@@ -1,0 +1,6 @@
+@FPS.Billing_HostAddress = http://localhost:5054
+
+GET {{FPS.Billing_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

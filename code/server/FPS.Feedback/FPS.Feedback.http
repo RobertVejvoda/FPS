@@ -1,0 +1,6 @@
+@FPS.Feedback_HostAddress = http://localhost:5135
+
+GET {{FPS.Feedback_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

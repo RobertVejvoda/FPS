@@ -1,0 +1,6 @@
+@FPS.Identity_HostAddress = http://localhost:5192
+
+GET {{FPS.Identity_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

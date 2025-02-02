@@ -1,0 +1,6 @@
+@FPS.Configuration_HostAddress = http://localhost:5013
+
+GET {{FPS.Configuration_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

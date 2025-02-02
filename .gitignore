@@ -1,0 +1,28 @@
+# Ignore macOS .DS_Store files
+.DS_Store
+
+# Ignore build output directories
+bin/
+obj/
+
+# Ignore user-specific files
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Ignore Rider project files
+.idea/
+*.sln.iml
+
+# Ignore NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
