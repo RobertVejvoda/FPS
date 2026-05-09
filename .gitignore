@@ -32,6 +32,10 @@ packages/
 .claude/**
 !.claude/settings.json
 
+# Node
+node_modules/
+package-lock.json
+
 # Secrets
 .env
 *.env.local

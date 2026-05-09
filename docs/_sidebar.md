@@ -1,5 +1,6 @@
 
 * [Development Plan](./development-plan)
+* [Tooling](./tooling)
 * [Versions and decisions](./versions-and-decisions)
 * [Strategy](./strategy-layer)
 * [Business Layer](./business-layer)

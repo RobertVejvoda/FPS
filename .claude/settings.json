@@ -10,6 +10,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node tools/llm-review.mjs",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
