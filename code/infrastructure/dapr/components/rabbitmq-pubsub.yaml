@@ -1,0 +1,32 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: rabbitmq-pubsub
+spec:
+  type: pubsub.rabbitmq
+  version: v1
+  metadata:
+  - name: host
+    value: amqp://host.docker.internal:5672
+  - name: durable
+    value: "true"
+  - name: deletedWhenUnused
+    value: "false"
+  - name: prefetchCount
+    value: "10"
+  - name: reconnectWait
+    value: "5s"
+  - name: enableTLS
+    value: "false"
+  - name: deliveryMode
+    value: "2" # Persistent delivery mode
+  - name: username
+    secretKeyRef:
+      name: rabbitmq-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: rabbitmq-credentials
+      key: password
+auth:
+  secretStore: vault

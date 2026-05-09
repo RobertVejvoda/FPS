@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_166cwvb" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.31.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0">
+  <bpmn:process id="Process_1hgycha" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0qah6u4</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Activity_13psw9w" name="Create account for tenant">
+      <bpmn:incoming>Flow_0qah6u4</bpmn:incoming>
+      <bpmn:outgoing>Flow_0d3xiob</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_0qah6u4" sourceRef="StartEvent_1" targetRef="Activity_13psw9w" />
+    <bpmn:task id="Activity_149f9x2" name="Validate email address">
+      <bpmn:incoming>Flow_0d3xiob</bpmn:incoming>
+      <bpmn:outgoing>Flow_1pztlp4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_0d3xiob" sourceRef="Activity_13psw9w" targetRef="Activity_149f9x2" />
+    <bpmn:sequenceFlow id="Flow_1pztlp4" sourceRef="Activity_149f9x2" targetRef="Event_0f5fq89" />
+    <bpmn:intermediateCatchEvent id="Event_0f5fq89" name="Email validated">
+      <bpmn:incoming>Flow_1pztlp4</bpmn:incoming>
+      <bpmn:outgoing>Flow_0oyjevv</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0y6zbw9" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Activity_0n8dyhv" name="Activate account">
+      <bpmn:incoming>Flow_0oyjevv</bpmn:incoming>
+      <bpmn:outgoing>Flow_00oks9f</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_0oyjevv" sourceRef="Event_0f5fq89" targetRef="Activity_0n8dyhv" />
+    <bpmn:endEvent id="Event_0etq4lo">
+      <bpmn:incoming>Flow_1523day</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_00oks9f" sourceRef="Activity_0n8dyhv" targetRef="Activity_0cqq6gg" />
+    <bpmn:task id="Activity_0cqq6gg" name="Send welcome letter with instructions">
+      <bpmn:incoming>Flow_00oks9f</bpmn:incoming>
+      <bpmn:outgoing>Flow_1523day</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_1523day" sourceRef="Activity_0cqq6gg" targetRef="Event_0etq4lo" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1hgycha">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="182" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_13psw9w_di" bpmnElement="Activity_13psw9w">
+        <dc:Bounds x="320" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_149f9x2_di" bpmnElement="Activity_149f9x2">
+        <dc:Bounds x="500" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1i67clr_di" bpmnElement="Event_0f5fq89">
+        <dc:Bounds x="682" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="663" y="145" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0n8dyhv_di" bpmnElement="Activity_0n8dyhv">
+        <dc:Bounds x="800" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0etq4lo_di" bpmnElement="Event_0etq4lo">
+        <dc:Bounds x="1102" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0cqq6gg_di" bpmnElement="Activity_0cqq6gg">
+        <dc:Bounds x="950" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0qah6u4_di" bpmnElement="Flow_0qah6u4">
+        <di:waypoint x="218" y="120" />
+        <di:waypoint x="320" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0d3xiob_di" bpmnElement="Flow_0d3xiob">
+        <di:waypoint x="420" y="120" />
+        <di:waypoint x="500" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pztlp4_di" bpmnElement="Flow_1pztlp4">
+        <di:waypoint x="600" y="120" />
+        <di:waypoint x="682" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0oyjevv_di" bpmnElement="Flow_0oyjevv">
+        <di:waypoint x="718" y="120" />
+        <di:waypoint x="800" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00oks9f_di" bpmnElement="Flow_00oks9f">
+        <di:waypoint x="900" y="120" />
+        <di:waypoint x="950" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1523day_di" bpmnElement="Flow_1523day">
+        <di:waypoint x="1050" y="120" />
+        <di:waypoint x="1102" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

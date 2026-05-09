@@ -1,35 +1,40 @@
-# Ignore macOS .DS_Store files
+# macOS
 .DS_Store
 
-# Ignore build output directories
+# .NET build output
 bin/
 obj/
 
-# Ignore user-specific files
+# User-specific files
 *.user
 *.userosscache
 *.suo
 *.sln.docstates
 
-# Ignore Rider project files
+# IDE
 .idea/
 *.sln.iml
+.vscode/settings.json
 
-# Ignore NuGet packages
+# NuGet
 *.nupkg
 *.snupkg
 packages/
 
-# Ignore logs
+# Logs
 *.log
 
-# Ignore temporary files
+# Temp
 *.tmp
 *.temp
 
 # Claude Code
 .claude/
 
-# Nested repos / subprojects
+# Secrets
+.env
+*.env.local
+
+# Old separate repos (superseded by monorepo)
 FPS.code/
 FPS.wiki/

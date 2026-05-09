@@ -1,0 +1,22 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: s3store
+spec:
+  type: bindings.aws.s3
+  version: v1
+  metadata:
+  - name: accessKey
+    secretKeyRef:
+      name: minio-credentials
+      key: accessKey
+  - name: secretKey
+    secretKeyRef:
+      name: minio-credentials
+      key: secretKey
+  - name: bucket
+    value: fps-bucket
+  - name: endpoint
+    value: http://minio:9000
+auth:
+  secretStore: vault
