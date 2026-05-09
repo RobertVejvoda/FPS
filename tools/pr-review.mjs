@@ -9,6 +9,14 @@
 
 const isPush = process.argv.includes('--push');
 
+// ── Skip flag ─────────────────────────────────────────────────────────────────
+// Set PR_REVIEW_SKIP=1 to bypass the LLM review for intentional large refactors.
+// validate.sh (build + tests) still runs — only the OpenAI call is skipped.
+if (process.env.PR_REVIEW_SKIP === '1') {
+  console.log('[pr-review] PR_REVIEW_SKIP=1 — skipping LLM review.');
+  process.exit(0);
+}
+
 // ── Read git diff ─────────────────────────────────────────────────────────────
 
 import { execSync } from 'node:child_process';
@@ -69,29 +77,33 @@ Review the git diff and return ONLY this JSON:
   "tests_to_run": ["<dotnet test command or xunit test class name>"]
 }
 
-REQUEST_CHANGES when:
+REQUEST_CHANGES only for confirmed hard issues:
 - Security vulnerability (injection, auth bypass, insecure deserialization)
-- Sensitive data exposed (.env, secret, private key, token, password in code)
-- Test files deleted without replacement
-- Auth/security/payment code changed without test coverage
-- Broad deletion or repo-wide rewrite without documented plan
-- Broken architecture (domain layer imports infrastructure, etc.)
-- EF Core, SQL Server, Swagger, or any technology explicitly replaced by the project
-- git push --force or --no-verify in scripts
-- rm -rf or destructive operations without justification
+- Sensitive data exposed in code (.env value, private key, password, token literal)
+- Active test files deleted with no replacement
+- Auth/security/payment code changed with zero test coverage
+- Broken architecture invariant (domain layer directly imports infrastructure)
+- Banned technology introduced (EF Core, SQL Server, Swagger/NSwag)
+- Destructive shell command added to a script (rm -rf, force push, --no-verify)
+
+Do NOT use REQUEST_CHANGES for:
+- Large documentation changes (always APPROVE or COMMENT)
+- Dead code removal or refactoring of scaffolding
+- Naming/namespace fixes without logic changes
+- Tooling or configuration updates
+- Any change where validate.sh (build + tests) passing is sufficient assurance
 
 COMMENT when:
-- Missing test coverage for new non-trivial code
-- Naming inconsistencies with project conventions
-- Minor architecture drift
-- Code duplication that could be shared
-- Documentation gap for complex logic
+- Missing test coverage for new non-trivial business logic
+- Minor naming or architecture inconsistency
+- Duplicated code that could be extracted
 
 APPROVE when:
-- Routine safe changes with adequate test coverage
-- Documentation or tooling updates
+- Documentation, wiki, or tooling changes
+- Dead code removal
+- Refactoring with no logic change and tests passing
 - Bug fixes with tests
-- Configuration changes that look correct`;
+- Routine safe changes`;
 
 const userMsg = `Files changed:\n${stat}\n\nFull diff:\n${diffBody}`;
 

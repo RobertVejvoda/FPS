@@ -24,7 +24,17 @@ Every commit must follow this sequence:
 
 The LLM PR reviewer may return `REQUEST_CHANGES` for large dead-code removal refactors because it cannot distinguish intentional deletion from accidental. `validate.sh` (build + tests) is always the hard gate.
 
-For approved large refactors, the project owner may run commits and pushes directly from the terminal (`!` prefix in Claude Code) with `OPENAI_API_KEY` unset, which causes `pr-review.mjs` to skip its OpenAI call while `validate.sh` still runs. This pattern is for one-off, pre-verified changes only.
+For approved large refactors, set `PR_REVIEW_SKIP=1` to skip the OpenAI call while `validate.sh` (build + tests) still runs in full:
+
+```sh
+# Commit
+PR_REVIEW_SKIP=1 git commit -m "your message"
+
+# Push (run via ! in Claude Code to avoid PreToolUse interference)
+! PR_REVIEW_SKIP=1 git push -u origin your-branch
+```
+
+Use only for deliberate, pre-verified refactors. The env var is checked inside `pr-review.mjs` — it has no effect on any other hook.
 
 ---
 
