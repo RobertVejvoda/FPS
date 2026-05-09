@@ -1,22 +1,19 @@
-using System.Threading.Tasks;
 using Dapr.Client;
-using FPS.Booking.Application.Services;
+using FPS.SharedKernel.DomainEvents;
 
-namespace FPS.Booking.Infrastructure.Services
+namespace FPS.Booking.Infrastructure.Services;
+
+public class DaprEventPublisher : IEventPublisher
 {
-    public class DaprEventPublisher : IEventPublisher
+    private readonly DaprClient _daprClient;
+    private const string PubsubName = "rabbitmq-pubsub";
+
+    public DaprEventPublisher(DaprClient daprClient) => _daprClient = daprClient;
+
+    public async Task PublishAsync<TEvent>(TEvent domainEvent, CancellationToken cancellationToken = default)
+        where TEvent : IDomainEvent
     {
-        private readonly DaprClient _daprClient;
-        private const string PUBSUB_NAME = "booking-pubsub";
-
-        public DaprEventPublisher(DaprClient daprClient)
-        {
-            _daprClient = daprClient;
-        }
-
-        public async Task PublishEventAsync<T>(string eventType, T eventData)
-        {
-            await _daprClient.PublishEventAsync(PUBSUB_NAME, eventType, eventData);
-        }
+        var topic = typeof(TEvent).Name;
+        await _daprClient.PublishEventAsync(PubsubName, topic, domainEvent, cancellationToken);
     }
 }

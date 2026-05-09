@@ -75,7 +75,7 @@ if (SENSITIVE_FILE.test(file)) deny('[llm-review] Editing sensitive files is blo
 // ── Local fast-path: ALLOW routine safe operations (no API call) ──────────────
 
 const FAST_ALLOW_CMD = [
-  /^git\s+(status|diff|log|branch|show|fetch|remote|stash\s+list)\b/,
+  /^git\s+(status|diff|log|branch|show|fetch|remote|stash\s+list|add|rm|mv)\b/,
   /^dotnet\s+(test|build|restore|run)\b/,
   /^(ls|find|cat|head|tail|wc|pwd|echo|which|whoami|tree|grep)\b/,
   /^gh\s+(run|pr|repo|issue)\s+(list|view|status)\b/,

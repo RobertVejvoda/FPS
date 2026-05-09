@@ -21,9 +21,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FPS.Booking.Infrastructure.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FPS.Booking.IntegrationTests", "Booking\FPS.Booking.IntegrationTests\FPS.Booking.IntegrationTests.csproj", "{A1B2C3D4-0009-0000-0000-000000000009}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FPS.Identity", "FPS.Identity\FPS.Identity\FPS.Identity.csproj", "{A1B2C3D4-0010-0000-0000-000000000010}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FPS.Identity", "Identity\FPS.Identity\FPS.Identity.csproj", "{A1B2C3D4-0010-0000-0000-000000000010}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FPS.Identity.Tests", "FPS.Identity\FPS.Identity.Tests\FPS.Identity.Tests.csproj", "{A1B2C3D4-0011-0000-0000-000000000011}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FPS.Identity.Tests", "Identity\FPS.Identity.Tests\FPS.Identity.Tests.csproj", "{A1B2C3D4-0011-0000-0000-000000000011}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
