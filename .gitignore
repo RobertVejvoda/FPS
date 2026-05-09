@@ -28,8 +28,9 @@ packages/
 *.tmp
 *.temp
 
-# Claude Code
-.claude/
+# Claude Code — exclude everything except project settings
+.claude/**
+!.claude/settings.json
 
 # Secrets
 .env

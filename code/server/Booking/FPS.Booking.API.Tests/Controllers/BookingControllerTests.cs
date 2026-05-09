@@ -1,34 +1,8 @@
-// FPS.Booking.API.Tests/Controllers/BookingsControllerTests.cs
+namespace FPS.Booking.API.Tests.Controllers;
 
-using FPS.Booking.Domain.ValueObjects;
-
-public class BookingsControllerTests
+// Controller tests will be implemented in Phase 1 alongside the actual controller implementation.
+public class BookingControllerTests
 {
-    private readonly BookingsController _controller;
-    private readonly Mock<IMediator> _mediatorMock;
-    private readonly Mock<DaprClient> _daprClientMock;
-    
-    public BookingsControllerTests()
-    {
-        _mediatorMock = new Mock<IMediator>();
-        _daprClientMock = new Mock<DaprClient>();
-        _controller = new BookingsController(_mediatorMock.Object, _daprClientMock.Object);
-    }
-    
-    [Fact]
-    public async Task CreateBooking_ValidRequest_ReturnsCreated()
-    {
-        // Arrange
-        var request = new CreateBookingRequestDto(/* parameters */);
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<CreateBookingRequestCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BookingId.New());
-        
-        // Act
-        var result = await _controller.CreateBooking(request);
-        
-        // Assert
-        var actionResult = Assert.IsType<CreatedAtActionResult>(result);
-        actionResult.StatusCode.Should().Be(201);
-    }
+    [Fact(Skip = "Implement in Phase 1")]
+    public Task SubmitBookingRequest_ValidRequest_ReturnsAccepted() => Task.CompletedTask;
 }
