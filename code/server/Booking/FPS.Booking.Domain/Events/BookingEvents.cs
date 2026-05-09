@@ -46,3 +46,10 @@ public record SlotUsageStartedEvent(
 public record SlotUsageCompletedEvent(
     SlotAllocationId AllocationId,
     DateTime EndTime) : DomainEvent;
+
+// Draw events
+public record DrawRunEvent(
+    DateOnly DrawDate,
+    int TotalRequests,
+    int AllocatedCount,
+    int RejectedCount) : DomainEvent;

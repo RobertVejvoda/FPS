@@ -7,6 +7,7 @@ global using FPS.Booking.Domain.Aggregates.SlotAllocationAggregate;
 global using FPS.Booking.Domain.Exceptions;
 global using FPS.Booking.Domain.Interfaces;
 global using FPS.Booking.Domain.Services;
+global using FPS.Booking.Domain.Entities;
 global using FPS.Booking.Domain.ValueObjects;
 global using FPS.Booking.Domain.Events;
 global using FPS.SharedKernel.DomainEvents;
