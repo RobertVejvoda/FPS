@@ -149,6 +149,7 @@ This is the core of FPS. Everything else is supporting.
 
 **Domain layer** (`FPS.Booking.Domain`):
 - [ ] `BookingRequest` aggregate — submit, cancel, expire
+  - Must follow `docs/business-layer/booking-request-lifecycle.md`
 - [ ] `SlotAllocation` aggregate — allocate, confirm, release
 - [ ] `ParkingSlot` value object (or entity depending on ownership)
 - [ ] `TimeSlot` value object (date + half/full day)
@@ -165,6 +166,8 @@ This is the core of FPS. Everything else is supporting.
 - [ ] Domain events: `BookingSubmitted`, `BookingCancelled`, `DrawStarted`, `SlotAllocated`, `DrawCompleted`
 - [ ] Unit tests for allocation service (pure domain, no infrastructure)
 - [ ] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
+- [ ] Implement request lifecycle behavior against `docs/business-layer/booking-request-lifecycle.md`
+- [ ] Resolve allocation policy from `docs/business-layer/parking-policy-configuration.md`
 
 **Application layer** (`FPS.Booking.Application`):
 - [ ] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
@@ -191,6 +194,10 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **Volume cap**: maximum 500 requests per tenant per Draw. The Booking service rejects submissions once this limit is reached for a given date. At 500 items the allocation algorithm completes in under a millisecond — no fan-out or child workflows needed.
 >
 > **Executable rules**: Draw implementation must follow `docs/business-layer/allocation-rules.md`, including duplicate detection, seeded lottery audit data, company-car overflow rejection, same-day metric updates, cancellation reallocation, and default penalties.
+>
+> **Request lifecycle**: Request status transitions, late-cancellation trigger, usage confirmation, no-show handling, and employee-visible reasons are defined in `docs/business-layer/booking-request-lifecycle.md`.
+>
+> **Policy configuration**: Tenant defaults with per-location overrides are defined in `docs/business-layer/parking-policy-configuration.md`.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
@@ -237,8 +244,10 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 - [ ] Subscribe to: `slot.allocated`, `booking.cancelled`, `draw.completed`, `penalty.applied`
 - [ ] Email channel (SMTP or SendGrid)
 - [ ] In-app notification store (read via API)
+- [ ] V1 mandatory channels: in-app and email for critical operational notifications
 - [ ] **SSE endpoint** `GET /notifications/stream` — clients connect, events from Dapr pub/sub are bridged to connected SSE clients; no Azure dependency, no extra infrastructure
 - [ ] Idempotent — duplicate events must not send duplicate emails
+- [ ] Implement notification behavior against `docs/business-layer/notification.md`
 
 **Audit** (`FPS.Audit`):
 - [ ] Subscribe to all domain events — record everything
@@ -404,3 +413,6 @@ These need answers before the relevant phase begins:
 | 10 | ~~Real-time channel?~~ → **SSE via Notification service, bridged from Dapr pub/sub** | ✅ Decided | — |
 | 11 | ~~What determines Tier 2 lottery weight?~~ → **`1 / (1 + RecentAllocationCount + ActivePenaltyScore)` from draw-time user metrics** | ✅ Decided | — |
 | 12 | ~~What are the executable Draw rules?~~ → **See `docs/business-layer/allocation-rules.md`** | ✅ Decided | — |
+| 13 | ~~When does late cancellation start?~~ → **After a slot has been allocated; before allocation no penalty applies** | ✅ Decided | — |
+| 14 | ~~How is parking policy configured?~~ → **Tenant defaults with per-location overrides** | ✅ Decided | — |
+| 15 | ~~Which notification channels are required for v1?~~ → **Both in-app and email for critical operational notifications** | ✅ Decided | — |

@@ -6,6 +6,8 @@ title: Configuration
 
 [Configuration module](../application-layer/configuration) provides comprehensive system configuration capabilities. It enables administrators and users to customize and manage various system aspects based on their roles and permissions.
 
+Parking-specific tenant and location policy requirements are defined in [Parking Policy Configuration](./parking-policy-configuration). That document is the implementation contract for cut-off times, request caps, lookback windows, penalties, usage confirmation, company-car behavior, and location overrides.
+
 ## Business Interfaces
 
 ### Administrative Interface
