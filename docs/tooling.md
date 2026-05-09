@@ -20,6 +20,12 @@ Every commit must follow this sequence:
 - Never force push (`--force` / `--force-with-lease`)
 - Use zsh/macOS-compatible syntax only — no bash-specific constructs
 
+### Large refactor commits
+
+The LLM PR reviewer may return `REQUEST_CHANGES` for large dead-code removal refactors because it cannot distinguish intentional deletion from accidental. `validate.sh` (build + tests) is always the hard gate.
+
+For approved large refactors, the project owner may run commits and pushes directly from the terminal (`!` prefix in Claude Code) with `OPENAI_API_KEY` unset, which causes `pr-review.mjs` to skip its OpenAI call while `validate.sh` still runs. This pattern is for one-off, pre-verified changes only.
+
 ---
 
 ## tools/validate.sh
