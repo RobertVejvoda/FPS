@@ -16,7 +16,7 @@ services:
       - web
 
   whoami-dapr:
-    image: "daprio/daprd:latest"
+    image: "daprio/daprd:1.14.4"
     command: [
       "./daprd",
       "-app-id", "whoami",
@@ -106,20 +106,6 @@ services:
       - web
     
 
-  postgresql:
-    image: postgres:latest
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - web
-    
-
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
@@ -193,7 +179,6 @@ services:
 
 volumes:
   minio_data:
-  postgres_data:
   mongodb_data:
   prometheus_data:
   grafana_data:
