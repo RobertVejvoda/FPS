@@ -37,7 +37,6 @@ FPS uses a weighted allocation model. Each eligible request receives a priority 
 Typical factors include:
 
 - Recent successful allocations.
-- Recent rejected requests.
 - Late cancellations or no-shows.
 - Employee eligibility.
 - Vehicle type and space capability.
@@ -51,14 +50,21 @@ The default fairness rule should favor employees who have parked less often rece
 A simple starting rule is:
 
 ```text
-Weight = 1 / (1 + previous allocations + penalties)
+Tier2Weight = 1 / (1 + RecentAllocationCount + ActivePenaltyScore)
 ```
+
+`RecentAllocationCount` is the number of successful non-company-car allocations for the requestor in the tenant's configured lookback window.
+`ActivePenaltyScore` is the active penalty total from late cancellations, no-shows, policy violations, or justified manual HR adjustments.
+
+The lookback window is tenant-configurable and defaults to `10` days. Same-day successful allocations count toward `RecentAllocationCount` because they consume scarce parking capacity. Tier 1 company-car allocations do not count toward Tier 2 weight.
 
 This means:
 
 - employees with fewer previous allocations receive a higher chance;
 - penalties reduce future chances;
 - every eligible employee still has some chance unless policy excludes the request.
+
+Rejected requests are not part of the default denominator. They remain useful for reporting and future fairness analysis, but adding them to the denominator would reduce the chance of employees who were already unlucky.
 
 The exact formula can evolve, but the business principle should remain stable: allocation history and policy behavior influence future probability.
 
@@ -98,6 +104,7 @@ Business rules:
 - Reserved users should still declare when they need or do not need the space.
 - Released reserved spaces can be offered to other eligible employees.
 - Company-car requests may be exempt from penalties where customer policy requires it.
+- If company-car requests exceed available matching capacity, FPS rejects the overflow requests for now. This is expected to be rare and keeps the first implementation simple.
 - All reserved-space decisions should be visible in reports and audit history.
 
 ## Cancellations and Reallocation
@@ -113,7 +120,7 @@ After allocation:
 
 - the reservation is cancelled;
 - FPS may apply a late-cancellation penalty;
-- the released space may be offered to another eligible employee.
+- the released space is automatically allocated to the next eligible requestor when one exists.
 
 If the employee does not use an allocated space and usage confirmation is available, FPS may mark the reservation as a no-show and apply the configured policy.
 
