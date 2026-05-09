@@ -2,240 +2,121 @@
 title: Business Requirements
 ---
 
-## Scenario
+## Business Context
 
-The company has a limited number of parking slots, typically fewer than the number of employees. These slots are offered to employees who can request a parking slot for any available time slot (day or half day). Currently, employees send emails to HR, where parking requests are managed using an external system or a simple Excel file. This approach has several issues, including fairness and the workload involved in processing all email requests. The typical "first come, first served" method is simple but not fair and adds significant administrative burden. The main idea behind the new system is to ensure fairness for everyone, with minimal or no manual adjustment/management required.
+Many companies have fewer parking spaces than employees who want to use them. When parking is managed by email, spreadsheets, or informal agreements, HR becomes the bottleneck and employees perceive the process as arbitrary. First-come, first-served allocation is simple, but it rewards speed and insider knowledge rather than actual business need or fair access.
 
-## Business Requirements
+Fair Parking System (FPS) replaces manual parking coordination with a transparent, automated allocation process. Employees request parking for specific time slots, the system allocates available capacity using configurable fairness rules, and all affected users receive clear status updates. The customer value is reduced administration, higher employee trust, better parking utilization, and auditable policy enforcement.
 
-### 1. Automated Parking Management System
-The company requires an automated parking management system to streamline the process of booking and managing parking slots. This system should eliminate the need for manual email requests and reduce administrative workload.
+## Business Goals
 
-### 2. Fair Distribution of Parking Slots
-The system must ensure a fair distribution of parking slots, prioritizing occasional parkers over daily users. It should prevent informal agreements and unauthorized use of parking slots.
+1. **Reduce HR workload**
+   - Remove email-based request handling.
+   - Minimize manual corrections, exceptions, and follow-up messages.
+   - Give HR and facility managers a single view of demand, allocation, and usage.
 
-### 3. Dedicated Motorcycle Parking
-The system should include dedicated and secure parking areas for motorcycles to optimize space usage and prevent damage to bikes.
+2. **Increase perceived fairness**
+   - Apply the same allocation rules to every eligible employee.
+   - Give occasional parkers a fair opportunity instead of favoring daily users.
+   - Make allocation results explainable and auditable.
 
-### 4. Real-Time Updates and Notifications
-Employees need real-time updates on parking availability and notifications about their parking slot status. This feature will help reduce frustration and improve overall user experience.
+3. **Improve parking utilization**
+   - Reuse spaces released by cancellations or unused reservations.
+   - Support half-day and full-day time slots.
+   - Track actual usage so the customer can identify underused capacity.
 
-### 5. Integration with Calendar and Reminders
-The system should integrate with employees' calendars and provide reminders for parking reservations. This will help employees manage their parking needs efficiently.
+4. **Support company policies**
+   - Respect reserved spaces, company-car rules, accessibility needs, motorcycle parking, EV charging, and other local constraints.
+   - Allow each customer tenant to configure rules without changing the product.
 
-### 6. Comprehensive Reporting and Analytics
-HR and management require detailed reports and analytics on parking slot usage. The system should provide insights into patterns, peak usage times, and underutilized slots to optimize resource allocation.
+5. **Improve employee experience**
+   - Let employees request, cancel, and track parking without contacting HR.
+   - Notify users when requests are submitted, allocated, rejected, cancelled, or reallocated.
+   - Integrate with calendars and reminders where it reduces missed reservations.
 
-### 7. Sustainability and Eco-Friendly Features
-The system should support the company's sustainability goals by incentivizing eco-friendly commuting options. Features such as priority parking for carpoolers and electric vehicle charging stations should be included.
+6. **Provide management insight**
+   - Report on demand, allocation fairness, utilization, cancellations, no-shows, and policy exceptions.
+   - Help HR and management make evidence-based decisions about parking capacity and commuting policy.
 
-### 8. User-Friendly Interface
-The system must have an intuitive and user-friendly interface to ensure ease of use for all employees, including those responsible for managing parking assignments.
+## Core Business Requirements
 
-### 9. Security and Access Control
-The system should include security measures to prevent unauthorized access and ensure that only eligible employees can book and use parking slots.
+### BR001: Automated Parking Requests
 
-### 10. Scalability and Flexibility
-The system should be scalable to accommodate future growth and flexible enough to adapt to changing business needs and policies.
+Employees must be able to submit parking requests through FPS instead of email. A request must identify the employee, vehicle where needed, preferred date, time slot, location, and relevant parking requirements.
 
-### 11. Data-Driven Decision Making
-The system should provide data and analytics to support data-driven decision-making, helping HR and management optimize parking resource allocation and improve overall efficiency.
+### BR002: Fair Slot Allocation
 
-### 12. Enhanced Communication Tools
-The system should include communication tools to facilitate better interaction between employees and HR regarding parking slot management and availability.
+FPS must allocate limited parking capacity using transparent and configurable fairness rules. The process must avoid persistent favoritism and should improve the chance of allocation for employees who have received fewer recent spaces.
 
-## Table of Contents
+### BR003: Configurable Parking Policies
 
-1. [Parking Slot Allocation Process](#parking-slot-allocation-process)
-    1. [Request Submission](#request-submission)
-    2. [Request Validation](#request-validation)
-    3. [Notification System](#notification-system)
-    4. [Penalty Management](#penalty-management)
-    5. [Reporting and Analytics](#reporting-and-analytics)
-    6. [Priority Management](#priority-management)
-    7. [Conflict Resolution](#conflict-resolution)
-    8. [Feedback Mechanism](#feedback-mechanism)
-    9. [Integration with Other Systems](#integration-with-other-systems)
-    10. [Scalability](#scalability)
-    11. [User Training and Support](#user-training-and-support)
-    12. [Environmental Considerations](#environmental-considerations)
-    13. [Draw Process](#draw-process)
-    14. [Request Scheduler](#request-scheduler)
-    15. [Request Approvals/Cancellations](#request-approvalscancellations)
-2. [Core Values](#core-values)
-3. [Apps](#apps)
-    1. [Web App](#web-app)
-    2. [Mobile App](#mobile-app)
-4. [Microservices](#microservices)
-5. [Auditing](#auditing)
-6. [Expected Profit](#expected-profit)
-7. [Glossary](#glossary)
+Customers must be able to configure parking rules for their organization, including locations, spaces, time slots, eligibility, reserved-space policies, company-car handling, motorcycles, EV charging, accessibility needs, and penalties.
 
-### Parking Slot Allocation Process
+### BR004: Real-Time Status and Notifications
 
-#### Request Submission
+Employees must receive clear status updates for request submission, allocation outcome, cancellation, reallocation, and reminders. Notifications should be available in the application and may also be delivered by email, push notification, or calendar integration.
 
-Employees submit their parking slot requests through the system, specifying their preferred time slots (day or half day). The system collects these requests and prepares them for the Draw process.
+### BR005: Cancellation and Reallocation
 
-#### Request Validation
+Employees must be able to cancel requests and reservations. If a confirmed space becomes available, FPS should offer or allocate it to another eligible employee according to customer policy.
 
-The system validates each request to ensure it meets the criteria (e.g., no duplicate requests for the same time slot). Invalid requests are flagged, and employees are notified to correct and resubmit them.
+### BR006: Usage Confirmation
 
-#### Notification System
+FPS should support confirmation of actual parking usage, either by user action, access-control integration, QR code, card reader, or another customer-specific signal. Usage data is required for fairness, penalties, and reporting.
 
-Employees receive notifications about the status of their requests (submitted, approved, rejected, or canceled). Notifications are sent via email and can also be viewed in the web or mobile app.
+### BR007: Penalties and Adjustments
 
-#### Penalty Management
+FPS must support configurable penalties for late cancellations, no-shows, and policy violations. Authorized roles must also be able to apply justified manual adjustments when business policy requires it.
 
-The system tracks penalties for late cancellations or missed parking slots. Penalties are applied according to predefined rules and affect the employee's future parking slot allocations.
+### BR008: Reporting and Analytics
 
-#### Reporting and Analytics
+FPS must provide reports for HR, facility managers, and leadership. Reports should cover demand, utilization, allocation rates, rejected requests, cancellations, no-shows, repeated exceptions, and fairness indicators.
 
-The system generates reports on parking slot usage, request patterns, and penalty statistics. These reports help management understand parking demand and optimize the allocation process.
+### BR009: Role-Based Access
 
-#### Priority Management
+FPS must separate employee, manager, administrator, support, audit, and finance responsibilities. Users should only access the actions and data required for their role.
 
-The system allows for prioritization of parking slot requests based on predefined criteria such as seniority, job role, or special needs. This ensures that employees with higher priority have a better chance of securing a parking slot.
+### BR010: Auditability and Compliance
 
-#### Conflict Resolution
+FPS must keep an audit trail of important business actions, including request creation, allocation decisions, cancellations, manual overrides, penalty changes, and configuration changes.
 
-In case of conflicting requests (e.g., multiple employees requesting the same slot), the system uses a fair algorithm to resolve conflicts. This may include random selection, rotating priority, or other equitable methods.
+### BR011: Multi-Tenant Customer Model
 
-#### Feedback Mechanism
+FPS must support multiple customer organizations. Each customer must have isolated data, configurable policies, independent users, and tenant-specific billing or subscription settings where applicable.
 
-Employees can provide feedback on the parking allocation process through the system. This feedback is collected and analyzed to continuously improve the system and address any concerns or suggestions from employees.
+### BR012: Scalability and Flexibility
 
-#### Integration with Other Systems
+FPS must support customer growth in users, locations, parking spaces, and request volume. The product should adapt to different company parking policies without requiring custom development for every customer.
 
-The parking allocation system can integrate with other company systems such as HR, payroll, and employee management. This ensures seamless data flow and reduces the need for manual data entry.
+## Business Process Summary
 
-#### Scalability
+1. Employees submit parking requests for future or current time slots.
+2. FPS validates eligibility, duplicate requests, time slot availability, vehicle constraints, and local policy.
+3. The allocation process assigns available spaces using the configured fairness rules.
+4. Employees receive allocation results and reminders.
+5. Employees cancel or confirm usage when needed.
+6. Released or unused spaces are reallocated according to policy.
+7. HR and management review reports, exceptions, and usage patterns.
 
-The system is designed to scale with the company's growth. As the number of employees and parking slots increases, the system can handle the additional load without performance degradation.
+The full allocation description is documented in [Slot Allocation Process](./process).
 
-#### User Training and Support
+## Scope Boundaries
 
-Comprehensive training materials and support are provided to ensure employees can effectively use the system. This includes user manuals, video tutorials, and a helpdesk for resolving any issues.
-
-#### Environmental Considerations
-
-The system encourages carpooling and the use of eco-friendly vehicles by offering incentives such as priority parking slots or reduced penalties. This supports the company's sustainability goals and reduces its carbon footprint.
-
-#### Draw Process
-
-The Draw process is an automated mechanism that runs at a predetermined schedule to allocate parking slots among employees. During this process, the system evaluates all collected requests and assigns available slots based on a fair and transparent algorithm. This algorithm takes into account various factors such as the number of requests, existing assignments, penalties for late cancellations or missed slots, privileges for company car users, and overall user behavior patterns.
-
-Once the Draw is complete, employees are notified of the outcome via email and through the web or mobile app. Notifications include whether their request has been approved or rejected. The system is designed to be self-managing, requiring no manual confirmation from employees for their allocated slots. This ensures minimal administrative overhead and a seamless user experience.
-
-The Draw process aims to balance fairness and efficiency, ensuring that all employees have an equitable chance of securing a parking slot while maintaining the core values of the system.
-
-The complete description is on [Business Process](./process).
-
-#### Request Scheduler
-
-Employees can setup that system will send scheduled requests automatically for prefered days, so they don't have to do it manually. 
-Some slots are long term booked for people with a company car. Requests from these people are always pre-assigned on park slots and penalization is not applied. 
-Since each person/employee can schedule which days they need the park slot on their side, very little management/interaction is needed in fact.
-
-#### Request Approvals/Cancellations
-
-Employees can cancel their parking slot requests at any time. If a request is canceled before the Draw process, it has no impact on the allocation of parking slots. However, cancellations made after the Draw process, as well as missed parking slots, will incur penalties. This is to maintain the system's **"Simple"** core value by discouraging last-minute changes that complicate the allocation process.
-
-When a parking slot becomes available due to a cancellation or a missed slot, the system will promptly offer it to other interested employees. The first employee to confirm the newly available slot will be assigned to it. This process is designed to be user-friendly and can be easily managed through the mobile application or the web interface.
-
-
-
-### Apps
-
-#### Web App
-
-The web app is divided into three main sections: User, Management, and Admin.
-
-* **User Section (My)**
-    * **My Requests** - Users can view and manage their parking slot requests.
-    * **My Parking** - Users can see their current and upcoming parking slot assignments.
-    * **My Info** - Users can manage their personal information, including car details (license plates, ID, names).
-
-* **Manager Section**
-    * **Manage Users** - Managers can oversee user accounts and their parking requests.
-    * **View All Requests** - Managers have access to all parking requests and can approve or reject them with reasons.
-    * **User Capabilities** - Managers have all the capabilities of a regular user.
-
-* **Admin Section**
-    * **Assign Roles** - Admins can assign roles to users, such as Manager or User.
-    * **Manager Capabilities** - Admins have all the capabilities of a manager and user.
-
-* **System Section**
-    * **Business Process Automation** - The system runs the business processes, ensuring smooth operation and minimal manual intervention.
-
-#### Mobile App
-
-The mobile app provides a user-friendly interface for employees to interact with the parking allocation system.
-
-![Scatch](../images/mobileapp-sketch.png)
-
-* **Send Requests** - Users can submit parking slot requests.
-* **Confirm Assignments** - Users can confirm their assigned parking slots.
-* **View Status** - Users can check the status of their requests.
-* **Request History** - Users can view their past parking requests and assignments.
-
-#### Microservices
-
-The system is built using a microservices architecture, ensuring flexibility and scalability.
-
-* **Flexible Business Processes** - The system can easily adjust business processes with minimal development effort.
-* **Scalable Architecture** - The system can handle increased load as the company grows.
-
-#### Auditing
-
-The system includes comprehensive auditing features.
-
-* **Log Exploration** - Users can easily explore logs and traces to monitor system activity.
-* **Traceability** - The system provides detailed traceability for all actions, ensuring transparency and accountability.
-
-
-### Expected Profit
-
-The system is not meant to bring direct profit, but it provides valuable reports that can help with monetization. For example, charging a nominal fee (e.g., 1 Euro) for each allocated time slot can help companies offset licensing costs or fund employee amenities like coffee.
-
-Other monetization options include:
-
-1. **Subscription Model**: Implement a subscription-based model where employees pay a monthly or annual fee for access to premium parking slots or additional features within the system.
-
-2. **Incentive Programs**: Offer incentives for employees who frequently use eco-friendly vehicles or participate in carpooling. These incentives could be sponsored by external partners or internal company funds.
-
-3. **Advertising**: Integrate non-intrusive advertisements within the web and mobile apps. Local businesses or service providers could advertise their offerings to employees, generating additional revenue.
-
-4. **Corporate Sponsorships**: Partner with local businesses or service providers to sponsor parking slots. For example, a nearby car wash could sponsor a slot and offer discounts to employees who park there.
-
-5. **Auction System**: Extend the Draw process with an auction feature where employees can bid for premium parking slots. This could generate additional revenue and provide a fair way to allocate high-demand slots.
-
-6. **Data Analytics Services**: Offer anonymized data analytics services to third parties interested in understanding parking trends and employee behavior. This data could be valuable for urban planning, transportation services, and other sectors.
-
-By implementing these monetization strategies, the system can not only cover its operational costs but also provide additional benefits to the company and its employees.
-
-
-### Glossary
-
-| **Term**                | **Explanation**                                                                                       |
-|-------------------------|-------------------------------------------------------------------------------------------------------|
-| **Allocation**          | The process of assigning available parking slots to employees based on their requests and the system's fair algorithm. |
-| **Cancellation**        | The act of withdrawing a parking slot request. Cancellations made after the Draw process may incur penalties. |
-| **Draw Process**        | An automated mechanism that allocates parking slots among employees based on a fair and transparent algorithm. |
-| **Eco-friendly Vehicles** | Vehicles that have a reduced environmental impact, often incentivized with priority parking slots. |
-| **Fair Algorithm**      | A method used by the system to ensure equitable allocation of parking slots among employees. |
-| **Notification**        | A message sent to employees informing them of the status of their parking slot requests. |
-| **Penalty**             | A consequence applied for late cancellations or missed parking slots, affecting future allocations. |
-| **Priority Management** | A system feature that allows prioritization of parking slot requests based on criteria such as seniority or job role. |
-| **Request**             | An employee's submission for a parking slot for a specific time period. |
-| **Scalability**         | The system's ability to handle increased load as the company grows without performance degradation. |
-| **Sustainability**      | Efforts to promote environmental responsibility, such as encouraging carpooling and the use of eco-friendly vehicles. |
-| **Validation**          | The process of checking parking slot requests to ensure they meet predefined criteria. |
-| **Web App**             | A web-based application that allows employees to interact with the parking allocation system. |
-| **Mobile App**          | A mobile application that provides a user-friendly interface for employees to manage their parking slot requests. |
-| **Microservices**       | An architectural style that structures the system as a collection of loosely coupled services, ensuring flexibility and scalability. |
-| **Auditing**            | The process of logging and tracing system activities to ensure transparency and accountability. |
-| **Subscription Model**  | A monetization strategy where employees pay a fee for access to premium parking slots or additional features. |
-| **Auction System**      | A feature that allows employees to bid for premium parking slots, generating additional revenue. |
-| **Data Analytics Services** | Services that offer insights into parking trends and employee behavior, potentially valuable for third parties. |
-| **Corporate Sponsorships** | Partnerships with local businesses to sponsor parking slots, providing additional benefits to employees. |
+### In Scope
+
+- Employee parking requests and status tracking.
+- Fair allocation of limited parking capacity.
+- Time-slot, location, space, and vehicle constraints.
+- Reserved-space and company-car policy support.
+- Notifications, cancellations, reallocations, and usage confirmation.
+- Reporting, audit trail, and role-based access.
+- Customer tenant configuration.
+
+### Future Opportunities
+
+- Sustainability incentives for carpooling, cycling, EVs, or public transport.
+- Advanced demand prediction and allocation optimization.
+- Paid parking, subscription models, or internal cost recovery.
+- Integration with building access systems, license plate recognition, or workplace calendars.
+
+These opportunities should be treated as product extensions, not prerequisites for the core FPS value proposition.

@@ -58,12 +58,12 @@ The functional architecture of the Fair Parking System (FPS) is designed to ensu
   - **Confirm Slot Allocation**: Users can confirm their parking slot allocation upon entering the garage.
   - **Send Automated Notifications**: The system sends automated notifications to users confirming their parking slot usage.
   - **Collect Usage Data**: The system collects data on parking slot usage patterns.
-  - **AI-Enhanced Allocation**: The system uses AI to optimize the allocation process.
-  - **Predict Demand**: The system uses AI to forecast parking slot demand.
-  - **Adjust Allocation Dynamically**: The system adjusts the allocation process in real-time based on current data.
-  - **Analyze User Behavior**: The system analyzes user behavior patterns to adjust their allocation priority.
-  - **Detect Anomalies**: The system uses AI to detect anomalies in booking patterns.
-  - **Provide Personalized Recommendations**: The system offers personalized parking recommendations based on user history and preferences.
+  - **Future Optimization Support**: The system may later use advanced analytics to improve allocation decisions once the core workflow is trusted.
+  - **Demand Forecasting**: The system may forecast parking demand from historical request and usage data.
+  - **Dynamic Policy Tuning**: The system may recommend policy adjustments based on current capacity, demand, and utilization patterns.
+  - **Behavior Pattern Analysis**: The system may analyze repeated cancellations, no-shows, and request patterns to support fairer policy decisions.
+  - **Anomaly Detection**: The system may detect unusual booking patterns that require HR or support review.
+  - **Personalized Guidance**: The system may suggest better request times or alternative parking options based on user history and availability.
   - **Ensure Data Privacy Compliance**: The system ensures data privacy compliance.
   - **Monitor System Performance**: The system monitors performance during the draw process.
   - **Ensure Scalability**: The system ensures the draw process is scalable.

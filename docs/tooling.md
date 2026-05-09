@@ -28,6 +28,55 @@ For approved large refactors, the project owner may run commits and pushes direc
 
 ---
 
+## GitHub Pages Documentation Site
+
+The project documentation is published from the `docs/` folder to GitHub Pages. The site is intentionally **not** built with Jekyll. It is a static [Docsify](https://docsify.js.org/) site served directly by the browser.
+
+### How the site works
+
+| File | Purpose |
+|---|---|
+| `docs/index.html` | Loads Docsify and points it at the wiki content. |
+| `docs/Home.md` | Default landing page for the documentation site. |
+| `docs/_sidebar.md` | Main navigation used by Docsify. |
+| `docs/.nojekyll` | Disables GitHub Pages Jekyll processing. |
+| `.github/workflows/docs.yml` | Publishes the `docs/` folder to GitHub Pages. |
+
+GitHub Pages normally supports Jekyll processing, but FPS does not need it. The `.nojekyll` file is required so GitHub Pages serves files exactly as they exist in `docs/`. This avoids Jekyll ignoring underscore-prefixed files such as `_sidebar.md`, which Docsify needs for navigation.
+
+### Publishing flow
+
+1. Documentation changes are committed under `docs/`.
+2. The GitHub Actions workflow `.github/workflows/docs.yml` runs on pushes to the configured publishing branch.
+3. The workflow uploads the `docs/` folder as the Pages artifact.
+4. GitHub Pages serves `docs/index.html`, and Docsify loads the Markdown pages in the browser.
+
+### Local preview
+
+Docsify can be previewed by serving the `docs/` folder with any static file server. For example:
+
+```sh
+npx docsify-cli serve docs
+```
+
+or:
+
+```sh
+npx http-server docs
+```
+
+Then open the printed local URL in a browser.
+
+### Editing rules
+
+- Put article content in Markdown files under `docs/`.
+- Update `docs/_sidebar.md` when adding important new pages.
+- Keep `docs/.nojekyll` in place.
+- Do not add Jekyll front matter, layouts, collections, or plugins unless the documentation platform is intentionally changed away from Docsify.
+- Avoid relying on build-time transforms; GitHub Pages serves the checked-in files directly.
+
+---
+
 ## tools/validate.sh
 
 Runs automatically as a pre-commit hook and can be called manually before staging.

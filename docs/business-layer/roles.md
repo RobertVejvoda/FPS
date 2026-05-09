@@ -4,107 +4,161 @@ title: Business Actors and Roles
 
 ![Business Domain](../images/fps-exchange-map.png)
 
-### Business Actors
+## Business Actors
 
-1. **User**: The primary actor who interacts with the system to send booking requests for parking vehicles. Users are typically customers or clients who need parking services.
+### Employee
 
-2. **Manager**: A person responsible for maintaining the booking system. Managers have elevated permissions that allow them to adjust bookings, manage schedules, and ensure the smooth operation of the parking services.
+An employee requests, views, cancels, or confirms parking reservations. Employees are the primary users of FPS and represent the largest source of daily business value.
 
-3. **Administrator**: The administrator is responsible for overseeing the entire system's functionality. They have the highest level of permissions and ensure that all components of the system are operating smoothly. Administrators manage user roles, handle tenant's system configurations, and ensure compliance with organizational policies.
+### HR or Facility Manager
 
-4. **IT Support**: The technical support personnel who can access system logs and handle technical issues. Support staff assist users and managers by troubleshooting problems and ensuring the system runs efficiently.
+An HR or facility manager owns the parking policy, monitors allocation outcomes, handles exceptions, and uses reports to improve parking operations.
 
-5. **Accountant**: Responsible for overseeing financial transactions and managing accounts. Account Managers ensure that all financial activities are accurately recorded and compliant with relevant regulations.
+### Customer Administrator
+
+A customer administrator manages tenant configuration, user access, roles, locations, parking spaces, and organization-specific policy settings.
+
+### IT Support
+
+IT support investigates technical issues, reviews operational logs where permitted, and helps keep the system available for customer users.
+
+### Finance or Accounting User
+
+A finance or accounting user manages billing, invoices, subscriptions, and financial reporting where the customer uses paid parking, internal cost recovery, or tenant billing features.
+
+### Auditor
+
+An auditor reviews business events, policy changes, manual overrides, and access history to confirm that FPS is operated consistently and transparently.
 
 ## Business Roles
 
-1. **Booking Requestor**
-   - **Description**: This role is  responsible for initiating booking requests. This could involve creating new bookings, specifying details such as dates, times, and any other relevant information needed to make a booking.
-   - **Responsibilities**: 
-     - Create new booking requests.
-     - Provide necessary details for the booking.
-     - Ensure that the booking request meets any predefined criteria or requirements.
+### Booking Requestor
 
-2. **Booking Adjuster**
-   - **Description**: This role is responsible for modifying existing booking requests. This could include changing dates, times, or other details of a booking.
-   - **Responsibilities**: 
-     - Modify existing booking requests.
-     - Update booking details as needed.
-     - Ensure that changes comply with any relevant policies or constraints.
+Creates parking requests and manages their own reservations.
 
-3. **Booking Processor**
-   - **Description**: This role handles the processing of booking requests. This involves approving or rejecting requests, and ensuring that all necessary steps are taken to finalize a booking.
-    - **Responsibilities**:
-      - Process booking requests.
-      - Allocate slots to booking requests.
-      - Ensure compliance with booking policies and rules.
-      - Handle booking conflicts and reallocation.
+Responsibilities:
 
-4. **Configuration Manager**
-   - **Description**: This role involves managing and adjusting location-related available booking and time slots.
-   - **Responsibilities**: 
-     - Adjust slots and capabilities.
-     - Manage location resources and areas.
-     - Ensure efficient use of location space.
+- Create parking requests for eligible time slots.
+- Provide required vehicle and parking details.
+- View allocation status and request history.
+- Cancel requests or reservations when plans change.
 
-5. **Profile Adjuster**
-   - **Description**: This role involves managing and adjusting user profiles. This could include updating user information, managing permissions, or handling profile-related requests.
-   - **Responsibilities**: 
-     - Update and manage user profiles.
-     - Handle profile-related requests.
-     - Ensure user information is accurate and up-to-date.
+### Booking Adjuster
 
-6. **Profile User**
-    - **Description**: This role involves managing and updating the user's own profile. This could include changing personal information, updating contact details, or modifying preferences.
-    - **Responsibilities**:
-    - Update personal information.
-    - Manage contact details.
-    - Modify user preferences.
-    - Manage subjects, like vehicles
+Modifies booking requests or reservations when business policy allows it.
 
-7. **Administrator**
-  - **Description**: This role involves managing customer information and assigning users to different roles. Administrators have the highest level of permissions and oversee the overall functionality of the system.
-  - **Responsibilities**:
-    - Manage customer information.
-    - Assign users to roles.
-    - Oversee system functionality.
-    - Ensure compliance with policies and regulations.
+Responsibilities:
 
-8. **Report Builder**
-  - **Description**: This role is responsible for creating and managing reports. Report Builders gather data, generate reports, and ensure that the information is accurate and presented in a useful format.
-  - **Responsibilities**:
-    - Create and generate reports.
-    - Gather and analyze data.
-    - Ensure accuracy and relevance of report content.
-    - Distribute reports to relevant stakeholders.
-    
-9. **Report Viewer**
-  - **Description**: This role is responsible for viewing and accessing reports. Report Viewers can access generated reports to review data and insights.
-  - **Responsibilities**:
-    - Access and view reports.
-    - Review data and insights.
-    - Ensure confidentiality of report content.
-    - Provide feedback on report usefulness.
+- Update booking details.
+- Cancel or modify reservations on behalf of employees.
+- Record a reason for manual changes.
+- Respect tenant policy and audit requirements.
 
-10. **Auditor**
-  - **Description**: This role is responsible for checking audit events and assisting with finding critical information. Auditors ensure that all activities are properly logged and that any discrepancies or issues are identified and addressed.
-  - **Responsibilities**:
-    - Review and analyze audit logs.
-    - Identify and report critical information.
-    - Ensure compliance with auditing standards and policies.
-    - Assist in investigations and audits.
+### Booking Processor
 
-11. **Accounting**
-  - **Description**: This role is responsible for managing financial records and transactions. Accountants ensure that all financial activities are accurately recorded, reported, and compliant with relevant regulations.
-  - **Responsibilities**:
-    - Maintain financial records.
-    - Manage accounts payable and receivable.
-    - Prepare financial statements and reports.
+Runs or supervises the allocation process.
 
-12. **Feedback Sender**
-  - **Description**: This role is responsible for providing feedback on the booking system. Feedback Senders share their experiences, report issues, and suggest improvements to help enhance the system.
-  - **Responsibilities**:
-    - Submit feedback on system usage.
-    - Report any issues or bugs encountered.
-    - Suggest improvements or new features.
-    - Participate in user surveys and feedback sessions.
+Responsibilities:
+
+- Process queued requests.
+- Allocate spaces according to configured rules.
+- Handle conflicts, cancellations, and reallocations.
+- Ensure allocation outcomes are traceable.
+
+### Configuration Manager
+
+Manages parking configuration for a customer tenant.
+
+Responsibilities:
+
+- Maintain locations, areas, spaces, and time slots.
+- Configure vehicle capabilities such as motorcycle spaces or EV charging.
+- Manage reserved-space and company-car rules.
+- Keep parking capacity data accurate.
+
+### Profile User
+
+Manages personal profile information used by FPS.
+
+Responsibilities:
+
+- Update personal contact information.
+- Maintain vehicle details such as license plates.
+- Manage notification preferences.
+- Review personal booking history.
+
+### Profile Adjuster
+
+Maintains user profiles and policy-related user attributes.
+
+Responsibilities:
+
+- Update employee profile data when authorized.
+- Maintain eligibility, role, and parking-related attributes.
+- Apply approved penalties or benefits.
+- Support HR in resolving profile-related issues.
+
+### Customer Administrator
+
+Owns tenant administration and access control.
+
+Responsibilities:
+
+- Manage customer information.
+- Assign users to roles.
+- Configure tenant-level settings.
+- Ensure policy and compliance requirements are reflected in setup.
+
+### Report Builder
+
+Creates and manages operational and management reports.
+
+Responsibilities:
+
+- Define reports for demand, utilization, fairness, and exceptions.
+- Configure filters, schedules, and export formats.
+- Ensure report content is accurate and useful.
+- Share reports with authorized stakeholders.
+
+### Report Viewer
+
+Uses reports to monitor parking operations and make decisions.
+
+Responsibilities:
+
+- View authorized reports.
+- Review trends and operational issues.
+- Protect confidential report content.
+- Provide feedback on reporting needs.
+
+### Auditor
+
+Reviews audit events and investigates policy-sensitive actions.
+
+Responsibilities:
+
+- Review request, allocation, cancellation, and override history.
+- Check configuration and access changes.
+- Identify suspicious or inconsistent activity.
+- Support internal reviews and compliance audits.
+
+### Accounting User
+
+Manages financial information where FPS includes billing or cost recovery.
+
+Responsibilities:
+
+- Maintain billing records.
+- Review invoices and payments.
+- Support subscription or usage-based charging.
+- Prepare financial reports where required.
+
+### Feedback Sender
+
+Provides feedback about the parking process or application experience.
+
+Responsibilities:
+
+- Submit feedback, issues, or improvement suggestions.
+- Participate in surveys or feedback sessions.
+- Help identify friction in the employee experience.
