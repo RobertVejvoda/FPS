@@ -180,7 +180,7 @@ namespace FPS.Booking.Application.Workflows
                     "ReservationCancelled");
 
                 // If a cancellation is received, process it
-                if (await Task.WhenAny(cancellationTask, Task.Delay(Timeout.Infinite, context.CancellationToken)) == cancellationTask)
+                if (await Task.WhenAny(cancellationTask, Task.Delay(Timeout.Infinite)) == cancellationTask)
                 {
                     var cancellationInfo = cancellationTask.Result;
 

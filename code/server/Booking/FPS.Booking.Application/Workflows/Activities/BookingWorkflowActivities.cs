@@ -1,122 +1,106 @@
-using System;
-using System.Threading.Tasks;
 using Dapr.Workflow;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.Events;
 using FPS.Booking.Domain.Models;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace FPS.Booking.Application.Workflows.Activities
+namespace FPS.Booking.Application.Workflows.Activities;
+
+public class RecordBookingRequestActivity : WorkflowActivity<BookingRequestDto, bool>
 {
-    public class BookingWorkflowActivities
+    private readonly IBookingRepository _repository;
+    public RecordBookingRequestActivity(IBookingRepository repository) => _repository = repository;
+
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, BookingRequestDto input)
     {
-        private readonly IBookingRepository _bookingRepository;
-        private readonly IAllocationService _allocationService;
-        private readonly IEventPublisher _eventPublisher;
+        await _repository.CreateBookingRequestAsync(input);
+        return true;
+    }
+}
 
-        public BookingWorkflowActivities(
-            IBookingRepository bookingRepository,
-            IAllocationService allocationService,
-            IEventPublisher eventPublisher)
+public class CheckFacilityAvailabilityActivity : WorkflowActivity<BookingRequestDto, FacilityAvailabilityResult>
+{
+    private readonly IAllocationService _allocationService;
+    public CheckFacilityAvailabilityActivity(IAllocationService allocationService) => _allocationService = allocationService;
+
+    public override Task<FacilityAvailabilityResult> RunAsync(WorkflowActivityContext context, BookingRequestDto input)
+        => _allocationService.CheckFacilityAvailabilityAsync(input.FacilityId, input.PlannedArrivalTime, input.PlannedDepartureTime);
+}
+
+public class FindAvailableSlotActivity : WorkflowActivity<BookingRequestDto, SlotAllocationResult>
+{
+    private readonly IAllocationService _allocationService;
+    public FindAvailableSlotActivity(IAllocationService allocationService) => _allocationService = allocationService;
+
+    public override Task<SlotAllocationResult> RunAsync(WorkflowActivityContext context, BookingRequestDto input)
+        => _allocationService.FindAvailableSlotAsync(input.FacilityId, input.VehicleId, input.PlannedArrivalTime, input.PlannedDepartureTime);
+}
+
+public class RecordAllocationActivity : WorkflowActivity<SlotAllocationResult, AllocationDto>
+{
+    private readonly IBookingRepository _repository;
+    public RecordAllocationActivity(IBookingRepository repository) => _repository = repository;
+
+    public override async Task<AllocationDto> RunAsync(WorkflowActivityContext context, SlotAllocationResult input)
+    {
+        var allocation = new AllocationDto
         {
-            _bookingRepository = bookingRepository;
-            _allocationService = allocationService;
-            _eventPublisher = eventPublisher;
-        }
+            AllocationId = Guid.NewGuid(),
+            RequestId = input.RequestId,
+            SlotId = input.SlotId,
+            Status = "Reserved",
+            AllocatedAt = DateTime.UtcNow
+        };
+        await _repository.CreateAllocationAsync(allocation);
+        return allocation;
+    }
+}
 
-        [Activity("RecordBookingRequest")]
-        public async Task RecordBookingRequestAsync(BookingRequestDto request)
-        {
-            await _bookingRepository.CreateBookingRequestAsync(request);
-        }
+public class PublishBookingDeclinedActivity : WorkflowActivity<BookingDeclinedEvent, bool>
+{
+    private readonly IEventPublisher _publisher;
+    public PublishBookingDeclinedActivity(IEventPublisher publisher) => _publisher = publisher;
 
-        [Activity("CheckFacilityAvailability")]
-        public async Task<FacilityAvailabilityResult> CheckFacilityAvailabilityAsync(BookingRequestDto request)
-        {
-            return await _allocationService.CheckFacilityAvailabilityAsync(
-                request.FacilityId,
-                request.PlannedArrivalTime,
-                request.PlannedDepartureTime);
-        }
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, BookingDeclinedEvent input)
+    {
+        await _publisher.PublishEventAsync("booking.declined", input);
+        return true;
+    }
+}
 
-        [Activity("FindAvailableSlot")]
-        public async Task<SlotAllocationResult> FindAvailableSlotAsync(BookingRequestDto request)
-        {
-            return await _allocationService.FindAvailableSlotAsync(
-                request.FacilityId,
-                request.VehicleId,
-                request.PlannedArrivalTime,
-                request.PlannedDepartureTime);
-        }
+public class PublishAllocationConfirmedActivity : WorkflowActivity<AllocationConfirmedEvent, bool>
+{
+    private readonly IEventPublisher _publisher;
+    public PublishAllocationConfirmedActivity(IEventPublisher publisher) => _publisher = publisher;
 
-        [Activity("RecordAllocation")]
-        public async Task<AllocationDto> RecordAllocationAsync(SlotAllocationResult slotResult)
-        {
-            var allocation = new AllocationDto
-            {
-                AllocationId = Guid.NewGuid(),
-                RequestId = slotResult.RequestId,
-                SlotId = slotResult.SlotId,
-                Status = "Reserved",
-                AllocatedAt = DateTime.UtcNow
-            };
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, AllocationConfirmedEvent input)
+    {
+        await _publisher.PublishEventAsync("allocation.confirmed", input);
+        return true;
+    }
+}
 
-            await _bookingRepository.CreateAllocationAsync(allocation);
-            return allocation;
-        }
+public class UpdateAllocationArrivalActivity : WorkflowActivity<UpdateAllocationInfo, bool>
+{
+    private readonly IBookingRepository _repository;
+    public UpdateAllocationArrivalActivity(IBookingRepository repository) => _repository = repository;
 
-        [Activity("PublishBookingDeclinedEvent")]
-        public async Task PublishBookingDeclinedEventAsync(BookingDeclinedEvent @event)
-        {
-            await _eventPublisher.PublishEventAsync("booking.declined", @event);
-        }
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, UpdateAllocationInfo input)
+    {
+        await _repository.UpdateAllocationArrivalAsync(input.AllocationId, input.ArrivalTime, input.ConfirmedBy);
+        return true;
+    }
+}
 
-        [Activity("PublishAllocationConfirmedEvent")]
-        public async Task PublishAllocationConfirmedEventAsync(AllocationConfirmedEvent @event)
-        {
-            await _eventPublisher.PublishEventAsync("allocation.confirmed", @event);
-        }
+public class CancelReservationActivity : WorkflowActivity<CancellationInfo, bool>
+{
+    private readonly IBookingRepository _repository;
+    public CancelReservationActivity(IBookingRepository repository) => _repository = repository;
 
-        [Activity("UpdateAllocationWithArrival")]
-        public async Task UpdateAllocationWithArrivalAsync(UpdateAllocationInfo info)
-        {
-            await _bookingRepository.UpdateAllocationArrivalAsync(
-                info.AllocationId,
-                info.ArrivalTime,
-                info.ConfirmedBy);
-        }
-
-        [Activity("PublishArrivalConfirmedEvent")]
-        public async Task PublishArrivalConfirmedEventAsync(ArrivalConfirmedEvent @event)
-        {
-            await _eventPublisher.PublishEventAsync("arrival.confirmed", @event);
-        }
-
-        [Activity("ExpireReservation")]
-        public async Task ExpireReservationAsync(Guid allocationId)
-        {
-            await _bookingRepository.UpdateAllocationStatusAsync(allocationId, "Expired");
-        }
-
-        [Activity("PublishReservationExpiredEvent")]
-        public async Task PublishReservationExpiredEventAsync(ReservationExpiredEvent @event)
-        {
-            await _eventPublisher.PublishEventAsync("reservation.expired", @event);
-        }
-
-        [Activity("CancelReservation")]
-        public async Task CancelReservationAsync(CancellationInfo info)
-        {
-            await _bookingRepository.UpdateAllocationStatusAsync(
-                info.AllocationId,
-                "Cancelled",
-                info.Reason);
-        }
-
-        [Activity("PublishReservationCancelledEvent")]
-        public async Task PublishReservationCancelledEventAsync(ReservationCancelledEvent @event)
-        {
-            await _eventPublisher.PublishEventAsync("reservation.cancelled", @event);
-        }
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, CancellationInfo input)
+    {
+        await _repository.UpdateAllocationStatusAsync(input.AllocationId, "Cancelled", input.Reason);
+        return true;
     }
 }
