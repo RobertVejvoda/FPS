@@ -1,6 +1,0 @@
-@FPS.Customer_HostAddress = http://localhost:5268
-
-GET {{FPS.Customer_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

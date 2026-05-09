@@ -26,3 +26,10 @@ packages/
 # Ignore temporary files
 *.tmp
 *.temp
+
+# Claude Code
+.claude/
+
+# Nested repos / subprojects
+FPS.code/
+FPS.wiki/
