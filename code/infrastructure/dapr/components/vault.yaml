@@ -1,0 +1,24 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: vault
+spec:
+  type: secretstores.hashicorp.vault
+  version: v1
+  metadata:
+  - name: vaultAddr
+    value: http://host.docker.internal:8200
+  - name: skipVerify
+    value : "true"
+  - name: vaultToken
+    value : "dev-only-token"
+  - name: vaultKVPrefix
+    value : "dapr"
+  - name: vaultKVUsePrefix
+    value: "true"
+  - name: enginePath
+    value: "secret"
+  - name: vaultValueType
+    value: "map"
+auth:
+  secretStore: vault

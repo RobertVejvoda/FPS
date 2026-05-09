@@ -2,10 +2,13 @@
 
 A system for companies where a building does not have enough parking slots, distributing spaces fairly among employees.
 
-## Repositories
+## Structure
 
-| Repo | Description |
-|------|-------------|
-| [FPS](https://github.com/RobertVejvoda/FPS) | This repo — project overview |
-| [FPS.code](https://github.com/RobertVejvoda/FPS.code) | Application source code |
-| [FPS-wiki](https://github.com/RobertVejvoda/FPS-wiki) | Architecture and documentation |
+| Directory | Description |
+|-----------|-------------|
+| `code/` | Application source code |
+| `docs/` | Architecture and documentation (also at [vejvoda.net/FPS](https://www.vejvoda.net/FPS/)) |
+
+## Repository
+
+https://github.com/RobertVejvoda/FPS

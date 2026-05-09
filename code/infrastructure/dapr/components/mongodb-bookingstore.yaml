@@ -1,0 +1,28 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: bookingstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: host.docker.internal:27017
+  - name: databaseName
+    value: fps
+  - name: collectionName
+    value: bookings
+  - name: username
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-credentials
+      key: password
+  - name: authSource
+    value: admin
+  - name: params
+    value: "?authSource=admin&ssl=false"
+auth:
+  secretStore: vault

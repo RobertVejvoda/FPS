@@ -1,0 +1,14 @@
+global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Threading.Tasks;
+global using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
+global using FPS.Booking.Domain.Aggregates.SlotAllocationAggregate;
+global using FPS.Booking.Domain.Exceptions;
+global using FPS.Booking.Domain.Interfaces;
+global using FPS.Booking.Domain.Services;
+global using FPS.Booking.Domain.ValueObjects;
+global using FPS.Booking.Domain.Events;
+global using FPS.SharedKernel.DomainEvents;
+global using Moq;
+global using Xunit;

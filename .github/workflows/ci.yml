@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'code/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'code/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore code/server/FPS.sln
+
+      - name: Build
+        run: dotnet build code/server/FPS.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test code/server/FPS.sln --no-build --configuration Release --verbosity minimal
