@@ -2,65 +2,106 @@
 title: Business Strategy
 ---
 
-### Step 1: Identify Key Stakeholders
+## Strategic Position
 
-- **Andrea**: Occasional parker, needs fair distribution.
-- **Bob**: Motorbike user, needs dedicated parking.
-- **Cecil**: Sales, needs easy notifications.
-- **David**: Needs transparent system.
-- **Elvis**: HR, needs automated handling.
-- **Fiona**: HR manager, needs detailed reports.
-- **Godric**: CEO, needs eco-friendly incentives.
+FPS is a workplace resource-management product focused on fair access to limited parking capacity. The product is valuable because parking is a visible daily employee pain point: when the process feels unfair, employees complain, HR loses time, and management lacks reliable data.
 
-### Step 2: Understand Stakeholder Needs
+The strongest business position for FPS is not "parking booking software." The stronger position is:
 
-- **Andrea**: Ensure fair distribution of parking slots, with a focus on accommodating occasional parkers.
+> FPS gives companies a transparent, automated, and auditable way to allocate scarce workplace parking capacity.
 
-- **Bob**: Provide dedicated motorcycle parking and a streamlined system for ease of use.
+## Target Customer
 
-- **Cecil**: Implement an easy-to-use notification system for real-time slot availability updates.
+The primary customer is an organization with:
 
-- **David**: Maintain a transparent and organized system to prevent misuse and ensure fairness.
+- fewer parking spaces than employees who want to use them;
+- HR, facility, or office-management teams currently handling requests manually;
+- employee dissatisfaction with first-come, first-served or informal allocation;
+- a need to respect local policies such as reserved spaces, company cars, EV charging, accessibility, or motorcycle parking;
+- management interest in utilization reporting and operational transparency.
 
-- **Elvis**: Automate request handling and ensure fair assignment of parking slots.
+## Value Proposition
 
-- **Fiona**: Generate detailed usage reports and optimize resource allocation for better efficiency.
+FPS delivers value in five areas:
 
-- **Godric**: Promote sustainable and eco-friendly commuting incentives to support environmental goals.
+1. **Operational efficiency**
+   - Reduces HR coordination effort.
+   - Replaces email chains and spreadsheets with a governed workflow.
+   - Automates routine allocation and notification.
 
-### Step 3: Develop Solutions
+2. **Employee trust**
+   - Makes allocation rules visible and consistent.
+   - Reduces the perception of favoritism.
+   - Gives occasional commuters a fair chance.
 
-- **Automated Parking Management System**: Implement a system that automates parking slot requests and allocations, reducing the manual workload for HR and ensuring a more efficient process.
+3. **Asset utilization**
+   - Reuses released or unused reserved spaces.
+   - Tracks actual demand and usage.
+   - Helps companies get more value from existing parking capacity.
 
-- **Dedicated Motorcycle Parking**: Designate specific areas for motorcycle parking to optimize space usage and minimize the risk of damage to motorcycles.
+4. **Policy governance**
+   - Supports configurable local rules.
+   - Records allocation decisions, overrides, penalties, and configuration changes.
+   - Gives HR a defensible process during disputes.
 
-- **Notification System**: Develop a real-time notification system that allows employees to easily inform HR about slot availability and receive updates on their parking status.
+5. **Management insight**
+   - Shows demand, rejection rates, utilization, cancellations, and no-shows.
+   - Supports decisions about capacity, commuting policy, and employee benefits.
 
-- **Transparent Allocation**: Create a transparent allocation process that ensures fair access to parking slots, preventing misuse and favoritism.
+## Stakeholder Outcomes
 
-- **Reporting Feature**: Integrate a reporting feature that provides detailed usage data, enabling HR and management to make informed decisions about resource allocation and system improvements.
+| Stakeholder | Desired Outcome | FPS Value |
+|-------------|-----------------|-----------|
+| Employee | Request parking without friction | Self-service requests, clear status, notifications |
+| Occasional commuter | Fair chance against daily parkers | Fairness-based allocation |
+| Company-car user | Keep entitlement while avoiding waste | Reserved-space rules and release workflow |
+| HR coordinator | Stop manually matching requests to spaces | Automated workflow and exception handling |
+| HR manager | Explain and improve parking policy | Reports, audit history, fairness indicators |
+| Executive sponsor | Reduce friction and use assets better | Lower admin cost, better utilization, measurable impact |
 
-- **Sustainability Initiatives**: Introduce incentives and programs that encourage eco-friendly commuting options, such as carpooling, cycling, and the use of electric vehicles, to support the company's environmental goals.
+## Product Strategy
 
-### Step 4: Implement and Monitor
+### Start with the Core Workflow
 
-- **Pilot Program**: Implement the new system with a small group of employees to test its functionality and identify any potential issues. Select a diverse group of participants to ensure the system meets the needs of different stakeholders.
+The minimum valuable product must solve the daily operational pain:
 
-- **Feedback Loop**: Establish a process for collecting feedback from stakeholders during the pilot phase. Use surveys, interviews, and suggestion boxes to gather insights and identify areas for improvement.
+- employee request submission;
+- eligibility and duplicate validation;
+- fair allocation;
+- notifications;
+- cancellation and reallocation;
+- basic reporting;
+- role-based administration.
 
-- **Training**: Develop comprehensive training materials, including user manuals, video tutorials, and FAQs. Conduct training sessions to educate employees on how to use the new system effectively, ensuring they understand its features and benefits.
+### Make Fairness Configurable
 
-- **Continuous Improvement**: Regularly review feedback and usage data to identify trends and areas for enhancement. Schedule periodic updates to the system, incorporating stakeholder suggestions and technological advancements to maintain its efficiency and relevance.
+Different customers will define fairness differently. FPS should provide a strong default model while allowing tenant-specific configuration for reserved spaces, company cars, penalties, vehicle capabilities, and priority rules.
 
-### Step 5: Evaluate Success
+### Treat Auditability as a Business Feature
 
-To ensure the new parking management system achieves its goals, the following evaluation criteria should be used:
+Audit history is not only a technical control. It is part of the customer value because it lets HR explain decisions, resolve disputes, and prove that policy was applied consistently.
 
-- **Employee Satisfaction**: Conduct surveys and interviews to measure employee satisfaction levels before and after the implementation of the new system. Look for improvements in perceived fairness, ease of use, and overall satisfaction with parking arrangements.
+### Keep Advanced Features Secondary
 
-- **Efficiency Gains**: Track the reduction in manual workload for HR by comparing the time spent on parking management tasks before and after the system's implementation. Monitor the number of automated processes and their impact on HR efficiency.
+AI optimization, sustainability incentives, paid parking, and deep access-control integrations can add value later. They should not distract from the core promise: fair and low-administration allocation of scarce parking capacity.
 
-- **Resource Utilization**: Analyze parking slot usage patterns to determine how effectively the new system allocates resources. Look for improvements in the utilization rate of parking slots, including the reduction of unused or underutilized spaces.
+## Success Measures
 
-- **Sustainability Impact**: Assess the increase in eco-friendly commuting options by tracking the number of employees participating in carpooling, cycling, and using electric vehicles. Measure the reduction in carbon footprint and other environmental benefits resulting from these initiatives.
+FPS should be evaluated using business outcomes:
 
+- reduction in HR time spent on parking coordination;
+- reduction in parking-related employee complaints;
+- percentage of requests handled without manual intervention;
+- parking-space utilization rate;
+- cancellation and no-show rate;
+- fairness indicators across employee groups;
+- report usage by HR and management;
+- tenant configuration changes completed without development work.
+
+## Implementation Approach
+
+1. Pilot FPS with one location and a limited set of parking policies.
+2. Measure request volume, allocation outcomes, cancellations, and HR workload.
+3. Collect employee and HR feedback after several allocation cycles.
+4. Refine fairness rules and reporting before expanding to more locations.
+5. Add advanced policy and integration features only after the core workflow is trusted.

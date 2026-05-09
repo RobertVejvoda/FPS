@@ -2,339 +2,164 @@
 title: Slot Allocation Process
 ---
 
-The whole solution must be fair to everyone, so how to make it fair, so that nobody has advantage over the others?
-
-**The Problem**
+## Purpose
 
-During a typical work week (Monday to Friday), there are not enough parking slots for everyone. To ensure fairness, an allocation algorithm is necessary. Simple randomization is insufficient as it may result in some users parking more frequently than others.
-
-### Fair Allocation Algorithm
+FPS must allocate limited parking capacity in a way that employees and managers can understand and trust. Because demand can exceed supply, the system cannot rely only on first-come, first-served booking. The allocation process must balance fairness, policy, and practical use of available spaces.
 
-To ensure a fair distribution of available slots for all users, we can use a weighted lottery system. This system assigns weights to users based on their previous allocations and requests, ensuring that users who have parked less frequently or requested fewer times have a higher chance of being allocated a slot.
-
-The steps for the weighted lottery system are as follows:
-
-1. **Calculate Weights**: For each user, calculate a weight based on their **previous allocations (PA)** and **previous requests (PR)**. The weight is inversely proportional to the sum of PA and PR.
-   
-$$
-\text{Weight} = \frac{1}{1 + \text{PA} + \text{PR}}
-$$
-
-2. **Generate Lottery Tickets**: Assign each user a number of lottery tickets proportional to their weight. Users with higher weights receive more tickets, increasing their chances of being selected.
-
-3. **Draw Lottery**: Randomly draw tickets to allocate the available slots. Users with more tickets have a higher probability of being selected, ensuring a fair distribution based on their previous allocations and requests.
-
-4. **Update Records**: After the allocation, update the records for each user, incrementing their PA and PR as appropriate.
-
-This weighted lottery system ensures that users who have parked less frequently or requested fewer times are given a fair chance of being allocated a slot, promoting equity in the distribution process.
-
-### Example Calculation
-
-Let's consider an example with 4 users and 2 available parking slots. The users have the following previous allocations (PA) and previous requests (PR):
-
-| User | PA | PR |
-|------|----|----|
-| A    | 2  | 3  |
-| B    | 1  | 2  |
-| C    | 0  | 1  |
-| D    | 1  | 1  |
-
-1. **Calculate Weights**:
-    - User A: Weight = 1 / (1 + 2 + 3) = 1/6
-    - User B: Weight = 1 / (1 + 1 + 2) = 1/4
-    - User C: Weight = 1 / (1 + 0 + 1) = 1/2
-    - User D: Weight = 1 / (1 + 1 + 1) = 1/3
-
-2. **Normalize Weights**: Normalize the weights so that they sum up to 1.
-    - Total Weight = 1/6 + 1/4 + 1/2 + 1/3 = 1/6 + 3/12 + 6/12 + 4/12 = 1/6 + 13/12
-    - Normalized Weights:
-        - User A: (1/6) / (1/6 + 13/12) = 1/6 / (15/12) = 1/6 * 12/15 = 2/15
-        - User B: (1/4) / (1/6 + 13/12) = 1/4 / (15/12) = 1/4 * 12/15 = 3/15
-        - User C: (1/2) / (1/6 + 13/12) = 1/2 / (15/12) = 1/2 * 12/15 = 6/15
-        - User D: (1/3) / (1/6 + 13/12) = 1/3 / (15/12) = 1/3 * 12/15 = 4/15
-
-3. **Generate Lottery Tickets**:
-    - User A: 2 tickets
-    - User B: 3 tickets
-    - User C: 6 tickets
-    - User D: 4 tickets
-
-4. **Draw Lottery**:
-    - Randomly draw 2 tickets from the pool of 15 tickets.
-    - Suppose tickets drawn are for User C and User B.
-
-5. **Update Records**:
-    - User C: PA = 1, PR = 2
-    - User B: PA = 2, PR = 3
-
-This example demonstrates how the weighted lottery system ensures a fair allocation of parking slots based on previous allocations and requests.
-
-### Weekly Allocation Example
-
-Let's consider an example with 5 users (Alice, Bob, Charlie, David, Emma) and 3 available parking slots for a whole week (Monday to Friday). The users have the following previous allocations (PA) and previous requests (PR) at the start of the week:
-
-| User   | PA | PR |
-|--------|----|----|
-| Alice  | 2  | 3  |
-| Bob    | 1  | 2  |
-| Charlie| 0  | 1  |
-| David  | 1  | 1  |
-| Emma   | 0  | 0  |
-
-#### Monday
-1. **Calculate Weights**:
-    - Alice: Weight = 1 / (1 + 2 + 3) = 1/6
-    - Bob: Weight = 1 / (1 + 1 + 2) = 1/4
-    - Charlie: Weight = 1 / (1 + 0 + 1) = 1/2
-    - David: Weight = 1 / (1 + 1 + 1) = 1/3
-    - Emma: Weight = 1 / (1 + 0 + 0) = 1
-
-2. **Normalize Weights**:
-    - Total Weight = 1/6 + 1/4 + 1/2 + 1/3 + 1 = 1/6 + 3/12 + 6/12 + 4/12 + 12/12 = 1/6 + 25/12
-    - Normalized Weights:
-        - Alice: (1/6) / (1/6 + 25/12) = 1/6 / (27/12) = 1/6 * 12/27 = 2/27
-        - Bob: (1/4) / (1/6 + 25/12) = 1/4 / (27/12) = 1/4 * 12/27 = 3/27
-        - Charlie: (1/2) / (1/6 + 25/12) = 1/2 / (27/12) = 1/2 * 12/27 = 6/27
-        - David: (1/3) / (1/6 + 25/12) = 1/3 / (27/12) = 1/3 * 12/27 = 4/27
-        - Emma: 1 / (1/6 + 25/12) = 1 / (27/12) = 12/27
-
-3. **Generate Lottery Tickets**:
-    - Alice: 2 tickets
-    - Bob: 3 tickets
-    - Charlie: 6 tickets
-    - David: 4 tickets
-    - Emma: 12 tickets
-
-4. **Draw Lottery**:
-    - Randomly draw 3 tickets from the pool of 27 tickets.
-    - Suppose tickets drawn are for Emma, Charlie, and Bob.
-
-5. **Update Records**:
-    - Emma: PA = 1, PR = 1
-    - Charlie: PA = 1, PR = 2
-    - Bob: PA = 2, PR = 3
-
-#### Tuesday
-1. **Calculate Weights**:
-    - Alice: Weight = 1 / (1 + 2 + 3) = 1/6
-    - Bob: Weight = 1 / (1 + 2 + 3) = 1/6
-    - Charlie: Weight = 1 / (1 + 1 + 2) = 1/4
-    - David: Weight = 1 / (1 + 1 + 1) = 1/3
-    - Emma: Weight = 1 / (1 + 1 + 1) = 1/3
-
-2. **Normalize Weights**:
-    - Total Weight = 1/6 + 1/6 + 1/4 + 1/3 + 1/3 = 1/6 + 1/6 + 3/12 + 4/12 + 4/12 = 1/6 + 11/12
-    - Normalized Weights:
-        - Alice: (1/6) / (1/6 + 11/12) = 1/6 / (13/12) = 1/6 * 12/13 = 2/13
-        - Bob: (1/6) / (1/6 + 11/12) = 1/6 / (13/12) = 1/6 * 12/13 = 2/13
-        - Charlie: (1/4) / (1/6 + 11/12) = 1/4 / (13/12) = 1/4 * 12/13 = 3/13
-        - David: (1/3) / (1/6 + 11/12) = 1/3 / (13/12) = 1/3 * 12/13 = 4/13
-        - Emma: (1/3) / (1/6 + 11/12) = 1/3 / (13/12) = 1/3 * 12/13 = 4/13
-
-3. **Generate Lottery Tickets**:
-    - Alice: 2 tickets
-    - Bob: 2 tickets
-    - Charlie: 3 tickets
-    - David: 4 tickets
-    - Emma: 4 tickets
-
-4. **Draw Lottery**:
-    - Randomly draw 3 tickets from the pool of 15 tickets.
-    - Suppose tickets drawn are for David, Emma, and Charlie.
-
-5. **Update Records**:
-    - David: PA = 2, PR = 2
-    - Emma: PA = 2, PR = 2
-    - Charlie: PA = 2, PR = 3
-
-#### Wednesday
-1. **Calculate Weights**:
-    - Alice: Weight = 1 / (1 + 2 + 3) = 1/6
-    - Bob: Weight = 1 / (1 + 2 + 3) = 1/6
-    - Charlie: Weight = 1 / (1 + 2 + 3) = 1/6
-    - David: Weight = 1 / (1 + 2 + 2) = 1/5
-    - Emma: Weight = 1 / (1 + 2 + 2) = 1/5
-
-2. **Normalize Weights**:
-    - Total Weight = 1/6 + 1/6 + 1/6 + 1/5 + 1/5 = 3/18 + 2/10 = 3/18 + 3.6/18 = 6.6/18
-    - Normalized Weights:
-        - Alice: (1/6) / (6.6/18) = 1/6 / (6.6/18) = 1/6 * 18/6.6 = 3/11
-        - Bob: (1/6) / (6.6/18) = 1/6 / (6.6/18) = 1/6 * 18/6.6 = 3/11
-        - Charlie: (1/6) / (6.6/18) = 1/6 / (6.6/18) = 1/6 * 18/6.6 = 3/11
-        - David: (1/5) / (6.6/18) = 1/5 / (6.6/18) = 1/5 * 18/6.6 = 3.6/11
-        - Emma: (1/5) / (6.6/18) = 1/5 / (6.6/18) = 1/5 * 18/6.6 = 3.6/11
-
-3. **Generate Lottery Tickets**:
-    - Alice: 3 tickets
-    - Bob: 3 tickets
-    - Charlie: 3 tickets
-    - David: 4 tickets
-    - Emma: 4 tickets
-
-4. **Draw Lottery**:
-    - Randomly draw 3 tickets from the pool of 17 tickets.
-    - Suppose tickets drawn are for Alice, Bob, and David.
-
-5. **Update Records**:
-    - Alice: PA = 3, PR = 4
-    - Bob: PA = 3, PR = 4
-    - David: PA = 3, PR = 3
-
-#### Thursday
-1. **Calculate Weights**:
-    - Alice: Weight = 1 / (1 + 3 + 4) = 1/8
-    - Bob: Weight = 1 / (1 + 3 + 4) = 1/8
-    - Charlie: Weight = 1 / (1 + 2 + 3) = 1/6
-    - David: Weight = 1 / (1 + 3 + 3) = 1/7
-    - Emma: Weight = 1 / (1 + 2 + 2) = 1/5
-
-2. **Normalize Weights**:
-    - Total Weight = 1/8 + 1/8 + 1/6 + 1/7 + 1/5 = 1/8 + 1/8 + 4/24 + 3/21 + 4.8/24 = 0.125 + 0.125 + 0.1667 + 0.1429 + 0.2 = 0.7596
-    - Normalized Weights:
-        - Alice: (1/8) / 0.7596 = 0.125 / 0.7596 = 0.1645
-        - Bob: (1/8) / 0.7596 = 0.125 / 0.7596 = 0.1645
-        - Charlie: (1/6) / 0.7596 = 0.1667 / 0.7596 = 0.2194
-        - David: (1/7) / 0.7596 = 0.1429 / 0.7596 = 0.1881
-        - Emma: (1/5) / 0.7596 = 0.2 / 0.7596 = 0.2632
-
-3. **Generate Lottery Tickets**:
-    - Alice: 2 tickets
-    - Bob: 2 tickets
-    - Charlie: 3 tickets
-    - David: 3 tickets
-    - Emma: 4 tickets
-
-4. **Draw Lottery**:
-    - Randomly draw 3 tickets from the pool of 14 tickets.
-    - Suppose tickets drawn are for Emma, Charlie, and David.
-
-5. **Update Records**:
-    - Emma: PA = 3, PR = 3
-    - Charlie: PA = 3, PR = 4
-    - David: PA = 4, PR = 4
-
-#### Friday
-1. **Calculate Weights**:
-    - Alice: Weight = 1 / (1 + 3 + 4) = 1/8
-    - Bob: Weight = 1 / (1 + 3 + 4) = 1/8
-    - Charlie: Weight = 1 / (1 + 3 + 4) = 1/8
-    - David: Weight = 1 / (1 + 4 + 4) = 1/9
-    - Emma: Weight = 1 / (1 + 3 + 3) = 1/7
-
-2. **Normalize Weights**:
-    - Total Weight = 1/8 + 1/8 + 1/8 + 1/9 + 1/7 = 0.125 + 0.125 + 0.125 + 0.1111 + 0.1429 = 0.629
-    - Normalized Weights:
-        - Alice: (1/8) / 0.629 = 0.125 / 0.629 = 0.1987
-        - Bob: (1/8) / 0.629 = 0.125 / 0.629 = 0.1987
-        - Charlie: (1/8) / 0.629 = 0.125 / 0.629 = 0.1987
-        - David: (1/9) / 0.629 = 0.1111 / 0.629 = 0.1766
-        - Emma: (1/7) / 0.629 = 0.1429 / 0.629 = 0.2273
-
-3. **Generate Lottery Tickets**:
-    - Alice: 2 tickets
-    - Bob: 2 tickets
-    - Charlie: 2 tickets
-    - David: 2 tickets
-    - Emma: 3 tickets
-
-4. **Draw Lottery**:
-    - Randomly draw 3 tickets from the pool of 11 tickets.
-    - Suppose tickets drawn are for Alice, Bob, and Emma.
-
-5. **Update Records**:
-    - Alice: PA = 4, PR = 5
-    - Bob: PA = 4, PR = 5
-    - Emma: PA = 4, PR = 4
-
-
-### Weekly Summary
-
-The following table summarizes the number of requests and allocations for each user over the week:
-
-| User    | Requests | Allocations |
-|---------|----------|-------------|
-| Alice   | 5        | 4           |
-| Bob     | 5        | 4           |
-| Charlie | 4        | 3           |
-| David   | 4        | 4           |
-| Emma    | 4        | 4           |
-
-The daily allocations are as follows:
-
-| Day      | Allocations          |
-|----------|----------------------|
-| Monday   | Emma, Charlie, Bob   |
-| Tuesday  | David, Emma, Charlie |
-| Wednesday| Alice, Bob, David    |
-| Thursday | Emma, Charlie, David |
-| Friday   | Alice, Bob, Emma     |
-
-
-## Allocation Process - Requests sent to future time slot
-
-1. Booking requestors submit requests for parking in future time slots.
-2. The Booking Controller accepts the requests and adds them to the queue, rejecting any duplicate requests.
-3. The allocation process is triggered daily at a specified time. It can be configured.
-4. The Booking Processor locks the time slot, preventing further requests for that slot.
-5. The Booking Processor runs the allocation algorithm (as described above) to assign parking slots.
-6. Notifications are sent to the requestors informing them of the allocation results.
-
-## Allocation Process - Requests sent to current time slot
-
-This scenario deals with requests sent for the same day, for example, during the commute to the office. It assumes that the requestor has checked the availability in the garage for the current time slot, allocation process has already run and there are still some parking slots available.
-
-1. Booking requestors submit requests for parking in the current time slot (today).
-2. The Booking Controller accepts the request and adds it to the queue; duplicate requests are rejected.
-3. The slot is allocated immediatelly.
-4. A notification is sent to the requestor confirming the allocation.
-
-### Example Scenarios
-
-| Current Time (UTC) | TimeSlot.Start      | Valid? | Reason                                |
-|---------------------|---------------------|--------|---------------------------------------|
-| 2025-03-30 10:00    | 2025-03-30 09:00   | ❌     | Start time is earlier than the current day. |
-| 2025-03-30 10:00    | 2025-03-30 11:00   | ✅     | Start time is later today.            |
-| 2025-03-30 10:00    | 2025-03-31 09:00   | ✅     | Start time is in the future.          |
-
-
-**Predefined Parking Slots for company cars**
-
-- Users with company cars have predefined parking slots. 
-- These users must send parking requests too, either manually or within an automated schedule. 
-- These requests take precedence over others outside of allocation process.
-
-**Constraints**
-
-- Consider parking slot availability within time slot
-- Consider parking slot capabilities - vehicle types, EV chargers, ...
-
-    
-## Cancel Booking Request
-
-1. Booking requestor can send a cancellation request any time.
-2. If the Draw process has already run (issued lock), it'll cancel the parking slot allocation; 
-3. Allocation process runs again.
-
-## Penalties and Compensations
-
-The Profile Adjuster can add or remove allocations from users as a penalty or benefit. This adjustment is also applied when a parking slot is not occupied by the requestor.
+The business goal is simple: employees should have a fair opportunity to park, HR should not manually arbitrate every request, and the company should use its parking assets efficiently.
+
+## Business Principles
+
+### Fairness
+
+Employees who have received fewer recent allocations should have a better chance in future draws. The system should avoid patterns where the same employees repeatedly receive spaces while others are consistently rejected.
+
+### Transparency
+
+Allocation rules must be explainable. HR and employees should be able to understand why a request was allocated, rejected, or deprioritized.
+
+### Policy Control
+
+Each customer must be able to configure local rules, including reserved spaces, company cars, motorcycles, EV charging, accessibility requirements, time slots, and penalties.
+
+### Low Administration
+
+The normal process should run without HR manually reviewing every request. Manual intervention should be limited to exceptions and should always be auditable.
+
+### Efficient Utilization
+
+Spaces released by cancellations, unused reservations, or company-car absences should be made available to other eligible employees whenever policy allows it.
+
+## Allocation Model
+
+FPS uses a weighted allocation model. Each eligible request receives a priority weight based on configurable business factors. A higher weight gives the request a better chance of receiving an available space.
+
+Typical factors include:
+
+- Recent successful allocations.
+- Recent rejected requests.
+- Late cancellations or no-shows.
+- Employee eligibility.
+- Vehicle type and space capability.
+- Reserved-space or company-car rules.
+- Customer-specific priority rules.
+
+The default fairness rule should favor employees who have parked less often recently. This keeps the process fair over time without requiring HR to manually compare every employee.
+
+## Default Fairness Rule
+
+A simple starting rule is:
+
+```text
+Weight = 1 / (1 + previous allocations + penalties)
+```
+
+This means:
+
+- employees with fewer previous allocations receive a higher chance;
+- penalties reduce future chances;
+- every eligible employee still has some chance unless policy excludes the request.
+
+The exact formula can evolve, but the business principle should remain stable: allocation history and policy behavior influence future probability.
+
+## Future Time Slot Process
+
+This process covers requests submitted before the allocation draw for a future time slot.
+
+1. The employee submits a parking request.
+2. FPS validates the request against tenant policy.
+3. FPS rejects duplicates or ineligible requests with a clear reason.
+4. Valid requests wait in the allocation queue.
+5. At the configured time, FPS locks the target time slot for allocation.
+6. FPS applies reserved-space, vehicle, capacity, and fairness rules.
+7. FPS allocates available spaces.
+8. FPS notifies employees of the result.
+9. FPS records the decision for reporting and audit.
+
+## Same-Day Request Process
+
+This process covers requests made after the scheduled allocation has already run.
+
+1. The employee submits a same-day request.
+2. FPS checks whether the request is eligible and whether capacity remains.
+3. If a suitable space is available, FPS allocates it immediately according to tenant policy.
+4. If no suitable space is available, FPS rejects the request or adds it to a waitlist.
+5. FPS notifies the employee of the result.
+
+Same-day allocation should be fast, but it must not bypass core policy. It should only use capacity that is genuinely available.
+
+## Reserved and Company-Car Spaces
+
+Some customers reserve spaces for company cars, executives, accessibility needs, or operational roles. FPS should support these rules without hiding unused capacity.
+
+Business rules:
+
+- Reserved users may keep priority access to assigned spaces.
+- Reserved users should still declare when they need or do not need the space.
+- Released reserved spaces can be offered to other eligible employees.
+- Company-car requests may be exempt from penalties where customer policy requires it.
+- All reserved-space decisions should be visible in reports and audit history.
+
+## Cancellations and Reallocation
+
+Employees can cancel requests or reservations when their plans change.
+
+Before allocation:
+
+- the request is removed from the allocation queue;
+- no penalty is applied unless customer policy says otherwise.
+
+After allocation:
+
+- the reservation is cancelled;
+- FPS may apply a late-cancellation penalty;
+- the released space may be offered to another eligible employee.
+
+If the employee does not use an allocated space and usage confirmation is available, FPS may mark the reservation as a no-show and apply the configured policy.
+
+## Penalties and Manual Adjustments
+
+Penalties should encourage responsible use of limited capacity, not punish legitimate changes. Customers should configure when penalties apply and how long they affect allocation probability.
+
+Examples:
+
+- late cancellation after the draw;
+- confirmed reservation not used;
+- repeated policy violations;
+- manual correction after an HR review.
+
+Authorized roles may apply manual adjustments, but every adjustment must include a reason and be available for audit.
+
+## Usage Confirmation
+
+Usage confirmation improves fairness and reporting. FPS should support one or more confirmation methods depending on customer infrastructure.
+
+Possible methods:
+
+- employee self-confirmation in the web or mobile app;
+- QR code scan;
+- card reader or access-control integration;
+- license plate recognition;
+- manual confirmation by an authorized role.
+
+Confirmed usage helps the customer identify unused allocations, improve fairness scoring, and measure real utilization.
+
+## Example Allocation
+
+Assume five employees request parking and three spaces are available. Employees with fewer recent allocations receive higher priority. FPS applies configured constraints first, such as vehicle type and reserved-space rules, then runs the fairness allocation across the remaining eligible requests.
+
+The result is not meant to guarantee everyone a space every week. It is meant to prevent persistent unfairness over time and to give HR a defensible process.
+
+![Example](../images/fps-booking-allocation-example.png)
 
 ## Further Improvements
 
-Eco-friendly vehicles should have a percentage advantage over others, considering parking slot capability. Similarly, motorcycles should be allowed to share slots where possible.
+Future policy extensions may include:
 
-### Confirmation of Parking Slot Usage
+- percentage advantages for carpooling or eco-friendly commuting;
+- shared motorcycle capacity rules;
+- demand forecasting;
+- waitlist optimization;
+- integration with workplace calendars and building access systems.
 
-To ensure accurate tracking of parking slot usage, users must confirm their parking slot allocation upon entering the garage. This can be achieved by using a card reader system. When a user enters the garage, they swipe their access card at the card reader, which automatically logs the usage of the allocated parking slot. 
-
-This approach provides several benefits:
-- **Accurate Tracking**: It allows the system to track the exact duration for which a user occupies a parking slot.
-- **Usage Verification**: Confirms that the allocated slot is being used by the intended user.
-- **Data Collection**: Collects data on parking slot usage patterns, which can be used for future improvements in the allocation process.
-- **Automated Notifications**: Sends automated notifications to users confirming their parking slot usage and duration.
-
-By implementing this system, we can ensure fair and efficient use of parking resources while maintaining accurate records of parking slot usage.
-
-## Example of allocation
-
-![Example](../images/fps-booking-allocation-example.png)
+These extensions should be evaluated against the same business principles: fairness, transparency, policy control, low administration, and efficient utilization.
