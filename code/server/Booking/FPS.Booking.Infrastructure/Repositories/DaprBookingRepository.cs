@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dapr.Client;
 using FPS.Booking.Application.Repositories;
-using FPS.Booking.Domain.Models;
+using FPS.Booking.Application.Models;
+using FPS.Booking.Domain.ValueObjects;
 
 namespace FPS.Booking.Infrastructure.Repositories
 {
@@ -170,7 +171,7 @@ namespace FPS.Booking.Infrastructure.Repositories
             
             if (allocation != null)
             {
-                allocation.Status = "Active";
+                allocation.Status = SlotAllocationStatus.InUse.ToString();
                 allocation.ActualArrivalTime = arrivalTime;
                 allocation.ArrivalConfirmedBy = confirmedBy;
                 allocation.LastUpdated = DateTime.UtcNow;

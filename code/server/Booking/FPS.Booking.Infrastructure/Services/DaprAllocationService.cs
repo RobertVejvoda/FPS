@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 using Dapr.Client;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
-using FPS.Booking.Domain.Models;
+using FPS.Booking.Application.Models;
+using FPS.Booking.Domain.ValueObjects;
 
 namespace FPS.Booking.Infrastructure.Services
 {

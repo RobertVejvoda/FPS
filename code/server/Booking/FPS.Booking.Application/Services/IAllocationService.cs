@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using FPS.Booking.Domain.Models;
+using FPS.Booking.Application.Models;
 
 namespace FPS.Booking.Application.Services
 {

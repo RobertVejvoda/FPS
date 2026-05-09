@@ -1,230 +1,130 @@
-using System;
-using System.Threading.Tasks;
 using Dapr.Workflow;
-using FPS.Booking.Domain.Events;
-using FPS.Booking.Domain.Models;
-using FPS.Booking.Application.Services;
+using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
+using FPS.Booking.Application.Services;
+using FPS.Booking.Application.Workflows.Activities;
+using FPS.Booking.Domain.Events;
+using FPS.Booking.Domain.ValueObjects;
 
-namespace FPS.Booking.Application.Workflows
+namespace FPS.Booking.Application.Workflows;
+
+public class BookingWorkflow : Workflow<BookingRequestDto, AllocatedSlotDto?>
 {
-    public class BookingWorkflow : Workflow<BookingRequestDto, AllocatedSlotDto>
+    public override async Task<AllocatedSlotDto?> RunAsync(WorkflowContext context, BookingRequestDto request)
     {
-        private readonly IAllocationService _allocationService;
-        private readonly IBookingRepository _bookingRepository;
-        private readonly IEventPublisher _eventPublisher;
+        // Step 1: Record the booking request
+        await context.CallActivityAsync(
+            nameof(RecordBookingRequestActivity),
+            request);
 
-        public BookingWorkflow(
-            IAllocationService allocationService,
-            IBookingRepository bookingRepository,
-            IEventPublisher eventPublisher)
+        context.SetCustomStatus("BookingRequestRecorded");
+
+        // Step 2: Check facility availability
+        var facilityResult = await context.CallActivityAsync<FacilityAvailabilityResult>(
+            nameof(CheckFacilityAvailabilityActivity),
+            request);
+
+        if (!facilityResult.IsAvailable)
         {
-            _allocationService = allocationService;
-            _bookingRepository = bookingRepository;
-            _eventPublisher = eventPublisher;
+            await context.CallActivityAsync(
+                nameof(PublishBookingRejectedActivity),
+                new BookingRequestRejectedEvent(
+                    BookingRequestId.FromGuid(request.RequestId),
+                    "Facility unavailable"));
+
+            return null;
         }
 
-        public override async Task<AllocatedSlotDto> RunAsync(WorkflowContext context, BookingRequestDto request)
+        context.SetCustomStatus("FacilityAvailabilityConfirmed");
+
+        // Step 3: Find available slot
+        var slotResult = await context.CallActivityAsync<SlotAllocationResult>(
+            nameof(FindAvailableSlotActivity),
+            request);
+
+        if (!slotResult.Success)
         {
-            // Step 1: Record the booking request
             await context.CallActivityAsync(
-                "RecordBookingRequest",
-                request);
+                nameof(PublishBookingRejectedActivity),
+                new BookingRequestRejectedEvent(
+                    BookingRequestId.FromGuid(request.RequestId),
+                    slotResult.Reason ?? "No available slots"));
 
-            // Set custom status to show progress
-            context.SetCustomStatus("RequestRecorded");
+            return null;
+        }
 
-            // Step 2: Check facility availability
-            var facilityResult = await context.CallActivityAsync<FacilityAvailabilityResult>(
-                "CheckFacilityAvailability",
-                request);
+        context.SetCustomStatus("SlotAllocated");
 
-            if (!facilityResult.IsAvailable)
-            {
-                // Publish event about facility unavailability
-                await context.CallActivityAsync(
-                    "PublishBookingDeclinedEvent",
-                    new BookingDeclinedEvent
-                    {
-                        RequestId = request.RequestId,
-                        Reason = "Facility unavailable: " + facilityResult.Reason,
-                        DeclinedAt = DateTime.UtcNow
-                    });
+        // Step 4: Record the allocation
+        var allocation = await context.CallActivityAsync<AllocationDto>(
+            nameof(RecordAllocationActivity),
+            slotResult);
 
-                // Return null to indicate no allocation was made
-                return null;
-            }
+        // Step 5: Publish allocation confirmed event
+        await context.CallActivityAsync(
+            nameof(PublishAllocationConfirmedActivity),
+            new SlotAllocationConfirmedEvent(
+                SlotAllocationId.FromGuid(allocation.AllocationId),
+                BookingRequestId.FromGuid(request.RequestId),
+                ParkingSlotId.FromString(slotResult.SlotId.ToString())));
 
-            // Update status
-            context.SetCustomStatus("FacilityAvailabilityConfirmed");
+        context.SetCustomStatus("WaitingForArrival");
 
-            // Step 3: Find available slot
-            var slotResult = await context.CallActivityAsync<SlotAllocationResult>(
-                "FindAvailableSlot",
-                request);
+        // Step 6: Wait for arrival or timeout
+        try
+        {
+            var timeout = request.PlannedArrivalTime.AddMinutes(30) - DateTime.UtcNow;
+            var arrival = await context.WaitForExternalEventAsync<ArrivalConfirmationDto>(
+                "DriverArrivalConfirmed",
+                timeout > TimeSpan.Zero ? timeout : TimeSpan.Zero);
 
-            if (!slotResult.Success)
-            {
-                // Publish event about allocation failure
-                await context.CallActivityAsync(
-                    "PublishBookingDeclinedEvent",
-                    new BookingDeclinedEvent
-                    {
-                        RequestId = request.RequestId,
-                        Reason = "No available slots: " + slotResult.Reason,
-                        DeclinedAt = DateTime.UtcNow
-                    });
-
-                // Return null to indicate no allocation was made
-                return null;
-            }
-
-            // Update status
-            context.SetCustomStatus("SlotAllocated");
-
-            // Step 4: Record the allocation
-            var allocation = await context.CallActivityAsync<AllocationDto>(
-                "RecordAllocation",
-                slotResult);
-
-            // Step 5: Publish allocation confirmed event
             await context.CallActivityAsync(
-                "PublishAllocationConfirmedEvent",
-                new AllocationConfirmedEvent
+                nameof(UpdateAllocationArrivalActivity),
+                new UpdateAllocationInfo
                 {
-                    RequestId = request.RequestId,
                     AllocationId = allocation.AllocationId,
-                    SlotId = slotResult.SlotId,
-                    ConfirmedAt = DateTime.UtcNow
+                    ArrivalTime = arrival.ArrivalTime,
+                    ConfirmedBy = arrival.ConfirmedBy,
                 });
 
-            // Wait for arrival or cancellation
-            using (var timeoutCts = new CancellationTokenSource())
-            {
-                // Set timeout for the arrival (e.g., 30 minutes after planned arrival)
-                var timeout = request.PlannedArrivalTime.AddMinutes(30) - DateTime.UtcNow;
-                if (timeout.TotalMilliseconds > 0)
-                {
-                    timeoutCts.CancelAfter(timeout);
-                }
-                else
-                {
-                    // Already past the arrival time window, skip waiting
-                    timeoutCts.Cancel();
-                }
-
-                // Wait for events (arrival confirmation, cancellation, or timeout)
-                try
-                {
-                    context.SetCustomStatus("WaitingForArrival");
-
-                    // Wait for the driver arrival confirmation event
-                    var arrivalConfirmation = await context.WaitForExternalEventAsync<ArrivalConfirmationDto>(
-                        "DriverArrivalConfirmed",
-                        timeoutCts.Token);
-
-                    // Driver has arrived, update the allocation
-                    await context.CallActivityAsync(
-                        "UpdateAllocationWithArrival",
-                        new UpdateAllocationInfo
-                        {
-                            AllocationId = allocation.AllocationId,
-                            ArrivalTime = arrivalConfirmation.ArrivalTime,
-                            ConfirmedBy = arrivalConfirmation.ConfirmedBy
-                        });
-
-                    // Publish the arrival confirmed event
-                    await context.CallActivityAsync(
-                        "PublishArrivalConfirmedEvent",
-                        new ArrivalConfirmedEvent
-                        {
-                            AllocationId = allocation.AllocationId,
-                            ConfirmedAt = arrivalConfirmation.ArrivalTime,
-                            ConfirmedBy = arrivalConfirmation.ConfirmedBy
-                        });
-
-                    context.SetCustomStatus("ArrivalConfirmed");
-                }
-                catch (TaskCanceledException)
-                {
-                    // Timeout occurred - driver did not arrive within the expected window
-                    // Mark the reservation as expired
-                    await context.CallActivityAsync(
-                        "ExpireReservation",
-                        allocation.AllocationId);
-
-                    // Publish the expiration event
-                    await context.CallActivityAsync(
-                        "PublishReservationExpiredEvent",
-                        new ReservationExpiredEvent
-                        {
-                            AllocationId = allocation.AllocationId,
-                            RequestId = request.RequestId,
-                            ExpiredAt = DateTime.UtcNow
-                        });
-
-                    context.SetCustomStatus("ReservationExpired");
-                }
-                catch (Exception)
-                {
-                    // Handle other errors
-                    throw;
-                }
-            }
-
-            // Listen for cancellation event
-            try
-            {
-                // Create a task that completes when the cancellation event is received
-                var cancellationTask = context.WaitForExternalEventAsync<ReservationCancellationDto>(
-                    "ReservationCancelled");
-
-                // If a cancellation is received, process it
-                if (await Task.WhenAny(cancellationTask, Task.Delay(Timeout.Infinite)) == cancellationTask)
-                {
-                    var cancellationInfo = cancellationTask.Result;
-
-                    // Cancel the reservation
-                    await context.CallActivityAsync(
-                        "CancelReservation",
-                        new CancellationInfo
-                        {
-                            AllocationId = allocation.AllocationId,
-                            Reason = cancellationInfo.CancellationReason,
-                            CancelledBy = cancellationInfo.CancelledBy,
-                            CancellationTime = cancellationInfo.CancellationTime
-                        });
-
-                    // Publish the cancellation event
-                    await context.CallActivityAsync(
-                        "PublishReservationCancelledEvent",
-                        new ReservationCancelledEvent
-                        {
-                            AllocationId = allocation.AllocationId,
-                            RequestId = request.RequestId,
-                            Reason = cancellationInfo.CancellationReason,
-                            CancelledBy = cancellationInfo.CancelledBy,
-                            CancelledAt = cancellationInfo.CancellationTime
-                        });
-
-                    context.SetCustomStatus("ReservationCancelled");
-                }
-            }
-            catch (Exception)
-            {
-                // Handle any errors
-                throw;
-            }
-
-            // Return the allocated slot information
-            return new AllocatedSlotDto
-            {
-                AllocationId = allocation.AllocationId,
-                SlotId = allocation.SlotId,
-                FacilityId = request.FacilityId,
-                StartTime = request.PlannedArrivalTime,
-                EndTime = request.PlannedDepartureTime
-            };
+            context.SetCustomStatus("ArrivalConfirmed");
         }
+        catch (TaskCanceledException)
+        {
+            // Arrival window expired — publish expiry event (activity to be added in Phase 1)
+            context.SetCustomStatus("AllocationExpired");
+            return null;
+        }
+
+        // Step 7: Listen for cancellation
+        var cancellationTask = context.WaitForExternalEventAsync<ReservationCancellationDto>(
+            "ReservationCancelled");
+
+        if (await Task.WhenAny(cancellationTask, Task.Delay(Timeout.Infinite)) == cancellationTask)
+        {
+            var cancellation = cancellationTask.Result;
+
+            await context.CallActivityAsync(
+                nameof(CancelReservationActivity),
+                new CancellationInfo
+                {
+                    AllocationId = allocation.AllocationId,
+                    Reason = cancellation.CancellationReason,
+                    CancelledBy = cancellation.CancelledBy,
+                    CancellationTime = cancellation.CancellationTime,
+                });
+
+            context.SetCustomStatus("AllocationCancelled");
+            return null;
+        }
+
+        return new AllocatedSlotDto
+        {
+            AllocationId = allocation.AllocationId,
+            SlotId = allocation.SlotId,
+            FacilityId = request.FacilityId,
+            StartTime = request.PlannedArrivalTime,
+            EndTime = request.PlannedDepartureTime,
+        };
     }
 }

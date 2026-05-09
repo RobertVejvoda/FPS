@@ -1,9 +1,10 @@
 using Dapr.Workflow;
+using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.Events;
-using FPS.Booking.Domain.Models;
-using Microsoft.Extensions.DependencyInjection;
+using FPS.Booking.Domain.ValueObjects;
+using FPS.SharedKernel.DomainEvents;
 
 namespace FPS.Booking.Application.Workflows.Activities;
 
@@ -49,34 +50,34 @@ public class RecordAllocationActivity : WorkflowActivity<SlotAllocationResult, A
             AllocationId = Guid.NewGuid(),
             RequestId = input.RequestId,
             SlotId = input.SlotId,
-            Status = "Reserved",
-            AllocatedAt = DateTime.UtcNow
+            Status = SlotAllocationStatus.Reserved.ToString(),
+            AllocatedAt = DateTime.UtcNow,
         };
         await _repository.CreateAllocationAsync(allocation);
         return allocation;
     }
 }
 
-public class PublishBookingDeclinedActivity : WorkflowActivity<BookingDeclinedEvent, bool>
+public class PublishBookingRejectedActivity : WorkflowActivity<BookingRequestRejectedEvent, bool>
 {
     private readonly IEventPublisher _publisher;
-    public PublishBookingDeclinedActivity(IEventPublisher publisher) => _publisher = publisher;
+    public PublishBookingRejectedActivity(IEventPublisher publisher) => _publisher = publisher;
 
-    public override async Task<bool> RunAsync(WorkflowActivityContext context, BookingDeclinedEvent input)
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, BookingRequestRejectedEvent input)
     {
-        await _publisher.PublishEventAsync("booking.declined", input);
+        await _publisher.PublishAsync(input);
         return true;
     }
 }
 
-public class PublishAllocationConfirmedActivity : WorkflowActivity<AllocationConfirmedEvent, bool>
+public class PublishAllocationConfirmedActivity : WorkflowActivity<SlotAllocationConfirmedEvent, bool>
 {
     private readonly IEventPublisher _publisher;
     public PublishAllocationConfirmedActivity(IEventPublisher publisher) => _publisher = publisher;
 
-    public override async Task<bool> RunAsync(WorkflowActivityContext context, AllocationConfirmedEvent input)
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, SlotAllocationConfirmedEvent input)
     {
-        await _publisher.PublishEventAsync("allocation.confirmed", input);
+        await _publisher.PublishAsync(input);
         return true;
     }
 }
@@ -100,7 +101,7 @@ public class CancelReservationActivity : WorkflowActivity<CancellationInfo, bool
 
     public override async Task<bool> RunAsync(WorkflowActivityContext context, CancellationInfo input)
     {
-        await _repository.UpdateAllocationStatusAsync(input.AllocationId, "Cancelled", input.Reason);
+        await _repository.UpdateAllocationStatusAsync(input.AllocationId, SlotAllocationStatus.Cancelled.ToString(), input.Reason);
         return true;
     }
 }

@@ -1,4 +1,4 @@
-using FPS.Booking.Domain.Models;
+using FPS.Booking.Application.Models;
 
 namespace FPS.Booking.Application.Repositories;
 
