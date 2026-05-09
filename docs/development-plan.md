@@ -155,7 +155,12 @@ This is the core of FPS. Everything else is supporting.
 - [ ] `BookingStatus`, `VehicleType`, `UserId` value objects
 - [ ] `ParkingAllocationService` — two-tier allocation:
   - **Tier 1**: requests from users with `HasCompanyCar = true` are guaranteed — allocated first, no lottery, no penalty ever
-  - **Tier 2**: weighted lottery on remaining slots: `weight = 1 / (1 + PA + PR)`
+  - **Tier 2**: weighted lottery on remaining slots: `weight = 1 / (1 + RecentAllocationCount + ActivePenaltyScore)`
+    - `RecentAllocationCount`: successful non-company-car allocations in the tenant's configured lookback window; same-day allocations count
+    - Lookback window is tenant-configurable and defaults to `10` days
+    - `ActivePenaltyScore`: active penalty points from late cancellations, no-shows, policy violations, or manual HR adjustments
+    - Rejected requests are not part of the default denominator; if FPS later rewards repeated unlucky requestors, it should be modelled as a separate positive factor
+    - If company-car requests exceed available matching capacity, reject overflow requests for now
 - [ ] `HasCompanyCar` flag on `UserProfile` aggregate — set by admin, read by allocation service
 - [ ] Domain events: `BookingSubmitted`, `BookingCancelled`, `DrawStarted`, `SlotAllocated`, `DrawCompleted`
 - [ ] Unit tests for allocation service (pure domain, no infrastructure)
@@ -173,7 +178,7 @@ BookingWorkflow
   ├── Activity: LoadRequestsActivity          (fetch all requests for date)
   ├── Activity: RunAllocationAlgorithmActivity (weighted lottery → assignments)
   ├── Activity: PersistAllocationsActivity    (save results)
-  ├── Activity: UpdateUserMetricsActivity     (update PA/PR per user)
+  ├── Activity: UpdateUserMetricsActivity     (update RecentAllocationCount / ActivePenaltyScore per user)
   ├── Activity: PublishNotificationsActivity  (fire booking.allocated events)
   └── Activity: UnlockTimeSlotsActivity       (compensate if anything above fails)
 ```
@@ -394,3 +399,4 @@ These need answers before the relevant phase begins:
 | 8 | ~~GDPR deletion: pseudonymise or redact?~~ → **Pseudonymise — `actor_hash` in audit log, separate `PiiMapping` collection** | ✅ Decided | — |
 | 9 | ~~Payment provider?~~ → **Stub (`IPaymentProvider`) — real provider wired in later** | ✅ Decided | — |
 | 10 | ~~Real-time channel?~~ → **SSE via Notification service, bridged from Dapr pub/sub** | ✅ Decided | — |
+| 11 | ~~What determines Tier 2 lottery weight?~~ → **`1 / (1 + RecentAllocationCount + ActivePenaltyScore)` from draw-time user metrics** | ✅ Decided | — |

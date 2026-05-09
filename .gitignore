@@ -32,6 +32,10 @@ packages/
 .claude/**
 !.claude/settings.json
 
+# Codex — exclude local config, keep shared hooks
+.codex/**
+!.codex/hooks.json
+
 # Node
 node_modules/
 package-lock.json

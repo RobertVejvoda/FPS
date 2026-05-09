@@ -57,7 +57,7 @@
     </bpmn:task>
     <bpmn:sequenceFlow id="Flow_06s1nk6" sourceRef="Activity_16kh4za" targetRef="Activity_07y4dby" />
     <bpmn:textAnnotation id="TextAnnotation_02jn2jw">
-      <bpmn:text>PA, PR</bpmn:text>
+      <bpmn:text>RecentAllocationCount, ActivePenaltyScore</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Association_00v1j7v" associationDirection="None" sourceRef="Activity_07y4dby" targetRef="TextAnnotation_02jn2jw" />
   </bpmn:process>
