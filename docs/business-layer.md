@@ -20,6 +20,7 @@ FPS helps companies manage scarce parking capacity without turning HR into a man
 - [Business & Technical Roles](./business-layer/roles)
 - [Business Requirements](./business-layer/requirements)
 - [Allocation Process](./business-layer/process)
+- [Executable Allocation Rules](./business-layer/allocation-rules)
 - [Business Strategy](./business-layer/strategy)
 - [Functional Architecture](./business-layer/functional-architecture)
 

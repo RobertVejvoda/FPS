@@ -34,6 +34,8 @@ Spaces released by cancellations, unused reservations, or company-car absences s
 
 FPS uses a weighted allocation model. Each eligible request receives a priority weight based on configurable business factors. A higher weight gives the request a better chance of receiving an available space.
 
+The implementation contract for Draw behavior is documented in [Executable Allocation Rules](./allocation-rules).
+
 Typical factors include:
 
 - Recent successful allocations.

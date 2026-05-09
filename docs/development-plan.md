@@ -164,6 +164,7 @@ This is the core of FPS. Everything else is supporting.
 - [ ] `HasCompanyCar` flag on `UserProfile` aggregate — set by admin, read by allocation service
 - [ ] Domain events: `BookingSubmitted`, `BookingCancelled`, `DrawStarted`, `SlotAllocated`, `DrawCompleted`
 - [ ] Unit tests for allocation service (pure domain, no infrastructure)
+- [ ] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
 
 **Application layer** (`FPS.Booking.Application`):
 - [ ] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
@@ -188,6 +189,8 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **Trigger**: the Draw workflow is started by a Dapr cron binding at the tenant's configured cut-off time (default **18:00** local time, stored in Configuration service per tenant). `LockTimeSlotsActivity` fires immediately on workflow start — no new requests accepted after this point. Requests submitted before cut-off are also subject to the 500-request cap.
 >
 > **Volume cap**: maximum 500 requests per tenant per Draw. The Booking service rejects submissions once this limit is reached for a given date. At 500 items the allocation algorithm completes in under a millisecond — no fan-out or child workflows needed.
+>
+> **Executable rules**: Draw implementation must follow `docs/business-layer/allocation-rules.md`, including duplicate detection, seeded lottery audit data, company-car overflow rejection, same-day metric updates, cancellation reallocation, and default penalties.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
@@ -400,3 +403,4 @@ These need answers before the relevant phase begins:
 | 9 | ~~Payment provider?~~ → **Stub (`IPaymentProvider`) — real provider wired in later** | ✅ Decided | — |
 | 10 | ~~Real-time channel?~~ → **SSE via Notification service, bridged from Dapr pub/sub** | ✅ Decided | — |
 | 11 | ~~What determines Tier 2 lottery weight?~~ → **`1 / (1 + RecentAllocationCount + ActivePenaltyScore)` from draw-time user metrics** | ✅ Decided | — |
+| 12 | ~~What are the executable Draw rules?~~ → **See `docs/business-layer/allocation-rules.md`** | ✅ Decided | — |
