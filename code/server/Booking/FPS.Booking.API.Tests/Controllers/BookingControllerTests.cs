@@ -249,6 +249,48 @@ public sealed class BookingControllerTests
         Assert.IsType<UnprocessableEntityObjectResult>(result);
     }
 
+    // ── POST /bookings/{id}/manual-corrections ────────────────────────────────
+
+    [Fact]
+    public async Task ApplyManualCorrection_ValidRequest_Returns200()
+    {
+        var requestId = Guid.NewGuid();
+        mediator.Setup(m => m.Send(It.IsAny<ApplyManualCorrectionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ManualCorrectionResult(requestId, "status", "Allocated", DateTime.UtcNow));
+
+        var result = await controller.ApplyManualCorrection(
+            requestId, new ManualCorrectionRequest("status", "Pending", "Allocated", "HR override"),
+            "tenant-1", "hr-user", CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ApplyManualCorrection_OldValueMismatch_Returns409()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<ApplyManualCorrectionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CorrectionConflictException(Guid.NewGuid(), "status", "Allocated", "Pending"));
+
+        var result = await controller.ApplyManualCorrection(
+            Guid.NewGuid(), new ManualCorrectionRequest("status", "Allocated", "Pending", "Fix"),
+            "tenant-1", "hr-user", CancellationToken.None);
+
+        Assert.IsType<ConflictObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ApplyManualCorrection_MissingReason_Returns422()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<ApplyManualCorrectionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FPS.Booking.Domain.Exceptions.BookingException("A reason is required for manual corrections."));
+
+        var result = await controller.ApplyManualCorrection(
+            Guid.NewGuid(), new ManualCorrectionRequest("status", "Pending", "Allocated", ""),
+            "tenant-1", "hr-user", CancellationToken.None);
+
+        Assert.IsType<UnprocessableEntityObjectResult>(result);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequest ValidSubmitBody() => new(

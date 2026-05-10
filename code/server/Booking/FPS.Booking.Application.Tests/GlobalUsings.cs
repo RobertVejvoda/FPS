@@ -7,7 +7,6 @@ global using FPS.Booking.Application.Exceptions;
 global using FPS.Booking.Application.Models;
 global using FPS.Booking.Application.Queries;
 global using FPS.Booking.Application.Repositories;
-global using FPS.Booking.Application.Models;
 global using FPS.Booking.Application.Services;
 global using FPS.Booking.Domain.ValueObjects;
 global using FPS.SharedKernel.DomainEvents;

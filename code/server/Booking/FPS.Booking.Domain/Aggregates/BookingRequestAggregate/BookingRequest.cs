@@ -92,6 +92,29 @@ public sealed class BookingRequest : IAggregateRoot
         };
     }
 
+    // Applies a justified manual correction bypassing normal lifecycle guards.
+    // Only callable from the explicit manual correction flow — not from normal operations.
+    public void ApplyManualCorrection(
+        string correctionType,
+        string oldValue,
+        string newValue,
+        string actor,
+        string reason,
+        DateTime appliedAt,
+        IEventPublisher eventPublisher)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new BookingException("A reason is required for manual corrections.");
+
+        if (correctionType == "status")
+            Status = Enum.Parse<BookingRequestStatus>(newValue, ignoreCase: true);
+        else if (correctionType == "reason")
+            RejectionReason = newValue;
+
+        eventPublisher.PublishAsync(new ManualCorrectionAppliedEvent(
+            Id, correctionType, oldValue, newValue, actor, reason, appliedAt));
+    }
+
     // Called by Draw or same-day allocation when a slot is assigned.
     public void Allocate(IEventPublisher eventPublisher)
     {

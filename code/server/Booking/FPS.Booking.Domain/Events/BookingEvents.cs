@@ -3,6 +3,16 @@ using FPS.SharedKernel.DomainEvents;
 
 namespace FPS.Booking.Domain.Events;
 
+// Manual correction event
+public record ManualCorrectionAppliedEvent(
+    BookingRequestId RequestId,
+    string CorrectionType,
+    string OldValue,
+    string NewValue,
+    string Actor,
+    string Reason,
+    DateTime AppliedAt) : DomainEvent;
+
 // No-show event
 public record BookingRequestNoShowEvent(
     BookingRequestId RequestId) : DomainEvent;
