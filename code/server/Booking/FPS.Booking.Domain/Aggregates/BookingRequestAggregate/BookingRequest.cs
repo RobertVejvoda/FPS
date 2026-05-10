@@ -131,8 +131,21 @@ public sealed class BookingRequest : IAggregateRoot
         if (RequestedPeriod.Start.Date < DateTime.UtcNow.Date)
             return (BookingRejectionCode.PastDate, "Cannot submit a request for a date in the past.");
 
-        if (context.IsCutOffPassed)
-            return (BookingRejectionCode.CutOffPassed, "Requests for this time slot are closed.");
+        if (context.IsSameDayRequest)
+        {
+            if (!context.SameDayEnabled)
+                return (BookingRejectionCode.SameDayBookingDisabled,
+                    "Same-day booking is not available for this location.");
+
+            if (!context.SameDayCapacityAvailable)
+                return (BookingRejectionCode.NoCapacityForSameDay,
+                    "No matching parking slot is available for your same-day request.");
+        }
+        else
+        {
+            if (context.IsCutOffPassed)
+                return (BookingRejectionCode.CutOffPassed, "Requests for this time slot are closed.");
+        }
 
         if (context.IsCapExceeded)
             return (BookingRejectionCode.DailyCapExceeded, "The daily request cap for this date has been reached.");

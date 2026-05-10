@@ -8,5 +8,7 @@ public enum BookingRejectionCode
     DuplicateRequest,
     VehicleConstraintUnmatched,
     NoCapacityAvailable,
-    RequestorIneligible
+    RequestorIneligible,
+    SameDayBookingDisabled,
+    NoCapacityForSameDay
 }

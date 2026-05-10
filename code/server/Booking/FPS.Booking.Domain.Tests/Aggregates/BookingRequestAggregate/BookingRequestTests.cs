@@ -207,6 +207,47 @@ public class BookingRequestTests
         Assert.True(request.IsTerminal());
     }
 
+    // ── Same-day validation ───────────────────────────────────────────────────
+
+    [Fact]
+    public void Submit_SameDay_WithCapacityAvailable_ReturnsPending()
+    {
+        var request = SubmitSameDay(sameDayEnabled: true, capacityAvailable: true);
+        Assert.Equal(BookingRequestStatus.Pending, request.Status);
+    }
+
+    [Fact]
+    public void Submit_SameDay_Disabled_ReturnsRejectedWithSameDayCode()
+    {
+        var request = SubmitSameDay(sameDayEnabled: false, capacityAvailable: true);
+        Assert.Equal(BookingRequestStatus.Rejected, request.Status);
+        Assert.Equal(BookingRejectionCode.SameDayBookingDisabled, request.RejectionCode);
+    }
+
+    [Fact]
+    public void Submit_SameDay_NoCapacity_ReturnsRejectedWithNoCapacityCode()
+    {
+        var request = SubmitSameDay(sameDayEnabled: true, capacityAvailable: false);
+        Assert.Equal(BookingRequestStatus.Rejected, request.Status);
+        Assert.Equal(BookingRejectionCode.NoCapacityForSameDay, request.RejectionCode);
+    }
+
+    [Fact]
+    public void Submit_SameDay_CapExceeded_RejectsOnCap()
+    {
+        var ctx = SubmissionContext.CreateSameDay(10, 10, false, true, true);
+        var request = BookingRequest.Submit(UserId.New(), TodayPeriod(), MakeVehicle(), ctx, _publisher.Object);
+        Assert.Equal(BookingRejectionCode.DailyCapExceeded, request.RejectionCode);
+    }
+
+    [Fact]
+    public void Submit_SameDay_DoesNotCheckCutOff()
+    {
+        // Same-day path skips cut-off check
+        var request = SubmitSameDay(sameDayEnabled: true, capacityAvailable: true);
+        Assert.NotEqual(BookingRejectionCode.CutOffPassed, request.RejectionCode);
+    }
+
     // ── Restore ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -251,6 +292,15 @@ public class BookingRequestTests
 
     private BookingRequest Submit(SubmissionContext context)
         => BookingRequest.Submit(UserId.New(), _futurePeriod, MakeVehicle(), context, _publisher.Object);
+
+    private BookingRequest SubmitSameDay(bool sameDayEnabled, bool capacityAvailable)
+    {
+        var ctx = SubmissionContext.CreateSameDay(500, 0, false, sameDayEnabled, capacityAvailable);
+        return BookingRequest.Submit(UserId.New(), TodayPeriod(), MakeVehicle(), ctx, _publisher.Object);
+    }
+
+    private static TimeSlot TodayPeriod()
+        => TimeSlot.Create(DateTime.UtcNow.Date.AddHours(9), DateTime.UtcNow.Date.AddHours(17));
 
     private static SubmissionContext ValidContext(
         int cap = 500,
