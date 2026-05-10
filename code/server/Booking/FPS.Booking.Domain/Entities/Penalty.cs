@@ -5,13 +5,13 @@ namespace FPS.Booking.Domain.Entities;
 public sealed class Penalty : IEntity<Guid>
 {
     public Guid Id { get; private set; }
-    public BookingRequestId RequestId { get; private set; }
-    public UserId RequestorId { get; private set; }
+    public BookingRequestId RequestId { get; private set; } = null!;
+    public UserId RequestorId { get; private set; } = null!;
     public PenaltyType Type { get; private set; }
     public int Score { get; private set; }
     public DateOnly EffectiveDate { get; private set; }
     public DateOnly ExpiryDate { get; private set; }
-    public string SourceEventId { get; private set; }
+    public string SourceEventId { get; private set; } = null!;
 
     private Penalty() { }
 

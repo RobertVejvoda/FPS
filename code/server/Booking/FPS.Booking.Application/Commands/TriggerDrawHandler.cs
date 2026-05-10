@@ -89,7 +89,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
             cmd.TenantId, requestorIds, cmd.Date, policy.AllocationLookbackDays, cancellationToken);
 
         var seed = GenerateSeed(drawKey);
-        eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptStartedEvent(drawKey, seed, DateTime.UtcNow));
+        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptStartedEvent(drawKey, seed, DateTime.UtcNow));
 
         var result = drawService.RunDraw(pendingRequests, availableSlots, metrics, seed);
 
@@ -146,7 +146,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
 
         await drawRepository.SaveAsync(attempt, cancellationToken);
 
-        eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptCompletedEvent(
+        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptCompletedEvent(
             drawKey, seed,
             attempt.AllocatedCount, attempt.RejectedCount, attempt.WaitlistedCount,
             DateTime.UtcNow));

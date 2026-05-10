@@ -108,7 +108,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
             SourceEventId = sourceEventId
         }, cancellationToken);
 
-        eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
+        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
             BookingRequestId.FromGuid(dto.RequestId),
             UserId.FromString(dto.RequestedBy),
             PenaltyType.NoShow,

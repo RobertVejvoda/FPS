@@ -138,7 +138,7 @@ public sealed class GetMyBookingsHandlerTests
 
         var result = await handler.Handle(QueryWith(), CancellationToken.None);
 
-        Assert.Equal(1, result.Items.Count);
+        Assert.Single(result.Items);
         Assert.Equal("next-token", result.NextCursor);
     }
 

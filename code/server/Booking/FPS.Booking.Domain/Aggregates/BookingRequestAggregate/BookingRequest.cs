@@ -8,10 +8,10 @@ namespace FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 
 public sealed class BookingRequest : IAggregateRoot
 {
-    public BookingRequestId Id { get; private set; }
-    public UserId RequestorId { get; private set; }
-    public VehicleInformation Vehicle { get; private set; }
-    public TimeSlot RequestedPeriod { get; private set; }
+    public BookingRequestId Id { get; private set; } = null!;
+    public UserId RequestorId { get; private set; } = null!;
+    public VehicleInformation Vehicle { get; private set; } = null!;
+    public TimeSlot RequestedPeriod { get; private set; } = null!;
     public BookingRequestStatus Status { get; private set; }
     public DateTime SubmittedAt { get; private set; }
     public BookingRejectionCode? RejectionCode { get; private set; }

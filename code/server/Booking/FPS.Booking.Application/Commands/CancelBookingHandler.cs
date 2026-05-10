@@ -98,7 +98,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             SourceEventId = sourceEventId
         }, cancellationToken);
 
-        eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
+        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
             BookingRequestId.FromGuid(dto.RequestId),
             UserId.FromString(dto.RequestedBy),
             PenaltyType.LateCancellation,
@@ -148,7 +148,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
 
         await repository.UpdateBookingRequestStatusAsync(winner.RequestId, "Allocated", cancellationToken: cancellationToken);
 
-        eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestReallocatedEvent(
+        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestReallocatedEvent(
             BookingRequestId.FromGuid(winner.RequestId),
             UserId.FromString(winner.RequestedBy),
             releasedSlot.SlotId,
