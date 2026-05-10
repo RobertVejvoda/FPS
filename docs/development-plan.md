@@ -314,6 +314,50 @@ Stop and ask before implementation if:
 - [ ] Commands: `RegisterVehicle`, `SetParkingSchedule`, `UpdatePreferences`
 - [ ] Queries: `GetProfile`, `GetVehicles`
 
+#### Slice BK011: Booking Uses Auth Context
+
+Purpose: migrate employee-facing Booking APIs from caller-supplied tenant/user headers to the authenticated context established by `ID001`.
+
+Scope:
+
+- Register and consume the shared `ICurrentUser` abstraction in `FPS.Booking.API`.
+- Add authentication and authorization middleware to Booking API using the same JWT claim mapping documented by `ID001`.
+- For employee self-service Booking endpoints, resolve `tenantId` from `ICurrentUser.TenantId` and requestor/actor ID from `ICurrentUser.UserId`.
+- Remove trust in `X-Tenant-Id`, `X-Requestor-Id`, request body, or query string for employee tenant/user identity.
+- Add or update API tests proving spoofed tenant/user headers or query parameters cannot change the authenticated context used by Booking.
+
+Employee-facing endpoints in scope:
+
+- `POST /bookings`
+- `GET /bookings`
+- `DELETE /bookings/{requestId}`
+- `POST /bookings/{requestId}/confirm-usage`
+
+Out of scope:
+
+- New Booking business behavior, status transitions, allocation rules, or response fields.
+- Profile vehicle or company-car snapshot integration.
+- Notification or Audit consumers.
+- Keycloak deployment/provisioning automation.
+- Mobile/web frontend changes.
+- Admin/system endpoint authorization redesign, except for preserving existing behavior while avoiding accidental trust in employee identity headers.
+
+Acceptance criteria:
+
+- Authenticated employee calls to the in-scope endpoints use only authenticated `tenantId` and `userId`.
+- Missing or invalid authentication returns `401`.
+- Authenticated callers cannot spoof another tenant or requestor by sending `X-Tenant-Id`, `X-Requestor-Id`, `tenantId`, `requestorId`, `userId`, or similar request fields.
+- Existing Booking command/query handlers can continue accepting tenant/requestor parameters internally; this slice changes the API boundary, not domain behavior.
+- API tests cover at least one write path and one read path for spoofing resistance.
+- `./tools/validate.sh` passes before the PR is reported ready.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after `ID001` is merged; do not branch from the ID001 feature branch.
+- Prefer a small Booking API adapter change over refactoring application commands.
+- If current test infrastructure makes real JWT setup expensive, mirror the `ID001` test approach with a local test signing key.
+- If an admin/system endpoint needs a broader auth model to avoid trusting headers, stop and ask Codex before widening this slice.
+
 ---
 
 ### Phase 3 — Notification & Audit (Week 9–10)
