@@ -1,6 +1,7 @@
 using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
+using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Queries;
 using FPS.Booking.Domain.Exceptions;
 using MediatR;
@@ -98,6 +99,40 @@ public sealed class BookingController : ControllerBase
             cancellationToken);
 
         return Ok(new GetMyBookingsResponse(result.Items, result.NextCursor));
+    }
+
+    [HttpPost("{requestId:guid}/confirm-usage")]
+    [ProducesResponseType(typeof(ConfirmUsageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ConfirmUsage(
+        Guid requestId,
+        [FromBody] ConfirmUsageRequest body,
+        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
+        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new ConfirmSlotUsageCommand(
+                RequestId: requestId,
+                TenantId: tenantId,
+                RequestorId: requestorId,
+                ConfirmationSource: body.ConfirmationSource,
+                ConfirmedAt: body.ConfirmedAt,
+                SourceEventId: body.SourceEventId),
+                cancellationToken);
+
+            return Ok(new ConfirmUsageResponse(result.RequestId, result.Status, result.ConfirmedAt, result.WasAlreadyConfirmed));
+        }
+        catch (FPS.Booking.Application.Exceptions.BookingNotFoundException ex)
+        {
+            return NotFound(new { ex.Message });
+        }
+        catch (FPS.Booking.Domain.Exceptions.BookingException ex)
+        {
+            return UnprocessableEntity(new { ex.Message });
+        }
     }
 
     [HttpGet("{requestId:guid}/status")]

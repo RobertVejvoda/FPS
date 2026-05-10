@@ -192,6 +192,63 @@ public sealed class BookingControllerTests
         Assert.Equal("some-cursor", captured?.Cursor);
     }
 
+    // ── POST /bookings/{id}/confirm-usage ─────────────────────────────────────
+
+    [Fact]
+    public async Task ConfirmUsage_AllocatedRequest_Returns200()
+    {
+        var requestId = Guid.NewGuid();
+        var confirmedAt = DateTime.UtcNow;
+        mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConfirmSlotUsageResult(requestId, "Used", confirmedAt, false));
+
+        var result = await controller.ConfirmUsage(requestId, new ConfirmUsageRequest("EmployeeSelf"),
+            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ConfirmUsageResponse>(ok.Value);
+        Assert.Equal("Used", body.Status);
+        Assert.False(body.WasAlreadyConfirmed);
+    }
+
+    [Fact]
+    public async Task ConfirmUsage_AlreadyConfirmed_Returns200WithFlag()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConfirmSlotUsageResult(Guid.NewGuid(), "Used", DateTime.UtcNow, true));
+
+        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"),
+            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ConfirmUsageResponse>(ok.Value);
+        Assert.True(body.WasAlreadyConfirmed);
+    }
+
+    [Fact]
+    public async Task ConfirmUsage_NotFound_Returns404()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new BookingNotFoundException(Guid.NewGuid()));
+
+        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"),
+            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ConfirmUsage_NotAllocated_Returns422()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FPS.Booking.Domain.Exceptions.BookingException("Only allocated requests can be confirmed as used"));
+
+        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"),
+            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+
+        Assert.IsType<UnprocessableEntityObjectResult>(result);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequest ValidSubmitBody() => new(

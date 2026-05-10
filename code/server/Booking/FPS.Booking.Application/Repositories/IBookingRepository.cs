@@ -15,6 +15,7 @@ public interface IBookingRepository
     Task UpdateAllocationArrivalAsync(Guid allocationId, DateTime arrivalTime, string confirmedBy);
     Task UpdateAllocationDepartureAsync(Guid allocationId, DateTime departureTime, string confirmedBy);
     Task UpdateBookingRequestStatusAsync(Guid requestId, string status, string? reason = null, CancellationToken cancellationToken = default);
+    Task UpdateBookingRequestUsageAsync(Guid requestId, string confirmationSource, DateTime confirmedAt, string? sourceEventId = null, CancellationToken cancellationToken = default);
     Task<int> CountRequestsForDateAsync(string tenantId, DateTime date, CancellationToken cancellationToken = default);
     Task<bool> HasOverlappingRequestAsync(string tenantId, string requestorId, TimeSlot period, CancellationToken cancellationToken = default);
 }

@@ -15,6 +15,9 @@ public class BookingRequestDto
     public string? CancellationReason { get; set; }
     public Guid? AllocatedSlotId { get; set; }
     public DateTime LastStatusChangedAt { get; set; }
+    public DateTime? UsageConfirmedAt { get; set; }
+    public string? ConfirmationSource { get; set; }
+    public string? ConfirmationSourceEventId { get; set; }
 }
 
 public class AllocationDto
