@@ -260,9 +260,27 @@ public sealed class BookingControllerTests
 
         var result = await controller.ApplyManualCorrection(
             requestId, new ManualCorrectionRequest("status", "Pending", "Allocated", "HR override"),
-            "hr-user", CancellationToken.None);
+            CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ApplyManualCorrection_ActorComesFromCurrentUser()
+    {
+        currentUser.Setup(u => u.UserId).Returns("hr-user-from-token");
+
+        ApplyManualCorrectionCommand? captured = null;
+        mediator.Setup(m => m.Send(It.IsAny<ApplyManualCorrectionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<ManualCorrectionResult>, CancellationToken>(
+                (cmd, _) => captured = (ApplyManualCorrectionCommand)cmd)
+            .ReturnsAsync(new ManualCorrectionResult(Guid.NewGuid(), "status", "Allocated", DateTime.UtcNow));
+
+        await controller.ApplyManualCorrection(
+            Guid.NewGuid(), new ManualCorrectionRequest("status", "Pending", "Allocated", "HR override"),
+            CancellationToken.None);
+
+        Assert.Equal("hr-user-from-token", captured?.Actor);
     }
 
     [Fact]
@@ -273,7 +291,7 @@ public sealed class BookingControllerTests
 
         var result = await controller.ApplyManualCorrection(
             Guid.NewGuid(), new ManualCorrectionRequest("status", "Allocated", "Pending", "Fix"),
-            "hr-user", CancellationToken.None);
+            CancellationToken.None);
 
         Assert.IsType<ConflictObjectResult>(result);
     }
@@ -286,7 +304,7 @@ public sealed class BookingControllerTests
 
         var result = await controller.ApplyManualCorrection(
             Guid.NewGuid(), new ManualCorrectionRequest("status", "Pending", "Allocated", ""),
-            "hr-user", CancellationToken.None);
+            CancellationToken.None);
 
         Assert.IsType<UnprocessableEntityObjectResult>(result);
     }

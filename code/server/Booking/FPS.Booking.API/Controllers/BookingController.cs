@@ -153,10 +153,9 @@ public sealed class BookingController : ControllerBase
     public async Task<IActionResult> ApplyManualCorrection(
         Guid requestId,
         [FromBody] ManualCorrectionRequest body,
-        [FromHeader(Name = "X-Actor-Id")] string actor,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(currentUser.TenantId))
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
             return Unauthorized();
 
         try
@@ -164,7 +163,7 @@ public sealed class BookingController : ControllerBase
             var result = await mediator.Send(new ApplyManualCorrectionCommand(
                 RequestId: requestId,
                 TenantId: currentUser.TenantId,
-                Actor: actor,
+                Actor: currentUser.UserId,
                 CorrectionType: body.CorrectionType,
                 OldValue: body.OldValue,
                 NewValue: body.NewValue,
