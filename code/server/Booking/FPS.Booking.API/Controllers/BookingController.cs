@@ -1,23 +1,59 @@
+using FPS.Booking.API.Models;
+using FPS.Booking.Application.Commands;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Booking.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("bookings")]
 public class BookingController : ControllerBase
 {
+    private readonly IMediator _mediator;
+
+    public BookingController(IMediator mediator) => _mediator = mediator;
+
     [HttpPost]
-    public IActionResult SubmitBookingRequest() => StatusCode(501, "Not implemented — Phase 1");
+    [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SubmitBookingRequest(
+        [FromBody] SubmitBookingRequest body,
+        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
+        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
+        CancellationToken cancellationToken)
+    {
+        var command = new SubmitBookingRequestCommand(
+            TenantId: tenantId,
+            RequestorId: requestorId,
+            FacilityId: body.FacilityId,
+            LocationId: body.LocationId,
+            LicensePlate: body.LicensePlate,
+            VehicleType: body.VehicleType,
+            IsElectric: body.IsElectric,
+            RequiresAccessibleSpot: body.RequiresAccessibleSpot,
+            IsCompanyCar: body.IsCompanyCar,
+            PlannedArrivalTime: body.PlannedArrivalTime,
+            PlannedDepartureTime: body.PlannedDepartureTime);
 
-    [HttpGet("{instanceId}/status")]
-    public IActionResult GetBookingStatus(string instanceId) => StatusCode(501, "Not implemented — Phase 1");
+        var result = await _mediator.Send(command, cancellationToken);
 
-    [HttpPost("{instanceId}/arrival")]
-    public IActionResult ConfirmArrival(string instanceId) => StatusCode(501, "Not implemented — Phase 1");
+        var response = new SubmitBookingResponse(
+            result.RequestId,
+            result.Status,
+            result.RejectionCode,
+            result.Reason);
 
-    [HttpPost("{instanceId}/cancel")]
-    public IActionResult CancelReservation(string instanceId) => StatusCode(501, "Not implemented — Phase 1");
+        return result.Status == "Pending"
+            ? Accepted(response)
+            : UnprocessableEntity(response);
+    }
 
-    [HttpGet("availability")]
-    public IActionResult CheckAvailability() => StatusCode(501, "Not implemented — Phase 1");
+    [HttpGet("{requestId:guid}/status")]
+    public IActionResult GetBookingStatus(Guid requestId) => StatusCode(501, "Not implemented");
+
+    [HttpPost("{requestId:guid}/arrival")]
+    public IActionResult ConfirmArrival(Guid requestId) => StatusCode(501, "Not implemented");
+
+    [HttpDelete("{requestId:guid}")]
+    public IActionResult CancelBooking(Guid requestId) => StatusCode(501, "Not implemented");
 }
