@@ -157,6 +157,48 @@ public class BookingRequestTests
         Assert.Equal("Only pending requests can be rejected", ex.Message);
     }
 
+    // ── MarkNoShow ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void MarkNoShow_WhenAllocated_ChangesStatusToNoShow()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+        request.MarkNoShow(_publisher.Object);
+
+        Assert.Equal(BookingRequestStatus.NoShow, request.Status);
+    }
+
+    [Fact]
+    public void MarkNoShow_WhenAllocated_FiresNoShowEvent()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+        request.MarkNoShow(_publisher.Object);
+
+        _publisher.Verify(p => p.PublishAsync(
+            It.Is<BookingRequestNoShowEvent>(e => e.RequestId == request.Id), default), Times.Once);
+    }
+
+    [Fact]
+    public void MarkNoShow_WhenPending_Throws()
+    {
+        var request = Submit(ValidContext());
+        var ex = Assert.Throws<BookingException>(() => request.MarkNoShow(_publisher.Object));
+        Assert.Equal("Only allocated requests can be marked as no-show", ex.Message);
+    }
+
+    [Fact]
+    public void MarkNoShow_WhenUsed_Throws()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+        request.ConfirmUsage(ConfirmationSource.EmployeeSelf, DateTime.UtcNow, _publisher.Object);
+
+        var ex = Assert.Throws<BookingException>(() => request.MarkNoShow(_publisher.Object));
+        Assert.Equal("Only allocated requests can be marked as no-show", ex.Message);
+    }
+
     // ── ConfirmUsage ──────────────────────────────────────────────────────────
 
     [Fact]
