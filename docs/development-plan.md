@@ -151,14 +151,29 @@ This is the core of FPS. Everything else is supporting.
 
 Implementation should follow vertical slices from `docs/business-layer/booking-vertical-slices.md`. Do not complete the whole domain layer before application and API work; each story should cut through the layers and be independently testable.
 
+**Current implementation status**: Phase 1 Booking vertical slices B001-B010 are implemented and merged:
+
+- B001 Submit Future Booking Request
+- B002 Submit Same-Day Booking Request
+- B003 Cancel Pending Request
+- B004 Run Scheduled Draw
+- B005 Cancel Allocated Reservation And Reallocate
+- B006 Confirm Usage
+- B007 Mark No-Show
+- B008 View My Bookings
+- B009 View Draw Status
+- B010 Manual Correction
+
+Remaining work in this phase is hardening and integration with the surrounding platform: real authenticated tenant/user/role context, Profile-provided eligibility and vehicle snapshots, Notification and Audit consumers, and production infrastructure concerns.
+
 **Domain layer** (`FPS.Booking.Domain`):
-- [ ] `BookingRequest` aggregate — submit, cancel, expire
+- [x] `BookingRequest` aggregate — submit, cancel, expire
   - Must follow `docs/business-layer/booking-request-lifecycle.md`
-- [ ] `SlotAllocation` aggregate — allocate, confirm, release
-- [ ] `ParkingSlot` value object (or entity depending on ownership)
-- [ ] `TimeSlot` value object (date + half/full day)
-- [ ] `BookingStatus`, `VehicleType`, `UserId` value objects
-- [ ] `ParkingAllocationService` — two-tier allocation:
+- [x] `SlotAllocation` aggregate — allocate, confirm, release
+- [x] `ParkingSlot` value object (or entity depending on ownership)
+- [x] `TimeSlot` value object (date + half/full day)
+- [x] `BookingStatus`, `VehicleType`, `UserId` value objects
+- [x] `ParkingAllocationService` — two-tier allocation:
   - **Tier 1**: requests from users with `HasCompanyCar = true` are guaranteed — allocated first, no lottery, no penalty ever
   - **Tier 2**: weighted lottery on remaining slots: `weight = 1 / (1 + RecentAllocationCount + ActivePenaltyScore)`
     - `RecentAllocationCount`: successful non-company-car allocations in the tenant's configured lookback window; same-day allocations count
@@ -167,19 +182,25 @@ Implementation should follow vertical slices from `docs/business-layer/booking-v
     - Rejected requests are not part of the default denominator; if FPS later rewards repeated unlucky requestors, it should be modelled as a separate positive factor
     - If company-car requests exceed available matching capacity, reject overflow requests for now
 - [ ] `HasCompanyCar` flag on `UserProfile` aggregate — set by admin, read by allocation service
-- [ ] Domain events: `BookingSubmitted`, `BookingCancelled`, `DrawStarted`, `SlotAllocated`, `DrawCompleted`
-- [ ] Unit tests for allocation service (pure domain, no infrastructure)
-- [ ] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
-- [ ] Implement request lifecycle behavior against `docs/business-layer/booking-request-lifecycle.md`
-- [ ] Resolve allocation policy from `docs/business-layer/parking-policy-configuration.md`
-- [ ] Implement Booking story-by-story against `docs/business-layer/booking-vertical-slices.md`
+  - Booking currently consumes company-car eligibility through request/profile snapshots. The Profile aggregate remains Phase 2 work.
+- [x] Domain events: `BookingSubmitted`, `BookingCancelled`, `DrawStarted`, `SlotAllocated`, `DrawCompleted`
+- [x] Unit tests for allocation service (pure domain, no infrastructure)
+- [x] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
+- [x] Implement request lifecycle behavior against `docs/business-layer/booking-request-lifecycle.md`
+- [x] Resolve allocation policy from `docs/business-layer/parking-policy-configuration.md`
+- [x] Implement Booking story-by-story against `docs/business-layer/booking-vertical-slices.md`
 
 **Application layer** (`FPS.Booking.Application`):
-- [ ] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
-- [ ] Queries: `GetMyBookings`, `GetAllocationResult`, `GetDrawStatus`
-- [ ] `IBookingRepository`, `ISlotAllocationRepository` interfaces
+- [x] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
+- [x] Commands: `EvaluateNoShow`, `ApplyManualCorrection`
+- [x] Queries: `GetMyBookings`, `GetDrawStatus`
+- [ ] Query: `GetAllocationResult`
+  - Covered by `GetMyBookings` and `GetDrawStatus` for the current Booking slices; keep a distinct allocation-result query only if a later consumer needs it.
+- [x] `IBookingRepository`, `IBookingQueryRepository`, `IDrawRepository`, `IPenaltyRepository`, `ICorrectionAuditRepository` interfaces
 
-**Dapr Workflow — Draw Process** (`BookingWorkflow`):
+**Dapr Workflow — Draw Process** (`BookingWorkflow`, future platform hardening):
+
+The current Booking implementation runs Draw behavior through application handlers and domain services. A durable Dapr workflow can be added later if operational replay, long-running orchestration, or cross-service compensation requires it.
 
 ```
 BookingWorkflow
@@ -211,24 +232,29 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **API contract**: Booking response and error shapes are defined in `docs/business-layer/booking-api-contract.md`.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
-- [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
-- [ ] MongoDB driver — query read models: bookings by date, requests per user, allocation history (read side)
+- [x] Dapr state store client — save/load Booking request state and related Booking read-model data
+- [x] Booking query repository — bookings by date, requests per user, draw inputs, allocation history
 - [ ] Tenant context middleware — resolves `fps_{tenant_id}` MongoDB database per request
-- [ ] Dapr pub/sub publisher for domain events
+- [x] Dapr pub/sub publisher for domain events
 - [ ] Dapr pub/sub subscriber for `configuration.slotsUpdated`
-- [ ] Remove: EF Core, SQL Server, `BookingDbContext` (already exists in code — dead code to delete)
+- [x] Remove: EF Core, SQL Server, `BookingDbContext` (already exists in code — dead code to delete)
 
 **API layer** (`FPS.Booking.API`):
-- [ ] `POST /bookings` — submit request (future date → queued for Draw; today → immediate allocation if slot available); same 500-cap applies to both paths
-- [ ] `DELETE /bookings/{id}` — cancel
-- [ ] `GET /bookings` — my bookings
-- [ ] `POST /draws/trigger` — admin-only, trigger draw manually
-- [ ] `GET /draws/{date}/status` — draw status
+- [x] `POST /bookings` — submit request (future date → queued for Draw; today → immediate allocation if slot available); same 500-cap applies to both paths
+- [x] `DELETE /bookings/{id}` — cancel
+- [x] `GET /bookings` — my bookings
+- [x] `POST /draws/trigger` — admin-only, trigger draw manually
+- [x] `GET /draws/{date}/status` — draw status
+- [x] `POST /bookings/{id}/confirm-usage` — confirm usage
+- [x] `POST /bookings/no-show-evaluation` — evaluate no-shows
+- [x] `POST /bookings/{id}/manual-corrections` — apply manual correction
 
 **Tests**:
-- Unit: Domain (allocation algorithm, aggregate invariants)
-- Integration: Dapr state store and MongoDB queries against real MongoDB (TestContainers)
-- API: Controller tests with mocked application layer
+- [x] Unit: Domain (allocation algorithm, aggregate invariants)
+- [x] Application handler tests
+- [x] API controller tests with mocked application layer
+- [ ] Integration: Dapr state store and MongoDB queries against real MongoDB (TestContainers)
+  - Integration test scaffolding exists, but current validation skips these tests.
 
 ---
 
