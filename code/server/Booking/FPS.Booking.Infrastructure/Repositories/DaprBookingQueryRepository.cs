@@ -60,6 +60,36 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             nextCursor);
     }
 
+    public async Task<IReadOnlyList<BookingRequestDto>> GetPendingRequestsForDrawAsync(
+        string tenantId,
+        string locationId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        // Fetch tenant-wide pending index — maintained by SubmitBookingRequestHandler
+        var index = await daprClient.GetStateAsync<TenantPendingIndex>(
+            BookingStore,
+            $"pending:{tenantId}",
+            cancellationToken: cancellationToken);
+
+        if (index is null) return [];
+
+        var results = new List<BookingRequestDto>();
+        foreach (var id in index.RequestIds)
+        {
+            var dto = await daprClient.GetStateAsync<BookingRequestDto>(
+                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+
+            if (dto is null || dto.Status != "Pending") continue;
+            if (dto.LocationId != locationId) continue;
+            if (DateOnly.FromDateTime(dto.PlannedArrivalTime) != date) continue;
+
+            results.Add(dto);
+        }
+
+        return results;
+    }
+
     public async Task AddToUserIndexAsync(
         string tenantId,
         string requestorId,
@@ -119,6 +149,11 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(offset.ToString()));
 
     private sealed class UserRequestIndex
+    {
+        public List<Guid> RequestIds { get; set; } = [];
+    }
+
+    private sealed class TenantPendingIndex
     {
         public List<Guid> RequestIds { get; set; } = [];
     }

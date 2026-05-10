@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FPS.Booking.Application\FPS.Booking.Application.csproj" />
     <ProjectReference Include="..\FPS.Booking.Domain\FPS.Booking.Domain.csproj" />
+    <ProjectReference Include="..\FPS.Booking.Infrastructure\FPS.Booking.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Shared\FPS.SharedKernel\FPS.SharedKernel.csproj" />
   </ItemGroup>
 
