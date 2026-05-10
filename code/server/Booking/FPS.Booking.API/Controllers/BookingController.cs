@@ -3,6 +3,7 @@ using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Queries;
+using FPS.Booking.Application.Repositories;
 using FPS.Booking.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -128,6 +129,47 @@ public sealed class BookingController : ControllerBase
         catch (FPS.Booking.Application.Exceptions.BookingNotFoundException ex)
         {
             return NotFound(new { ex.Message });
+        }
+        catch (FPS.Booking.Domain.Exceptions.BookingException ex)
+        {
+            return UnprocessableEntity(new { ex.Message });
+        }
+    }
+
+    [HttpPost("{requestId:guid}/manual-corrections")]
+    [ProducesResponseType(typeof(ManualCorrectionResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApplyManualCorrection(
+        Guid requestId,
+        [FromBody] ManualCorrectionRequest body,
+        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
+        [FromHeader(Name = "X-Actor-Id")] string actor,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new ApplyManualCorrectionCommand(
+                RequestId: requestId,
+                TenantId: tenantId,
+                Actor: actor,
+                CorrectionType: body.CorrectionType,
+                OldValue: body.OldValue,
+                NewValue: body.NewValue,
+                Reason: body.Reason,
+                EffectiveAt: body.EffectiveAt),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (BookingNotFoundException ex)
+        {
+            return NotFound(new { ex.Message });
+        }
+        catch (CorrectionConflictException ex)
+        {
+            return Conflict(new { ex.Message });
         }
         catch (FPS.Booking.Domain.Exceptions.BookingException ex)
         {

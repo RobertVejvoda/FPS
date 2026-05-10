@@ -157,6 +157,45 @@ public class BookingRequestTests
         Assert.Equal("Only pending requests can be rejected", ex.Message);
     }
 
+    // ── ApplyManualCorrection ─────────────────────────────────────────────────
+
+    [Fact]
+    public void ApplyManualCorrection_StatusCorrection_ChangesStatusDirectly()
+    {
+        var request = Submit(ValidContext(isCutOffPassed: true)); // Rejected
+        request.ApplyManualCorrection("status", "Rejected", "Pending", "hr-user", "Correction needed", DateTime.UtcNow, _publisher.Object);
+        Assert.Equal(BookingRequestStatus.Pending, request.Status);
+    }
+
+    [Fact]
+    public void ApplyManualCorrection_BypassesTerminalGuard()
+    {
+        var request = Submit(ValidContext());
+        request.Cancel("Done", _publisher.Object);
+        // Terminal — but correction should NOT throw
+        request.ApplyManualCorrection("status", "Cancelled", "Pending", "hr-user", "Exception case", DateTime.UtcNow, _publisher.Object);
+        Assert.Equal(BookingRequestStatus.Pending, request.Status);
+    }
+
+    [Fact]
+    public void ApplyManualCorrection_FiresManualCorrectionEvent()
+    {
+        var request = Submit(ValidContext());
+        request.ApplyManualCorrection("status", "Pending", "Allocated", "hr-user", "Manual fix", DateTime.UtcNow, _publisher.Object);
+        _publisher.Verify(p => p.PublishAsync(
+            It.Is<ManualCorrectionAppliedEvent>(e => e.RequestId == request.Id && e.Actor == "hr-user"),
+            default), Times.Once);
+    }
+
+    [Fact]
+    public void ApplyManualCorrection_EmptyReason_Throws()
+    {
+        var request = Submit(ValidContext());
+        var ex = Assert.Throws<BookingException>(() =>
+            request.ApplyManualCorrection("status", "Pending", "Allocated", "hr-user", "", DateTime.UtcNow, _publisher.Object));
+        Assert.Equal("A reason is required for manual corrections.", ex.Message);
+    }
+
     // ── MarkNoShow ────────────────────────────────────────────────────────────
 
     [Fact]

@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IBookingQueryRepository, DaprBookingQueryRepository>();
         services.AddScoped<IDrawRepository, DaprDrawRepository>();
         services.AddScoped<IPenaltyRepository, DaprPenaltyRepository>();
+        services.AddScoped<ICorrectionAuditRepository, DaprCorrectionAuditRepository>();
         services.AddSingleton<IEmployeeMetricsService, InMemoryEmployeeMetricsService>();
         services.AddScoped<IAvailableSlotService, ConfiguredAvailableSlotService>();
         services.AddSingleton<DrawService>();
