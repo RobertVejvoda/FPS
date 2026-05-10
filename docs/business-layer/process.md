@@ -74,6 +74,8 @@ The exact formula can evolve, but the business principle should remain stable: a
 
 This process covers requests submitted before the allocation draw for a future time slot.
 
+The request status model is defined in [Booking Request Lifecycle](./booking-request-lifecycle).
+
 1. The employee submits a parking request.
 2. FPS validates the request against tenant policy.
 3. FPS rejects duplicates or ineligible requests with a clear reason.
@@ -112,6 +114,8 @@ Business rules:
 ## Cancellations and Reallocation
 
 Employees can cancel requests or reservations when their plans change.
+
+Detailed status transitions and penalty triggers are defined in [Booking Request Lifecycle](./booking-request-lifecycle).
 
 Before allocation:
 
