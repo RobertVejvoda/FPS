@@ -5,7 +5,9 @@ public record TenantPolicy(
     TimeOnly DrawCutOffTime,
     string TimeZoneId,
     bool SameDayBookingEnabled,
-    int AllocationLookbackDays = 10);
+    int AllocationLookbackDays = 10,
+    int LateCancellationPenalty = 1,
+    int NoShowPenalty = 2);
 
 public interface ITenantPolicyService
 {

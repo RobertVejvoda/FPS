@@ -4,7 +4,16 @@ namespace FPS.Booking.Application.Tests.Services;
 
 public sealed class EmployeeMetricsServiceTests
 {
-    private readonly InMemoryEmployeeMetricsService sut = new();
+    private readonly InMemoryEmployeeMetricsService sut;
+
+    public EmployeeMetricsServiceTests()
+    {
+        var penaltyRepo = new Mock<IPenaltyRepository>();
+        penaltyRepo.Setup(r => r.GetActiveByRequestorAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PenaltyDto>());
+        sut = new InMemoryEmployeeMetricsService(penaltyRepo.Object);
+    }
     private const string TenantId = "tenant-1";
     private const string RequestorId = "user-1";
     private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);

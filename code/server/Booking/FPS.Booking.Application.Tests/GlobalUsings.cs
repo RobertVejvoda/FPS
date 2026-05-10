@@ -1,14 +1,11 @@
 global using System;
+global using System.Collections.Generic;
 global using System.Threading;
 global using System.Threading.Tasks;
 global using FPS.Booking.Application.Commands;
 global using FPS.Booking.Application.Exceptions;
 global using FPS.Booking.Application.Models;
 global using FPS.Booking.Application.Queries;
-global using FPS.Booking.Application.Repositories;
-global using FPS.Booking.Application.Services;
-global using FPS.Booking.Domain.ValueObjects;
-global using FPS.Booking.Application.Models;
 global using FPS.Booking.Application.Repositories;
 global using FPS.Booking.Application.Services;
 global using FPS.Booking.Domain.ValueObjects;

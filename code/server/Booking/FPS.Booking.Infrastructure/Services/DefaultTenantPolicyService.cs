@@ -16,7 +16,9 @@ public class DefaultTenantPolicyService : ITenantPolicyService
             DrawCutOffTime: new TimeOnly(18, 0),
             TimeZoneId: "UTC",
             SameDayBookingEnabled: true,
-            AllocationLookbackDays: 10);
+            AllocationLookbackDays: 10,
+            LateCancellationPenalty: 1,
+            NoShowPenalty: 2);
 
         return Task.FromResult(policy);
     }
