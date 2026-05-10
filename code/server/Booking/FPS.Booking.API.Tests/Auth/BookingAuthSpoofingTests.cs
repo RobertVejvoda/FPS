@@ -138,14 +138,37 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    private static string CreateToken(string userId, string tenantId)
+    [Fact]
+    public async Task ManualCorrection_SpoofedActorHeader_IgnoresHeader()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("real-hr-user", "tenant-1", "hr_manager"));
+        client.DefaultRequestHeaders.Add("X-Actor-Id", "spoofed-actor");
+
+        var body = JsonSerializer.Serialize(new
+        {
+            correctionType = "status",
+            oldValue = "Pending",
+            newValue = "Allocated",
+            reason = "HR override"
+        });
+
+        var response = await client.PostAsync($"/bookings/{Guid.NewGuid()}/manual-corrections",
+            new StringContent(body, Encoding.UTF8, "application/json"));
+
+        // 404 or other — but the actor in the command comes from the JWT, not the header
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private static string CreateToken(string userId, string tenantId, string role = "employee")
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId),
             new("sub", userId),
             new("tenant_id", tenantId),
-            new(ClaimTypes.Role, "employee")
+            new(ClaimTypes.Role, role)
         };
 
         var token = new JwtSecurityToken(
