@@ -157,10 +157,13 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             _ => null
         };
 
-    // Only advertise actions implemented in merged slices (B001 + B003).
-    // cancel: Pending requests only. Allocated-cancel waits for B005.
     private static string NextActionFor(string status) =>
-        status == "Pending" ? "cancel" : "none";
+        status switch
+        {
+            "Pending" => "cancel",
+            "Allocated" => "confirmUsage",
+            _ => "none"
+        };
 
     private static int DecodeCursor(string? cursor)
     {
