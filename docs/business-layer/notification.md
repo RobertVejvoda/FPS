@@ -44,6 +44,8 @@ FPS must notify affected employees for these events:
 | Manual correction or override | Affected requestor | In-app, email |
 | Draw completed | Requestors included in the Draw | In-app, email |
 
+When a request remains `Pending` after the Draw because it was eligible but no matching capacity was available, the Draw completed notification must explain that the request is still waiting for a released slot until the requested time slot expires.
+
 FPS must notify HR or configured administrators for these events:
 
 | Event | Recipient |
@@ -108,12 +110,14 @@ Notification delivery must be idempotent.
 
 Rules:
 
+- Booking workflows publish notification events asynchronously after the authoritative booking state change is persisted.
 - the same source event must not create duplicate in-app notifications;
 - the same source event must not send duplicate emails;
 - each notification should have a stable deduplication key based on event ID, recipient, notification type, and channel;
 - retries must use the same deduplication key;
 - in-app notification creation and email sending may complete independently;
 - failure in one channel must not silently suppress the other channel.
+- notification delivery failure must not roll back a completed booking cancellation, allocation, reallocation, penalty, or Draw outcome.
 
 ## Delivery Failure Behavior
 

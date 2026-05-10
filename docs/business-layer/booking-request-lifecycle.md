@@ -35,6 +35,8 @@ These rules cover:
 
 Implementation may use different internal enum names only if API responses, audit records, and documentation keep these business meanings clear.
 
+`Submitted` is a transient business state for validation and audit explanation. The first persisted request status for normal submission is `Pending` when validation passes or `Rejected` when validation fails. API clients should not see a long-lived `Submitted` booking.
+
 ## Status Transitions
 
 | From | To | Trigger |
@@ -42,7 +44,7 @@ Implementation may use different internal enum names only if API responses, audi
 | `Submitted` | `Pending` | Initial validation passes. |
 | `Submitted` | `Rejected` | Initial validation fails. |
 | `Pending` | `Allocated` | Draw, same-day allocation, or cancellation reallocation assigns a slot. |
-| `Pending` | `Rejected` | Request is duplicate, ineligible, late, over cap, impossible to match, or no capacity remains. |
+| `Pending` | `Rejected` | Request is duplicate, ineligible, late, over cap, impossible to match, or tenant policy does not keep unallocated eligible requests pending. |
 | `Pending` | `Cancelled` | Requestor or authorized role cancels before allocation. |
 | `Pending` | `Expired` | Requested time passes before allocation. |
 | `Allocated` | `Used` | Usage is confirmed. |
@@ -63,7 +65,13 @@ FPS accepts a booking request only when:
 - the requestor has a registered or provided vehicle when vehicle data is required;
 - the vehicle and request constraints can be matched to at least one configured slot type.
 
+For future scheduled Draw requests, the cut-off is anchored to the requested parking date. By default, the Draw for parking date `D` closes at the configured `drawCutOffTime` on calendar date `D - 1` in the tenant or location policy timezone. Requests submitted after that instant are rejected as late for that Draw. Same-day requests are handled by the same-day booking slice, not by the future-request slice.
+
+At submission time, slot matching checks configured slot type or capacity-pool compatibility only. FPS must verify that at least one configured slot type at the requested location could satisfy the request's vehicle and declared constraints. It must not reserve live capacity or run Draw allocation during future-request submission.
+
 The duplicate definition is owned by [Executable Allocation Rules](./allocation-rules): same tenant, same requestor, same date, and overlapping time slot.
+
+When a scheduled Draw has fewer matching slots than eligible requests, requests that are valid but do not win capacity remain `Pending` by default. They form the reallocation pool for later cancellations until the requested time slot expires or tenant policy explicitly rejects unallocated requests immediately.
 
 ## Cancellation Rules
 
@@ -123,7 +131,10 @@ The default no-show penalty is `+2`. If usage confirmation is not available for 
 Examples:
 
 - a pending same-day request reaches the end of the requested time slot without allocation;
+- a pending scheduled-Draw request remains unallocated when the requested time slot is no longer actionable;
 - an allocated request passes its usage window in a tenant where no-show detection is disabled.
+
+For scheduled Draw waitlist requests, expiry occurs at the end of the requested time slot in the resolved policy timezone. Expiry may be performed by a scheduled process or by the next command/query that observes the stale pending request, but it must be auditable and idempotent.
 
 Expiry must be auditable and must not create penalties by default.
 

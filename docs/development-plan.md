@@ -147,6 +147,8 @@ Goal: every developer can run the full stack locally with a single command.
 
 This is the core of FPS. Everything else is supporting.
 
+Implementation should follow vertical slices from `docs/business-layer/booking-vertical-slices.md`. Do not complete the whole domain layer before application and API work; each story should cut through the layers and be independently testable.
+
 **Domain layer** (`FPS.Booking.Domain`):
 - [ ] `BookingRequest` aggregate — submit, cancel, expire
   - Must follow `docs/business-layer/booking-request-lifecycle.md`
@@ -168,6 +170,7 @@ This is the core of FPS. Everything else is supporting.
 - [ ] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
 - [ ] Implement request lifecycle behavior against `docs/business-layer/booking-request-lifecycle.md`
 - [ ] Resolve allocation policy from `docs/business-layer/parking-policy-configuration.md`
+- [ ] Implement Booking story-by-story against `docs/business-layer/booking-vertical-slices.md`
 
 **Application layer** (`FPS.Booking.Application`):
 - [ ] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
@@ -198,6 +201,8 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **Request lifecycle**: Request status transitions, late-cancellation trigger, usage confirmation, no-show handling, and employee-visible reasons are defined in `docs/business-layer/booking-request-lifecycle.md`.
 >
 > **Policy configuration**: Tenant defaults with per-location overrides are defined in `docs/business-layer/parking-policy-configuration.md`.
+>
+> **Vertical slices**: Booking implementation order and story acceptance criteria are defined in `docs/business-layer/booking-vertical-slices.md`.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
@@ -379,7 +384,7 @@ public class BookingDrawWorkflow : Workflow<DrawInput, DrawResult>
 
 - Domain layer: pure unit tests, no mocks, no infrastructure — fast
 - Application layer: unit tests with mocked repositories
-- Infrastructure layer: integration tests with TestContainers (real PostgreSQL, real Redis)
+- Infrastructure layer: integration tests with TestContainers (real MongoDB, real Redis)
 - API layer: integration tests with `WebApplicationFactory`
 - Minimum 80% coverage on Domain + Application layers (NFR502)
 - Draw algorithm: property-based tests (FsCheck or similar) to verify fairness invariants
@@ -416,3 +421,4 @@ These need answers before the relevant phase begins:
 | 13 | ~~When does late cancellation start?~~ → **After a slot has been allocated; before allocation no penalty applies** | ✅ Decided | — |
 | 14 | ~~How is parking policy configured?~~ → **Tenant defaults with per-location overrides** | ✅ Decided | — |
 | 15 | ~~Which notification channels are required for v1?~~ → **Both in-app and email for critical operational notifications** | ✅ Decided | — |
+| 16 | ~~How should Booking be implemented?~~ → **Story-driven vertical slices, not layer-by-layer** | ✅ Decided | — |

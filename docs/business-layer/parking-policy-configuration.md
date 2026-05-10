@@ -34,6 +34,8 @@ A parking policy applies to:
 - company-car and reserved-space behavior;
 - employee-visible rejection reasons.
 
+For a future parking request, `drawCutOffTime` is evaluated against the requested parking date. The default rule is: parking date `D` closes at the configured cut-off time on calendar date `D - 1` in the policy timezone. Location timezone overrides tenant timezone when a location override exists.
+
 ## Tenant Default Policy
 
 Each tenant policy must define these fields.

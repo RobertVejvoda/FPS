@@ -2,7 +2,7 @@
 title: Bookings
 ---
 
-[Bookings module](../application-layer/booking) is designed to manage the reservation of parking slots efficiently. It allows users to submit booking requests, check the status of their bookings, and manage their reservations through modifications or cancellations. The system ensures fair allocation of slots, provides real-time updates, and leverages AI to optimize the allocation process and predict demand. Additionally, it handles user notifications, monitors system performance, and ensures compliance with data privacy regulations.
+[Bookings module](../application-layer/booking) manages employee parking requests, allocation outcomes, cancellations, usage confirmation, and booking history. Implementation should follow the story-driven plan in [Booking Vertical Slices](./booking-vertical-slices), with each story cutting through domain, application, API, persistence, notification, audit, and tests where needed.
 
 ### Booking Service
 **Functions:**
@@ -42,7 +42,10 @@ title: Bookings
 - Conflict Detected
 - Override Applied
 
-### AI Service
+### AI Service (Future)
+
+AI capabilities are not part of the Phase 1 Booking implementation. Phase 1 allocation must follow the deterministic rules documented in [Executable Allocation Rules](./allocation-rules) and the story order documented in [Booking Vertical Slices](./booking-vertical-slices).
+
 **Functions:**
 - Slot Optimization
 - Demand Prediction
