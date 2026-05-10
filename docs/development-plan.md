@@ -6,6 +6,8 @@ The **Fair Parking System (FPS)** is a multi-tenant SaaS platform that replaces 
 
 The system is not a simple CRUD app — the Draw is a long-running distributed process that locks slots, runs an allocation algorithm, fires notifications, and updates metrics. This makes it an ideal candidate for **Dapr Workflows**.
 
+Booking implementation requirements are maintained under the business layer. The key product-owner handoff documents are [Booking Vertical Slices](business-layer/booking-vertical-slices), [Booking Event Contracts](business-layer/booking-event-contracts), [Booking Authorization](business-layer/booking-authorization), [Booking Reason Codes](business-layer/booking-reason-codes), [Booking API Contract](business-layer/booking-api-contract), and [Booking Context Contract](business-layer/booking-context-contract).
+
 ---
 
 ## Architecture Style
@@ -105,8 +107,8 @@ The docs describe a multi-tenant SaaS but never define isolation: database-per-t
 **4. Mobile platform decision: React Native vs .NET MAUI**
 Both are listed. They require different skill sets, build pipelines, and maintenance effort. Pick one.
 
-**5. Event topology not defined**
-RabbitMQ via Dapr pub/sub is selected, but no topic/exchange map exists. Each service publishing or subscribing to events needs a defined contract. Suggested starting point: one topic per domain event (`booking.submitted`, `draw.completed`, `slot.allocated`, etc.).
+**5. Event topology** ✅ *Resolved for Booking*
+Booking event contracts are defined in `docs/business-layer/booking-event-contracts.md`. Other services may add their contracts slice-by-slice.
 
 **6. Draw process volume not quantified**
 NFRs specify 10,000 concurrent users and 100 TPS but never state how many booking requests a single Draw processes. This determines whether the workflow runs in seconds or minutes, and whether it needs partitioning.
@@ -147,6 +149,8 @@ Goal: every developer can run the full stack locally with a single command.
 
 This is the core of FPS. Everything else is supporting.
 
+Implementation should follow vertical slices from `docs/business-layer/booking-vertical-slices.md`. Do not complete the whole domain layer before application and API work; each story should cut through the layers and be independently testable.
+
 **Domain layer** (`FPS.Booking.Domain`):
 - [ ] `BookingRequest` aggregate — submit, cancel, expire
   - Must follow `docs/business-layer/booking-request-lifecycle.md`
@@ -168,6 +172,7 @@ This is the core of FPS. Everything else is supporting.
 - [ ] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
 - [ ] Implement request lifecycle behavior against `docs/business-layer/booking-request-lifecycle.md`
 - [ ] Resolve allocation policy from `docs/business-layer/parking-policy-configuration.md`
+- [ ] Implement Booking story-by-story against `docs/business-layer/booking-vertical-slices.md`
 
 **Application layer** (`FPS.Booking.Application`):
 - [ ] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
@@ -198,6 +203,12 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **Request lifecycle**: Request status transitions, late-cancellation trigger, usage confirmation, no-show handling, and employee-visible reasons are defined in `docs/business-layer/booking-request-lifecycle.md`.
 >
 > **Policy configuration**: Tenant defaults with per-location overrides are defined in `docs/business-layer/parking-policy-configuration.md`.
+>
+> **Vertical slices**: Booking implementation order and story acceptance criteria are defined in `docs/business-layer/booking-vertical-slices.md`.
+>
+> **Authorization**: Booking role/action permissions are defined in `docs/business-layer/booking-authorization.md`.
+>
+> **API contract**: Booking response and error shapes are defined in `docs/business-layer/booking-api-contract.md`.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
@@ -379,7 +390,7 @@ public class BookingDrawWorkflow : Workflow<DrawInput, DrawResult>
 
 - Domain layer: pure unit tests, no mocks, no infrastructure — fast
 - Application layer: unit tests with mocked repositories
-- Infrastructure layer: integration tests with TestContainers (real PostgreSQL, real Redis)
+- Infrastructure layer: integration tests with TestContainers (real MongoDB, real Redis)
 - API layer: integration tests with `WebApplicationFactory`
 - Minimum 80% coverage on Domain + Application layers (NFR502)
 - Draw algorithm: property-based tests (FsCheck or similar) to verify fairness invariants
@@ -416,3 +427,4 @@ These need answers before the relevant phase begins:
 | 13 | ~~When does late cancellation start?~~ → **After a slot has been allocated; before allocation no penalty applies** | ✅ Decided | — |
 | 14 | ~~How is parking policy configured?~~ → **Tenant defaults with per-location overrides** | ✅ Decided | — |
 | 15 | ~~Which notification channels are required for v1?~~ → **Both in-app and email for critical operational notifications** | ✅ Decided | — |
+| 16 | ~~How should Booking be implemented?~~ → **Story-driven vertical slices, not layer-by-layer** | ✅ Decided | — |

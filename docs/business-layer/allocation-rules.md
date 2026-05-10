@@ -52,7 +52,7 @@ The Draw applies rules in this order:
 4. Allocate Tier 1 company-car requests.
 5. Reject Tier 1 overflow when company-car requests exceed available matching capacity.
 6. Allocate remaining eligible requests through Tier 2 weighted lottery.
-7. Persist allocations and rejections.
+7. Persist allocations, rejections, and pending waitlist outcomes.
 8. Update user metrics.
 9. Publish notifications and audit events.
 
@@ -67,6 +67,9 @@ Rules:
 - Tier 1 allocations do not increment `RecentAllocationCount`.
 - Tier 1 requestors do not receive penalties for company-car allocations.
 - If matching capacity is insufficient, FPS rejects overflow requests for now.
+- Company-car overflow means Tier 1 demand exceeds matching company-car-eligible capacity for the Draw key after tenant, location, time slot, slot capability, reserved-space, and active/inactive slot constraints are applied.
+- Company-car overflow is determined before Tier 2 starts.
+- Company-car overflow requests become `Rejected`, not `Pending`, because the overflow is treated as tenant configuration drift rather than normal scarce-capacity lottery loss.
 
 Overflow is expected to indicate tenant configuration drift, not normal business demand. The rejection reason must make that visible to HR.
 
@@ -88,6 +91,7 @@ Rules:
 - Rejected requests do not reduce weight.
 - Every eligible Tier 2 request has a non-zero weight unless tenant policy excludes it before the lottery.
 - The lottery selects without replacement until capacity is exhausted or no eligible request remains.
+- Eligible Tier 2 requests that do not win only because matching capacity is exhausted remain `Pending` by default for cancellation reallocation.
 
 ## Slot Matching
 
@@ -115,6 +119,7 @@ Rules:
 - the seed is generated once per Draw key;
 - manual re-run of the same Draw key must reuse the existing seed unless an admin explicitly starts a new audited Draw attempt;
 - the audit record stores the seed and algorithm version;
+- the Draw attempt record stores the ordered Tier 2 candidate sequence, including winners and remaining eligible pending candidates;
 - test fixtures may inject the seed to make outcomes deterministic.
 
 The product does not need to expose the seed to employees, but HR and audit roles must be able to reproduce or explain the result.
@@ -127,9 +132,10 @@ Rules:
 
 - same-day requests still pass tenant policy, duplicate, vehicle, and slot matching checks;
 - if a suitable slot is available, FPS allocates it immediately;
-- if no suitable slot exists, FPS rejects the request or places it on a waitlist when that tenant feature exists;
+- if no suitable slot exists, FPS rejects the request for v1; same-day waitlist is a future feature;
 - successful same-day allocations count toward `RecentAllocationCount`;
 - same-day allocation does not bypass penalties or reserved-space constraints.
+- same-day allocation must not steal an already allocated slot and must not allocate a slot reserved for a pending scheduled-Draw waitlist candidate unless tenant policy marks that slot as currently available for same-day use.
 
 ## Cancellation Reallocation
 
@@ -146,6 +152,8 @@ Rules:
 - both affected requestors receive notifications.
 
 If no eligible requestor exists, the slot remains available for same-day allocation or manual use under tenant policy.
+
+Reallocation should use the original Draw ordering when available. The original ordering is available when the Draw attempt for the same tenant, location, date, and time slot has a recorded algorithm version, seed, and ordered Tier 2 candidate sequence. FPS must skip candidates that are no longer `Pending`, are no longer eligible, or do not match the released slot. If the original ordering is missing or corrupt, FPS must run a new deterministic reallocation selection for the remaining eligible pending candidates, record the reallocation seed and decision, and audit why the fallback was used.
 
 ## Penalties
 
@@ -165,6 +173,10 @@ Penalty rules:
 - penalties expire according to tenant policy;
 - if no tenant expiry is configured, the allocation lookback window applies;
 - company-car Tier 1 allocations do not create penalties.
+- late cancellation starts immediately after a request becomes `Allocated`; there is no additional hours-before-start threshold in v1.
+- the Booking service owns the v1 penalty ledger for booking-related penalties.
+- each penalty record must include tenant, request ID, requestor ID, penalty type, score, source event ID, effective timestamp, expiry timestamp, actor or system source, and reason.
+- penalty creation must be idempotent by source event ID and penalty type.
 
 ## Metrics Update
 
