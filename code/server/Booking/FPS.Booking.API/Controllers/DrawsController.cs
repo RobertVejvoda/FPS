@@ -1,6 +1,7 @@
 using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Models;
+using FPS.Booking.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,5 +44,38 @@ public sealed class DrawsController : ControllerBase
             result.WaitlistedCount);
 
         return result.WasAlreadyCompleted ? Ok(response) : Accepted(response);
+    }
+
+    [HttpGet("{date}/status")]
+    [ProducesResponseType(typeof(DrawStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDrawStatus(
+        DateOnly date,
+        [FromQuery] string locationId,
+        [FromQuery] DateTime timeSlotStart,
+        [FromQuery] DateTime timeSlotEnd,
+        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetDrawStatusQuery(tenantId, locationId, date, timeSlotStart, timeSlotEnd),
+            cancellationToken);
+
+        if (result is null) return NotFound();
+
+        return Ok(new DrawStatusResponse(
+            result.DrawKey,
+            result.Status,
+            result.RequestCount,
+            result.AllocatedCount,
+            result.RejectedCount,
+            result.WaitlistedCount,
+            result.CompanyCarOverflowCount,
+            result.SummaryRejectionReasons,
+            result.AlgorithmVersion,
+            result.Seed,
+            result.AuditReference,
+            result.StartedAt,
+            result.CompletedAt));
     }
 }

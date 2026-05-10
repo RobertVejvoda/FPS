@@ -2,6 +2,7 @@ using FPS.Booking.API.Controllers;
 using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Models;
+using FPS.Booking.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -59,6 +60,39 @@ public sealed class DrawsControllerTests
         await controller.TriggerDraw(ValidBody(), "tenant-99", CancellationToken.None);
 
         Assert.Equal("tenant-99", captured?.TenantId);
+    }
+
+    // ── GET /draws/{date}/status ──────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetDrawStatus_CompletedDraw_Returns200()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DrawStatusResult(
+                "draw-key", "tenant-1", "loc-1", DrawDate,
+                "Completed", 5, 3, 1, 1, 0, [], "1.0", 42, "draw-key",
+                DateTime.UtcNow, DateTime.UtcNow));
+
+        var result = await controller.GetDrawStatus(
+            DrawDate, "loc-1", SlotStart, SlotEnd, "tenant-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<DrawStatusResponse>(ok.Value);
+        Assert.Equal("Completed", body.Status);
+        Assert.Equal(3, body.AllocatedCount);
+        Assert.Equal(42, body.Seed);
+    }
+
+    [Fact]
+    public async Task GetDrawStatus_NoDraw_Returns404()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawStatusResult?)null);
+
+        var result = await controller.GetDrawStatus(
+            DrawDate, "loc-1", SlotStart, SlotEnd, "tenant-1", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
     }
 
     private static TriggerDrawRequest ValidBody() => new(
