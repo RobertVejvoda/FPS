@@ -157,7 +157,7 @@ public class ParkingAllocationServiceTests
     {
         // Arrange
         var request = CreatePendingBookingRequest();
-        request.Accept(_eventPublisherMock.Object);
+        request.Allocate(_eventPublisherMock.Object);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BookingException>(() =>
@@ -170,8 +170,8 @@ public class ParkingAllocationServiceTests
     {
         var userId = UserId.New();
         var period = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2));
-        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, true); // Updated to include IsCompanyCar
-
-        return BookingRequest.Create(userId, period, vehicle, _eventPublisherMock.Object);
+        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, false);
+        var context = SubmissionContext.Create(500, 0, false, false);
+        return BookingRequest.Submit(userId, period, vehicle, context, _eventPublisherMock.Object);
     }
 }

@@ -30,6 +30,7 @@ public class BookingWorkflow : Workflow<BookingRequestDto, AllocatedSlotDto?>
                 nameof(PublishBookingRejectedActivity),
                 new BookingRequestRejectedEvent(
                     BookingRequestId.FromGuid(request.RequestId),
+                    BookingRejectionCode.NoCapacityAvailable,
                     "Facility unavailable"));
 
             return null;
@@ -48,6 +49,7 @@ public class BookingWorkflow : Workflow<BookingRequestDto, AllocatedSlotDto?>
                 nameof(PublishBookingRejectedActivity),
                 new BookingRequestRejectedEvent(
                     BookingRequestId.FromGuid(request.RequestId),
+                    BookingRejectionCode.NoCapacityAvailable,
                     slotResult.Reason ?? "No available slots"));
 
             return null;

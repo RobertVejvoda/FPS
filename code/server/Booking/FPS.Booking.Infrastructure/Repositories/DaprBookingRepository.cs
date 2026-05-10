@@ -233,11 +233,31 @@ namespace FPS.Booking.Infrastructure.Repositories
             }
         }
 
+        public async Task<int> CountRequestsForDateAsync(string tenantId, DateTime date, CancellationToken cancellationToken = default)
+        {
+            var key = $"count:{tenantId}:{date:yyyy-MM-dd}";
+            var counter = await _daprClient.GetStateAsync<RequestDateCounter>(BOOKING_STORE, key, cancellationToken: cancellationToken);
+            return counter?.Count ?? 0;
+        }
+
+        public async Task<bool> HasOverlappingRequestAsync(string tenantId, string requestorId, TimeSlot period, CancellationToken cancellationToken = default)
+        {
+            // Full overlap query requires MongoDB driver — Dapr state store does not support range queries.
+            // Returns false until the MongoDB read-side implementation is added (infrastructure test phase).
+            await Task.CompletedTask;
+            return false;
+        }
+
         // Index classes for state storage
         private class StatusAllocationIndex
         {
             public string Status { get; set; }
             public Guid AllocationId { get; set; }
+        }
+
+        private class RequestDateCounter
+        {
+            public int Count { get; set; }
         }
 
         private class FacilityAllocationIndex

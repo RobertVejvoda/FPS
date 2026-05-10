@@ -1,5 +1,9 @@
+using FPS.Booking.Application.Commands;
+using FPS.Booking.Application.Repositories;
+using FPS.Booking.Application.Services;
 using FPS.Booking.Infrastructure.Repositories;
 using FPS.Booking.Infrastructure.Services;
+using FPS.SharedKernel.DomainEvents;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,9 +13,13 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddScoped<DaprBookingRepository>();
-        services.AddScoped<DaprAllocationService>();
-        services.AddScoped<DaprEventPublisher>();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(SubmitBookingRequestHandler).Assembly));
+
+        services.AddScoped<IBookingRepository, DaprBookingRepository>();
+        services.AddScoped<IAllocationService, DaprAllocationService>();
+        services.AddScoped<IEventPublisher, DaprEventPublisher>();
+        services.AddScoped<ITenantPolicyService, DefaultTenantPolicyService>();
+
         return services;
     }
 }

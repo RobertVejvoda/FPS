@@ -3,17 +3,21 @@ using FPS.SharedKernel.DomainEvents;
 
 namespace FPS.Booking.Domain.Events;
 
-// BookingRequest events
-public record BookingRequestCreatedEvent(
+// BookingRequest lifecycle events
+public record BookingRequestSubmittedEvent(
     BookingRequestId RequestId,
     UserId RequestorId,
     TimeSlot RequestedPeriod) : DomainEvent;
 
-public record BookingRequestAcceptedEvent(
+public record BookingRequestPendingEvent(
+    BookingRequestId RequestId) : DomainEvent;
+
+public record BookingRequestAllocatedEvent(
     BookingRequestId RequestId) : DomainEvent;
 
 public record BookingRequestRejectedEvent(
     BookingRequestId RequestId,
+    BookingRejectionCode RejectionCode,
     string Reason) : DomainEvent;
 
 public record BookingRequestCancelledEvent(
@@ -46,3 +50,10 @@ public record SlotUsageStartedEvent(
 public record SlotUsageCompletedEvent(
     SlotAllocationId AllocationId,
     DateTime EndTime) : DomainEvent;
+
+// Draw events
+public record DrawRunEvent(
+    DateOnly DrawDate,
+    int TotalRequests,
+    int AllocatedCount,
+    int RejectedCount) : DomainEvent;

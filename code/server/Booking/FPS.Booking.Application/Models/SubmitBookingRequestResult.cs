@@ -1,6 +1,6 @@
-namespace FPS.Booking.API.Models;
+namespace FPS.Booking.Application.Models;
 
-public record SubmitBookingResponse(
+public record SubmitBookingRequestResult(
     Guid RequestId,
     string Status,
     string? RejectionCode,

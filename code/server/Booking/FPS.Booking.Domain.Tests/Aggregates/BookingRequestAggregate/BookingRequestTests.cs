@@ -2,188 +2,223 @@ namespace FPS.Booking.Domain.Tests.Aggregates.BookingRequestAggregate;
 
 public class BookingRequestTests
 {
+    private readonly Mock<IEventPublisher> _publisher = new();
+    private readonly TimeSlot _futurePeriod = TimeSlot.Create(
+        DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(8));
+
+    // ── Submit — happy path ──────────────────────────────────────────────────
+
     [Fact]
-    public void Create_WithValidParameters_ReturnsRequestWithPendingStatus()
+    public void Submit_ValidFutureRequest_ReturnsPending()
     {
-        // Arrange
-        var userId = UserId.New();
-        var period = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2));
-        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, true); // Updated to include IsCompanyCar
-        var eventPublisher = new Mock<IEventPublisher>();
+        var request = Submit(ValidContext());
 
-        // Act
-        var request = BookingRequest.Create(userId, period, vehicle, eventPublisher.Object);
-
-        // Assert
-        Assert.NotNull(request);
         Assert.Equal(BookingRequestStatus.Pending, request.Status);
+        Assert.Null(request.RejectionCode);
+    }
+
+    [Fact]
+    public void Submit_ValidRequest_FiresSubmittedAndPendingEvents()
+    {
+        var request = Submit(ValidContext());
+
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestSubmittedEvent>(
+            e => e.RequestId == request.Id), default), Times.Once);
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestPendingEvent>(
+            e => e.RequestId == request.Id), default), Times.Once);
+    }
+
+    [Fact]
+    public void Submit_ValidRequest_SetsRequestorIdAndPeriod()
+    {
+        var userId = UserId.New();
+        var vehicle = MakeVehicle();
+        var request = BookingRequest.Submit(userId, _futurePeriod, vehicle, ValidContext(), _publisher.Object);
+
         Assert.Equal(userId, request.RequestorId);
-        Assert.Equal(period, request.RequestedPeriod);
+        Assert.Equal(_futurePeriod, request.RequestedPeriod);
         Assert.Equal(vehicle, request.Vehicle);
+    }
 
-        // Verify domain event was published
-        eventPublisher.Verify(p => p.PublishAsync(It.Is<BookingRequestCreatedEvent>(e =>
-            e.RequestId == request.Id &&
-            e.RequestorId == userId &&
-            e.RequestedPeriod == period), default), Times.Once);
+    // ── Submit — rejection paths ─────────────────────────────────────────────
+
+    [Fact]
+    public void Submit_PastDate_ReturnsRejectedWithPastDateCode()
+    {
+        var pastPeriod = TimeSlot.Create(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(-1).AddHours(2));
+        var request = BookingRequest.Submit(UserId.New(), pastPeriod, MakeVehicle(), ValidContext(), _publisher.Object);
+
+        Assert.Equal(BookingRequestStatus.Rejected, request.Status);
+        Assert.Equal(BookingRejectionCode.PastDate, request.RejectionCode);
     }
 
     [Fact]
-    public void Accept_WhenPending_ChangesStatusToAccepted()
+    public void Submit_CutOffPassed_ReturnsRejectedWithCutOffCode()
     {
-        // Arrange
-        var request = CreatePendingRequest(out var eventPublisher);
+        var request = Submit(ValidContext(isCutOffPassed: true));
 
-        // Act
-        request.Accept(eventPublisher.Object);
-
-        // Assert
-        Assert.Equal(BookingRequestStatus.Accepted, request.Status);
-
-        // Verify domain event was published
-        eventPublisher.Verify(p => p.PublishAsync(It.Is<BookingRequestAcceptedEvent>(e =>
-            e.RequestId == request.Id), default), Times.Once);
+        Assert.Equal(BookingRequestStatus.Rejected, request.Status);
+        Assert.Equal(BookingRejectionCode.CutOffPassed, request.RejectionCode);
     }
 
     [Fact]
-    public void Accept_WhenNotPending_ThrowsBookingException()
+    public void Submit_DailyCapExceeded_ReturnsRejectedWithCapCode()
     {
-        // Arrange
-        var request = CreatePendingRequest(out var eventPublisher);
-        request.Reject("No slots available", eventPublisher.Object);
+        var request = Submit(ValidContext(cap: 10, existingCount: 10));
 
-        // Act & Assert
-        var exception = Assert.Throws<BookingException>(() => request.Accept(eventPublisher.Object));
-        Assert.Equal("Only pending requests can be accepted", exception.Message);
+        Assert.Equal(BookingRequestStatus.Rejected, request.Status);
+        Assert.Equal(BookingRejectionCode.DailyCapExceeded, request.RejectionCode);
     }
+
+    [Fact]
+    public void Submit_DuplicateRequest_ReturnsRejectedWithDuplicateCode()
+    {
+        var request = Submit(ValidContext(hasOverlap: true));
+
+        Assert.Equal(BookingRequestStatus.Rejected, request.Status);
+        Assert.Equal(BookingRejectionCode.DuplicateRequest, request.RejectionCode);
+    }
+
+    [Fact]
+    public void Submit_Rejected_FiresSubmittedAndRejectedEvents()
+    {
+        var request = Submit(ValidContext(isCutOffPassed: true));
+
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestSubmittedEvent>(
+            e => e.RequestId == request.Id), default), Times.Once);
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestRejectedEvent>(
+            e => e.RequestId == request.Id && e.RejectionCode == BookingRejectionCode.CutOffPassed), default), Times.Once);
+    }
+
+    [Fact]
+    public void Submit_Rejected_HasEmployeeVisibleReason()
+    {
+        var request = Submit(ValidContext(hasOverlap: true));
+
+        Assert.NotNull(request.RejectionReason);
+        Assert.NotEmpty(request.RejectionReason);
+    }
+
+    // ── Reject — ordering: first failing rule wins ───────────────────────────
+
+    [Fact]
+    public void Submit_PastDateTakesPrecedenceOverCutOff()
+    {
+        var pastPeriod = TimeSlot.Create(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(-1).AddHours(2));
+        var context = SubmissionContext.Create(500, 0, false, isCutOffPassed: true);
+        var request = BookingRequest.Submit(UserId.New(), pastPeriod, MakeVehicle(), context, _publisher.Object);
+
+        Assert.Equal(BookingRejectionCode.PastDate, request.RejectionCode);
+    }
+
+    // ── Allocate ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Allocate_WhenPending_ChangesStatusToAllocated()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+
+        Assert.Equal(BookingRequestStatus.Allocated, request.Status);
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestAllocatedEvent>(
+            e => e.RequestId == request.Id), default), Times.Once);
+    }
+
+    [Fact]
+    public void Allocate_WhenNotPending_Throws()
+    {
+        var request = Submit(ValidContext());
+        request.Reject(BookingRejectionCode.NoCapacityAvailable, "No slots", _publisher.Object);
+
+        var ex = Assert.Throws<BookingException>(() => request.Allocate(_publisher.Object));
+        Assert.Equal("Only pending requests can be allocated", ex.Message);
+    }
+
+    // ── Reject (post-Draw) ───────────────────────────────────────────────────
 
     [Fact]
     public void Reject_WhenPending_ChangesStatusToRejected()
     {
-        // Arrange
-        var request = CreatePendingRequest(out var eventPublisher);
-        var reason = "No slots available";
+        var request = Submit(ValidContext());
+        request.Reject(BookingRejectionCode.NoCapacityAvailable, "No slots available", _publisher.Object);
 
-        // Act
-        request.Reject(reason, eventPublisher.Object);
-
-        // Assert
         Assert.Equal(BookingRequestStatus.Rejected, request.Status);
-        Assert.Equal(reason, request.RejectionReason);
-
-        // Verify domain event was published
-        eventPublisher.Verify(p => p.PublishAsync(It.Is<BookingRequestRejectedEvent>(e =>
-            e.RequestId == request.Id &&
-            e.Reason == reason), default), Times.Once);
+        Assert.Equal(BookingRejectionCode.NoCapacityAvailable, request.RejectionCode);
     }
 
     [Fact]
-    public void Reject_WhenNotPending_ThrowsBookingException()
+    public void Reject_WhenNotPending_Throws()
     {
-        // Arrange
-        var request = CreatePendingRequest(out var eventPublisher);
-        request.Accept(eventPublisher.Object);
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
 
-        // Act & Assert
-        var exception = Assert.Throws<BookingException>(() => request.Reject("Some reason", eventPublisher.Object));
-        Assert.Equal("Only pending requests can be rejected", exception.Message);
+        var ex = Assert.Throws<BookingException>(() =>
+            request.Reject(BookingRejectionCode.NoCapacityAvailable, "No slots", _publisher.Object));
+        Assert.Equal("Only pending requests can be rejected", ex.Message);
     }
+
+    // ── Cancel ───────────────────────────────────────────────────────────────
 
     [Fact]
     public void Cancel_WhenPending_ChangesStatusToCancelled()
     {
-        // Arrange
-        var request = CreatePendingRequest(out var eventPublisher);
-        var reason = "User cancelled";
+        var request = Submit(ValidContext());
+        request.Cancel("User cancelled", _publisher.Object);
 
-        // Act
-        request.Cancel(reason, eventPublisher.Object);
-
-        // Assert
         Assert.Equal(BookingRequestStatus.Cancelled, request.Status);
-
-        // Verify domain event was published
-        eventPublisher.Verify(p => p.PublishAsync(It.Is<BookingRequestCancelledEvent>(e =>
-            e.RequestId == request.Id &&
-            e.Reason == reason), default), Times.Once);
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestCancelledEvent>(
+            e => e.RequestId == request.Id), default), Times.Once);
     }
 
     [Fact]
-    public void Cancel_WhenRejected_ThrowsBookingException()
+    public void Cancel_WhenAllocated_ChangesStatusToCancelled()
     {
-        // Arrange
-        var request = CreatePendingRequest(out var eventPublisher);
-        request.Reject("No slots available", eventPublisher.Object);
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+        request.Cancel("Changed plans", _publisher.Object);
 
-        // Act & Assert
-        var exception = Assert.Throws<BookingException>(() => request.Cancel("User cancelled", eventPublisher.Object));
-        Assert.Equal("Only pending or accepted requests can be cancelled", exception.Message);
+        Assert.Equal(BookingRequestStatus.Cancelled, request.Status);
     }
 
     [Fact]
-    public void Create_WithPastTimeSlot_ThrowsBookingException()
+    public void Cancel_WhenRejected_Throws()
     {
-        // Arrange
-        var userId = UserId.New();
-        var pastPeriod = TimeSlot.Create(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(-1).AddHours(2));
-        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, true);
-        var eventPublisher = new Mock<IEventPublisher>();
+        var request = Submit(ValidContext(isCutOffPassed: true));
 
-        // Act & Assert
-        var exception = Assert.Throws<BookingException>(() =>
-            BookingRequest.Create(userId, pastPeriod, vehicle, eventPublisher.Object));
-
-        Assert.Equal("Cannot create a booking request for a time period in the past", exception.Message);
+        var ex = Assert.Throws<BookingException>(() => request.Cancel("Too late", _publisher.Object));
+        Assert.Equal("Only pending or allocated requests can be cancelled", ex.Message);
     }
+
+    // ── IsTerminal ───────────────────────────────────────────────────────────
 
     [Fact]
-    public void Create_WithSameDayTimeSlot_Succeeds()
-    {
-        // Arrange
-        var userId = UserId.New();
-        var sameDayPeriod = TimeSlot.Create(DateTime.UtcNow.Date.AddHours(12), DateTime.UtcNow.Date.AddHours(14)); // Later today
-        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, true);
-        var eventPublisher = new Mock<IEventPublisher>();
-
-        // Act
-        var request = BookingRequest.Create(userId, sameDayPeriod, vehicle, eventPublisher.Object);
-
-        // Assert
-        Assert.NotNull(request);
-        Assert.Equal(BookingRequestStatus.Pending, request.Status);
-        Assert.Equal(userId, request.RequestorId);
-        Assert.Equal(sameDayPeriod, request.RequestedPeriod);
-        Assert.Equal(vehicle, request.Vehicle);
-    }
+    public void IsTerminal_Pending_ReturnsFalse()
+        => Assert.False(Submit(ValidContext()).IsTerminal());
 
     [Fact]
-    public void Create_WithFutureTimeSlot_Succeeds()
+    public void IsTerminal_Rejected_ReturnsTrue()
+        => Assert.True(Submit(ValidContext(isCutOffPassed: true)).IsTerminal());
+
+    [Fact]
+    public void IsTerminal_Cancelled_ReturnsTrue()
     {
-        // Arrange
-        var userId = UserId.New();
-        var futurePeriod = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2));
-        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, true);
-        var eventPublisher = new Mock<IEventPublisher>();
-
-        // Act
-        var request = BookingRequest.Create(userId, futurePeriod, vehicle, eventPublisher.Object);
-
-        // Assert
-        Assert.NotNull(request);
-        Assert.Equal(BookingRequestStatus.Pending, request.Status);
-        Assert.Equal(userId, request.RequestorId);
-        Assert.Equal(futurePeriod, request.RequestedPeriod);
-        Assert.Equal(vehicle, request.Vehicle);
+        var request = Submit(ValidContext());
+        request.Cancel("Done", _publisher.Object);
+        Assert.True(request.IsTerminal());
     }
 
-    // Helper method to create a pending request
-    private static BookingRequest CreatePendingRequest(out Mock<IEventPublisher> eventPublisher)
-    {
-        var userId = UserId.New();
-        var period = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2));
-        var vehicle = VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, true); // Updated to include IsCompanyCar
-        eventPublisher = new Mock<IEventPublisher>();
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-        return BookingRequest.Create(userId, period, vehicle, eventPublisher.Object);
-    }
+    private BookingRequest Submit(SubmissionContext context)
+        => BookingRequest.Submit(UserId.New(), _futurePeriod, MakeVehicle(), context, _publisher.Object);
+
+    private static SubmissionContext ValidContext(
+        int cap = 500,
+        int existingCount = 0,
+        bool hasOverlap = false,
+        bool isCutOffPassed = false)
+        => SubmissionContext.Create(cap, existingCount, hasOverlap, isCutOffPassed);
+
+    private static VehicleInformation MakeVehicle()
+        => VehicleInformation.Create("ABC123", VehicleType.Sedan, false, false, false);
 }
