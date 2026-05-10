@@ -34,6 +34,8 @@ A parking policy applies to:
 - company-car and reserved-space behavior;
 - employee-visible rejection reasons.
 
+For a future parking request, `drawCutOffTime` is evaluated against the requested parking date. The default rule is: parking date `D` closes at the configured cut-off time on calendar date `D - 1` in the policy timezone. Location timezone overrides tenant timezone when a location override exists.
+
 ## Tenant Default Policy
 
 Each tenant policy must define these fields.
@@ -50,9 +52,11 @@ Each tenant policy must define these fields.
 | `manualAdjustmentEnabled` | `true` | Manual adjustments require reason and audit record. |
 | `sameDayBookingEnabled` | `true` | Allows immediate allocation after Draw. |
 | `sameDayUsesRequestCap` | `true` | Same-day requests count toward the same date cap. |
+| `sameDayWaitlistEnabled` | `false` | Future feature. V1 rejects same-day requests when no suitable slot is available. |
 | `automaticReallocationEnabled` | `true` | Released allocated slots are reassigned to the next eligible requestor. |
 | `usageConfirmationRequired` | `false` | Tenant can enable confirmation when a reliable method exists. |
 | `usageConfirmationWindowMinutes` | `0` | `0` means not enforced unless confirmation is enabled. |
+| `usageConfirmationMethods` | Empty list | Enabled methods such as employee self-confirmation, HR manual confirmation, QR code, access-control import, or system import. |
 | `noShowDetectionEnabled` | `false` | Must not be enabled without a confirmation method. |
 | `companyCarTier1Enabled` | `true` | Company-car requests are allocated before Tier 2. |
 | `companyCarOverflowBehavior` | `reject` | First implementation rejects overflow. |
@@ -153,8 +157,10 @@ Supported confirmation methods may include:
 Rules:
 
 - no-show detection requires usage confirmation to be enabled;
+- no-show detection requires at least one configured confirmation method;
 - if no confirmation method is configured, unconfirmed usage remains unknown rather than no-show;
 - confirmation source must be recorded;
+- confirmation after the configured window requires an authorized manual correction;
 - manual correction must be audited.
 
 ## Policy Change Behavior
