@@ -60,6 +60,30 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             nextCursor);
     }
 
+    public async Task<IReadOnlyList<BookingRequestDto>> GetAllocatedRequestsForDrawAsync(
+        string tenantId, string locationId, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        var index = await daprClient.GetStateAsync<TenantPendingIndex>(
+            BookingStore, $"pending:{tenantId}", cancellationToken: cancellationToken);
+
+        if (index is null) return [];
+
+        var results = new List<BookingRequestDto>();
+        foreach (var id in index.RequestIds)
+        {
+            var dto = await daprClient.GetStateAsync<BookingRequestDto>(
+                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+
+            if (dto is null || dto.Status != "Allocated") continue;
+            if (dto.LocationId != locationId) continue;
+            if (DateOnly.FromDateTime(dto.PlannedArrivalTime) != date) continue;
+
+            results.Add(dto);
+        }
+
+        return results;
+    }
+
     public async Task<IReadOnlyList<BookingRequestDto>> GetPendingRequestsForDrawAsync(
         string tenantId,
         string locationId,

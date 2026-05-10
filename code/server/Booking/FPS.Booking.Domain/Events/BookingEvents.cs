@@ -3,6 +3,10 @@ using FPS.SharedKernel.DomainEvents;
 
 namespace FPS.Booking.Domain.Events;
 
+// No-show event
+public record BookingRequestNoShowEvent(
+    BookingRequestId RequestId) : DomainEvent;
+
 // Usage confirmation event
 public record BookingRequestUsedEvent(
     BookingRequestId RequestId,

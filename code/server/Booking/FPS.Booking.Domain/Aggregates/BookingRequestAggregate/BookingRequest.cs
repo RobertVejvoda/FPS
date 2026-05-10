@@ -114,6 +114,15 @@ public sealed class BookingRequest : IAggregateRoot
         eventPublisher.PublishAsync(new BookingRequestRejectedEvent(Id, code, reason));
     }
 
+    public void MarkNoShow(IEventPublisher eventPublisher)
+    {
+        if (Status != BookingRequestStatus.Allocated)
+            throw new BookingException("Only allocated requests can be marked as no-show");
+
+        Status = BookingRequestStatus.NoShow;
+        eventPublisher.PublishAsync(new BookingRequestNoShowEvent(Id));
+    }
+
     // Returns true when confirmation was newly applied; false when already Used (idempotent).
     public bool ConfirmUsage(ConfirmationSource source, DateTime confirmedAt, IEventPublisher eventPublisher)
     {
