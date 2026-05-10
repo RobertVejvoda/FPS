@@ -132,9 +132,10 @@ Rules:
 
 - same-day requests still pass tenant policy, duplicate, vehicle, and slot matching checks;
 - if a suitable slot is available, FPS allocates it immediately;
-- if no suitable slot exists, FPS rejects the request or places it on a waitlist when that tenant feature exists;
+- if no suitable slot exists, FPS rejects the request for v1; same-day waitlist is a future feature;
 - successful same-day allocations count toward `RecentAllocationCount`;
 - same-day allocation does not bypass penalties or reserved-space constraints.
+- same-day allocation must not steal an already allocated slot and must not allocate a slot reserved for a pending scheduled-Draw waitlist candidate unless tenant policy marks that slot as currently available for same-day use.
 
 ## Cancellation Reallocation
 

@@ -112,6 +112,7 @@ Rules:
 - usage may be confirmed by employee self-confirmation, HR, QR code, access-control integration, license plate recognition, or another tenant-configured signal;
 - confirmation must identify the source of confirmation;
 - confirmation after the tenant's allowed confirmation window requires an audited manual correction;
+- repeated confirmation of an already `Used` request must be idempotent and must not duplicate notifications or audit records;
 - company-car allocations may still be confirmed for utilization reporting even though they do not affect Tier 2 weight.
 
 ## No-Show Rules
@@ -123,6 +124,8 @@ A request becomes `NoShow` when:
 - tenant policy enables no-show detection for that confirmation method.
 
 The default no-show penalty is `+2`. If usage confirmation is not available for a tenant, FPS must not automatically mark no-shows; it may only report unconfirmed usage as unknown.
+
+No-show evaluation runs only after the requested time slot plus the configured confirmation window has passed in the resolved policy timezone. Re-running no-show evaluation must be idempotent.
 
 ## Expiry Rules
 

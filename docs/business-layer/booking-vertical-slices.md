@@ -123,6 +123,33 @@ As an employee, I want to request parking for today so that I can use currently 
 - Same-day successful allocation affects future fairness metrics.
 - Same-day request does not bypass reserved-space, penalty, or slot capability policy.
 
+### B002 API Contract
+
+`POST /bookings` uses the same endpoint as B001. A request is treated as same-day when the requested parking date is the current date in the resolved tenant or location policy timezone.
+
+Behavior:
+
+- If `sameDayBookingEnabled = false`, reject with an employee-visible reason.
+- If the requested time slot is already over or no longer actionable, reject with an employee-visible reason.
+- If `sameDayUsesRequestCap = true`, count the request against the same tenant/date cap used by scheduled requests.
+- Apply the same duplicate definition as scheduled requests: same tenant, same requestor, same date, and overlapping time slot.
+- Validate requestor eligibility, vehicle requirements, and slot capability compatibility.
+- Check live available capacity for the requested location, date, and time slot.
+- If a suitable slot is available, allocate immediately and persist the request as `Allocated`.
+- If no suitable slot is available, reject for v1. Same-day waitlist is not part of B002.
+
+Same-day allocation may use capacity left unused after the scheduled Draw, released capacity from cancellations, or capacity that tenant policy allows for immediate use. It must not steal an already allocated slot and must not allocate a slot reserved for a pending waitlist candidate unless tenant policy marks that slot as currently available for same-day use.
+
+### B002 Outcome Rules
+
+- Successful same-day allocation increments `RecentAllocationCount` because it consumes scarce parking capacity.
+- Company-car same-day behavior follows the same company-car policy as other allocations: company-car allocations do not increment Tier 2 metrics and do not create penalties.
+- Same-day rejection never creates penalties.
+- Notifications are mandatory in-app and email for allocated or rejected outcomes.
+- Audit must record whether the allocation source was `sameDay`.
+
+B002 must not implement scheduled Draw execution, cancellation reallocation, usage confirmation, no-show handling, manual correction, or a same-day waitlist.
+
 ## Slice B003: Cancel Pending Request
 
 ### User Story
@@ -323,6 +350,37 @@ As an employee or authorized confirmation source, I want to confirm parking usag
 - Confirmation source is recorded.
 - Metrics/reporting can distinguish used from merely allocated.
 
+### B006 API Contract
+
+`POST /bookings/{id}/confirm-usage` records that an allocated booking was actually used.
+
+Request fields:
+
+| Field | Meaning |
+| --- | --- |
+| `confirmationSource` | Source of confirmation, such as `employeeSelf`, `hrManual`, `qrCode`, `accessControl`, or `systemImport`. |
+| `confirmedAt` | Confirmation timestamp. Defaults to server time when omitted. |
+| `reason` | Required when confirmation is submitted by HR/manual source after the normal confirmation window. |
+
+Behavior:
+
+- Only `Allocated` requests can be confirmed through the normal flow.
+- Employee self-confirmation is allowed only for the authenticated requestor and only when tenant policy enables self-confirmation.
+- HR/manual confirmation is allowed only for authorized roles.
+- Confirmation must be within the tenant confirmation window unless it is an authorized manual correction path.
+- Confirmation is idempotent by booking ID and confirmation source event ID when provided.
+- Confirmation after a request is already `Used` returns the existing confirmed state and must not duplicate notifications or audit records.
+
+### B006 Outcome Rules
+
+- Valid confirmation moves the request from `Allocated` to `Used`.
+- Confirmation records source, timestamp, actor, and related signal ID when available.
+- Usage confirmation is for utilization/reporting and no-show prevention; it does not change Tier 2 allocation metrics.
+- Company-car allocations may be confirmed for utilization reporting.
+- Notification events are asynchronous after the `Used` state is persisted.
+
+B006 must not implement no-show evaluation, no-show penalties, manual correction UI, hardware integrations, or vendor-specific access-control behavior. Non-self confirmation sources may be represented as source types without building the external integration.
+
 ## Slice B007: Mark No-Show
 
 ### User Story
@@ -351,6 +409,50 @@ As HR, I want FPS to mark no-shows when usage is not confirmed so that fairness 
 
 - FPS never marks no-show automatically when usage confirmation is unavailable.
 - No-show penalty affects future allocation probability.
+
+### B007 Evaluation Rules
+
+No-show evaluation runs after the requested time slot plus the configured confirmation window has passed in the resolved tenant or location policy timezone.
+
+FPS may mark `Allocated -> NoShow` only when all of these are true:
+
+- `usageConfirmationRequired = true`;
+- `noShowDetectionEnabled = true`;
+- a configured confirmation method exists;
+- the request is still `Allocated`;
+- no valid usage confirmation exists;
+- the confirmation window has closed.
+
+If usage confirmation is disabled, no confirmation method exists, or no-show detection is disabled, FPS must not mark `NoShow`. The allocation may later become `Expired` when it is no longer actionable under lifecycle rules.
+
+### B007 Penalty And Notification Rules
+
+- Default no-show penalty is `+2` unless tenant policy changes or disables it.
+- The Booking service uses the same v1 penalty ledger defined for booking penalties.
+- No-show penalty creation must be idempotent by source event ID and penalty type.
+- `NoShow` status and no-show penalty are separate auditable events when both occur.
+- The requestor receives mandatory in-app and email notifications for no-show status and for penalty application.
+
+### B007 API/Process Contract
+
+B007 may be implemented as a scheduled evaluation process and an authorized manual trigger for HR/admin recovery.
+
+Manual trigger endpoint, when added:
+
+`POST /bookings/no-show-evaluation`
+
+Request fields:
+
+| Field | Meaning |
+| --- | --- |
+| `locationId` | Location to evaluate. |
+| `date` | Parking date to evaluate. |
+| `timeSlot` | Time slot to evaluate. |
+| `reason` | Required for manual trigger. |
+
+Tenant is resolved from authenticated context. Re-running the same evaluation must be idempotent and must not duplicate `NoShow` status changes, penalties, or notifications.
+
+B007 must not implement usage confirmation, manual correction, external hardware integrations, or billing.
 
 ## Slice B008: View My Bookings
 
@@ -443,6 +545,44 @@ As HR, I want to view Draw status and results so that I can explain allocation o
 - HR can explain high-level outcomes.
 - Sensitive implementation details are limited to authorized roles.
 
+### B009 API Contract
+
+`GET /draws/{date}/status` returns Draw status and result summaries for authorized viewers.
+
+Required query parameters:
+
+| Parameter | Meaning |
+| --- | --- |
+| `locationId` | Location being queried. |
+| `timeSlot` | Time slot being queried. |
+
+Tenant is resolved from authenticated context. The path `date` is the requested parking date.
+
+Response must include for HR/admin/auditor roles:
+
+- Draw key: tenant, location, date, time slot;
+- status: `notStarted`, `running`, `completed`, `failed`, or `requiresManualIntervention`;
+- started timestamp, completed timestamp, and last updated timestamp where available;
+- request count;
+- allocated count;
+- rejected count;
+- pending waitlist count;
+- company-car overflow count;
+- failure reason when failed;
+- summary rejection reasons;
+- audit reference or Draw attempt ID;
+- algorithm version and seed visibility only for roles authorized to reproduce or audit the Draw.
+
+Employee view, if exposed through this endpoint, must be limited to the authenticated employee's own request outcome and must not include other employees, weights, candidate order, seed, or audit-only diagnostics.
+
+### B009 Scope Rules
+
+- B009 is read-only.
+- B009 must not trigger or rerun a Draw.
+- B009 must not mutate stale pending requests except through a separately documented expiry process.
+- B009 must not expose private employee data or internal diagnostics to unauthorized roles.
+- Failed or in-progress Draws should be explainable to HR without exposing stack traces.
+
 ## Slice B010: Manual Correction
 
 ### User Story
@@ -470,6 +610,43 @@ As HR, I want to apply a justified manual correction so that exceptional busines
 
 - Manual corrections are visible, auditable, and explainable.
 - Normal lifecycle rules remain intact.
+
+### B010 Correction Rules
+
+Manual correction is an exception path, not a normal lifecycle shortcut.
+
+Rules:
+
+- Only authorized HR/admin roles can submit manual corrections.
+- Every correction requires a human-readable reason.
+- Corrections must record old value, new value, actor, timestamp, reason, and related request/allocation/penalty IDs.
+- Corrections create append-only audit events; old audit records are never edited or deleted.
+- A correction may change request status, allocation assignment, penalty score/expiry, usage outcome, or employee-visible reason when authorized.
+- Corrections must preserve tenant isolation and must not affect another tenant's data.
+- Affected requestors receive mandatory in-app and email notifications.
+
+### B010 API Contract
+
+`POST /bookings/{id}/manual-corrections`
+
+Request fields:
+
+| Field | Meaning |
+| --- | --- |
+| `correctionType` | `status`, `allocation`, `penalty`, `usage`, or `reason`. |
+| `oldValue` | Expected current value. Used for optimistic concurrency. |
+| `newValue` | Requested corrected value. |
+| `reason` | Required human-readable reason. |
+| `effectiveAt` | Optional effective timestamp. Defaults to server time. |
+
+Behavior:
+
+- If `oldValue` does not match current state, reject with a concurrency/conflict response.
+- If the correction would violate hard tenant isolation or security rules, reject.
+- If the correction changes allocation or penalty state, update the authoritative state and emit the appropriate audit and notification events.
+- Corrections must be idempotent when retried with the same correction event ID.
+
+B010 must not introduce broad admin bypasses, delete audit history, or implement billing/payment behavior.
 
 ## Implementation Order
 
