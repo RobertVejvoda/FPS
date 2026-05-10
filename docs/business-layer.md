@@ -22,6 +22,7 @@ FPS helps companies manage scarce parking capacity without turning HR into a man
 - [Booking Vertical Slices](./business-layer/booking-vertical-slices)
 - [Booking Event Contracts](./business-layer/booking-event-contracts)
 - [Booking Authorization](./business-layer/booking-authorization)
+- [Booking Reason Codes](./business-layer/booking-reason-codes)
 - [Booking Request Lifecycle](./business-layer/booking-request-lifecycle)
 - [Allocation Process](./business-layer/process)
 - [Executable Allocation Rules](./business-layer/allocation-rules)

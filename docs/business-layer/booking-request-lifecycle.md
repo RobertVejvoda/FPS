@@ -145,6 +145,8 @@ Expiry must be auditable and must not create penalties by default.
 
 FPS must provide clear outcome reasons for employee-facing statuses.
 
+Reason codes are defined in [Booking Reason Codes](./booking-reason-codes). Implementations must use stable `reasonCode` values for API responses, audit records, events, notifications, and reporting.
+
 | Outcome | Example reason |
 | --- | --- |
 | `Rejected` | No matching parking slot is available for your request. |

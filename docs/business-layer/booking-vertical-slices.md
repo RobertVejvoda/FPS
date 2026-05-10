@@ -33,6 +33,7 @@ Claude must follow these docs when implementing Booking:
 - [Notification Requirements](./notification)
 - [Booking Event Contracts](./booking-event-contracts)
 - [Booking Authorization](./booking-authorization)
+- [Booking Reason Codes](./booking-reason-codes)
 - [Slot Allocation Process](./process)
 
 If implementation finds a business ambiguity, Claude should ask for clarification instead of inventing a rule.

@@ -73,6 +73,8 @@ Most Booking events should include these payload fields when relevant:
 | `reasonCode` | Stable machine-readable reason. |
 | `reasonText` | Employee-visible reason when the event affects the employee. |
 
+Reason code values are defined in [Booking Reason Codes](./booking-reason-codes).
+
 ## Allocation Payload Fields
 
 `booking.slotAllocated` must include:
