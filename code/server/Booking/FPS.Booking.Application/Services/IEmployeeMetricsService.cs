@@ -16,4 +16,10 @@ public interface IEmployeeMetricsService
         string requestorId,
         DateOnly allocationDate,
         CancellationToken cancellationToken = default);
+
+    Task<int> GetActivePenaltyScoreAsync(
+        string tenantId,
+        string requestorId,
+        DateOnly asOfDate,
+        CancellationToken cancellationToken = default);
 }

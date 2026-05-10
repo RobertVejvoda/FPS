@@ -3,6 +3,21 @@ using FPS.SharedKernel.DomainEvents;
 
 namespace FPS.Booking.Domain.Events;
 
+// Penalty events
+public record PenaltyAppliedEvent(
+    BookingRequestId RequestId,
+    UserId RequestorId,
+    PenaltyType PenaltyType,
+    int Score,
+    string SourceEventId) : DomainEvent;
+
+// Reallocation event
+public record BookingRequestReallocatedEvent(
+    BookingRequestId NewRequestId,
+    UserId NewRequestorId,
+    ParkingSlotId SlotId,
+    BookingRequestId OriginalCancelledRequestId) : DomainEvent;
+
 // BookingRequest lifecycle events
 public record BookingRequestSubmittedEvent(
     BookingRequestId RequestId,
