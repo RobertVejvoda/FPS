@@ -260,6 +260,47 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 
 ### Phase 2 — Identity & Profile (Week 7–8)
 
+### Implementation Partner Queue
+
+Booking Phase 1 is complete. New implementation work should now proceed through these focused slices. Each slice should be its own branch and PR, and implementation must stop when a business rule or cross-service contract is missing.
+
+| Order | Slice | Goal | Depends on | Must not include |
+| ---: | --- | --- | --- | --- |
+| 1 | `ID001` Authenticated User Context | Resolve authenticated tenant, user, and roles from claims and expose `GET /me`. | Existing Identity service and Booking authorization docs. | Profile vehicle data, mobile UI, Keycloak deployment automation. |
+| 2 | `BK011` Booking Uses Auth Context | Replace Booking API tenant/user parameters with authenticated context for employee-facing actions. | `ID001`. | New Booking business behavior. |
+| 3 | `P001` Profile Vehicle Snapshot | Add Profile-owned vehicle and company-car eligibility data needed by Booking validation/allocation. | `ID001`; Booking context contract. | Booking allocation changes beyond consuming the snapshot. |
+| 4 | `N001` Booking Notification Consumer | Consume Booking events and create idempotent in-app notification records. | Booking event contracts. | Email sending, push notifications, mobile notification UI. |
+| 5 | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Booking event contracts; GDPR audit decision. | Audit query UI, GDPR erasure workflow beyond mapping shape. |
+| 6 | `CFG001` Parking Policy/Slot Source | Move default/in-memory Booking policy and slot inputs toward Configuration-owned contracts. | Booking context contract; parking policy configuration docs. | Tenant onboarding or admin UI. |
+| 7 | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Authenticated API surface from `ID001` and `BK011`. | React or React Native implementation. |
+| 8 | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | `API001`. | Booking business rule changes. |
+
+#### Slice ID001: Authenticated User Context
+
+Purpose: establish the security/context foundation required before Profile, Notification, Audit, and mobile work.
+
+Scope:
+
+- Add a shared current-user abstraction usable by API controllers and application handlers.
+- Resolve `tenantId`, `userId`, and roles from authenticated claims.
+- Expose `GET /me` in `FPS.Identity`.
+- Add tests for authenticated and unauthenticated requests.
+- Document any final claim-name decision in `docs/versions-and-decisions.md` if the implementation chooses stable claim names not already documented.
+
+Acceptance criteria:
+
+- Authenticated requests can obtain tenant, user, and roles without trusting request body or query string identity.
+- `GET /me` returns current user identity, tenant, and roles.
+- Unauthenticated access returns `401`.
+- Tests prove a caller cannot spoof tenant or user through request payload fields.
+
+Stop and ask before implementation if:
+
+- required claim names are ambiguous;
+- the slice would require a full Keycloak deployment or provisioning flow;
+- Booking endpoint migration cannot be kept small;
+- implementation would introduce mobile, Profile vehicle, Notification, or Audit behavior.
+
 **Identity** (`FPS.Identity`):
 - [ ] Keycloak integration (OIDC provider, not reinventing auth)
 - [ ] JWT validation middleware
