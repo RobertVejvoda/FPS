@@ -207,6 +207,46 @@ public class BookingRequestTests
         Assert.True(request.IsTerminal());
     }
 
+    // ── Restore ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Restore_PreservesAllFields()
+    {
+        var original = Submit(ValidContext());
+        var restored = BookingRequest.Restore(
+            original.Id, original.RequestorId, original.Vehicle,
+            original.RequestedPeriod, original.Status, original.SubmittedAt);
+
+        Assert.Equal(original.Id, restored.Id);
+        Assert.Equal(original.Status, restored.Status);
+        Assert.Equal(original.RequestorId, restored.RequestorId);
+    }
+
+    [Fact]
+    public void Restore_PendingRequest_CanBeCancelled()
+    {
+        var original = Submit(ValidContext());
+        var restored = BookingRequest.Restore(
+            original.Id, original.RequestorId, original.Vehicle,
+            original.RequestedPeriod, BookingRequestStatus.Pending, original.SubmittedAt);
+
+        restored.Cancel("Changed plans", _publisher.Object);
+
+        Assert.Equal(BookingRequestStatus.Cancelled, restored.Status);
+    }
+
+    [Fact]
+    public void Restore_DoesNotFireEvents()
+    {
+        var original = Submit(ValidContext());
+        _publisher.Invocations.Clear();
+
+        BookingRequest.Restore(original.Id, original.RequestorId, original.Vehicle,
+            original.RequestedPeriod, original.Status, original.SubmittedAt);
+
+        _publisher.VerifyNoOtherCalls();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private BookingRequest Submit(SubmissionContext context)

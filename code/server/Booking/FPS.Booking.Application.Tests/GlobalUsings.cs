@@ -2,6 +2,7 @@ global using System;
 global using System.Threading;
 global using System.Threading.Tasks;
 global using FPS.Booking.Application.Commands;
+global using FPS.Booking.Application.Exceptions;
 global using FPS.Booking.Application.Models;
 global using FPS.Booking.Application.Repositories;
 global using FPS.Booking.Application.Services;

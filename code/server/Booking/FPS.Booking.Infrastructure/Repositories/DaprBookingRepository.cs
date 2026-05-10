@@ -233,6 +233,15 @@ namespace FPS.Booking.Infrastructure.Repositories
             }
         }
 
+        public async Task UpdateBookingRequestStatusAsync(Guid requestId, string status, string? reason = null, CancellationToken cancellationToken = default)
+        {
+            var dto = await GetBookingRequestAsync(requestId);
+            if (dto is null) return;
+
+            dto.Status = status;
+            await _daprClient.SaveStateAsync(BOOKING_STORE, $"request:{requestId}", dto, cancellationToken: cancellationToken);
+        }
+
         public async Task<int> CountRequestsForDateAsync(string tenantId, DateTime date, CancellationToken cancellationToken = default)
         {
             var key = $"count:{tenantId}:{date:yyyy-MM-dd}";
