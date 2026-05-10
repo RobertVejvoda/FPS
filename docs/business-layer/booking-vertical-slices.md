@@ -32,6 +32,7 @@ Claude must follow these docs when implementing Booking:
 - [Parking Policy Configuration](./parking-policy-configuration)
 - [Notification Requirements](./notification)
 - [Booking Event Contracts](./booking-event-contracts)
+- [Booking Authorization](./booking-authorization)
 - [Slot Allocation Process](./process)
 
 If implementation finds a business ambiguity, Claude should ask for clarification instead of inventing a rule.

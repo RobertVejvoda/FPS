@@ -203,6 +203,8 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **Policy configuration**: Tenant defaults with per-location overrides are defined in `docs/business-layer/parking-policy-configuration.md`.
 >
 > **Vertical slices**: Booking implementation order and story acceptance criteria are defined in `docs/business-layer/booking-vertical-slices.md`.
+>
+> **Authorization**: Booking role/action permissions are defined in `docs/business-layer/booking-authorization.md`.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
