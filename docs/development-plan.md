@@ -205,6 +205,8 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 > **Vertical slices**: Booking implementation order and story acceptance criteria are defined in `docs/business-layer/booking-vertical-slices.md`.
 >
 > **Authorization**: Booking role/action permissions are defined in `docs/business-layer/booking-authorization.md`.
+>
+> **API contract**: Booking response and error shapes are defined in `docs/business-layer/booking-api-contract.md`.
 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [ ] Dapr state store client — save/load `BookingRequest` and `SlotAllocation` aggregates by ID (write side)
