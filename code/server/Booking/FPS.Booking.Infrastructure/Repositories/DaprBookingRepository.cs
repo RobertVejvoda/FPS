@@ -40,6 +40,22 @@ public sealed class DaprBookingRepository : IBookingRepository
         await daprClient.SaveStateAsync(BookingStore, $"request:{requestId}", dto, cancellationToken: cancellationToken);
     }
 
+    public async Task UpdateBookingRequestUsageAsync(
+        Guid requestId, string confirmationSource, DateTime confirmedAt,
+        string? sourceEventId = null, CancellationToken cancellationToken = default)
+    {
+        var dto = await GetBookingRequestAsync(requestId);
+        if (dto is null) return;
+
+        dto.Status = "Used";
+        dto.ConfirmationSource = confirmationSource;
+        dto.UsageConfirmedAt = confirmedAt;
+        dto.ConfirmationSourceEventId = sourceEventId;
+        dto.LastStatusChangedAt = DateTime.UtcNow;
+
+        await daprClient.SaveStateAsync(BookingStore, $"request:{requestId}", dto, cancellationToken: cancellationToken);
+    }
+
     public async Task<int> CountRequestsForDateAsync(
         string tenantId, DateTime date, CancellationToken cancellationToken = default)
     {

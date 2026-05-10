@@ -114,6 +114,20 @@ public sealed class BookingRequest : IAggregateRoot
         eventPublisher.PublishAsync(new BookingRequestRejectedEvent(Id, code, reason));
     }
 
+    // Returns true when confirmation was newly applied; false when already Used (idempotent).
+    public bool ConfirmUsage(ConfirmationSource source, DateTime confirmedAt, IEventPublisher eventPublisher)
+    {
+        if (Status == BookingRequestStatus.Used)
+            return false; // already confirmed — no duplicate event
+
+        if (Status != BookingRequestStatus.Allocated)
+            throw new BookingException("Only allocated requests can be confirmed as used");
+
+        Status = BookingRequestStatus.Used;
+        eventPublisher.PublishAsync(new BookingRequestUsedEvent(Id, source, confirmedAt));
+        return true;
+    }
+
     public void Cancel(string reason, IEventPublisher eventPublisher)
     {
         if (Status != BookingRequestStatus.Pending && Status != BookingRequestStatus.Allocated)

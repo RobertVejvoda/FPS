@@ -157,6 +157,55 @@ public class BookingRequestTests
         Assert.Equal("Only pending requests can be rejected", ex.Message);
     }
 
+    // ── ConfirmUsage ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ConfirmUsage_WhenAllocated_ChangesStatusToUsed()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+
+        var wasNew = request.ConfirmUsage(ConfirmationSource.EmployeeSelf, DateTime.UtcNow, _publisher.Object);
+
+        Assert.Equal(BookingRequestStatus.Used, request.Status);
+        Assert.True(wasNew);
+    }
+
+    [Fact]
+    public void ConfirmUsage_WhenAllocated_FiresUsedEvent()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+        request.ConfirmUsage(ConfirmationSource.HrManual, DateTime.UtcNow, _publisher.Object);
+
+        _publisher.Verify(p => p.PublishAsync(
+            It.Is<BookingRequestUsedEvent>(e => e.RequestId == request.Id && e.Source == ConfirmationSource.HrManual),
+            default), Times.Once);
+    }
+
+    [Fact]
+    public void ConfirmUsage_WhenAlreadyUsed_ReturnsFalseAndNoEvent()
+    {
+        var request = Submit(ValidContext());
+        request.Allocate(_publisher.Object);
+        request.ConfirmUsage(ConfirmationSource.EmployeeSelf, DateTime.UtcNow, _publisher.Object);
+        _publisher.Invocations.Clear();
+
+        var wasNew = request.ConfirmUsage(ConfirmationSource.EmployeeSelf, DateTime.UtcNow, _publisher.Object);
+
+        Assert.False(wasNew);
+        _publisher.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void ConfirmUsage_WhenPending_Throws()
+    {
+        var request = Submit(ValidContext());
+        var ex = Assert.Throws<BookingException>(() =>
+            request.ConfirmUsage(ConfirmationSource.EmployeeSelf, DateTime.UtcNow, _publisher.Object));
+        Assert.Equal("Only allocated requests can be confirmed as used", ex.Message);
+    }
+
     // ── Cancel ───────────────────────────────────────────────────────────────
 
     [Fact]

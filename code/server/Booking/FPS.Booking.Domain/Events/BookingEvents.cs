@@ -3,6 +3,12 @@ using FPS.SharedKernel.DomainEvents;
 
 namespace FPS.Booking.Domain.Events;
 
+// Usage confirmation event
+public record BookingRequestUsedEvent(
+    BookingRequestId RequestId,
+    ConfirmationSource Source,
+    DateTime ConfirmedAt) : DomainEvent;
+
 // Penalty events
 public record PenaltyAppliedEvent(
     BookingRequestId RequestId,

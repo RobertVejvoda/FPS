@@ -7,7 +7,9 @@ public record TenantPolicy(
     bool SameDayBookingEnabled,
     int AllocationLookbackDays = 10,
     int LateCancellationPenalty = 1,
-    int NoShowPenalty = 2);
+    int NoShowPenalty = 2,
+    bool UsageConfirmationEnabled = false,
+    int UsageConfirmationWindowMinutes = 0);
 
 public interface ITenantPolicyService
 {
