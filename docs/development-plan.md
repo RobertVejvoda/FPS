@@ -105,8 +105,8 @@ The docs describe a multi-tenant SaaS but never define isolation: database-per-t
 **4. Mobile platform decision: React Native vs .NET MAUI**
 Both are listed. They require different skill sets, build pipelines, and maintenance effort. Pick one.
 
-**5. Event topology not defined**
-RabbitMQ via Dapr pub/sub is selected, but no topic/exchange map exists. Each service publishing or subscribing to events needs a defined contract. Suggested starting point: one topic per domain event (`booking.submitted`, `draw.completed`, `slot.allocated`, etc.).
+**5. Event topology** ✅ *Resolved for Booking*
+Booking event contracts are defined in `docs/business-layer/booking-event-contracts.md`. Other services may add their contracts slice-by-slice.
 
 **6. Draw process volume not quantified**
 NFRs specify 10,000 concurrent users and 100 TPS but never state how many booking requests a single Draw processes. This determines whether the workflow runs in seconds or minutes, and whether it needs partitioning.
