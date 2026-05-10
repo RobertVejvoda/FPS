@@ -5,15 +5,21 @@ using Microsoft.AspNetCore.Mvc;
 namespace FPS.Identity.Controllers;
 
 [ApiController]
-[Route("api/me")]
+[Route("me")]
 [Authorize]
 public sealed class MeController(ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet]
-    public IActionResult Get() => Ok(new
+    public IActionResult Get()
     {
-        userId = currentUser.UserId,
-        tenantId = currentUser.TenantId,
-        roles = currentUser.Roles
-    });
+        if (string.IsNullOrEmpty(currentUser.UserId) || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        return Ok(new
+        {
+            userId = currentUser.UserId,
+            tenantId = currentUser.TenantId,
+            roles = currentUser.Roles
+        });
+    }
 }

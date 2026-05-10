@@ -52,7 +52,7 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "tenant-1", "employee"));
 
-        var response = await client.GetAsync("/api/me");
+        var response = await client.GetAsync("/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
@@ -68,7 +68,7 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken("user-2", "tenant-1", "employee", "hr_manager"));
 
-        var response = await client.GetAsync("/api/me");
+        var response = await client.GetAsync("/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var roles = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
@@ -82,7 +82,43 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
     {
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/api/me");
+        var response = await client.GetAsync("/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMe_WithExpiredToken_Returns401()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "tenant-1", expires: DateTime.UtcNow.AddMinutes(-1)));
+
+        var response = await client.GetAsync("/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMe_WithMissingTenantId_Returns401()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateTokenWithoutClaim("user-1", omitTenantId: true));
+
+        var response = await client.GetAsync("/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMe_WithMissingUserId_Returns401()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateTokenWithoutClaim(tenantId: "tenant-1", omitUserId: true));
+
+        var response = await client.GetAsync("/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -94,23 +130,11 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "real-tenant"));
 
-        var response = await client.GetAsync("/api/me?tenantId=spoofed-tenant");
+        var response = await client.GetAsync("/me?tenantId=spoofed-tenant");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
         Assert.Equal("real-tenant", json.GetProperty("tenantId").GetString());
-    }
-
-    [Fact]
-    public async Task GetMe_WithExpiredToken_Returns401()
-    {
-        var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "tenant-1", expires: DateTime.UtcNow.AddMinutes(-1)));
-
-        var response = await client.GetAsync("/api/me");
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     private static string CreateToken(string userId, string tenantId, params string[] roles)
@@ -129,6 +153,26 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         var token = new JwtSecurityToken(
             claims: claims,
             expires: expires,
+            signingCredentials: new SigningCredentials(TestKey, SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string CreateTokenWithoutClaim(string? userId = null, string? tenantId = null,
+        bool omitUserId = false, bool omitTenantId = false)
+    {
+        var claims = new List<Claim>();
+        if (!omitUserId && userId is not null)
+        {
+            claims.Add(new(ClaimTypes.NameIdentifier, userId));
+            claims.Add(new("sub", userId));
+        }
+        if (!omitTenantId && tenantId is not null)
+            claims.Add(new("tenant_id", tenantId));
+
+        var token = new JwtSecurityToken(
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
             signingCredentials: new SigningCredentials(TestKey, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
