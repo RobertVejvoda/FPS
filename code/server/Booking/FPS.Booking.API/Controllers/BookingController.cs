@@ -1,5 +1,7 @@
 using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
+using FPS.Booking.Application.Exceptions;
+using FPS.Booking.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,11 +9,15 @@ namespace FPS.Booking.API.Controllers;
 
 [ApiController]
 [Route("bookings")]
-public class BookingController : ControllerBase
+public sealed class BookingController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMediator mediator;
 
-    public BookingController(IMediator mediator) => _mediator = mediator;
+    public BookingController(IMediator mediator)
+    {
+        ArgumentNullException.ThrowIfNull(mediator);
+        this.mediator = mediator;
+    }
 
     [HttpPost]
     [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status202Accepted)]
@@ -35,17 +41,43 @@ public class BookingController : ControllerBase
             PlannedArrivalTime: body.PlannedArrivalTime,
             PlannedDepartureTime: body.PlannedDepartureTime);
 
-        var result = await _mediator.Send(command, cancellationToken);
+        var result = await mediator.Send(command, cancellationToken);
 
         var response = new SubmitBookingResponse(
-            result.RequestId,
-            result.Status,
-            result.RejectionCode,
-            result.Reason);
+            result.RequestId, result.Status, result.RejectionCode, result.Reason);
 
         return result.Status == "Pending"
             ? Accepted(response)
             : UnprocessableEntity(response);
+    }
+
+    [HttpDelete("{requestId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CancelBooking(
+        Guid requestId,
+        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
+        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
+        [FromQuery] string? reason,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(
+                new CancelBookingCommand(requestId, tenantId, requestorId, reason ?? "Cancelled by requestor"),
+                cancellationToken);
+
+            return Ok(new { result.RequestId, result.Status });
+        }
+        catch (BookingNotFoundException ex)
+        {
+            return NotFound(new { ex.Message });
+        }
+        catch (BookingException ex)
+        {
+            return UnprocessableEntity(new { ex.Message });
+        }
     }
 
     [HttpGet("{requestId:guid}/status")]
@@ -53,7 +85,4 @@ public class BookingController : ControllerBase
 
     [HttpPost("{requestId:guid}/arrival")]
     public IActionResult ConfirmArrival(Guid requestId) => StatusCode(501, "Not implemented");
-
-    [HttpDelete("{requestId:guid}")]
-    public IActionResult CancelBooking(Guid requestId) => StatusCode(501, "Not implemented");
 }

@@ -6,7 +6,7 @@ using FPS.SharedKernel.Interfaces;
 
 namespace FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 
-public class BookingRequest : IAggregateRoot
+public sealed class BookingRequest : IAggregateRoot
 {
     public BookingRequestId Id { get; private set; }
     public UserId RequestorId { get; private set; }
@@ -24,7 +24,7 @@ public class BookingRequest : IAggregateRoot
 
     private BookingRequest() { }
 
-    // Submits a new booking request. Validates synchronously and ends in Pending or Rejected.
+    // Submits a new booking request. Validates synchronously — ends in Pending or Rejected.
     public static BookingRequest Submit(
         UserId requestorId,
         TimeSlot requestedPeriod,
@@ -61,6 +61,35 @@ public class BookingRequest : IAggregateRoot
         }
 
         return request;
+    }
+
+    // Reconstructs the aggregate from persisted state. No events fired.
+    public static BookingRequest Restore(
+        BookingRequestId id,
+        UserId requestorId,
+        VehicleInformation vehicle,
+        TimeSlot requestedPeriod,
+        BookingRequestStatus status,
+        DateTime submittedAt,
+        BookingRejectionCode? rejectionCode = null,
+        string? rejectionReason = null,
+        string? cancellationReason = null)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(requestorId);
+
+        return new BookingRequest
+        {
+            Id = id,
+            RequestorId = requestorId,
+            Vehicle = vehicle,
+            RequestedPeriod = requestedPeriod,
+            Status = status,
+            SubmittedAt = submittedAt,
+            RejectionCode = rejectionCode,
+            RejectionReason = rejectionReason,
+            CancellationReason = cancellationReason
+        };
     }
 
     // Called by Draw or same-day allocation when a slot is assigned.
