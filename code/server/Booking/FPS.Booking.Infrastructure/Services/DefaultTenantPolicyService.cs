@@ -15,7 +15,8 @@ public class DefaultTenantPolicyService : ITenantPolicyService
             DailyRequestCap: 500,
             DrawCutOffTime: new TimeOnly(18, 0),
             TimeZoneId: "UTC",
-            SameDayBookingEnabled: true);
+            SameDayBookingEnabled: true,
+            AllocationLookbackDays: 10);
 
         return Task.FromResult(policy);
     }

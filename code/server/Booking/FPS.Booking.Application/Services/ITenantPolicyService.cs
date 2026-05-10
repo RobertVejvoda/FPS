@@ -4,7 +4,8 @@ public record TenantPolicy(
     int DailyRequestCap,
     TimeOnly DrawCutOffTime,
     string TimeZoneId,
-    bool SameDayBookingEnabled);
+    bool SameDayBookingEnabled,
+    int AllocationLookbackDays = 10);
 
 public interface ITenantPolicyService
 {
