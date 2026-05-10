@@ -12,7 +12,7 @@ public sealed class SubmitBookingRequestHandlerTests
 
     private static readonly TenantPolicy DefaultPolicy = new(
         DailyRequestCap: 500,
-        DrawCutOffTime: new TimeOnly(18, 0),
+        DrawCutOffTime: new TimeOnly(23, 59),
         TimeZoneId: "UTC",
         SameDayBookingEnabled: true,
         AllocationLookbackDays: 10,
