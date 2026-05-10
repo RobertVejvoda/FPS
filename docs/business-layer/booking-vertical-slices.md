@@ -35,6 +35,7 @@ Claude must follow these docs when implementing Booking:
 - [Booking Authorization](./booking-authorization)
 - [Booking Reason Codes](./booking-reason-codes)
 - [Booking API Contract](./booking-api-contract)
+- [Booking Context Contract](./booking-context-contract)
 - [Slot Allocation Process](./process)
 
 If implementation finds a business ambiguity, Claude should ask for clarification instead of inventing a rule.

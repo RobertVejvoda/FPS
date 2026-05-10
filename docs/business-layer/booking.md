@@ -4,6 +4,8 @@ title: Bookings
 
 [Bookings module](../application-layer/booking) manages employee parking requests, allocation outcomes, cancellations, usage confirmation, and booking history. Implementation should follow the story-driven plan in [Booking Vertical Slices](./booking-vertical-slices), with each story cutting through domain, application, API, persistence, notification, audit, and tests where needed.
 
+Booking boundaries and cross-domain dependencies are defined in [Booking Context Contract](./booking-context-contract).
+
 ### Booking Service
 **Functions:**
 - Booking Request Handling

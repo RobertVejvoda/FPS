@@ -6,6 +6,8 @@ The **Fair Parking System (FPS)** is a multi-tenant SaaS platform that replaces 
 
 The system is not a simple CRUD app — the Draw is a long-running distributed process that locks slots, runs an allocation algorithm, fires notifications, and updates metrics. This makes it an ideal candidate for **Dapr Workflows**.
 
+Booking implementation requirements are maintained under the business layer. The key product-owner handoff documents are [Booking Vertical Slices](business-layer/booking-vertical-slices), [Booking Event Contracts](business-layer/booking-event-contracts), [Booking Authorization](business-layer/booking-authorization), [Booking Reason Codes](business-layer/booking-reason-codes), [Booking API Contract](business-layer/booking-api-contract), and [Booking Context Contract](business-layer/booking-context-contract).
+
 ---
 
 ## Architecture Style
