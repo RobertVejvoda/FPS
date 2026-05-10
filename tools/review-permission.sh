@@ -6,9 +6,28 @@ TOOL="$(printf '%s' "$INPUT" | jq -r '.tool_name // ""')"
 CMD="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // ""')"
 FILE="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // ""')"
 
-deny() { printf '{"decision":"deny","reason":"%s"}\n' "$1"; exit 0; }
-allow() { printf '{"decision":"allow"}\n'; exit 0; }
-ask() { printf '{"decision":"ask","reason":"%s"}\n' "$1"; exit 0; }
+emit() {
+  local decision="$1"
+  local reason="${2:-}"
+
+  if [[ -n "$reason" ]]; then
+    jq -n \
+      --arg event "PermissionRequest" \
+      --arg decision "$decision" \
+      --arg reason "$reason" \
+      '{hookSpecificOutput:{hookEventName:$event,permissionDecision:$decision,permissionDecisionReason:$reason}}'
+  else
+    jq -n \
+      --arg event "PermissionRequest" \
+      --arg decision "$decision" \
+      '{hookSpecificOutput:{hookEventName:$event,permissionDecision:$decision}}'
+  fi
+  exit 0
+}
+
+deny() { emit deny "$1"; }
+allow() { emit allow; }
+ask() { emit ask "$1"; }
 
 # ── Auto-allow: read-only tools ───────────────────────────────────────────────
 case "$TOOL" in
