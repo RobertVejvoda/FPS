@@ -19,4 +19,11 @@ public class BookingRepositoryTests
 
     [Fact(Skip = "Requires MongoDB + Dapr sidecar — implement with TestContainers")]
     public Task HasOverlappingRequestAsync_OverlappingSlot_ReturnsTrue() => Task.CompletedTask;
+
+    // B004 gaps — replace InMemoryEmployeeMetricsService with MongoDB-backed implementation
+    [Fact(Skip = "Requires MongoDB — implement with TestContainers")]
+    public Task EmployeeMetrics_IncrementAndQuery_ReturnsCorrectLookbackCount() => Task.CompletedTask;
+
+    [Fact(Skip = "Requires MongoDB — implement with TestContainers")]
+    public Task EmployeeMetrics_AllocationsOutsideLookbackWindow_NotCounted() => Task.CompletedTask;
 }

@@ -19,4 +19,10 @@ public interface IBookingQueryRepository
         string requestorId,
         Guid requestId,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<BookingRequestDto>> GetPendingRequestsForDrawAsync(
+        string tenantId,
+        string locationId,
+        DateOnly date,
+        CancellationToken cancellationToken = default);
 }
