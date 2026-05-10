@@ -1,6 +1,7 @@
 using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
+using FPS.Booking.Application.Queries;
 using FPS.Booking.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -78,6 +79,25 @@ public sealed class BookingController : ControllerBase
         {
             return UnprocessableEntity(new { ex.Message });
         }
+    }
+
+    [HttpGet]
+    [ProducesResponseType(typeof(GetMyBookingsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyBookings(
+        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
+        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? status,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await mediator.Send(
+            new GetMyBookingsQuery(tenantId, requestorId, from, to, status, pageSize, cursor),
+            cancellationToken);
+
+        return Ok(new GetMyBookingsResponse(result.Items, result.NextCursor));
     }
 
     [HttpGet("{requestId:guid}/status")]

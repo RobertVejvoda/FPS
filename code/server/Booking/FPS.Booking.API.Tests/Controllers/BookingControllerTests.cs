@@ -3,6 +3,7 @@ using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
+using FPS.Booking.Application.Queries;
 using FPS.Booking.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -118,6 +119,77 @@ public sealed class BookingControllerTests
             Guid.NewGuid(), "tenant-1", Guid.NewGuid().ToString(), null, CancellationToken.None);
 
         Assert.IsType<UnprocessableEntityObjectResult>(result);
+    }
+
+    // ── GET /bookings ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetMyBookings_ReturnsOkWithItems()
+    {
+        var items = new List<BookingListItem>
+        {
+            new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                new TimeOnly(9, 0), new TimeOnly(17, 0), null,
+                "Pending", null, null, "cancel", DateTime.UtcNow, DateTime.UtcNow)
+        };
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await controller.GetMyBookings(
+            "tenant-1", "user-1", null, null, null, 50, null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<GetMyBookingsResponse>(ok.Value);
+        Assert.Single(body.Items);
+        Assert.Null(body.NextCursor);
+    }
+
+    [Fact]
+    public async Task GetMyBookings_EmptyResult_ReturnsOkWithEmptyList()
+    {
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult([], null));
+
+        var result = await controller.GetMyBookings(
+            "tenant-1", "user-1", null, null, null, 50, null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<GetMyBookingsResponse>(ok.Value);
+        Assert.Empty(body.Items);
+    }
+
+    [Fact]
+    public async Task GetMyBookings_PassesTenantAndUserToQuery()
+    {
+        GetMyBookingsQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<BookingListResult>, CancellationToken>(
+                (q, _) => captured = (GetMyBookingsQuery)q)
+            .ReturnsAsync(new BookingListResult([], null));
+
+        await controller.GetMyBookings("t-99", "u-42", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal("t-99", captured!.TenantId);
+        Assert.Equal("u-42", captured.RequestorId);
+    }
+
+    [Fact]
+    public async Task GetMyBookings_WithCursor_PassesCursorToQuery()
+    {
+        GetMyBookingsQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<BookingListResult>, CancellationToken>(
+                (q, _) => captured = (GetMyBookingsQuery)q)
+            .ReturnsAsync(new BookingListResult([], "next-page"));
+
+        await controller.GetMyBookings("t-1", "u-1", null, null, null, 10, "some-cursor", CancellationToken.None);
+
+        Assert.Equal("some-cursor", captured?.Cursor);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

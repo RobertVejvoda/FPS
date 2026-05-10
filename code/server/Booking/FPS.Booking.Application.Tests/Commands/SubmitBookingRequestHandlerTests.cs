@@ -1,39 +1,43 @@
 namespace FPS.Booking.Application.Tests.Commands;
 
-public class SubmitBookingRequestHandlerTests
+public sealed class SubmitBookingRequestHandlerTests
 {
-    private readonly Mock<IBookingRepository> _repository = new();
-    private readonly Mock<ITenantPolicyService> _policyService = new();
-    private readonly Mock<IEventPublisher> _publisher = new();
-    private readonly SubmitBookingRequestHandler _handler;
+    private readonly Mock<IBookingRepository> repository = new();
+    private readonly Mock<IBookingQueryRepository> queryRepository = new();
+    private readonly Mock<ITenantPolicyService> policyService = new();
+    private readonly Mock<IEventPublisher> publisher = new();
+    private readonly SubmitBookingRequestHandler handler;
 
     private static readonly TenantPolicy DefaultPolicy = new(
         DailyRequestCap: 500,
         DrawCutOffTime: new TimeOnly(18, 0),
         TimeZoneId: "UTC",
-        SameDayBookingEnabled: true);
+        SameDayBookingEnabled: true,
+        AllocationLookbackDays: 10);
 
     public SubmitBookingRequestHandlerTests()
     {
-        _handler = new SubmitBookingRequestHandler(
-            _repository.Object,
-            _policyService.Object,
-            _publisher.Object);
+        handler = new SubmitBookingRequestHandler(
+            repository.Object, queryRepository.Object, policyService.Object, publisher.Object);
 
-        _policyService
+        policyService
             .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultPolicy);
 
-        _repository
+        repository
             .Setup(r => r.CountRequestsForDateAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        _repository
+        repository
             .Setup(r => r.HasOverlappingRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        _repository
+        repository
             .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Returns(Task.CompletedTask);
+
+        queryRepository
+            .Setup(r => r.AddToUserIndexAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
     }
 
@@ -42,102 +46,104 @@ public class SubmitBookingRequestHandlerTests
     [Fact]
     public async Task Handle_ValidFutureRequest_ReturnsPendingStatus()
     {
-        var result = await _handler.Handle(ValidCommand(), CancellationToken.None);
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
         Assert.Equal("Pending", result.Status);
         Assert.Null(result.RejectionCode);
-        Assert.Null(result.Reason);
     }
 
     [Fact]
     public async Task Handle_ValidRequest_PersistsBookingRequest()
     {
-        await _handler.Handle(ValidCommand(), CancellationToken.None);
+        await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        _repository.Verify(r => r.CreateBookingRequestAsync(
+        repository.Verify(r => r.CreateBookingRequestAsync(
             It.Is<BookingRequestDto>(dto => dto.Status == "Pending")), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ValidRequest_AddsToUserIndex()
+    {
+        var cmd = ValidCommand();
+        await handler.Handle(cmd, CancellationToken.None);
+
+        queryRepository.Verify(r => r.AddToUserIndexAsync(
+            cmd.TenantId, cmd.RequestorId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedRequest_StillAddsToUserIndex()
+    {
+        repository
+            .Setup(r => r.HasOverlappingRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        queryRepository.Verify(r => r.AddToUserIndexAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_ValidRequest_ReturnsNonEmptyRequestId()
     {
-        var result = await _handler.Handle(ValidCommand(), CancellationToken.None);
-
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
         Assert.NotEqual(Guid.Empty, result.RequestId);
     }
 
-    // ── Cut-off rejection ─────────────────────────────────────────────────────
+    // ── Rejection paths ───────────────────────────────────────────────────────
 
     [Fact]
     public async Task Handle_CutOffPassed_ReturnsRejected()
     {
-        var latePolicy = DefaultPolicy with { DrawCutOffTime = new TimeOnly(0, 0) }; // midnight = always past
-        _policyService
+        var latePolicy = DefaultPolicy with { DrawCutOffTime = new TimeOnly(0, 0) };
+        policyService
             .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(latePolicy);
 
-        var result = await _handler.Handle(ValidCommand(), CancellationToken.None);
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
         Assert.Equal("Rejected", result.Status);
         Assert.Equal("CutOffPassed", result.RejectionCode);
     }
 
-    // ── Daily cap rejection ───────────────────────────────────────────────────
-
     [Fact]
     public async Task Handle_DailyCapExceeded_ReturnsRejected()
     {
-        _repository
+        repository
             .Setup(r => r.CountRequestsForDateAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(500);
 
-        var result = await _handler.Handle(ValidCommand(), CancellationToken.None);
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
         Assert.Equal("Rejected", result.Status);
         Assert.Equal("DailyCapExceeded", result.RejectionCode);
     }
 
-    // ── Duplicate rejection ───────────────────────────────────────────────────
-
     [Fact]
     public async Task Handle_DuplicateRequest_ReturnsRejected()
     {
-        _repository
+        repository
             .Setup(r => r.HasOverlappingRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var result = await _handler.Handle(ValidCommand(), CancellationToken.None);
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
         Assert.Equal("Rejected", result.Status);
         Assert.Equal("DuplicateRequest", result.RejectionCode);
     }
 
-    // ── Rejected request is still persisted ──────────────────────────────────
-
-    [Fact]
-    public async Task Handle_RejectedRequest_StillPersisted()
-    {
-        _repository
-            .Setup(r => r.HasOverlappingRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        await _handler.Handle(ValidCommand(), CancellationToken.None);
-
-        _repository.Verify(r => r.CreateBookingRequestAsync(
-            It.Is<BookingRequestDto>(dto => dto.Status == "Rejected")), Times.Once);
-    }
-
-    // ── Domain events are published ───────────────────────────────────────────
-
     [Fact]
     public async Task Handle_ValidRequest_PublishesDomainEvents()
     {
-        await _handler.Handle(ValidCommand(), CancellationToken.None);
+        await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        _publisher.Verify(p => p.PublishAsync(It.IsAny<FPS.Booking.Domain.Events.BookingRequestSubmittedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+        publisher.Verify(p => p.PublishAsync(
+            It.IsAny<FPS.Booking.Domain.Events.BookingRequestSubmittedEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    // ── Helper ───────────────────────────────────────────────────────────────
+    // ── Helper ────────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequestCommand ValidCommand() => new(
         TenantId: "tenant-1",

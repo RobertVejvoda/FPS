@@ -5,24 +5,29 @@ using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 using FPS.Booking.Domain.ValueObjects;
 using FPS.SharedKernel.DomainEvents;
 using MediatR;
+using System.Threading;
 
 namespace FPS.Booking.Application.Commands;
 
 public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingRequestCommand, SubmitBookingRequestResult>
 {
     private readonly IBookingRepository repository;
+    private readonly IBookingQueryRepository queryRepository;
     private readonly ITenantPolicyService policyService;
     private readonly IEventPublisher eventPublisher;
 
     public SubmitBookingRequestHandler(
         IBookingRepository repository,
+        IBookingQueryRepository queryRepository,
         ITenantPolicyService policyService,
         IEventPublisher eventPublisher)
     {
         ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(queryRepository);
         ArgumentNullException.ThrowIfNull(policyService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
         this.repository = repository;
+        this.queryRepository = queryRepository;
         this.policyService = policyService;
         this.eventPublisher = eventPublisher;
     }
@@ -55,6 +60,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, eventPublisher);
 
         await repository.CreateBookingRequestAsync(ToDto(request, cmd.TenantId, cmd.FacilityId));
+        await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
 
         return new SubmitBookingRequestResult(
             request.Id.Value,
