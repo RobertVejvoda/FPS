@@ -358,6 +358,68 @@ Implementation notes for Claude:
 - If current test infrastructure makes real JWT setup expensive, mirror the `ID001` test approach with a local test signing key.
 - If an admin/system endpoint needs a broader auth model to avoid trusting headers, stop and ask Codex before widening this slice.
 
+#### Slice P001: Profile Vehicle Snapshot
+
+Purpose: make Profile the source of truth for employee parking eligibility, vehicle capability data, and company-car entitlement needed by Booking validation and allocation.
+
+Scope:
+
+- Add a Profile-owned `UserProfile` model for the authenticated tenant/user.
+- Add vehicle records owned by Profile, including the minimum parking fields Booking needs for slot matching.
+- Expose a Booking-facing snapshot query that returns employee eligibility, vehicles, and company-car/accessibility/reserved-space eligibility for one requestor in one tenant.
+- Include a stable snapshot version or timestamp so Booking can record which Profile facts influenced a booking decision.
+- Update Booking to consume the Profile snapshot through a Booking-owned application interface when validating submission and allocation inputs.
+- Add tests for eligible profile, ineligible profile, missing required vehicle, vehicle capability mismatch, and company-car entitlement propagation.
+
+Profile snapshot fields:
+
+| Field | Meaning |
+| --- | --- |
+| `tenantId` | Tenant that owns the profile snapshot. |
+| `userId` | Requestor identity from authenticated context. |
+| `profileStatus` | `Active`, `Inactive`, or `Suspended`. Only `Active` can request parking. |
+| `parkingEligible` | Whether the employee may request parking under tenant/Profile rules. |
+| `hasCompanyCar` | Whether the requestor enters Tier 1 company-car allocation when policy enables it. |
+| `accessibilityEligible` | Whether the requestor may use accessibility-reserved capacity. |
+| `reservedSpaceEligible` | Whether the requestor may use reserved-space capacity where policy requires it. |
+| `vehicles[]` | Registered vehicles usable for parking requests. |
+| `snapshotVersion` | Stable version, ETag, or timestamp for audit/replay. |
+
+Vehicle snapshot fields:
+
+| Field | Meaning |
+| --- | --- |
+| `vehicleId` | Stable Profile-owned vehicle identifier. |
+| `licensePlate` | Plate or registration value required for operational use. |
+| `vehicleType` | Canonical type such as `car`, `motorcycle`, or another documented slot-matching value. |
+| `isElectric` | Whether the vehicle may require EV-capable parking. |
+| `isActive` | Inactive vehicles cannot be selected for new booking requests. |
+
+Out of scope:
+
+- Booking allocation rule changes beyond consuming Profile-provided facts.
+- Profile UI, mobile UI, or self-service vehicle management screens.
+- HR/admin bulk profile management.
+- Keycloak user provisioning or identity lifecycle.
+- Notification, Audit, Reporting, or Configuration work.
+- Storing Profile private data in Booking responses or exposing it to other employees.
+
+Acceptance criteria:
+
+- Booking no longer relies on request body fields for company-car entitlement or vehicle capability facts when Profile snapshot data is required.
+- Booking records the Profile snapshot version/reference on decisions that depend on eligibility, vehicle, company-car, accessibility, or reserved-space facts.
+- If Profile is unavailable for required validation, Booking fails safely and does not accept or allocate the request.
+- Employee-facing Booking responses do not expose Profile private data beyond existing Booking outcome fields.
+- Tests fake Profile through a Booking-owned interface; Booking must not read Profile persistence models directly.
+- `./tools/validate.sh` passes before the PR is reported ready.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after `BK011` is merged.
+- Keep the first Profile implementation minimal and slice-focused; do not build the full Profile product area.
+- Prefer a small Profile API/query plus Booking anti-corruption interface over coupling Booking to Profile internals.
+- If the current Booking request DTO still accepts vehicle/company-car fields for compatibility, Booking must prefer Profile snapshot facts and must not let a caller spoof elevated eligibility.
+
 ---
 
 ### Phase 3 — Notification & Audit (Week 9–10)

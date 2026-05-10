@@ -55,6 +55,34 @@ Booking may consume:
 
 Booking must not expose Profile private data in employee-facing Booking responses. Booking may store only the minimum snapshot needed to explain and audit the decision.
 
+Profile data used by Booking must be consumed as a snapshot, not as live Profile internals. The snapshot contract is owned by Profile and translated by Booking into Booking concepts before domain logic runs.
+
+Minimum Profile snapshot fields for Booking:
+
+| Field | Booking use |
+| --- | --- |
+| `tenantId` | Tenant isolation and snapshot ownership. |
+| `userId` | Requestor identity; must match authenticated context or authorized on-behalf-of flow. |
+| `profileStatus` | Reject or fail safely when the employee is inactive/suspended. |
+| `parkingEligible` | Requestor eligibility validation. |
+| `hasCompanyCar` | Tier 1 company-car allocation eligibility when policy enables it. |
+| `accessibilityEligible` | Eligibility for accessibility-reserved capacity. |
+| `reservedSpaceEligible` | Eligibility for tenant/location reserved capacity. |
+| `vehicles[]` | Vehicle requirement and slot capability matching. |
+| `snapshotVersion` | Audit/replay reference for decisions affected by Profile facts. |
+
+Minimum vehicle snapshot fields for Booking:
+
+| Field | Booking use |
+| --- | --- |
+| `vehicleId` | Stable reference to the selected Profile vehicle. |
+| `licensePlate` | Operational vehicle identifier when required by policy. |
+| `vehicleType` | Slot matching for car, motorcycle, or other configured vehicle types. |
+| `isElectric` | EV-capable slot matching when requested or required. |
+| `isActive` | Inactive vehicles cannot be used for new requests. |
+
+Booking must record the snapshot version or timestamp for decisions affected by Profile facts, including eligibility rejection, vehicle mismatch rejection, company-car Tier 1 classification, accessibility/reserved-space matching, and allocation outcomes. Booking must not store Profile-only details that are unnecessary for explaining or auditing the Booking decision.
+
 ### System To Booking
 
 System or scheduler may trigger scheduled operational work.
