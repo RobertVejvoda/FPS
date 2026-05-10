@@ -26,7 +26,6 @@ public static class DependencyInjection
         services.AddSingleton<IEmployeeMetricsService, InMemoryEmployeeMetricsService>();
         services.AddScoped<IAvailableSlotService, ConfiguredAvailableSlotService>();
         services.AddSingleton<DrawService>();
-        services.AddScoped<IAllocationService, DaprAllocationService>();
         services.AddScoped<IEventPublisher, DaprEventPublisher>();
         services.AddScoped<ITenantPolicyService, DefaultTenantPolicyService>();
 
