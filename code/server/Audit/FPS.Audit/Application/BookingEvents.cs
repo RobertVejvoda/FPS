@@ -1,0 +1,34 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace FPS.Audit.Application;
+
+public sealed record BookingEventEnvelope(
+    string EventId,
+    string EventType,
+    int EventVersion,
+    DateTime OccurredAt,
+    string TenantId,
+    string CorrelationId,
+    string? CausationId,
+    string ActorType,
+    string? ActorId,
+    string Source,
+    BookingEventPayload Payload);
+
+public sealed record BookingEventPayload(
+    string? BookingRequestId,
+    string? RequestorId,
+    string? LocationId,
+    string? Date,
+    string? TimeSlot,
+    string? PreviousStatus,
+    string? NewStatus,
+    string? ReasonCode,
+    string? ReasonText,
+    IReadOnlyList<string>? AffectedRecipientIds)
+{
+    // Captures any additive payload fields not in the known contract.
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? AdditionalData { get; init; }
+}
