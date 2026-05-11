@@ -9,11 +9,9 @@ OUT_DIR="$REPO_ROOT/code/clients/typescript"
 OPENAPI_DIR="$OUT_DIR/openapi"
 SRC_DIR="$OUT_DIR/src"
 
-declare -A SERVICES=(
-  ["identity"]="code/server/Identity/FPS.Identity:5100"
-  ["booking"]="code/server/Booking/FPS.Booking.API:5101"
-  ["profile"]="code/server/Profile/FPS.Profile:5102"
-)
+SERVICES="identity:code/server/Identity/FPS.Identity:5100
+booking:code/server/Booking/FPS.Booking.API:5101
+profile:code/server/Profile/FPS.Profile:5102"
 
 mkdir -p "$OPENAPI_DIR" "$SRC_DIR"
 
@@ -25,11 +23,12 @@ capture_openapi() {
   local out_file="$OPENAPI_DIR/${name}.json"
 
   echo "[generate] Starting $name on :$port"
-  dotnet run \
+  ASPNETCORE_ENVIRONMENT=Production dotnet run \
     --project "$REPO_ROOT/$project_path" \
     --no-build \
+    -c Release \
+    --no-launch-profile \
     --urls "http://localhost:$port" \
-    --environment Development \
     2>/dev/null &
   local pid=$!
 
@@ -58,10 +57,9 @@ capture_openapi() {
 echo "[generate] Building services..."
 dotnet build "$REPO_ROOT/code/server/FPS.sln" -c Release -v q --nologo 2>/dev/null
 
-for name in "${!SERVICES[@]}"; do
-  IFS=: read -r path port <<< "${SERVICES[$name]}"
+while IFS=: read -r name path port; do
   capture_openapi "$name" "$path" "$port"
-done
+done <<< "$SERVICES"
 
 # Generate TypeScript types from captured OpenAPI JSON.
 if ! command -v npx &>/dev/null; then
@@ -69,10 +67,12 @@ if ! command -v npx &>/dev/null; then
   exit 1
 fi
 
-echo "[generate] Generating TypeScript types..."
-for name in "${!SERVICES[@]}"; do
-  npx openapi-typescript "$OPENAPI_DIR/${name}.json" -o "$SRC_DIR/${name}.d.ts"
+# Pin generator version exactly so output stays deterministic.
+OPENAPI_TS_VERSION="$(node -e "console.log(require('$OUT_DIR/package.json').devDependencies['openapi-typescript'])")"
+echo "[generate] Generating TypeScript types with openapi-typescript@${OPENAPI_TS_VERSION}..."
+while IFS=: read -r name path port; do
+  npx --yes --package="openapi-typescript@${OPENAPI_TS_VERSION}" -- openapi-typescript "$OPENAPI_DIR/${name}.json" -o "$SRC_DIR/${name}.d.ts"
   echo "[generate] Generated $SRC_DIR/${name}.d.ts"
-done
+done <<< "$SERVICES"
 
 echo "[generate] Done. Commit $OPENAPI_DIR/ and $SRC_DIR/ to keep them up to date."

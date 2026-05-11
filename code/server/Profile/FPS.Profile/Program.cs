@@ -16,14 +16,18 @@ builder.Services.AddOpenApi("v1", options =>
     options.AddDocumentTransformer((doc, _, _) =>
     {
         doc.Info = new OpenApiInfo { Title = "Profile API", Version = "v1" };
-        doc.Components ??= new OpenApiComponents();
-        doc.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        doc.Servers = null;
+        var components = doc.Components ?? new OpenApiComponents();
+        var schemes = components.SecuritySchemes ?? new Dictionary<string, IOpenApiSecurityScheme>();
+        schemes["Bearer"] = new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
             Description = "JWT Bearer — tenant and user identity come from token claims, not request parameters."
         };
+        components.SecuritySchemes = schemes;
+        doc.Components = components;
         return Task.CompletedTask;
     });
     options.AddOperationTransformer((op, _, _) =>

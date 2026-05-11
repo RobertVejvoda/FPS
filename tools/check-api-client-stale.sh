@@ -15,23 +15,22 @@ TMP_SRC="$TMP_DIR/src"
 
 mkdir -p "$TMP_OPENAPI" "$TMP_SRC"
 
-declare -A SERVICES=(
-  ["identity"]="code/server/Identity/FPS.Identity:5110"
-  ["booking"]="code/server/Booking/FPS.Booking.API:5111"
-  ["profile"]="code/server/Profile/FPS.Profile:5112"
-)
+SERVICES="identity:code/server/Identity/FPS.Identity:5110
+booking:code/server/Booking/FPS.Booking.API:5111
+profile:code/server/Profile/FPS.Profile:5112"
 
 stale=false
+OPENAPI_TS_VERSION="$(node -e "console.log(require('$REPO_ROOT/code/clients/typescript/package.json').devDependencies['openapi-typescript'])")"
 
-for name in "${!SERVICES[@]}"; do
-  IFS=: read -r path port <<< "${SERVICES[$name]}"
+while IFS=: read -r name path port; do
   out_file="$TMP_OPENAPI/${name}.json"
 
-  dotnet run \
+  ASPNETCORE_ENVIRONMENT=Production dotnet run \
     --project "$REPO_ROOT/$path" \
     --no-build \
+    -c Release \
+    --no-launch-profile \
     --urls "http://localhost:$port" \
-    --environment Development \
     2>/dev/null &
   pid=$!
 
@@ -59,13 +58,13 @@ for name in "${!SERVICES[@]}"; do
   fi
 
   if command -v npx &>/dev/null; then
-    npx openapi-typescript "$out_file" -o "$TMP_SRC/${name}.d.ts" 2>/dev/null
+    npx --yes --package="openapi-typescript@${OPENAPI_TS_VERSION}" -- openapi-typescript "$out_file" -o "$TMP_SRC/${name}.d.ts" 2>/dev/null
     if ! diff -q "$SRC_DIR/${name}.d.ts" "$TMP_SRC/${name}.d.ts" >/dev/null 2>&1; then
       echo "[stale-check] STALE: $name TypeScript types have changed — run tools/generate-api-client.sh"
       stale=true
     fi
   fi
-done
+done <<< "$SERVICES"
 
 if $stale; then
   echo "[stale-check] FAILED — generated client is out of date"
