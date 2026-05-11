@@ -273,7 +273,8 @@ Booking Phase 1 is complete. New implementation work should now proceed through 
 | 5 | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Booking event contracts; GDPR audit decision. | Audit query UI, GDPR erasure endpoint/workflow, PII mapping persistence beyond documented shape. |
 | 6 | `CFG001` Parking Policy/Slot Source | Move default/in-memory Booking policy and slot inputs toward Configuration-owned contracts. | Booking context contract; parking policy configuration docs. | Tenant onboarding or admin UI. |
 | 7 | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Authenticated API surface from `ID001` and `BK011`. | React or React Native implementation. |
-| 8 | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | `API001`. | Booking business rule changes. |
+| 8 | `CI001` Build Status and CI Visibility | Make repository health visible and keep CI reliable across code, tooling, generated clients, and docs. | Existing GitHub Actions workflows; `API001` client stale-check tooling if merged. | Product behavior, UI screens, deployment automation beyond GitHub Actions. |
+| 9 | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | `API001`; `CI001` recommended before active mobile work. | Booking business rule changes. |
 
 #### Slice ID001: Authenticated User Context
 
@@ -605,6 +606,60 @@ Implementation notes for Claude:
 - Prefer a small, repeatable generator setup over hand-written TypeScript clients.
 - If current controllers cannot produce stable operation IDs or schemas without widening an API contract, stop and ask Codex before changing behavior.
 - If choosing or adding a generator package, document the decision and command in the repo docs so the next frontend/mobile slice can use it without rediscovery.
+
+#### Slice CI001: Build Status and CI Visibility
+
+Purpose: make project health obvious to contributors and prevent code, tooling, generated clients, and documentation workflow changes from drifting without a visible signal.
+
+Scope:
+
+- Add GitHub Actions status badges for the main CI workflow and documentation deployment workflow to the repository entry points.
+- Expand CI triggers beyond `code/**` so relevant changes under `.github/workflows/**`, `tools/**`, and generated client/tooling paths are validated.
+- Add `workflow_dispatch` so maintainers can manually run CI.
+- Add a scheduled CI run, initially weekly, to catch SDK, dependency, and environment drift even when no PR is active.
+- Keep CI based on the repository solution and validation tools already in use; do not introduce a second build system.
+- After `API001` lands, include the API client stale-check script in CI so generated OpenAPI and TypeScript client artifacts cannot silently drift.
+- Document the CI strategy in `docs/tooling.md`.
+
+Status badge expectations:
+
+| Badge | Target |
+| --- | --- |
+| CI | `.github/workflows/ci.yml` on `master`. |
+| Docs | `.github/workflows/docs.yml` on `master`. |
+
+CI trigger expectations:
+
+| Trigger | Requirement |
+| --- | --- |
+| `pull_request` to `master` | Runs when code, tools, workflow files, or generated client paths change. |
+| `push` to `master` | Runs for the same relevant paths after merge. |
+| `workflow_dispatch` | Allows a manual health check from GitHub. |
+| `schedule` | Runs weekly until the project has enough active development to justify daily builds. |
+
+Out of scope:
+
+- Changing Booking, Profile, Notification, Audit, or Identity product behavior.
+- Adding frontend/mobile screens.
+- Replacing GitHub Actions with another CI provider.
+- Publishing packages, containers, or releases.
+- Enforcing branch protection in code; branch protection is a GitHub repository setting to configure after the workflow names are stable.
+
+Acceptance criteria:
+
+- `README.md` and `docs/Home.md` show visible CI and docs status signals.
+- CI still restores, builds, and tests `code/server/FPS.sln` on Ubuntu with .NET 10.
+- CI runs when `.github/workflows/**` or `tools/**` changes, not only when `code/**` changes.
+- Manual and scheduled CI runs are available.
+- If `API001` has merged, CI runs the generated API client stale check and fails on stale output.
+- `docs/tooling.md` explains what the badges mean, what triggers CI, and where branch protection should point.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after `API001` is resolved, unless Codex explicitly reprioritises this slice sooner.
+- Keep this to GitHub Actions, entry badges, and tooling documentation.
+- Use existing workflow names where possible so badge URLs and branch-protection settings remain stable.
+- If the API client stale-check script depends on .NET 10 user-install PATH locally, make sure CI and local scripts agree on SDK selection.
 
 ---
 

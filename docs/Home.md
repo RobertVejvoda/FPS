@@ -2,26 +2,35 @@
 title: Fair Parking System (FPS) 
 ---
 
+![CI](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml/badge.svg?branch=master)
+![Docs](https://github.com/RobertVejvoda/FPS/actions/workflows/docs.yml/badge.svg?branch=master)
 
-The Fair Parking System (FPS) is a comprehensive solution aimed at optimizing the allocation and management of parking spaces within an organization. It leverages a set of predefined criteria to ensure that parking slots are distributed fairly among employees, taking into account factors such as seniority, work schedules, and specific needs.
+The Fair Parking System (FPS) is an open-source, multi-tenant SaaS platform for companies where more employees need parking than the building can provide.
 
-### Key Features of FPS
+FPS replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Employees request parking, company-car obligations are handled first, and remaining spaces are allocated by documented fairness rules so access improves over time instead of depending on who emailed HR first.
 
-- **Equitable Distribution**: FPS uses [algorithms](./business-layer/process) to allocate parking spaces in a manner that is fair and transparent. This ensures that all employees have an equal opportunity to access parking based on the established criteria.
+### Product Goals
 
-- **User-Friendly Interface**: The system provides an intuitive interface for employees to view available parking slots, make reservations, and manage their parking preferences.
+- **Fair access to scarce parking**: Allocate spaces with explicit, auditable rules instead of first-come, first-served coordination.
+- **Lower operational load**: Reduce HR and facilities work by automating request intake, Draw execution, notification, and audit records.
+- **Tenant isolation by design**: Keep company data and policies isolated for SaaS use.
+- **Employee trust**: Make booking status, outcomes, and visible reasons understandable to employees.
+- **Operational evidence**: Preserve event, notification, and audit trails so policy decisions can be reviewed later.
 
-- **Real-Time Updates**: FPS offers real-time updates on parking availability, allowing employees to see the current status of parking spaces and make informed decisions.
+### What FPS Does
 
-- **Integration with Employee Database**: The system integrates seamlessly with the organization's employee database, ensuring that all relevant information is up-to-date and accurate.
+- Accepts future and same-day parking requests.
+- Runs the daily Draw for scarce spaces.
+- Gives company-car employees first allocation priority where policy requires it.
+- Uses weighted allocation for remaining employees based on recent allocation history and active penalties.
+- Records booking events for notification and audit consumers.
+- Exposes API contracts for future web and React Native clients.
 
-- **Customizable Criteria**: Administrators can customize the criteria used for parking allocation, allowing the system to adapt to the specific needs and policies of the organization.
+### Current Build Focus
 
-- **Reporting and Analytics**: FPS includes robust reporting and analytics features, providing insights into parking usage patterns, peak times, and other valuable metrics.
+The backend Booking vertical slices are implemented. Current work is hardening the platform around authenticated user context, Profile snapshots, Notification and Audit consumers, Configuration-owned policy, OpenAPI client generation, and then the mobile shell.
 
-- **Security and Compliance**: The system incorporates strong security measures to protect user data and ensure compliance with relevant regulations.
-
-By implementing FPS, organizations can streamline their parking management processes, reduce conflicts over parking spaces, and enhance overall employee satisfaction.
+The implementation queue is maintained in the [Development Plan](./development-plan).
 
 ---
 

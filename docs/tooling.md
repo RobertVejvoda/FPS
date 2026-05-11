@@ -87,6 +87,41 @@ Then open the printed local URL in a browser.
 
 ---
 
+## Build Status and CI
+
+Repository health should be visible on the public entry points:
+
+| Signal | Workflow |
+|---|---|
+| CI badge | `.github/workflows/ci.yml` |
+| Docs badge | `.github/workflows/docs.yml` |
+
+The CI badge is the red/green signal for backend build and test health. The docs badge shows whether the documentation site was deployed successfully.
+
+### CI strategy
+
+CI should run for pull requests and pushes to `master` when relevant build inputs change:
+
+- `code/**`
+- `tools/**`
+- `.github/workflows/**`
+- generated API client paths once `API001` is merged
+
+CI should also support:
+
+- `workflow_dispatch` for manual maintainer runs;
+- a weekly scheduled run to catch SDK, dependency, and environment drift.
+
+After the workflow names are stable, repository branch protection should require the CI build/test check before merging implementation PRs.
+
+### API client stale check
+
+After `API001` lands, CI should run the generated API client stale-check script as part of the build. This prevents backend OpenAPI changes from being merged without updated generated client artifacts.
+
+The stale check should be self-contained in a clean checkout and should select the same .NET SDK path as the local validation tools.
+
+---
+
 ## tools/validate.sh
 
 Runs automatically as a pre-commit hook and can be called manually before staging.
