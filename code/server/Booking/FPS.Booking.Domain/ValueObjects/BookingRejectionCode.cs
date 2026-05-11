@@ -10,5 +10,6 @@ public enum BookingRejectionCode
     NoCapacityAvailable,
     RequestorIneligible,
     SameDayBookingDisabled,
-    NoCapacityForSameDay
+    NoCapacityForSameDay,
+    ProfileUnavailable
 }

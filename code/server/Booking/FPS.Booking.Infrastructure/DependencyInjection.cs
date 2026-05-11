@@ -6,6 +6,7 @@ using FPS.Booking.Domain.Services;
 using FPS.Booking.Infrastructure.Repositories;
 using FPS.Booking.Infrastructure.Services;
 using FPS.SharedKernel.DomainEvents;
+using FPS.SharedKernel.Profile;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<ICorrectionAuditRepository, DaprCorrectionAuditRepository>();
         services.AddSingleton<IEmployeeMetricsService, InMemoryEmployeeMetricsService>();
         services.AddScoped<IAvailableSlotService, ConfiguredAvailableSlotService>();
+        services.AddHttpClient<IProfileSnapshotService, HttpProfileSnapshotService>(client =>
+            client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fps-profile"));
         services.AddSingleton<DrawService>();
         services.AddScoped<IEventPublisher, DaprEventPublisher>();
         services.AddScoped<ITenantPolicyService, DefaultTenantPolicyService>();
