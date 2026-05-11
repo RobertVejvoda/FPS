@@ -12,3 +12,10 @@ A system for companies where a building does not have enough parking slots, dist
 ## Repository
 
 https://github.com/RobertVejvoda/FPS
+
+## License
+
+FPS is licensed under the GNU Affero General Public License v3.0 or later.
+See [LICENSE](./LICENSE).
+
+Copyright (c) 2026 Robert Vejvoda.
