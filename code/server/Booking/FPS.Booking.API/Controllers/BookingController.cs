@@ -186,10 +186,4 @@ public sealed class BookingController : ControllerBase
             return UnprocessableEntity(new { ex.Message });
         }
     }
-
-    [HttpGet("{requestId:guid}/status")]
-    public IActionResult GetBookingStatus(Guid requestId) => StatusCode(501, "Not implemented");
-
-    [HttpPost("{requestId:guid}/arrival")]
-    public IActionResult ConfirmArrival(Guid requestId) => StatusCode(501, "Not implemented");
 }
