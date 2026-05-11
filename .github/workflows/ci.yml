@@ -5,10 +5,19 @@ on:
     branches: [master]
     paths:
       - 'code/**'
+      - 'tools/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [master]
     paths:
       - 'code/**'
+      - 'tools/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+  schedule:
+    # Weekly health check (Mondays at 06:00 UTC) so SDK, dependency, and
+    # environment drift is caught even when no PR is active.
+    - cron: '0 6 * * 1'
 
 jobs:
   build-and-test:
@@ -28,3 +37,11 @@ jobs:
 
       - name: Test
         run: dotnet test code/server/FPS.sln --no-build --configuration Release --verbosity minimal
+
+      - name: Set up Node.js for client stale-check
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: API client stale-check
+        run: ./tools/check-api-client-stale.sh

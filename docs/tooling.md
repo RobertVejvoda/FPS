@@ -4,6 +4,37 @@ Scripts in `tools/` automate quality gates and permission review for AI-assisted
 
 ---
 
+## Continuous Integration
+
+Repository health is visible through two GitHub Actions status badges on `README.md` and `docs/Home.md`:
+
+| Badge | Workflow | What it means |
+|---|---|---|
+| **CI** | `.github/workflows/ci.yml` | Latest run of restore + build + test + generated-client stale-check on `master`. |
+| **Docs** | `.github/workflows/docs.yml` | Latest deploy of `docs/` to GitHub Pages on `master`. |
+
+### When CI runs
+
+| Trigger | Behaviour |
+|---|---|
+| `pull_request` to `master` | Runs when `code/**`, `tools/**`, or `.github/workflows/**` change. |
+| `push` to `master` | Runs after merge for the same path set. |
+| `workflow_dispatch` | A maintainer can run CI manually from the Actions tab. |
+| `schedule` (weekly) | Runs every Monday at 06:00 UTC so SDK, dependency, and environment drift is caught even when no PR is active. |
+
+The `docs` workflow runs on `push` to `master` when anything under `docs/**` changes and is also exposed via `workflow_dispatch` for manual republish.
+
+### What CI checks
+
+1. **.NET build and test** — restore, build, and test `code/server/FPS.sln` against .NET 10 in Release configuration on Ubuntu.
+2. **Generated API client stale-check** — `./tools/check-api-client-stale.sh` runs after the build. It re-captures OpenAPI from each in-process service and diffs against the committed `code/clients/typescript/openapi/*.json` and `code/clients/typescript/src/*.d.ts`. CI fails if either differs, so the generator must be re-run before merge whenever a public API contract changes.
+
+### Branch protection
+
+Branch protection is not encoded in this repository; it is a GitHub repository setting. Once workflow names are stable, point the required check at the `build-and-test` job from `CI` so PRs cannot merge to `master` until that check passes. Keep the job name stable when editing `ci.yml` so this configuration does not need to be re-wired.
+
+---
+
 ## Commit Workflow
 
 Every commit must follow this sequence:
