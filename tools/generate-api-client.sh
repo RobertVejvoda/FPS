@@ -4,6 +4,11 @@
 # Run from repo root. Services are started temporarily on localhost.
 set -euo pipefail
 
+# Prefer the .NET 10 user install (FPS targets net10.0). validate.sh and the
+# git hooks do the same; without this, a system dotnet pinned to 9.x will
+# fail with NETSDK1045 from a clean shell.
+export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="$REPO_ROOT/code/clients/typescript"
 OPENAPI_DIR="$OUT_DIR/openapi"
@@ -59,9 +64,10 @@ capture_openapi() {
   wait "$pid" 2>/dev/null || true
 }
 
-# Build all services once before starting them.
+# Build all services once before starting them. Let stderr through so SDK
+# selection / restore failures are visible — silencing them looked like a hang.
 echo "[generate] Building services..."
-dotnet build "$REPO_ROOT/code/server/FPS.sln" -c Release -v q --nologo 2>/dev/null
+dotnet build "$REPO_ROOT/code/server/FPS.sln" -c Release -v q --nologo
 
 while IFS=: read -r name path port; do
   capture_openapi "$name" "$path" "$port"

@@ -4,6 +4,11 @@
 # Run from repo root after building services.
 set -euo pipefail
 
+# Prefer the .NET 10 user install (FPS targets net10.0). validate.sh and the
+# git hooks do the same; without this, a system dotnet pinned to 9.x will
+# fail with NETSDK1045 from a clean shell.
+export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -21,9 +26,10 @@ profile:code/server/Profile/FPS.Profile:5112"
 
 # Build Release once before launching any service, so --no-build below has
 # something to run. CI typically builds Debug; without this, dotnet run
-# --no-build -c Release would fail or pick up a stale Release binary.
+# --no-build -c Release would fail or pick up a stale Release binary. Let
+# stderr through so SDK selection / restore failures are visible.
 echo "[stale-check] Building services..."
-dotnet build "$REPO_ROOT/code/server/FPS.sln" -c Release -v q --nologo 2>/dev/null
+dotnet build "$REPO_ROOT/code/server/FPS.sln" -c Release -v q --nologo
 
 stale=false
 OPENAPI_TS_VERSION="$(node -e "console.log(require('$REPO_ROOT/code/clients/typescript/package.json').devDependencies['openapi-typescript'])")"
