@@ -24,6 +24,12 @@ The first mobile slice is an app shell only. It establishes Expo, TypeScript, na
 
 MOB001 does not implement production login, booking submission, booking cancellation, push/SSE notifications, payments, maps, feedback, profile editing, or app-store packaging.
 
+## MOB002 Boundary
+
+The second mobile slice implements the read-only My Bookings screen. It shows the authenticated employee's own booking requests from `GET /bookings`, including dates, time slots, locations, statuses, employee-visible reasons, and safe allocation labels when returned by the API.
+
+MOB002 does not implement booking submission, cancellation, usage confirmation, no-show handling, Draw status, real login, push/SSE notifications, maps, payments, feedback, profile editing, or backend behavior changes.
+
 ## Notifications
 - **Booking Alerts**: Receive booking confirmations
 - **Reminder Settings**: Configure notification preferences

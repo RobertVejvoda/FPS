@@ -275,6 +275,7 @@ Booking Phase 1 is complete. New implementation work should now proceed through 
 | 7 | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Authenticated API surface from `ID001` and `BK011`. | React or React Native implementation. |
 | 8 | `CI001` Build Status and CI Visibility | Make repository health visible and keep CI reliable across code, tooling, generated clients, and docs. | Existing GitHub Actions workflows; `API001` client stale-check tooling if merged. | Product behavior, UI screens, deployment automation beyond GitHub Actions. |
 | 9 | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | `API001`; `CI001` recommended before active mobile work. | Booking business rule changes. |
+| 10 | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | `MOB001`; `B008`/`GET /bookings`; generated API client. | Booking submission, cancellation, usage confirmation, push/SSE, real login. |
 
 #### Slice ID001: Authenticated User Context
 
@@ -723,6 +724,68 @@ Implementation notes for Claude:
 - Keep screens intentionally thin; the goal is a stable mobile foundation for later booking slices.
 - If generated API client packaging is not directly consumable by Metro/TypeScript, stop and ask Codex before replacing it with hand-written DTOs.
 - If Expo scaffolding introduces platform-specific generated files or native build requirements, stop and ask before committing them.
+
+#### Slice MOB002: Mobile My Bookings
+
+Purpose: deliver the first useful employee mobile screen by showing the authenticated user's booking requests and outcomes through the existing `GET /bookings` contract.
+
+Scope:
+
+- Implement the My Bookings screen inside the MOB001 Expo app.
+- Call `GET /bookings` through the mobile API access layer using the development bearer token and configured API base URL from MOB001.
+- Use generated API client types from `code/clients/typescript` for request query parameters and response shapes.
+- Display upcoming and recent booking requests returned by the API with employee-safe fields:
+  - requested date;
+  - time slot;
+  - location label or location ID;
+  - current status;
+  - employee-visible reason text when present;
+  - allocated slot label or ID only when returned and safe for the employee;
+  - next action label only when returned by the API.
+- Add a simple segmented filter for `Upcoming` and `Recent`, implemented through date-range query parameters when practical.
+- Support pull-to-refresh or an equivalent explicit refresh control.
+- Support pagination using the API cursor when `nextCursor` is returned.
+- Add screen-level loading, refreshing, empty, error, unauthenticated, and unreachable-backend states.
+- Add basic UI tests or component tests for list rendering, empty state, and error state if the MOB001 test setup supports it; otherwise keep TypeScript validation as the minimum gate and document the test gap.
+- Keep mobile typecheck wired into CI.
+
+Mobile display rules:
+
+| Area | Requirement |
+| --- | --- |
+| Ownership | The screen must rely on backend authenticated scoping. The mobile app must not send tenant ID or requestor ID. |
+| Status text | Use stable status values from the API and map them to short employee-facing labels in the app. |
+| Reason text | Show `reasonText`/employee-visible reason only when the API returns it. Do not infer hidden reasons. |
+| Next action | Render a non-destructive label or disabled placeholder only. Do not execute cancellation or confirmation in MOB002. |
+| Pagination | Treat cursors as opaque strings. |
+| Privacy | Do not show lottery weights, seed, candidate order, other employees, audit diagnostics, hidden slot metadata, or raw Profile data. |
+
+Out of scope:
+
+- Booking submission, booking cancellation, usage confirmation, no-show handling, or Draw status screens.
+- Real login, token refresh, Keycloak, MFA, biometric auth, or production credential storage.
+- Push notifications, SSE streaming, notification preferences, unread-count APIs, or background updates.
+- Profile editing, vehicle management, maps, payments, feedback, HR/admin screens, reporting, or billing.
+- Backend API behavior changes unless `GET /bookings` is unusable as documented; if so, stop and ask before changing the backend.
+
+Acceptance criteria:
+
+- A signed-in development session can open My Bookings and load data from `GET /bookings`.
+- The app does not send tenant ID, requestor ID, or user ID as query/body/header identity parameters for My Bookings.
+- The screen handles loading, empty, API error, invalid/expired token, and network-unreachable states without crashing.
+- The screen can refresh the current list.
+- If `nextCursor` is returned, the user can load the next page and items append without duplicating already-rendered booking request IDs.
+- The screen uses generated API client types instead of hand-written Booking DTOs.
+- TypeScript validation passes in CI.
+- No backend business behavior changes are included.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after MOB001 is merged.
+- Keep MOB002 focused on read-only bookings.
+- Prefer simple React Native components and local screen state over adding a global state framework.
+- If the current generated client only provides types, write a small typed fetch wrapper in the mobile app rather than hand-writing API DTOs.
+- If `GET /bookings` response fields differ from the B008 contract, stop and ask Codex before changing backend or mobile expectations.
 
 ---
 
