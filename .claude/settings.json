@@ -8,10 +8,7 @@
       "Bash(git status *)",
       "Bash(git show *)",
       "Bash(git remote *)",
-      "Bash(./tools/validate.sh *)",
-      "Bash(gh pr view * --json comments *)",
-      "Bash(gh pr diff * --name-only)",
-      "Bash(gh api repos/RobertVejvoda/FPS/branches *)"
+      "Bash(./tools/validate.sh *)"
     ]
   },
   "hooks": {
