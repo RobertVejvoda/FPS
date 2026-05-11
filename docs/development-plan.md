@@ -553,6 +553,59 @@ Implementation notes for Claude:
 - Keep event DTOs local to Audit unless a shared cross-service contract package already exists.
 - If a field appears to require raw PII for audit value, stop and ask before storing it.
 
+#### Slice API001: OpenAPI Client Contract
+
+Purpose: stabilise the backend OpenAPI output and create the first generated TypeScript API client contract that can be reused by future web and React Native work.
+
+Scope:
+
+- Enable deterministic OpenAPI JSON output for the currently implemented public API services that frontend/mobile clients need first: Identity, Booking, Profile, Notification, and Audit where applicable.
+- Document and normalise route, operation ID, request DTO, response DTO, error response, authentication, and pagination conventions needed by generated clients.
+- Generate a TypeScript client package from the OpenAPI output under a stable repository path such as `code/clients/typescript`.
+- Add a repeatable script or documented command that regenerates the client from the current OpenAPI specs.
+- Include generated types for authenticated user context, Booking submission/history/cancellation/usage confirmation, Profile snapshot basics, Notification records when exposed, and Audit only if a public API exists.
+- Ensure generated client code does not require browser-only APIs so it can be consumed later by both React web and React Native + Expo.
+- Add a lightweight validation step that fails when generated client output is stale after backend API contract changes.
+
+Client contract conventions:
+
+| Area | Requirement |
+| --- | --- |
+| Auth | Bearer token authentication must be represented in OpenAPI security metadata; tenant/user identity must not appear as caller-supplied tenant/requestor parameters for employee endpoints. |
+| Operation IDs | Operation IDs must be stable, unique, and human-readable enough to generate useful client method names. |
+| DTOs | Request and response schemas must use explicit DTOs rather than anonymous shapes where practical. |
+| Errors | Common `400`, `401`, `403`, `404`, and conflict/validation responses should be represented consistently enough for clients to handle them. |
+| Pagination | Cursor/page-size parameters and response shapes must be modelled consistently for list endpoints such as `GET /bookings`. |
+| Dates/times | Date-only, time-slot, and timestamp fields must be represented consistently as strings with documented semantics. |
+| Generated output | Generated client files should be deterministic: repeated generation without API changes should produce no diff. |
+
+Out of scope:
+
+- React web implementation, React Native screens, Expo setup, or UI state management.
+- Changing Booking, Profile, Notification, Audit, or Identity business behavior to make client generation easier.
+- Creating new public APIs that are not already required by implemented slices.
+- Auth provider provisioning, login UI, token refresh UX, or Keycloak deployment automation.
+- SSE streaming client implementation for notifications; this remains a later frontend/mobile slice.
+- Publishing the generated client to npm or setting up package release automation.
+
+Acceptance criteria:
+
+- Each in-scope API service can produce OpenAPI JSON in a deterministic local development/CI-friendly way.
+- The generated TypeScript client compiles or passes the repository's chosen TypeScript validation command if one is introduced in this slice.
+- A documented regeneration command exists and is safe for Claude/Codex to run repeatedly.
+- The generated client does not expose spoofable employee `tenantId` or `requestorId` parameters for endpoints that must use authenticated context.
+- `GET /me` and employee-facing Booking endpoints are represented with bearer-token security metadata.
+- Stale generated output is detectable by validation or a documented diff check.
+- Existing backend validation remains green before the PR is reported ready.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after `CFG001` is merged.
+- Keep API001 focused on contracts and generated client plumbing; do not start MOB001 or web UI work.
+- Prefer a small, repeatable generator setup over hand-written TypeScript clients.
+- If current controllers cannot produce stable operation IDs or schemas without widening an API contract, stop and ask Codex before changing behavior.
+- If choosing or adding a generator package, document the decision and command in the repo docs so the next frontend/mobile slice can use it without rediscovery.
+
 ---
 
 ### Phase 3 — Notification & Audit (Week 9–10)
