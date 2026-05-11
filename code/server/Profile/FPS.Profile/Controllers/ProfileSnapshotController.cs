@@ -14,7 +14,10 @@ public sealed class ProfileSnapshotController(
     IProfileRepository repository,
     ICurrentUser currentUser) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet(Name = "GetProfileSnapshot")]
+    [ProducesResponseType(typeof(ProfileSnapshot), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSnapshot(CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
