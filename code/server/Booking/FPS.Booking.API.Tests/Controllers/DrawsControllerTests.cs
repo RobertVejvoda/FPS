@@ -3,6 +3,7 @@ using FPS.Booking.API.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Queries;
+using FPS.SharedKernel.Identity;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ namespace FPS.Booking.API.Tests.Controllers;
 public sealed class DrawsControllerTests
 {
     private readonly Mock<IMediator> mediator = new();
+    private readonly Mock<ICurrentUser> currentUser = new();
     private readonly DrawsController controller;
 
     private static readonly DateOnly DrawDate = new(2026, 6, 2);
@@ -21,7 +23,10 @@ public sealed class DrawsControllerTests
 
     public DrawsControllerTests()
     {
-        controller = new DrawsController(mediator.Object);
+        currentUser.Setup(u => u.TenantId).Returns("tenant-1");
+        currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+
+        controller = new DrawsController(mediator.Object, currentUser.Object);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
@@ -31,7 +36,7 @@ public sealed class DrawsControllerTests
         mediator.Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TriggerDrawResult("draw-key", "Completed", 3, 1, 2, WasAlreadyCompleted: false));
 
-        var result = await controller.TriggerDraw(ValidBody(), "tenant-1", CancellationToken.None);
+        var result = await controller.TriggerDraw(ValidBody(), CancellationToken.None);
 
         var accepted = Assert.IsType<AcceptedResult>(result);
         var body = Assert.IsType<TriggerDrawResponse>(accepted.Value);
@@ -44,20 +49,22 @@ public sealed class DrawsControllerTests
         mediator.Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TriggerDrawResult("draw-key", "Completed", 3, 1, 2, WasAlreadyCompleted: true));
 
-        var result = await controller.TriggerDraw(ValidBody(), "tenant-1", CancellationToken.None);
+        var result = await controller.TriggerDraw(ValidBody(), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
     }
 
     [Fact]
-    public async Task TriggerDraw_MapsTenantFromHeader()
+    public async Task TriggerDraw_MapsTenantFromCurrentUser()
     {
+        currentUser.Setup(u => u.TenantId).Returns("tenant-99");
+
         TriggerDrawCommand? captured = null;
         mediator.Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
             .Callback<IRequest<TriggerDrawResult>, CancellationToken>((cmd, _) => captured = (TriggerDrawCommand)cmd)
             .ReturnsAsync(new TriggerDrawResult("k", "Completed", 0, 0, 0, false));
 
-        await controller.TriggerDraw(ValidBody(), "tenant-99", CancellationToken.None);
+        await controller.TriggerDraw(ValidBody(), CancellationToken.None);
 
         Assert.Equal("tenant-99", captured?.TenantId);
     }
@@ -73,8 +80,7 @@ public sealed class DrawsControllerTests
                 "Completed", 5, 3, 1, 1, 0, [], "1.0", 42, "draw-key",
                 DateTime.UtcNow, DateTime.UtcNow));
 
-        var result = await controller.GetDrawStatus(
-            DrawDate, "loc-1", SlotStart, SlotEnd, "tenant-1", CancellationToken.None);
+        var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<DrawStatusResponse>(ok.Value);
@@ -89,8 +95,7 @@ public sealed class DrawsControllerTests
         mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawStatusResult?)null);
 
-        var result = await controller.GetDrawStatus(
-            DrawDate, "loc-1", SlotStart, SlotEnd, "tenant-1", CancellationToken.None);
+        var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(result);
     }

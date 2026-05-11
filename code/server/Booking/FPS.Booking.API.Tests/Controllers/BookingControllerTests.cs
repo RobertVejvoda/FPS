@@ -5,6 +5,7 @@ using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Queries;
 using FPS.Booking.Domain.Exceptions;
+using FPS.SharedKernel.Identity;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,16 @@ namespace FPS.Booking.API.Tests.Controllers;
 public sealed class BookingControllerTests
 {
     private readonly Mock<IMediator> mediator = new();
+    private readonly Mock<ICurrentUser> currentUser = new();
     private readonly BookingController controller;
 
     public BookingControllerTests()
     {
-        controller = new BookingController(mediator.Object);
+        currentUser.Setup(u => u.TenantId).Returns("tenant-1");
+        currentUser.Setup(u => u.UserId).Returns("user-1");
+        currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+
+        controller = new BookingController(mediator.Object, currentUser.Object);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -35,8 +41,7 @@ public sealed class BookingControllerTests
             .Setup(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SubmitBookingRequestResult(Guid.NewGuid(), "Pending", null, null));
 
-        var result = await controller.SubmitBookingRequest(
-            ValidSubmitBody(), "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await controller.SubmitBookingRequest(ValidSubmitBody(), CancellationToken.None);
 
         var accepted = Assert.IsType<AcceptedResult>(result);
         var body = Assert.IsType<SubmitBookingResponse>(accepted.Value);
@@ -52,8 +57,7 @@ public sealed class BookingControllerTests
                 Guid.NewGuid(), "Rejected", "DuplicateRequest",
                 "You already have a request for an overlapping time slot."));
 
-        var result = await controller.SubmitBookingRequest(
-            ValidSubmitBody(), "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await controller.SubmitBookingRequest(ValidSubmitBody(), CancellationToken.None);
 
         var unprocessable = Assert.IsType<UnprocessableEntityObjectResult>(result);
         var body = Assert.IsType<SubmitBookingResponse>(unprocessable.Value);
@@ -61,8 +65,11 @@ public sealed class BookingControllerTests
     }
 
     [Fact]
-    public async Task SubmitBookingRequest_MapsCommandFieldsCorrectly()
+    public async Task SubmitBookingRequest_MapsCommandFieldsFromCurrentUser()
     {
+        currentUser.Setup(u => u.TenantId).Returns("tenant-42");
+        currentUser.Setup(u => u.UserId).Returns("user-99");
+
         SubmitBookingRequestCommand? captured = null;
         mediator
             .Setup(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()))
@@ -71,7 +78,7 @@ public sealed class BookingControllerTests
             .ReturnsAsync(new SubmitBookingRequestResult(Guid.NewGuid(), "Pending", null, null));
 
         var body = ValidSubmitBody();
-        await controller.SubmitBookingRequest(body, "tenant-42", "user-99", CancellationToken.None);
+        await controller.SubmitBookingRequest(body, CancellationToken.None);
 
         Assert.NotNull(captured);
         Assert.Equal("tenant-42", captured.TenantId);
@@ -89,8 +96,7 @@ public sealed class BookingControllerTests
             .Setup(m => m.Send(It.IsAny<CancelBookingCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CancelBookingResult(requestId, "Cancelled"));
 
-        var result = await controller.CancelBooking(
-            requestId, "tenant-1", Guid.NewGuid().ToString(), null, CancellationToken.None);
+        var result = await controller.CancelBooking(requestId, null, CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
     }
@@ -102,8 +108,7 @@ public sealed class BookingControllerTests
             .Setup(m => m.Send(It.IsAny<CancelBookingCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new BookingNotFoundException(Guid.NewGuid()));
 
-        var result = await controller.CancelBooking(
-            Guid.NewGuid(), "tenant-1", Guid.NewGuid().ToString(), null, CancellationToken.None);
+        var result = await controller.CancelBooking(Guid.NewGuid(), null, CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
@@ -115,8 +120,7 @@ public sealed class BookingControllerTests
             .Setup(m => m.Send(It.IsAny<CancelBookingCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new BookingException("Only pending or allocated requests can be cancelled"));
 
-        var result = await controller.CancelBooking(
-            Guid.NewGuid(), "tenant-1", Guid.NewGuid().ToString(), null, CancellationToken.None);
+        var result = await controller.CancelBooking(Guid.NewGuid(), null, CancellationToken.None);
 
         Assert.IsType<UnprocessableEntityObjectResult>(result);
     }
@@ -136,8 +140,7 @@ public sealed class BookingControllerTests
             .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BookingListResult(items, null));
 
-        var result = await controller.GetMyBookings(
-            "tenant-1", "user-1", null, null, null, 50, null, CancellationToken.None);
+        var result = await controller.GetMyBookings(null, null, null, 50, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<GetMyBookingsResponse>(ok.Value);
@@ -152,8 +155,7 @@ public sealed class BookingControllerTests
             .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BookingListResult([], null));
 
-        var result = await controller.GetMyBookings(
-            "tenant-1", "user-1", null, null, null, 50, null, CancellationToken.None);
+        var result = await controller.GetMyBookings(null, null, null, 50, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<GetMyBookingsResponse>(ok.Value);
@@ -161,8 +163,11 @@ public sealed class BookingControllerTests
     }
 
     [Fact]
-    public async Task GetMyBookings_PassesTenantAndUserToQuery()
+    public async Task GetMyBookings_PassesTenantAndUserFromCurrentUser()
     {
+        currentUser.Setup(u => u.TenantId).Returns("t-99");
+        currentUser.Setup(u => u.UserId).Returns("u-42");
+
         GetMyBookingsQuery? captured = null;
         mediator
             .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
@@ -170,10 +175,10 @@ public sealed class BookingControllerTests
                 (q, _) => captured = (GetMyBookingsQuery)q)
             .ReturnsAsync(new BookingListResult([], null));
 
-        await controller.GetMyBookings("t-99", "u-42", null, null, null, 50, null, CancellationToken.None);
+        await controller.GetMyBookings(null, null, null, 50, null, CancellationToken.None);
 
         Assert.NotNull(captured);
-        Assert.Equal("t-99", captured!.TenantId);
+        Assert.Equal("t-99", captured.TenantId);
         Assert.Equal("u-42", captured.RequestorId);
     }
 
@@ -187,7 +192,7 @@ public sealed class BookingControllerTests
                 (q, _) => captured = (GetMyBookingsQuery)q)
             .ReturnsAsync(new BookingListResult([], "next-page"));
 
-        await controller.GetMyBookings("t-1", "u-1", null, null, null, 10, "some-cursor", CancellationToken.None);
+        await controller.GetMyBookings(null, null, null, 10, "some-cursor", CancellationToken.None);
 
         Assert.Equal("some-cursor", captured?.Cursor);
     }
@@ -202,8 +207,7 @@ public sealed class BookingControllerTests
         mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ConfirmSlotUsageResult(requestId, "Used", confirmedAt, false));
 
-        var result = await controller.ConfirmUsage(requestId, new ConfirmUsageRequest("EmployeeSelf"),
-            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await controller.ConfirmUsage(requestId, new ConfirmUsageRequest("EmployeeSelf"), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<ConfirmUsageResponse>(ok.Value);
@@ -217,12 +221,10 @@ public sealed class BookingControllerTests
         mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ConfirmSlotUsageResult(Guid.NewGuid(), "Used", DateTime.UtcNow, true));
 
-        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"),
-            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var body = Assert.IsType<ConfirmUsageResponse>(ok.Value);
-        Assert.True(body.WasAlreadyConfirmed);
+        Assert.True(((ConfirmUsageResponse)ok.Value!).WasAlreadyConfirmed);
     }
 
     [Fact]
@@ -231,8 +233,7 @@ public sealed class BookingControllerTests
         mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new BookingNotFoundException(Guid.NewGuid()));
 
-        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"),
-            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"), CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
@@ -243,8 +244,7 @@ public sealed class BookingControllerTests
         mediator.Setup(m => m.Send(It.IsAny<ConfirmSlotUsageCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new FPS.Booking.Domain.Exceptions.BookingException("Only allocated requests can be confirmed as used"));
 
-        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"),
-            "tenant-1", Guid.NewGuid().ToString(), CancellationToken.None);
+        var result = await controller.ConfirmUsage(Guid.NewGuid(), new ConfirmUsageRequest("EmployeeSelf"), CancellationToken.None);
 
         Assert.IsType<UnprocessableEntityObjectResult>(result);
     }
@@ -260,9 +260,27 @@ public sealed class BookingControllerTests
 
         var result = await controller.ApplyManualCorrection(
             requestId, new ManualCorrectionRequest("status", "Pending", "Allocated", "HR override"),
-            "tenant-1", "hr-user", CancellationToken.None);
+            CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ApplyManualCorrection_ActorComesFromCurrentUser()
+    {
+        currentUser.Setup(u => u.UserId).Returns("hr-user-from-token");
+
+        ApplyManualCorrectionCommand? captured = null;
+        mediator.Setup(m => m.Send(It.IsAny<ApplyManualCorrectionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<ManualCorrectionResult>, CancellationToken>(
+                (cmd, _) => captured = (ApplyManualCorrectionCommand)cmd)
+            .ReturnsAsync(new ManualCorrectionResult(Guid.NewGuid(), "status", "Allocated", DateTime.UtcNow));
+
+        await controller.ApplyManualCorrection(
+            Guid.NewGuid(), new ManualCorrectionRequest("status", "Pending", "Allocated", "HR override"),
+            CancellationToken.None);
+
+        Assert.Equal("hr-user-from-token", captured?.Actor);
     }
 
     [Fact]
@@ -273,7 +291,7 @@ public sealed class BookingControllerTests
 
         var result = await controller.ApplyManualCorrection(
             Guid.NewGuid(), new ManualCorrectionRequest("status", "Allocated", "Pending", "Fix"),
-            "tenant-1", "hr-user", CancellationToken.None);
+            CancellationToken.None);
 
         Assert.IsType<ConflictObjectResult>(result);
     }
@@ -286,7 +304,7 @@ public sealed class BookingControllerTests
 
         var result = await controller.ApplyManualCorrection(
             Guid.NewGuid(), new ManualCorrectionRequest("status", "Pending", "Allocated", ""),
-            "tenant-1", "hr-user", CancellationToken.None);
+            CancellationToken.None);
 
         Assert.IsType<UnprocessableEntityObjectResult>(result);
     }

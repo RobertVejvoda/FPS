@@ -3,23 +3,28 @@ using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Queries;
-using FPS.Booking.Application.Repositories;
 using FPS.Booking.Domain.Exceptions;
+using FPS.SharedKernel.Identity;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Booking.API.Controllers;
 
 [ApiController]
 [Route("bookings")]
+[Authorize]
 public sealed class BookingController : ControllerBase
 {
     private readonly IMediator mediator;
+    private readonly ICurrentUser currentUser;
 
-    public BookingController(IMediator mediator)
+    public BookingController(IMediator mediator, ICurrentUser currentUser)
     {
         ArgumentNullException.ThrowIfNull(mediator);
+        ArgumentNullException.ThrowIfNull(currentUser);
         this.mediator = mediator;
+        this.currentUser = currentUser;
     }
 
     [HttpPost]
@@ -27,13 +32,14 @@ public sealed class BookingController : ControllerBase
     [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> SubmitBookingRequest(
         [FromBody] SubmitBookingRequest body,
-        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
-        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
         var command = new SubmitBookingRequestCommand(
-            TenantId: tenantId,
-            RequestorId: requestorId,
+            TenantId: currentUser.TenantId,
+            RequestorId: currentUser.UserId,
             FacilityId: body.FacilityId,
             LocationId: body.LocationId,
             LicensePlate: body.LicensePlate,
@@ -60,15 +66,16 @@ public sealed class BookingController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> CancelBooking(
         Guid requestId,
-        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
-        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
         [FromQuery] string? reason,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
         try
         {
             var result = await mediator.Send(
-                new CancelBookingCommand(requestId, tenantId, requestorId, reason ?? "Cancelled by requestor"),
+                new CancelBookingCommand(requestId, currentUser.TenantId, currentUser.UserId, reason ?? "Cancelled by requestor"),
                 cancellationToken);
 
             return Ok(new { result.RequestId, result.Status });
@@ -86,8 +93,6 @@ public sealed class BookingController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(GetMyBookingsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMyBookings(
-        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
-        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
         [FromQuery] DateOnly? from,
         [FromQuery] DateOnly? to,
         [FromQuery] string? status,
@@ -95,8 +100,11 @@ public sealed class BookingController : ControllerBase
         [FromQuery] string? cursor = null,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
         var result = await mediator.Send(
-            new GetMyBookingsQuery(tenantId, requestorId, from, to, status, pageSize, cursor),
+            new GetMyBookingsQuery(currentUser.TenantId, currentUser.UserId, from, to, status, pageSize, cursor),
             cancellationToken);
 
         return Ok(new GetMyBookingsResponse(result.Items, result.NextCursor));
@@ -109,16 +117,17 @@ public sealed class BookingController : ControllerBase
     public async Task<IActionResult> ConfirmUsage(
         Guid requestId,
         [FromBody] ConfirmUsageRequest body,
-        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
-        [FromHeader(Name = "X-Requestor-Id")] string requestorId,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
         try
         {
             var result = await mediator.Send(new ConfirmSlotUsageCommand(
                 RequestId: requestId,
-                TenantId: tenantId,
-                RequestorId: requestorId,
+                TenantId: currentUser.TenantId,
+                RequestorId: currentUser.UserId,
                 ConfirmationSource: body.ConfirmationSource,
                 ConfirmedAt: body.ConfirmedAt,
                 SourceEventId: body.SourceEventId),
@@ -144,16 +153,17 @@ public sealed class BookingController : ControllerBase
     public async Task<IActionResult> ApplyManualCorrection(
         Guid requestId,
         [FromBody] ManualCorrectionRequest body,
-        [FromHeader(Name = "X-Tenant-Id")] string tenantId,
-        [FromHeader(Name = "X-Actor-Id")] string actor,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
         try
         {
             var result = await mediator.Send(new ApplyManualCorrectionCommand(
                 RequestId: requestId,
-                TenantId: tenantId,
-                Actor: actor,
+                TenantId: currentUser.TenantId,
+                Actor: currentUser.UserId,
                 CorrectionType: body.CorrectionType,
                 OldValue: body.OldValue,
                 NewValue: body.NewValue,
