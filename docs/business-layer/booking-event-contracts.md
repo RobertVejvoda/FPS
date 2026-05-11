@@ -72,6 +72,7 @@ Most Booking events should include these payload fields when relevant:
 | `newStatus` | Status after the event, when applicable. |
 | `reasonCode` | Stable machine-readable reason. |
 | `reasonText` | Employee-visible reason when the event affects the employee. |
+| `affectedRecipientIds` | Optional list of additional affected employee IDs that must receive employee-facing notifications for the same business outcome. Use only IDs, not names, emails, or private profile data. |
 
 Reason code values are defined in [Booking Reason Codes](./booking-reason-codes).
 
@@ -89,6 +90,8 @@ Reason code values are defined in [Booking Reason Codes](./booking-reason-codes)
 - `employeeVisibleSlotLabel` when the slot may be shown to the employee.
 
 The event must not expose lottery seed, candidate order, or other employees to employee-facing consumers.
+
+When an allocation comes from reallocation, Booking should publish enough recipient data for Notification to notify both the newly allocated requestor and the original requestor whose cancellation released the slot. If a single event represents both effects, include the additional employee ID in `affectedRecipientIds`; otherwise publish separate employee-facing events with each affected employee as `requestorId`.
 
 ## Draw Payload Fields
 

@@ -15,6 +15,8 @@ v1 requires both:
 
 Push notifications may be added later, but they are not required for v1.
 
+Implementation is sliced. `N001` establishes the Booking-event consumer and durable in-app notification records first. Email delivery remains a v1 requirement, but it is implemented in a later Notification slice after the in-app record contract and idempotency behavior are stable.
+
 ## Notification Classes
 
 | Class | Meaning | User preference allowed |
@@ -135,6 +137,32 @@ If email delivery fails:
 - persistent email failure should be visible to support or administrators.
 
 FPS must not roll back a completed booking or allocation solely because email delivery failed.
+
+## Slice N001: In-App Booking Event Records
+
+`N001` is the first Notification implementation slice. It consumes Booking events and persists in-app notification records only.
+
+N001 must:
+
+- consume Booking event envelopes from the Booking event topic;
+- create in-app records for affected recipients;
+- deduplicate by `eventId + recipientId + notificationType + channel`;
+- keep unread/read state on the in-app record;
+- store source event ID, recipient, notification type, related booking request ID, related date/time slot, location, message text, delivery status, and timestamps;
+- tolerate additive event payload fields;
+- ignore or reject malformed events without creating misleading notifications.
+
+N001 must not:
+
+- send email;
+- send push notifications;
+- expose an SSE stream;
+- add notification history or unread-count APIs;
+- implement user notification preferences;
+- query Booking or Profile to infer recipients not present in the event;
+- change Booking state or publish new Booking events.
+
+The full v1 requirement for email remains authoritative. Later Notification slices add email delivery, preferences, streaming/history APIs, and production persistence without changing the N001 in-app record idempotency contract.
 
 ## Notification History
 
