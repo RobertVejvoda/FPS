@@ -269,7 +269,7 @@ Booking Phase 1 is complete. New implementation work should now proceed through 
 | 1 | `ID001` Authenticated User Context | Resolve authenticated tenant, user, and roles from claims and expose `GET /me`. | Existing Identity service and Booking authorization docs. | Profile vehicle data, mobile UI, Keycloak deployment automation. |
 | 2 | `BK011` Booking Uses Auth Context | Replace Booking API tenant/user parameters with authenticated context for employee-facing actions. | `ID001`. | New Booking business behavior. |
 | 3 | `P001` Profile Vehicle Snapshot | Add Profile-owned vehicle and company-car eligibility data needed by Booking validation/allocation. | `ID001`; Booking context contract. | Booking allocation changes beyond consuming the snapshot. |
-| 4 | `N001` Booking Notification Consumer | Consume Booking events and create idempotent in-app notification records. | Booking event contracts. | Email sending, push notifications, mobile notification UI. |
+| 4 | `N001` Booking Notification Consumer | Consume Booking events and create idempotent in-app notification records. | Booking event contracts. | Email sending, push notifications, SSE, notification history API, mobile notification UI. |
 | 5 | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Booking event contracts; GDPR audit decision. | Audit query UI, GDPR erasure workflow beyond mapping shape. |
 | 6 | `CFG001` Parking Policy/Slot Source | Move default/in-memory Booking policy and slot inputs toward Configuration-owned contracts. | Booking context contract; parking policy configuration docs. | Tenant onboarding or admin UI. |
 | 7 | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Authenticated API surface from `ID001` and `BK011`. | React or React Native implementation. |
@@ -419,6 +419,68 @@ Implementation notes for Claude:
 - Keep the first Profile implementation minimal and slice-focused; do not build the full Profile product area.
 - Prefer a small Profile API/query plus Booking anti-corruption interface over coupling Booking to Profile internals.
 - If the current Booking request DTO still accepts vehicle/company-car fields for compatibility, Booking must prefer Profile snapshot facts and must not let a caller spoof elevated eligibility.
+
+#### Slice N001: Booking Notification Consumer
+
+Purpose: create the first Notification service slice by consuming published Booking events and storing idempotent in-app notification records for affected recipients.
+
+Scope:
+
+- Add or complete a `FPS.Notification` service that subscribes to the Booking event topic.
+- Accept Booking event envelopes defined in `docs/business-layer/booking-event-contracts.md` and ignore unknown additive payload fields.
+- Create one in-app notification record per required recipient and source event.
+- Deduplicate records with the stable key `eventId + recipientId + notificationType + channel`.
+- Store the notification fields needed by future notification history: tenant, recipient, channel, notification type, source event ID, related booking request ID, date/time slot, location, message text, read/unread state, delivery status, and timestamps.
+- Generate employee-facing messages from event type plus safe payload fields such as `reasonText`; do not expose algorithm diagnostics or other employees.
+- Treat malformed events with missing required envelope fields as rejected or ignored without throwing unhandled service errors.
+- Add handler tests for idempotency, known event mapping, missing recipient behavior, reason text, unread default, and reallocation/cancellation recipient handling where the event payload supplies multiple affected recipients.
+
+N001 event types in scope:
+
+- `booking.requestSubmitted`
+- `booking.requestRejected`
+- `booking.requestCancelled`
+- `booking.slotAllocated`
+- `booking.drawCompleted`
+- `booking.penaltyApplied`
+- `booking.noShowRecorded`
+- `booking.usageConfirmed`
+- `booking.requestExpired`
+- `booking.manualCorrectionApplied`
+
+Recipient rules:
+
+- Employee-facing notifications go to `payload.requestorId`.
+- Reallocation or released-slot scenarios must notify both affected employees only when the published event payload includes enough recipient data, such as `payload.affectedRecipientIds`, to do so.
+- If an event type requires HR/facility/admin notification but no configured recipient source exists yet, record the gap in code or tests and stop before inventing a recipient directory.
+- Do not query Booking or Profile to infer extra recipients in N001.
+
+Out of scope:
+
+- Email sending, SMTP/SendGrid integration, push notifications, or user preference handling.
+- SSE streaming, notification history API, unread-count API, or frontend/mobile notification UI.
+- Notification admin/support views.
+- Publishing new Booking events or changing Booking state transitions.
+- Audit, Reporting, or Configuration behavior.
+- A production persistence adapter beyond the smallest repository abstraction needed for tests.
+
+Acceptance criteria:
+
+- Given a valid in-scope Booking event with `requestorId`, Notification stores one unread in-app record for that recipient.
+- Given the same event is delivered twice, Notification stores only one record for the same event, recipient, notification type, and in-app channel.
+- Given two distinct recipients are explicitly present for a reallocation/cancellation outcome, Notification stores separate deduplicated records for each recipient.
+- Given an event has employee-visible `reasonText`, the stored message includes that reason without exposing internal diagnostics.
+- Given an event lacks a recipient needed for an employee notification, Notification does not create a misleading record and the behavior is covered by a test.
+- Notification failure does not roll back Booking state; N001 only consumes already-persisted Booking events.
+- `./tools/validate.sh` passes before the PR is reported ready.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after `P001` is merged.
+- If continuing from PR `#28`, rebase or recreate it from current `master` and keep only N001 changes.
+- Remove scaffold leftovers such as template `UnitTest1` files and unused `.http` samples unless they provide real value.
+- Keep event DTOs local to Notification unless a shared cross-service contract package already exists.
+- Do not expand N001 to satisfy the full v1 email requirement; that remains a later Notification slice.
 
 ---
 
