@@ -270,7 +270,7 @@ Booking Phase 1 is complete. New implementation work should now proceed through 
 | 2 | `BK011` Booking Uses Auth Context | Replace Booking API tenant/user parameters with authenticated context for employee-facing actions. | `ID001`. | New Booking business behavior. |
 | 3 | `P001` Profile Vehicle Snapshot | Add Profile-owned vehicle and company-car eligibility data needed by Booking validation/allocation. | `ID001`; Booking context contract. | Booking allocation changes beyond consuming the snapshot. |
 | 4 | `N001` Booking Notification Consumer | Consume Booking events and create idempotent in-app notification records. | Booking event contracts. | Email sending, push notifications, SSE, notification history API, mobile notification UI. |
-| 5 | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Booking event contracts; GDPR audit decision. | Audit query UI, GDPR erasure workflow beyond mapping shape. |
+| 5 | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Booking event contracts; GDPR audit decision. | Audit query UI, GDPR erasure endpoint/workflow, PII mapping persistence beyond documented shape. |
 | 6 | `CFG001` Parking Policy/Slot Source | Move default/in-memory Booking policy and slot inputs toward Configuration-owned contracts. | Booking context contract; parking policy configuration docs. | Tenant onboarding or admin UI. |
 | 7 | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Authenticated API surface from `ID001` and `BK011`. | React or React Native implementation. |
 | 8 | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | `API001`. | Booking business rule changes. |
@@ -481,6 +481,77 @@ Implementation notes for Claude:
 - Remove scaffold leftovers such as template `UnitTest1` files and unused `.http` samples unless they provide real value.
 - Keep event DTOs local to Notification unless a shared cross-service contract package already exists.
 - Do not expand N001 to satisfy the full v1 email requirement; that remains a later Notification slice.
+
+#### Slice A001: Booking Audit Consumer
+
+Purpose: create the first Audit service slice by consuming Booking events and storing immutable audit records with pseudonymised actor identity.
+
+Scope:
+
+- Add a minimal `FPS.Audit` service that subscribes to the Booking event topic.
+- Accept Booking event envelopes defined in `docs/business-layer/booking-event-contracts.md` and tolerate additive payload fields.
+- Store one append-only audit record per unique Booking event.
+- Deduplicate by `eventId`; duplicate event delivery must not create duplicate audit records.
+- Store event envelope fields needed for traceability: event ID, event type, event version, occurred-at timestamp, tenant ID, correlation ID, causation ID, actor type, actor hash, source, and captured payload.
+- Store entity references when present, especially booking request ID, requestor ID hash, location ID, date/time slot, previous/new status, reason code, draw attempt ID, policy/snapshot references, and source event ID.
+- Pseudonymise user IDs before writing audit records. Audit records must store `actorHash` and requestor/affected-user hashes, not names, emails, or raw user IDs.
+- Define the `PiiMapping` record shape in code or docs when useful, but do not implement the GDPR erasure workflow or a production PII mapping store in A001.
+- Add tests for append-only behavior, idempotency by event ID, actor pseudonymisation, requestor pseudonymisation, and payload capture without unsupported PII.
+
+Audit record minimum fields:
+
+| Field | Meaning |
+| --- | --- |
+| `auditRecordId` | Internal Audit record ID. |
+| `sourceEventId` | Booking `eventId`; unique idempotency key. |
+| `eventType` | Booking event type. |
+| `eventVersion` | Booking event schema version. |
+| `occurredAt` | Business event timestamp from Booking. |
+| `recordedAt` | Audit service ingestion timestamp. |
+| `tenantId` | Tenant that owns the event. |
+| `correlationId` | Request/workflow correlation ID. |
+| `causationId` | Source command, workflow activity, or event ID. |
+| `actorType` | `employee`, `hr`, `admin`, `system`, or `integration`. |
+| `actorHash` | SHA-256 hash of `actorId` when an actor ID is present. |
+| `source` | Producing service, normally `booking`. |
+| `entityType` | `bookingRequest`, `drawAttempt`, `penalty`, or another stable entity category when known. |
+| `entityId` | Primary entity ID when known, usually booking request ID. |
+| `payload` | Captured event payload with raw user IDs removed or hashed. |
+
+Pseudonymisation rules:
+
+- Hash actor/requestor/affected-user IDs with SHA-256 using a stable implementation so the same source ID produces the same hash.
+- Do not store names, emails, license plates, or raw profile data in Audit records in A001.
+- If a payload field is needed for traceability but contains a user ID, store the hash and a clearly named field such as `requestorHash`.
+- If a payload includes operational data that may be sensitive but is already part of Booking event contracts, keep only the minimum needed for audit replay and review.
+
+Out of scope:
+
+- Audit query API such as `GET /audit`.
+- GDPR erasure endpoint/workflow such as `DELETE /pii-mapping/{userId}`.
+- Persistent `PiiMapping` storage beyond shape/documentation.
+- Audit UI, reporting dashboards, search/indexing, retention jobs, backup jobs, or integrity verification jobs.
+- Changes to Booking event publication or Booking state transitions.
+- Notification, email, Profile, Configuration, or frontend/mobile behavior.
+- Production persistence beyond the smallest repository abstraction needed for tests.
+
+Acceptance criteria:
+
+- Given a valid Booking event, Audit stores exactly one immutable audit record.
+- Given the same event is delivered twice, Audit stores one record and treats the second delivery as a no-op.
+- Given an event has `actorId`, the audit record stores `actorHash` and does not store raw `actorId`.
+- Given an event has `payload.requestorId` or `payload.affectedRecipientIds`, the audit payload stores hashed user references and does not store raw IDs.
+- Given an event has no actor ID, the record is still stored with actor type/source and a null actor hash.
+- Audit records cannot be updated or deleted through the repository interface used by A001.
+- `./tools/validate.sh` passes before the PR is reported ready.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after N001 is merged.
+- Use the Booking event contract as the source of truth; do not add new Booking events in A001.
+- Mirror the N001 consumer pattern where useful, but keep Audit models separate from Notification models.
+- Keep event DTOs local to Audit unless a shared cross-service contract package already exists.
+- If a field appears to require raw PII for audit value, stop and ask before storing it.
 
 ---
 
