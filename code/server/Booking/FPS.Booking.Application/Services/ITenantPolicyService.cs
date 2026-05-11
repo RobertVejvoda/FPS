@@ -18,17 +18,21 @@ public sealed record TenantPolicy(
     bool CompanyCarTier1Enabled = true,
     CompanyCarOverflow CompanyCarOverflowBehavior = CompanyCarOverflow.Reject,
     bool ManualAdjustmentEnabled = true,
-    int? LateCancellationPenaltyExpiryDays = null,   // null = use AllocationLookbackDays
-    int? NoShowPenaltyExpiryDays = null)              // null = use AllocationLookbackDays
+    int? LateCancellationPenaltyExpiryDays = null,       // null = use AllocationLookbackDays
+    int? NoShowPenaltyExpiryDays = null,                 // null = use AllocationLookbackDays
+    IReadOnlyList<string>? UsageConfirmationMethods = null)  // at least one required when NoShowDetectionEnabled
 {
     public int EffectiveLateCancellationPenaltyExpiry => LateCancellationPenaltyExpiryDays ?? AllocationLookbackDays;
     public int EffectiveNoShowPenaltyExpiry => NoShowPenaltyExpiryDays ?? AllocationLookbackDays;
 
+    public bool HasConfirmationMethod => UsageConfirmationMethods is { Count: > 0 };
+
     public void Validate()
     {
-        if (NoShowDetectionEnabled && !UsageConfirmationEnabled)
+        if (NoShowDetectionEnabled && !HasConfirmationMethod)
             throw new InvalidOperationException(
-                "NoShowDetectionEnabled requires UsageConfirmationEnabled. Enable a confirmation method first.");
+                "NoShowDetectionEnabled requires at least one UsageConfirmationMethod. " +
+                "Without a configured method, unconfirmed usage remains unknown, not no-show.");
         if (DailyRequestCap < 1)
             throw new InvalidOperationException("DailyRequestCap must be at least 1.");
         if (AllocationLookbackDays < 1)
@@ -57,6 +61,7 @@ public sealed record TenantPolicy(
             NoShowPenalty = loc.NoShowPenalty ?? NoShowPenalty,
             LateCancellationPenaltyExpiryDays = loc.LateCancellationPenaltyExpiryDays ?? LateCancellationPenaltyExpiryDays,
             NoShowPenaltyExpiryDays = loc.NoShowPenaltyExpiryDays ?? NoShowPenaltyExpiryDays,
+            UsageConfirmationMethods = loc.UsageConfirmationMethods ?? UsageConfirmationMethods,
         };
     }
 }
@@ -78,7 +83,8 @@ public sealed record LocationPolicyOverride(
     int? LateCancellationPenalty = null,
     int? NoShowPenalty = null,
     int? LateCancellationPenaltyExpiryDays = null,
-    int? NoShowPenaltyExpiryDays = null);
+    int? NoShowPenaltyExpiryDays = null,
+    IReadOnlyList<string>? UsageConfirmationMethods = null);
 
 public interface ITenantPolicyService
 {

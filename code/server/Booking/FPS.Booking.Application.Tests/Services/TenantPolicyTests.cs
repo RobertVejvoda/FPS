@@ -121,30 +121,64 @@ public sealed class TenantPolicyTests
         Assert.Equal(policy.CompanyCarTier1Enabled, effective.CompanyCarTier1Enabled);
     }
 
+    // --- Defaults for new fields ---
+
+    [Fact]
+    public void Default_DrawCutOffTime_Is18h00()
+        => Assert.Equal(new TimeOnly(18, 0), DefaultTenantPolicyService.Default.DrawCutOffTime);
+
+    [Fact]
+    public void Default_UsageConfirmationMethods_IsNullOrEmpty()
+        => Assert.False(DefaultTenantPolicyService.Default.HasConfirmationMethod);
+
     // --- Validation ---
 
     [Fact]
-    public void Validate_NoShowEnabledWithoutConfirmation_Throws()
+    public void Validate_NoShowEnabledWithoutConfirmationMethod_Throws()
     {
         var policy = DefaultTenantPolicyService.Default with
         {
             NoShowDetectionEnabled = true,
-            UsageConfirmationEnabled = false
+            UsageConfirmationMethods = null
         };
 
         Assert.Throws<InvalidOperationException>(policy.Validate);
     }
 
     [Fact]
-    public void Validate_NoShowEnabledWithConfirmation_DoesNotThrow()
+    public void Validate_NoShowEnabledWithEmptyConfirmationMethods_Throws()
     {
         var policy = DefaultTenantPolicyService.Default with
         {
             NoShowDetectionEnabled = true,
-            UsageConfirmationEnabled = true
+            UsageConfirmationMethods = []
+        };
+
+        Assert.Throws<InvalidOperationException>(policy.Validate);
+    }
+
+    [Fact]
+    public void Validate_NoShowEnabledWithConfirmationMethod_DoesNotThrow()
+    {
+        var policy = DefaultTenantPolicyService.Default with
+        {
+            NoShowDetectionEnabled = true,
+            UsageConfirmationMethods = ["self-confirmation"]
         };
 
         policy.Validate(); // no exception
+    }
+
+    [Fact]
+    public void WithLocationOverride_UsageConfirmationMethods_OverridesWhenSet()
+    {
+        var policy = DefaultTenantPolicyService.Default;
+        var loc = new LocationPolicyOverride(UsageConfirmationMethods: ["qr-code", "card-reader"]);
+
+        var effective = policy.WithLocationOverride(loc);
+
+        Assert.Equal(2, effective.UsageConfirmationMethods!.Count);
+        Assert.True(effective.HasConfirmationMethod);
     }
 
     [Fact]
