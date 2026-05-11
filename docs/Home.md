@@ -30,24 +30,24 @@ By implementing FPS, organizations can streamline their parking management proce
 
 1. **[Versions and decisions](./versions-and-decisions)** 
 
-This section likely documents the different versions of the Fair Parking System and the key decisions made during its development. It includes version history, change logs, and rationale for major decisions.
+Durable architecture decisions, version choices, licensing decisions, and implementation milestones.
 
 2. **[Strategy layer](./strategy-layer)** 
 
-This section describes the strategic goals and objectives of the Fair Parking System. It includes the vision, mission, and key performance indicators (KPIs) that guide the development and implementation of the system. 
+Strategic goals, product scope, stakeholder outcomes, and high-level success measures for FPS.
 
 3. **[Business layer](./business-layer)** 
 
-This section outlines the business needs and objectives that the Fair Parking System aims to fulfill. It includes requirements from stakeholders, goals, and expected outcomes. Also describes the idea of the business process.
+Business requirements, domain processes, vertical slices, service contracts, and bounded-context rules.
 
-3. **[Application layer](./application-layer)** 
+4. **[Application layer](./application-layer)** 
 
-This section provides an overview of the application's structure, including the organization of code, modules, and components. It might also cover design patterns and principles used.
+Application structure, user-facing components, service responsibilities, and implementation conventions.
 
-4. **[Technology layer](./technology-layer)** 
+5. **[Technology layer](./technology-layer)** 
 
-This section describes the underlying infrastructure that supports the system, such as servers, networks, and cloud services. It might also include deployment and maintenance strategies.
+Infrastructure, security, deployment, non-functional requirements, and the [Software Architecture](./technology-layer/software-architecture) overview.
 
-5. **[Glossary](./glossary)** 
+6. **[Glossary](./glossary)** 
 
-This section provides definitions and explanations of terms and acronyms used throughout the documentation. It helps ensure that all readers have a common understanding of the terminology.
+Definitions and acronyms used across the product, business, application, and technology documentation.
