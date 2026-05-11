@@ -19,6 +19,12 @@ SERVICES="identity:code/server/Identity/FPS.Identity:5110
 booking:code/server/Booking/FPS.Booking.API:5111
 profile:code/server/Profile/FPS.Profile:5112"
 
+# Build Release once before launching any service, so --no-build below has
+# something to run. CI typically builds Debug; without this, dotnet run
+# --no-build -c Release would fail or pick up a stale Release binary.
+echo "[stale-check] Building services..."
+dotnet build "$REPO_ROOT/code/server/FPS.sln" -c Release -v q --nologo 2>/dev/null
+
 stale=false
 OPENAPI_TS_VERSION="$(node -e "console.log(require('$REPO_ROOT/code/clients/typescript/package.json').devDependencies['openapi-typescript'])")"
 

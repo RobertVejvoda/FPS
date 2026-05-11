@@ -29,12 +29,12 @@ builder.Services.AddOpenApi("v1", options =>
         doc.Components = components;
         return Task.CompletedTask;
     });
-    options.AddOperationTransformer((op, _, _) =>
+    options.AddOperationTransformer((op, ctx, _) =>
     {
         op.Security ??= [];
         op.Security.Add(new OpenApiSecurityRequirement
         {
-            [new OpenApiSecuritySchemeReference("Bearer")] = []
+            [new OpenApiSecuritySchemeReference("Bearer", ctx.Document)] = []
         });
         return Task.CompletedTask;
     });
