@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using FPS.Audit.Application;
 using FPS.Audit.Domain;
 using Moq;
@@ -79,13 +81,14 @@ public sealed class BookingEventAuditHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Payload_RequestorIdIsHashed()
+    public async Task Handle_Payload_RequestorIdIsHashedNotRaw()
     {
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", actorId: "user-1"));
 
-        var expectedHash = Pseudonymiser.Hash("user-1");
         repository.Verify(r => r.AppendAsync(
-            It.Is<AuditRecord>(a => !a.Payload.ToString()!.Contains("user-1")),
+            It.Is<AuditRecord>(a =>
+                !PayloadJson(a).Contains("\"user-1\"") &&
+                !PayloadJson(a).Contains("requestorId")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -102,6 +105,44 @@ public sealed class BookingEventAuditHandlerTests
 
         repository.Verify(r => r.AppendAsync(
             It.Is<AuditRecord>(a => a.EntityType == "drawAttempt"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AdditivePayloadField_IsPreservedInAuditRecord()
+    {
+        // drawAttemptId is an event-specific additive field not in the base contract.
+        var envelope = BuildEnvelopeWithExtras("booking.drawCompleted",
+            extras: new Dictionary<string, JsonElement>
+            {
+                ["drawAttemptId"] = JsonDocument.Parse("\"draw-99\"").RootElement,
+                ["allocationId"] = JsonDocument.Parse("\"alloc-42\"").RootElement
+            });
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.AppendAsync(
+            It.Is<AuditRecord>(a =>
+                PayloadJson(a).Contains("drawAttemptId") &&
+                PayloadJson(a).Contains("draw-99") &&
+                PayloadJson(a).Contains("allocationId") &&
+                PayloadJson(a).Contains("alloc-42")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AffectedRecipientIds_AreHashedInPayload()
+    {
+        var envelope = BuildEnvelope("booking.requestCancelled", actorId: "user-1",
+            affectedRecipientIds: ["user-2", "user-3"]);
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.AppendAsync(
+            It.Is<AuditRecord>(a =>
+                !PayloadJson(a).Contains("user-2") &&
+                !PayloadJson(a).Contains("user-3") &&
+                PayloadJson(a).Contains("affectedRecipientHashes")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -123,21 +164,6 @@ public sealed class BookingEventAuditHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AffectedRecipientIds_AreHashedInPayload()
-    {
-        var envelope = BuildEnvelope("booking.requestCancelled", actorId: "user-1",
-            affectedRecipientIds: ["user-2", "user-3"]);
-
-        await handler.HandleAsync(envelope);
-
-        repository.Verify(r => r.AppendAsync(
-            It.Is<AuditRecord>(a =>
-                !a.Payload.ToString()!.Contains("user-2") &&
-                !a.Payload.ToString()!.Contains("user-3")),
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
     public void IAuditRepository_HasNoUpdateOrDeletePath()
     {
         var methods = typeof(IAuditRepository).GetMethods()
@@ -145,6 +171,8 @@ public sealed class BookingEventAuditHandlerTests
 
         Assert.DoesNotContain(methods, m => m.Contains("update") || m.Contains("delete") || m.Contains("remove"));
     }
+
+    private static string PayloadJson(AuditRecord a) => a.Payload.ToJsonString();
 
     private static BookingEventEnvelope BuildEnvelope(
         string eventType,
@@ -171,4 +199,22 @@ public sealed class BookingEventAuditHandlerTests
             ReasonCode: null,
             ReasonText: null,
             AffectedRecipientIds: affectedRecipientIds));
+
+    private static BookingEventEnvelope BuildEnvelopeWithExtras(
+        string eventType,
+        Dictionary<string, JsonElement> extras) => new(
+        EventId: "event-1",
+        EventType: eventType,
+        EventVersion: 1,
+        OccurredAt: DateTime.UtcNow,
+        TenantId: "tenant-1",
+        CorrelationId: "corr-1",
+        CausationId: null,
+        ActorType: "system",
+        ActorId: null,
+        Source: "booking",
+        Payload: new BookingEventPayload(null, null, null, null, null, null, null, null, null, null)
+        {
+            AdditionalData = extras
+        });
 }

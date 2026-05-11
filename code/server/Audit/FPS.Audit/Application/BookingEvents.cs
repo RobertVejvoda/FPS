@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace FPS.Audit.Application;
 
 public sealed record BookingEventEnvelope(
@@ -23,4 +26,9 @@ public sealed record BookingEventPayload(
     string? NewStatus,
     string? ReasonCode,
     string? ReasonText,
-    IReadOnlyList<string>? AffectedRecipientIds);
+    IReadOnlyList<string>? AffectedRecipientIds)
+{
+    // Captures any additive payload fields not in the known contract.
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? AdditionalData { get; init; }
+}

@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace FPS.Audit.Domain;
 
 public sealed class AuditRecord
@@ -16,7 +18,7 @@ public sealed class AuditRecord
     public string Source { get; init; } = string.Empty;
     public string EntityType { get; init; } = string.Empty;
     public string? EntityId { get; init; }
-    public object Payload { get; init; } = new();
+    public JsonObject Payload { get; init; } = new();
 }
 
 public interface IAuditRepository
