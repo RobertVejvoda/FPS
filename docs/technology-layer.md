@@ -10,11 +10,15 @@ title: Technology Layer
 
 ### Technologies Used
 
-- **.NET 9**: Core framework for building the application.
-- **React**: Frontend library for building user interfaces.
+- **.NET 10**: Core framework for backend services.
+- **React**: Frontend library for web user interfaces.
+- **React Native + Expo**: Mobile platform.
 - **Docker**: Containerization platform for consistent deployment.
 - **Kubernetes**: Orchestration platform for managing containerized applications.
-- **Dapr**: Runtime for building distributed applications.
+- **Dapr 1.14+**: Runtime for state, pub/sub, service invocation, sidecars, and future workflows.
+- **RabbitMQ via Dapr pub/sub**: Event bus for Booking events consumed by Notification, Audit, and future read models.
+- **MongoDB**: Dapr-backed write store and MongoDB-driver read store, isolated database-per-tenant.
+- **Keycloak**: OIDC/OAuth 2.0 identity provider.
 
 
 ### Domain Map
