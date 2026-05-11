@@ -29,10 +29,10 @@ public sealed record TenantPolicy(
 
     public void Validate()
     {
-        if (NoShowDetectionEnabled && !HasConfirmationMethod)
+        if (NoShowDetectionEnabled && (!UsageConfirmationEnabled || !HasConfirmationMethod))
             throw new InvalidOperationException(
-                "NoShowDetectionEnabled requires at least one UsageConfirmationMethod. " +
-                "Without a configured method, unconfirmed usage remains unknown, not no-show.");
+                "NoShowDetectionEnabled requires UsageConfirmationEnabled=true and at least one UsageConfirmationMethod. " +
+                "Without both, unconfirmed usage remains unknown, not no-show.");
         if (DailyRequestCap < 1)
             throw new InvalidOperationException("DailyRequestCap must be at least 1.");
         if (AllocationLookbackDays < 1)

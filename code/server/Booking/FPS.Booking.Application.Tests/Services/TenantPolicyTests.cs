@@ -158,11 +158,26 @@ public sealed class TenantPolicyTests
     }
 
     [Fact]
-    public void Validate_NoShowEnabledWithConfirmationMethod_DoesNotThrow()
+    public void Validate_NoShowEnabled_MethodsPresent_ButConfirmationDisabled_Throws()
+    {
+        // Having methods without UsageConfirmationEnabled=true is not sufficient
+        var policy = DefaultTenantPolicyService.Default with
+        {
+            NoShowDetectionEnabled = true,
+            UsageConfirmationEnabled = false,
+            UsageConfirmationMethods = ["self-confirmation"]
+        };
+
+        Assert.Throws<InvalidOperationException>(policy.Validate);
+    }
+
+    [Fact]
+    public void Validate_NoShowEnabledWithConfirmationEnabledAndMethod_DoesNotThrow()
     {
         var policy = DefaultTenantPolicyService.Default with
         {
             NoShowDetectionEnabled = true,
+            UsageConfirmationEnabled = true,
             UsageConfirmationMethods = ["self-confirmation"]
         };
 
