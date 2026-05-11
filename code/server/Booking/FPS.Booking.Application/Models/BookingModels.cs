@@ -18,4 +18,5 @@ public class BookingRequestDto
     public DateTime? UsageConfirmedAt { get; set; }
     public string? ConfirmationSource { get; set; }
     public string? ConfirmationSourceEventId { get; set; }
+    public string? ProfileSnapshotVersion { get; set; }
 }

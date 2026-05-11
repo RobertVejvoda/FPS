@@ -7,8 +7,22 @@ public sealed class SubmitBookingRequestHandlerTests
     private readonly Mock<IAvailableSlotService> slotService = new();
     private readonly Mock<IEmployeeMetricsService> metricsService = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
+    private readonly Mock<IProfileSnapshotService> profileService = new();
     private readonly Mock<IEventPublisher> publisher = new();
     private readonly SubmitBookingRequestHandler handler;
+
+    private static readonly ProfileSnapshot DefaultProfile = new(
+        TenantId: "tenant-1",
+        UserId: "user-1",
+        ProfileStatus: "Active",
+        ParkingEligible: true,
+        HasCompanyCar: false,
+        AccessibilityEligible: false,
+        ReservedSpaceEligible: false,
+        Vehicles: [
+            new VehicleSnapshot("v-1", "ABC-123", "Sedan", false, true),
+            new VehicleSnapshot("v-2", "XYZ-999", "Sedan", false, true)],
+        SnapshotVersion: "v1");
 
     private static readonly TenantPolicy DefaultPolicy = new(
         DailyRequestCap: 500,
@@ -23,7 +37,11 @@ public sealed class SubmitBookingRequestHandlerTests
     {
         handler = new SubmitBookingRequestHandler(
             repository.Object, queryRepository.Object, slotService.Object,
-            metricsService.Object, policyService.Object, publisher.Object);
+            metricsService.Object, policyService.Object, profileService.Object, publisher.Object);
+
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultProfile);
 
         policyService
             .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))

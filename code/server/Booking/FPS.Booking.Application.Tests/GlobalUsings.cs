@@ -10,5 +10,6 @@ global using FPS.Booking.Application.Repositories;
 global using FPS.Booking.Application.Services;
 global using FPS.Booking.Domain.ValueObjects;
 global using FPS.SharedKernel.DomainEvents;
+global using FPS.SharedKernel.Profile;
 global using Moq;
 global using Xunit;
