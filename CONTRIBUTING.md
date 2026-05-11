@@ -2,6 +2,14 @@
 
 This document defines the git workflow for Claude and Codex working in parallel on this repository.
 
+## Copyright and License
+
+FPS is licensed under AGPL-3.0-or-later. By submitting a contribution to this repository, you agree that your contribution is provided under AGPL-3.0-or-later unless a separate written agreement says otherwise.
+
+The project copyright notice is maintained in `NOTICE`. AI-assisted changes prepared by Codex, Claude, or similar tools under Robert Vejvoda's direction are treated as project contributions under the same repository license.
+
+Do not submit code, documentation, generated assets, or third-party content unless you have the right to contribute it under AGPL-3.0-or-later and it is compatible with the repository license.
+
 ## Scope Boundaries
 
 | Agent | Owns | Never touches |
