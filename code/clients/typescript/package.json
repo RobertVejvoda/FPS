@@ -1,0 +1,19 @@
+{
+  "name": "@fps/api-client",
+  "version": "0.1.0",
+  "description": "Generated TypeScript API client for Fair Parking System — do not edit by hand",
+  "private": true,
+  "scripts": {
+    "generate": "bash ../../../tools/generate-api-client.sh",
+    "check-stale": "bash ../../../tools/check-api-client-stale.sh"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.4.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./identity": "./src/identity.d.ts",
+    "./booking": "./src/booking.d.ts",
+    "./profile": "./src/profile.d.ts"
+  }
+}
