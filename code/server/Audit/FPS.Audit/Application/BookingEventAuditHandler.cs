@@ -13,11 +13,16 @@ public sealed class BookingEventAuditHandler(IAuditRepository repository)
             ["booking.requestCancelled"] = ("bookingRequest", p => p.BookingRequestId),
             ["booking.penaltyApplied"] = ("bookingRequest", p => p.BookingRequestId),
             ["booking.noShowRecorded"] = ("bookingRequest", p => p.BookingRequestId),
-            ["booking.drawCompleted"] = ("drawAttempt", _ => null),
+            ["booking.drawStarted"] = ("drawAttempt", p => DrawAttemptId(p)),
+            ["booking.drawCompleted"] = ("drawAttempt", p => DrawAttemptId(p)),
+            ["booking.drawFailed"] = ("drawAttempt", p => DrawAttemptId(p)),
             ["booking.manualCorrectionApplied"] = ("bookingRequest", p => p.BookingRequestId),
             ["booking.usageConfirmed"] = ("bookingRequest", p => p.BookingRequestId),
             ["booking.requestExpired"] = ("bookingRequest", p => p.BookingRequestId),
         };
+
+    private static string? DrawAttemptId(BookingEventPayload p) =>
+        p.AdditionalData?.TryGetValue("drawAttemptId", out var el) == true ? el.GetString() : null;
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {

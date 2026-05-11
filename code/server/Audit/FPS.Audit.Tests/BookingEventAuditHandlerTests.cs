@@ -92,8 +92,43 @@ public sealed class BookingEventAuditHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData("booking.drawStarted")]
+    [InlineData("booking.drawCompleted")]
+    [InlineData("booking.drawFailed")]
+    public async Task Handle_DrawEvents_EntityTypeIsDrawAttempt(string eventType)
+    {
+        var envelope = new BookingEventEnvelope(
+            EventId: "event-1", EventType: eventType, EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-1", CorrelationId: "corr-1",
+            CausationId: null, ActorType: "system", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(null, null, null, null, null, null, null, null, null, null));
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.AppendAsync(
+            It.Is<AuditRecord>(a => a.EntityType == "drawAttempt"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
-    public async Task Handle_DrawCompleted_EntityTypeIsDrawAttempt()
+    public async Task Handle_DrawEvent_WithDrawAttemptId_SetsEntityId()
+    {
+        var envelope = BuildEnvelopeWithExtras("booking.drawCompleted",
+            extras: new Dictionary<string, JsonElement>
+            {
+                ["drawAttemptId"] = JsonDocument.Parse("\"draw-99\"").RootElement
+            });
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.AppendAsync(
+            It.Is<AuditRecord>(a => a.EntityId == "draw-99"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DrawEvent_WithoutDrawAttemptId_EntityIdIsNull()
     {
         var envelope = new BookingEventEnvelope(
             EventId: "event-1", EventType: "booking.drawCompleted", EventVersion: 1,
@@ -104,7 +139,7 @@ public sealed class BookingEventAuditHandlerTests
         await handler.HandleAsync(envelope);
 
         repository.Verify(r => r.AppendAsync(
-            It.Is<AuditRecord>(a => a.EntityType == "drawAttempt"),
+            It.Is<AuditRecord>(a => a.EntityType == "drawAttempt" && a.EntityId == null),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
