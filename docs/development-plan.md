@@ -661,6 +661,69 @@ Implementation notes for Claude:
 - Use existing workflow names where possible so badge URLs and branch-protection settings remain stable.
 - If the API client stale-check script depends on .NET 10 user-install PATH locally, make sure CI and local scripts agree on SDK selection.
 
+#### Slice MOB001: React Native App Shell
+
+Purpose: create the first mobile client foundation without implementing end-user booking behavior yet.
+
+Scope:
+
+- Scaffold an Expo managed React Native app under a stable path such as `code/mobile/fps-mobile`.
+- Use TypeScript and keep the app in the managed Expo workflow; do not commit generated native `ios/` or `android/` directories.
+- Consume the generated API client contract from `code/clients/typescript` for shared DTO/path typing.
+- Add a small API access layer that centralises base URL, bearer token attachment, JSON parsing, and typed error handling.
+- Add a development-only authentication handoff screen that accepts an API base URL and bearer token, then verifies the session with `GET /me` when possible.
+- Add a simple authenticated app shell with navigation placeholders for:
+  - Home / current parking status;
+  - My bookings;
+  - New booking;
+  - Notifications;
+  - Profile / settings.
+- Add loading, empty, error, unauthenticated, and offline/unreachable API states at shell level.
+- Add package scripts for local start, typecheck, and any formatter/linter selected by the scaffold.
+- Add CI validation for the mobile app typecheck if the scaffold introduces a TypeScript project.
+- Document how to run the app locally against a backend/API gateway base URL.
+
+Mobile app shell contract:
+
+| Area | Requirement |
+| --- | --- |
+| Platform | React Native + Expo managed workflow. |
+| Language | TypeScript. |
+| API contract | Use `@fps/api-client` generated types from `code/clients/typescript`; do not hand-copy DTOs. |
+| Auth in MOB001 | Developer-provided bearer token only. Real login, token refresh, Keycloak browser flow, MFA, and secure production session lifecycle are later slices. |
+| Navigation | Shell-level navigation only; screens may use typed mock data or read-only API probes. |
+| Configuration | API base URL must be environment/config driven, not hard-coded to one developer machine. |
+| State | Keep state local and simple; no global state framework unless the app shell genuinely needs it. |
+
+Out of scope:
+
+- Real username/password login, SSO, Keycloak, token refresh, biometric auth, MFA, or production credential storage.
+- Booking submission, cancellation, usage confirmation, no-show handling, or Draw status workflows beyond placeholders or read-only probes.
+- Push notifications, SSE streaming, notification preferences, unread-count APIs, or mobile background delivery.
+- Maps, payments, feedback, profile editing, admin/HR screens, reporting, billing, or tenant onboarding.
+- EAS build, app-store packaging, OTA update setup, native module customisation, or generated `ios/` / `android/` projects.
+- Changing backend API behavior to fit the app shell.
+
+Acceptance criteria:
+
+- A developer can install dependencies and start the Expo app from the documented mobile path.
+- The app renders a usable shell on a mobile simulator/device or Expo Go without requiring native build tooling.
+- TypeScript validates the mobile project.
+- The app imports generated API client types from `code/clients/typescript` rather than duplicating API DTOs.
+- API base URL and bearer token are configurable for local development.
+- `GET /me` is the only required live backend probe; if backend/auth is unavailable, the app shows a clear shell-level error without crashing.
+- CI includes the mobile typecheck if the mobile TypeScript project is added.
+- No backend business behavior changes are included.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after CI001 is merged.
+- Implement MOB001 only.
+- Prefer a small Expo scaffold with clear scripts over a large app architecture.
+- Keep screens intentionally thin; the goal is a stable mobile foundation for later booking slices.
+- If generated API client packaging is not directly consumable by Metro/TypeScript, stop and ask Codex before replacing it with hand-written DTOs.
+- If Expo scaffolding introduces platform-specific generated files or native build requirements, stop and ask before committing them.
+
 ---
 
 ### Phase 3 — Notification & Audit (Week 9–10)

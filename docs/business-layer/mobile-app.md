@@ -5,24 +5,24 @@ title: Mobile App
 ## User Interface
 - **Responsive Design**: Optimized for mobile devices
 - **Intuitive Navigation**: Simplified interface for booking flow
-- **Dark Mode**: Optional dark theme for better visibility
-- **Accessibility**: WCAG-compliant features
+- **Accessible Defaults**: Readable text, touch-friendly controls, and clear loading/error states
 
 ## Booking Features
-- **Parking Search**: Find available parking spots
-- **Quick Booking**: Simple booking process
-- **Booking History**: View past and upcoming bookings
-- **Payment Integration**: Secure payment processing
+- **Current Status**: See whether the employee has an active or upcoming parking allocation
+- **My Bookings**: View upcoming and recent booking requests
+- **New Booking Entry Point**: Start the request flow once the booking UI slice is implemented
+- **Notifications Entry Point**: Reach booking-related alerts once notification APIs are exposed to mobile
 
 ## User Profile
-- **Profile Picture**: Upload and manage avatar
-- **Personal Info**: Manage user details and vehicles
-- **Account Settings**: Update preferences
+- **Current User**: Show authenticated user and tenant context from `GET /me`
+- **Vehicle Snapshot**: Read vehicle/company-car/accessibility information once Profile APIs are available
+- **Settings Entry Point**: Hold later preferences, token/session controls, and support links
 
-## Feedback System
-- **Rating**: Rate parking experience
-- **Comments**: Submit feedback about service
-- **Issue Reporting**: Report problems or concerns
+## MOB001 Boundary
+
+The first mobile slice is an app shell only. It establishes Expo, TypeScript, navigation, API configuration, generated API-client type consumption, and a development-only bearer-token handoff.
+
+MOB001 does not implement production login, booking submission, booking cancellation, push/SSE notifications, payments, maps, feedback, profile editing, or app-store packaging.
 
 ## Notifications
 - **Booking Alerts**: Receive booking confirmations
