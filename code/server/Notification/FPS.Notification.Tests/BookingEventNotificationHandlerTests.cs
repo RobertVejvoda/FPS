@@ -31,7 +31,8 @@ public sealed class BookingEventNotificationHandlerTests
                 n.TenantId == "tenant-1" &&
                 n.NotificationType == "booking.requestSubmitted" &&
                 n.Channel == NotificationChannel.InApp &&
-                n.SourceEventId == "event-1"),
+                n.SourceEventId == "event-1" &&
+                n.DeliveryStatus == NotificationDeliveryStatus.Stored),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -57,9 +58,30 @@ public sealed class BookingEventNotificationHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CancellationWithAdditionalRecipient_NotifiesBothRecipients()
+    public async Task Handle_AffectedRecipientIds_NotifiesAllRecipients()
     {
-        var envelope = BuildEnvelope("booking.requestCancelled", "user-1", additionalRecipientId: "user-2");
+        var envelope = BuildEnvelope("booking.requestCancelled", "user-1",
+            affectedRecipientIds: ["user-2", "user-3"]);
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-2"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-3"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DuplicateInAffectedRecipientIds_DeduplicatesRecipients()
+    {
+        // requestorId also appears in affectedRecipientIds — should only notify once
+        var envelope = BuildEnvelope("booking.slotAllocated", "user-1",
+            affectedRecipientIds: ["user-1", "user-2"]);
 
         await handler.HandleAsync(envelope);
 
@@ -108,7 +130,7 @@ public sealed class BookingEventNotificationHandlerTests
 
     private static BookingEventEnvelope BuildEnvelope(
         string eventType, string requestorId,
-        string? additionalRecipientId = null,
+        IReadOnlyList<string>? affectedRecipientIds = null,
         string? reasonText = null) => new(
         EventId: "event-1",
         EventType: eventType,
@@ -130,5 +152,5 @@ public sealed class BookingEventNotificationHandlerTests
             NewStatus: null,
             ReasonCode: null,
             ReasonText: reasonText,
-            AdditionalRecipientId: additionalRecipientId));
+            AffectedRecipientIds: affectedRecipientIds));
 }

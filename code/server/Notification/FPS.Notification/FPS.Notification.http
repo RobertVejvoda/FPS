@@ -1,6 +1,0 @@
-@FPS.Notification_HostAddress = http://localhost:5157
-
-GET {{FPS.Notification_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -51,14 +51,20 @@ public sealed class BookingEventNotificationHandler(INotificationRepository repo
 
     private static IEnumerable<string> ResolveRecipients(BookingEventEnvelope envelope)
     {
-        if (!string.IsNullOrEmpty(envelope.Payload.RequestorId))
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrEmpty(envelope.Payload.RequestorId) &&
+            seen.Add(envelope.Payload.RequestorId))
             yield return envelope.Payload.RequestorId;
 
-        // booking.slotAllocated via reallocation also notifies the original requestor separately
-        if (envelope.EventType == "booking.requestCancelled"
-            && !string.IsNullOrEmpty(envelope.Payload.AdditionalRecipientId)
-            && envelope.Payload.AdditionalRecipientId != envelope.Payload.RequestorId)
-            yield return envelope.Payload.AdditionalRecipientId;
+        if (envelope.Payload.AffectedRecipientIds is { Count: > 0 })
+        {
+            foreach (var id in envelope.Payload.AffectedRecipientIds)
+            {
+                if (!string.IsNullOrEmpty(id) && seen.Add(id))
+                    yield return id;
+            }
+        }
     }
 
     private static string ResolveMessage(BookingEventEnvelope envelope)

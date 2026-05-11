@@ -15,6 +15,7 @@ public sealed class NotificationRecord
     public string? LocationId { get; init; }
     public string? NextAction { get; init; }
     public string SourceEventId { get; init; } = string.Empty;
+    public string DeliveryStatus { get; private set; } = NotificationDeliveryStatus.Stored;
     public bool IsRead { get; private set; }
     public DateTime CreatedAt { get; init; }
 
@@ -25,4 +26,10 @@ public static class NotificationChannel
 {
     public const string InApp = "in-app";
     public const string Email = "email";
+}
+
+public static class NotificationDeliveryStatus
+{
+    public const string Stored = "stored";
+    public const string Failed = "failed";
 }

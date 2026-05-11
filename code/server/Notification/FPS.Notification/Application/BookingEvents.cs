@@ -23,4 +23,4 @@ public sealed record BookingEventPayload(
     string? NewStatus,
     string? ReasonCode,
     string? ReasonText,
-    string? AdditionalRecipientId);
+    IReadOnlyList<string>? AffectedRecipientIds);
