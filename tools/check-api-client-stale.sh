@@ -25,6 +25,13 @@ OPENAPI_TS_VERSION="$(node -e "console.log(require('$REPO_ROOT/code/clients/type
 while IFS=: read -r name path port; do
   out_file="$TMP_OPENAPI/${name}.json"
 
+  # Fail fast if something else is already listening on this port — otherwise
+  # curl would silently capture stale output from the squatter process.
+  if lsof -i ":$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "[stale-check] ERROR: port $port already in use — kill the process before re-running" >&2
+    exit 1
+  fi
+
   ASPNETCORE_ENVIRONMENT=Production dotnet run \
     --project "$REPO_ROOT/$path" \
     --no-build \

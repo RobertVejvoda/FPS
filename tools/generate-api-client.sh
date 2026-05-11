@@ -23,6 +23,12 @@ capture_openapi() {
   local out_file="$OPENAPI_DIR/${name}.json"
 
   echo "[generate] Starting $name on :$port"
+  # Fail fast if something else is already listening on this port — otherwise
+  # curl would silently capture stale output from the squatter process.
+  if lsof -i ":$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "[generate] ERROR: port $port already in use — kill the process before re-running" >&2
+    exit 1
+  fi
   ASPNETCORE_ENVIRONMENT=Production dotnet run \
     --project "$REPO_ROOT/$project_path" \
     --no-build \
