@@ -45,3 +45,11 @@ jobs:
 
       - name: API client stale-check
         run: ./tools/check-api-client-stale.sh
+
+      - name: Install mobile app dependencies
+        working-directory: code/mobile/fps-mobile
+        run: npm ci
+
+      - name: Mobile app typecheck
+        working-directory: code/mobile/fps-mobile
+        run: npm run typecheck

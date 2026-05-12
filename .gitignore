@@ -39,6 +39,8 @@ packages/
 # Node
 node_modules/
 package-lock.json
+# Allow the mobile app's lockfile so CI installs are deterministic.
+!code/mobile/fps-mobile/package-lock.json
 
 # Secrets
 .env
