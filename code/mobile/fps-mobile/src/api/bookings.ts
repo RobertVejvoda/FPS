@@ -12,14 +12,16 @@ export type BookingsResult =
 
 export async function fetchBookings(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
-  cursor?: string,
+  opts?: { cursor?: string; from?: string; to?: string },
 ): Promise<BookingsResult> {
   if (!apiBaseUrl || !bearerToken) {
     return { kind: 'unauthenticated' };
   }
 
   const params = new URLSearchParams();
-  if (cursor) params.set('cursor', cursor);
+  if (opts?.cursor) params.set('cursor', opts.cursor);
+  if (opts?.from) params.set('from', opts.from);
+  if (opts?.to) params.set('to', opts.to);
   const query = params.toString();
   const url = `${apiBaseUrl}/bookings${query ? `?${query}` : ''}`;
 

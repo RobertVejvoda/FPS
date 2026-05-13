@@ -18,6 +18,11 @@ const STATUS_BADGE_COLOR: Record<string, string> = {
   NoShow: '#b45309',
 };
 
+const NEXT_ACTION_LABEL: Record<string, string> = {
+  cancel: 'Cancel booking',
+  confirmUsage: 'Confirm usage',
+};
+
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString(undefined, {
@@ -37,6 +42,10 @@ function formatTime(timeStr: string): string {
 
 export function BookingCard({ booking, testID }: BookingCardProps) {
   const badgeColor = STATUS_BADGE_COLOR[booking.status] ?? colors.textMuted;
+  const nextActionLabel =
+    booking.nextAction && booking.nextAction.toLowerCase() !== 'none'
+      ? (NEXT_ACTION_LABEL[booking.nextAction] ?? booking.nextAction)
+      : null;
 
   return (
     <View style={styles.card} testID={testID ?? `booking-card-${booking.requestId}`}>
@@ -55,12 +64,16 @@ export function BookingCard({ booking, testID }: BookingCardProps) {
         <Text style={styles.detail}>Location: {booking.locationId}</Text>
       ) : null}
 
+      {booking.allocatedSlotId ? (
+        <Text style={styles.detail}>Slot: {booking.allocatedSlotId}</Text>
+      ) : null}
+
       {booking.reason ? (
         <Text style={styles.reason}>{booking.reason}</Text>
       ) : null}
 
-      {booking.nextAction && booking.nextAction !== 'None' ? (
-        <Text style={styles.nextAction}>{booking.nextAction}</Text>
+      {nextActionLabel ? (
+        <Text style={styles.nextAction}>{nextActionLabel}</Text>
       ) : null}
     </View>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
 import { fetchBookings, type BookingListItem } from './bookings';
 
@@ -10,7 +10,13 @@ export type BookingsState =
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
 
-export function useBookings(): {
+function localDateStr(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
   state: BookingsState;
   refresh: () => void;
   loadMore: () => void;
@@ -19,8 +25,9 @@ export function useBookings(): {
   const [state, setState] = useState<BookingsState>({ kind: 'idle' });
   const [refreshKey, setRefreshKey] = useState(0);
   const [loadMoreCursor, setLoadMoreCursor] = useState<string | null>(null);
+  const filterRef = useRef(filter);
 
-  // Initial load and refresh
+  // Initial load, refresh, and filter switch
   useEffect(() => {
     if (!ready) {
       setState({ kind: 'idle' });
@@ -31,20 +38,26 @@ export function useBookings(): {
       return;
     }
 
+    const isFilterChange = filterRef.current !== filter;
+    filterRef.current = filter;
+    if (isFilterChange) setLoadMoreCursor(null);
+
     let cancelled = false;
-    // Keep existing items visible during pull-to-refresh; show spinner on initial load
     setState((prev) =>
-      prev.kind === 'ok'
+      !isFilterChange && prev.kind === 'ok'
         ? { ...prev, isRefreshing: true }
         : { kind: 'loading' },
     );
 
-    fetchBookings({ apiBaseUrl, bearerToken }).then((result) => {
+    const opts = filter === 'upcoming'
+      ? { from: localDateStr(0) }
+      : { to: localDateStr(-1) };
+
+    fetchBookings({ apiBaseUrl, bearerToken }, opts).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
         setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor, loadingMore: false, isRefreshing: false });
       } else {
-        // On refresh failure with existing data, keep the list and clear the refreshing flag
         setState((prev) => (prev.kind === 'ok' ? { ...prev, isRefreshing: false } : result));
       }
     });
@@ -52,22 +65,24 @@ export function useBookings(): {
     return () => {
       cancelled = true;
     };
-  }, [ready, apiBaseUrl, bearerToken, isConfigured, refreshKey]);
+  }, [ready, apiBaseUrl, bearerToken, isConfigured, refreshKey, filter]);
 
   // Cursor pagination
   useEffect(() => {
     if (!loadMoreCursor || !isConfigured) return;
 
     let cancelled = false;
-    fetchBookings({ apiBaseUrl, bearerToken }, loadMoreCursor).then((result) => {
+    fetchBookings({ apiBaseUrl, bearerToken }, { cursor: loadMoreCursor }).then((result) => {
       if (cancelled) return;
       setLoadMoreCursor(null);
       setState((prev) => {
         if (prev.kind !== 'ok') return prev;
         if (result.kind === 'ok') {
+          const existingIds = new Set(prev.items.map((i) => i.requestId));
+          const newItems = result.items.filter((i) => !existingIds.has(i.requestId));
           return {
             kind: 'ok',
-            items: [...prev.items, ...result.items],
+            items: [...prev.items, ...newItems],
             nextCursor: result.nextCursor,
             loadingMore: false,
             isRefreshing: false,
