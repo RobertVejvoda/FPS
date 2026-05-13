@@ -9,6 +9,7 @@
       "Bash(git show *)",
       "Bash(git remote *)",
       "Bash(./tools/validate.sh *)",
+      "Bash(cd code/mobile/fps-mobile && npm run typecheck)",
       "Bash(gh pr view *)",
       "Bash(gh pr list *)",
       "Bash(gh pr diff *)",
