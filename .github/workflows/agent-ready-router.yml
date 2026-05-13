@@ -94,7 +94,9 @@ jobs:
           claude_args: >-
             --max-turns 20
             --model claude-sonnet-4-6
+            --verbose
             --allowedTools "Bash(rg:*),Bash(npm run typecheck),Edit,Replace,Write"
+          show_full_output: true
           prompt: |
             You are Claude acting as FPS Implementer.
 
@@ -126,7 +128,9 @@ jobs:
           claude_args: >-
             --max-turns 20
             --model claude-sonnet-4-6
+            --verbose
             --allowedTools "Bash(rg:*),Bash(npm run typecheck),Edit,Replace,Write"
+          show_full_output: true
           prompt: |
             You are Claude acting as FPS Implementer.
 
