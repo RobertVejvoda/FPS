@@ -145,6 +145,7 @@ jobs:
           Do not start a parallel implementation or unrelated refactor.
           Prioritize code edits over label cleanup. Codex can update labels after the run.
           Start by editing the changed files listed below. Use local search only when needed to understand nearby types or examples.
+          For validation, use exactly: cd code/mobile/fps-mobile && npm run typecheck
           When finished, push updates to this PR branch if permitted and report validation.
 
           PROMPT
@@ -190,5 +191,5 @@ jobs:
           claude_args: >-
             --max-turns 20
             --model claude-sonnet-4-6
-            --allowedTools "Bash(rg:*),Bash(npm run typecheck),Edit,Replace,Write"
+            --allowedTools "Bash(rg:*),Bash(npm run typecheck),Bash(cd code/mobile/fps-mobile && npm run typecheck),Edit,Replace,Write"
           prompt: ${{ steps.claude_pr_prompt.outputs.prompt }}
