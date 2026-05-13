@@ -91,7 +91,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
-          claude_args: '--max-turns 8 --model claude-sonnet-4-20250514'
+          claude_args: '--max-turns 8 --model claude-sonnet-4-6'
           prompt: |
             You are Claude acting as FPS Implementer.
 
@@ -120,7 +120,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
-          claude_args: '--max-turns 8 --model claude-sonnet-4-20250514'
+          claude_args: '--max-turns 8 --model claude-sonnet-4-6'
           prompt: |
             You are Claude acting as FPS Implementer.
 
