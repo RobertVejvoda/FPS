@@ -21,6 +21,14 @@ GitHub Copilot agent is an implementer for mechanical, file-bounded slices. Use 
 - Use referenced docs under `docs/` for business rules, API contracts, event contracts, and slice boundaries.
 - Keep terminology consistent with existing docs and code.
 
+## Context And Cost Hygiene
+
+- Treat the issue body as the compact task brief.
+- Read only the files needed to satisfy the acceptance criteria.
+- Prefer focused searches and referenced docs over broad repository scans.
+- If the task is too broad or missing context, comment with the specific blocker instead of exploring indefinitely.
+- Keep PR summaries concise: scope, files changed, validation, and any blockers.
+
 ## Implementation Style
 
 - Prefer existing patterns, project structure, and local abstractions.
