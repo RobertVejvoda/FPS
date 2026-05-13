@@ -24,6 +24,30 @@ Repository health is visible through two GitHub Actions status badges on `README
 
 The `docs` workflow runs on `push` to `master` when anything under `docs/**` changes and is also exposed via `workflow_dispatch` for manual republish.
 
+## Agent Routing
+
+`.github/workflows/agent-ready-router.yml` turns explicit GitHub labels into implementer actions:
+
+| Signal | Automated action |
+|---|---|
+| Issue has `ready-to-implement` + `copilot` and does not have `blocked-question` | Assigns the issue to GitHub Copilot coding agent |
+| Issue has `needs-claude-action` and does not have `blocked-question` | Runs Claude Code Action against the issue |
+| PR has `needs-claude-action` | Runs Claude Code Action against the PR so Claude can address Codex review feedback |
+
+Required setup:
+
+- `ANTHROPIC_API_KEY` repository secret for Claude Code Action.
+- Optional `COPILOT_ASSIGNMENT_TOKEN` repository secret for Copilot assignment. If absent, the workflow tries `GITHUB_TOKEN`; GitHub may require a user token for Copilot coding agent assignment.
+- Claude GitHub app installed if using Anthropic's recommended app-backed setup.
+- Copilot coding agent enabled for the repository/account.
+
+Safety notes:
+
+- `blocked-question` prevents automated implementer routing.
+- `active-coordination` is not an implementation trigger.
+- Copilot is assigned only to issues, not PRs.
+- Claude PR routing is only for PRs explicitly labeled `needs-claude-action`.
+
 ### What CI checks
 
 1. **.NET build and test** — restore, build, and test `code/server/FPS.sln` against .NET 10 in Release configuration on Ubuntu.

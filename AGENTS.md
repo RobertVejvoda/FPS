@@ -49,7 +49,17 @@ All agents should keep session history small and handoffs explicit:
 - Task tracking: GitHub issues, not `.codex/tasks/active/` or `.codex/results/` files. TASK-XXX / RESULT-XXX schemas are reference material only.
 - Agent index file: this `AGENTS.md` is the canonical session index. No `CLAUDE.md` is maintained.
 - Docs structure: keep the existing `docs/` layout (layer-based folders + `versions-and-decisions.md`). Do not introduce `architecture.md` / `conventions.md` / `constraints.md` / `decisions.md` without explicit approval.
-- CI auto-trigger: the `claude-implement.yml` workflow described in the guide is not adopted.
+- The guide's `.codex/tasks/active/**` CI auto-trigger is not adopted.
+
+### Automated Routing
+
+`.github/workflows/agent-ready-router.yml` routes explicit ready signals:
+
+- issues labeled `ready-to-implement` + `copilot`, without `blocked-question`, are assigned to GitHub Copilot coding agent;
+- issues labeled `needs-claude-action`, without `blocked-question`, are sent to Claude;
+- pull requests labeled `needs-claude-action` are sent to Claude for revision.
+
+The workflow depends on repository secrets and service availability. Missing secrets or unavailable external agent services are operational blockers, not product decisions.
 
 ### Implementer routing
 
