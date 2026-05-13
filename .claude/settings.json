@@ -8,7 +8,17 @@
       "Bash(git status *)",
       "Bash(git show *)",
       "Bash(git remote *)",
-      "Bash(./tools/validate.sh *)"
+      "Bash(./tools/validate.sh *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh run view *)",
+      "Bash(gh run list *)",
+      "Bash(gh repo view *)",
+      "Bash(gh api repos/*)"
     ]
   },
   "hooks": {
