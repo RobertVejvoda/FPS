@@ -56,10 +56,10 @@ All agents should keep session history small and handoffs explicit:
 `.github/workflows/agent-ready-router.yml` routes explicit ready signals:
 
 - issues labeled `ready-to-implement` + `copilot`, without `blocked-question`, are assigned to GitHub Copilot coding agent;
-- issues labeled `needs-claude-action`, without `blocked-question`, are sent to Claude;
-- pull requests labeled `needs-claude-action` are sent to Claude for revision.
+- issues labeled `needs-claude-action`, without `blocked-question`, receive a prepared Claude handoff comment and are relabeled `claude-ready`;
+- pull requests labeled `needs-claude-action` receive a prepared Claude handoff comment and are relabeled `claude-ready`.
 
-The workflow depends on repository secrets and service availability. Missing secrets or unavailable external agent services are operational blockers, not product decisions.
+The workflow invokes Copilot assignment automatically, but Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost. Missing Copilot secrets or unavailable external agent services are operational blockers, not product decisions.
 
 ### Implementer routing
 
@@ -76,7 +76,8 @@ Agents should use GitHub labels and short comments as the handoff signal. Do not
 
 - `ready-to-implement` means the issue is ready for an implementer to start, subject to its assignment and labels.
 - `copilot` plus assignment to `Copilot` means GitHub Copilot agent should start the issue.
-- `needs-claude-action` means Claude should act next. On an issue, implement or respond to the blocker. On a PR, address Codex review feedback.
+- `needs-claude-action` means the router should prepare a Claude handoff.
+- `claude-ready` means a Claude handoff comment is prepared for manual invocation. It does not mean Claude has already run.
 - `needs-codex-review` means Codex should review or validate next.
 - `blocked-question` means no implementer should continue until Codex/Robert answers the concrete blocker.
 - `active-coordination` marks the current coordination thread; it is not by itself implementation permission.

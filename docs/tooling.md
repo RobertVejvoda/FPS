@@ -31,14 +31,12 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 | Signal | Automated action |
 |---|---|
 | Issue has `ready-to-implement` + `copilot` and does not have `blocked-question` | Assigns the issue to GitHub Copilot coding agent |
-| Issue has `needs-claude-action` and does not have `blocked-question` | Runs Claude Code Action against the issue |
-| PR has `needs-claude-action` | Runs Claude Code Action against the PR so Claude can address Codex review feedback |
+| Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and changes the label to `claude-ready` |
+| PR has `needs-claude-action` | Prepares a Claude handoff comment and changes the label to `claude-ready` |
 
 Required setup:
 
-- `ANTHROPIC_API_KEY` repository secret for Claude Code Action.
 - `COPILOT_ASSIGNMENT_TOKEN` repository secret for Copilot assignment. GitHub requires a user token for Copilot coding agent assignment; `GITHUB_TOKEN` cannot assign agents.
-- Claude GitHub app installed if using Anthropic's recommended app-backed setup.
 - Copilot coding agent enabled for the repository/account.
 
 Safety notes:
@@ -46,7 +44,8 @@ Safety notes:
 - `blocked-question` prevents automated implementer routing.
 - `active-coordination` is not an implementation trigger.
 - Copilot is assigned only to issues, not PRs.
-- Claude PR routing is only for PRs explicitly labeled `needs-claude-action`.
+- Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost.
+- `claude-ready` means the handoff is prepared; it does not mean Claude has already run.
 
 ### What CI checks
 

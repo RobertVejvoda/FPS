@@ -80,49 +80,89 @@ This package is referenced by all services — it must remain stable and have no
 | Object storage | MinIO | Files, report exports |
 | IaC | Terraform + Helm | K8s manifests |
 | Frontend (web) | React | Consistent with mobile stack |
-| Frontend (mobile) | **React Native + Expo** | Managed workflow, no native build tooling, OTA updates |
+| Frontend (mobile) | **React Native 0.81.5 + Expo SDK 54** | Managed workflow, no native build tooling; checked in at `code/mobile/fps-mobile` |
 
 ---
 
-## Discrepancies & Issues Found in Docs
+## Current Plan Tracking
 
-These need resolution before or during development. Raised here so decisions can be logged in `versions-and-decisions.md`.
+Last validated: 13.5.2026 by Codex against `origin/master` after PR #55.
 
-### 🔴 Critical
+Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
-**1. Dapr version is 1.4.0 — Dapr Workflows did not exist then**
-Dapr Workflows (the `dapr/go-sdk` workflow engine, `.NET SDK Dapr.Workflow`) were introduced in Dapr 1.10 and stabilised in 1.12. The system must target **Dapr 1.14+** to use workflows. All Dapr component configs will need updating.
+What is done:
 
-**2. Multi-tenancy isolation strategy is undefined**
-The docs describe a multi-tenant SaaS but never define isolation: database-per-tenant, schema-per-tenant, or row-level with tenant ID? This affects every service, every query, and the entire deployment model. A decision is needed before any data layer is built.
+- Booking core vertical slices `B001`-`B010`.
+- Authenticated user context and Booking API authenticated scoping: `ID001`, `BK011`.
+- Profile vehicle/eligibility snapshot consumed by Booking: `P001`.
+- Booking event consumers for in-app Notification and pseudonymised Audit records: `N001`, `A001`.
+- Parking policy/configuration hardening: `CFG001`.
+- OpenAPI/TypeScript client generation and stale-check tooling: `API001`.
+- CI/docs visibility and weekly/manual validation hooks: `CI001`.
+- Mobile foundation and first read-only employee screen: `MOB001`, `MOB002`.
+- Agent routing docs and handoff-only Claude automation.
 
-**3. Draw algorithm edge cases are unspecified**
-- What happens when requests > slots? (documented: lottery) — but what if a user submits duplicate requests?
-- What if a slot is cancelled by admin during an active draw?
-- What is the cut-off time for next-day request submission?
-- Is the draw atomic — does a partial failure roll back all allocations?
+What is planned next:
 
-### 🟡 Important
+- Real mobile authentication flow against Keycloak/OIDC.
+- Mobile booking actions after the read-only screen: submit request, cancel request/reservation, confirm usage, and notification history/streaming.
+- Notification v1 completion: email delivery, notification history API, unread counts, SSE stream, and preferences.
+- Audit v1 completion: query API, retention/integrity jobs, and GDPR PII mapping erasure workflow.
+- Production infrastructure: Dapr components, tenant database provisioning, Vault secrets, Helm/Kubernetes, observability, and runbooks.
 
-**4. Mobile platform decision: React Native vs .NET MAUI**
-Both are listed. They require different skill sets, build pipelines, and maintenance effort. Pick one.
+Plan validation notes:
+
+- The dependency order has held: API client and CI landed before mobile, and `MOB002` stayed read-only.
+- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, notification delivery, and operational hardening.
+- Phase headings below remain useful as roadmap groupings, but completed slice tracking is now more accurate than the original week numbers.
+
+---
+
+## Discrepancies & Plan Risks
+
+This section tracks historical gaps that were found while planning and the remaining risks that still need future slices.
+
+### Resolved
+
+**1. Dapr version was outdated** ✅ *Resolved*
+FPS targets **Dapr 1.14+**. Dapr Workflows require at least 1.10, and the current architecture treats durable workflow adoption as a future hardening step where needed.
+
+**2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved*
+The decision is database-per-tenant in MongoDB using `fps_{tenant_id}`, resolved from authenticated/service context.
+
+**3. Draw algorithm edge cases were underspecified** ✅ *Resolved for Booking Phase 1*
+Executable Draw rules are now documented in `docs/business-layer/allocation-rules.md` and implemented across Booking slices `B001`-`B010`.
+
+**4. Mobile platform decision: React Native vs .NET MAUI** ✅ *Resolved*
+The project uses React Native with Expo managed workflow. The checked-in mobile baseline is React Native 0.81.5 and Expo SDK 54.
 
 **5. Event topology** ✅ *Resolved for Booking*
 Booking event contracts are defined in `docs/business-layer/booking-event-contracts.md`. Other services may add their contracts slice-by-slice.
 
-**6. Draw process volume not quantified**
-NFRs specify 10,000 concurrent users and 100 TPS but never state how many booking requests a single Draw processes. This determines whether the workflow runs in seconds or minutes, and whether it needs partitioning.
+**6. Draw process volume was not quantified** ✅ *Resolved*
+The Draw cap is 500 requests per tenant per Draw.
 
 **7. GDPR vs. audit log tension** ✅ *Resolved — pseudonymisation*
 Audit records store `actor_hash` (SHA-256 of `user_id`). A separate `PiiMapping` collection holds the hash→identity link. On GDPR erasure: delete the mapping row. Audit log stays immutable and anonymous.
 
-### 🟢 Minor / Future
+### Remaining Risks
 
-**8. AI/ML allocation enhancement** — mentioned as future, no tech chosen. Skip for now.
+**8. Production authentication and authorization**
+The code has authenticated context and claim mapping, but production Keycloak/OIDC setup, token lifecycle, and full role-policy wiring are still planned.
 
-**9. Gamification** — badges/leaderboards have no business case. Skip unless explicitly prioritised.
+**9. Production Dapr/MongoDB/tenant provisioning**
+The architecture is decided, but production-grade component configuration, tenant database provisioning, secrets, and runbooks remain future operational work.
 
-**10. Card reader / physical confirmation integration** — no vendor or protocol specified. Leave as a stub interface.
+**10. Notification and Audit v1 completion**
+N001 and A001 established the first consumers. Email, SSE/history APIs, audit query, retention/integrity, and GDPR erasure workflows remain planned.
+
+### Minor / Future
+
+**11. AI/ML allocation enhancement** — mentioned as future, no tech chosen. Skip for now.
+
+**12. Gamification** — badges/leaderboards have no business case. Skip unless explicitly prioritised.
+
+**13. Card reader / physical confirmation integration** — no vendor or protocol specified. Leave as a stub interface.
 
 ---
 
@@ -135,10 +175,10 @@ Goal: every developer can run the full stack locally with a single command.
 - [ ] Set up `.NET Aspire` app host (`FPS.AppHost`)
 - [ ] Configure Dapr sidecars per service in Aspire
 - [ ] Dapr components: RabbitMQ pub/sub, MongoDB state store, Redis cache, Vault secrets
-- [ ] Shared `docker-compose.yaml` for infrastructure (already exists, needs Dapr update)
-- [ ] Finalise `FPS.SharedKernel` — ensure it compiles and is referenced by at least one service
-- [ ] Establish `FPS.sln` (a single solution file referencing all services for cross-service navigation)
-- [ ] CI: GitHub Actions workflow — build + test on every PR (per service or mono-workflow)
+- [x] Shared `docker-compose.yaml` for infrastructure exists under `code/infrastructure` (production-grade Dapr component hardening remains)
+- [x] `FPS.SharedKernel` compiles and is referenced by services
+- [x] Establish `FPS.sln` for server-side cross-service navigation and validation
+- [x] CI: GitHub Actions workflow builds and tests on PRs and `master`
 - [ ] ~~Decision log: resolve multi-tenancy strategy, mobile platform, Dapr version~~ ✅ All resolved
 
 **Deliverable**: `docker compose up` starts all infra; `dotnet run` in AppHost starts all services.
@@ -262,20 +302,26 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 
 ### Implementation Partner Queue
 
-Booking Phase 1 is complete. New implementation work should now proceed through these focused slices. Each slice should be its own branch and PR, and implementation must stop when a business rule or cross-service contract is missing.
+Booking Phase 1 and the first integration/mobile sequence are complete. New implementation work should still proceed through focused slices. Each slice should be its own branch and PR, and implementation must stop when a business rule or cross-service contract is missing.
 
-| Order | Slice | Goal | Depends on | Must not include |
-| ---: | --- | --- | --- | --- |
-| 1 | `ID001` Authenticated User Context | Resolve authenticated tenant, user, and roles from claims and expose `GET /me`. | Existing Identity service and Booking authorization docs. | Profile vehicle data, mobile UI, Keycloak deployment automation. |
-| 2 | `BK011` Booking Uses Auth Context | Replace Booking API tenant/user parameters with authenticated context for employee-facing actions. | `ID001`. | New Booking business behavior. |
-| 3 | `P001` Profile Vehicle Snapshot | Add Profile-owned vehicle and company-car eligibility data needed by Booking validation/allocation. | `ID001`; Booking context contract. | Booking allocation changes beyond consuming the snapshot. |
-| 4 | `N001` Booking Notification Consumer | Consume Booking events and create idempotent in-app notification records. | Booking event contracts. | Email sending, push notifications, SSE, notification history API, mobile notification UI. |
-| 5 | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Booking event contracts; GDPR audit decision. | Audit query UI, GDPR erasure endpoint/workflow, PII mapping persistence beyond documented shape. |
-| 6 | `CFG001` Parking Policy/Slot Source | Move default/in-memory Booking policy and slot inputs toward Configuration-owned contracts. | Booking context contract; parking policy configuration docs. | Tenant onboarding or admin UI. |
-| 7 | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Authenticated API surface from `ID001` and `BK011`. | React or React Native implementation. |
-| 8 | `CI001` Build Status and CI Visibility | Make repository health visible and keep CI reliable across code, tooling, generated clients, and docs. | Existing GitHub Actions workflows; `API001` client stale-check tooling if merged. | Product behavior, UI screens, deployment automation beyond GitHub Actions. |
-| 9 | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | `API001`; `CI001` recommended before active mobile work. | Booking business rule changes. |
-| 10 | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | `MOB001`; `B008`/`GET /bookings`; generated API client. | Booking submission, cancellation, usage confirmation, push/SSE, real login. |
+| Status | Slice | Goal | Notes |
+| --- | --- | --- | --- |
+| Done | `ID001` Authenticated User Context | Resolve authenticated tenant, user, and roles from claims and expose `GET /me`. | Merged. Claim mapping is recorded in [Versions and Decisions](versions-and-decisions). |
+| Done | `BK011` Booking Uses Auth Context | Replace Booking API tenant/user parameters with authenticated context for employee-facing actions. | Merged. Employee Booking APIs do not trust caller-supplied tenant/requestor identity. |
+| Done | `P001` Profile Vehicle Snapshot | Add Profile-owned vehicle and company-car eligibility data needed by Booking validation/allocation. | Merged. Booking consumes Profile facts through a boundary. |
+| Done | `N001` Booking Notification Consumer | Consume Booking events and create idempotent in-app notification records. | Merged. Email, history API, unread counts, and SSE remain later Notification slices. |
+| Done | `A001` Booking Audit Consumer | Persist append-only audit records for Booking events with pseudonymised actors. | Merged. Audit query, retention/integrity, and GDPR erasure remain later Audit slices. |
+| Done | `CFG001` Parking Policy/Slot Source | Move default/in-memory Booking policy and slot inputs toward Configuration-owned contracts. | Merged. |
+| Done | `API001` OpenAPI Client Contract | Stabilise OpenAPI output and generated TypeScript client for web/mobile. | Merged. Client stale-check tooling is available. |
+| Done | `CI001` Build Status and CI Visibility | Make repository health visible and keep CI reliable across code, tooling, generated clients, and docs. | Merged. |
+| Done | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | Merged. Uses development bearer-token handoff only. |
+| Done | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | Merged. Read-only, authenticated-scoped, cursor-paginated `GET /bookings` screen. |
+| Next | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC/Keycloak flow. | Must preserve generated client usage and authenticated backend scoping. |
+| Next | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Depends on real login or an explicitly approved development-only path. Must not add new Booking rules. |
+| Next | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Must use existing Booking endpoints and employee-safe error/reason handling. |
+| Next | `N002` Notification API And Stream | Expose notification history, unread counts, and SSE stream. | Builds on N001 in-app records. Email can be separate if needed. |
+| Next | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure workflow. | Builds on A001 append-only audit records. |
+| Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Should stay infrastructure-focused; no product behavior changes. |
 
 #### Slice ID001: Authenticated User Context
 
@@ -304,15 +350,18 @@ Stop and ask before implementation if:
 - implementation would introduce mobile, Profile vehicle, Notification, or Audit behavior.
 
 **Identity** (`FPS.Identity`):
-- [ ] Keycloak integration (OIDC provider, not reinventing auth)
-- [ ] JWT validation middleware
-- [ ] User roles: `employee`, `hr_manager`, `admin`, `auditor`, `accounting`
+- [x] Shared authenticated user context abstraction and claim mapping
+- [x] JWT validation middleware/test path for current APIs
+- [x] `GET /me` — current user from token claims
+- [ ] Production Keycloak/OIDC integration and provisioning
+- [ ] User roles fully wired to production authorization policies: `employee`, `hr_manager`, `admin`, `auditor`, `accounting`
 - [ ] Service-to-service auth via Dapr mTLS (Sentry) — no extra work needed
-- [ ] `GET /me` — current user from token claims
 
 **Profile** (`FPS.Profile`):
-- [ ] `UserProfile` aggregate — name, vehicles, preferences, scheduler settings
-- [ ] `Vehicle` entity — type (car/motorcycle/EV), plate
+- [x] Booking-facing profile/vehicle eligibility snapshot
+- [x] Booking consumes Profile facts for vehicle/company-car eligibility decisions
+- [ ] Full `UserProfile` aggregate — name, vehicles, preferences, scheduler settings
+- [ ] Full `Vehicle` entity management — type (car/motorcycle/EV), plate
 - [ ] Commands: `RegisterVehicle`, `SetParkingSchedule`, `UpdatePreferences`
 - [ ] Queries: `GetProfile`, `GetVehicles`
 
@@ -792,19 +841,23 @@ Implementation notes for Claude:
 ### Phase 3 — Notification & Audit (Week 9–10)
 
 **Notification** (`FPS.Notification`):
-- [ ] Subscribe to: `slot.allocated`, `booking.cancelled`, `draw.completed`, `penalty.applied`
+- [x] Booking event consumer for N001 event envelope/types
+- [x] Idempotent in-app notification record store for Booking events
+- [ ] Subscribe to any non-Booking event families required after Configuration/Customer/Reporting expand
 - [ ] Email channel (SMTP or SendGrid)
-- [ ] In-app notification store (read via API)
+- [ ] In-app notification history API and unread-count API
 - [ ] V1 mandatory channels: in-app and email for critical operational notifications
 - [ ] **SSE endpoint** `GET /notifications/stream` — clients connect, events from Dapr pub/sub are bridged to connected SSE clients; no Azure dependency, no extra infrastructure
 - [ ] Idempotent — duplicate events must not send duplicate emails
 - [ ] Implement notification behavior against `docs/business-layer/notification.md`
 
 **Audit** (`FPS.Audit`):
-- [ ] Subscribe to all domain events — record everything
-- [ ] Immutable append-only store (never UPDATE or DELETE audit records)
-- [ ] PII pseudonymisation:
+- [x] Booking event consumer for A001 event envelope/types
+- [x] Immutable append-only audit record store for Booking events
+- [x] PII pseudonymisation for actor/requestor/affected-user references in A001 records:
   - Audit records store `actor_hash` (SHA-256 of `user_id`) — never name or email
+- [ ] Subscribe to all domain event families as each producing service is implemented
+- [ ] PII mapping persistence and erasure workflow:
   - Separate `PiiMapping` collection: `{ actor_hash, user_id, name, email }`
   - On GDPR deletion request: delete the `PiiMapping` row — audit records remain intact and anonymous
 - [ ] `GET /audit` — paginated, filterable by entity/date/actor (auditor role only)
@@ -847,8 +900,9 @@ Implementation notes for Claude:
 ### Phase 6 — Frontend (Week 16–20)
 
 - [ ] Web app (React) — employee self-service, HR dashboard, admin panel
-- [ ] Mobile app (React Native + Expo) — employee self-service, booking, notifications
-- [ ] Shared API client generated from OpenAPI specs (used by both web and mobile)
+- [x] Mobile app (React Native + Expo) — app shell and read-only My Bookings
+- [ ] Mobile app (React Native + Expo) — real login, booking actions, notifications
+- [x] Shared API client generated from OpenAPI specs (used by both web and mobile)
 - [ ] Shared TypeScript types between web and mobile
 - [ ] Real-time updates via SSE — subscribe to `GET /notifications/stream` on Notification service
 
