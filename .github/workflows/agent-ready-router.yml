@@ -28,10 +28,17 @@ jobs:
     steps:
       - name: Assign issue to GitHub Copilot coding agent
         env:
-          GH_TOKEN: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN != '' && secrets.COPILOT_ASSIGNMENT_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN }}
+          FALLBACK_GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            GH_TOKEN="$FALLBACK_GH_TOKEN" gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body \
+              "Automated router: Copilot routing is configured, but COPILOT_ASSIGNMENT_TOKEN is missing. GitHub requires a user token for Copilot coding agent assignment; GITHUB_TOKEN cannot assign agents."
+            exit 0
+          fi
+
           payload="$(jq -n \
             --arg repo "$GH_REPO" \
             --arg base "master" \
