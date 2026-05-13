@@ -16,6 +16,12 @@ function localDateStr(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function filterQuery(filter: 'upcoming' | 'recent') {
+  return filter === 'upcoming'
+    ? { from: localDateStr(0) }
+    : { to: localDateStr(-1) };
+}
+
 export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
   state: BookingsState;
   refresh: () => void;
@@ -49,11 +55,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
         : { kind: 'loading' },
     );
 
-    const opts = filter === 'upcoming'
-      ? { from: localDateStr(0) }
-      : { to: localDateStr(-1) };
-
-    fetchBookings({ apiBaseUrl, bearerToken }, opts).then((result) => {
+    fetchBookings({ apiBaseUrl, bearerToken }, filterQuery(filter)).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
         setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor, loadingMore: false, isRefreshing: false });
@@ -72,7 +74,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
     if (!loadMoreCursor || !isConfigured) return;
 
     let cancelled = false;
-    fetchBookings({ apiBaseUrl, bearerToken }, { cursor: loadMoreCursor }).then((result) => {
+    fetchBookings({ apiBaseUrl, bearerToken }, { ...filterQuery(filter), cursor: loadMoreCursor }).then((result) => {
       if (cancelled) return;
       setLoadMoreCursor(null);
       setState((prev) => {
@@ -95,7 +97,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
     return () => {
       cancelled = true;
     };
-  }, [loadMoreCursor, apiBaseUrl, bearerToken, isConfigured]);
+  }, [loadMoreCursor, apiBaseUrl, bearerToken, isConfigured, filter]);
 
   const refresh = useCallback(() => {
     setLoadMoreCursor(null);
