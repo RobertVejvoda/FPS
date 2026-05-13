@@ -7,7 +7,7 @@ on:
     types: [labeled, reopened]
 
 permissions:
-  contents: write
+  contents: read
   issues: write
   pull-requests: write
 
@@ -76,7 +76,7 @@ jobs:
             "Automated router: issue is labeled ready-to-implement + copilot and is not blocked, so it was assigned to GitHub Copilot coding agent."
 
   route-claude-issue:
-    name: Route issue to Claude
+    name: Prepare Claude issue handoff
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'issues' &&
@@ -84,48 +84,68 @@ jobs:
       contains(github.event.issue.labels.*.name, 'needs-claude-action') &&
       !contains(github.event.issue.labels.*.name, 'blocked-question')
     steps:
-      - uses: actions/checkout@v4
+      - name: Post Claude issue handoff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          handoff_file="$RUNNER_TEMP/claude-issue-handoff.md"
+          issue_json="$RUNNER_TEMP/claude-issue-context.json"
 
-      - name: Ask Claude to act on issue
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ github.token }}
-          claude_args: >-
-            --max-turns 20
-            --model claude-sonnet-4-6
-            --allowedTools "Bash(rg:*),Bash(npm run typecheck),Edit,Replace,Write"
-          prompt: |
-            You are Claude acting as FPS Implementer.
+          gh issue view "$ISSUE_NUMBER" --repo "$GH_REPO" \
+            --json title,url,body,labels,comments \
+            > "$issue_json"
 
-            Issue: #${{ github.event.issue.number }} ${{ github.event.issue.title }}
-            URL: ${{ github.event.issue.html_url }}
+          {
+            cat <<'HANDOFF'
+          Automated Claude handoff prepared. No Anthropic API call was made.
 
-            Follow AGENTS.md exactly. The label needs-claude-action is the ready signal.
-            Determine whether the issue asks for implementation or a blocker response.
-            Keep scope narrow. Do not implement adjacent slices. If blocked, comment with the concrete blocker.
-            When finished, open or update a focused PR, report validation, remove needs-claude-action, and add needs-codex-review.
+          Use this prompt only when a human decides the task is worth spending Claude tokens.
+
+          ```text
+          You are Claude acting as FPS Implementer.
+
+          Follow AGENTS.md exactly. Keep scope narrow. Do not implement adjacent slices.
+          If blocked, comment with the concrete blocker instead of widening scope.
+          When finished, open or update a focused PR, report validation, and add needs-codex-review.
+
+          HANDOFF
+
+            jq -r '
+              "## Issue\n" +
+              "Title: \(.title)\n" +
+              "URL: \(.url)\n" +
+              "Labels: \([.labels[].name] | join(", "))\n\n" +
+              "## Body\n" +
+              ((.body // "") | if . == "" then "(empty)" else . end) + "\n\n" +
+              "## Conversation Comments\n" +
+              ((.comments // []) | map("### " + .author.login + " at " + .createdAt + "\n" + .body) | join("\n\n"))
+            ' "$issue_json"
+
+            printf '\n```\n'
+          } > "$handoff_file"
+
+          gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
+          gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
+            --remove-label needs-claude-action \
+            --add-label claude-ready
 
   route-claude-pr:
-    name: Route pull request to Claude
+    name: Prepare Claude pull request handoff
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'pull_request_target' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(github.event.pull_request.labels.*.name, 'needs-claude-action')
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Build Claude PR prompt
-        id: claude_pr_prompt
+      - name: Post Claude PR handoff
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          prompt_file="$RUNNER_TEMP/claude-pr-prompt.md"
+          handoff_file="$RUNNER_TEMP/claude-pr-handoff.md"
           pr_json="$RUNNER_TEMP/claude-pr-context.json"
           review_comments_json="$RUNNER_TEMP/claude-pr-review-comments.json"
 
@@ -136,19 +156,23 @@ jobs:
           gh api "repos/$GH_REPO/pulls/$PR_NUMBER/comments" > "$review_comments_json"
 
           {
-            cat <<'PROMPT'
+            cat <<'HANDOFF'
+          Automated Claude handoff prepared. No Anthropic API call was made.
+
+          Use this prompt only when a human decides the PR repair is worth spending Claude tokens.
+
+          ```text
           You are Claude acting as FPS Implementer.
 
-          Follow AGENTS.md exactly. The label needs-claude-action is the ready signal.
+          Follow AGENTS.md exactly.
           The PR context below is complete enough to act; do not call gh to rediscover PR comments, labels, or review state.
           Address Codex review feedback on this PR only. Keep the existing PR scope.
           Do not start a parallel implementation or unrelated refactor.
-          Prioritize code edits over label cleanup. Codex can update labels after the run.
           Start by editing the changed files listed below. Use local search only when needed to understand nearby types or examples.
           For validation, use exactly: cd code/mobile/fps-mobile && npm run typecheck
-          When finished, push updates to this PR branch if permitted and report validation.
+          When finished, push updates to this PR branch if permitted, report validation, and add needs-codex-review.
 
-          PROMPT
+          HANDOFF
 
             jq -r '
               "## Pull Request\n" +
@@ -175,21 +199,11 @@ jobs:
                 map("### " + .user.login + " on " + .path + ":" + ((.line // .original_line // 0) | tostring) + "\n" + .body) | join("\n\n")
               end
             ' "$review_comments_json"
-          } > "$prompt_file"
 
-          {
-            echo "prompt<<CLAUDE_PR_PROMPT"
-            cat "$prompt_file"
-            echo "CLAUDE_PR_PROMPT"
-          } >> "$GITHUB_OUTPUT"
+            printf '\n```\n'
+          } > "$handoff_file"
 
-      - name: Ask Claude to revise pull request
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ github.token }}
-          claude_args: >-
-            --max-turns 20
-            --model claude-sonnet-4-6
-            --allowedTools "Bash(rg:*),Bash(npm run typecheck),Bash(cd code/mobile/fps-mobile && npm run typecheck),Edit,Replace,Write"
-          prompt: ${{ steps.claude_pr_prompt.outputs.prompt }}
+          gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" \
+            --remove-label needs-claude-action \
+            --add-label claude-ready
