@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StateView } from '@/components/StateView';
@@ -15,7 +15,7 @@ export default function BookingsRoute() {
   const [filter, setFilter] = useState<'upcoming' | 'recent'>('upcoming');
   const { state, refresh, loadMore } = useBookings(filter);
 
-  const filterBar = (
+  const filterBar = useMemo(() => (
     <View style={styles.filterBar}>
       {FILTERS.map(({ key, label }) => (
         <Pressable
@@ -30,34 +30,23 @@ export default function BookingsRoute() {
         </Pressable>
       ))}
     </View>
-  );
+  ), [filter]);
 
-  if (state.kind === 'idle' || state.kind === 'loading') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        {filterBar}
-        <StateView kind="loading" title="Loading bookings…" />
-      </SafeAreaView>
-    );
-  }
-
-  if (state.kind === 'unauthenticated') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        {filterBar}
+  function renderContent() {
+    if (state.kind === 'idle' || state.kind === 'loading') {
+      return <StateView kind="loading" title="Loading bookings…" />;
+    }
+    if (state.kind === 'unauthenticated') {
+      return (
         <StateView
           kind="unauthenticated"
           title="Not signed in"
           message="Your developer token is missing or rejected. Paste a fresh one to continue."
         />
-      </SafeAreaView>
-    );
-  }
-
-  if (state.kind === 'unreachable') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        {filterBar}
+      );
+    }
+    if (state.kind === 'unreachable') {
+      return (
         <StateView
           kind="unreachable"
           title="Backend unreachable"
@@ -65,14 +54,10 @@ export default function BookingsRoute() {
           actionLabel="Retry"
           onAction={refresh}
         />
-      </SafeAreaView>
-    );
-  }
-
-  if (state.kind === 'error') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        {filterBar}
+      );
+    }
+    if (state.kind === 'error') {
+      return (
         <StateView
           kind="error"
           title="Something went wrong"
@@ -80,14 +65,10 @@ export default function BookingsRoute() {
           actionLabel="Retry"
           onAction={refresh}
         />
-      </SafeAreaView>
-    );
-  }
-
-  if (state.items.length === 0) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        {filterBar}
+      );
+    }
+    if (state.items.length === 0) {
+      return (
         <StateView
           kind="empty"
           title="No bookings yet"
@@ -95,13 +76,9 @@ export default function BookingsRoute() {
           actionLabel="Refresh"
           onAction={refresh}
         />
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      {filterBar}
+      );
+    }
+    return (
       <FlatList
         data={state.items}
         keyExtractor={(item) => item.requestId}
@@ -134,6 +111,13 @@ export default function BookingsRoute() {
           ) : null
         }
       />
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      {filterBar}
+      {renderContent()}
     </SafeAreaView>
   );
 }
