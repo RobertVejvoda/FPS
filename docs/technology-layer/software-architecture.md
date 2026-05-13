@@ -38,7 +38,7 @@ Boundary rules are defined in [Booking Context Contract](../business-layer/booki
 | App. Component | Name | Technology |
 |------------------- | ---- | ------- |
 | [Web App](./web-app) | Web App | React |
-| [Mobile App](./mobile-app) | Mobile App | React Native + Expo |
+| [Mobile App](./mobile-app) | Mobile App | React Native 0.81.5 + Expo SDK 54 |
 | [Identity](./identity) | Authentication & Authorization | .NET 10 Web API |
 | [Audit](./audit) | Audit Service | .NET 10 Web API |
 | [Billing](./billing) | Billing Service | .NET 10 Web API |
@@ -120,15 +120,15 @@ This section provides a list of tools and frameworks used in the project, along 
 
 | Tool/Framework | Version | Editor | Language | Distribution Format | License | Purpose |
 | ---------------| ------- | ------ | -------- | ------------------- | ------- | ------- |
-| React          | Current project version | VSCode | TypeScript/JavaScript | npm package | MIT | Frontend library for building user interfaces |
-| React Native  | 0.74+   | VSCode | TypeScript | npm package         | MIT     | Cross-platform mobile app framework |
-| Expo          | 51+     | VSCode | TypeScript | npm package         | MIT     | Managed React Native workflow — no native build tooling required |
+| React          | 19.1.0  | VSCode | TypeScript/JavaScript | npm package | MIT | Frontend library for building user interfaces |
+| React Native  | 0.81.5  | VSCode | TypeScript | npm package         | MIT     | Cross-platform mobile app framework |
+| Expo          | 54.0.33 | VSCode | TypeScript | npm package         | MIT     | Managed React Native workflow — no native build tooling required |
 | .NET 10        | 10.0    | VSCode | C#        | NuGet package       | MIT     | Framework for building various types of applications |
 | Java           | 11      | IntelliJ| Java     | JAR file            | GPL     | General-purpose programming language |
-| Docker         | 20.10.7 | VSCode | N/A      | Docker image        | Apache 2.0 | Platform for developing, shipping, and running applications in containers |
-| Helm           | 3.5.4   | VSCode | N/A      | Helm chart          | Apache 2.0 | Package manager for Kubernetes applications |
+| Docker         | Current supported local/CI version | VSCode | N/A | Docker image | Apache 2.0 | Platform for developing, shipping, and running applications in containers |
+| Helm           | 3.x     | VSCode | N/A      | Helm chart          | Apache 2.0 | Package manager for Kubernetes applications |
 | Dapr           | 1.14+   | VSCode | Various  | Docker image        | Apache 2.0  | Runtime for building distributed applications (Workflows require 1.10+) |
-| Kubernetes     | 1.21.0  | VSCode | YAML     | Helm chart          | Apache 2.0 | Container orchestration platform |
-| Terraform      | 1.0.0   | VSCode | HCL      | Binary              | MPL 2.0 | Infrastructure as code tool |
-| Ansible        | 2.9.0   | VSCode | YAML     | Package             | GPL 3.0 | Automation tool for IT tasks |
-| Git            | 2.31.1  | VSCode | N/A      | Binary              | GPL 2.0 | Version control system |
+| Kubernetes     | Target provider-supported version | VSCode | YAML | Helm chart | Apache 2.0 | Container orchestration platform |
+| Terraform      | 1.x     | VSCode | HCL      | Binary              | MPL 2.0 | Infrastructure as code tool |
+| Ansible        | Future/optional | VSCode | YAML     | Package             | GPL 3.0 | Automation tool for IT tasks |
+| Git            | Current contributor version | VSCode | N/A | Binary | GPL 2.0 | Version control system |

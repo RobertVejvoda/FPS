@@ -44,6 +44,7 @@ title: Versions and decisions
 | 0.2     | 23.11.2024 | Robert Vejvoda | Architect | Scope clarification
 | 0.3     | 1.12.2024 | Robert Vejvoda | Architect | React, API gateways & domain model
 | 0.4     | 9.5.2026  | Robert Vejvoda | Architect | Persistence, multi-tenancy, CQRS, stack versions
+| 0.5     | 13.5.2026 | Codex          | Product Owner | Plan/status validation after MOB002 merge
 
 
 
@@ -60,6 +61,7 @@ title: Versions and decisions
 
 | Name | Role | Date
 | ---- | ---- | ----
+| Codex | Product Owner | 13.5.2026
 
 
 ## Decision Log

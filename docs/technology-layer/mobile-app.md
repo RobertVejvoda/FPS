@@ -4,6 +4,8 @@ title: Mobile App
 
 The mobile application uses React Native with Expo managed workflow. Early mobile work should avoid native project generation and app-store packaging until the product flows and API contracts are stable.
 
+Current checked-in baseline: React Native `0.81.5`, Expo SDK `54.0.33`, React `19.1.0`, TypeScript `5.9.x`.
+
 ## Key Components
 
 - [Identity](./identity)
@@ -16,13 +18,14 @@ The mobile application uses React Native with Expo managed workflow. Early mobil
 
 | Concern | Decision |
 | --- | --- |
-| Framework | React Native + Expo managed workflow |
+| Framework | React Native 0.81.5 + Expo SDK 54 managed workflow |
 | Language | TypeScript |
 | Repository path | `code/mobile/fps-mobile` |
 | API contract | Generated types from `code/clients/typescript` |
 | Auth in MOB001 | Development-only bearer token handoff; production login is later |
-| Native projects | Do not commit generated `ios/` or `android/` directories in MOB001 |
-| Validation | Mobile TypeScript typecheck, wired into CI when the mobile project is added |
+| Implemented mobile slices | `MOB001` app shell and `MOB002` read-only My Bookings |
+| Native projects | Do not commit generated `ios/` or `android/` directories until a native-build slice explicitly requires them |
+| Validation | Mobile TypeScript typecheck is wired into CI |
 
 ## Packaging
 
