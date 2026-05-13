@@ -173,7 +173,11 @@ jobs:
             ' "$review_comments_json"
           } > "$prompt_file"
 
-          echo "path=$prompt_file" >> "$GITHUB_OUTPUT"
+          {
+            echo "prompt<<CLAUDE_PR_PROMPT"
+            cat "$prompt_file"
+            echo "CLAUDE_PR_PROMPT"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Ask Claude to revise pull request
         uses: anthropics/claude-code-action@v1
@@ -184,4 +188,4 @@ jobs:
             --max-turns 20
             --model claude-sonnet-4-6
             --allowedTools "Bash(rg:*),Bash(npm run typecheck),Edit,Replace,Write"
-          prompt_file: ${{ steps.claude_pr_prompt.outputs.path }}
+          prompt: ${{ steps.claude_pr_prompt.outputs.prompt }}
