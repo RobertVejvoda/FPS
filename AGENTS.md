@@ -49,3 +49,13 @@ There are two implementer agents available: **Claude** (Anthropic) and **GitHub 
 - **Claude candidate** — slice touches architecture, cross-service flow, or design judgment; spec might be wrong and needs an implementer who can push back; cross-cutting refactors; anything where reading the diff isn't enough to validate.
 
 When Claude picks up a Codex-assigned slice, the first step is a routing self-check: if the slice looks Copilot-shaped, flag it back to Codex/Robert before starting rather than absorbing it silently. If a Copilot PR is already open on a slice, do not start a parallel implementation — review the Copilot PR or wait.
+
+### Attribution
+
+GitHub actions may technically run under Robert's account unless a separate agent token or GitHub App is configured. Use issue labels and PR text to make responsibility clear:
+
+- `initiated-by: codex` — Codex/Product Owner prepared or routed the work.
+- `implemented-by: claude` — Claude implemented the PR.
+- `implemented-by: copilot` — GitHub Copilot agent implemented the PR.
+
+Copilot-specific behavior is documented in `.github/copilot-instructions.md`.
