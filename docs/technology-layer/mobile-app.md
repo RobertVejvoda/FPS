@@ -24,8 +24,15 @@ Current checked-in baseline: React Native `0.81.5`, Expo SDK `54.0.33`, React `1
 | API contract | Generated types from `code/clients/typescript` |
 | Auth in MOB001 | Development-only bearer token handoff; production login is later |
 | Implemented mobile slices | `MOB001` app shell and `MOB002` read-only My Bookings |
+| Planned auth slice | `MOB003` real login through OIDC Authorization Code + PKCE using Expo-compatible browser auth |
 | Native projects | Do not commit generated `ios/` or `android/` directories until a native-build slice explicitly requires them |
 | Validation | Mobile TypeScript typecheck is wired into CI |
+
+## Authentication Baseline
+
+MOB003 should use an Expo managed-workflow-compatible OIDC Authorization Code + PKCE flow. Runtime configuration must provide the API base URL, issuer/discovery or authorization endpoints, client ID, scopes, and redirect URI. No client secret is stored in the app.
+
+After login, the app validates the session through `GET /me` and uses the returned identity only for display and shell state. Employee API authorization remains backend-owned: services resolve tenant, user, and roles from authenticated token claims.
 
 ## Packaging
 

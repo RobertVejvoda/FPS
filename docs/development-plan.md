@@ -836,6 +836,61 @@ Implementation notes for Claude:
 - If the current generated client only provides types, write a small typed fetch wrapper in the mobile app rather than hand-writing API DTOs.
 - If `GET /bookings` response fields differ from the B008 contract, stop and ask Codex before changing backend or mobile expectations.
 
+#### Slice MOB003: Mobile Real Login
+
+Purpose: replace the development-only bearer-token handoff with a real employee login flow in the Expo mobile app.
+
+Scope:
+
+- Add an Expo-compatible OIDC Authorization Code + PKCE login flow.
+- Support runtime configuration for API base URL, issuer/discovery or authorization endpoint, client ID, scopes, and redirect URI.
+- Complete browser callback handling and restore a valid session when the app starts.
+- Store only the session material needed for API calls and restoration, using Expo-compatible storage primitives.
+- Call `GET /me` after login and before entering the authenticated shell.
+- Attach the bearer token through the existing mobile API access layer.
+- Add logout that clears local session state and returns the user to the unauthenticated/login state.
+- Preserve the current development flow only if it remains clearly marked as development-only and cannot be confused with production login.
+- Add clear UI states for unauthenticated, login cancelled, login failed, invalid/expired token, and unreachable backend.
+- Keep mobile typecheck wired into CI.
+
+Mobile auth rules:
+
+| Area | Requirement |
+| --- | --- |
+| Auth flow | OIDC Authorization Code + PKCE through an Expo managed-workflow-compatible browser-auth package. |
+| Client secret | Do not store a client secret in the mobile app. |
+| Backend scoping | The app must not send tenant ID, requestor ID, user ID, or roles for employee API scoping. |
+| Identity display | Use `GET /me` only for display/session state; backend services remain authoritative. |
+| Configuration | Do not hardcode developer-machine URLs, secrets, tokens, tenant IDs, or user IDs. |
+| Native projects | Do not commit generated `ios/` or `android/` directories. |
+
+Out of scope:
+
+- Booking submission, cancellation, usage confirmation, no-show handling, or Draw status screens.
+- Push notifications, SSE streaming, notification preferences, unread-count APIs, or background updates.
+- Profile editing, vehicle management, maps, payments, feedback, HR/admin screens, reporting, or billing.
+- Keycloak provisioning, realm/client setup automation, MFA policy design, tenant onboarding, or backend business behavior changes.
+- App-store packaging, EAS build, OTA updates, native module customisation, or generated native projects.
+
+Acceptance criteria:
+
+- A user can start login from the mobile app and complete an OIDC Authorization Code + PKCE flow.
+- After successful login, the app calls `GET /me` and enters the existing authenticated shell.
+- Logout clears local session state.
+- Expired/invalid tokens return the app to a clear unauthenticated/session-expired state or an equivalent recoverable state.
+- Login cancellation, login failure, invalid configuration, and unreachable backend are handled without crashing.
+- The app does not send tenant ID, requestor ID, user ID, or roles for employee API scoping.
+- The implementation uses generated API client types and the existing mobile API access layer where practical.
+- `npm run typecheck` passes in `code/mobile/fps-mobile`.
+
+Implementation notes for Claude:
+
+- Start from updated `master` after MOB002 is merged.
+- Keep MOB003 focused on authentication only.
+- Prefer Expo managed workflow packages and local state over adding a broad app framework.
+- If current Identity/OpenAPI endpoints cannot support the flow without backend changes, stop and ask Codex before changing backend code.
+- If Keycloak-specific configuration is needed, document the required settings instead of implementing provisioning automation in this slice.
+
 ---
 
 ### Phase 3 — Notification & Audit (Week 9–10)
