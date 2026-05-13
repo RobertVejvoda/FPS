@@ -37,7 +37,7 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 Required setup:
 
 - `ANTHROPIC_API_KEY` repository secret for Claude Code Action.
-- Optional `COPILOT_ASSIGNMENT_TOKEN` repository secret for Copilot assignment. If absent, the workflow tries `GITHUB_TOKEN`; GitHub may require a user token for Copilot coding agent assignment.
+- `COPILOT_ASSIGNMENT_TOKEN` repository secret for Copilot assignment. GitHub requires a user token for Copilot coding agent assignment; `GITHUB_TOKEN` cannot assign agents.
 - Claude GitHub app installed if using Anthropic's recommended app-backed setup.
 - Copilot coding agent enabled for the repository/account.
 
