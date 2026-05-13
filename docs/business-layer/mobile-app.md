@@ -30,6 +30,22 @@ The second mobile slice implements the read-only My Bookings screen. It shows th
 
 MOB002 does not implement booking submission, cancellation, usage confirmation, no-show handling, Draw status, real login, push/SSE notifications, maps, payments, feedback, profile editing, or backend behavior changes.
 
+## MOB003 Boundary
+
+The third mobile slice replaces the development bearer-token handoff with a real employee login flow. The app should authenticate through the configured OIDC provider, obtain a bearer token through an Expo-compatible Authorization Code + PKCE flow, call `GET /me`, and enter the existing authenticated shell when the session is valid.
+
+MOB003 must preserve the existing security boundary: the mobile app never supplies tenant ID, requestor ID, or user ID for employee scoping. Identity and Booking continue to resolve those values from authenticated claims on the backend.
+
+MOB003 includes:
+
+- login start, callback handling, authenticated session restoration, and logout;
+- session validation through `GET /me`;
+- clear states for unauthenticated, login cancelled, login failed, invalid/expired token, and unreachable backend;
+- secure local token/session handling using Expo-compatible storage and browser-auth primitives;
+- development configuration for API base URL, issuer/authorization endpoint, client ID, scopes, and redirect URI.
+
+MOB003 does not implement booking submission, cancellation, usage confirmation, push/SSE notifications, profile editing, native app-store packaging, tenant/user selection, Keycloak provisioning, or backend business behavior changes.
+
 ## Notifications
 - **Booking Alerts**: Receive booking confirmations
 - **Reminder Settings**: Configure notification preferences
