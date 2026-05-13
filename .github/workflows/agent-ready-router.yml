@@ -1,0 +1,121 @@
+name: Agent ready router
+
+on:
+  issues:
+    types: [labeled, reopened]
+  pull_request_target:
+    types: [labeled, reopened]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: agent-ready-router-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  route-copilot-issue:
+    name: Route ready issue to Copilot
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'issues' &&
+      github.event.issue.pull_request == null &&
+      contains(github.event.issue.labels.*.name, 'ready-to-implement') &&
+      contains(github.event.issue.labels.*.name, 'copilot') &&
+      !contains(github.event.issue.labels.*.name, 'blocked-question')
+    steps:
+      - name: Assign issue to GitHub Copilot coding agent
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN != '' && secrets.COPILOT_ASSIGNMENT_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          payload="$(jq -n \
+            --arg repo "$GH_REPO" \
+            --arg base "master" \
+            --arg instructions "Follow AGENTS.md and .github/copilot-instructions.md. Implement only the assigned issue scope. If a blocking ambiguity remains, stop and comment instead of widening scope." \
+            '{
+              assignees: ["copilot-swe-agent[bot]"],
+              agent_assignment: {
+                target_repo: $repo,
+                base_branch: $base,
+                custom_instructions: $instructions,
+                custom_agent: "",
+                model: ""
+              }
+            }')"
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$GH_REPO/issues/$ISSUE_NUMBER/assignees" \
+            --input - <<< "$payload"
+
+      - name: Leave routing signal
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body \
+            "Automated router: issue is labeled ready-to-implement + copilot and is not blocked, so it was assigned to GitHub Copilot coding agent."
+
+  route-claude-issue:
+    name: Route issue to Claude
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'issues' &&
+      github.event.issue.pull_request == null &&
+      contains(github.event.issue.labels.*.name, 'needs-claude-action') &&
+      !contains(github.event.issue.labels.*.name, 'blocked-question')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ask Claude to act on issue
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          claude_args: '--max-turns 8 --model claude-sonnet-4-20250514'
+          prompt: |
+            You are Claude acting as FPS Implementer.
+
+            Issue: #${{ github.event.issue.number }} ${{ github.event.issue.title }}
+            URL: ${{ github.event.issue.html_url }}
+
+            Follow AGENTS.md exactly. The label needs-claude-action is the ready signal.
+            Determine whether the issue asks for implementation or a blocker response.
+            Keep scope narrow. Do not implement adjacent slices. If blocked, comment with the concrete blocker.
+            When finished, open or update a focused PR, report validation, remove needs-claude-action, and add needs-codex-review.
+
+  route-claude-pr:
+    name: Route pull request to Claude
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'needs-claude-action')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Ask Claude to revise pull request
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          claude_args: '--max-turns 8 --model claude-sonnet-4-20250514'
+          prompt: |
+            You are Claude acting as FPS Implementer.
+
+            Pull request: #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}
+            URL: ${{ github.event.pull_request.html_url }}
+
+            Follow AGENTS.md exactly. The label needs-claude-action is the ready signal.
+            Address Codex review feedback on this PR only. Keep the existing PR scope.
+            Do not start a parallel implementation or unrelated refactor.
+            When finished, push updates to this PR branch if permitted, report validation, remove needs-claude-action, and add needs-codex-review.
