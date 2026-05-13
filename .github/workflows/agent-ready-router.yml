@@ -27,6 +27,7 @@ jobs:
       !contains(github.event.issue.labels.*.name, 'blocked-question')
     steps:
       - name: Assign issue to GitHub Copilot coding agent
+        id: assign_copilot
         env:
           GH_TOKEN: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN }}
           FALLBACK_GH_TOKEN: ${{ github.token }}
@@ -36,6 +37,7 @@ jobs:
           if [ -z "$GH_TOKEN" ]; then
             GH_TOKEN="$FALLBACK_GH_TOKEN" gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body \
               "Automated router: Copilot routing is configured, but COPILOT_ASSIGNMENT_TOKEN is missing. GitHub requires a user token for Copilot coding agent assignment; GITHUB_TOKEN cannot assign agents."
+            echo "assigned=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -61,7 +63,10 @@ jobs:
             "/repos/$GH_REPO/issues/$ISSUE_NUMBER/assignees" \
             --input - <<< "$payload"
 
+          echo "assigned=true" >> "$GITHUB_OUTPUT"
+
       - name: Leave routing signal
+        if: steps.assign_copilot.outputs.assigned == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
