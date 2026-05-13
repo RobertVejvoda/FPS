@@ -120,7 +120,10 @@ jobs:
               "## Body\n" +
               ((.body // "") | if . == "" then "(empty)" else . end) + "\n\n" +
               "## Conversation Comments\n" +
-              ((.comments // []) | map("### " + .author.login + " at " + .createdAt + "\n" + .body) | join("\n\n"))
+              ((.comments // [])
+                | map(select((.author.login != "github-actions") or (((.body // "") | startswith("Automated Claude handoff prepared.")) | not)))
+                | map("### " + .author.login + " at " + .createdAt + "\n" + .body)
+                | join("\n\n"))
             ' "$issue_json"
 
             printf '\n```\n'
@@ -186,7 +189,10 @@ jobs:
               "## Changed Files\n" +
               ((.files // []) | map("- " + .path) | join("\n")) + "\n\n" +
               "## Conversation Comments\n" +
-              ((.comments // []) | map("### " + .author.login + " at " + .createdAt + "\n" + .body) | join("\n\n")) + "\n\n" +
+              ((.comments // [])
+                | map(select((.author.login != "github-actions") or (((.body // "") | startswith("Automated Claude handoff prepared.")) | not)))
+                | map("### " + .author.login + " at " + .createdAt + "\n" + .body)
+                | join("\n\n")) + "\n\n" +
               "## Reviews\n" +
               ((.reviews // []) | map("### " + .author.login + " " + .state + " at " + (.submittedAt // "") + "\n" + (.body // "")) | join("\n\n"))
             ' "$pr_json"
