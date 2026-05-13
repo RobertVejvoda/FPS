@@ -29,6 +29,14 @@ GitHub Copilot agent is an implementer for mechanical, file-bounded slices. Use 
 - If the task is too broad or missing context, comment with the specific blocker instead of exploring indefinitely.
 - Keep PR summaries concise: scope, files changed, validation, and any blockers.
 
+## Ready Signals
+
+- Start only when the issue is assigned to Copilot and has a clear implementation scope.
+- Treat `ready-to-implement` as ready, unless `blocked-question` is also present.
+- If `blocked-question` is present, do not implement; comment with the unresolved question if needed.
+- If a PR already exists for the same slice, do not start parallel work.
+- When done, open a focused PR that references the issue and clearly states validation results.
+
 ## Implementation Style
 
 - Prefer existing patterns, project structure, and local abstractions.
