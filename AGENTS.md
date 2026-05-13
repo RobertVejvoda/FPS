@@ -34,6 +34,16 @@ See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperat
 - Architectural decisions go to `docs/versions-and-decisions.md` and require human approval (neither agent decides alone).
 - Cost-management tips: keep agent-facing docs lean, scope tasks tightly to files expected to change, compact long sessions.
 
+### Context And Cost Hygiene
+
+All agents should keep session history small and handoffs explicit:
+
+- Use `/compact` before or during long interactive sessions when the tool supports it.
+- Before compacting, leave a concise state summary covering current branch, goal, files changed, validation run, blockers, and next action.
+- Prefer linking to issue bodies, PRs, and focused docs over pasting long history into prompts.
+- Keep implementer prompts short and bounded to expected files, acceptance criteria, and validation commands.
+- Do not ask another agent to re-read broad directories or full conversation history when a focused summary is enough.
+
 **Not in effect (FPS-specific overrides)**
 - PR ownership: Claude opens PRs; Codex reviews. (The guide's "Codex opens PRs" rule does not apply.)
 - Task tracking: GitHub issues, not `.codex/tasks/active/` or `.codex/results/` files. TASK-XXX / RESULT-XXX schemas are reference material only.
@@ -49,6 +59,26 @@ There are two implementer agents available: **Claude** (Anthropic) and **GitHub 
 - **Claude candidate** — slice touches architecture, cross-service flow, or design judgment; spec might be wrong and needs an implementer who can push back; cross-cutting refactors; anything where reading the diff isn't enough to validate.
 
 When Claude picks up a Codex-assigned slice, the first step is a routing self-check: if the slice looks Copilot-shaped, flag it back to Codex/Robert before starting rather than absorbing it silently. If a Copilot PR is already open on a slice, do not start a parallel implementation — review the Copilot PR or wait.
+
+### Ready Signals
+
+Agents should use GitHub labels and short comments as the handoff signal. Do not rely on implicit conversation history.
+
+- `ready-to-implement` means the issue is ready for an implementer to start, subject to its assignment and labels.
+- `copilot` plus assignment to `Copilot` means GitHub Copilot agent should start the issue.
+- `needs-claude-action` means Claude should act next. On an issue, implement or respond to the blocker. On a PR, address Codex review feedback.
+- `needs-codex-review` means Codex should review or validate next.
+- `blocked-question` means no implementer should continue until Codex/Robert answers the concrete blocker.
+- `active-coordination` marks the current coordination thread; it is not by itself implementation permission.
+
+When Codex signals work to an implementer, include a short comment with:
+
+- the target issue or PR;
+- the exact next action;
+- the source-of-truth docs or review comment;
+- whether to implement, revise, pause, or only answer a blocker.
+
+When an implementer finishes, it should update labels back to `needs-codex-review` and leave a concise summary with validation results.
 
 ### Attribution
 
