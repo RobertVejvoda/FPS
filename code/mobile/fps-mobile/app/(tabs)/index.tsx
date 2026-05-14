@@ -1,15 +1,15 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSession } from '@/api/useSession';
+import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { StateView } from '@/components/StateView';
 import { PlaceholderCard } from '@/components/PlaceholderCard';
 import { colors, spacing } from '@/theme';
 
-// Home / current status. Calls GET /me to verify the dev session and exposes the
-// five required shell states (loading, error, unauthenticated, unreachable, ok-with-empty).
 export default function HomeRoute() {
   const router = useRouter();
+  const { clearSession } = useAuth();
   const { state, refresh } = useSession();
 
   if (state.kind === 'idle' || state.kind === 'loading') {
@@ -26,9 +26,12 @@ export default function HomeRoute() {
         <StateView
           kind="unauthenticated"
           title="Not signed in"
-          message="Your developer token is missing or rejected. Paste a fresh one to continue."
-          actionLabel="Open token screen"
-          onAction={() => router.push('/debug-session')}
+          message="Your session has expired or was rejected. Please sign in again."
+          actionLabel="Sign in"
+          onAction={async () => {
+            await clearSession();
+            router.replace('/login');
+          }}
         />
       </Screen>
     );

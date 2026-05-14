@@ -1,16 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { getOidcConfig } from './oidcConfig';
+import { clearAccessToken, loadAccessToken, saveAccessToken } from './authStorage';
 
-// MOB001 keeps dev credentials in AsyncStorage only — never bundled, never persisted server-side.
-// Production auth (login, refresh, secure storage) belongs to a later slice.
-const STORAGE_KEY_TOKEN = 'fps.devBearerToken';
-const STORAGE_KEY_BASE_URL = 'fps.apiBaseUrl';
+const DEV_TOKEN_KEY = 'fps.devBearerToken';
+const DEV_BASE_URL_KEY = 'fps.apiBaseUrl';
 
 export type AuthState = {
   ready: boolean;
   apiBaseUrl: string;
   bearerToken: string;
   isConfigured: boolean;
+  setSession: (accessToken: string) => Promise<void>;
+  clearSession: () => Promise<void>;
+  // Development only - preserved for the debug-session screen
   saveCredentials: (apiBaseUrl: string, bearerToken: string) => Promise<void>;
   clearCredentials: () => Promise<void>;
 };
@@ -26,13 +29,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
+        const oidcToken = await loadAccessToken();
+        if (oidcToken) {
+          const { apiBaseUrl: configUrl } = getOidcConfig();
+          if (!cancelled) {
+            setApiBaseUrl(configUrl);
+            setBearerToken(oidcToken);
+          }
+          return;
+        }
         const [storedBaseUrl, storedToken] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEY_BASE_URL),
-          AsyncStorage.getItem(STORAGE_KEY_TOKEN),
+          AsyncStorage.getItem(DEV_BASE_URL_KEY),
+          AsyncStorage.getItem(DEV_TOKEN_KEY),
         ]);
-        if (cancelled) return;
-        if (storedBaseUrl) setApiBaseUrl(storedBaseUrl);
-        if (storedToken) setBearerToken(storedToken);
+        if (!cancelled) {
+          if (storedBaseUrl) setApiBaseUrl(storedBaseUrl);
+          if (storedToken) setBearerToken(storedToken);
+        }
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -42,32 +55,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const setSession = useCallback(async (accessToken: string) => {
+    await Promise.all([
+      saveAccessToken(accessToken),
+      AsyncStorage.removeItem(DEV_BASE_URL_KEY),
+      AsyncStorage.removeItem(DEV_TOKEN_KEY),
+    ]);
+    const { apiBaseUrl: configUrl } = getOidcConfig();
+    setApiBaseUrl(configUrl);
+    setBearerToken(accessToken);
+  }, []);
+
+  const clearSession = useCallback(async () => {
+    await Promise.all([
+      clearAccessToken(),
+      AsyncStorage.removeItem(DEV_BASE_URL_KEY),
+      AsyncStorage.removeItem(DEV_TOKEN_KEY),
+    ]);
+    setApiBaseUrl('');
+    setBearerToken('');
+  }, []);
+
+  const saveCredentials = useCallback(async (nextBaseUrl: string, nextToken: string) => {
+    const trimmedBaseUrl = nextBaseUrl.trim().replace(/\/+$/, '');
+    const trimmedToken = nextToken.trim();
+    await Promise.all([
+      clearAccessToken(),
+      AsyncStorage.setItem(DEV_BASE_URL_KEY, trimmedBaseUrl),
+      AsyncStorage.setItem(DEV_TOKEN_KEY, trimmedToken),
+    ]);
+    setApiBaseUrl(trimmedBaseUrl);
+    setBearerToken(trimmedToken);
+  }, []);
+
+  const clearCredentials = useCallback(async () => {
+    await Promise.all([
+      AsyncStorage.removeItem(DEV_BASE_URL_KEY),
+      AsyncStorage.removeItem(DEV_TOKEN_KEY),
+    ]);
+    setApiBaseUrl('');
+    setBearerToken('');
+  }, []);
+
   const value = useMemo<AuthState>(
     () => ({
       ready,
       apiBaseUrl,
       bearerToken,
       isConfigured: ready && apiBaseUrl.length > 0 && bearerToken.length > 0,
-      async saveCredentials(nextBaseUrl, nextToken) {
-        const trimmedBaseUrl = nextBaseUrl.trim().replace(/\/+$/, '');
-        const trimmedToken = nextToken.trim();
-        await Promise.all([
-          AsyncStorage.setItem(STORAGE_KEY_BASE_URL, trimmedBaseUrl),
-          AsyncStorage.setItem(STORAGE_KEY_TOKEN, trimmedToken),
-        ]);
-        setApiBaseUrl(trimmedBaseUrl);
-        setBearerToken(trimmedToken);
-      },
-      async clearCredentials() {
-        await Promise.all([
-          AsyncStorage.removeItem(STORAGE_KEY_BASE_URL),
-          AsyncStorage.removeItem(STORAGE_KEY_TOKEN),
-        ]);
-        setApiBaseUrl('');
-        setBearerToken('');
-      },
+      setSession,
+      clearSession,
+      saveCredentials,
+      clearCredentials,
     }),
-    [ready, apiBaseUrl, bearerToken],
+    [ready, apiBaseUrl, bearerToken, setSession, clearSession, saveCredentials, clearCredentials],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -75,8 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthState {
   const value = useContext(AuthContext);
-  if (!value) {
-    throw new Error('useAuth must be used inside <AuthProvider>');
-  }
+  if (!value) throw new Error('useAuth must be used inside <AuthProvider>');
   return value;
 }

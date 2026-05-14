@@ -7,12 +7,11 @@ import { StateView } from '@/components/StateView';
 import { PlaceholderCard } from '@/components/PlaceholderCard';
 import { colors, radius, spacing } from '@/theme';
 
-// Profile/settings tab: surfaces authenticated identity from GET /me and offers a
-// way back to the debug-session screen. Vehicle and preference editing live in
-// later slices that depend on Profile API work.
+// Profile/settings tab: surfaces authenticated identity from GET /me. Vehicle
+// and preference editing live in later slices that depend on Profile API work.
 export default function ProfileRoute() {
   const router = useRouter();
-  const { apiBaseUrl, clearCredentials } = useAuth();
+  const { apiBaseUrl, clearSession } = useAuth();
   const { state } = useSession();
 
   if (state.kind === 'idle' || state.kind === 'loading') {
@@ -29,9 +28,9 @@ export default function ProfileRoute() {
         <StateView
           kind="unauthenticated"
           title="Not signed in"
-          message="Paste a development token to load your profile."
-          actionLabel="Open token screen"
-          onAction={() => router.push('/debug-session')}
+          message="Your session has expired or was rejected. Please sign in again."
+          actionLabel="Sign in"
+          onAction={() => router.replace('/login')}
         />
       </Screen>
     );
@@ -76,13 +75,13 @@ export default function ProfileRoute() {
       <Pressable
         accessibilityRole="button"
         onPress={async () => {
-          await clearCredentials();
-          router.replace('/debug-session');
+          await clearSession();
+          router.replace('/login');
         }}
         style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}
         testID="button-sign-out"
       >
-        <Text style={styles.signOutLabel}>Clear developer session</Text>
+        <Text style={styles.signOutLabel}>Sign out</Text>
       </Pressable>
     </Screen>
   );
