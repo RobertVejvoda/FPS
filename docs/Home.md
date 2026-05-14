@@ -7,7 +7,7 @@ FPS replaces manual email and spreadsheet coordination with a transparent bookin
 
 ## Executive Summary
 
-FPS is being built as a documentation-led product with vertical slices. The core Booking domain is implemented, the surrounding Identity/Profile/Notification/Audit/API-client foundation is in place, and the active product direction is now mobile employee self-service plus production hardening.
+FPS is being built as a documentation-led product with focused implementation slices. The core Booking domain is implemented, the surrounding Identity/Profile/Notification/Audit/API-client foundation is in place, and the active product direction is now mobile employee self-service plus production hardening.
 
 The current roadmap is known end-to-end: complete mobile login and booking actions, finish Notification and Audit v1 capabilities, then harden Configuration, Customer, Reporting, Billing, and production operations. Progress is tracked slice-by-slice in the [Implementation Tracker](./implementation-tracker).
 
@@ -33,6 +33,7 @@ Use these pages first:
 
 - [Implementation Tracker](./implementation-tracker): what is done, what is next, PRs, implementer attribution, and dates.
 - [Development Plan](./development-plan): detailed roadmap, slice scope, acceptance criteria, and open risks.
+- [Implementation](./implementation): how work is sliced, assigned, reviewed, tracked, and merged.
 - [Software Architecture](./technology-layer/software-architecture): current bounded contexts, integration model, technology choices, and tenant isolation decision.
 - [Security Model](./technology-layer/security/security-model): actors, roles, data classification, encryption, secret access, and GDPR alignment.
 
@@ -42,22 +43,26 @@ Use these pages first:
 
 Durable architecture decisions, version choices, licensing decisions, and implementation milestones.
 
-2. **[Strategy layer](./strategy-layer)** 
+2. **[Strategy layer](./strategy)**
 
 Strategic goals, product scope, stakeholder outcomes, and high-level success measures for FPS.
 
 3. **[Business layer](./business-layer)** 
 
-Business requirements, domain processes, vertical slices, service contracts, and bounded-context rules.
+Business requirements, domain processes, service contracts, and bounded-context rules.
 
-4. **[Application layer](./application-layer)** 
+4. **[Implementation](./implementation)**
+
+Development plan, slice tracking, handoff workflow, validation gates, and tooling.
+
+5. **[Application layer](./application-layer)**
 
 Application structure, user-facing components, service responsibilities, and implementation conventions.
 
-5. **[Technology layer](./technology-layer)** 
+6. **[Technology layer](./technology-layer)**
 
 Infrastructure, security, deployment, non-functional requirements, and the [Software Architecture](./technology-layer/software-architecture) overview.
 
-6. **[Glossary](./glossary)** 
+7. **[Glossary](./glossary)**
 
 Definitions and acronyms used across the product, business, application, and technology documentation.

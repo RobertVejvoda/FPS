@@ -2,7 +2,7 @@
 title: Bookings
 ---
 
-[Bookings module](../application-layer/booking) manages employee parking requests, allocation outcomes, cancellations, usage confirmation, and booking history. Implementation should follow the story-driven plan in [Booking Vertical Slices](./booking-vertical-slices), with each story cutting through domain, application, API, persistence, notification, audit, and tests where needed.
+[Bookings module](../application-layer/booking) manages employee parking requests, allocation outcomes, cancellations, usage confirmation, and booking history. Implementation should follow the story-driven plan in [Booking Implementation Slices](../implementation/booking-vertical-slices), with each story cutting through domain, application, API, persistence, notification, audit, and tests where needed.
 
 Booking boundaries and cross-domain dependencies are defined in [Booking Context Contract](./booking-context-contract).
 
@@ -46,7 +46,7 @@ Booking boundaries and cross-domain dependencies are defined in [Booking Context
 
 ### AI Service (Future)
 
-AI capabilities are not part of the Phase 1 Booking implementation. Phase 1 allocation must follow the deterministic rules documented in [Executable Allocation Rules](./allocation-rules) and the story order documented in [Booking Vertical Slices](./booking-vertical-slices).
+AI capabilities are not part of the Phase 1 Booking implementation. Phase 1 allocation must follow the deterministic rules documented in [Executable Allocation Rules](./allocation-rules) and the story order documented in [Booking Implementation Slices](../implementation/booking-vertical-slices).
 
 **Functions:**
 - Slot Optimization

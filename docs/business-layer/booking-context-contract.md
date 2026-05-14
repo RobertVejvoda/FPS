@@ -6,7 +6,7 @@ title: Booking Context Contract
 
 This document turns the Booking relationships shown in the [Exchange Map](../business-layer#exchange-map) into implementation boundaries. It defines what Booking may consume from other business domains, what Booking must publish, and which data must not cross boundaries.
 
-Read this with [Booking Vertical Slices](./booking-vertical-slices), [Booking Event Contracts](./booking-event-contracts), [Booking Authorization](./booking-authorization), and [Booking API Contract](./booking-api-contract).
+Read this with [Booking Implementation Slices](../implementation/booking-vertical-slices), [Booking Event Contracts](./booking-event-contracts), [Booking Authorization](./booking-authorization), and [Booking API Contract](./booking-api-contract).
 
 ## Boundary Principle
 
@@ -133,7 +133,7 @@ Audit events must include:
 - effective timestamp;
 - policy version or snapshot reference when policy affected the decision.
 
-Draw audit must additionally include the algorithm version, seed, candidate ordering, winners, rejected candidates, and fallback decisions as documented in [Booking Vertical Slices](./booking-vertical-slices).
+Draw audit must additionally include the algorithm version, seed, candidate ordering, winners, rejected candidates, and fallback decisions as documented in [Booking Implementation Slices](../implementation/booking-vertical-slices).
 
 ### Booking To Reporting
 

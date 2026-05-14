@@ -6,7 +6,7 @@ The **Fair Parking System (FPS)** is a multi-tenant SaaS platform that replaces 
 
 The system is not a simple CRUD app — the Draw is a long-running distributed process that locks slots, runs an allocation algorithm, fires notifications, and updates metrics. This makes it an ideal candidate for **Dapr Workflows**.
 
-Booking implementation requirements are maintained under the business layer. The key product-owner handoff documents are [Booking Vertical Slices](business-layer/booking-vertical-slices), [Booking Event Contracts](business-layer/booking-event-contracts), [Booking Authorization](business-layer/booking-authorization), [Booking Reason Codes](business-layer/booking-reason-codes), [Booking API Contract](business-layer/booking-api-contract), and [Booking Context Contract](business-layer/booking-context-contract).
+Booking implementation planning is maintained in [Booking Implementation Slices](implementation/booking-vertical-slices). Business rules and contracts remain under the business layer: [Booking Event Contracts](business-layer/booking-event-contracts), [Booking Authorization](business-layer/booking-authorization), [Booking Reason Codes](business-layer/booking-reason-codes), [Booking API Contract](business-layer/booking-api-contract), and [Booking Context Contract](business-layer/booking-context-contract).
 
 Progress, PRs, implementer attribution, and current ownership are tracked in the [Implementation Tracker](implementation-tracker). Update that tracker whenever a slice is created, assigned, implemented, reviewed, or merged.
 
@@ -191,7 +191,7 @@ Goal: every developer can run the full stack locally with a single command.
 
 This is the core of FPS. Everything else is supporting.
 
-Implementation should follow vertical slices from `docs/business-layer/booking-vertical-slices.md`. Do not complete the whole domain layer before application and API work; each story should cut through the layers and be independently testable.
+Implementation should follow vertical slices from `docs/implementation/booking-vertical-slices.md`. Do not complete the whole domain layer before application and API work; each story should cut through the layers and be independently testable.
 
 **Current implementation status**: Phase 1 Booking vertical slices B001-B010 are implemented and merged:
 
@@ -230,7 +230,7 @@ Remaining work in this phase is hardening and integration with the surrounding p
 - [x] Implement Draw behavior against `docs/business-layer/allocation-rules.md`
 - [x] Implement request lifecycle behavior against `docs/business-layer/booking-request-lifecycle.md`
 - [x] Resolve allocation policy from `docs/business-layer/parking-policy-configuration.md`
-- [x] Implement Booking story-by-story against `docs/business-layer/booking-vertical-slices.md`
+- [x] Implement Booking story-by-story against `docs/implementation/booking-vertical-slices.md`
 
 **Application layer** (`FPS.Booking.Application`):
 - [x] Commands: `SubmitBookingRequest`, `CancelBooking`, `TriggerDraw`, `ConfirmSlotUsage`
@@ -267,7 +267,7 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 >
 > **Policy configuration**: Tenant defaults with per-location overrides are defined in `docs/business-layer/parking-policy-configuration.md`.
 >
-> **Vertical slices**: Booking implementation order and story acceptance criteria are defined in `docs/business-layer/booking-vertical-slices.md`.
+> **Vertical slices**: Booking implementation order and story acceptance criteria are defined in `docs/implementation/booking-vertical-slices.md`.
 >
 > **Authorization**: Booking role/action permissions are defined in `docs/business-layer/booking-authorization.md`.
 >

@@ -4,7 +4,7 @@ title: Booking Authorization
 
 ## Purpose
 
-This document defines who may perform Booking actions. It is the Booking-specific RBAC/ABAC contract for the vertical slices in [Booking Vertical Slices](./booking-vertical-slices).
+This document defines who may perform Booking actions. It is the Booking-specific RBAC/ABAC contract for the vertical slices in [Booking Implementation Slices](../implementation/booking-vertical-slices).
 
 Authorization must use tenant and actor identity from the authenticated context. Request bodies must not be trusted for tenant ID, actor ID, role, or ownership.
 

@@ -6,7 +6,7 @@ title: Booking Event Contracts
 
 Booking events are the integration contract between Booking, Notification, Audit, Reporting, and future read-model consumers. They must be stable enough for vertical slice implementation while still allowing payloads to evolve.
 
-These contracts apply to the Booking slices defined in [Booking Vertical Slices](./booking-vertical-slices).
+These contracts apply to the Booking slices defined in [Booking Implementation Slices](../implementation/booking-vertical-slices).
 
 ## Event Envelope
 

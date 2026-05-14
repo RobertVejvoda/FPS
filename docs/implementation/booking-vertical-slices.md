@@ -1,5 +1,5 @@
 ---
-title: Booking Vertical Slices
+title: Booking Implementation Slices
 ---
 
 ## Purpose
@@ -27,16 +27,16 @@ Do not build all domain objects first, then all application services, then all A
 
 Claude must follow these docs when implementing Booking:
 
-- [Booking Request Lifecycle](./booking-request-lifecycle)
-- [Executable Allocation Rules](./allocation-rules)
-- [Parking Policy Configuration](./parking-policy-configuration)
-- [Notification Requirements](./notification)
-- [Booking Event Contracts](./booking-event-contracts)
-- [Booking Authorization](./booking-authorization)
-- [Booking Reason Codes](./booking-reason-codes)
-- [Booking API Contract](./booking-api-contract)
-- [Booking Context Contract](./booking-context-contract)
-- [Slot Allocation Process](./process)
+- [Booking Request Lifecycle](../business-layer/booking-request-lifecycle)
+- [Executable Allocation Rules](../business-layer/allocation-rules)
+- [Parking Policy Configuration](../business-layer/parking-policy-configuration)
+- [Notification Requirements](../business-layer/notification)
+- [Booking Event Contracts](../business-layer/booking-event-contracts)
+- [Booking Authorization](../business-layer/booking-authorization)
+- [Booking Reason Codes](../business-layer/booking-reason-codes)
+- [Booking API Contract](../business-layer/booking-api-contract)
+- [Booking Context Contract](../business-layer/booking-context-contract)
+- [Slot Allocation Process](../business-layer/process)
 
 If implementation finds a business ambiguity, Claude should ask for clarification instead of inventing a rule.
 
@@ -482,7 +482,7 @@ As an employee, I want to view my booking requests and outcomes so that I unders
 ### Done Means
 
 - Employee sees only own bookings.
-- Statuses match [Booking Request Lifecycle](./booking-request-lifecycle).
+- Statuses match [Booking Request Lifecycle](../business-layer/booking-request-lifecycle).
 - Employee-visible reasons match lifecycle and notification docs.
 - Default response includes future bookings plus recent history from the tenant allocation lookback window.
 - Results are ordered by requested date descending, then creation time descending.
