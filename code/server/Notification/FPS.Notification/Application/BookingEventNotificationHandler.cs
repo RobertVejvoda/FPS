@@ -2,7 +2,7 @@ using FPS.Notification.Domain;
 
 namespace FPS.Notification.Application;
 
-public sealed class BookingEventNotificationHandler(INotificationRepository repository)
+public sealed class BookingEventNotificationHandler(INotificationRepository repository, INotificationBroadcaster broadcaster)
 {
     private static readonly IReadOnlyDictionary<string, string> MessageTemplates = new Dictionary<string, string>
     {
@@ -46,6 +46,8 @@ public sealed class BookingEventNotificationHandler(INotificationRepository repo
             };
 
             await repository.SaveAsync(record, cancellationToken);
+            // Best-effort — broadcaster failure must not affect persistence
+            try { await broadcaster.BroadcastAsync(record, cancellationToken); } catch { }
         }
     }
 
