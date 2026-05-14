@@ -1,10 +1,12 @@
 
 * [Development Plan](./development-plan)
 * [Implementation Tracker](./implementation-tracker)
+* [Implementation](./implementation)
 * [Tooling](./tooling)
 * [Versions and decisions](./versions-and-decisions)
-* [Strategy](./strategy-layer)
+* [Strategy](./strategy)
 * [Business Layer](./business-layer)
 * [Application Layer](./application-layer)
 * [Technology Layer](./technology-layer)
+* [Security](./technology-layer/security)
 * [Glossary](./glossary)
