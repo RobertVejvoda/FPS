@@ -71,6 +71,6 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 
 | Item | Status | Source | Owner |
 | --- | --- | --- | --- |
-| GitHub Actions Node 20 deprecation | Planned | Docs deploy warning from GitHub Actions | Unassigned |
+| GitHub Actions Node 20 deprecation | Done | Docs deploy warning from GitHub Actions | CI002 |
 | TestContainers-backed integration tests | Planned | Current validation skips Dapr/MongoDB integration tests | Unassigned |
 | Collection-per-tenant implementation hardening | Planned | Decision recorded in [Versions and Decisions](./versions-and-decisions) | Unassigned |
