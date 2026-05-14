@@ -15,6 +15,8 @@ public sealed class NotificationController(
     INotificationBroadcaster broadcaster,
     ICurrentUser currentUser) : ControllerBase
 {
+    private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
+
     [HttpGet]
     public async Task<IActionResult> GetHistoryAsync(
         [FromQuery] bool unreadOnly = false,
@@ -69,7 +71,7 @@ public sealed class NotificationController(
 
         await foreach (var record in broadcaster.SubscribeAsync(currentUser.TenantId, currentUser.UserId, cancellationToken))
         {
-            var json = JsonSerializer.Serialize(ToDto(record));
+            var json = JsonSerializer.Serialize(ToDto(record), SseJsonOptions);
             await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
             await Response.Body.FlushAsync(cancellationToken);
         }
