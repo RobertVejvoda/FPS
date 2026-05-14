@@ -1,7 +1,3 @@
----
-title: Project Compliance Review
----
-
 [Summary](#summary)
 
 ### Functional Assessment

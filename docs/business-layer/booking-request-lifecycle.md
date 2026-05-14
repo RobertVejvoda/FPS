@@ -1,7 +1,3 @@
----
-title: Booking Request Lifecycle
----
-
 ## Purpose
 
 This document defines the lifecycle of a parking booking request from submission to final outcome. It is written as an implementation contract for the Booking domain and should be read together with [Executable Allocation Rules](./allocation-rules).

@@ -1,7 +1,3 @@
----
-title: Traceability in Azure Hosting
----
-
 ## Traceability in Security for Azure Hosting
 
 Traceability in security for Azure hosting refers to the ability to track and trace the actions and changes made within the Azure environment. This is crucial for ensuring accountability, auditing, and forensic analysis. Traceability involves several key components:

@@ -1,7 +1,3 @@
----
-title: Glossary
----
-
 
 ### Business Terms
 | Term | Explanation |

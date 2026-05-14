@@ -1,7 +1,3 @@
----
-title: Authorization
----
-
 Authorization is the process of determining whether a user has the right to access a resource or perform an action. It is a critical aspect of security in any application.
 
 ## Authorization Type

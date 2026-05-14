@@ -1,7 +1,3 @@
----
-title: Incident Handling
----
-
 ### Incident Handling Approach
 
 When running our solution in our own Kubernetes cluster, we follow a structured incident handling approach to ensure quick resolution and minimal downtime. The key components involved in our incident handling process are:

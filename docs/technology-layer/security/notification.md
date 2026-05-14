@@ -1,7 +1,3 @@
----
-title: Notification Security
----
-
 Ensures that notification systems are secure, protecting messages from unauthorized access or tampering.
 
 ### Security with Notification Messages

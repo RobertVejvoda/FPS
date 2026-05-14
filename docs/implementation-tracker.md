@@ -1,7 +1,3 @@
----
-title: Implementation Tracker
----
-
 # Implementation Tracker
 
 This page tracks the delivery plan as slices. It is the first place to update when a new slice is created, assigned, implemented, reviewed, or merged.

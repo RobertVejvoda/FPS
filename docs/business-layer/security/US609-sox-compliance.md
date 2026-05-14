@@ -1,7 +1,3 @@
----
-title: US609 - Compliance with SOX
----
-
 ## Objective
 The objective of this user story is to ensure that the system adheres to the Sarbanes-Oxley Act (SOX) requirements, thereby guaranteeing the integrity and accuracy of financial data management and reporting.
 

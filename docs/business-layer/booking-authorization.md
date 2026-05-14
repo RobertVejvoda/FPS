@@ -1,7 +1,3 @@
----
-title: Booking Authorization
----
-
 ## Purpose
 
 This document defines who may perform Booking actions. It is the Booking-specific RBAC/ABAC contract for the vertical slices in [Booking Implementation Slices](../implementation/booking-vertical-slices).

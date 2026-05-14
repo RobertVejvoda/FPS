@@ -1,7 +1,3 @@
----
-title: Booking Reason Codes
----
-
 ## Purpose
 
 Booking reason codes provide stable machine-readable explanations for rejected, cancelled, expired, no-show, penalty, and manual-correction outcomes.

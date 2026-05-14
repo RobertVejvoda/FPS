@@ -1,7 +1,3 @@
----
-title: US610 - Compliance with PCI DSS
----
-
 ## Objective
 The objective of this user story is to ensure that the system adheres to the Payment Card Industry Data Security Standard (PCI DSS) to protect payment information. This involves implementing necessary security measures, conducting regular audits, and maintaining compliance to safeguard sensitive data and build user trust.
 

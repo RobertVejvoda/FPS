@@ -1,7 +1,3 @@
----
-title: Amazon AWS Hosting
----
-
 ![Amazon AWS Hosting](../../images/fps-logical-architecture-aws.png)
 
 

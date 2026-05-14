@@ -1,7 +1,3 @@
----
-title: Executable Allocation Rules
----
-
 ## Purpose
 
 This document turns the allocation business policy into executable rules for the Draw implementation. If this document conflicts with a higher-level process description, this document wins for implementation until the decision log says otherwise.

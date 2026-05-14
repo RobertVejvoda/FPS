@@ -1,7 +1,3 @@
----
-title: US606 -Data Encryption and Anonymization
----
-
 ## Objective
 To ensure that all user data is encrypted and anonymized in compliance with GDPR and other relevant data protection regulations, thereby protecting personal information from unauthorized access.
 

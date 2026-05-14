@@ -1,7 +1,3 @@
----
-title: Versions and decisions
----
-
 ## About
 
 **FPS** stands for Fair Parking System, designed for companies with more employees owning cars than available parking slots. Currently, employees must email HR to request parking for the next day, operating on a "first-come, first-served" basis, which can be discouraging. The new system aims to be fair by evenly distributing parking slots among interested employees.

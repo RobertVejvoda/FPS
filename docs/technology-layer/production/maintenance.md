@@ -1,7 +1,3 @@
----
-title: Maintenance
----
-
 ### Maintenance Strategy for Kubernetes Cluster
 
 Maintaining a solution running in Kubernetes cluster involves several key strategies to ensure reliability, performance, and security. 

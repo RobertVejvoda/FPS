@@ -1,7 +1,3 @@
----
-title: Customer
----
-
 [Customer](../technology-layer/customer) is responsible for managing customers in a multi-tenant application. A multi-tenant application is one where a single instance of the software serves multiple customers (tenants), each with their own isolated data and configurations.
 
 ### Application Functions

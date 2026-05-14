@@ -1,6 +1,3 @@
----
-title: {{ID}} - {{TITLE}}
----
 **Description:** {{DESCRIPTION}}
 **Rationale:**  
 {{RATIONALE}}

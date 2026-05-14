@@ -1,7 +1,3 @@
----
-title: US602 - Manage User Consent
----
-
 ## Objective
 The objective of this user story is to implement a robust and user-friendly consent management system that allows users to easily give and withdraw consent for data processing. This system must comply with GDPR and other relevant data protection regulations, ensuring that user preferences are respected and securely managed.
 

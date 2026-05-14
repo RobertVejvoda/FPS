@@ -1,7 +1,3 @@
----
-title: Notification Requirements
----
-
 ## Purpose
 
 FPS notifications keep employees, HR, and administrators informed about allocation outcomes and policy-sensitive events. For v1, notification delivery is part of the core parking workflow, not an optional enhancement.

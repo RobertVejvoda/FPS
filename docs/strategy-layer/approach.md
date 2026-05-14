@@ -1,7 +1,3 @@
----
-title: Goals & approach
----
-
 ## Incremental Steps to Achieve Goals
 
 1. **Assess Company Size and Roles**

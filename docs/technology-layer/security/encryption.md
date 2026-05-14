@@ -1,7 +1,3 @@
----
-title: Encryption
----
-
 Encryption is a critical component of security, ensuring that data is protected both at rest and in transit. In the context of Azure and Dapr, encryption applies in several ways:
 
 - **Data at Rest**: Azure provides encryption for data at rest using Azure Storage Service Encryption (SSE). This includes encryption for Azure Blob Storage. The encryption uses 256-bit AES encryption, one of the strongest block ciphers available. Additionally, Azure Key Vault manages and controls access to the encryption keys.

@@ -1,7 +1,3 @@
----
-title: Confidentiality
----
-
 ## Confidentiality Overview
 
 Confidentiality within the Fair Parking System (FPS) is crucial to ensure that sensitive information is protected from unauthorized access. Each application component and role has specific confidentiality requirements to maintain the integrity and privacy of the data.

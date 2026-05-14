@@ -1,7 +1,3 @@
----
-title: US601 - Ensure GDPR Compliance
----
-
 ## Objective
 The objective of this user story is to ensure that the system adheres to the General Data Protection Regulation (GDPR) by implementing necessary features and processes that protect user data, provide transparency, and allow users to exercise their rights regarding their personal data.
 

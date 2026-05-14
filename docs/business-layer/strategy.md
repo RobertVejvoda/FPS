@@ -1,7 +1,3 @@
----
-title: Business Strategy
----
-
 ## Strategic Position
 
 FPS is a workplace resource-management product focused on fair access to limited parking capacity. The product is valuable because parking is a visible daily employee pain point: when the process feels unfair, employees complain, HR loses time, and management lacks reliable data.

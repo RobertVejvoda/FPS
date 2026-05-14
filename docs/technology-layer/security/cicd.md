@@ -1,7 +1,3 @@
----
-title: Continuous development and Integration
----
-
 GitLab CI/CD is a powerful tool that allows to automate the build, test, and deployment processes of applications.
 
 ### Setting Up GitLab CI/CD

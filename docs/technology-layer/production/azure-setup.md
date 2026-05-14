@@ -1,7 +1,3 @@
----
-title: MS Azure Hosting (Development Tier)
----
-
 ![MS Azure Hosting](../../images/fps-logical-architecture-azure.png)
 
 ### MS Azure

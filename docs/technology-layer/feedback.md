@@ -1,7 +1,3 @@
----
-title: Feedback
----
-
 The Feedback component handles the collection and management of user feedback. It allows users to submit feedback on various aspects of the service, and manages the storage and analysis of this feedback to improve service quality.
 
 ![Software Architecture - Feedback](../images/fps-software-arch-feedback.png)

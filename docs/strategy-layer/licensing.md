@@ -1,7 +1,3 @@
----
-title: Licensing Policy
----
-
 We understand the importance of affordability. We offer a special rate to ensure that the cost is manageable, even for large enterprises that typically manage their processes in Excel and may not have extra budget.
 
 - **Small Businesses**: $0.50 per employee per month (for companies with fewer than 50 employees)

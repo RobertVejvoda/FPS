@@ -1,7 +1,3 @@
----
-title: Booking API Contract
----
-
 ## Purpose
 
 This document standardizes Booking API responses and errors across vertical slices. It should be read with [Booking Implementation Slices](../implementation/booking-vertical-slices), [Booking Reason Codes](./booking-reason-codes), and [Booking Authorization](./booking-authorization).

@@ -1,7 +1,3 @@
----
-title: Profile
----
-
 [Profile](../technology-layer/profile) is responsible for managing user-specific data within the system. This includes handling user preferences, vehicle information and maintenance activities. The service ensures that all user-related data is stored securely and is easily accessible for other system components.
 
 

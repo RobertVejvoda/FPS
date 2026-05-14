@@ -1,7 +1,3 @@
----
-title: Non-Functional Requirements
----
-
 ## Table of Contents
 
 - [Technical](#technical)

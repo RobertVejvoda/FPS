@@ -1,7 +1,3 @@
----
-title: Mobile App
----
-
 The mobile application uses React Native with Expo managed workflow. Early mobile work should avoid native project generation and app-store packaging until the product flows and API contracts are stable.
 
 Current checked-in baseline: React Native `0.81.5`, Expo SDK `54.0.33`, React `19.1.0`, TypeScript `5.9.x`.

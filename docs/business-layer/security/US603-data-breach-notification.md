@@ -1,7 +1,3 @@
----
-title: US603 - Data Breach Notification
----
-
 ## Objective
 Ensure that users are promptly informed about data breaches to enable them to take necessary actions to protect their personal information and comply with relevant data protection regulations.
 

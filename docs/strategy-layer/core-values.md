@@ -1,7 +1,3 @@
----
-title: Core Values
----
-
 ## There are 4 core values 
 
 1. **Fair** - The system ensures transparency, reliability, and fairness for all employees. It uses equitable algorithms to allocate parking slots and provides clear communication about the allocation process.

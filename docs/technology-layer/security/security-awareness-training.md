@@ -1,7 +1,3 @@
----
-title: Security Awareness Training
----
-
 Security awareness training is a formal process for educating employees about computer security. A good security awareness program should educate employees about corporate policies and procedures for working with information technology (IT). The goal is to minimize risk and prevent the loss of intellectual property and data by educating employees on how they can avoid being exploited by cybercriminals.
 
 ## Key Components

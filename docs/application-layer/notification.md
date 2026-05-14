@@ -1,7 +1,3 @@
----
-title: Notification
----
-
 [Notification](../technology-layer/notification) provides functionalities to manage and display notifications to the user.
 
 ## Application Functions

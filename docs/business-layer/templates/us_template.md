@@ -1,7 +1,3 @@
----
-title: {{ID}} - {{TITLE}}
---- 
-
 ## Objective
 {{OBJECTIVE}}
 

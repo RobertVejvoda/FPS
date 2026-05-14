@@ -1,7 +1,3 @@
----
-title: User Interface
----
-
 ### Features for Mobile Application
 
 - **Mobile App**: Allow employees to check slot availability, make requests, and receive notifications on the go.

@@ -1,7 +1,3 @@
----
-title: Slot Allocation Process
----
-
 ## Purpose
 
 FPS must allocate limited parking capacity in a way that employees and managers can understand and trust. Because demand can exceed supply, the system cannot rely only on first-come, first-served booking. The allocation process must balance fairness, policy, and practical use of available spaces.

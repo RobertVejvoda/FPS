@@ -1,7 +1,3 @@
----
-title: Parking Policy Configuration
----
-
 ## Purpose
 
 This document defines which parking policy settings a customer tenant can configure. These requirements support the booking lifecycle and allocation rules without requiring product code changes for normal customer policy differences.

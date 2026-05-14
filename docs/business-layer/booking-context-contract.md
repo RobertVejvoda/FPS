@@ -1,7 +1,3 @@
----
-title: Booking Context Contract
----
-
 ## Purpose
 
 This document turns the Booking relationships shown in the [Exchange Map](../business-layer#exchange-map) into implementation boundaries. It defines what Booking may consume from other business domains, what Booking must publish, and which data must not cross boundaries.

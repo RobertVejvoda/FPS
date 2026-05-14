@@ -1,7 +1,3 @@
----
-title: Mobile App Security
----
-
 Ensures the security of mobile applications through secure coding practices, encryption of sensitive data, and protection against reverse engineering and tampering.
 
 

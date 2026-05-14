@@ -1,7 +1,3 @@
----
-title: US611 - Implement data anonymization
----
-
 ## Objective
 To ensure that sensitive user data is protected by anonymizing it before storage or processing, thereby enhancing privacy and compliance with data protection regulations.
 
