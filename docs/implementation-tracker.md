@@ -20,7 +20,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | Platform integration foundation | Done | ID001, BK011, P001, N001, A001, CFG001, API001, CI001 are merged. |
 | Mobile foundation | Done | MOB001-MOB005 are merged for the current employee mobile flow. |
 | Notification v1 completion | In progress | N002 is implemented. N003 email delivery is prepared for Claude handoff; preferences remain planned. |
-| Audit v1 completion | Planned | Query API, retention/integrity, and GDPR erasure remain. |
+| Audit v1 completion | In progress | A002 audit query and PII mapping erasure support is prepared for Claude handoff. Retention and integrity remain planned. |
 | Production operations | In progress | OPS000 is prepared for Claude to refresh the hosting/deployment strategy around Dapr portability and cost before production hardening continues. |
 
 ## Slice Tracker
@@ -58,7 +58,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | MOB005 Mobile Booking Actions | Done | [#91](https://github.com/RobertVejvoda/FPS/issues/91) | [#95](https://github.com/RobertVejvoda/FPS/pull/95) | PR author: RobertVejvoda; Codex reviewed | 2026-05-14 | Cancel and confirm-usage actions from mobile. |
 | N002 Notification API And Stream | Done | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | [#93](https://github.com/RobertVejvoda/FPS/pull/93), [#94](https://github.com/RobertVejvoda/FPS/pull/94) | `implemented-by: claude` plus Codex SSE casing fix | 2026-05-14 | Notification history API, unread counts, mark-read API, and SSE stream. |
 | N003 Notification Email Delivery | Ready | [#103](https://github.com/RobertVejvoda/FPS/issues/103) | - | `initiated-by: codex`, `claude-ready` | Next Notification Claude slice | Email channel for v1 critical operational notifications, with a Dapr-ready provider boundary and local no-cost validation path. |
-| A002 Audit Query And Erasure Support | Planned | - | - | Unassigned | After A001 foundation | Auditor query API and GDPR PII mapping erasure workflow. |
+| A002 Audit Query And Erasure Support | Ready | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | - | `initiated-by: codex`, `claude-ready` | Next Audit Claude slice | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
 | OPS000 Hosting And Deployment Strategy Options | Ready | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | - | `initiated-by: codex`, `claude-ready` | Next architecture Claude slice | Compare hosting/deployment options with Dapr as the portability boundary and cost as a first-class constraint. |
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | Before production deployment | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
 | CFG002 Admin Policy/Slot Management | Planned | - | - | Unassigned | After CFG001 | Admin-facing management for policy, slots, and Draw schedules. |
