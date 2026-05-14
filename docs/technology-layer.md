@@ -17,7 +17,7 @@ title: Technology Layer
 - **Kubernetes**: Orchestration platform for managing containerized applications.
 - **Dapr 1.14+**: Runtime for state, pub/sub, service invocation, sidecars, and future workflows.
 - **RabbitMQ via Dapr pub/sub**: Event bus for Booking events consumed by Notification, Audit, and future read models.
-- **MongoDB**: Dapr-backed write store and MongoDB-driver read store, isolated database-per-tenant.
+- **MongoDB**: Dapr-backed write store and MongoDB-driver read store, isolated collection-per-tenant inside service-owned databases.
 - **Keycloak**: OIDC/OAuth 2.0 identity provider.
 
 

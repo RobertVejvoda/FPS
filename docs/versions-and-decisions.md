@@ -80,7 +80,8 @@ title: Versions and decisions
 | **React Native + Expo** | Mobile platform. Expo managed workflow, no native build tooling required. Larger community, better AI support than MAUI. TypeScript consistent with React web frontend. OTA updates without App Store review. | Architect | 9.5.2026
 | **No PostgreSQL, no EF Core** | Persistence via Dapr state store (write side) and MongoDB driver (read side). PostgreSQL removed from stack. | Architect | 9.5.2026
 | **CQRS persistence split** | Commands use Dapr state store backed by MongoDB. Queries use MongoDB driver directly for aggregation pipelines and projections. | Architect | 9.5.2026
-| **Database-per-tenant (MongoDB)** | Each tenant isolated in its own MongoDB database `fps_{tenant_id}`. Resolved from request context. Equivalent to schema-per-tenant in relational DBs. | Architect | 9.5.2026
+| ~~Database-per-tenant (MongoDB)~~ *(reversed 14.5.2026)* | Replaced by collection-per-tenant. Database-per-tenant gave stronger physical isolation but created more provisioning and operational overhead than needed for the current FPS scale. | Architect | 9.5.2026
+| **Collection-per-tenant (MongoDB)** | Each service owns its MongoDB database and isolates tenant data through tenant-specific collections resolved from authenticated/service context. This keeps tenant data separated while reducing database provisioning overhead. Repository/query code must derive collection names from a sanitised tenant key, create tenant-specific indexes, and never accept collection names from callers. | Architect | 14.5.2026
 | **Dapr 1.14+** | Minimum Dapr version updated from 1.4.0. Dapr Workflows require 1.10+. | Architect | 9.5.2026
 | **.NET 10** | Upgraded from .NET 9 (LTS). Released Nov 2025. | Architect | 9.5.2026
 | **Draw volume cap: 500** | Maximum 500 booking requests per tenant per Draw. Single sequential Dapr Workflow — no fan-out needed. Booking service enforces the cap at submission time. | Architect | 9.5.2026

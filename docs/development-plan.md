@@ -67,9 +67,9 @@ This package is referenced by all services — it must remain stable and have no
 | Distributed runtime | **Dapr 1.14+** | ⚠️ Docs said 1.4.0 — updated; Workflows require 1.10+ |
 | Workflows | **Dapr Workflow** | .NET SDK `Dapr.Workflow` |
 | CQRS | MediatR | Commands and queries dispatched per service |
-| Write side (CQRS) | **Dapr state store → MongoDB** | Aggregate persistence by ID; tenant isolated per MongoDB database |
+| Write side (CQRS) | **Dapr state store → MongoDB** | Aggregate persistence by ID; tenant isolated by tenant-specific MongoDB collections |
 | Read side (CQRS) | **MongoDB driver** | Projections, aggregation pipelines, reporting queries |
-| Multi-tenancy | **Database-per-tenant** | Each tenant gets `fps_{tenant_id}` MongoDB database; resolved from request context |
+| Multi-tenancy | **Collection-per-tenant** | Each tenant gets tenant-specific collections in a service-owned MongoDB database; collection names are resolved from authenticated/service context |
 | Cache / session | Redis | Identity sessions, rate limiting |
 | Message broker | **RabbitMQ via Dapr pub/sub** | All async domain events |
 | Auth | **Keycloak** (OIDC/OAuth 2.0) | JWT tokens, RBAC, MFA |
@@ -108,7 +108,7 @@ What is planned next:
 - Mobile booking actions after the read-only screen: submit request, cancel request/reservation, confirm usage, and notification history/streaming.
 - Notification v1 completion: email delivery, notification history API, unread counts, SSE stream, and preferences.
 - Audit v1 completion: query API, retention/integrity jobs, and GDPR PII mapping erasure workflow.
-- Production infrastructure: Dapr components, tenant database provisioning, Vault secrets, Helm/Kubernetes, observability, and runbooks.
+- Production infrastructure: Dapr components, tenant collection/index provisioning, Vault secrets, Helm/Kubernetes, observability, and runbooks.
 
 Plan validation notes:
 
@@ -127,8 +127,8 @@ This section tracks historical gaps that were found while planning and the remai
 **1. Dapr version was outdated** ✅ *Resolved*
 FPS targets **Dapr 1.14+**. Dapr Workflows require at least 1.10, and the current architecture treats durable workflow adoption as a future hardening step where needed.
 
-**2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved*
-The decision is database-per-tenant in MongoDB using `fps_{tenant_id}`, resolved from authenticated/service context.
+**2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved, revised 14.5.2026*
+The current decision is collection-per-tenant in MongoDB. Services use a service-owned database and resolve tenant-specific collection names from authenticated/service context.
 
 **3. Draw algorithm edge cases were underspecified** ✅ *Resolved for Booking Phase 1*
 Executable Draw rules are now documented in `docs/business-layer/allocation-rules.md` and implemented across Booking slices `B001`-`B010`.
@@ -151,7 +151,7 @@ Audit records store `actor_hash` (SHA-256 of `user_id`). A separate `PiiMapping`
 The code has authenticated context and claim mapping, but production Keycloak/OIDC setup, token lifecycle, and full role-policy wiring are still planned.
 
 **9. Production Dapr/MongoDB/tenant provisioning**
-The architecture is decided, but production-grade component configuration, tenant database provisioning, secrets, and runbooks remain future operational work.
+The architecture is decided, but production-grade component configuration, tenant collection/index provisioning, secrets, and runbooks remain future operational work.
 
 **10. Notification and Audit v1 completion**
 N001 and A001 established the first consumers. Email, SSE/history APIs, audit query, retention/integrity, and GDPR erasure workflows remain planned.
@@ -175,7 +175,7 @@ Goal: every developer can run the full stack locally with a single command.
 - [ ] Set up `.NET Aspire` app host (`FPS.AppHost`)
 - [ ] Configure Dapr sidecars per service in Aspire
 - [ ] Dapr components: RabbitMQ pub/sub, MongoDB state store, Redis cache, Vault secrets
-- [x] Shared `docker-compose.yaml` for infrastructure exists under `code/infrastructure` (production-grade Dapr component hardening remains)
+- [x] Shared `docker-compose.yaml` for infrastructure exists under `code/infrastructure` (production-grade Dapr component and collection provisioning hardening remains)
 - [x] `FPS.SharedKernel` compiles and is referenced by services
 - [x] Establish `FPS.sln` for server-side cross-service navigation and validation
 - [x] CI: GitHub Actions workflow builds and tests on PRs and `master`
@@ -274,7 +274,7 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [x] Dapr state store client — save/load Booking request state and related Booking read-model data
 - [x] Booking query repository — bookings by date, requests per user, draw inputs, allocation history
-- [ ] Tenant context middleware — resolves `fps_{tenant_id}` MongoDB database per request
+- [ ] Tenant collection resolver — resolves tenant-scoped MongoDB collection names per request/service context
 - [x] Dapr pub/sub publisher for domain events
 - [ ] Dapr pub/sub subscriber for `configuration.slotsUpdated`
 - [x] Remove: EF Core, SQL Server, `BookingDbContext` (already exists in code — dead code to delete)
@@ -1061,7 +1061,7 @@ These need answers before the relevant phase begins:
 
 | # | Question | Needed By | Owner |
 |---|---|---|---|
-| 1 | ~~Multi-tenancy isolation strategy?~~ → **Database-per-tenant (`fps_{tenant_id}`)** | ✅ Decided | — |
+| 1 | ~~Multi-tenancy isolation strategy?~~ → **Collection-per-tenant in service-owned MongoDB databases** | ✅ Decided | — |
 | 2 | ~~Mobile platform: React Native or .NET MAUI?~~ → **React Native + Expo** | ✅ Decided | — |
 | 3 | ~~Volume of booking requests per Draw?~~ → **max 500 per tenant per Draw** | ✅ Decided | — |
 | 4 | ~~Hard cut-off time for request submission?~~ → **Configurable per tenant, default 18:00** | ✅ Decided | — |
