@@ -58,8 +58,8 @@ Boundary rules are defined in [Booking Context Contract](../business-layer/booki
 | Service-to-service command data | Synchronous HTTP/Dapr where required for command decisions | Booking may synchronously query Configuration and Profile when required to accept/reject a command. |
 | Domain outcomes | RabbitMQ via Dapr pub/sub | Booking events feed Notification, Audit, and future Reporting read models. |
 | Workflow/orchestration | Dapr Workflows where durability is needed | Draw workflow can be introduced when operational replay/long-running orchestration is required. |
-| Write persistence | Dapr state store backed by MongoDB | Aggregate persistence; tenant isolation is database-per-tenant. |
-| Read persistence | MongoDB driver/read models | Query/projection stores per tenant. |
+| Write persistence | Dapr state store backed by MongoDB | Aggregate persistence; tenant isolation is collection-per-tenant inside service-owned databases. |
+| Read persistence | MongoDB driver/read models | Query/projection stores use tenant-specific collections. |
 
 Cross-domain failures follow [Booking Context Contract](../business-layer/booking-context-contract): required command inputs fail safely, while observer services such as Notification and Audit must not roll back persisted Booking state.
 
@@ -72,15 +72,24 @@ Cross-domain failures follow [Booking Context Contract](../business-layer/bookin
 | Monitoring | Grafana | Analytics and Monitoring | Various |
 | Logging | Loki | Log Aggregation | Go |
 | Tracing | Jaeger | Distributed Tracing | Go |
-| Write store (CQRS) | Dapr State Store → MongoDB | Aggregate persistence per tenant database | Various |
-| Read store (CQRS) | MongoDB driver | Query/projection read models per tenant database | Various |
+| Write store (CQRS) | Dapr State Store → MongoDB | Aggregate persistence in tenant-specific collections | Various |
+| Read store (CQRS) | MongoDB driver | Query/projection read models in tenant-specific collections | Various |
 | Event Bus | RabbitMQ via Dapr pub/sub | Message Broker | Various |
 | Cache | Redis | In-Memory Data Store | Various |
 | API Gateway | Traefik | Edge Router | Go |
 | File Storage | MinIO | Object Storage | Go |
 | Secret Management | Vault | Secret Management | N/A |
 
-> **Multi-tenancy**: each tenant is isolated in its own MongoDB database (`fps_{tenant_id}`). Services resolve the tenant database from the request context before any read or write operation.
+> **Multi-tenancy**: each service owns its MongoDB database and isolates tenant data through tenant-specific collections such as `{tenantKey}_booking_requests` or an equivalent sanitised naming scheme. Services resolve the tenant collection from authenticated/service context before any read or write operation.
+
+Collection-per-tenant impact:
+
+- Provisioning creates tenant-specific collections and indexes instead of MongoDB databases.
+- Repository and query helpers must centralise collection-name derivation so tenant keys are sanitised consistently.
+- Dapr state-store usage must either route to tenant-specific collections through a documented component strategy or use state keys that cannot cross tenants; do not mix approaches ad hoc.
+- Backup, restore, retention, and support tooling must operate at collection scope when a single tenant is targeted.
+- Cross-tenant analytics must explicitly enumerate allowed tenant collections and enforce authorization before aggregation.
+- Database-level credentials no longer provide tenant isolation by themselves; application/service authorization and collection resolver tests become more important.
 
 ## Security
 
@@ -90,7 +99,7 @@ FPS security is centred on authenticated context, tenant isolation, least privil
 | --- | --- |
 | Identity provider | Keycloak/OIDC provides JWTs. Stable claim mapping is documented in [Versions and Decisions](../versions-and-decisions). |
 | Current user context | Services resolve `tenantId`, `userId`, and roles from authenticated claims through `ICurrentUser`; request bodies, query strings, or caller-supplied identity headers must not override identity. |
-| Tenant isolation | MongoDB database-per-tenant (`fps_{tenant_id}`), resolved from authenticated/service context before reads or writes. |
+| Tenant isolation | MongoDB collection-per-tenant, resolved from authenticated/service context before reads or writes. Collection names must use a sanitised tenant key and must not be caller supplied. |
 | Service-to-service security | Dapr mTLS/Sentry is the platform baseline; user-context forwarding is used only where the downstream service must make a user-scoped decision. |
 | Authorization | Booking authorization rules are documented in [Booking Authorization](../business-layer/booking-authorization); services must fail closed on missing required identity claims. |
 | Privacy | Audit stores pseudonymised user references (`actorHash`, requestor/affected-user hashes) and must not store raw names, emails, profile private data, or raw user IDs in audit records. |
