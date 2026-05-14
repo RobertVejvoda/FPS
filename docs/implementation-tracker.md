@@ -21,7 +21,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | Mobile foundation | In progress | MOB001-MOB004 are merged. MOB005 is prepared for Claude handoff. |
 | Notification v1 completion | In progress | N002 is implemented. Email and preferences remain planned. |
 | Audit v1 completion | Planned | Query API, retention/integrity, and GDPR erasure remain. |
-| Production operations | Planned | Dapr components, tenant collection provisioning, secrets, Helm/Kubernetes, observability, and runbooks remain. |
+| Production operations | In progress | OPS000 is prepared for Claude to refresh the hosting/deployment strategy around Dapr portability and cost before production hardening continues. |
 
 ## Slice Tracker
 
@@ -59,6 +59,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | N002 Notification API And Stream | Done | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | [#93](https://github.com/RobertVejvoda/FPS/pull/93), [#94](https://github.com/RobertVejvoda/FPS/pull/94) | `implemented-by: claude` plus Codex SSE casing fix | 2026-05-14 | Notification history API, unread counts, mark-read API, and SSE stream. |
 | N003 Notification Email Delivery | Planned | - | - | Unassigned | After N002 or in parallel if bounded | Email channel for v1 critical operational notifications. |
 | A002 Audit Query And Erasure Support | Planned | - | - | Unassigned | After A001 foundation | Auditor query API and GDPR PII mapping erasure workflow. |
+| OPS000 Hosting And Deployment Strategy Options | Ready | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | - | `initiated-by: codex`, `claude-ready` | Next architecture Claude slice | Compare hosting/deployment options with Dapr as the portability boundary and cost as a first-class constraint. |
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | Before production deployment | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
 | CFG002 Admin Policy/Slot Management | Planned | - | - | Unassigned | After CFG001 | Admin-facing management for policy, slots, and Draw schedules. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
@@ -71,6 +72,6 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 
 | Item | Status | Source | Owner |
 | --- | --- | --- | --- |
-| GitHub Actions Node runtime refresh | In progress | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | `implemented-by: copilot` |
+| GitHub Actions Node runtime refresh | Deferred | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | Superseded until hosting/deployment strategy is agreed. |
 | TestContainers-backed integration tests | Planned | Current validation skips Dapr/MongoDB integration tests | Unassigned |
 | Collection-per-tenant implementation hardening | Planned | Decision recorded in [Versions and Decisions](./versions-and-decisions) | Unassigned |
