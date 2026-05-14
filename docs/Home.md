@@ -9,33 +9,41 @@ The Fair Parking System (FPS) is an open-source, multi-tenant SaaS platform for 
 
 FPS replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Employees request parking, company-car obligations are handled first, and remaining spaces are allocated by documented fairness rules so access improves over time instead of depending on who emailed HR first.
 
-### Product Goals
+## Executive Summary
 
-- **Fair access to scarce parking**: Allocate spaces with explicit, auditable rules instead of first-come, first-served coordination.
-- **Lower operational load**: Reduce HR and facilities work by automating request intake, Draw execution, notification, and audit records.
-- **Tenant isolation by design**: Keep company data and policies isolated for SaaS use.
-- **Employee trust**: Make booking status, outcomes, and visible reasons understandable to employees.
-- **Operational evidence**: Preserve event, notification, and audit trails so policy decisions can be reviewed later.
+FPS is being built as a documentation-led product with vertical slices. The core Booking domain is implemented, the surrounding Identity/Profile/Notification/Audit/API-client foundation is in place, and the active product direction is now mobile employee self-service plus production hardening.
 
-### What FPS Does
+The current roadmap is known end-to-end: complete mobile login and booking actions, finish Notification and Audit v1 capabilities, then harden Configuration, Customer, Reporting, Billing, and production operations. Progress is tracked slice-by-slice in the [Implementation Tracker](./implementation-tracker).
 
-- Accepts future and same-day parking requests.
-- Runs the daily Draw for scarce spaces.
-- Gives company-car employees first allocation priority where policy requires it.
-- Uses weighted allocation for remaining employees based on recent allocation history and active penalties.
-- Records booking events for notification and audit consumers.
-- Exposes API contracts for future web and React Native clients.
+## Product Outcomes
 
-### Current Build Focus
+- **Fair access to scarce parking**: allocate spaces with explicit, auditable rules instead of first-come, first-served coordination.
+- **Lower operational load**: reduce HR and facilities work by automating request intake, Draw execution, notification, and audit records.
+- **Tenant isolation by design**: keep company data and policies isolated for SaaS use through authenticated context and tenant-scoped persistence.
+- **Employee trust**: make booking status, outcomes, and visible reasons understandable to employees.
+- **Operational evidence**: preserve event, notification, and audit trails so policy decisions can be reviewed later.
 
-The backend Booking vertical slices are implemented. Current work is hardening the platform around authenticated user context, Profile snapshots, Notification and Audit consumers, Configuration-owned policy, OpenAPI client generation, and then the mobile shell.
+## Current Product Shape
 
-The implementation queue is maintained in the [Development Plan](./development-plan).
+- Employees can submit future and same-day booking requests through the backend API.
+- The daily Draw allocates scarce spaces using documented allocation rules.
+- Company-car employees receive first allocation priority where policy requires it.
+- Remaining employees are selected by weighted fairness using recent allocation history and active penalties.
+- Booking emits events consumed by Notification and Audit services.
+- OpenAPI and generated TypeScript client contracts support web and React Native clients.
+- The React Native + Expo mobile app has an app shell and read-only My Bookings screen.
 
----
+## Current Build Focus
 
+The next active product slice is `MOB003` Mobile Real Login. It is specified and ready for Claude handoff in GitHub issue #75. After that, planned work moves through mobile booking actions, Notification API/streaming, Audit query and erasure support, and production infrastructure hardening.
 
-### Global Architecture Document
+Use these pages first:
+
+- [Implementation Tracker](./implementation-tracker): what is done, what is next, PRs, implementer attribution, and dates.
+- [Development Plan](./development-plan): detailed roadmap, slice scope, acceptance criteria, and open risks.
+- [Software Architecture](./technology-layer/software-architecture): current bounded contexts, integration model, technology choices, and tenant isolation decision.
+
+## Global Architecture Document
 
 1. **[Versions and decisions](./versions-and-decisions)** 
 

@@ -8,6 +8,8 @@ The system is not a simple CRUD app — the Draw is a long-running distributed p
 
 Booking implementation requirements are maintained under the business layer. The key product-owner handoff documents are [Booking Vertical Slices](business-layer/booking-vertical-slices), [Booking Event Contracts](business-layer/booking-event-contracts), [Booking Authorization](business-layer/booking-authorization), [Booking Reason Codes](business-layer/booking-reason-codes), [Booking API Contract](business-layer/booking-api-contract), and [Booking Context Contract](business-layer/booking-context-contract).
 
+Progress, PRs, implementer attribution, and current ownership are tracked in the [Implementation Tracker](implementation-tracker). Update that tracker whenever a slice is created, assigned, implemented, reviewed, or merged.
+
 ---
 
 ## Architecture Style
@@ -86,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 13.5.2026 by Codex against `origin/master` after PR #55.
+Last validated: 14.5.2026 by Codex against `origin/master` after PR #77.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
