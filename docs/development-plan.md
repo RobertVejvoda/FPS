@@ -88,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 14.5.2026 by Codex against `origin/master` after PR #93, with N002 implemented and MOB005 prepared in issue #91.
+Last validated: 14.5.2026 by Codex against `origin/master` after PR #99, with N002 implemented, MOB005 in Claude review/implementation flow, and OPS000 prepared in issue #100.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
@@ -110,12 +110,12 @@ What is planned next:
 - Mobile booking actions after real login: MOB005 is ready for Claude handoff with cancel and confirm-usage actions.
 - Notification v1 completion: email delivery and preferences remain later slices.
 - Audit v1 completion: query API, retention/integrity jobs, and GDPR PII mapping erasure workflow.
-- Production infrastructure: Dapr components, tenant collection/index provisioning, Vault secrets, Helm/Kubernetes, observability, and runbooks.
+- Production infrastructure: first refresh hosting/deployment options in OPS000 with Dapr as the portability boundary and cost as a first-class constraint; then continue Dapr components, tenant collection/index provisioning, secrets, observability, and runbooks.
 
 Plan validation notes:
 
 - The dependency order has held: API client and CI landed before mobile, and `MOB002` stayed read-only.
-- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, notification delivery, and operational hardening.
+- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, notification delivery, and operational hardening. OPS000 now precedes production infrastructure work so the deployment target is revalidated before more CI/CD or hosting-specific changes.
 - Phase headings below remain useful as roadmap groupings, but completed slice tracking is now more accurate than the original week numbers.
 
 ---
@@ -322,8 +322,9 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Merged in PR #87. |
 | Ready | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Prepared in [issue #91](https://github.com/RobertVejvoda/FPS/issues/91). Must use existing Booking endpoints and employee-safe error/reason handling. |
 | Done | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Implemented in PR #93; SSE JSON casing follow-up in [PR #94](https://github.com/RobertVejvoda/FPS/pull/94). Email remains separate. |
+| Ready | `OPS000` Hosting And Deployment Strategy Options | Compare hosting/deployment options before more production infrastructure work. | Prepared in [issue #100](https://github.com/RobertVejvoda/FPS/issues/100). Dapr APIs/components/bindings are the portability boundary; cost is a first-class criterion. |
 | Next | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure workflow. | Builds on A001 append-only audit records. |
-| Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Should stay infrastructure-focused; no product behavior changes. |
+| Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Start after OPS000 clarifies the target hosting/deployment path. Should stay infrastructure-focused; no product behavior changes. |
 
 #### Slice ID001: Authenticated User Context
 
