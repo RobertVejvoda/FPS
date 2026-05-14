@@ -101,13 +101,12 @@ What is done:
 - Parking policy/configuration hardening: `CFG001`.
 - OpenAPI/TypeScript client generation and stale-check tooling: `API001`.
 - CI/docs visibility and weekly/manual validation hooks: `CI001`.
-- Mobile foundation and first read-only employee screen: `MOB001`, `MOB002`.
+- Mobile foundation, first read-only employee screen, and real OIDC login: `MOB001`, `MOB002`, `MOB003`.
 - Agent routing docs and handoff-only Claude automation.
 
 What is planned next:
 
-- Real mobile authentication flow against Keycloak/OIDC.
-- Mobile booking actions after the read-only screen: submit request, cancel request/reservation, confirm usage, and notification history/streaming.
+- Mobile booking actions after real login: submit request, cancel request/reservation, confirm usage, and notification history/streaming.
 - Notification v1 completion: email delivery, notification history API, unread counts, SSE stream, and preferences.
 - Audit v1 completion: query API, retention/integrity jobs, and GDPR PII mapping erasure workflow.
 - Production infrastructure: Dapr components, tenant collection/index provisioning, Vault secrets, Helm/Kubernetes, observability, and runbooks.
@@ -318,8 +317,8 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `CI001` Build Status and CI Visibility | Make repository health visible and keep CI reliable across code, tooling, generated clients, and docs. | Merged. |
 | Done | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | Merged. Uses development bearer-token handoff only. |
 | Done | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | Merged. Read-only, authenticated-scoped, cursor-paginated `GET /bookings` screen. |
-| Next | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC/Keycloak flow. | Must preserve generated client usage and authenticated backend scoping. |
-| Next | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Depends on real login or an explicitly approved development-only path. Must not add new Booking rules. |
+| Done | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC/Keycloak flow. | Merged in PR #78. |
+| Next | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Issue #85 prepared for Claude handoff. Must not add new Booking rules. |
 | Next | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Must use existing Booking endpoints and employee-safe error/reason handling. |
 | Next | `N002` Notification API And Stream | Expose notification history, unread counts, and SSE stream. | Builds on N001 in-app records. Email can be separate if needed. |
 | Next | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure workflow. | Builds on A001 append-only audit records. |
