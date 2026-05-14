@@ -1,7 +1,3 @@
----
-title: Monitoring
----
-
 ## Open Source Monitoring
 
 In addition to AWS services, open source tools can be used to monitor the application. Below are some popular open source monitoring tools:

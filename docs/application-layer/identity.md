@@ -1,7 +1,3 @@
----
-title: Identity
----
-
 [Identity](../technology-layer/identity) is responsible for managing user authentication, authorization, and session management across the system. This module ensures secure access control and user identity verification.
 
 ## Application Functions

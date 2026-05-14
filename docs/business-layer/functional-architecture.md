@@ -1,7 +1,3 @@
----
-title: Functional Architecture
----
-
 ## Overview
 
 The functional architecture of the Fair Parking System (FPS) is designed to ensure equitable distribution of parking slots among employees. Employers can send requests to park their vehicles, and the system distributes available slots using a daily draw process. This process prioritizes employees with fewer parking requests, increasing their chances of securing a slot. This approach ensures fairness and maximizes the utilization of available parking spaces.

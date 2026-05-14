@@ -1,7 +1,3 @@
----
-title: Customer
----
-
 The Customer component is responsible for managing customers in a multi-tenant application. A multi-tenant application is one where a single instance of the software serves multiple customers (tenants), each with their own isolated data and configurations.
 
 ![Software Architecture - Customer](../images/fps-software-arch-customer.png)

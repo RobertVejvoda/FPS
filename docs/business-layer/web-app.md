@@ -1,7 +1,3 @@
----
-title: Web App
----
-
 
 ## User Interface
 - **Responsive Design**: Adapts to mobile and desktop devices

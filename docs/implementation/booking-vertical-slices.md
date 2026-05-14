@@ -1,7 +1,3 @@
----
-title: Booking Implementation Slices
----
-
 ## Purpose
 
 Booking implementation should proceed story-by-story, not layer-by-layer. Each story cuts vertically through domain, application, API, persistence, notifications, audit, and tests where needed.

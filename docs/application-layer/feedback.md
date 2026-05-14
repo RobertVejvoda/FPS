@@ -1,7 +1,3 @@
----
-title: Feedback
----
-
 [Feedback](../technology-layer/feedback) is designed to facilitate communication between users and the development team. It allows users to submit their feedback, view responses, and stay informed about the status of their feedback. This module helps the development team gather valuable insights, address user concerns, and improve the overall user experience by categorizing and managing feedback efficiently.
 
 ## Application Functions

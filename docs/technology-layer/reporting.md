@@ -1,7 +1,3 @@
----
-title: Reporting
----
-
 The Reporting component is a simple service that provides a predefined set of reports. It allows users to access and generate standard reports without the need for custom report creation.
 
 ![Software Architecture - Reporting](../images/fps-software-arch-reporting.png)

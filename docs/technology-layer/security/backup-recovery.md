@@ -1,7 +1,3 @@
----
-title: Backup and Recovery
----
-
 ## Docker Images in AKS
 
 When hosting Docker images in Azure Kubernetes Service (AKS), it's crucial to have a backup and recovery strategy to ensure the availability and integrity of your containerized applications. Here are the key steps:

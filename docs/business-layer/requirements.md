@@ -1,7 +1,3 @@
----
-title: Business Requirements
----
-
 ## Business Context
 
 Many companies have fewer parking spaces than employees who want to use them. When parking is managed by email, spreadsheets, or informal agreements, HR becomes the bottleneck and employees perceive the process as arbitrary. First-come, first-served allocation is simple, but it rewards speed and insider knowledge rather than actual business need or fair access.

@@ -1,7 +1,3 @@
----
-title: Web App Security for React and Azure Hosting
----
-
 Secures the web application by implementing measures such as input validation, secure session management, and protection against common web vulnerabilities like XSS and CSRF, specifically tailored for React applications hosted on Azure.
 
 

@@ -1,7 +1,3 @@
----
-title: Configuration
----
-
 ## Overview
 
 [Configuration module](../application-layer/configuration) provides comprehensive system configuration capabilities. It enables administrators and users to customize and manage various system aspects based on their roles and permissions.

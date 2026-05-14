@@ -1,7 +1,3 @@
----
-title: Billing
----
-
 [Billing](../technology-layer/billing) is responsible for handling all financial transactions within the system. It ensures secure processing of payments, manages billing, and integrates with various payment gateways.
 
 ### Application Functions (Archimate Perspective)

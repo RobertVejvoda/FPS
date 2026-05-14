@@ -1,7 +1,3 @@
----
-title: Technology Layer
----
-
 - [**Security**](./technology-layer/security): Implements security measures to protect data and ensure compliance with industry standards.
 - [**Non-functional Requirements**](./technology-layer/non-functional-requirements): Addresses performance, reliability, usability, and other non-functional aspects.
 - [**Software Architecture**](./technology-layer/software-architecture): Defines the structure and organization of the software components.

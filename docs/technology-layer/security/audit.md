@@ -1,7 +1,3 @@
----
-title: Audit
----
-
 Ensures that all significant actions and events within the system are tracked and logged. This includes user activities, system changes, and access to sensitive data, providing a trail of evidence for security audits, compliance verification, and troubleshooting.
 
 ### Azure Components for Managing Audit Trails

@@ -1,7 +1,3 @@
----
-title: Testing
----
-
 ## Types of Testing Applied
 
 ### Unit Testing

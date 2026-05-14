@@ -1,7 +1,3 @@
----
-title: Customer
----
-
 [Customer module](../application-layer/customer) is designed to manage all aspects related to customers within the Fair Parking System. It encompasses functionalities such as defining customer entities, managing user roles and permissions, handling billing and payments, ensuring data privacy and security, and providing customer support. This module aims to deliver a seamless and personalized experience for customers, enabling them to efficiently manage their interactions and transactions with the system.
 
 | User Story | Title |

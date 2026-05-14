@@ -1,7 +1,3 @@
----
-title: Application Layer
----
-
 ![Application Architecture](./images/fps-application-arch-1.png)
 
 ## Application Components

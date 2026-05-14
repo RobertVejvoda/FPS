@@ -1,7 +1,3 @@
----
-title: Security Model
----
-
 ## Purpose
 
 This page defines the FPS security model across actors, roles, data classification, transport/storage protections, secret handling, and GDPR-aligned privacy controls.

@@ -1,7 +1,3 @@
----
-title: Compliance
----
-
 ## Compliance Checks
 
 Compliance checks are essential to ensure that our software adheres to industry standards and regulations. These checks help identify potential security vulnerabilities and ensure that our practices align with legal and regulatory requirements.

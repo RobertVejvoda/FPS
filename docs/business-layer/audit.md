@@ -1,7 +1,3 @@
----
-title: Audits
----
-
 [Audit module](../application-layer/audit) is designed to ensure the integrity, availability, and confidentiality of audit logs within the system. It provides mechanisms for logging, retaining, protecting, and reviewing audit logs to comply with regulatory requirements and enhance security monitoring.
 
 ### Audit Services

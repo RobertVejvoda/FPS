@@ -1,8 +1,3 @@
----
-title: Security Patching for Microsoft Azure
-
----
-
 ## Overview
 
 Security patching is a critical process in maintaining the integrity and security of software systems, especially in cloud environments like Microsoft Azure. It involves the identification, acquisition, testing, and deployment of updates to software components to address vulnerabilities that could be exploited by malicious actors.

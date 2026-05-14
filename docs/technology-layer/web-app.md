@@ -1,7 +1,3 @@
----
-title: Web App
----
-
 The web application follows a modular frontend architecture that separates functionality into distinct UI components while ensuring consistent deployment through Docker containerization.
 
 ## Key Components

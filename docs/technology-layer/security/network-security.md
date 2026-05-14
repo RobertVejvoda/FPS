@@ -1,7 +1,3 @@
----
-title: Network Security
----
-
 Protects the network infrastructure of applications hosted in Azure from unauthorized access, misuse, or theft. This includes Azure-native firewalls, intrusion detection/prevention systems (IDS/IPS), and secure network architecture design tailored for cloud environments.
 
 ## Azure Firewalls

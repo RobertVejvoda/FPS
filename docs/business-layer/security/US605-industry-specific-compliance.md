@@ -1,7 +1,3 @@
----
-title: US605 - Compliance with Industry-Specific Regulations
----
-
 ## Objective
 Ensure that the system adheres to all industry-specific compliance requirements, providing users with confidence that their operations meet legal and regulatory standards.
 

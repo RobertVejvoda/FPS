@@ -1,7 +1,3 @@
----
-title: Integrity
----
-
 ### Strategies to Achieve Integrity
 
 1. **Data Validation**:

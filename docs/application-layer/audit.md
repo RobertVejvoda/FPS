@@ -1,7 +1,3 @@
----
-title: Audit
----
-
 [Audit](../technology-layer/audit) is responsible for tracking and logging all significant actions and events within the system. This includes user activities, system changes, and access to sensitive data. It ensures accountability and provides a trail of evidence that can be used for security audits, compliance verification, and troubleshooting.
 
 ## Application Functions

@@ -1,7 +1,3 @@
----
-title: Incident Response
----
-
 ## Strategies for Handling Incidents
 
 1. **Preparation**

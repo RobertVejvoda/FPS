@@ -1,7 +1,3 @@
----
-title: Logging and Monitoring
----
-
 ## Business Logs
 
 Business logs capture information about business processes and transactions. They are essential for understanding the flow of business operations and can help in auditing, compliance, and identifying business trends. Examples include user activities, transaction records, and order processing logs.

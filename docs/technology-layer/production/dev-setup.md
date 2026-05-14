@@ -1,7 +1,3 @@
----
-title: Development Setup (local hosting)
----
-
 ![Development Setup](../../images/fps-logical-architecture.png)
 
 ### Open Source solutions

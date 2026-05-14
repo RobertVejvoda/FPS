@@ -1,7 +1,3 @@
----
-title: Booking Event Contracts
----
-
 ## Purpose
 
 Booking events are the integration contract between Booking, Notification, Audit, Reporting, and future read-model consumers. They must be stable enough for vertical slice implementation while still allowing payloads to evolve.

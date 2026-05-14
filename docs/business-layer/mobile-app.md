@@ -1,7 +1,3 @@
----
-title: Mobile App
----
-
 ## User Interface
 - **Responsive Design**: Optimized for mobile devices
 - **Intuitive Navigation**: Simplified interface for booking flow

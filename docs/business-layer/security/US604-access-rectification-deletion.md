@@ -1,7 +1,3 @@
----
-title: US604 - Access, Rectification, and Deletion of Data
----
-
 ## Objective
 Ensure that users have the ability to access, rectify, and delete their personal data in compliance with GDPR and other relevant data protection regulations.
 

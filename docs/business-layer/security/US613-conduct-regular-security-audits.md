@@ -1,7 +1,3 @@
----
-title: US613: Conduct regular security audits
----
-
 ## Objective
 
  This user story aims to implement a feature that allows users to select a specific portion of code 

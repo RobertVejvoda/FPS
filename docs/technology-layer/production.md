@@ -1,7 +1,3 @@
----
-title: Production
----
-
 ## Production
 
 * [Availability model](./production/availability-model) - Description of the availability model used in production.

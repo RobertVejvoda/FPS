@@ -1,7 +1,3 @@
----
-title: Business Actors and Roles
----
-
 ![Business Domain](../images/fps-exchange-map.png)
 
 ## Business Actors

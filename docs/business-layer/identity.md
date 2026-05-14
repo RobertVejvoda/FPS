@@ -1,7 +1,3 @@
----
-title: Identity
----
-
 [Identity module](../application-layer/identity) is designed to provide secure and user-friendly authentication mechanisms for accessing the system. It includes features such as user login, credential validation, password reset, and third-party authentication options. The module ensures that user data is protected through encryption and secure data transmission, while also offering a responsive and intuitive user experience. Additionally, it supports logging and monitoring of login attempts and integrates Single Sign-On (SSO) for seamless access across multiple systems.
 
 ### Authentication Management

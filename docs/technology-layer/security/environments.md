@@ -1,7 +1,3 @@
----
-title: Environments
----
-
 Defines security measures and best practices for different environments (development, testing, staging, production) to ensure consistency and protection across the software development lifecycle.
 
 ## Development Environment

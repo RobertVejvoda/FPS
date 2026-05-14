@@ -1,7 +1,3 @@
----
-title: Access Control
----
-
 Access control within the system is managed through a combination of role-based access control (RBAC) and attribute-based access control (ABAC). This ensures that users have the minimum necessary permissions to perform their tasks, adhering to the principle of least privilege. Multi-factor authentication (MFA) is implemented to add an extra layer of security, requiring users to verify their identity through multiple methods. Regular access reviews are conducted to ensure that permissions are up-to-date and appropriate for each user's role. Additionally, access control policies are enforced consistently across all environments, from development to production, to maintain a secure and compliant system.
 
 ## Azure Components for Access Control
