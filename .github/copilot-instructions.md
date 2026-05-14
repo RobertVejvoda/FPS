@@ -50,6 +50,19 @@ GitHub Copilot agent is an implementer for mechanical, file-bounded slices. Use 
 - If validation cannot be run, state why and list the narrower checks that were run.
 - In the PR body, include a concise summary, test results, and any skipped validation.
 
+## Completion Handoff
+
+When implementation is ready for review:
+
+- Open or update one focused PR for the assigned issue.
+- Link the issue with `Closes #NN` or `Refs #NN` as appropriate.
+- Add `implemented-by: copilot` and `needs-codex-review` labels when permitted.
+- If labels cannot be changed, leave a PR comment saying the work is ready for Codex review.
+- Do not merge the PR.
+- Do not keep the PR as draft unless blocked.
+- If blocked, comment with the concrete blocker and do not widen scope.
+- If Codex comments on the PR, address only that PR feedback and keep the existing PR scope.
+
 ## Attribution
 
 - PRs opened by Copilot should clearly say they were implemented by GitHub Copilot agent.
