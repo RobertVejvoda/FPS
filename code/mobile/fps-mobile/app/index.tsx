@@ -3,8 +3,6 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { colors } from '@/theme';
 
-// Auth gate: until dev credentials are stored we route to the debug-session screen.
-// Real login is intentionally out of scope for MOB001.
 export default function IndexRoute() {
   const { ready, isConfigured } = useAuth();
 
@@ -16,7 +14,7 @@ export default function IndexRoute() {
     );
   }
 
-  return isConfigured ? <Redirect href="/(tabs)" /> : <Redirect href="/debug-session" />;
+  return isConfigured ? <Redirect href="/(tabs)" /> : <Redirect href="/login" />;
 }
 
 const styles = StyleSheet.create({
