@@ -22,6 +22,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | Notification v1 completion | In progress | N002 is implemented. N003 email delivery is prepared for Claude handoff; preferences remain planned. |
 | Audit v1 completion | In progress | A002 audit query and PII mapping erasure support is prepared for Claude handoff. Retention and integrity remain planned. |
 | Production operations | In progress | OPS000 is prepared for Claude to refresh the hosting/deployment strategy around Dapr portability and cost before production hardening continues. |
+| Configuration management | In progress | CFG002 admin policy and slot management is prepared for Claude handoff. |
 
 ## Slice Tracker
 
@@ -61,7 +62,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | A002 Audit Query And Erasure Support | Ready | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | - | `initiated-by: codex`, `claude-ready` | Next Audit Claude slice | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
 | OPS000 Hosting And Deployment Strategy Options | Ready | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | - | `initiated-by: codex`, `claude-ready` | Next architecture Claude slice | Compare hosting/deployment options with Dapr as the portability boundary and cost as a first-class constraint. |
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | Before production deployment | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
-| CFG002 Admin Policy/Slot Management | Planned | - | - | Unassigned | After CFG001 | Admin-facing management for policy, slots, and Draw schedules. |
+| CFG002 Admin Policy/Slot Management | Ready | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | - | `initiated-by: codex`, `claude-ready` | Next Configuration Claude slice | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
 | REPORT001 Reporting Read Models | Planned | - | - | Unassigned | After enough event volume/contracts stabilize | Utilization, fairness, penalty, and export read models. |
 | BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | Later commercialisation phase | Subscription, invoice generation, and payment-provider integration. |

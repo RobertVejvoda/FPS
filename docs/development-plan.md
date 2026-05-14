@@ -88,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 14.5.2026 by Codex against `origin/master` after PR #104, with MOB005 merged, N003 prepared in issue #103, A002 prepared in issue #105, and OPS000 prepared in issue #100.
+Last validated: 14.5.2026 by Codex against `origin/master` after PR #106, with N003 prepared in issue #103, A002 prepared in issue #105, OPS000 prepared in issue #100, and CFG002 prepared in issue #107.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
@@ -109,6 +109,7 @@ What is planned next:
 
 - Notification v1 completion: N003 email delivery is ready for Claude handoff; preferences remain a later slice.
 - Audit v1 completion: A002 audit query and PII mapping erasure support is ready for Claude handoff; retention and integrity jobs remain later slices.
+- Configuration management: CFG002 admin policy and slot management is ready for Claude handoff; production persistence and Dapr publication remain later slices.
 - Production infrastructure: first refresh hosting/deployment options in OPS000 with Dapr as the portability boundary and cost as a first-class constraint; then continue Dapr components, tenant collection/index provisioning, secrets, observability, and runbooks.
 
 Plan validation notes:
@@ -324,6 +325,7 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Ready | `N003` Notification Email Delivery | Add mandatory email-channel delivery for Booking operational notifications. | Prepared in [issue #103](https://github.com/RobertVejvoda/FPS/issues/103). Keep local validation no-cost and design the sender behind a Dapr-ready provider boundary. |
 | Ready | `OPS000` Hosting And Deployment Strategy Options | Compare hosting/deployment options before more production infrastructure work. | Prepared in [issue #100](https://github.com/RobertVejvoda/FPS/issues/100). Dapr APIs/components/bindings are the portability boundary; cost is a first-class criterion. |
 | Ready | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure support. | Prepared in [issue #105](https://github.com/RobertVejvoda/FPS/issues/105). Builds on A001 append-only audit records; retention and integrity jobs remain out of scope. |
+| Ready | `CFG002` Admin Policy And Slot Management | Add admin-managed tenant policy, location override, and slot/capacity configuration APIs. | Prepared in [issue #107](https://github.com/RobertVejvoda/FPS/issues/107). Keep production persistence, Dapr publication, and Booking migration out of scope. |
 | Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Start after OPS000 clarifies the target hosting/deployment path. Should stay infrastructure-focused; no product behavior changes. |
 
 #### Slice ID001: Authenticated User Context
