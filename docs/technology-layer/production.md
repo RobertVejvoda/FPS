@@ -8,9 +8,10 @@
 
 ## Hosting
 
+* [**Hosting and Deployment Strategy**](./production/hosting-deployment-strategy) — OPS000 proposal: Azure Container Apps recommendation, option comparison, cost estimates, Dapr component mapping, and open questions. *(Pending approval.)*
 * [Development](./production/dev-setup)
-* [Amazon AWS](./production/aws-setup)
-* [MS Azure](./production/azure-setup)
+* [Amazon AWS](./production/aws-setup) *(stale — see hosting-deployment-strategy.md)*
+* [MS Azure](./production/azure-setup) *(stale — see hosting-deployment-strategy.md)*
 
 ## Testing
 
