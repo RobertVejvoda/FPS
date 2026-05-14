@@ -56,14 +56,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = useCallback(async (accessToken: string) => {
-    await saveAccessToken(accessToken);
+    await Promise.all([
+      saveAccessToken(accessToken),
+      AsyncStorage.removeItem(DEV_BASE_URL_KEY),
+      AsyncStorage.removeItem(DEV_TOKEN_KEY),
+    ]);
     const { apiBaseUrl: configUrl } = getOidcConfig();
     setApiBaseUrl(configUrl);
     setBearerToken(accessToken);
   }, []);
 
   const clearSession = useCallback(async () => {
-    await clearAccessToken();
+    await Promise.all([
+      clearAccessToken(),
+      AsyncStorage.removeItem(DEV_BASE_URL_KEY),
+      AsyncStorage.removeItem(DEV_TOKEN_KEY),
+    ]);
     setApiBaseUrl('');
     setBearerToken('');
   }, []);
@@ -72,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const trimmedBaseUrl = nextBaseUrl.trim().replace(/\/+$/, '');
     const trimmedToken = nextToken.trim();
     await Promise.all([
+      clearAccessToken(),
       AsyncStorage.setItem(DEV_BASE_URL_KEY, trimmedBaseUrl),
       AsyncStorage.setItem(DEV_TOKEN_KEY, trimmedToken),
     ]);

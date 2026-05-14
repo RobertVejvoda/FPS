@@ -6,7 +6,6 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { getOidcConfig, isOidcConfigured } from '@/auth/oidcConfig';
-import { clearAccessToken } from '@/auth/authStorage';
 import { fetchMe } from '@/api/client';
 import { colors, radius, spacing } from '@/theme';
 
@@ -20,7 +19,7 @@ type LoginStatus =
 
 export default function LoginRoute() {
   const router = useRouter();
-  const { setSession } = useAuth();
+  const { setSession, clearSession } = useAuth();
   const oidcConfig = getOidcConfig();
   const configured = isOidcConfigured(oidcConfig);
   const [status, setStatus] = useState<LoginStatus>({ kind: 'idle' });
@@ -80,14 +79,15 @@ export default function LoginRoute() {
         return;
       }
       // 401/403 or server error means the token is not accepted
-      await clearAccessToken();
+      await clearSession();
       setStatus({
         kind: 'error',
         message: meResult.kind === 'unauthenticated'
           ? 'Session was rejected. Please sign in again.'
           : `Server error (${meResult.status}). Please try again.`,
       });
-    }).catch((err: unknown) => {
+    }).catch(async (err: unknown) => {
+      await clearSession();
       setStatus({
         kind: 'error',
         message: err instanceof Error ? err.message : 'Token exchange failed.',
