@@ -23,6 +23,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | Audit v1 completion | In progress | A002 audit query and PII mapping erasure support is prepared for Claude handoff. Retention and integrity remain planned. |
 | Production operations | In progress | OPS000 is prepared for Claude to refresh the hosting/deployment strategy around Dapr portability and cost before production hardening continues. |
 | Configuration management | In progress | CFG002 admin policy and slot management is prepared for Claude handoff. |
+| Reporting foundation | In progress | REPORT001 reporting read models is prepared for Claude handoff. |
 
 ## Slice Tracker
 
@@ -64,7 +65,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | Before production deployment | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
 | CFG002 Admin Policy/Slot Management | Ready | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | - | `initiated-by: codex`, `claude-ready` | Next Configuration Claude slice | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
-| REPORT001 Reporting Read Models | Planned | - | - | Unassigned | After enough event volume/contracts stabilize | Utilization, fairness, penalty, and export read models. |
+| REPORT001 Reporting Read Models | Ready | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | - | `initiated-by: codex`, `claude-ready` | Next Reporting Claude slice | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | Later commercialisation phase | Subscription, invoice generation, and payment-provider integration. |
 | WEB001 Web Employee Self-Service | Planned | - | - | Unassigned | After mobile proves core UX/API path | React web employee self-service. |
 | WEB002 HR/Admin Dashboard | Planned | - | - | Unassigned | After reporting/configuration APIs mature | HR/facilities/admin operational UI. |
