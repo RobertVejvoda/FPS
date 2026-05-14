@@ -88,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 14.5.2026 by Codex against `origin/master` after PR #77.
+Last validated: 14.5.2026 by Codex against `origin/master` after PR #86, with N002 prepared in issue #88.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
@@ -107,7 +107,7 @@ What is done:
 What is planned next:
 
 - Mobile booking actions after real login: submit request, cancel request/reservation, confirm usage, and notification history/streaming.
-- Notification v1 completion: email delivery, notification history API, unread counts, SSE stream, and preferences.
+- Notification v1 completion: N002 is ready for Claude handoff with notification history API, unread counts, mark-read API, and SSE stream; email delivery and preferences remain later slices.
 - Audit v1 completion: query API, retention/integrity jobs, and GDPR PII mapping erasure workflow.
 - Production infrastructure: Dapr components, tenant collection/index provisioning, Vault secrets, Helm/Kubernetes, observability, and runbooks.
 
@@ -320,7 +320,7 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC/Keycloak flow. | Merged in PR #78. |
 | Next | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Issue #85 prepared for Claude handoff. Must not add new Booking rules. |
 | Next | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Must use existing Booking endpoints and employee-safe error/reason handling. |
-| Next | `N002` Notification API And Stream | Expose notification history, unread counts, and SSE stream. | Builds on N001 in-app records. Email can be separate if needed. |
+| Ready | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Prepared in [issue #88](https://github.com/RobertVejvoda/FPS/issues/88). Builds on N001 in-app records. Email remains separate. |
 | Next | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure workflow. | Builds on A001 append-only audit records. |
 | Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Should stay infrastructure-focused; no product behavior changes. |
 
