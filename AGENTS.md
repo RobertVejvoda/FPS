@@ -24,6 +24,24 @@ This repository is documentation-first unless the user explicitly asks for code 
 - For code changes, run `./tools/validate.sh` when feasible and report the result.
 - Keep pull requests focused on one logical unit of work.
 
+### Cross-Agent Validation
+
+Use Claude as a second reviewer only when the quality risk justifies the token cost.
+
+Good Claude validation candidates:
+
+- architecture, security, privacy, GDPR, auth, secrets, audit, billing, tenant isolation, or production operations changes;
+- cross-service designs or implementation plans where one missed assumption can affect multiple bounded contexts;
+- substantial Codex-authored specs that will drive non-trivial implementation by Claude or Copilot;
+- PR reviews where the diff is large enough that an independent implementation-focused read may catch gaps.
+
+Do not route routine work to Claude validation by default:
+
+- typo fixes, tracker updates, Home/sidebar maintenance, link fixes, and other low-risk documentation cleanup;
+- mechanical changes already covered by validation and local review.
+
+When requesting Claude validation, ask for a focused review of gaps, contradictions, implementation risk, and missing acceptance criteria. Claude should report findings first and should not rewrite or broaden scope unless Codex/Robert explicitly asks for edits.
+
 ## Cooperation Model
 
 See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperation reference. The sections below record which parts of that guide are in effect for FPS today; treat any guidance in the file that contradicts this list as background context, not policy.
@@ -33,6 +51,7 @@ See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperat
 - Default model for routine implementation: `claude-sonnet-4-6`. Escalate to Opus only for hard problems.
 - Architectural decisions go to `docs/versions-and-decisions.md` and require human approval (neither agent decides alone).
 - Cost-management tips: keep agent-facing docs lean, scope tasks tightly to files expected to change, compact long sessions.
+- Cross-agent validation: Claude may be used as a second reviewer for high-impact Codex-authored architecture/security/spec work, but not for routine low-risk updates.
 
 ### Context And Cost Hygiene
 

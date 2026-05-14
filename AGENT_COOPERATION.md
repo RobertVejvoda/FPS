@@ -244,6 +244,16 @@ jobs:
 - Run `/compact` in long interactive sessions before context grows too large
 - Codex (OpenAI) and Claude (Anthropic) bill separately — no cross-charges unless you explicitly call one API from the other
 
+## Cross-Agent Validation
+
+Claude can also validate Codex-authored work when the change is high-impact enough to justify a second model read.
+
+Use Claude validation for architecture, security, privacy, GDPR, authentication, secrets, audit, billing, tenant isolation, production operations, cross-service plans, or substantial specs that will drive non-trivial implementation.
+
+Do not use Claude validation by default for typo fixes, tracker updates, Home/sidebar maintenance, link fixes, or mechanical cleanup where local review and validation are enough.
+
+Validation prompts should be narrow: ask Claude to find gaps, contradictions, implementation risks, and missing acceptance criteria. Claude should report findings first and should not rewrite or broaden scope unless Codex or Robert explicitly requests edits.
+
 ---
 
 ## Bootstrapping Checklist
