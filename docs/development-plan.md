@@ -88,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 14.5.2026 by Codex against `origin/master` after PR #99, with N002 implemented, MOB005 in Claude review/implementation flow, and OPS000 prepared in issue #100.
+Last validated: 14.5.2026 by Codex against `origin/master` after PR #95, with MOB005 merged, N003 prepared in issue #103, and OPS000 prepared in issue #100.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
@@ -102,13 +102,12 @@ What is done:
 - Parking policy/configuration hardening: `CFG001`.
 - OpenAPI/TypeScript client generation and stale-check tooling: `API001`.
 - CI/docs visibility and weekly/manual validation hooks: `CI001`.
-- Mobile foundation, first read-only employee screen, real OIDC login, and booking submission: `MOB001`, `MOB002`, `MOB003`, `MOB004`.
+- Mobile foundation, first read-only employee screen, real OIDC login, booking submission, and booking actions: `MOB001`, `MOB002`, `MOB003`, `MOB004`, `MOB005`.
 - Agent routing docs and handoff-only Claude automation.
 
 What is planned next:
 
-- Mobile booking actions after real login: MOB005 is ready for Claude handoff with cancel and confirm-usage actions.
-- Notification v1 completion: email delivery and preferences remain later slices.
+- Notification v1 completion: N003 email delivery is ready for Claude handoff; preferences remain a later slice.
 - Audit v1 completion: query API, retention/integrity jobs, and GDPR PII mapping erasure workflow.
 - Production infrastructure: first refresh hosting/deployment options in OPS000 with Dapr as the portability boundary and cost as a first-class constraint; then continue Dapr components, tenant collection/index provisioning, secrets, observability, and runbooks.
 
@@ -320,8 +319,9 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | Merged. Read-only, authenticated-scoped, cursor-paginated `GET /bookings` screen. |
 | Done | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC/Keycloak flow. | Merged in PR #78. |
 | Done | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Merged in PR #87. |
-| Ready | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Prepared in [issue #91](https://github.com/RobertVejvoda/FPS/issues/91). Must use existing Booking endpoints and employee-safe error/reason handling. |
+| Done | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Merged in [PR #95](https://github.com/RobertVejvoda/FPS/pull/95). Uses existing Booking endpoints and employee-safe error/reason handling. |
 | Done | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Implemented in PR #93; SSE JSON casing follow-up in [PR #94](https://github.com/RobertVejvoda/FPS/pull/94). Email remains separate. |
+| Ready | `N003` Notification Email Delivery | Add mandatory email-channel delivery for Booking operational notifications. | Prepared in [issue #103](https://github.com/RobertVejvoda/FPS/issues/103). Keep local validation no-cost and design the sender behind a Dapr-ready provider boundary. |
 | Ready | `OPS000` Hosting And Deployment Strategy Options | Compare hosting/deployment options before more production infrastructure work. | Prepared in [issue #100](https://github.com/RobertVejvoda/FPS/issues/100). Dapr APIs/components/bindings are the portability boundary; cost is a first-class criterion. |
 | Next | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure workflow. | Builds on A001 append-only audit records. |
 | Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Start after OPS000 clarifies the target hosting/deployment path. Should stay infrastructure-focused; no product behavior changes. |
