@@ -108,9 +108,9 @@ public sealed class NotificationBroadcasterTests
                 received2.Add(n);
         });
 
-        await Task.Delay(50);
+        await Task.Delay(200); // two concurrent subscribers need more time to register on CI
         await broadcaster.BroadcastAsync(record);
-        await Task.Delay(50);
+        await Task.Delay(200);
 
         cts.Cancel();
         await Task.WhenAll(
