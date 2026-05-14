@@ -33,15 +33,12 @@ The current roadmap is known end-to-end: complete mobile login and booking actio
 - OpenAPI and generated TypeScript client contracts support web and React Native clients.
 - The React Native + Expo mobile app has an app shell and read-only My Bookings screen.
 
-## Current Build Focus
-
-The next active product slice is `MOB003` Mobile Real Login. It is specified and ready for Claude handoff in GitHub issue #75. After that, planned work moves through mobile booking actions, Notification API/streaming, Audit query and erasure support, and production infrastructure hardening.
-
 Use these pages first:
 
 - [Implementation Tracker](./implementation-tracker): what is done, what is next, PRs, implementer attribution, and dates.
 - [Development Plan](./development-plan): detailed roadmap, slice scope, acceptance criteria, and open risks.
 - [Software Architecture](./technology-layer/software-architecture): current bounded contexts, integration model, technology choices, and tenant isolation decision.
+- [Security Model](./technology-layer/security/security-model): actors, roles, data classification, encryption, secret access, and GDPR alignment.
 
 ## Global Architecture Document
 

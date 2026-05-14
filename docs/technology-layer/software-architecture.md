@@ -107,7 +107,7 @@ FPS security is centred on authenticated context, tenant isolation, least privil
 | Secrets | Vault is the target secret store for credentials and API keys. |
 | Observability | Prometheus, Grafana, Loki, and Jaeger provide metrics, dashboards, logs, and distributed tracing. |
 
-Detailed security documentation is maintained under [Security](./security), especially [Authentication](./security/authentication), [Authorization](./security/authorization), [Data Privacy](./security/data-privacy), [Traceability](./security/traceability), and [Microservice Security Patterns](./security/microservice-security-patterns).
+Detailed security documentation is maintained under [Security](./security), especially [Security Model](./security/security-model), [Authentication](./security/authentication), [Authorization](./security/authorization), [Data Privacy](./security/data-privacy), [Traceability](./security/traceability), and [Microservice Security Patterns](./security/microservice-security-patterns).
 
 ### Dapr
 
