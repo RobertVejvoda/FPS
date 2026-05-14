@@ -19,7 +19,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | Booking core | Done | B001-B010 implemented and merged. |
 | Platform integration foundation | Done | ID001, BK011, P001, N001, A001, CFG001, API001, CI001 are merged. |
 | Mobile foundation | In progress | MOB001-MOB003 are merged. MOB004 is prepared for Claude handoff. |
-| Notification v1 completion | Planned | API, unread counts, SSE, email, and preferences remain. |
+| Notification v1 completion | In progress | N002 is prepared for Claude handoff. Email and preferences remain planned. |
 | Audit v1 completion | Planned | Query API, retention/integrity, and GDPR erasure remain. |
 | Production operations | Planned | Dapr components, tenant collection provisioning, secrets, Helm/Kubernetes, observability, and runbooks remain. |
 
@@ -56,7 +56,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | MOB003 Mobile Real Login | Done | [#75](https://github.com/RobertVejvoda/FPS/issues/75) | [#78](https://github.com/RobertVejvoda/FPS/pull/78) | `implemented-by: claude` plus Codex repair commit | 2026-05-14 | Real OIDC Authorization Code + PKCE login in Expo mobile app. |
 | MOB004 Mobile Booking Submission | Ready | [#85](https://github.com/RobertVejvoda/FPS/issues/85) | - | `initiated-by: codex`, `needs-claude-action` | Next | Employee request submission from mobile. |
 | MOB005 Mobile Booking Actions | Planned | - | - | Unassigned | After MOB004 or as split permits | Cancel and confirm-usage actions from mobile. |
-| N002 Notification API And Stream | Planned | - | - | Unassigned | After mobile/login priority or when notification UX is needed | Notification history API, unread counts, and SSE stream. |
+| N002 Notification API And Stream | Ready | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | - | `initiated-by: codex`, `needs-claude-action`, `claude-ready` | Next parallel Claude slice | Notification history API, unread counts, mark-read API, and SSE stream. |
 | N003 Notification Email Delivery | Planned | - | - | Unassigned | After N002 or in parallel if bounded | Email channel for v1 critical operational notifications. |
 | A002 Audit Query And Erasure Support | Planned | - | - | Unassigned | After A001 foundation | Auditor query API and GDPR PII mapping erasure workflow. |
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | Before production deployment | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
