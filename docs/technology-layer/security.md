@@ -6,6 +6,8 @@ title: Security
 
 - **[Audit](./security/audit)**: Ensures that all significant actions and events within the system are tracked and logged. This includes user activities, system changes, and access to sensitive data, providing a trail of evidence for security audits, compliance verification, and troubleshooting.
 
+- **[Security Model](./security/security-model)**: Defines FPS actors, roles, responsibilities, data classification, data-in-transit and data-at-rest controls, protocol/encryption expectations, secret access tracking, and GDPR alignment.
+
 - **[Authentication](./security/authentication)**: Ensures that only authorized users can access the services. This involves the use of tokens (such as JWT) and OAuth for secure user authentication.
 
 - **[Authorization](./security/authorization)**: Determines what resources and actions an authenticated user is allowed to access. This is often managed through role-based access control (RBAC) or attribute-based access control (ABAC).
