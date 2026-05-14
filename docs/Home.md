@@ -1,7 +1,3 @@
----
-title: Fair Parking System (FPS) 
----
-
 ![CI](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml/badge.svg?branch=master)
 ![Docs](https://github.com/RobertVejvoda/FPS/actions/workflows/docs.yml/badge.svg?branch=master)
 
