@@ -71,6 +71,6 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 
 | Item | Status | Source | Owner |
 | --- | --- | --- | --- |
-| GitHub Actions Node 20 deprecation | Planned | Docs deploy warning from GitHub Actions | Unassigned |
+| GitHub Actions Node runtime refresh | In progress | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | `implemented-by: copilot` |
 | TestContainers-backed integration tests | Planned | Current validation skips Dapr/MongoDB integration tests | Unassigned |
 | Collection-per-tenant implementation hardening | Planned | Decision recorded in [Versions and Decisions](./versions-and-decisions) | Unassigned |
