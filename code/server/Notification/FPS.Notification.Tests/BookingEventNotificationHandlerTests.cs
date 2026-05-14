@@ -7,14 +7,17 @@ namespace FPS.Notification.Tests;
 public sealed class BookingEventNotificationHandlerTests
 {
     private readonly Mock<INotificationRepository> repository = new();
+    private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly BookingEventNotificationHandler handler;
 
     public BookingEventNotificationHandlerTests()
     {
-        handler = new BookingEventNotificationHandler(repository.Object);
+        handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object);
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.SaveAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        broadcaster.Setup(b => b.BroadcastAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
     }
 
@@ -117,6 +120,27 @@ public sealed class BookingEventNotificationHandlerTests
         await handler.HandleAsync(envelope);
 
         repository.Verify(r => r.SaveAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ValidEvent_BroadcastsAfterSave()
+    {
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        broadcaster.Verify(b => b.BroadcastAsync(
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DuplicateEvent_DoesNotBroadcast()
+    {
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        broadcaster.Verify(b => b.BroadcastAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
