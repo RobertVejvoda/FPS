@@ -56,7 +56,7 @@ The tracker complements the [Development Plan](./development-plan): the Developm
 | MOB003 Mobile Real Login | Done | [#75](https://github.com/RobertVejvoda/FPS/issues/75) | [#78](https://github.com/RobertVejvoda/FPS/pull/78) | `implemented-by: claude` plus Codex repair commit | 2026-05-14 | Real OIDC Authorization Code + PKCE login in Expo mobile app. |
 | MOB004 Mobile Booking Submission | Ready | [#85](https://github.com/RobertVejvoda/FPS/issues/85) | - | `initiated-by: codex`, `needs-claude-action` | Next | Employee request submission from mobile. |
 | MOB005 Mobile Booking Actions | Planned | - | - | Unassigned | After MOB004 or as split permits | Cancel and confirm-usage actions from mobile. |
-| N002 Notification API And Stream | Ready | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | - | `initiated-by: codex`, `needs-claude-action`, `claude-ready` | Next parallel Claude slice | Notification history API, unread counts, mark-read API, and SSE stream. |
+| N002 Notification API And Stream | Ready | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | - | `initiated-by: codex`, `claude-ready` | Next parallel Claude slice | Notification history API, unread counts, mark-read API, and SSE stream. |
 | N003 Notification Email Delivery | Planned | - | - | Unassigned | After N002 or in parallel if bounded | Email channel for v1 critical operational notifications. |
 | A002 Audit Query And Erasure Support | Planned | - | - | Unassigned | After A001 foundation | Auditor query API and GDPR PII mapping erasure workflow. |
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | Before production deployment | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
