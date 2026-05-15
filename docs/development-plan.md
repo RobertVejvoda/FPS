@@ -88,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 14.5.2026 by Codex against `origin/master` after PR #108, with N003 prepared in issue #103, A002 prepared in issue #105, OPS000 prepared in issue #100, CFG002 prepared in issue #107, and REPORT001 prepared in issue #109.
+Last validated: 15.5.2026 by Codex against `origin/master` after PR #115, with N003 prepared in issue #103, A002 prepared in issue #105, OPS000 prepared in issue #100, CFG002 prepared in issue #107, and REPORT001 prepared in issue #109.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
@@ -104,19 +104,23 @@ What is done:
 - CI/docs visibility and weekly/manual validation hooks: `CI001`.
 - Mobile foundation, first read-only employee screen, real OIDC login, booking submission, and booking actions: `MOB001`, `MOB002`, `MOB003`, `MOB004`, `MOB005`.
 - Agent routing docs and handoff-only Claude automation.
+- Security documentation promoted to a top-level architecture section.
 
 What is planned next:
 
+- First review and resolve current Claude implementation PRs: N003, A002, and REPORT001.
 - Notification v1 completion: N003 email delivery is ready for Claude handoff; preferences remain a later slice.
 - Audit v1 completion: A002 audit query and PII mapping erasure support is ready for Claude handoff; retention and integrity jobs remain later slices.
 - Configuration management: CFG002 admin policy and slot management is ready for Claude handoff; production persistence and Dapr publication remain later slices.
 - Reporting foundation: REPORT001 reporting read models is ready for Claude handoff; dashboards, exports, and custom reports remain later slices.
-- Production infrastructure: first refresh hosting/deployment options in OPS000 with Dapr as the portability boundary and cost as a first-class constraint; then continue Dapr components, tenant collection/index provisioning, secrets, observability, and runbooks.
+- Mobile product completion: MOB006 notifications, MOB007 profile/vehicle details, MOB008 employee-safe draw/allocation detail, and MOB009 production polish.
+- Web app: WEB001 employee self-service first, then WEB002 HR/admin dashboard, WEB003 tenant admin console, and WEB004 reporting views as supporting APIs mature.
+- Production infrastructure: first refresh hosting/deployment options in OPS000 with Dapr as the portability boundary and cost as a first-class constraint; then continue Dapr components, tenant collection/index provisioning, cloud environment baseline, secrets, observability, and runbooks.
 
 Plan validation notes:
 
 - The dependency order has held: API client and CI landed before mobile, and `MOB002` stayed read-only.
-- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, notification delivery, and operational hardening. OPS000 now precedes production infrastructure work so the deployment target is revalidated before more CI/CD or hosting-specific changes.
+- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, notification delivery, cloud hosting, and operational hardening. OPS000 now precedes production infrastructure work so the deployment target is revalidated before more CI/CD or hosting-specific changes.
 - Phase headings below remain useful as roadmap groupings, but completed slice tracking is now more accurate than the original week numbers.
 
 ---
@@ -166,6 +170,8 @@ N001 and A001 established the first consumers. Email, SSE/history APIs, audit qu
 **12. Gamification** — badges/leaderboards have no business case. Skip unless explicitly prioritised.
 
 **13. Card reader / physical confirmation integration** — no vendor or protocol specified. Leave as a stub interface.
+
+**14. Seat booking as a future product extension** — after FPS parking reaches a stable hosted v1, the same allocation and booking platform approach could be applied to company seat/desk booking. Treat this as future scope, not v1 parking scope. It would reuse the concepts of tenant-scoped resources, employee requests, policy-driven allocation, notification, audit, reporting, and admin configuration, but would need separate business rules for seats, zones, teams, recurring occupancy, collaboration needs, health/safety constraints, and workspace-specific fairness.
 
 ---
 
@@ -941,6 +947,12 @@ Implementation notes for Claude:
 - [ ] User-to-tenant assignment
 - [ ] Subscription tier management
 
+Current slice mapping:
+
+- `CFG002` Admin Policy/Slot Management: admin-facing policy, location override, slot, and capacity management.
+- `CFG003` Configuration Publication And Audit: publish policy/slot changes safely, version them, and record policy-sensitive audit evidence.
+- `CUST001` Tenant Onboarding: tenant creation, initial administrator setup, tenant lifecycle, and provisioning hooks.
+
 ---
 
 ### Phase 5 — Reporting & Billing (Week 13–15)
@@ -957,21 +969,41 @@ Implementation notes for Claude:
 - [ ] Payment provider integration (stub, expandable to Stripe/PayU)
 - [ ] Metering: track per-slot allocations for usage-based billing
 
+Current slice mapping:
+
+- `REPORT001` Reporting Read Models: tenant-scoped operational reporting read models and summary/fairness APIs.
+- `REPORT002` Reporting Dashboards And Exports: dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views.
+- `BILL001` Billing Stub To Workflow: subscription, invoice generation, and payment-provider integration.
+
 ---
 
 ### Phase 6 — Frontend (Week 16–20)
 
 - [ ] Web app (React) — employee self-service, HR dashboard, admin panel
-- [x] Mobile app (React Native + Expo) — app shell and read-only My Bookings
-- [ ] Mobile app (React Native + Expo) — real login, booking actions, notifications
+- [x] Mobile app (React Native + Expo) — app shell, My Bookings, real login, booking submission, cancellation, and usage confirmation
+- [ ] Mobile app (React Native + Expo) — notifications, profile/vehicle details, draw/allocation detail, production polish
 - [x] Shared API client generated from OpenAPI specs (used by both web and mobile)
 - [ ] Shared TypeScript types between web and mobile
 - [ ] Real-time updates via SSE — subscribe to `GET /notifications/stream` on Notification service
+
+Current slice mapping:
+
+- `MOB006` Mobile Notifications: notification list, unread count, mark-read action, and SSE or polling fallback.
+- `MOB007` Mobile Profile And Vehicle Details: employee-visible profile, vehicle, company-car, and accessibility facts.
+- `MOB008` Mobile Draw Status And Allocation Detail: employee-safe draw/allocation visibility without hidden lottery internals.
+- `MOB009` Mobile Production Polish: session expiry, refresh recovery, environment config, error/empty/loading states, accessibility, and production QA.
+- `WEB001` Web Employee Self-Service: login, my bookings, submit request, cancel, confirm usage, and notifications.
+- `WEB002` HR/Admin Dashboard: operational overview, manual corrections, booking status, configuration visibility, and reporting summaries.
+- `WEB003` Tenant Admin Console: tenant users, roles, locations, policies, and slot administration.
+- `WEB004` Reporting Views: parking summary, fairness metrics, utilization views, and exports.
 
 ---
 
 ### Phase 7 — Production Readiness (Week 21–24)
 
+- [ ] Cloud hosting/deployment target selected from OPS000
+- [ ] Low-cost hosted pilot environment provisioned
+- [ ] CI/CD deployment path to the chosen cloud environment
 - [ ] Kubernetes Helm charts per service
 - [ ] Horizontal Pod Autoscaler configs
 - [ ] Vault integration for all secrets
@@ -980,6 +1012,13 @@ Implementation notes for Claude:
 - [ ] Penetration testing pass
 - [ ] Runbooks for Draw process failure, Keycloak outage, database failover
 - [ ] Multi-region deployment strategy
+
+Current slice mapping:
+
+- `OPS000` Hosting And Deployment Strategy Options: compare cloud hosting choices with Dapr portability and cost as first-class constraints.
+- `OPS001` Local/Production Dapr Hardening: Dapr components, MongoDB tenant collections/index provisioning, secrets, and runbooks.
+- `OPS002` Cloud Environment Baseline: provision a hosted FPS environment with ingress/TLS, Dapr components, persistence, broker, identity provider, secrets, CI/CD deploy path, and rollback notes.
+- `OPS003` Observability And Runbooks: dashboards, alerts, backup/restore checks, and incident runbooks for hosted operation.
 
 ---
 
