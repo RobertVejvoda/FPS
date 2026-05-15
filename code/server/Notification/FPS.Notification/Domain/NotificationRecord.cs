@@ -16,10 +16,17 @@ public sealed class NotificationRecord
     public string? NextAction { get; init; }
     public string SourceEventId { get; init; } = string.Empty;
     public string DeliveryStatus { get; private set; } = NotificationDeliveryStatus.Stored;
+    public string? FailureReason { get; private set; }
     public bool IsRead { get; private set; }
     public DateTime CreatedAt { get; init; }
 
     public void MarkRead() => IsRead = true;
+    public void MarkDelivered() => DeliveryStatus = NotificationDeliveryStatus.Sent;
+    public void MarkFailed(string reason)
+    {
+        DeliveryStatus = NotificationDeliveryStatus.Failed;
+        FailureReason = reason;
+    }
 }
 
 public static class NotificationChannel
@@ -31,5 +38,6 @@ public static class NotificationChannel
 public static class NotificationDeliveryStatus
 {
     public const string Stored = "stored";
+    public const string Sent = "sent";
     public const string Failed = "failed";
 }
