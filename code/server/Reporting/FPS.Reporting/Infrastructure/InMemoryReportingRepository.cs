@@ -33,14 +33,16 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
         return Task.CompletedTask;
     }
 
-    public Task ApplyFairnessAsync(string tenantId, string requestorHash,
+    public Task ApplyFairnessAsync(string tenantId, string requestorHash, string date, string locationId,
         Action<FairnessRecord> apply, CancellationToken cancellationToken = default)
     {
-        var key = $"{tenantId}:{requestorHash}";
+        var key = $"{tenantId}:{requestorHash}:{date}:{locationId}";
         var record = _fairness.GetOrAdd(key, _ => new FairnessRecord
         {
             TenantId = tenantId,
-            RequestorHash = requestorHash
+            RequestorHash = requestorHash,
+            Date = date,
+            LocationId = locationId
         });
         lock (record) { apply(record); }
         return Task.CompletedTask;
@@ -66,6 +68,11 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
     {
         var results = _fairness.Values
             .Where(f => f.TenantId == tenantId)
+            .Where(f => request.DateFrom == null || string.Compare(f.Date, request.DateFrom, StringComparison.Ordinal) >= 0)
+            .Where(f => request.DateTo == null || string.Compare(f.Date, request.DateTo, StringComparison.Ordinal) <= 0)
+            .Where(f => request.LocationId == null || f.LocationId == request.LocationId)
+            .GroupBy(f => f.RequestorHash)
+            .Select(g => FairnessRecord.Aggregate(tenantId, g.Key, g.Sum(f => f.RequestCount), g.Sum(f => f.AllocationCount)))
             .OrderByDescending(f => f.AllocationRate)
             .ToList();
 
