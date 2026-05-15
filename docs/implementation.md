@@ -4,6 +4,7 @@ The implementation section tracks how FPS is built, validated, and handed off be
 
 ## Core Documents
 
+- [Roadmap](./roadmap): phase plan, ordering rationale, Kanban usage, and current priority.
 - [Development Plan](./development-plan): roadmap, scope, acceptance criteria, and open risks.
 - [Implementation Tracker](./implementation-tracker): completed and planned slices, PRs, implementer attribution, and dates.
 - [Requirements Traceability](./requirements-traceability): business and non-functional requirement coverage by implementation slice.
