@@ -6,7 +6,7 @@ public interface IReportingRepository
     Task RecordEventIdAsync(string eventId, CancellationToken cancellationToken = default);
     Task ApplyMetricsAsync(string tenantId, string date, string locationId, string timeSlot,
         Action<ParkingMetrics> apply, CancellationToken cancellationToken = default);
-    Task ApplyFairnessAsync(string tenantId, string requestorHash,
+    Task ApplyFairnessAsync(string tenantId, string requestorHash, string date, string locationId,
         Action<FairnessRecord> apply, CancellationToken cancellationToken = default);
 }
 

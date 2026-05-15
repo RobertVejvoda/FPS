@@ -113,6 +113,34 @@ public sealed class ReportingQueryServiceTests
     }
 
     [Fact]
+    public async Task GetFairness_FilterByDateRange_ExcludesOutOfRangeRequests()
+    {
+        // May request is outside the June filter window; only June counts.
+        await handler.HandleAsync(Envelope("e1", "booking.requestSubmitted", "t1", "u1", "loc-1", "2026-05-01", "09:00-17:00"));
+        await handler.HandleAsync(Envelope("e2", "booking.requestSubmitted", "t1", "u1", "loc-1", "2026-06-01", "09:00-17:00"));
+        await handler.HandleAsync(Envelope("e3", "booking.slotAllocated", "t1", "u1", "loc-1", "2026-06-01", "09:00-17:00"));
+
+        var result = await service.GetFairnessAsync(new() { DateFrom = "2026-06-01", DateTo = "2026-06-30" }, "t1");
+
+        Assert.Single(result.Items);
+        Assert.Equal(1, result.Items[0].RequestCount);
+        Assert.Equal(1, result.Items[0].AllocationCount);
+        Assert.Equal(1.0, result.Items[0].AllocationRate);
+    }
+
+    [Fact]
+    public async Task GetFairness_FilterByLocation_ExcludesOtherLocations()
+    {
+        await handler.HandleAsync(Envelope("e1", "booking.requestSubmitted", "t1", "u1", "loc-A", "2026-06-01", "09:00-17:00"));
+        await handler.HandleAsync(Envelope("e2", "booking.requestSubmitted", "t1", "u1", "loc-B", "2026-06-01", "09:00-17:00"));
+
+        var result = await service.GetFairnessAsync(new() { LocationId = "loc-A" }, "t1");
+
+        Assert.Single(result.Items);
+        Assert.Equal(1, result.Items[0].RequestCount);
+    }
+
+    [Fact]
     public async Task GetSummary_AllocationRateCalculation_IsCorrect()
     {
         await handler.HandleAsync(Envelope("e1", "booking.requestSubmitted", "t1", "u1", "loc-1", "2026-06-01", "09:00-17:00"));
