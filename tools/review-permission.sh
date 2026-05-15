@@ -10,24 +10,30 @@ emit() {
   local decision="$1"
   local reason="${2:-}"
 
-  if [[ -n "$reason" ]]; then
-    jq -n \
-      --arg event "PermissionRequest" \
-      --arg decision "$decision" \
-      --arg reason "$reason" \
-      '{hookSpecificOutput:{hookEventName:$event,permissionDecision:$decision,permissionDecisionReason:$reason}}'
-  else
-    jq -n \
-      --arg event "PermissionRequest" \
-      --arg decision "$decision" \
-      '{hookSpecificOutput:{hookEventName:$event,permissionDecision:$decision}}'
-  fi
+  case "$decision" in
+    allow)
+      jq -n \
+        --arg event "PermissionRequest" \
+        '{hookSpecificOutput:{hookEventName:$event,decision:{behavior:"allow"}}}'
+      ;;
+    deny)
+      jq -n \
+        --arg event "PermissionRequest" \
+        --arg reason "$reason" \
+        '{hookSpecificOutput:{hookEventName:$event,decision:{behavior:"deny",message:$reason}}}'
+      ;;
+  esac
   exit 0
 }
 
 deny() { emit deny "$1"; }
 allow() { emit allow; }
-ask() { emit ask "$1"; }
+ask() {
+  # PermissionRequest supports only allow/deny decisions. Exit with no stdout to
+  # preserve the normal user permission prompt for cases that need confirmation.
+  printf '%s\n' "$1" >&2
+  exit 0
+}
 
 # ── Auto-allow: read-only tools ───────────────────────────────────────────────
 case "$TOOL" in
