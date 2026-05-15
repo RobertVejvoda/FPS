@@ -34,6 +34,8 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 | Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and changes the label to `claude-ready` |
 | PR has `needs-claude-action` | Prepares a Claude handoff comment and changes the label to `claude-ready` |
 
+`needs-claude-action` is a router trigger, not the durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. The durable waiting state is `claude-ready`.
+
 Required setup:
 
 - `COPILOT_ASSIGNMENT_TOKEN` repository secret for Copilot assignment. GitHub requires a user token for Copilot coding agent assignment; `GITHUB_TOKEN` cannot assign agents.
@@ -45,7 +47,8 @@ Safety notes:
 - `active-coordination` is not an implementation trigger.
 - Copilot is assigned only to issues, not PRs.
 - Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost.
-- `claude-ready` means the handoff is prepared; it does not mean Claude has already run.
+- `claude-ready` means the handoff is prepared and the item is waiting for a human to invoke Claude. It does not mean Claude has already run, is currently running, or has accepted the task.
+- Implementers should add `needs-codex-review` when they finish and should remove stale ready/action labels when permitted.
 
 ### What CI checks
 

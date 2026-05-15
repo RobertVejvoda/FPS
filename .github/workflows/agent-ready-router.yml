@@ -102,6 +102,8 @@ jobs:
           Automated Claude handoff prepared. No Anthropic API call was made.
 
           Use this prompt only when a human decides the task is worth spending Claude tokens.
+          After this comment is posted, the router removes needs-claude-action and adds claude-ready.
+          claude-ready means waiting for a human to invoke Claude with this prompt; it does not mean Claude has already run.
 
           ```text
           You are Claude acting as FPS Implementer.
@@ -163,6 +165,8 @@ jobs:
           Automated Claude handoff prepared. No Anthropic API call was made.
 
           Use this prompt only when a human decides the PR repair is worth spending Claude tokens.
+          After this comment is posted, the router removes needs-claude-action and adds claude-ready.
+          claude-ready means waiting for a human to invoke Claude with this prompt; it does not mean Claude has already run.
 
           ```text
           You are Claude acting as FPS Implementer.
@@ -172,7 +176,7 @@ jobs:
           Address Codex review feedback on this PR only. Keep the existing PR scope.
           Do not start a parallel implementation or unrelated refactor.
           Start by editing the changed files listed below. Use local search only when needed to understand nearby types or examples.
-          For validation, use exactly: cd code/mobile/fps-mobile && npm run typecheck
+          For validation, run the command requested by Codex review; otherwise prefer ./tools/validate.sh for code changes.
           When finished, push updates to this PR branch if permitted, report validation, and add needs-codex-review.
 
           HANDOFF
