@@ -8,7 +8,7 @@ The system is not a simple CRUD app — the Draw is a long-running distributed p
 
 Booking implementation planning is maintained in [Booking Implementation Slices](implementation/booking-vertical-slices). Business rules and contracts remain under the business layer: [Booking Event Contracts](business-layer/booking-event-contracts), [Booking Authorization](business-layer/booking-authorization), [Booking Reason Codes](business-layer/booking-reason-codes), [Booking API Contract](business-layer/booking-api-contract), and [Booking Context Contract](business-layer/booking-context-contract).
 
-Progress, PRs, implementer attribution, and current ownership are tracked in the [Implementation Tracker](implementation-tracker). Update that tracker whenever a slice is created, assigned, implemented, reviewed, or merged.
+Progress, PRs, implementer attribution, and current ownership are tracked in the [Implementation Tracker](implementation-tracker). Requirement coverage is tracked in [Requirements Traceability](requirements-traceability), which maps business and non-functional requirements to slices and PR evidence. Update both views when a slice is created, assigned, implemented, reviewed, or merged.
 
 ---
 
