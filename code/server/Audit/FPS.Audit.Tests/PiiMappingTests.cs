@@ -40,10 +40,7 @@ public sealed class PiiMappingTests
 
         await service.DeleteByUserIdAsync("user-1", "tenant-1", "actor-hash");
 
-        // Verify idempotent second call also succeeds.
-        var ex = await Record.ExceptionAsync(() =>
-            service.DeleteByUserIdAsync("user-1", "tenant-1", "actor-hash"));
-        Assert.Null(ex);
+        Assert.False(await mappingRepo.ExistsAsync("user-1", "tenant-1"));
     }
 
     [Fact]
@@ -56,14 +53,9 @@ public sealed class PiiMappingTests
             ActorHash = Pseudonymiser.Hash("user-1")!
         });
 
-        // Deleting for tenant-1 should not affect tenant-2 mapping.
         await service.DeleteByUserIdAsync("user-1", "tenant-1", "actor-hash");
 
-        // No assertion on the repo directly (it's private), but verify no exception
-        // and that a second delete on the correct tenant also succeeds idempotently.
-        var ex = await Record.ExceptionAsync(() =>
-            service.DeleteByUserIdAsync("user-1", "tenant-2", "actor-hash"));
-        Assert.Null(ex);
+        Assert.True(await mappingRepo.ExistsAsync("user-1", "tenant-2"));
     }
 
     [Fact]

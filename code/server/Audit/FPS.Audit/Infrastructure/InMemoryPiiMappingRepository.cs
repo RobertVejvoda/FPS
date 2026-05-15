@@ -18,4 +18,7 @@ public sealed class InMemoryPiiMappingRepository : IPiiMappingRepository
         store.TryRemove((tenantId, userId), out _);
         return Task.CompletedTask;
     }
+
+    public Task<bool> ExistsAsync(string userId, string tenantId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(store.ContainsKey((tenantId, userId)));
 }

@@ -41,4 +41,5 @@ public interface IPiiMappingRepository
 {
     Task SaveAsync(PiiMapping mapping, CancellationToken cancellationToken = default);
     Task DeleteByUserIdAsync(string userId, string tenantId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(string userId, string tenantId, CancellationToken cancellationToken = default);
 }
