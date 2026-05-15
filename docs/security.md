@@ -1,3 +1,5 @@
+# Security
+
 Security is a top-level FPS concern because it cuts across product policy, tenant isolation, implementation, operations, and compliance. This section defines the controls that every layer must respect.
 
 Start with [Security Model](./security/security-model). It is the source of truth for actors, roles, data classification, data-in-transit and data-at-rest controls, protocols, encryption, secret access tracking, and GDPR alignment.
