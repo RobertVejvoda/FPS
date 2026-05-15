@@ -1,14 +1,14 @@
 ## Objective
 
- This user story aims to implement a feature that allows users to select a specific portion of code 
- and generate a documentation comment for it. 
+ This user story aims to implement a feature that allows users to select a specific portion of code
+ and generate a documentation comment for it.
 
  The feature should:
  - Accept a selection of code from the user.
  - Analyze the selected code to understand its purpose and functionality.
  - Generate a clear and concise documentation comment that describes the objective of the code.
- 
- This feature will help developers quickly document their code, improving code readability and 
+
+ This feature will help developers quickly document their code, improving code readability and
  maintainability.
 
 ## Description
@@ -27,7 +27,7 @@ This user story focuses on ensuring that regular security audits are conducted t
 By conducting regular security audits, the organization can proactively manage security risks and maintain a robust security posture.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 

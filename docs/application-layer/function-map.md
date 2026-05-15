@@ -1,1 +1,1 @@
-![Function Map](./images/fps-function-map.png)
+![Function Map](../images/fps-function-map.png)

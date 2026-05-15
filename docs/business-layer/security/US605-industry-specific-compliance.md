@@ -5,7 +5,7 @@ Ensure that the system adheres to all industry-specific compliance requirements,
 As a user, I want the system to comply with industry-specific regulations, ensuring that the system meets all legal and regulatory standards relevant to my industry.
 
 ## Requirements
-- **[CR002](../compliance-requirements/CR002-industry-specific-compliance)**: Legal - System should comply with industry-specific regulations and standards.
+- **CR002**: Legal - System should comply with industry-specific regulations and standards.
 
 ## Acceptance Criteria
 - [ ] **Given** the system is processing user data **when** the data is stored **then** it must comply with GDPR regulations.

@@ -1,6 +1,6 @@
 The Feedback component handles the collection and management of user feedback. It allows users to submit feedback on various aspects of the service, and manages the storage and analysis of this feedback to improve service quality.
 
-![Software Architecture - Feedback](../images/fps-software-arch-feedback.png)
+Feedback does not yet have a dedicated software architecture diagram.
 
 ## REST API Endpoints
 
@@ -48,4 +48,4 @@ The Feedback component handles the collection and management of user feedback. I
 
 ## Packaging
 
-![Feedback](../images/fps-software-pack-feedback.png)
+Feedback does not yet have a dedicated packaging diagram.

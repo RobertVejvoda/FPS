@@ -5,7 +5,7 @@ Ensure that users have the ability to access, rectify, and delete their personal
 As a user, I want to access, rectify, or delete my personal data, ensuring that I have control over my information.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 - [ ] **Given** a user is logged in, **when** they navigate to the data management section, **then** they should see options to access, rectify, and delete their personal data.

@@ -117,7 +117,7 @@ Detailed security documentation is maintained under [Security](../security), esp
 
 ## Licensing
 
-FPS is licensed under AGPL-3.0-or-later. The repository license decision is recorded in [Versions and Decisions](../versions-and-decisions), and the full license text is available in [LICENSE](../../LICENSE).
+FPS is licensed under AGPL-3.0-or-later. The repository license decision is recorded in [Versions and Decisions](../versions-and-decisions), and the full license text is available in the [repository LICENSE](https://github.com/RobertVejvoda/FPS/blob/master/LICENSE).
 
 ## Tool/Framework Versions
 

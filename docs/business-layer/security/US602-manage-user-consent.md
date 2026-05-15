@@ -5,7 +5,7 @@ The objective of this user story is to implement a robust and user-friendly cons
 As a user, I want to be able to give and withdraw consent for data processing, ensuring that my preferences are respected.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 - [ ] **Given** a user is on the consent management page **when** they choose to give consent **then** the system should record their consent and display a confirmation message.

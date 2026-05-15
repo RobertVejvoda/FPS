@@ -53,4 +53,4 @@ All endpoints return appropriate HTTP status codes and follow REST conventions. 
 
 The Identity module is packaged as a separate service with its own API endpoints and database access. It is deployed independently to ensure scalability and security isolation.
 
-![Identity](../images/fps-software-pack-identity.png)
+![Identity](../images/fps-software-pack-auth.png)
