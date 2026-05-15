@@ -2,9 +2,9 @@
 
 This page tracks the delivery plan as slices. It is the first place to update when a new slice is created, assigned, implemented, reviewed, or merged.
 
-The tracker complements the [Development Plan](./development-plan) and [Requirements Traceability](./requirements-traceability): the Development Plan explains scope and acceptance criteria, Requirements Traceability maps slices to business/NFR coverage, and this page records progress, PRs, implementer attribution, and current ownership.
+The tracker complements the [Roadmap](./roadmap), [Development Plan](./development-plan), and [Requirements Traceability](./requirements-traceability): the Roadmap explains phases and ordering, the Development Plan explains scope and acceptance criteria, Requirements Traceability maps slices to business/NFR coverage, and this page records progress, PRs, implementer attribution, and current ownership.
 
-Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). The board gives a high-level view of Backlog, Ready, In progress, In review, and Done work; this page remains the detailed source of truth for slice evidence and PR links.
+Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). The board gives a high-level view of Backlog, Ready, In progress, In review, and Done work; the [Roadmap](./roadmap) explains what each phase means; this page remains the detailed source of truth for slice evidence and PR links.
 
 ## Tracking Rules
 
