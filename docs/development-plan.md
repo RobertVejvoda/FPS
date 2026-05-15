@@ -88,7 +88,7 @@ This package is referenced by all services — it must remain stable and have no
 
 ## Current Plan Tracking
 
-Last validated: 15.5.2026 by Codex against `origin/master` after PR #115, with N003 prepared in issue #103, A002 prepared in issue #105, OPS000 prepared in issue #100, CFG002 prepared in issue #107, and REPORT001 prepared in issue #109.
+Last validated: 15.5.2026 by Codex against `origin/master` after PR #125.
 
 Overall status: **on track, with the expected scope shift from backend foundation to mobile and product hardening.** Booking Phase 1 and the first integration/mobile sequence are merged. The plan remains coherent because mobile work is now using the generated API client and authenticated backend scoping instead of hand-copying DTOs or trusting client-supplied tenant/user identity.
 
@@ -98,29 +98,33 @@ What is done:
 - Authenticated user context and Booking API authenticated scoping: `ID001`, `BK011`.
 - Profile vehicle/eligibility snapshot consumed by Booking: `P001`.
 - Booking event consumers for in-app Notification and pseudonymised Audit records: `N001`, `A001`.
-- Notification history API, unread count, mark-read API, and SSE stream: `N002`.
+- Notification history API, unread count, mark-read API, SSE stream, email delivery, observability, and staging validation: `N002`, `N003`, `N004`.
+- Audit query and PII mapping erasure support: `A002`.
 - Parking policy/configuration hardening: `CFG001`.
+- Admin parking policy and slot management: `CFG002`.
+- Reporting read models and dashboard data foundation: `REPORT001`.
 - OpenAPI/TypeScript client generation and stale-check tooling: `API001`.
 - CI/docs visibility and weekly/manual validation hooks: `CI001`.
 - Mobile foundation, first read-only employee screen, real OIDC login, booking submission, and booking actions: `MOB001`, `MOB002`, `MOB003`, `MOB004`, `MOB005`.
 - Agent routing docs and handoff-only Claude automation.
 - Security documentation promoted to a top-level architecture section.
+- Production planning baseline: `OPS000`.
 
 What is planned next:
 
-- First review and resolve current Claude implementation PRs: N003, A002, and REPORT001.
-- Notification v1 completion: N003 email delivery is ready for Claude handoff; preferences remain a later slice.
-- Audit v1 completion: A002 audit query and PII mapping erasure support is ready for Claude handoff; retention and integrity jobs remain later slices.
-- Configuration management: CFG002 admin policy and slot management is ready for Claude handoff; production persistence and Dapr publication remain later slices.
-- Reporting foundation: REPORT001 reporting read models is ready for Claude handoff; dashboards, exports, and custom reports remain later slices.
+- Notification preferences and user-facing consumption remain later slices.
+- Audit retention, integrity jobs, and export support remain later slices.
+- Configuration publication/history/audit integration remain later slices.
+- Reporting dashboards, exports, custom reports, and web views remain later slices.
 - Mobile product completion: MOB006 notifications, MOB007 profile/vehicle details, MOB008 employee-safe draw/allocation detail, and MOB009 production polish.
 - Web app: WEB001 employee self-service first, then WEB002 HR/admin dashboard, WEB003 tenant admin console, and WEB004 reporting views as supporting APIs mature.
-- Production infrastructure: first refresh hosting/deployment options in OPS000 with Dapr as the portability boundary and cost as a first-class constraint; then continue Dapr components, tenant collection/index provisioning, cloud environment baseline, secrets, observability, and runbooks.
+- Production infrastructure: continue with pluggable Dapr component baseline, demo environment baseline, client-owned production integration, observability/performance evidence, and runbooks.
+- Client evaluation material: prepare business summary, role-based demo scripts, architecture overview, production operations summary, security/GDPR summary, cost assumptions, and FAQ.
 
 Plan validation notes:
 
 - The dependency order has held: API client and CI landed before mobile, and `MOB002` stayed read-only.
-- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, notification delivery, cloud hosting, and operational hardening. OPS000 now precedes production infrastructure work so the deployment target is revalidated before more CI/CD or hosting-specific changes.
+- The remaining risk is not the Booking domain; it is production integration depth: real IdP setup, production persistence/provisioning, client-owned hosting, demo evidence, telemetry integration, and operational hardening. OPS000 established the pluggable strategy; OPS001-OPS004 turn it into deployable proof.
 - Phase headings below remain useful as roadmap groupings, but completed slice tracking is now more accurate than the original week numbers.
 
 ---
@@ -158,10 +162,10 @@ Audit records store `actor_hash` (SHA-256 of `user_id`). A separate `PiiMapping`
 The code has authenticated context and claim mapping, but production Keycloak/OIDC setup, token lifecycle, and full role-policy wiring are still planned.
 
 **9. Production Dapr/MongoDB/tenant provisioning**
-The architecture is decided, but production-grade component configuration, tenant collection/index provisioning, secrets, and runbooks remain future operational work.
+The architecture is decided, but production-grade component configuration, tenant collection/index provisioning, secrets, demo deployment proof, client-owned production guidance, and runbooks remain future operational work.
 
-**10. Notification and Audit v1 completion**
-N001 and A001 established the first consumers. Email, SSE/history APIs, audit query, retention/integrity, and GDPR erasure workflows remain planned.
+**10. Notification and Audit hardening**
+Notification history/SSE/email and audit query/PII erasure are implemented. Preferences, retention, integrity jobs, exports, and operational evidence remain planned.
 
 ### Minor / Future
 
@@ -329,12 +333,12 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Merged in PR #87. |
 | Done | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Merged in [PR #95](https://github.com/RobertVejvoda/FPS/pull/95). Uses existing Booking endpoints and employee-safe error/reason handling. |
 | Done | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Implemented in PR #93; SSE JSON casing follow-up in [PR #94](https://github.com/RobertVejvoda/FPS/pull/94). Email remains separate. |
-| Ready | `N003` Notification Email Delivery | Add mandatory email-channel delivery for Booking operational notifications. | Prepared in [issue #103](https://github.com/RobertVejvoda/FPS/issues/103). Keep local validation no-cost and design the sender behind a Dapr-ready provider boundary. |
-| Ready | `OPS000` Hosting And Deployment Strategy Options | Compare hosting/deployment options before more production infrastructure work. | Prepared in [issue #100](https://github.com/RobertVejvoda/FPS/issues/100). Dapr APIs/components/bindings are the portability boundary; cost is a first-class criterion. |
-| Ready | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure support. | Prepared in [issue #105](https://github.com/RobertVejvoda/FPS/issues/105). Builds on A001 append-only audit records; retention and integrity jobs remain out of scope. |
-| Ready | `CFG002` Admin Policy And Slot Management | Add admin-managed tenant policy, location override, and slot/capacity configuration APIs. | Prepared in [issue #107](https://github.com/RobertVejvoda/FPS/issues/107). Keep production persistence, Dapr publication, and Booking migration out of scope. |
-| Ready | `REPORT001` Reporting Read Models | Add tenant-scoped operational reporting read models and parking summary/fairness APIs. | Prepared in [issue #109](https://github.com/RobertVejvoda/FPS/issues/109). Keep dashboards, exports, custom reports, and production persistence out of scope. |
-| Next | `OPS001` Local/Production Dapr Hardening | Align local Dapr components, tenant provisioning, secrets, and operational runbooks. | Start after OPS000 clarifies the target hosting/deployment path. Should stay infrastructure-focused; no product behavior changes. |
+| Done | `N003` Notification Email Delivery | Add mandatory email-channel delivery for Booking operational notifications. | Merged in PR #111. |
+| Done | `OPS000` Hosting and Deployment Strategy Options | Compare hosting/deployment options before more production infrastructure work. | Merged in PR #102. Current docs reframe this as local/demo/client-owned production profiles. |
+| Done | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure support. | Merged in PR #112. Retention and integrity jobs remain later slices. |
+| Done | `CFG002` Admin Policy And Slot Management | Add admin-managed tenant policy, location override, and slot/capacity configuration APIs. | Merged in PR #125. Publication/history/audit integration remain later slices. |
+| Done | `REPORT001` Reporting Read Models | Add tenant-scoped operational reporting read models and parking summary/fairness APIs. | Merged in PR #124. Dashboards, exports, custom reports, and web views remain later slices. |
+| Next | `OPS001` Pluggable Dapr Component Baseline | Align local component files with demo/client component contracts, tenant provisioning, secrets, and operational runbooks. | Should stay infrastructure-focused; no product behavior changes. |
 
 #### Slice ID001: Authenticated User Context
 
@@ -1001,24 +1005,25 @@ Current slice mapping:
 
 ### Phase 7 — Production Readiness (Week 21–24)
 
-- [ ] Cloud hosting/deployment target selected from OPS000
-- [ ] Low-cost hosted pilot environment provisioned
-- [ ] CI/CD deployment path to the chosen cloud environment
-- [ ] Kubernetes Helm charts per service
-- [ ] Horizontal Pod Autoscaler configs
+- [ ] Pluggable local/demo/client-owned deployment profiles defined from OPS000
+- [ ] Low-cost demo environment provisioned or documented
+- [ ] Repeatable deployment path to the selected demo environment
+- [ ] Client-owned production integration guide prepared
+- [ ] Runtime-appropriate scaling configuration documented
 - [ ] Vault integration for all secrets
-- [ ] Full observability stack (Prometheus, Grafana dashboards, Loki, Jaeger)
+- [ ] OpenTelemetry metrics/logs/traces exported locally and documented for client platforms such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent
 - [ ] Load testing (k6 or NBomber) against NFR targets
 - [ ] Penetration testing pass
 - [ ] Runbooks for Draw process failure, Keycloak outage, database failover
-- [ ] Multi-region deployment strategy
+- [ ] Client-specific high availability and region strategy documented
 
 Current slice mapping:
 
-- `OPS000` Hosting And Deployment Strategy Options: compare cloud hosting choices with Dapr portability and cost as first-class constraints.
-- `OPS001` Local/Production Dapr Hardening: Dapr components, MongoDB tenant collections/index provisioning, secrets, and runbooks.
-- `OPS002` Cloud Environment Baseline: provision a hosted FPS environment with ingress/TLS, Dapr components, persistence, broker, identity provider, secrets, CI/CD deploy path, and rollback notes.
-- `OPS003` Observability And Runbooks: dashboards, alerts, backup/restore checks, and incident runbooks for hosted operation.
+- `OPS000` Deployment Profile Strategy: establish local, demo, and client-owned production profiles with Dapr portability and cost as first-class constraints.
+- `OPS001` Pluggable Dapr Component Baseline: Dapr components, MongoDB tenant collections/index provisioning, secrets, and runbooks.
+- `OPS002` Demo Environment Baseline: provision or document a hosted demo path with ingress/TLS, Dapr components, persistence, broker, identity provider, secrets, deployment, smoke tests, and rollback notes.
+- `OPS003` Client-Owned Production Integration: define the client handoff model, deployment responsibilities, identity integration, network/security assumptions, backup/restore, and release process.
+- `OPS004` Observability And Performance Evidence: dashboards, alerts, traces, usage stats, backup/restore checks, and incident evidence for demo and client operation.
 
 ---
 

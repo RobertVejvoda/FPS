@@ -1,6 +1,35 @@
+# Monitoring
+
+Monitoring describes how FPS proves that the system is healthy, fair, auditable, and ready for client operation. The monitoring model must work across local development, demo, and client-owned production.
+
+## Telemetry Boundary
+
+FPS should instrument services with OpenTelemetry-compatible metrics, logs, and traces. Deployment profiles decide where telemetry is stored and visualized:
+
+| Profile | Default monitoring target | Purpose |
+| --- | --- | --- |
+| Local | Prometheus, Grafana, and local tracing such as Jaeger. | Fast developer feedback and service-level debugging. |
+| Demo | Low-cost dashboards and trace/log retention sufficient for evaluation. | Prove usage, performance, error rate, notification delivery, draw duration, and audit/reporting behavior. |
+| Client production | Client observability platform through OpenTelemetry Collector/exporters. | Integrate with existing client operations, alerting, SIEM, and incident processes. |
+
+Client production examples include Dynatrace, Azure Monitor/Application Insights, Grafana/Prometheus, Splunk, Datadog, New Relic, CloudWatch, or equivalent. FPS should not require one vendor-specific SDK in application code.
+
+## Required Signals
+
+| Signal | Examples |
+| --- | --- |
+| Usage | active tenants, active users, booking requests, cancellations, confirmations, no-shows, admin policy changes |
+| API health | request count, latency percentiles, error rate, authentication failures, rate-limit events |
+| Draw processing | scheduled draw count, draw duration, eligible request count, allocated/rejected/pending counts, deterministic fallback count |
+| Messaging | published events, consumer lag/backlog, dead-letter count, retry count |
+| Notification | in-app events, SSE reconnects, email send attempts, delivery failures, preference suppressions |
+| Audit and reporting | audit write count, audit query latency, reporting projection lag, export count |
+| Infrastructure | container restarts, CPU/memory, storage growth, cache health, broker health, Dapr sidecar health |
+| Security | privileged access, secret access, failed authorization, GDPR erasure requests, data export access |
+
 ## Open Source Monitoring
 
-In addition to AWS services, open source tools can be used to monitor the application. Below are some popular open source monitoring tools:
+Open source tools are the preferred local baseline and a valid client-production option when the client operates them:
 
 ### Prometheus
 Prometheus is an open-source systems monitoring and alerting toolkit. It is particularly well-suited for monitoring dynamic cloud environments and microservices.
@@ -36,7 +65,7 @@ AWS Config provides a detailed view of the configuration of AWS resources in the
 AWS Trusted Advisor provides real-time guidance to help provision resources following AWS best practices. It helps optimize the AWS environment by reducing costs, increasing performance, and improving security.
 
 ### Third-Party Tools
-In addition to AWS native tools, third-party monitoring tools like Datadog, New Relic, and Splunk can be integrated for enhanced monitoring capabilities.
+In addition to AWS native tools, third-party monitoring tools such as Dynatrace, Datadog, New Relic, and Splunk can be integrated through OpenTelemetry exporters where possible.
 
 ### Custom Dashboards
 Custom dashboards can be created in CloudWatch or third-party tools to visualize key metrics and logs for better insight into the application's performance and health.
@@ -73,4 +102,3 @@ Azure Sentinel is a scalable, cloud-native security information and event manage
 
 ### Azure Network Watcher
 Azure Network Watcher provides tools to monitor, diagnose, and gain insights into your network performance and health. It helps with network troubleshooting and diagnostics.
-

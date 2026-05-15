@@ -71,42 +71,46 @@
     - The message broker scales horizontally and handles increased load during testing.  
     **Priority:** High  
 
-### Kubernetes
+### Deployment Portability
 
-1. **NFR1400 - Kubernetes Deployment**  
-    **Description:** Deploy the system using Kubernetes for container orchestration and management.  
-    **Rationale:** Enhances scalability, reliability, and ease of deployment.  
-    **Acceptance Criteria:**  
-    - The system is deployed and managed using Kubernetes.  
-    **Priority:** High  
+1. **NFR1400 - Deployment Portability**
+    **Description:** Deploy the system into local, demo, and client-owned production environments using containerized services and Dapr-compatible components. Kubernetes is an allowed target, not the only target.
+    **Rationale:** Keeps FPS portable across client hosting environments while preserving service invocation, pub/sub, state, bindings, and secret-store boundaries.
+    **Acceptance Criteria:**
+    - The system can run locally with local Dapr components.
+    - Demo deployment uses replaceable Dapr components and documents cost assumptions.
+    - Client-owned production deployment guidance identifies required platform capabilities and integration responsibilities.
+    **Priority:** High
 
-2. **NFR1401 - Auto-Scaling**  
-    **Description:** Implement auto-scaling in Kubernetes to automatically adjust resources based on demand.  
-    **Rationale:** Ensures efficient resource utilization and performance.  
+2. **NFR1401 - Auto-Scaling**
+    **Description:** Implement runtime-appropriate auto-scaling to adjust resources based on demand.
+    **Rationale:** Ensures efficient resource utilization and performance.
     **Acceptance Criteria:**  
     - Auto-scaling is implemented and adjusts resources based on demand during testing.  
     **Priority:** High  
 
-3. **NFR1402 - High Availability**  
-    **Description:** Ensure high availability of services using Kubernetes features like replica sets and load balancing.  
-    **Rationale:** Enhances system reliability and uptime.  
-    **Acceptance Criteria:**  
-    - High availability is achieved using replica sets and load balancing in Kubernetes.  
-    **Priority:** High  
+3. **NFR1402 - High Availability**
+    **Description:** Ensure high availability using the selected runtime's replica, health-check, load-balancing, and restart capabilities.
+    **Rationale:** Enhances system reliability and uptime.
+    **Acceptance Criteria:**
+    - High availability design is documented for the selected demo and client production profiles.
+    **Priority:** High
 
-4. **NFR1403 - Monitoring and Logging**  
-    **Description:** Implement monitoring and logging for Kubernetes clusters to track performance and identify issues.  
-    **Rationale:** Provides visibility into cluster performance and helps in troubleshooting.  
-    **Acceptance Criteria:**  
-    - Monitoring and logging are implemented and provide insights into cluster performance.  
-    **Priority:** Medium  
+4. **NFR1403 - Monitoring and Logging**
+    **Description:** Implement metrics, logs, and traces through OpenTelemetry-compatible instrumentation.
+    **Rationale:** Provides visibility into service health, usage, performance, and operational incidents across local, demo, and client-owned production environments.
+    **Acceptance Criteria:**
+    - Local dashboards use Prometheus/Grafana or equivalent.
+    - Demo dashboards show usage, latency, errors, event processing, notification delivery, and draw duration.
+    - Client production telemetry can be exported to platforms such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent.
+    **Priority:** Medium
 
-5. **NFR1404 - Security**  
-    **Description:** Implement security best practices for Kubernetes, including network policies and role-based access control (RBAC).  
-    **Rationale:** Ensures the security and integrity of the Kubernetes cluster.  
-    **Acceptance Criteria:**  
-    - Security best practices are implemented and verified for the Kubernetes cluster.  
-    **Priority:** High  
+5. **NFR1404 - Security**
+    **Description:** Implement runtime-appropriate security controls, including network boundaries, workload identity or secret-store integration, TLS, RBAC, and least privilege.
+    **Rationale:** Ensures the security and integrity of the selected runtime and client-owned production deployment.
+    **Acceptance Criteria:**
+    - Security controls are implemented and verified for the selected demo/runtime profile and documented for client production.
+    **Priority:** High
 
 
 
@@ -993,4 +997,4 @@
     **Acceptance Criteria:**  
     - Challenges are defined and available for users to participate in.  
     - Users receive rewards and recognition for completing challenges.  
-    **Priority:** Medium  
+    **Priority:** Medium

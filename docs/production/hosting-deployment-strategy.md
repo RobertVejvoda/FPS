@@ -1,47 +1,89 @@
-# OPS000 Hosting and Deployment Strategy
+# OPS000 Deployment Profile Strategy
 
-**Status:** Proposal — not yet approved as a durable architecture decision.
-Approval by Robert Vejvoda and/or Codex is required before OPS001 begins.
+**Status:** Baseline merged; provider-specific production choice remains client/environment dependent.
 
 **Prepared by:** Claude (FPS Implementer), 2026-05-14
-**Supersedes:** `azure-setup.md` and `aws-setup.md` cost tables (those files remain for reference but their stack assumptions are stale).
+**Updated by:** Codex (FPS Product Owner), 2026-05-15
+**Supersedes:** `azure-setup.md` and `aws-setup.md` cost tables for planning purposes. Those files remain reference material, but their stack assumptions are stale.
 
 ---
 
 ## Executive Recommendation
 
-**Adopt Azure Container Apps (Consumption plan) as the first production target.**
+FPS should keep the runtime **pluggable by deployment profile** rather than choosing a single production provider owned by FPS.
 
-Azure Container Apps (ACA) is the only option in this comparison that provides native, managed Dapr integration — no control-plane installation, no version-pinning scripts, no sidecar-injector management. The Consumption plan scales to zero, has a generous free tier, and maps cleanly to GitHub Actions → Azure Container Registry → Container Apps. At FPS's current scale (early SaaS, single maintainer), the operational overhead of running AKS is unjustified.
+The product needs three practical targets:
 
-This is a proposal. The open questions in [section 8](#8-open-questions-requiring-approval) must be answered before OPS001 begins.
+| Profile | Recommendation | Why |
+|---|---|---|
+| **Local** | Docker Compose or local containers with self-hosted Dapr components. | Lowest cost, fast feedback, and close enough to production contracts for development. |
+| **Demo** | A low-cost hosted environment with managed container runtime and replaceable Dapr components. Azure Container Apps remains a strong candidate because of native Dapr support, but the demo provider is not yet a durable architecture decision. | Lets business and technical evaluators try a real system and lets FPS collect usage/performance evidence. |
+| **Client-owned production** | Client-selected cloud or platform, constrained by FPS component contracts, Dapr building blocks, OpenTelemetry telemetry, and documented backup/restore/security requirements. | Production operation belongs to the client. FPS should deliver deployable artifacts, configuration guidance, runbooks, and evidence rather than operate the client's environment. |
+
+Dapr remains the boundary for pub/sub, state, bindings, service invocation, and secrets. OpenTelemetry remains the boundary for logs, metrics, and traces. Provider-specific services are allowed only behind those boundaries or in clearly isolated deployment scripts.
 
 ---
 
-## 1. Comparison Table
+## 1. Deployment Profile Comparison
 
-| Criterion | **Azure Container Apps** (Consumption) | **Azure Kubernetes Service** (Dapr ext.) | **Hybrid stepping stone** | **Non-Azure / portable** |
+| Criterion | **Local** | **Demo hosted environment** | **Client-owned production** | **Kubernetes / enterprise option** |
 |---|---|---|---|---|
-| **Dapr support** | Native — all building blocks: service invocation, pub/sub, state, bindings, secrets, workflows | Managed extension — same Dapr building blocks; requires CRD/control-plane maintenance | ACA or Fargate for APIs; local Dapr for dev | Full Dapr compatibility; cloud-provider pieces must be replaced per target |
-| **Managed identity** | Yes — Azure MI for Key Vault, Service Bus, ACR, etc. | Yes — but requires Workload Identity setup on AKS | Partial — depends on chosen managed container service | Not applicable; external IdP/OIDC required per cloud |
-| **Cost at small scale** | ~$0–30/month compute (free tier covers light traffic); dominated by data service costs | ~$35–50/month base (1 node) + data services; no scale-to-zero on node | Lowest ACA + deferred services; $0 for idle dev/staging | Cloud-specific; comparable to ACA if self-managed Redis/RabbitMQ |
-| **Cost growth** | Linear with vCPU-seconds consumed; Dedicated profiles available when steady-load justifies | More predictable at high steady load; per-node billing | Scales with chosen services | Scales with hosting choice |
-| **Operational complexity** | Low — Microsoft manages Dapr control plane, TLS, scaling, and health | High — CRD lifecycle, Dapr extension versions, manual upgrade strategy | Low initially; deferred complexity | Medium — need Kubernetes or equivalent for orchestration |
-| **Multi-tenancy** | Collection-per-tenant MongoDB fits; no ACA constraints | Same | Same | Same |
-| **CI/CD shape** | GitHub Actions → ACR → `az containerapp update` | GitHub Actions → ACR → `kubectl apply` or Helm | Mixed | Cloud-specific |
-| **Observability** | Azure Monitor + Container Apps built-in; can export to self-hosted Grafana/Loki | Full Prometheus/Grafana/Loki/Jaeger stack on cluster | Mix | Full self-hosted stack; no vendor lock-in |
-| **GDPR / data residency** | Azure region selection; EU regions available | Azure region selection | Mixed | Cloud/region-specific |
-| **Vendor lock-in** | Medium — compute abstracted by Dapr; Azure Service Bus, Key Vault, ACR are Azure-specific | Medium — same Azure services; more portable compute layer | Low initially | Low — Dapr component swap is the portability mechanism |
-| **Rollback safety** | Revision-based traffic splitting; instant rollback to prior revision | Helm/kubectl rollback; more manual | Mixed | Depends on orchestrator |
-| **Time to first deploy** | Low — ACA environments spin up quickly | High — AKS cluster, Dapr extension, networking setup | Low for ACA portion | Medium |
+| **Dapr support** | Self-hosted sidecars and local component YAML. | Prefer managed Dapr where available; otherwise self-hosted Dapr sidecars. | Must support Dapr components or a documented equivalent adapter path. | Strong fit when client requires Kubernetes control. |
+| **Identity integration** | Local Keycloak or mocked OIDC. | Demo OIDC realm with seeded users and roles. | Client IdP through OIDC/OAuth 2.0, tenant and role claims mapped explicitly. | Enterprise OIDC, workload identity, private networking. |
+| **Cost role** | Minimal developer cost. | Low monthly spend; enough to run credible demos and measurements. | Client-owned cost model; FPS supplies sizing assumptions and measurement method. | Higher baseline cost, justified only by client controls or steady load. |
+| **Operational complexity** | Low. | Medium; enough automation to redeploy repeatably. | Depends on client platform and controls. | High; useful when enterprise deployment standards require it. |
+| **Multi-tenancy** | Collection-per-tenant MongoDB in service-owned databases. | Same, with seeded demo tenants and visible admin flows. | Same, with client-approved naming, backup, retention, and access controls. | Same. |
+| **CI/CD shape** | Local scripts and validation. | Build, deploy, seed, smoke test, collect evidence. | Deliverable pipeline template or client-integrated release process. | Helm/Kubernetes manifests or client platform equivalent. |
+| **Observability** | Prometheus/Grafana plus local traces. | Dashboards for usage, latency, errors, background processing, and demo evidence. | OpenTelemetry export to client tooling such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent. | Full platform-native telemetry stack. |
+| **GDPR / data residency** | Synthetic or local developer data. | Demo data only unless a DPA-approved pilot exists. | Client-owned region, retention, backup, DPA, and access model. | Client-specific. |
+| **Vendor lock-in** | Low. | Controlled; provider choices are replaceable behind Dapr. | Controlled by client environment. | Depends on client platform. |
+| **Time to first useful environment** | Immediate. | Short after OPS001/OPS002. | Depends on client onboarding and security review. | Longer. |
 
 ---
 
-## 2. Option Detail
+## 2. Profile Detail
 
-### 2.1 Azure Container Apps — Consumption Plan
+### 2.1 Local Development
 
-**How Dapr works:** ACA has first-class Dapr support. Enable Dapr per app via CLI, Bicep, or portal. Sidecar is injected automatically. Changes do not create new revisions; existing replicas restart. API logging available for debugging.
+Local development should remain cheap, repeatable, and close to production contracts:
+
+- .NET services run locally or in containers.
+- Dapr sidecars use local component YAML.
+- MongoDB, RabbitMQ, Redis, Vault-compatible secrets, and object storage run through local infrastructure where feasible.
+- Prometheus/Grafana provide local metrics dashboards.
+- Local tracing should use OpenTelemetry export to Jaeger or an equivalent collector.
+- Demo and production component files must not require code changes in application services.
+
+### 2.2 Demo Hosted Environment
+
+The demo environment is not production. Its job is to prove the product story and collect evidence:
+
+- seeded tenants, roles, employees, parking slots, policies, and booking history;
+- working mobile/web/API flows for the target evaluator roles;
+- repeatable deployment from source artifacts;
+- basic backup/restore rehearsal;
+- observable usage, latency, error rate, event processing, and notification delivery;
+- clear teardown and cost control.
+
+Azure Container Apps remains a good candidate because it has native Dapr support and can be low-cost at light traffic, but OPS002 should validate alternatives before locking in a demo provider. Alternatives can include a small Kubernetes distribution, a client-provided sandbox, or another managed container platform if it supports the Dapr and OpenTelemetry boundaries.
+
+### 2.3 Client-Owned Production
+
+Client production is operated by the client or the client's hosting partner. FPS should provide:
+
+- container images or build instructions;
+- Dapr component contracts for pub/sub, state, bindings, secrets, and service invocation;
+- OpenTelemetry instrumentation and exporter configuration guidance;
+- identity claim mapping requirements;
+- collection-per-tenant provisioning and index guidance;
+- backup, restore, incident, retention, and access-control runbooks;
+- sizing assumptions and performance/usage evidence from demo or staging.
+
+The exact provider choice is a client architecture decision. FPS should remain compatible with Azure, AWS, Kubernetes, and equivalent platforms by keeping provider-specific code outside the application services.
+
+### 2.4 Azure Container Apps — Demo Candidate
+
+**How Dapr works:** ACA has first-class Dapr support. Enable Dapr per app via CLI, Bicep, or portal. Sidecar is injected automatically. API logging is available for debugging.
 
 **Plan types:**
 - **Consumption** — serverless, scale-to-zero, charged per vCPU-second and GiB-second. Free tier: 180,000 vCPU-seconds, 360,000 GiB-seconds, 2M HTTP requests/month per subscription. No charge at zero replicas.
@@ -54,7 +96,7 @@ This is a proposal. The open questions in [section 8](#8-open-questions-requirin
 - Self-hosted observability stack (Prometheus/Grafana/Loki/Jaeger) needs separate hosting. Azure Monitor/Log Analytics can substitute for early production; full stack can be deferred.
 - RabbitMQ (current dev pub/sub) should be replaced by Azure Service Bus in production. Dapr pub/sub component swap is the mechanism — no application code changes.
 
-### 2.2 Azure Kubernetes Service — Dapr Extension
+### 2.5 Azure Kubernetes Service — Enterprise Candidate
 
 AKS gives full Kubernetes control: custom networking, Helm releases, full observability stack. The Dapr extension handles operator/sidecar-injector/placement/sentry installation.
 
@@ -64,15 +106,15 @@ AKS gives full Kubernetes control: custom networking, Helm releases, full observ
 - CRDs remain after extension deletion and must be manually cleaned.
 - Baseline node cost: ~$35–50/month for a Standard_B2s node (1 vCPU, 2 GB) even at zero traffic.
 
-**Recommended only if:** workload profiles in ACA prove insufficient, or full Kubernetes-native Helm deployment path is required for enterprise customer compliance.
+**Recommended only if:** workload profiles in a managed container runtime prove insufficient, or full Kubernetes-native deployment is required for client compliance.
 
-### 2.3 Hybrid / Minimal-Cost Stepping Stone
+### 2.6 Hybrid / Minimal-Cost Stepping Stone
 
-Keep local Docker Compose + .NET Aspire for development. Deploy only the externally useful API surface (Identity + Booking) to ACA Consumption first. Defer Notification, Audit, Reporting, and Configuration to a later deploy cycle.
+Keep local Docker Compose or .NET Aspire-style orchestration for development. Deploy only the externally useful API surface first. Defer non-essential services until the demo needs them.
 
 This is the lowest-risk path to a first live endpoint. The main downside is deferred integration testing between services in a real cloud environment.
 
-### 2.4 Non-Azure / Portable Dapr Baseline
+### 2.7 Non-Azure / Portable Dapr Baseline
 
 Dapr components define the portability boundary. If FPS ever needs to move off Azure:
 
@@ -93,47 +135,44 @@ The Dapr abstraction is real but not free — each component swap requires testi
 
 ---
 
-## 3. Recommended First Production Target
+## 3. Recommended Next Deployment Target
 
-**Phase 1: Azure Container Apps, Consumption plan, single environment.**
+**Next target: demo environment baseline, not FPS-operated production.**
 
-Deploy:
+The next operational slice should produce a working demo environment with enough evidence for client evaluation. It should deploy:
+
 - Identity service (Keycloak + FPS.Identity) — minimum 1 replica
 - Booking service
 - Profile service
 - Notification service
 - Audit service
 - Configuration service
+- Reporting service when dashboards or exports are part of the demo
 
 Backed by:
-- Azure Container Registry (Basic tier, ~$5/month)
-- Azure Service Bus Standard (~$10/month) — replaces dev RabbitMQ as Dapr pub/sub component
-- MongoDB Atlas M10 (~$57/month) or Azure Cosmos DB for MongoDB API (~$25/month at 400 RU/s) — see open question #1
-- Azure Cache for Redis C0 (~$16/month) — replaces dev Redis
-- Azure Key Vault Standard (~$4/month)
+- container registry;
+- Dapr pub/sub component such as RabbitMQ, Azure Service Bus, AWS SNS/SQS, or equivalent;
+- MongoDB-compatible storage with collection-per-tenant provisioning;
+- Redis-compatible cache where needed;
+- Dapr secret store backed by Vault, cloud key vault, or client-approved equivalent;
+- OpenTelemetry collector/exporter path.
 
-**Defer to later:**
-- Reporting service (no consumer yet)
-- Billing service (stub only)
-- Full Prometheus/Grafana/Loki/Jaeger stack (use Azure Monitor / Log Analytics initially)
-- Traefik (ACA has built-in ingress with HTTPS)
-- MinIO (no production object storage use yet)
+**Defer until there is a clear consumer or client requirement:**
+- Billing service.
+- Full enterprise-grade observability hosting if the demo can export telemetry to a managed service.
+- Object storage unless reports/exports require it.
+- Kubernetes unless a client or demo constraint requires it.
 
-**Estimated monthly cost at small scale:**
-| Component | Estimated cost |
+**Cost planning model:**
+| Component | Demo cost expectation | Production cost ownership |
 |---|---|
-| Azure Container Apps (Consumption) | $0–20 (free tier covers light traffic) |
-| Azure Service Bus Standard | ~$10 |
-| MongoDB (Cosmos DB for MongoDB, 400 RU/s, 10 GB) | ~$30 |
-| Azure Cache for Redis C0 | ~$16 |
-| Azure Key Vault | ~$4 |
-| Azure Container Registry Basic | ~$5 |
-| Log Analytics / Azure Monitor | ~$5–15 |
-| **Total estimate** | **~$70–100/month** |
+| Container hosting | Keep small and scale down outside demos where possible. | Client-owned platform and sizing. |
+| Persistence | Use the lowest credible managed or self-hosted option that supports backup/restore evidence. | Client data platform, region, backup, and retention policy. |
+| Pub/sub | Use a Dapr-compatible broker with visible message metrics. | Client-approved broker behind Dapr. |
+| Secrets | Use a real secret store, not repository files. | Client secret-management platform. |
+| Observability | Capture demo metrics/traces/logs at low cost. | Client observability platform, exported through OpenTelemetry. |
 
-This replaces the stale estimate of ~$162.76/month from `azure-setup.md`. That estimate used AKS, Cosmos DB Postgres, App Gateway, Load Balancer, SignalR, and APIM — none of which are in the current stack.
-
-> **Note:** Exact current pricing must be verified at [azure.microsoft.com/pricing/details/container-apps](https://azure.microsoft.com/en-us/pricing/details/container-apps/) and the respective service pages before committing to a budget.
+Exact provider pricing changes frequently. Treat any numeric cloud estimates as planning placeholders until OPS002 validates current prices against the selected demo provider and expected demo traffic.
 
 ---
 
@@ -143,10 +182,10 @@ This replaces the stale estimate of ~$162.76/month from `azure-setup.md`. That e
 GitHub Actions
     │
     ├─ Build + test (.NET 10, npm)
-    ├─ docker build + push → Azure Container Registry
-    └─ az containerapp update (per service)
+    ├─ docker build + push → selected container registry
+    └─ deploy to selected runtime profile
 
-Azure Container Apps Environment
+Container Runtime
     ├─ [fps-identity]     Dapr enabled, min 1 replica, ingress external
     ├─ [fps-booking]      Dapr enabled, scale-to-zero, ingress internal
     ├─ [fps-profile]      Dapr enabled, scale-to-zero, ingress internal
@@ -154,59 +193,58 @@ Azure Container Apps Environment
     ├─ [fps-audit]        Dapr enabled, scale-to-zero, ingress internal
     └─ [fps-configuration]Dapr enabled, scale-to-zero, ingress internal
 
-External ingress (ACA built-in, HTTPS/TLS managed)
-    └─ fps-identity (public) — employee OIDC + API auth entry point
+External ingress
+    └─ HTTPS/TLS managed by platform or ingress gateway
 
 Dapr components (scoped per app)
-    ├─ pubsub: Azure Service Bus
-    ├─ statestore: MongoDB (Cosmos DB for MongoDB API or Atlas)
-    ├─ secretstore: Azure Key Vault
-    └─ (future) bindings: Azure Storage / Service Bus input bindings
+    ├─ pubsub: local broker, managed broker, or client broker
+    ├─ statestore: MongoDB-compatible store
+    ├─ secretstore: Vault, cloud key vault, or client secret store
+    └─ bindings: cron, object storage, broker input, or provider equivalent
 
-Managed identity
-    └─ User-assigned MI → ACR pull, Service Bus, Key Vault, MongoDB (if Cosmos DB)
+Workload identity / credentials
+    └─ Runtime identity or secret-store references for registry, broker, database, and secret access
 
 Data
     ├─ MongoDB: collection-per-tenant per service
-    └─ Azure Cache for Redis (Dapr state store or direct session cache)
+    └─ Redis-compatible cache where required
 
-Observability (Phase 1, minimal)
-    └─ Azure Log Analytics (ACA native integration)
-        (Phase 2: add self-hosted Prometheus + Grafana in ACA or VM)
+Observability
+    ├─ OpenTelemetry metrics, logs, and traces from services
+    ├─ Local: Prometheus/Grafana and local tracing
+    ├─ Demo: low-cost dashboard and evidence collection
+    └─ Client production: export to client platform such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent
 ```
 
-Keycloak deployment note: Keycloak cannot scale to zero (it holds session/realm state). Options:
-- Run Keycloak in ACA Consumption with `minReplicas: 1` (incurs idle-rate charges, ~$5–10/month at minimum size).
-- Use Azure App Service Basic B1 (~$13/month) for Keycloak — simpler lifecycle management.
-- Use a managed OIDC provider (Entra External ID, Auth0) — eliminates Keycloak operational burden but requires evaluating cost and GDPR fit. See open question #2.
+Keycloak deployment note: Keycloak cannot scale to zero safely when it owns live session and realm state. Demo may use a small always-on Keycloak instance. Client production may use Keycloak or a client-managed OIDC provider, provided FPS receives the required tenant, user, and role claims.
 
 ---
 
 ## 5. Dapr Component Mapping
 
-| Building block | Local (dev) | Staging (ACA) | Production (ACA) |
+| Building block | Local | Demo | Client-owned production |
 |---|---|---|---|
-| **pub/sub** | RabbitMQ (`localhost:5672`) | Azure Service Bus Standard | Azure Service Bus Standard |
-| **state store** | MongoDB (`localhost:27017`) | MongoDB Atlas (free cluster) or Cosmos DB for MongoDB | MongoDB Atlas M10 or Cosmos DB provisioned |
-| **secrets** | Local file / `.env` | Azure Key Vault (dev vault, lower access policy) | Azure Key Vault (prod vault, MI, restricted policy) |
-| **bindings (cron)** | Dapr local scheduler | Dapr cron binding on ACA | Dapr cron binding on ACA |
-| **bindings (input)** | File / local HTTP | Azure Service Bus input binding | Azure Service Bus input binding |
-| **service invocation** | Dapr sidecar (`localhost:3500`) | ACA Dapr sidecar | ACA Dapr sidecar |
-| **mTLS / Sentry** | Local Dapr self-hosted | ACA-managed (built-in) | ACA-managed (built-in) |
-| **Dapr Workflows** | Local Dapr (1.14+) | ACA Dapr (1.14+) | ACA Dapr (1.14+) |
+| **pub/sub** | RabbitMQ | Dapr-compatible low-cost broker | Client-approved broker such as RabbitMQ, Azure Service Bus, SNS/SQS, Kafka, or equivalent |
+| **state store** | MongoDB | MongoDB-compatible managed or hosted option | Client-approved MongoDB-compatible store with collection-per-tenant provisioning |
+| **secrets** | Local secret store; no committed secrets | Vault or cloud key vault | Client secret-management platform |
+| **bindings (cron)** | Dapr local scheduler | Dapr cron binding or platform scheduler | Client-approved scheduler behind Dapr or equivalent |
+| **bindings (input)** | File/local HTTP where useful | Broker or object-storage binding | Client-approved broker/object-storage binding |
+| **service invocation** | Dapr sidecar | Managed or self-hosted Dapr sidecar | Managed or self-hosted Dapr sidecar |
+| **mTLS / Sentry** | Local Dapr self-hosted | Runtime-managed or self-hosted Dapr mTLS | Client platform Dapr mTLS policy |
+| **Dapr Workflows** | Local Dapr 1.14+ where needed | Dapr workflow support if selected slice needs it | Client-supported Dapr workflow runtime or an approved alternative |
 
-Component YAML files live in `code/infrastructure/dapr/components/`. Local files use `scopes: []` (all apps). Production files add `scopes: [fps-booking]` per building block and use `secretStoreComponent: fps-keyvault` instead of inline values.
+Component YAML files live in `code/infrastructure/dapr/components/`. Local files may be broad for developer convenience. Demo and production files should scope components per app and use secret-store references instead of inline credentials.
 
 ---
 
 ## 6. Cost-Control Notes
 
-- **Scale-to-zero is the primary cost lever** at this scale. All internal services (booking, profile, audit, notification, configuration) should use `minReplicas: 0`. Only Identity/Keycloak needs `minReplicas: 1` due to session state.
-- **Azure Service Bus Basic tier** (~$0.05/million operations) is sufficient for dev/test; Standard tier required for Topics (Dapr pub/sub uses topics). Standard adds ~$10/month base.
-- **MongoDB cost is the dominant variable.** Cosmos DB for MongoDB serverless is an option for very low traffic (~$0.25/million RU); provisioned throughput makes more sense as tenants grow. MongoDB Atlas M0 (free, 512 MB) is sufficient for staging but not production. Atlas M10 (~$57/month) is the lowest paid tier with dedicated resources.
-- **Avoid** deploying the full observability stack (Prometheus, Grafana, Loki, Jaeger) in ACA for production Phase 1. Azure Monitor + Log Analytics provides sufficient production visibility at ~$5–15/month. Migrate to self-hosted stack when operational maturity justifies it.
-- **Azure Container Registry Basic** (~$5/month) is sufficient; move to Standard only if geo-replication is needed.
-- **Defer AKS** until monthly tenant count or sustained traffic justifies dedicated node costs and full Kubernetes control.
+- **Separate demo cost from production cost.** FPS should estimate and control the demo bill. Client production cost belongs to the client's hosting and operations model.
+- **Scale-to-zero is useful for demo.** Internal services can scale down when idle if the selected runtime supports it. Identity may need an always-on instance.
+- **MongoDB-compatible storage is usually the dominant variable.** OPS002 should validate cost against expected tenant count, data volume, backups, and query/reporting load.
+- **Use managed services only where they reduce delivery risk.** A demo can use managed broker/secrets/monitoring to save time, but application code must stay behind Dapr and OpenTelemetry boundaries.
+- **Avoid Kubernetes by default for demo.** Use it only when the client target or technical validation requires Kubernetes behavior.
+- **Verify current prices before sharing numbers externally.** Cloud pricing changes frequently; docs should show the cost model and assumptions, not pretend one estimate is final.
 
 ---
 
@@ -216,9 +254,9 @@ Component YAML files live in `code/infrastructure/dapr/components/`. Local files
 
 ACA supports EU regions (West Europe, North Europe, Sweden Central, Germany West Central). All data services (MongoDB/Cosmos DB, Service Bus, Key Vault, Redis) must be provisioned in the **same region** to satisfy GDPR data residency. Cross-region replication must not move personal data (booking requests, profiles, notifications) to non-EU regions without explicit DPA coverage.
 
-### 7.2 Managed Identity
+### 7.2 Workload Identity
 
-ACA Consumption supports user-assigned managed identity. All Dapr component connections to Azure services (Key Vault, Service Bus, ACR) **must** use managed identity — no connection strings or API keys in component YAML or environment variables. `azureClientId` metadata field required for user-assigned MI.
+Where the runtime supports workload identity, Dapr component connections should use it instead of connection strings. The exact mechanism is provider-specific: Azure managed identity, AWS IAM Roles for Service Accounts, Kubernetes workload identity, or a client-approved equivalent. When workload identity is unavailable, credentials must come from the configured secret store and must not be committed to source control or embedded in container images.
 
 ### 7.3 Secrets
 
@@ -228,11 +266,11 @@ ACA Consumption supports user-assigned managed identity. All Dapr component conn
 
 ### 7.4 Private Networking
 
-ACA Consumption environments support VNet integration (requires Consumption-only environment in custom VNet). Phase 1 can use the default shared environment — internal ingress services (booking, profile, etc.) are not publicly reachable. Phase 2 should add VNet integration and private MongoDB endpoint if Cosmos DB is chosen.
+Demo can use a simpler network boundary if no real personal data is present. Client production should place internal services, persistence, broker, cache, and secret store behind private networking according to the client's platform standards.
 
 ### 7.5 TLS
 
-ACA manages TLS certificates for all ingress — no manual cert management for HTTPS. Custom domain + managed cert available. Internal service-to-service traffic over Dapr sidecar uses mTLS managed by ACA's built-in Sentry.
+External ingress must use HTTPS. Certificate ownership depends on the deployment profile: demo can use platform-managed certificates; client production should use client-approved certificate management. Internal service-to-service traffic should use Dapr mTLS where the runtime supports it.
 
 ### 7.6 GDPR Audit Trail
 
@@ -244,19 +282,19 @@ Pseudonymised audit records (actor_hash) as per the existing architecture decisi
 
 The following questions need answers from Robert and/or Codex before OPS001 begins:
 
-1. **MongoDB hosting choice**: Cosmos DB for MongoDB API (stays in Azure, MI supported, may need provisioned RU tuning) vs MongoDB Atlas (multi-cloud, no MI, requires Atlas credentials in Key Vault, better for non-Azure portability)? The Dapr statestore component changes slightly between them.
+1. **Demo provider choice**: Which environment should OPS002 target first: Azure Container Apps, another low-cost managed container runtime, a lightweight Kubernetes environment, or a client-provided sandbox?
 
-2. **Keycloak hosting**: Self-hosted on ACA (operational burden, min-replica cost) vs managed OIDC (Azure Entra External ID, Auth0)? If self-hosted, which ACA plan and persistence backend (Azure DB for PostgreSQL vs embedded H2/dev)?
+2. **MongoDB hosting choice for demo**: Which option gives credible backup/restore and reporting evidence without creating unnecessary monthly cost?
 
-3. **Observability Phase 1**: Accept Azure Monitor / Log Analytics for Phase 1, or deploy self-hosted Prometheus + Grafana from the start? Azure Monitor reduces initial operational burden but diverges from the documented architecture.
+3. **Keycloak hosting for demo**: Self-hosted Keycloak vs managed OIDC? For client production, confirm that FPS supports client OIDC as long as claims are mapped.
 
-4. **Region selection**: Which Azure EU region? Recommendation: West Europe (Amsterdam) or Sweden Central (Stockholm) for GDPR fit, but confirm with Robert.
+4. **Observability evidence target**: What dashboards and measurements must exist before a client demo: usage counts, latency, error rate, event backlog, notification delivery, draw duration, and audit query performance?
 
-5. **Vault vs Azure Key Vault**: The documented stack uses HashiCorp Vault. For Phase 1 ACA, Azure Key Vault is operationally simpler and MI-compatible. Is it acceptable to use Azure Key Vault for Phase 1 and re-evaluate Vault for production hardening in OPS001?
+5. **Client telemetry integrations**: Which examples should FPS document first: Dynatrace, Azure Monitor, Grafana/Prometheus, Splunk, or generic OpenTelemetry Collector?
 
-6. **Environment topology**: Single environment (dev/staging/production all in one subscription with separate ACA environments) vs multi-subscription? Recommendation: single subscription, three ACA environments (`fps-dev`, `fps-staging`, `fps-prod`) for Phase 1.
+6. **Secrets target**: Should demo use Vault, a provider key vault, or another low-cost secret store while keeping the Dapr secret-store boundary stable?
 
-7. **OPS000 approval**: Should the Azure Container Apps recommendation be recorded as a durable decision in `versions-and-decisions.md`? Holding until Robert approves.
+7. **External client material**: Which package should be prepared first: one-page business summary, demo script, architecture pack, production operations pack, security/GDPR pack, or cost assumptions sheet?
 
 ---
 
@@ -264,10 +302,11 @@ The following questions need answers from Robert and/or Codex before OPS001 begi
 
 | Slice | Scope | Depends on |
 |---|---|---|
-| **OPS001** Local/Production Dapr Hardening | Align local Docker Compose Dapr components with production ACA component YAML. Add tenant collection/index provisioning scripts. Configure Key Vault (or Vault) secretstore. Write first operational runbook. | OPS000 approved (hosting target confirmed) |
-| **OPS002** CI/CD Pipeline to ACA | GitHub Actions workflow: build → ACR push → `az containerapp update` per service. Staging environment deploy on PR merge. Production deploy on tag. | OPS001 (components configured) |
-| **OPS003** Observability Stack | Deploy Prometheus + Grafana + Loki + Jaeger (self-hosted on ACA or dedicated VM). Wire Dapr metrics and service traces. Connect to existing Grafana dashboard placeholders. | OPS002 (deployed services to instrument) |
-| **OPS004** Keycloak Production Setup | Production Keycloak realm, tenant claim mapper, PKCE client for mobile app, user provisioning. | OPS001 (secrets, database) |
+| **OPS001** Pluggable Dapr Component Baseline | Align local component files with demo/client component contracts. Add tenant collection/index provisioning guidance. Configure secret-store pattern. Write first operational runbook. | OPS000 baseline |
+| **OPS002** Demo Environment Baseline | Select and deploy a low-cost hosted demo profile. Build, deploy, seed, smoke test, and collect cost/usage evidence. | OPS001 |
+| **OPS003** Client-Owned Production Integration | Document client deployment responsibilities, identity integration, network/security assumptions, backup/restore handoff, and release process. | OPS001, OPS002 evidence |
+| **OPS004** Observability And Performance Evidence | Wire OpenTelemetry metrics/logs/traces, local Prometheus/Grafana, demo dashboards, and client exporter examples such as Dynatrace. | OPS002 |
+| **DOCS001** Client Evaluation Pack | Prepare business summary, demo script, architecture overview, production operations summary, security/GDPR summary, cost assumptions, and FAQ. | Demo plan and current architecture docs |
 
 These slices have clear boundaries: each has no product behavior changes and each can be reviewed and validated independently.
 

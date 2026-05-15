@@ -22,12 +22,12 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | Platform integration foundation | Done | ID001, BK011, P001, N001, A001, CFG001, API001, CI001 are merged. |
 | Mobile foundation | Done | MOB001-MOB005 are merged for the current employee mobile flow. |
 | Mobile product completion | Planned | Next employee slices are notifications, profile/vehicle display, draw/allocation detail, and production polish. |
-| Web app | Planned | Web employee self-service starts after the current server review queue is reduced; HR/admin dashboards depend on Configuration and Reporting APIs. |
-| Notification v1 completion | In progress | N002 is implemented. N003 email delivery is prepared for Claude handoff; preferences remain planned. |
-| Audit v1 completion | In progress | A002 audit query and PII mapping erasure support is prepared for Claude handoff. Retention and integrity remain planned. |
-| Production operations | In progress | OPS000 strategy document written (PR [#102](https://github.com/RobertVejvoda/FPS/pull/102) pending Codex review). Azure Container Apps recommended as first production target. 7 open questions documented for Robert/Codex approval before OPS001 begins. |
-| Configuration management | In progress | CFG002 admin policy and slot management is prepared for Claude handoff. |
-| Reporting foundation | In progress | REPORT001 reporting read models is prepared for Claude handoff. |
+| Web app | Planned | Web employee self-service starts after mobile completion; HR/admin dashboards can now build on Configuration and Reporting APIs. |
+| Notification v1 completion | In progress | N002, N003, and N004 are implemented. Preferences and client consumption remain planned. |
+| Audit v1 completion | In progress | A001 and A002 are implemented. Retention, integrity, and export evidence remain planned. |
+| Production operations | In progress | OPS000 deployment profile baseline is merged. Next work is pluggable local/demo/client-owned deployment hardening, observability, and operational evidence. |
+| Configuration management | In progress | CFG001 and CFG002 are implemented. Publication, version history, and audit integration remain planned. |
+| Reporting foundation | In progress | REPORT001 read models are implemented. Dashboards, exports, and web views remain planned. |
 
 ## Slice Tracker
 
@@ -74,9 +74,10 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | N001 Booking Notification Consumer | Done | - | [#35](https://github.com/RobertVejvoda/FPS/pull/35), [#36](https://github.com/RobertVejvoda/FPS/pull/36) | PR author: RobertVejvoda | 2026-05-11 | Idempotent in-app notification records. |
 | A001 Booking Audit Consumer | Done | - | [#37](https://github.com/RobertVejvoda/FPS/pull/37), [#39](https://github.com/RobertVejvoda/FPS/pull/39) | PR author: RobertVejvoda | 2026-05-11 | Append-only pseudonymised audit records. |
 | N002 Notification API And Stream | Done | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | [#93](https://github.com/RobertVejvoda/FPS/pull/93), [#94](https://github.com/RobertVejvoda/FPS/pull/94) | `implemented-by: claude` plus Codex SSE casing fix | 2026-05-14 | Notification history API, unread counts, mark-read API, and SSE stream. |
-| N003 Notification Email Delivery | Ready | [#103](https://github.com/RobertVejvoda/FPS/issues/103) | - | `initiated-by: codex`, `claude-ready` | Next Notification Claude slice | Email channel for v1 critical operational notifications, with a Dapr-ready provider boundary and local no-cost validation path. |
-| N004 Notification Preferences | Planned | - | - | Unassigned | After N003 | User notification preferences for optional channels and reminders; mandatory operational notifications stay non-disableable. |
-| A002 Audit Query And Erasure Support | In Review | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | [#112](https://github.com/RobertVejvoda/FPS/pull/112) | `implemented-by: claude` | Pending Codex review | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
+| N003 Notification Email Delivery | Done | [#103](https://github.com/RobertVejvoda/FPS/issues/103) | [#111](https://github.com/RobertVejvoda/FPS/pull/111) | `implemented-by: claude` | 2026-05-15 | Email channel for v1 critical operational notifications, with a Dapr-ready provider boundary and local no-cost validation path. |
+| N004 Email Observability And Staging Validation | Done | [#122](https://github.com/RobertVejvoda/FPS/issues/122) | [#123](https://github.com/RobertVejvoda/FPS/pull/123) | `implemented-by: claude` | 2026-05-15 | Safe email failure logging, categories, and staging validation checklist. |
+| N005 Notification Preferences | Planned | - | - | Unassigned | After mobile notification consumption | User notification preferences for optional channels and reminders; mandatory operational notifications stay non-disableable. |
+| A002 Audit Query And Erasure Support | Done | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | [#112](https://github.com/RobertVejvoda/FPS/pull/112) | `implemented-by: claude` | 2026-05-15 | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
 | A003 Audit Retention And Integrity | Planned | - | - | Unassigned | After A002 | Retention jobs, integrity verification, export evidence, and operational audit hardening. |
 
 ### Configuration, Customer, Reporting, And Billing
@@ -84,10 +85,10 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | CFG001 Parking Policy/Slot Source | Done | - | [#42](https://github.com/RobertVejvoda/FPS/pull/42) | PR author: RobertVejvoda | 2026-05-11 | Configuration-owned policy shape. |
-| CFG002 Admin Policy/Slot Management | Ready | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | - | `initiated-by: codex`, `claude-ready` | Next Configuration Claude slice | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
+| CFG002 Admin Policy/Slot Management | Done | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | [#125](https://github.com/RobertVejvoda/FPS/pull/125) | `implemented-by: claude` | 2026-05-15 | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CFG003 Configuration Publication And Audit | Planned | - | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
-| REPORT001 Reporting Read Models | In Review | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#114](https://github.com/RobertVejvoda/FPS/pull/114) | `implemented-by: claude` | Pending Codex review | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
+| REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | REPORT002 Reporting Dashboards And Exports | Planned | - | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
 | BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | Later commercialisation phase | Subscription, invoice generation, and payment-provider integration. |
 
@@ -118,18 +119,35 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| OPS000 Hosting And Deployment Strategy Options | In Review | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | [#102](https://github.com/RobertVejvoda/FPS/pull/102) | `initiated-by: codex`, `implemented-by: claude` | Pending Codex review | Strategy document written. Recommends Azure Container Apps (Consumption plan). 7 open questions documented for Robert/Codex approval before OPS001 begins. |
-| OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | After OPS000 | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
-| OPS002 Cloud Environment Baseline | Planned | - | - | Unassigned | Before hosted pilot | Provision a low-cost cloud environment for FPS using the OPS000 decision: container hosting/Kubernetes target, Dapr components, MongoDB, RabbitMQ, Redis, Keycloak, Vault/secrets, ingress/TLS, CI/CD deploy path, and rollback notes. |
-| OPS003 Observability And Runbooks | Planned | - | - | Unassigned | Before production pilot | Prometheus/Grafana/Loki/Jaeger or chosen cloud equivalents, dashboards, alerts, backup/restore checks, and incident runbooks. |
+| OPS000 Hosting and Deployment Strategy Options | Done | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | [#102](https://github.com/RobertVejvoda/FPS/pull/102) | `implemented-by: claude` | 2026-05-15 | Deployment profile baseline merged; local, demo, and client-owned production profiles replace the earlier single-provider production assumption. |
+| OPS001 Pluggable Dapr Component Baseline | Planned | - | - | Unassigned | Next production slice | Define local/demo/client-owned component profiles for pub/sub, state, secrets, bindings, identity, and observability. |
+| OPS002 Demo Environment Baseline | Planned | - | - | Unassigned | After OPS001 | Stand up or document a low-cost demo path that proves the product without assuming the final client production environment. |
+| OPS003 Client-Owned Production Integration | Planned | - | - | Unassigned | After OPS001/OPS002 | Document and implement the handoff model for client-owned production, including deployment assumptions, Dapr component replacement, and operational responsibilities. |
+| OPS004 Observability And Performance Evidence | Planned | - | - | Unassigned | Before client pilot | Expose usage, performance, logs, metrics, and traces so Prometheus/Grafana locally can be replaced by Dynatrace, Azure Monitor, OpenTelemetry Collector, or client tooling. |
+| DOCS001 Client Evaluation Pack | Planned | - | - | Unassigned | After demo plan stabilizes | Prepare shareable client material: product one-pager, role demo script, architecture overview, deployment/operations summary, security/GDPR summary, cost assumptions, and FAQ. |
+
+## Slice Order Rationale
+
+| Order | Slice | Goal | Why This Order | Links |
+| --- | --- | --- | --- | --- |
+| 1 | Status and traceability cleanup | Make docs truthful after recent merges. | Stale tracker and traceability pages create wrong handoffs and wrong client expectations. | [Tracker](./implementation-tracker), [Traceability](./requirements-traceability) |
+| 2 | Business story cleanup | Explain value, roles, and parking-first scope. | Business readers need the product story before architecture detail. | [Business Layer](./business-layer), [Demo and Evaluation](./demo-and-evaluation) |
+| 3 | ArchiMate view hierarchy | Prepare business/application/technology/security/production view structure. | Architects need a stable hierarchy before richer diagrams are added. | [Architecture Views](./architecture-views) |
+| 4 | Demo and client evaluation plan | Define how each role can try FPS. | Demo readiness exposes missing product and operational slices. | [Demo and Evaluation](./demo-and-evaluation) |
+| 5 | Pluggable operations plan | Define local, demo, and client-owned production profiles. | Dapr only helps if each component boundary is explicit and replaceable. | [Production](./production), [Hosting Strategy](./production/hosting-deployment-strategy) |
+| 6 | Observability and performance evidence | Make usage, metrics, logs, and traces consumable by client tooling. | Client production will run outside our environment, so evidence must be portable. | [Monitoring](./production/monitoring), `OPS004` |
+| 7 | Client evaluation pack | Create shareable materials for sponsors, architects, security, and operators. | Materials should be created after the demo and architecture story stabilize. | `DOCS001` |
 
 ## Maintenance Items
+
+These are tracker maintenance tasks, not ordered delivery slices.
 
 | Item | Status | Source | Owner |
 | --- | --- | --- | --- |
 | GitHub Actions Node runtime refresh | Deferred | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | Superseded until hosting/deployment strategy is agreed. |
 | TestContainers-backed integration tests | Planned | Current validation skips Dapr/MongoDB integration tests | Unassigned |
 | Collection-per-tenant implementation hardening | Planned | Decision recorded in [Versions and Decisions](./versions-and-decisions) | Unassigned |
+| GitHub project / Kanban links | Planned | Docs should link to live GitHub issues/PRs rather than duplicate board state | Unassigned |
 
 ## Future Product Extension Notes
 
