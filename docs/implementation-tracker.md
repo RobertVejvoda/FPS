@@ -4,6 +4,8 @@ This page tracks the delivery plan as slices. It is the first place to update wh
 
 The tracker complements the [Development Plan](./development-plan) and [Requirements Traceability](./requirements-traceability): the Development Plan explains scope and acceptance criteria, Requirements Traceability maps slices to business/NFR coverage, and this page records progress, PRs, implementer attribution, and current ownership.
 
+Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). The board gives a high-level view of Backlog, Ready, In progress, In review, and Done work; this page remains the detailed source of truth for slice evidence and PR links.
+
 ## Tracking Rules
 
 - Every implementation slice should have a stable slice ID.
@@ -148,7 +150,7 @@ These are tracker maintenance tasks, not ordered delivery slices.
 | GitHub Actions Node runtime refresh | Deferred | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | Superseded until hosting/deployment strategy is agreed. |
 | TestContainers-backed integration tests | Planned | Current validation skips Dapr/MongoDB integration tests | Unassigned |
 | Collection-per-tenant implementation hardening | Planned | Decision recorded in [Versions and Decisions](./versions-and-decisions) | Unassigned |
-| GitHub project / Kanban links | Planned | Docs should link to live GitHub issues/PRs rather than duplicate board state | Unassigned |
+| GitHub project / Kanban links | Done | [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2) links board-level phase status to tracker details | Codex |
 
 ## Future Product Extension Notes
 
