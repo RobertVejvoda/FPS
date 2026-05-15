@@ -1,5 +1,7 @@
 using FPS.Notification.Application;
 using FPS.Notification.Domain;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace FPS.Notification.Tests;
@@ -9,11 +11,13 @@ public sealed class EmailNotificationHandlerTests
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly Mock<IEmailNotificationSender> emailSender = new();
+    private readonly Mock<ILogger<BookingEventNotificationHandler>> logger = new();
     private readonly BookingEventNotificationHandler handler;
 
     public EmailNotificationHandlerTests()
     {
-        handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object);
+        handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
+            logger.Object);
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.SaveAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
@@ -138,6 +142,81 @@ public sealed class EmailNotificationHandlerTests
         var emailKey = BookingEventNotificationHandler.DeduplicationKey("evt-1", "user-1", "booking.slotAllocated", NotificationChannel.Email);
 
         Assert.NotEqual(inAppKey, emailKey);
+    }
+
+    [Fact]
+    public async Task Handle_EmailSenderFailure_LogsWarning_WithSafeFields()
+    {
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmailSendResult.Fail("SMTP timeout"));
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        logger.Verify(x => x.Log(
+            LogLevel.Warning,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, _) =>
+                v.ToString()!.Contains("tenant-1") &&
+                v.ToString()!.Contains("user-1") &&
+                v.ToString()!.Contains("booking.requestSubmitted") &&
+                v.ToString()!.Contains("event-1") &&
+                v.ToString()!.Contains(NotificationChannel.Email)),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmailSenderThrows_LogsWarning_WithProviderUnavailableCategory()
+    {
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("provider-internal-detail-must-not-leak"));
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        logger.Verify(x => x.Log(
+            LogLevel.Warning,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, _) =>
+                v.ToString()!.Contains(EmailFailureCategory.ProviderUnavailable) &&
+                !v.ToString()!.Contains("provider-internal-detail-must-not-leak")),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmailSenderSuccess_DoesNotLogWarning()
+    {
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        logger.Verify(x => x.Log(
+            LogLevel.Warning,
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EmailSendResult_Fail_WithCategory_SetsFields()
+    {
+        var result = EmailSendResult.Fail("timeout", EmailFailureCategory.ProviderUnavailable);
+
+        Assert.False(result.Success);
+        Assert.Equal("timeout", result.FailureReason);
+        Assert.Equal(EmailFailureCategory.ProviderUnavailable, result.FailureCategory);
+    }
+
+    [Fact]
+    public async Task EmailSendResult_Ok_HasNullFailureFields()
+    {
+        var result = EmailSendResult.Ok();
+
+        Assert.True(result.Success);
+        Assert.Null(result.FailureReason);
+        Assert.Null(result.FailureCategory);
     }
 
     private static BookingEventEnvelope BuildEnvelope(

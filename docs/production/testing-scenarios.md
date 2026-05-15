@@ -43,6 +43,19 @@ These scenarios prove that the hosted environment can run FPS safely. They shoul
 | Rebuild reporting projections | Reporting catches up from source data/events. |
 | Recreate indexes | Tenant collections regain required indexes and uniqueness constraints. |
 
+## Email Notification Staging Validation
+
+Run these before enabling a production email provider. The in-memory stub always returns success, so these steps require a real or mocked SMTP/SendGrid Dapr binding.
+
+| Step | How to validate |
+| --- | --- |
+| Provider sends a real email | Configure the Dapr output binding with staging credentials. Trigger a `booking.slotAllocated` event and confirm delivery to a test inbox. |
+| Failure is logged with safe fields | Take the provider offline or force a timeout. Inspect structured logs and confirm fields present: `TenantId`, `RecipientId`, `NotificationType`, `SourceEventId`, `Channel`, `FailureCategory`. |
+| No secrets in failure log | Verify logs contain no SMTP credentials, access tokens, raw exception stack traces, or email-provider payload internals. `FailureCategory` should be `provider_unavailable` or `delivery_rejected`, not a raw provider error. |
+| In-app notification unaffected | With provider offline, confirm `in-app` record is saved with `stored` status; email record is saved with `failed` status and non-empty `FailureReason`. Neither record leaks secrets. |
+| Idempotent retry | Replay the same event ID. Confirm no duplicate email is sent (deduplication key prevents re-send) and no duplicate in-app record is created. |
+| Recipient resolved correctly | Confirm the provider receives the recipient address resolved from the expected source (Booking event `requestorId` or a future Profile lookup), not from a logged/stored raw value. |
+
 ## Security And Operations Scenarios
 
 | Scenario | Expected evidence |
