@@ -1,4 +1,4 @@
-![Amazon AWS Hosting](../../images/fps-logical-architecture-aws.png)
+![Amazon AWS Hosting](../images/fps-logical-architecture-aws.png)
 
 
 ### Amazon AWS

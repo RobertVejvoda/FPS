@@ -36,6 +36,7 @@ Use these pages first:
 - [Implementation](./implementation): how work is sliced, assigned, reviewed, tracked, and merged.
 - [Software Architecture](./technology-layer/software-architecture): current bounded contexts, integration model, technology choices, and tenant isolation decision.
 - [Security](./security): actors, roles, data classification, encryption, secret access, service-level controls, and GDPR alignment.
+- [Production](./production): production runtime model, cloud deployment path, operations, backups, restore, monitoring, incidents, and readiness gates.
 
 ## Global Architecture Document
 
@@ -67,6 +68,10 @@ Infrastructure, deployment, non-functional requirements, runtime technology choi
 
 Cross-cutting security model, data classification, authentication, authorization, privacy, auditability, operational controls, and service-specific security notes.
 
-8. **[Glossary](./glossary)**
+8. **[Production](./production)**
+
+Hosted runtime architecture, cloud environment baseline, operational model, backup/restore, monitoring, incident handling, maintenance, and production readiness evidence.
+
+9. **[Glossary](./glossary)**
 
 Definitions and acronyms used across the product, business, application, and technology documentation.

@@ -1,4 +1,4 @@
-![MS Azure Hosting](../../images/fps-logical-architecture-azure.png)
+![MS Azure Hosting](../images/fps-logical-architecture-azure.png)
 
 ### MS Azure
 
