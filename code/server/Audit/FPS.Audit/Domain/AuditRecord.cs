@@ -26,3 +26,19 @@ public interface IAuditRepository
     Task<bool> ExistsAsync(string sourceEventId, CancellationToken cancellationToken = default);
     Task AppendAsync(AuditRecord record, CancellationToken cancellationToken = default);
 }
+
+// Shape per audit.md pseudonymisation rules; A002 adds persistence and erasure.
+public sealed class PiiMapping
+{
+    public string TenantId { get; init; } = string.Empty;
+    public string ActorHash { get; init; } = string.Empty;
+    public string UserId { get; init; } = string.Empty;
+    public string? Name { get; init; }
+    public string? Email { get; init; }
+}
+
+public interface IPiiMappingRepository
+{
+    Task SaveAsync(PiiMapping mapping, CancellationToken cancellationToken = default);
+    Task DeleteByUserIdAsync(string userId, string tenantId, CancellationToken cancellationToken = default);
+}
