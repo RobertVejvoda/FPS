@@ -101,6 +101,7 @@
   * [Dev setup](./production/dev-setup)
   * [Azure setup](./production/azure-setup)
   * [AWS setup](./production/aws-setup)
+  * [Hosting and deployment strategy](./production/hosting-deployment-strategy)
 * [Implementation](./implementation)
   * [Development Plan](./development-plan)
   * [Implementation Tracker](./implementation-tracker)

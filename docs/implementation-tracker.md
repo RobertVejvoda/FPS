@@ -25,7 +25,7 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | Web app | Planned | Web employee self-service starts after the current server review queue is reduced; HR/admin dashboards depend on Configuration and Reporting APIs. |
 | Notification v1 completion | In progress | N002 is implemented. N003 email delivery is prepared for Claude handoff; preferences remain planned. |
 | Audit v1 completion | In progress | A002 audit query and PII mapping erasure support is prepared for Claude handoff. Retention and integrity remain planned. |
-| Production operations | In progress | OPS000 is prepared for Claude to refresh the hosting/deployment strategy around Dapr portability and cost before cloud deployment hardening continues. |
+| Production operations | In progress | OPS000 strategy document written (PR [#102](https://github.com/RobertVejvoda/FPS/pull/102) pending Codex review). Azure Container Apps recommended as first production target. 7 open questions documented for Robert/Codex approval before OPS001 begins. |
 | Configuration management | In progress | CFG002 admin policy and slot management is prepared for Claude handoff. |
 | Reporting foundation | In progress | REPORT001 reporting read models is prepared for Claude handoff. |
 
@@ -76,7 +76,7 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | N002 Notification API And Stream | Done | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | [#93](https://github.com/RobertVejvoda/FPS/pull/93), [#94](https://github.com/RobertVejvoda/FPS/pull/94) | `implemented-by: claude` plus Codex SSE casing fix | 2026-05-14 | Notification history API, unread counts, mark-read API, and SSE stream. |
 | N003 Notification Email Delivery | Ready | [#103](https://github.com/RobertVejvoda/FPS/issues/103) | - | `initiated-by: codex`, `claude-ready` | Next Notification Claude slice | Email channel for v1 critical operational notifications, with a Dapr-ready provider boundary and local no-cost validation path. |
 | N004 Notification Preferences | Planned | - | - | Unassigned | After N003 | User notification preferences for optional channels and reminders; mandatory operational notifications stay non-disableable. |
-| A002 Audit Query And Erasure Support | Ready | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | - | `initiated-by: codex`, `claude-ready` | Next Audit Claude slice | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
+| A002 Audit Query And Erasure Support | In Review | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | [#112](https://github.com/RobertVejvoda/FPS/pull/112) | `implemented-by: claude` | Pending Codex review | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
 | A003 Audit Retention And Integrity | Planned | - | - | Unassigned | After A002 | Retention jobs, integrity verification, export evidence, and operational audit hardening. |
 
 ### Configuration, Customer, Reporting, And Billing
@@ -87,7 +87,7 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | CFG002 Admin Policy/Slot Management | Ready | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | - | `initiated-by: codex`, `claude-ready` | Next Configuration Claude slice | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CFG003 Configuration Publication And Audit | Planned | - | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
-| REPORT001 Reporting Read Models | Ready | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | - | `initiated-by: codex`, `claude-ready` | Next Reporting Claude slice | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
+| REPORT001 Reporting Read Models | In Review | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#114](https://github.com/RobertVejvoda/FPS/pull/114) | `implemented-by: claude` | Pending Codex review | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | REPORT002 Reporting Dashboards And Exports | Planned | - | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
 | BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | Later commercialisation phase | Subscription, invoice generation, and payment-provider integration. |
 
@@ -118,7 +118,7 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| OPS000 Hosting And Deployment Strategy Options | Ready | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | - | `initiated-by: codex`, `claude-ready` | Next architecture Claude slice | Compare hosting/deployment options with Dapr as the portability boundary and cost as a first-class constraint. |
+| OPS000 Hosting And Deployment Strategy Options | In Review | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | [#102](https://github.com/RobertVejvoda/FPS/pull/102) | `initiated-by: codex`, `implemented-by: claude` | Pending Codex review | Strategy document written. Recommends Azure Container Apps (Consumption plan). 7 open questions documented for Robert/Codex approval before OPS001 begins. |
 | OPS001 Local/Production Dapr Hardening | Planned | - | - | Unassigned | After OPS000 | Dapr components, tenant collection/index provisioning, secrets, and runbooks. |
 | OPS002 Cloud Environment Baseline | Planned | - | - | Unassigned | Before hosted pilot | Provision a low-cost cloud environment for FPS using the OPS000 decision: container hosting/Kubernetes target, Dapr components, MongoDB, RabbitMQ, Redis, Keycloak, Vault/secrets, ingress/TLS, CI/CD deploy path, and rollback notes. |
 | OPS003 Observability And Runbooks | Planned | - | - | Unassigned | Before production pilot | Prometheus/Grafana/Loki/Jaeger or chosen cloud equivalents, dashboards, alerts, backup/restore checks, and incident runbooks. |

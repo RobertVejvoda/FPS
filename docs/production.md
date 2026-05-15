@@ -46,8 +46,9 @@ FPS production runtime is expected to contain:
 - [Development Setup](./production/dev-setup): local/open-source stack used to approximate production dependencies.
 - [AWS Setup](./production/aws-setup): AWS-oriented cost and service mapping.
 - [Azure Setup](./production/azure-setup): Azure-oriented cost and service mapping.
+- [Hosting And Deployment Strategy](./production/hosting-deployment-strategy): OPS000 proposal recommending Azure Container Apps with native Dapr. Includes option comparison, cost estimates, and 7 open questions for approval before OPS001.
 
-These cloud pages are candidate inputs for `OPS000`, not final decisions. `OPS000` should select the first hosted path with Dapr portability and cost as explicit criteria.
+The cloud setup pages and hosting strategy are candidate inputs for `OPS001`. The `OPS000` recommendation is pending approval by Robert/Codex before `OPS001` begins.
 
 ## Testing And Readiness
 
