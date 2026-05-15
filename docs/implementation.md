@@ -4,6 +4,7 @@ The implementation section tracks how FPS is built, validated, and handed off be
 
 - [Development Plan](./development-plan): roadmap, scope, acceptance criteria, and open risks.
 - [Implementation Tracker](./implementation-tracker): completed and planned slices, PRs, implementer attribution, and dates.
+- [Requirements Traceability](./requirements-traceability): business and non-functional requirement coverage by implementation slice.
 - [Booking Implementation Slices](./implementation/booking-vertical-slices): Booking implementation order and acceptance criteria.
 - [Tooling](./tooling): validation scripts, hooks, router behavior, and local docs preview.
 
