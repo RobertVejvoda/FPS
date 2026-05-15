@@ -30,6 +30,21 @@ The project may later define a commercial model, but it should be recorded as a 
 | Hosted demo service | FPS-operated demo or sandbox environment for evaluation only. | Must stay separate from client production ownership. |
 | Dual licensing | Offer a separate commercial license for clients who cannot accept AGPL obligations. | Requires explicit legal/business approval before being documented as available. |
 
+## Free Core And Paid Add-On Direction
+
+FPS should remain useful as a free/open product. The free core should be good enough to prove the fairness model, run a normal tenant, and preserve trust in the allocation process. Paid options, if introduced later, should add convenience, scale, integration depth, or enterprise assurance rather than making the free version unusable.
+
+| Layer | Free/open core candidate | Paid or sponsored candidate |
+| --- | --- | --- |
+| Tenant operation | Standard tenant setup, parking policies, slot configuration, employee booking, Draw, notifications, audit, and basic reporting. | Dedicated tenant deployment package, advanced tenant provisioning, migration support, and environment-specific hardening. |
+| Reporting | Standard parking summary, fairness, utilization, and operational reports. | Enhanced reports, custom dashboards, export packs, executive analytics, benchmarking, and scheduled reporting. |
+| Deployment | Local setup and documented client-owned production guidance. | Paid implementation package, managed demo/pilot environment, production readiness review, and client-specific deployment templates. |
+| Support | Community documentation and public issue discussion. | Support subscription with response targets, upgrade help, release guidance, and security advisory handling. |
+| Integrations | Generic OIDC, Dapr component contracts, OpenTelemetry guidance, and standard APIs. | Client-specific integrations for Entra/Keycloak, Dynatrace, HR systems, access control, license plate recognition, workplace calendars, or BI tools. |
+| Licensing | AGPL source license. | Future dual-license option for clients that need commercial terms, subject to explicit legal/business approval. |
+
+This is not a product promise. It is a planning frame for later commercialisation work so future Billing and licensing discussions do not accidentally weaken the open-source core.
+
 ## Documentation Rule
 
 Do not add pricing or sales contact details to this page unless Robert explicitly approves the commercial model. Until then, this page should describe the repository license and possible future business models only.

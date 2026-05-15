@@ -52,6 +52,7 @@ These materials are planned, not implemented in this cleanup.
 | Deployment and operations summary | Client IT, operator | Explain local/demo/client-owned production options and pluggable components. |
 | Security and GDPR summary | Security reviewer, DPO | Summarize roles, data classes, audit, erasure, encryption, secrets, and traceability. |
 | Cost and hosting assumptions | Sponsor, procurement, client IT | Explain demo cost path, production ownership, and usage/performance tracking. |
+| Commercialisation options note | Sponsor, procurement | Explain that support subscription, dual licensing, dedicated tenant packaging, and enhanced reports are future options, not current product promises. |
 | FAQ | All evaluators | Capture common product, security, deployment, and roadmap questions. |
 
 ## Demo Readiness Checklist
