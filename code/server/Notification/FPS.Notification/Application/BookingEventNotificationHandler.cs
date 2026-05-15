@@ -1,11 +1,13 @@
 using FPS.Notification.Domain;
+using Microsoft.Extensions.Logging;
 
 namespace FPS.Notification.Application;
 
 public sealed class BookingEventNotificationHandler(
     INotificationRepository repository,
     INotificationBroadcaster broadcaster,
-    IEmailNotificationSender emailSender)
+    IEmailNotificationSender emailSender,
+    ILogger<BookingEventNotificationHandler> logger)
 {
     private static readonly IReadOnlyDictionary<string, string> MessageTemplates = new Dictionary<string, string>
     {
@@ -52,12 +54,20 @@ public sealed class BookingEventNotificationHandler(
 
         EmailSendResult result;
         try { result = await emailSender.SendAsync(record, cancellationToken); }
-        catch { result = EmailSendResult.Fail("Email delivery unavailable"); }
+        catch { result = EmailSendResult.Fail("Email delivery unavailable", EmailFailureCategory.ProviderUnavailable); }
 
         if (result.Success)
+        {
             record.MarkDelivered();
+        }
         else
+        {
             record.MarkFailed(result.FailureReason ?? "Unknown error");
+            logger.LogWarning(
+                "Email delivery failed. TenantId={TenantId} RecipientId={RecipientId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel} FailureCategory={FailureCategory}",
+                record.TenantId, record.RecipientId, record.NotificationType, record.SourceEventId, record.Channel,
+                result.FailureCategory ?? EmailFailureCategory.DeliveryRejected);
+        }
 
         await repository.SaveAsync(record, cancellationToken);
     }
