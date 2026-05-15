@@ -5,7 +5,7 @@ Ensure that users are promptly informed about data breaches to enable them to ta
 As a user, I want to be notified promptly in case of a data breach, so I can take necessary actions to protect my information.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 - [ ] **Given** a user is registered in the system, **when** a data breach occurs, **then** the user should receive a notification within 24 hours.

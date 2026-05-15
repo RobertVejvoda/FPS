@@ -11,7 +11,7 @@ The web application frontend consists of multiple modules providing a comprehens
 - **[Profile Administration](./profile)**
     Enables users to manage personal information and preferences through profile-ui.
 
-- **[Configuration Interface](./config)**
+- **[Configuration Interface](./configuration)**
     Offers system configuration capabilities for administrators using configuration-ui.
 
 - **[Reporting Dashboard](./reporting)**

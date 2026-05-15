@@ -5,7 +5,7 @@ The objective of this user story is to ensure that the system adheres to the Gen
 As a user, I want the system to comply with GDPR so that my personal data is protected and managed according to legal standards.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 
@@ -54,10 +54,10 @@ As a user, I want the system to comply with GDPR so that my personal data is pro
 
 ## Related User Stories
 
-- [US607: Ensure CCPA Compliance](./US607-ccpa-compliance)
+- US607: Ensure CCPA Compliance (not yet documented)
 - [US611: Implement Data Anonymization](./US611-implement-data-anonymization.md)
-- [US612: Provide Data Portability](./US612-provide-data-portability.md)
-- [US602: Manage User Consent](.US602-enable-user-consent-management.md)
+- US612: Provide Data Portability (not yet documented)
+- [US602: Manage User Consent](./US602-manage-user-consent.md)
 - [US613: Conduct Regular Security Audits](./US613-conduct-regular-security-audits.md)
 
 ## Dependencies

@@ -7,7 +7,7 @@
 | [Web App](./application-layer/web-app) | User interface for web users | Internal | Standard | High | Simple |
 | [Mobile App](./application-layer/mobile-app) | User interface for mobile users | Internal | Standard | High | Simple |
 | [Identity](./application-layer/identity) | Authentication features | Internal | High | High | Simple |
-| [Audit](./application-layer/auditing) | Manage and retrieve audit logs | Internal | High | High | Detailed |
+| [Audit](./application-layer/audit) | Manage and retrieve audit logs | Internal | High | High | Detailed |
 | [Billing](./application-layer/billing) | Manage customer billing and invoicing | Confidential | High | High | Simple |
 | [Booking](./application-layer/booking) | Manage booking requests and allocations | Internal | High | High | Simple |
 | [Configuration](./application-layer/configuration) | Manage configuration options | Internal | Standard | High | Simple |

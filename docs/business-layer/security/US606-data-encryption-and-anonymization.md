@@ -5,7 +5,7 @@ To ensure that all user data is encrypted and anonymized in compliance with GDPR
 As a user, I want my data to be encrypted and anonymized so that my personal information is protected from unauthorized access, ensuring compliance with GDPR and other relevant data protection regulations.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 - [ ] **Given** the user data is stored **when** the data is accessed **then** it should be encrypted.

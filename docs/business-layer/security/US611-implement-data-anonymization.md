@@ -5,7 +5,7 @@ To ensure that sensitive user data is protected by anonymizing it before storage
 As a developer, I want to implement data anonymization techniques so that sensitive information such as names, addresses, and other personally identifiable information (PII) are not stored in their original form. This will help in protecting user privacy and complying with regulations like GDPR and CCPA.
 
 ## Requirements
-**[CR001](../compliance-requirements/CR001-ensure-gdpr-compliance)**: System should comply with GDPR and other relevant data protection regulations. 
+**CR001**: System should comply with GDPR and other relevant data protection regulations.
 
 ## Acceptance Criteria
 
@@ -22,7 +22,7 @@ As a developer, I want to implement data anonymization techniques so that sensit
     - Financial information
 
 2. **Anonymization Implementation**:
-       
+
     - At least one anonymization technique (hashing, encryption, tokenization, data masking, generalization, perturbation) is implemented for each identified PII field.
     - The anonymization process is irreversible.
 

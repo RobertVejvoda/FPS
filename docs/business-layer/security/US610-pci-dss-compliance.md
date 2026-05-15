@@ -5,7 +5,7 @@ The objective of this user story is to ensure that the system adheres to the Pay
 As a user, I want the system to comply with the Payment Card Industry Data Security Standard (PCI DSS), ensuring that payment information is securely processed and stored.
 
 ## Requirements
-- **[CR002](../compliance-requirements/CR002-industry-specific-compliance)**: Legal - System should comply with industry-specific regulations and standards.
+- **CR002**: Legal - System should comply with industry-specific regulations and standards.
 
 ## Acceptance Criteria
 - [ ] **Given** the system is processing payment information **when** a transaction is made **then** the payment data should be encrypted in transit and at rest.

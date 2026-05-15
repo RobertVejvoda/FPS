@@ -5,7 +5,7 @@ The objective of this user story is to ensure that the system adheres to the Sar
 As a user, I want the system to comply with the Sarbanes-Oxley Act (SOX) to ensure that financial data is managed and reported accurately, maintaining the integrity and transparency required by the regulation.
 
 ## Requirements
-- **[CR002](../compliance-requirements/CR002-industry-specific-compliance)**: Legal - System should comply with industry-specific regulations and standards.
+- **CR002**: Legal - System should comply with industry-specific regulations and standards.
 
 ## Acceptance Criteria
 

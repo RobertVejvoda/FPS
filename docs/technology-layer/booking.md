@@ -16,7 +16,7 @@ The Booking module handles parking space reservations and associated processes. 
 - Interfaces with user authentication for secure bookings
 - Links to IoT systems for physical slot monitoring
 
-![Software Architecture - Booking](../images/fps-software-arch-bookings.png)
+![Software Architecture - Booking](../images/fps-software-arch-booking.png)
 
 ## Software Components
 
