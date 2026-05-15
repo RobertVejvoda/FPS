@@ -106,6 +106,32 @@ public sealed class EmailNotificationHandlerTests
     }
 
     [Fact]
+    public async Task Handle_EmailSenderThrows_DoesNotThrow_SavesFailedEmailRecord_InAppUnaffected()
+    {
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("provider-internal-detail-must-not-leak"));
+
+        var exception = await Record.ExceptionAsync(() =>
+            handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1")));
+
+        Assert.Null(exception);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.Channel == NotificationChannel.InApp &&
+                n.DeliveryStatus == NotificationDeliveryStatus.Stored),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.Channel == NotificationChannel.Email &&
+                n.DeliveryStatus == NotificationDeliveryStatus.Failed &&
+                !string.IsNullOrEmpty(n.FailureReason) &&
+                !n.FailureReason!.Contains("provider-internal-detail-must-not-leak")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_EmailAndInAppUseDistinctDeduplicationKeys()
     {
         var inAppKey = BookingEventNotificationHandler.DeduplicationKey("evt-1", "user-1", "booking.slotAllocated", NotificationChannel.InApp);

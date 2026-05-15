@@ -49,7 +49,11 @@ public sealed class BookingEventNotificationHandler(
             return;
 
         var record = CreateRecord(envelope, recipientId, NotificationChannel.Email, dedupKey);
-        var result = await emailSender.SendAsync(record, cancellationToken);
+
+        EmailSendResult result;
+        try { result = await emailSender.SendAsync(record, cancellationToken); }
+        catch { result = EmailSendResult.Fail("Email delivery unavailable"); }
+
         if (result.Success)
             record.MarkDelivered();
         else
