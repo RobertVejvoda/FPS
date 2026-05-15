@@ -140,6 +140,8 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 
 ## Maintenance Items
 
+These are tracker maintenance tasks, not ordered delivery slices.
+
 | Item | Status | Source | Owner |
 | --- | --- | --- | --- |
 | GitHub Actions Node runtime refresh | Deferred | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | Superseded until hosting/deployment strategy is agreed. |
