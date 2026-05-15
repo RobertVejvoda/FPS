@@ -1,6 +1,7 @@
 
 * [Development Plan](./development-plan)
 * [Implementation Tracker](./implementation-tracker)
+* [Requirements Traceability](./requirements-traceability)
 * [Implementation](./implementation)
 * [Tooling](./tooling)
 * [Versions and decisions](./versions-and-decisions)
