@@ -35,7 +35,8 @@ Use these pages first:
 - [Development Plan](./development-plan): detailed roadmap, slice scope, acceptance criteria, and open risks.
 - [Implementation](./implementation): how work is sliced, assigned, reviewed, tracked, and merged.
 - [Software Architecture](./technology-layer/software-architecture): current bounded contexts, integration model, technology choices, and tenant isolation decision.
-- [Security Model](./technology-layer/security/security-model): actors, roles, data classification, encryption, secret access, and GDPR alignment.
+- [Security](./security): actors, roles, data classification, encryption, secret access, service-level controls, and GDPR alignment.
+- [Production](./production): production runtime model, cloud deployment path, operations, backups, restore, monitoring, incidents, and readiness gates.
 
 ## Global Architecture Document
 
@@ -61,8 +62,16 @@ Application structure, user-facing components, service responsibilities, and imp
 
 6. **[Technology layer](./technology-layer)**
 
-Infrastructure, security, deployment, non-functional requirements, and the [Software Architecture](./technology-layer/software-architecture) overview.
+Infrastructure, deployment, non-functional requirements, runtime technology choices, and the [Software Architecture](./technology-layer/software-architecture) overview.
 
-7. **[Glossary](./glossary)**
+7. **[Security](./security)**
+
+Cross-cutting security model, data classification, authentication, authorization, privacy, auditability, operational controls, and service-specific security notes.
+
+8. **[Production](./production)**
+
+Hosted runtime architecture, cloud environment baseline, operational model, backup/restore, monitoring, incident handling, maintenance, and production readiness evidence.
+
+9. **[Glossary](./glossary)**
 
 Definitions and acronyms used across the product, business, application, and technology documentation.

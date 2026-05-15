@@ -8,11 +8,14 @@ public sealed class BookingEventNotificationHandlerTests
 {
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
+    private readonly Mock<IEmailNotificationSender> emailSender = new();
     private readonly BookingEventNotificationHandler handler;
 
     public BookingEventNotificationHandlerTests()
     {
-        handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object);
+        handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object);
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmailSendResult.Ok());
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.SaveAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
@@ -56,7 +59,7 @@ public sealed class BookingEventNotificationHandlerTests
         await handler.HandleAsync(BuildEnvelope("booking.slotAllocated", "user-1"));
 
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.NextAction == "confirmUsage"),
+            It.Is<NotificationRecord>(n => n.NextAction == "confirmUsage" && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -69,13 +72,13 @@ public sealed class BookingEventNotificationHandlerTests
         await handler.HandleAsync(envelope);
 
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.RecipientId == "user-1"),
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-1" && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.RecipientId == "user-2"),
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-2" && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.RecipientId == "user-3"),
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-3" && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -89,10 +92,10 @@ public sealed class BookingEventNotificationHandlerTests
         await handler.HandleAsync(envelope);
 
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.RecipientId == "user-1"),
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-1" && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.RecipientId == "user-2"),
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-2" && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -104,7 +107,7 @@ public sealed class BookingEventNotificationHandlerTests
         await handler.HandleAsync(envelope);
 
         repository.Verify(r => r.SaveAsync(
-            It.Is<NotificationRecord>(n => n.MessageText.Contains("No matching slot available")),
+            It.Is<NotificationRecord>(n => n.MessageText.Contains("No matching slot available") && n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

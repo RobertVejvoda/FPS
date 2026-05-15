@@ -2,7 +2,10 @@ using FPS.Notification.Domain;
 
 namespace FPS.Notification.Application;
 
-public sealed class BookingEventNotificationHandler(INotificationRepository repository, INotificationBroadcaster broadcaster)
+public sealed class BookingEventNotificationHandler(
+    INotificationRepository repository,
+    INotificationBroadcaster broadcaster,
+    IEmailNotificationSender emailSender)
 {
     private static readonly IReadOnlyDictionary<string, string> MessageTemplates = new Dictionary<string, string>
     {
@@ -20,36 +23,63 @@ public sealed class BookingEventNotificationHandler(INotificationRepository repo
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
-        var recipients = ResolveRecipients(envelope);
-        foreach (var recipientId in recipients)
+        foreach (var recipientId in ResolveRecipients(envelope))
         {
-            var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType);
-            if (await repository.ExistsAsync(dedupKey, cancellationToken))
-                continue;
-
-            var record = new NotificationRecord
-            {
-                Id = Guid.NewGuid(),
-                DeduplicationKey = dedupKey,
-                TenantId = envelope.TenantId,
-                RecipientId = recipientId,
-                NotificationType = envelope.EventType,
-                Channel = NotificationChannel.InApp,
-                MessageText = ResolveMessage(envelope),
-                RelatedRequestId = envelope.Payload.BookingRequestId,
-                RelatedDate = envelope.Payload.Date,
-                RelatedTimeSlot = envelope.Payload.TimeSlot,
-                LocationId = envelope.Payload.LocationId,
-                NextAction = ResolveNextAction(envelope.EventType),
-                SourceEventId = envelope.EventId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await repository.SaveAsync(record, cancellationToken);
-            // Best-effort — broadcaster failure must not affect persistence
-            try { await broadcaster.BroadcastAsync(record, cancellationToken); } catch { }
+            await HandleInAppAsync(envelope, recipientId, cancellationToken);
+            await HandleEmailAsync(envelope, recipientId, cancellationToken);
         }
     }
+
+    private async Task HandleInAppAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
+    {
+        var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType, NotificationChannel.InApp);
+        if (await repository.ExistsAsync(dedupKey, cancellationToken))
+            return;
+
+        var record = CreateRecord(envelope, recipientId, NotificationChannel.InApp, dedupKey);
+        await repository.SaveAsync(record, cancellationToken);
+        // Best-effort — broadcaster failure must not affect persistence
+        try { await broadcaster.BroadcastAsync(record, cancellationToken); } catch { }
+    }
+
+    private async Task HandleEmailAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
+    {
+        var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType, NotificationChannel.Email);
+        if (await repository.ExistsAsync(dedupKey, cancellationToken))
+            return;
+
+        var record = CreateRecord(envelope, recipientId, NotificationChannel.Email, dedupKey);
+
+        EmailSendResult result;
+        try { result = await emailSender.SendAsync(record, cancellationToken); }
+        catch { result = EmailSendResult.Fail("Email delivery unavailable"); }
+
+        if (result.Success)
+            record.MarkDelivered();
+        else
+            record.MarkFailed(result.FailureReason ?? "Unknown error");
+
+        await repository.SaveAsync(record, cancellationToken);
+    }
+
+    private static NotificationRecord CreateRecord(
+        BookingEventEnvelope envelope, string recipientId, string channel, string dedupKey) => new()
+    {
+        Id = Guid.NewGuid(),
+        DeduplicationKey = dedupKey,
+        TenantId = envelope.TenantId,
+        RecipientId = recipientId,
+        NotificationType = envelope.EventType,
+        Channel = channel,
+        MessageText = ResolveMessage(envelope),
+        RelatedRequestId = envelope.Payload.BookingRequestId,
+        RelatedDate = envelope.Payload.Date,
+        RelatedTimeSlot = envelope.Payload.TimeSlot,
+        LocationId = envelope.Payload.LocationId,
+        NextAction = ResolveNextAction(envelope.EventType),
+        SourceEventId = envelope.EventId,
+        CreatedAt = DateTime.UtcNow
+    };
 
     private static IEnumerable<string> ResolveRecipients(BookingEventEnvelope envelope)
     {
@@ -88,6 +118,7 @@ public sealed class BookingEventNotificationHandler(INotificationRepository repo
             _ => null
         };
 
-    public static string DeduplicationKey(string eventId, string recipientId, string notificationType)
-        => $"{eventId}:{recipientId}:{notificationType}:{NotificationChannel.InApp}";
+    public static string DeduplicationKey(string eventId, string recipientId, string notificationType,
+        string channel = NotificationChannel.InApp)
+        => $"{eventId}:{recipientId}:{notificationType}:{channel}";
 }

@@ -1,10 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
   booking: BookingListItem;
   testID?: string;
+  onCancel?: () => void;
+  onConfirmUsage?: () => void;
+  actionPending?: boolean;
 };
 
 const STATUS_BADGE_COLOR: Record<string, string> = {
@@ -40,11 +43,11 @@ function formatTime(timeStr: string): string {
   return `${displayHour}:${m.padStart(2, '0')} ${ampm}`;
 }
 
-export function BookingCard({ booking, testID }: BookingCardProps) {
+export function BookingCard({ booking, testID, onCancel, onConfirmUsage, actionPending }: BookingCardProps) {
   const badgeColor = STATUS_BADGE_COLOR[booking.status] ?? colors.textMuted;
-  const nextActionLabel =
+  const nextAction =
     booking.nextAction && booking.nextAction.toLowerCase() !== 'none'
-      ? (NEXT_ACTION_LABEL[booking.nextAction] ?? booking.nextAction)
+      ? booking.nextAction
       : null;
 
   return (
@@ -72,8 +75,32 @@ export function BookingCard({ booking, testID }: BookingCardProps) {
         <Text style={styles.reason}>{booking.reason}</Text>
       ) : null}
 
-      {nextActionLabel ? (
-        <Text style={styles.nextAction}>{nextActionLabel}</Text>
+      {nextAction === 'cancel' && onCancel ? (
+        <Pressable
+          onPress={onCancel}
+          disabled={actionPending}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.actionButton, styles.cancelButton, (pressed || actionPending) && styles.actionButtonDimmed]}
+          testID={`cancel-${booking.requestId}`}
+        >
+          {actionPending
+            ? <ActivityIndicator size="small" color="#ffffff" />
+            : <Text style={styles.actionButtonText}>{NEXT_ACTION_LABEL.cancel}</Text>}
+        </Pressable>
+      ) : nextAction === 'confirmUsage' && onConfirmUsage ? (
+        <Pressable
+          onPress={onConfirmUsage}
+          disabled={actionPending}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.actionButton, styles.confirmButton, (pressed || actionPending) && styles.actionButtonDimmed]}
+          testID={`confirm-${booking.requestId}`}
+        >
+          {actionPending
+            ? <ActivityIndicator size="small" color="#ffffff" />
+            : <Text style={styles.actionButtonText}>{NEXT_ACTION_LABEL.confirmUsage}</Text>}
+        </Pressable>
+      ) : nextAction ? (
+        <Text style={styles.nextAction}>{NEXT_ACTION_LABEL[nextAction] ?? nextAction}</Text>
       ) : null}
     </View>
   );
@@ -126,5 +153,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.primary,
     fontWeight: '500',
+  },
+  actionButton: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.danger,
+  },
+  confirmButton: {
+    backgroundColor: '#15803d',
+  },
+  actionButtonDimmed: {
+    opacity: 0.55,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

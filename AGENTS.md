@@ -95,8 +95,8 @@ Agents should use GitHub labels and short comments as the handoff signal. Do not
 
 - `ready-to-implement` means the issue is ready for an implementer to start, subject to its assignment and labels.
 - `copilot` plus assignment to `Copilot` means GitHub Copilot agent should start the issue.
-- `needs-claude-action` means the router should prepare a Claude handoff.
-- `claude-ready` means a Claude handoff comment is prepared for manual invocation. It does not mean Claude has already run.
+- `needs-claude-action` means the GitHub Actions router should prepare a Claude handoff. The router removes this label after posting the handoff so the same issue or PR can be routed again later.
+- `claude-ready` means a Claude handoff comment is prepared and the item is waiting for a human to invoke Claude with that prompt. It does not mean Claude has already run, is currently running, or has accepted the task.
 - `needs-codex-review` means Codex should review or validate next.
 - `blocked-question` means no implementer should continue until Codex/Robert answers the concrete blocker.
 - `active-coordination` marks the current coordination thread; it is not by itself implementation permission.
@@ -108,7 +108,7 @@ When Codex signals work to an implementer, include a short comment with:
 - the source-of-truth docs or review comment;
 - whether to implement, revise, pause, or only answer a blocker.
 
-When an implementer finishes, it should update labels back to `needs-codex-review` and leave a concise summary with validation results.
+When an implementer finishes, it should update labels back to `needs-codex-review`, remove stale ready/action labels when permitted, and leave a concise summary with validation results.
 
 ### Attribution
 
