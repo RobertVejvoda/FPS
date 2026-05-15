@@ -1,8 +1,9 @@
-- [**Security**](./technology-layer/security): Implements security measures to protect data and ensure compliance with industry standards.
 - [**Non-functional Requirements**](./technology-layer/non-functional-requirements): Addresses performance, reliability, usability, and other non-functional aspects.
 - [**Software Architecture**](./technology-layer/software-architecture): Defines the structure and organization of the software components.
 - [**Packaging**](./technology-layer/packaging): Manages the distribution and deployment of the application.
 - [**Production**](./technology-layer/production): Ensures the application remains operational and up-to-date through regular updates and monitoring.
+
+Security is a cross-cutting top-level section, not a child of the technology layer. See [Security](./security) for the FPS security model, controls, privacy requirements, and service-specific security notes.
 
 ### Technologies Used
 

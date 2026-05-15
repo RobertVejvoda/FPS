@@ -8,5 +8,5 @@
 * [Business Layer](./business-layer)
 * [Application Layer](./application-layer)
 * [Technology Layer](./technology-layer)
-* [Security](./technology-layer/security)
+* [Security](./security)
 * [Glossary](./glossary)

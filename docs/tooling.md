@@ -203,14 +203,27 @@ The script targets `code/server/FPS.sln` and must be run from the repo root.
 
 ## tools/review-permission.sh
 
-Runs automatically on every `PermissionRequest` event via `.claude/settings.json`. Claude Code calls it before asking you to approve a tool — the script can grant, deny, or escalate to you.
+Runs automatically on every `PermissionRequest` event via `.claude/settings.json`. Claude Code calls it before asking you to approve a tool. The script can grant or deny the request; when it needs human confirmation, it exits without structured output so the normal permission prompt is shown.
 
 ```sh
 # Hook configuration (.claude/settings.json)
 PermissionRequest → ./tools/review-permission.sh
 ```
 
-The script reads the pending request as JSON on stdin and outputs a decision.
+The script reads the pending request as JSON on stdin. For automatic decisions it emits Claude Code's `PermissionRequest` JSON shape:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PermissionRequest",
+    "decision": {
+      "behavior": "allow"
+    }
+  }
+}
+```
+
+For human confirmation cases it writes the reason to stderr and exits without stdout. `PermissionRequest` hooks do not support the `permissionDecision: "ask"` output used by `PreToolUse`.
 
 ### Decision rules
 
@@ -238,7 +251,7 @@ The script reads the pending request as JSON on stdin and outputs a decision.
 | Editing `.env`, `secret*`, `password*`, `token*`, `private*key*` | Sensitive files require manual review |
 | `rm *test*` / `rm *spec*` | Removing test files is blocked |
 
-**Ask** — escalated to you with a note:
+**Human confirmation** — leaves the normal permission prompt in place and writes a note:
 
 | Pattern | Reason |
 |---|---|
