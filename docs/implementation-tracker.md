@@ -90,7 +90,8 @@ The tracker complements the [Development Plan](./development-plan) and [Requirem
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
 | REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | REPORT002 Reporting Dashboards And Exports | Planned | - | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
-| BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | Later commercialisation phase | Subscription, invoice generation, and payment-provider integration. |
+| BILL000 Commercialisation Impact Review | Planned | - | - | Unassigned | Before Billing implementation | Decide free/open core boundaries, paid add-on candidates, support subscription shape, and future dual-license posture before implementing product Billing behavior. |
+| BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | After BILL000 | Subscription, invoice generation, and payment-provider integration only after the commercial model is approved. |
 
 ### Mobile
 
