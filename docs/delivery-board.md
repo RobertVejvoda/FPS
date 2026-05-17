@@ -63,9 +63,9 @@ When Claude, Copilot, or a human implementer needs Codex/Robert action, use the 
 - leave a concise issue or PR comment with the exact blocker, review request, or decision needed;
 - add `blocked-question` when implementation must stop for a product/architecture decision;
 - add `needs-codex-review` when the work is ready for Codex review or validation;
-- assign Robert when permitted.
+- assign Robert only for a real human decision, not for routine Codex review.
 
-The router assigns Robert automatically for issue and PR labels `blocked-question` and `needs-codex-review`. Claude agent assignment remains separate because GitHub exposes it through the Web UI agent picker rather than the normal assignees API.
+The router assigns Robert automatically for issue and PR label `blocked-question`. `needs-codex-review` uses label and board status only because Codex is not exposed as a normal GitHub assignee in this repository. Claude agent assignment remains separate because GitHub exposes it through the Web UI agent picker rather than the normal assignees API.
 
 ## Status Rules
 
@@ -96,7 +96,7 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Sync board `Phase` for grouping/filtering. |
 | Issue has `blocked-question` | Sync board status to `Backlog`. |
 | Issue has `needs-codex-review` | Sync board status to `In review` unless `blocked-question` is also present. |
-| Issue or PR has `blocked-question` or `needs-codex-review` | Assign Robert for human/Codex action. |
+| Issue or PR has `blocked-question` | Assign Robert for human decision. |
 | Issue has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. Robert can then assign the Claude agent through the GitHub Web UI. |
 | PR has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. |
 
