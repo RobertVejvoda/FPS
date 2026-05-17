@@ -32,7 +32,13 @@ docker network create fps_network
 Run the following command to start all services defined in the `docker-compose.yaml` file:
 
 ```bash
-docker-compose up -d
+docker compose up -d
+```
+
+From the repository root, use:
+
+```bash
+docker compose -f code/infrastructure/docker-compose.yaml up -d
 ```
 
 This will start the following services:
@@ -170,8 +176,27 @@ See `dapr/README.md` for the full component contract, app scoping rules, and pro
 To stop all running containers, use the following command:
 
 ```bash
-docker-compose down
+docker compose down
 ```
+
+From the repository root, use:
+
+```bash
+docker compose -f code/infrastructure/docker-compose.yaml down
+```
+
+---
+
+## Local Full-Stack Testing
+
+This Docker Compose setup starts shared dependencies, not the whole FPS application stack. Run the .NET services from source for service-level checks, or use the planned AppHost/local harness when it exists.
+
+See `../../docs/production/local-test-harness.md` for:
+
+- current service run commands;
+- local service URLs;
+- mobile gateway requirements;
+- preferred Aspire/AppHost direction for one-command full-stack smoke testing.
 
 ---
 

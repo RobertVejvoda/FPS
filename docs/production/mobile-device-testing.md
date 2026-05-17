@@ -59,6 +59,8 @@ The preferred test profile is a demo or local gateway URL that exposes those end
 
 Current local development has backend services on separate ports, and the checked-in infrastructure proxy is not yet a full mobile API gateway. That means a complete end-to-end phone test cannot be finished from only the individual service URLs. Until the gateway or hosted demo URL exists, use the mobile app for UI/device smoke and verify service behavior separately through backend/API tests.
 
+The local run path and preferred Aspire/AppHost direction are documented in the [Local Test Harness](./local-test-harness) page.
+
 Local infrastructure can be started for service-level verification. Create `fps_network` first if it does not already exist:
 
 ```sh
@@ -171,6 +173,7 @@ Pilot-grade mobile acceptance requires:
 ## Follow-Up Gaps
 
 - Provide a local or hosted API gateway URL that routes all mobile employee endpoints under one origin.
+- Add an Aspire AppHost or equivalent local harness for one-command full-stack smoke testing.
 - Document development token generation or seeded OIDC demo users.
 - Add a repeatable seed/reset command for the mobile demo data set.
 - Decide whether `MOB009` should include automated mobile component or end-to-end tests beyond TypeScript validation.

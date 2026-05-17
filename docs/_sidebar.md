@@ -23,6 +23,7 @@
   * [Production Model](./production)
   * [Hosting Strategy](./production/hosting-deployment-strategy)
   * [Demo Environment](./production/demo-environment-baseline)
+  * [Local Test Harness](./production/local-test-harness)
   * [Mobile Device Testing](./production/mobile-device-testing)
 * [Roadmap](./roadmap)
 * [Demo and Evaluation](./demo-and-evaluation)
