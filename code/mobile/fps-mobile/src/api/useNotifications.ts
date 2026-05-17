@@ -251,7 +251,7 @@ export function useNotifications() {
       stopPolling();
       isSSEConnectedRef.current = false;
     };
-  }, [config, state.kind, state.unreadCount, refresh]);
+  }, [config, state.kind, refresh]);
 
   // Initial load
   useEffect(() => {

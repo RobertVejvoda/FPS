@@ -2,11 +2,11 @@
 
 Expo managed React Native + TypeScript app shell for the Fair Parking System.
 
-This package corresponds to the MOB001 slice from `docs/development-plan.md`. It
-establishes the project, navigation, API configuration, generated API-client
-type consumption, and a development-only bearer-token handoff. It does **not**
-implement production login, booking flows, push/SSE notifications, profile
-editing, or native packaging — those live in later mobile slices.
+This package implements the mobile employee self-service experience. It started
+as the MOB001 slice (app shell, navigation, API configuration, development-only
+bearer-token handoff) and has been incrementally expanded through MOB002-MOB006
+to include real OIDC login, My Bookings, booking submission/actions, and
+notification consumption.
 
 ## Prerequisites
 
@@ -60,8 +60,16 @@ CI runs the same script against this directory on every PR that touches
 | Five-state shell (loading / empty / error / unauthenticated / unreachable) | Yes |
 | `GET /me` session verification | Yes |
 | Dev-only paste-token + API base URL screen | Yes |
-| Tabs: Home, My Bookings, New, Notifications, Profile | Yes — placeholders only |
+| Real OIDC login with Authorization Code + PKCE | Yes (MOB003) |
+| My Bookings list with filters and pagination | Yes (MOB002) |
+| Booking submission | Yes (MOB004) |
+| Booking cancellation and usage confirmation | Yes (MOB005) |
+| Notification list with polling fallback | Yes (MOB006) |
+| Unread count badge on Alerts tab | Yes (MOB006) |
+| Mark notification as read | Yes (MOB006) |
 | Type-only imports from generated client | Yes |
-| Real login / SSO / token refresh | No — later slice |
-| Booking submission / cancellation / usage confirmation | No — later slice |
-| Push / SSE / native projects / EAS packaging | No — later slice |
+| Profile and vehicle detail display | No — MOB007 |
+| Draw status and allocation detail | No — MOB008 |
+| Push notifications / SSE with auth headers | No — later slice |
+| Session expiry / refresh recovery | No — MOB009 |
+| Native projects / EAS packaging | No — later slice |

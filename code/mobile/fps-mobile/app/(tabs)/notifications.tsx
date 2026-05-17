@@ -48,7 +48,7 @@ export default function NotificationsRoute() {
   if (state.kind === 'unauthenticated') {
     return (
       <Screen>
-        <StateView kind="unauthenticated" />
+        <StateView kind="unauthenticated" title="Not authenticated" message="Please sign in to view notifications." />
       </Screen>
     );
   }
@@ -56,7 +56,7 @@ export default function NotificationsRoute() {
   if (state.kind === 'unreachable') {
     return (
       <Screen>
-        <StateView kind="unreachable" message={state.message} />
+        <StateView kind="unreachable" title="Connection failed" message={state.message} />
       </Screen>
     );
   }
