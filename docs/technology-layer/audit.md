@@ -1,3 +1,5 @@
+# Audit Technology
+
 The Audit component is responsible for tracking and logging all significant actions and events within the system. This includes user activities, system changes, and access to sensitive data. It ensures accountability and provides a trail of evidence that can be used for security audits, compliance verification, and troubleshooting.
 
 ![Software Architecture - Audit](../images/fps-software-arch-audit.png)
@@ -50,4 +52,3 @@ The Audit component is responsible for tracking and logging all significant acti
 ## Packaging
 
 ![Packaging](../images/fps-software-pack-audit.png)
-

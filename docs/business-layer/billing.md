@@ -1,3 +1,5 @@
+# Billing Business
+
 [Billings and Payments module](../application-layer/billing) is responsible for handling all financial transactions within the system. It ensures secure and efficient processing of payments, including credit card transactions, bank transfers, and other payment methods. The module integrates with various payment gateways to provide a seamless experience for users.
 
 ## Core Services
@@ -86,4 +88,3 @@
     - Dispute filed
     - Refund requested
     - Information changed
-

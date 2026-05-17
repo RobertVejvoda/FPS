@@ -1,3 +1,5 @@
+# Billing Technology
+
 The Billing component is responsible for handling all financial transactions within the system. It ensures secure processing of payments, manages billing, and integrates with various payment gateways.
 
 ![Software Architecture - Customer](../images/fps-software-arch-customer.png)
@@ -42,4 +44,3 @@ The Billing component is responsible for handling all financial transactions wit
 ## Packaging
 
 ![Billing](../images/fps-software-pack-billing.png)
-

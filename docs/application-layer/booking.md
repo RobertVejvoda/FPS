@@ -1,3 +1,5 @@
+# Booking Application
+
 [Booking](../technology-layer/booking) handles the reservation of parking slots. It allows employees to request parking slots for specific dates and times, and manages the allocation based on availability and priority rules.
 
 ## Application Functions

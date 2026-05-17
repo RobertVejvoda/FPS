@@ -1,3 +1,4 @@
+# Glossary
 
 ### Business Terms
 | Term | Explanation |

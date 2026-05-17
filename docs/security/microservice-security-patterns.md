@@ -1,3 +1,5 @@
+# Microservice Security Patterns
+
 Implements security measures specific to microservices architecture. This includes using API gateways for centralized authentication and authorization, service mesh for secure service-to-service communication, and distributed tracing for monitoring and logging across microservices.
 
 ### Tenant Isolation

@@ -1,3 +1,5 @@
+# Environment Security
+
 Defines security measures and best practices for different environments (development, testing, staging, production) to ensure consistency and protection across the software development lifecycle.
 
 ## Development Environment
@@ -23,4 +25,3 @@ Security is integrated into every phase of the software development lifecycle (S
 ## Container Registry
 
 A container registry is used to store and manage container images. Security measures for container registries include using private registries, scanning images for vulnerabilities, and implementing access controls. It's important to ensure that only trusted images are used and that images are regularly updated to include the latest security patches.
-

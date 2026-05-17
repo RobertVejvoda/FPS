@@ -1,3 +1,5 @@
+# Profile Technology
+
 The Profile component is responsible for managing user-specific data within the system. This includes handling user preferences, vehicle information, token management, and maintenance activities. The service ensures that all user-related data is stored securely and is easily accessible for other system components.
 
 ![Software Architecture - Profile](../images/fps-software-arch-profile.png)
@@ -26,4 +28,3 @@ The Profile component is responsible for managing user-specific data within the 
 ## Packaging
 
 ![Profile](../images/fps-software-pack-profile.png)
-

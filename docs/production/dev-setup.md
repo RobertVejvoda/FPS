@@ -1,3 +1,5 @@
+# Development Setup
+
 ![Development Setup](../images/fps-logical-architecture.png)
 
 ### Open Source solutions

@@ -1,3 +1,5 @@
+# Data Privacy
+
 Ensures that sensitive data is handled in compliance with privacy regulations and best practices, such as data minimization and anonymization.
 ## Purpose
 

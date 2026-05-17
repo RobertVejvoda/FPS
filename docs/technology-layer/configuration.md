@@ -1,3 +1,5 @@
+# Configuration Technology
+
 The Configuration component is responsible for managing and maintaining the various configurations required by the system, particularly focusing on garage and parking slot maintenance, configuration, and time slots availability. It ensures that all components have access to the necessary settings and parameters to function correctly.
 
 ![Software Architecture - Configuration](../images/fps-software-arch-configuration.png)
@@ -53,4 +55,3 @@ The Configuration component is responsible for managing and maintaining the vari
 ## Packaging
 
 ![configuration](../images/fps-software-pack-configuration.png)
-

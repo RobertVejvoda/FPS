@@ -1,3 +1,5 @@
+# Web App Technology
+
 The web application follows a modular frontend architecture that separates functionality into distinct UI components while ensuring consistent deployment through Docker containerization.
 
 ## Key Components
@@ -29,4 +31,3 @@ The web application follows a modular frontend architecture that separates funct
 | feedback-ui | GUI | User interface for handling feedback | React | Docker container | fps-web-app |
 | login-ui | GUI | User interface for authentication | React | Docker container | fps-web-app |
 | login-svc | Service | Service for authentication | React | Docker container | fps-web-app |
-

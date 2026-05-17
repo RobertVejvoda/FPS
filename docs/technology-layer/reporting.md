@@ -1,3 +1,5 @@
+# Reporting Technology
+
 The Reporting component is a simple service that provides a predefined set of reports. It allows users to access and generate standard reports without the need for custom report creation.
 
 ![Software Architecture - Reporting](../images/fps-software-arch-reporting.png)
@@ -26,7 +28,6 @@ The Reporting component is a simple service that provides a predefined set of re
 ## Packaging
 
 ![Reporting](../images/fps-software-pack-reporting.png)
-
 
 
 

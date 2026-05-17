@@ -1,3 +1,5 @@
+# Profile Application
+
 [Profile](../technology-layer/profile) is responsible for managing user-specific data within the system. This includes handling user preferences, vehicle information and maintenance activities. The service ensures that all user-related data is stored securely and is easily accessible for other system components.
 
 
@@ -16,4 +18,3 @@
 - **Manage Notifications:** Handles the settings and delivery of various user notifications.
 
 - **Ensure Data Security:** Applies encryption and privacy practices to protect sensitive user data.
-

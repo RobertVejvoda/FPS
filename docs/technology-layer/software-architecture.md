@@ -1,3 +1,5 @@
+# Software Architecture
+
 ![Logical Architecture](../images/fps-logical-architecture.png)
 
 ## Architecture Overview
