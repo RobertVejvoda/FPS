@@ -25,11 +25,11 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Booking core | Done | B001-B010 implemented and merged. |
 | Platform integration foundation | Done | ID001, BK011, P001, N001, A001, CFG001, API001, CI001 are merged. |
 | Mobile foundation | Done | MOB001-MOB005 are merged for the current employee mobile flow. |
-| Mobile product completion | Ready | `MOB006` is ready for Claude; later employee slices are profile/vehicle display, draw/allocation detail, and production polish. |
+| Mobile product completion | In progress | MOB006 is merged. Remaining employee slices are profile/vehicle display, draw/allocation detail, and production polish. |
 | Web app | Backlog | Web employee self-service starts after mobile completion; HR/admin dashboards can now build on Configuration and Reporting APIs. |
 | Notification v1 completion | In progress | N002, N003, and N004 are implemented. Preferences and client consumption remain planned. |
 | Audit v1 completion | In progress | A001 and A002 are implemented. Retention, integrity, and export evidence remain planned. |
-| Production operations | In progress | OPS000 deployment profile baseline is merged. Next work is pluggable local/demo/client-owned deployment hardening, observability, and operational evidence. |
+| Production operations | In progress | OPS000 and OPS001 are merged. Next work is demo environment baseline, client-owned deployment hardening, observability, and operational evidence. |
 | Configuration management | In progress | CFG001 and CFG002 are implemented. Publication, version history, and audit integration remain planned. |
 | Reporting foundation | In progress | REPORT001 read models are implemented. Dashboards, exports, and web views remain planned. |
 
@@ -109,7 +109,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | MOB003 Mobile Real Login | Done | [#75](https://github.com/RobertVejvoda/FPS/issues/75) | [#78](https://github.com/RobertVejvoda/FPS/pull/78) | `implemented-by: claude` plus Codex repair commit | 2026-05-14 | Real OIDC Authorization Code + PKCE login in Expo mobile app. |
 | MOB004 Mobile Booking Submission | Done | [#85](https://github.com/RobertVejvoda/FPS/issues/85) | [#87](https://github.com/RobertVejvoda/FPS/pull/87) | `implemented-by: claude` plus Codex review fix | 2026-05-14 | Employee request submission from mobile. |
 | MOB005 Mobile Booking Actions | Done | [#91](https://github.com/RobertVejvoda/FPS/issues/91) | [#95](https://github.com/RobertVejvoda/FPS/pull/95) | PR author: RobertVejvoda; Codex reviewed | 2026-05-14 | Cancel and confirm-usage actions from mobile. |
-| MOB006 Mobile Notifications | Ready | [#137](https://github.com/RobertVejvoda/FPS/issues/137) | - | Manual Claude handoff / assignment-first | Next mobile slice | Notification list, unread count, mark-read action, and SSE or polling fallback using N002 APIs. |
+| MOB006 Mobile Notifications | Done | [#137](https://github.com/RobertVejvoda/FPS/issues/137) | [#166](https://github.com/RobertVejvoda/FPS/pull/166) | `implemented-by: claude` plus Codex filter-refresh fix | 2026-05-17 | Notification list, unread count, mark-read action, and polling fallback using N002 APIs. |
 | MOB007 Mobile Profile And Vehicle Details | Planned | [#135](https://github.com/RobertVejvoda/FPS/issues/135) | - | Unassigned | After MOB006 or when Profile editing rules are clear | Employee-visible profile, vehicle, company-car, and accessibility facts; editing only if business rules allow it. |
 | MOB008 Mobile Draw Status And Allocation Detail | Planned | [#136](https://github.com/RobertVejvoda/FPS/issues/136) | - | Unassigned | After MOB007 | Employee-safe draw/allocation visibility without exposing hidden lottery internals. |
 | MOB009 Mobile Production Polish | Planned | [#138](https://github.com/RobertVejvoda/FPS/issues/138) | - | Unassigned | Before mobile pilot | Session expiry, refresh recovery, environment config, error/empty/loading states, accessibility, and production QA. |
@@ -128,7 +128,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | OPS000 Hosting and Deployment Strategy Options | Done | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | [#102](https://github.com/RobertVejvoda/FPS/pull/102) | `implemented-by: claude` | 2026-05-15 | Deployment profile baseline merged; local, demo, and client-owned production profiles replace the earlier single-provider production assumption. |
-| OPS001 Pluggable Dapr Component Baseline | Ready | [#139](https://github.com/RobertVejvoda/FPS/issues/139) | - | Manual Claude handoff / assignment-first | Next production slice | Define local/demo/client-owned component profiles for pub/sub, state, secrets, bindings, identity, and observability. |
+| OPS001 Pluggable Dapr Component Baseline | Done | [#139](https://github.com/RobertVejvoda/FPS/issues/139) | [#167](https://github.com/RobertVejvoda/FPS/pull/167) | `implemented-by: claude` plus Codex scope/doc fixes | 2026-05-17 | Local/demo/client-owned Dapr component profiles, pub/sub name alignment, state/secret/store naming, and local setup docs. |
 | OPS002 Demo Environment Baseline | Planned | [#140](https://github.com/RobertVejvoda/FPS/issues/140) | - | Unassigned | After OPS001 | Stand up or document a low-cost demo path that proves the product without assuming the final client production environment. |
 | OPS003 Client-Owned Production Integration | Planned | [#156](https://github.com/RobertVejvoda/FPS/issues/156) | - | Unassigned | After OPS001/OPS002 | Document and implement the handoff model for client-owned production, including deployment assumptions, Dapr component replacement, and operational responsibilities. |
 | OPS004 Observability And Performance Evidence | Planned | [#158](https://github.com/RobertVejvoda/FPS/issues/158) | - | Unassigned | Before client pilot | Expose usage, performance, logs, metrics, and traces so Prometheus/Grafana locally can be replaced by Dynatrace, Azure Monitor, OpenTelemetry Collector, or client tooling. |
