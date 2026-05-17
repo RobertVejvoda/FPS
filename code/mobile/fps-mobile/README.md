@@ -2,11 +2,10 @@
 
 Expo managed React Native + TypeScript app shell for the Fair Parking System.
 
-This package corresponds to the MOB001 slice from `docs/development-plan.md`. It
-establishes the project, navigation, API configuration, generated API-client
-type consumption, and a development-only bearer-token handoff. It does **not**
-implement production login, booking flows, push/SSE notifications, profile
-editing, or native packaging — those live in later mobile slices.
+This package contains the Expo managed React Native employee app. It started as
+the MOB001 app shell and now includes the current employee mobile flow for login,
+bookings, notifications, and read-only profile/vehicle facts. Native packaging,
+push delivery, profile editing, and pilot polish remain later scope.
 
 ## Prerequisites
 
@@ -35,10 +34,17 @@ npm run android        # Android emulator
 npm run web            # Web target
 ```
 
-The app starts on a developer-credential gate. Paste an API base URL (for
-example `http://localhost:5100`) and a bearer token issued by a development
-Identity service. Values are stored in `AsyncStorage` on the device only — they
-are never bundled, committed, or sent anywhere off-device.
+The app can use real OIDC login when the environment is configured, or a
+developer session for smoke testing. For developer sessions, paste an API base
+URL and a bearer token issued by a development Identity service. Values are
+stored in `AsyncStorage` on the device only — they are never bundled, committed,
+or sent anywhere off-device.
+
+The mobile app expects one API base URL that exposes the employee endpoints for
+Identity, Booking, Notification, and Profile. A physical device cannot use the
+developer machine's `localhost`; use a LAN-reachable gateway, tunnel, or hosted
+demo URL. The full device test runbook is in
+[`docs/production/mobile-device-testing.md`](../../../docs/production/mobile-device-testing.md).
 
 To clear stored credentials, open **Profile → Clear developer session** or call
 the corresponding option on the debug-session screen.
@@ -60,8 +66,15 @@ CI runs the same script against this directory on every PR that touches
 | Five-state shell (loading / empty / error / unauthenticated / unreachable) | Yes |
 | `GET /me` session verification | Yes |
 | Dev-only paste-token + API base URL screen | Yes |
-| Tabs: Home, My Bookings, New, Notifications, Profile | Yes — placeholders only |
+| Real login / SSO using OIDC Authorization Code + PKCE | Yes, when runtime config is provided |
+| Tabs: Home, My Bookings, New, Notifications, Profile | Yes |
+| My Bookings list | Yes |
+| Booking submission | Yes |
+| Booking cancellation / usage confirmation | Yes |
+| Notification list, unread count, mark-read, and polling fallback | Yes |
+| Read-only profile and vehicle facts | Yes |
 | Type-only imports from generated client | Yes |
-| Real login / SSO / token refresh | No — later slice |
-| Booking submission / cancellation / usage confirmation | No — later slice |
-| Push / SSE / native projects / EAS packaging | No — later slice |
+| Token refresh/session polish | Partial — `MOB009` |
+| Draw/allocation detail | No — `MOB008` |
+| Profile editing / notification preferences | No — later slice |
+| Push / native projects / EAS packaging | No — later slice |

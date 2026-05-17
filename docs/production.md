@@ -62,6 +62,7 @@ Provider-specific setup notes and local development environment details belong i
 
 - [Testing](./production/testing): test types used to build production confidence.
 - [Testing Scenarios](./production/testing-scenarios): concrete production-readiness scenarios to validate before hosted pilot.
+- [Mobile Device Testing](./production/mobile-device-testing): runbook and scenario plan for Expo/device testing of the employee mobile app.
 
 Minimum readiness before a hosted pilot:
 
@@ -76,6 +77,7 @@ Minimum readiness before a hosted pilot:
 - telemetry can be exported through OpenTelemetry to a client monitoring platform;
 - incident and rollback runbooks are documented;
 - `./tools/validate.sh` and relevant frontend/mobile checks pass before deployment.
+- mobile device smoke or pilot evidence exists for any environment used in an employee demo.
 
 ## Slice Mapping
 

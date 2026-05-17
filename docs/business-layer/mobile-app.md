@@ -1,4 +1,7 @@
 ## User Interface
+
+Device testing expectations and run steps are documented in the [Mobile Device Testing Plan](../production/mobile-device-testing).
+
 - **Responsive Design**: Optimized for mobile devices
 - **Intuitive Navigation**: Simplified interface for booking flow
 - **Accessible Defaults**: Readable text, touch-friendly controls, and clear loading/error states

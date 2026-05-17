@@ -64,3 +64,4 @@ The first version of these materials is collected in the [Client Evaluation Pack
 - Expected notifications, audit records, and reporting results are predictable.
 - Local observability shows metrics/logs/traces for the demo flow.
 - Client-facing materials are linked from this page and updated before external sharing.
+- Employee mobile scenarios are checked with the [Mobile Device Testing Plan](./production/mobile-device-testing) before any external demo.
