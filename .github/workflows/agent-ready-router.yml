@@ -32,6 +32,7 @@ jobs:
           FALLBACK_GH_TOKEN: ${{ github.token }}
           ISSUE_LABELS_JSON: ${{ toJson(github.event.issue.labels.*.name) }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           GH_REPO: ${{ github.repository }}
@@ -51,7 +52,9 @@ jobs:
           title_upper="$(tr '[:lower:]' '[:upper:]' <<< "$ISSUE_TITLE")"
 
           status=""
-          if grep -qw "blocked-question" <<< "$labels"; then
+          if [ "$ISSUE_STATE" = "closed" ]; then
+            status="Done"
+          elif grep -qw "blocked-question" <<< "$labels"; then
             status="Backlog"
           elif grep -qw "needs-codex-review" <<< "$labels"; then
             status="In review"

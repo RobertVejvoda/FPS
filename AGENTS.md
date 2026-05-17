@@ -77,13 +77,14 @@ All agents should keep session history small and handoffs explicit:
 
 - issue board status is synced best-effort only for FPS-specific exceptional states that GitHub Project built-ins cannot infer;
 - issue board `Phase` is synced best-effort from known slice/title prefixes for Kanban grouping;
+- closed issues sync to `Done`;
 - issues labeled `blocked-question` sync to `Backlog`;
 - issues labeled `needs-codex-review` sync to `In review` unless `blocked-question` is also present;
 - issues or pull requests labeled `blocked-question` are assigned to Robert for human decision;
 - issues labeled `needs-claude-action`, without `blocked-question`, receive a prepared Claude handoff comment and have `needs-claude-action` removed;
 - pull requests labeled `needs-claude-action` receive a prepared Claude handoff comment and have `needs-claude-action` removed.
 
-Ownership is now assignment-first for assignable GitHub actors. GitHub Project built-in workflows should handle generic lifecycle changes such as item-added, issue closed, and PR merged. Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly. Claude routing remains handoff-only; assign the Claude agent through the GitHub Web UI when the handoff is ready and worth the token cost. Missing external agent services are operational blockers, not product decisions.
+Ownership is now assignment-first for assignable GitHub actors. GitHub Project built-in workflows should handle generic lifecycle changes where reliable; the router explicitly syncs closed issues to `Done` because this status is operationally important. Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly. Claude routing remains handoff-only; assign the Claude agent through the GitHub Web UI when the handoff is ready and worth the token cost. Missing external agent services are operational blockers, not product decisions.
 
 Board status sync is intentionally non-blocking. If the repository token cannot write to the user-owned GitHub Project, configure `PROJECT_SYNC_TOKEN` with Project access; otherwise agents should update the board manually after changing labels or closing issues.
 

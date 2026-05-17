@@ -31,6 +31,7 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 | Signal | Automated action |
 |---|---|
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Syncs the Delivery Kanban `Phase` field |
+| Issue is closed | Syncs the Delivery Kanban status to `Done` |
 | Issue has `blocked-question` | Syncs the Delivery Kanban status to `Backlog` |
 | Issue has `needs-codex-review` | Syncs the Delivery Kanban status to `In review` unless `blocked-question` is also present |
 | Issue or PR has `blocked-question` | Assigns Robert for human decision |
@@ -50,6 +51,7 @@ Required setup:
 
 Safety notes:
 
+- Closed issues take precedence over routing labels and are synced to `Done`.
 - `blocked-question` prevents automated Claude handoff routing and syncs the board back to `Backlog`.
 - `active-coordination` is not an implementation trigger.
 - Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
