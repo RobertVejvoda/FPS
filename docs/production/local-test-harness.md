@@ -73,7 +73,7 @@ The first useful AppHost should:
 - document seeded demo users and data reset;
 - avoid committing or printing real secrets.
 
-Suggested slice name: `OPS005 Local Test Harness`.
+Suggested slice name: `OPS006 Local Test Harness`.
 
 ## AppHost Acceptance Criteria
 

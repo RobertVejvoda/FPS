@@ -91,6 +91,6 @@ Production work is tracked through these slices:
 | `OPS002` | Demo environment baseline, smoke checklist, reset/teardown path, and cost evidence for evaluation. |
 | `OPS003` | Client-owned production integration guide. |
 | `OPS004` | Observability, performance evidence, backup/restore verification, and production runbooks. |
-| `OPS005` | Local test harness with one-command stack startup, mobile gateway URL, seeded data, and smoke-test instructions. |
+| `OPS006` | Local test harness with one-command stack startup, mobile gateway URL, seeded data, and smoke-test instructions. |
 
 Production pages should be updated whenever these slices change the target hosting model, deployment path, backup strategy, monitoring stack, or operational responsibilities.
