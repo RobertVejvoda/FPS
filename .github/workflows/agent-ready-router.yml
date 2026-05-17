@@ -2,20 +2,83 @@ name: Agent ready router
 
 on:
   issues:
-    types: [labeled, reopened]
+    types: [opened, edited, labeled, unlabeled, assigned, unassigned, reopened, closed]
   pull_request_target:
     types: [labeled, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: read
   issues: write
   pull-requests: write
+  repository-projects: write
 
 concurrency:
   group: agent-ready-router-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
+  sync-issue-board-status:
+    name: Sync issue board status
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'issues' &&
+      github.event.issue.pull_request == null
+    steps:
+      - name: Best-effort Project status sync
+        continue-on-error: true
+        env:
+          PROJECT_SYNC_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
+          FALLBACK_GH_TOKEN: ${{ github.token }}
+          ISSUE_LABELS_JSON: ${{ toJson(github.event.issue.labels.*.name) }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          PROJECT_OWNER: RobertVejvoda
+          PROJECT_NUMBER: "2"
+        run: |
+          set -euo pipefail
+
+          if [ -n "${PROJECT_SYNC_TOKEN:-}" ]; then
+            export GH_TOKEN="$PROJECT_SYNC_TOKEN"
+          else
+            export GH_TOKEN="$FALLBACK_GH_TOKEN"
+          fi
+
+          labels="$(jq -r '.[]' <<< "$ISSUE_LABELS_JSON" | tr '\n' ' ')"
+
+          status="Backlog"
+          if [ "$ISSUE_STATE" = "closed" ]; then
+            status="Done"
+          elif grep -qw "needs-codex-review" <<< "$labels"; then
+            status="In review"
+          elif grep -qw "blocked-question" <<< "$labels"; then
+            status="Backlog"
+          elif grep -qw "claude-ready" <<< "$labels" ||
+               grep -qw "ready-to-implement" <<< "$labels" ||
+               grep -qw "copilot" <<< "$labels" ||
+               grep -qw "needs-claude-action" <<< "$labels"; then
+            status="Ready"
+          fi
+
+          project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
+          project_id="$(jq -r '.id' <<< "$project_json")"
+          fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
+          status_field_id="$(jq -r '.fields[] | select(.name == "Status") | .id' <<< "$fields_json")"
+          status_option_id="$(
+            jq -r --arg status "$status" \
+              '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' \
+              <<< "$fields_json"
+          )"
+
+          item_id="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$ISSUE_URL" --format json --jq .id)"
+          gh project item-edit \
+            --project-id "$project_id" \
+            --id "$item_id" \
+            --field-id "$status_field_id" \
+            --single-select-option-id "$status_option_id"
+
+          echo "Synced issue board status to $status"
+
   route-copilot-issue:
     name: Route ready issue to Copilot
     runs-on: ubuntu-latest

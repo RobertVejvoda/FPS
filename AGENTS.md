@@ -75,11 +75,14 @@ All agents should keep session history small and handoffs explicit:
 
 `.github/workflows/agent-ready-router.yml` routes explicit ready signals:
 
+- issue board status is synced best-effort for normal issue lifecycle and label changes;
 - issues labeled `ready-to-implement` + `copilot`, without `blocked-question`, are assigned to GitHub Copilot coding agent;
 - issues labeled `needs-claude-action`, without `blocked-question`, receive a prepared Claude handoff comment and are relabeled `claude-ready`;
 - pull requests labeled `needs-claude-action` receive a prepared Claude handoff comment and are relabeled `claude-ready`.
 
 The workflow invokes Copilot assignment automatically, but Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost. Missing Copilot secrets or unavailable external agent services are operational blockers, not product decisions.
+
+Board status sync is intentionally non-blocking. If the repository token cannot write to the user-owned GitHub Project, configure `PROJECT_SYNC_TOKEN` with Project access; otherwise agents should update the board manually after changing labels or closing issues.
 
 ### Implementer routing
 
