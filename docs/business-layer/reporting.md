@@ -1,3 +1,5 @@
+# Reporting Business
+
 [Reporting module](../application-layer/reporting) is designed to provide comprehensive insights and analytics on various aspects of the system. It enables users, administrators, and managers to access real-time and historical data, generate detailed reports, and make informed decisions based on the information presented. The module covers a wide range of reporting needs, including occupancy, revenue, system performance, user activity, and more, ensuring that all stakeholders have the necessary tools to monitor and optimize operations effectively.
 
 ### Real-time Reports
@@ -28,5 +30,4 @@
 - Monitor two-factor authentication usage
 - Process and track user account deletion requests
 - Analyze third-party integration usage and performance
-
 

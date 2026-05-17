@@ -1,3 +1,5 @@
+# Configuration Application
+
 [Configuration](../technology-layer/configuration) is responsible for managing and maintaining the various configurations required by the system, particularly focusing on garage and parking slot maintenance, configuration, and time slots availability. It ensures that all components have access to the necessary settings and parameters to function correctly.
 
 ## Application Functions
@@ -31,5 +33,4 @@
 
 - **Manage Localization Settings**  
     Offers the ability to add or update language packs, ensuring the application supports multiple regions and languages.
-
 

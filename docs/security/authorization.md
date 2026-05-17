@@ -1,3 +1,5 @@
+# Authorization
+
 Authorization is the process of determining whether a user has the right to access a resource or perform an action. It is a critical aspect of security in any application.
 
 ## Authorization Type
@@ -23,4 +25,3 @@ Authorization is the process of determining whether a user has the right to acce
 | System        | **Report Builder**             | Reporting       | Can build reports.                                          |
 | System        | **Billing Processor**          | Billing         | Can generate and process invoices and payments.             |
 | IT Support    | **Auditor**                    | Audit           | Can see audit logs.                                         |
-

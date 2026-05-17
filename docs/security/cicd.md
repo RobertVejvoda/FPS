@@ -1,3 +1,5 @@
+# CI/CD Security
+
 GitLab CI/CD is a powerful tool that allows to automate the build, test, and deployment processes of applications.
 
 ### Setting Up GitLab CI/CD
@@ -69,4 +71,3 @@ Automated testing tools help identify security vulnerabilities early in the soft
 - **Veracode**: A cloud-based service that provides application security testing and static analysis, which can be integrated with Azure DevOps.
 
 These tools can be integrated into the CI/CD pipeline to ensure continuous security testing throughout the development process.
-

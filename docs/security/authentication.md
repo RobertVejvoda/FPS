@@ -1,3 +1,5 @@
+# Authentication
+
 Authentication is implemented using token-based methods to verify user identities. JSON Web Tokens (JWT) are used to securely transmit information between parties, ensuring data integrity and authenticity. OAuth 2.0 is employed to delegate access, allowing third-party services to interact with user data without exposing credentials. These methods provide a robust framework for managing user authentication and access control within the system.
 
 ### Token-Based Authentication
@@ -66,6 +68,5 @@ In web and mobile applications, OAuth 2.0 is used to authenticate users and auth
     - **Step 3**: The authorization server redirects back to the app with an authorization code.
     - **Step 4**: The app exchanges the authorization code and code verifier for an access token.
     - **Step 5**: The access token is used to access protected resources.
-
 
 

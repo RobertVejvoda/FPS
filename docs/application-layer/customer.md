@@ -1,3 +1,5 @@
+# Customer Application
+
 [Customer](../technology-layer/customer) is responsible for managing customers in a multi-tenant application. A multi-tenant application is one where a single instance of the software serves multiple customers (tenants), each with their own isolated data and configurations.
 
 ### Application Functions
@@ -31,4 +33,3 @@
 
 - **Subscription Models**  
     Support various subscription options, including monthly, annual, pay-as-you-go, and freemium models, each customizable with specific features and limits.
-

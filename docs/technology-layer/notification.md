@@ -1,3 +1,5 @@
+# Notification Technology
+
 This Notification component provides functionalities to manage and display notifications to the user.
 
 

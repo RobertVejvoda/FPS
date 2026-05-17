@@ -1,3 +1,5 @@
+# Booking Technology
+
 The Booking module handles parking space reservations and associated processes. It operates within the technology layer, utilizing the following components:
 
 ## Technical Overview

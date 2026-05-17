@@ -1,3 +1,5 @@
+# Reporting Application
+
 [Reporting](../technology-layer/reporting) is a simple service that provides a predefined set of reports. It allows users to access and generate standard reports without the need for custom report creation.
 
 
@@ -33,6 +35,5 @@
 - Gathers customer feedback to improve service quality.
 - Reports on parking slot utilization for space optimization.
 - Tracks third-party integration usage to monitor external dependencies.
-
 
 

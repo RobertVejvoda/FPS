@@ -1,3 +1,5 @@
+# Billing Application
+
 [Billing](../technology-layer/billing) is responsible for handling all financial transactions within the system. It ensures secure processing of payments, manages billing, and integrates with various payment gateways.
 
 ### Application Functions (Archimate Perspective)
@@ -31,4 +33,3 @@
 - **Transaction History Management**: Maintains a comprehensive archive of all transactions for a minimum of five years.
 
 - **Dispute Resolution Management**: Provides a documented mechanism for disputing transactions and resolving issues.
-
