@@ -2,6 +2,10 @@
 
 This guide provides step-by-step instructions to set up the infrastructure for the FPS project using Docker Compose. The setup includes services like MongoDB, RabbitMQ, Vault, MinIO (S3), and others, with Dapr components configured for state store, pub/sub, and secret management.
 
+**Note:** FPS uses a pluggable Dapr component strategy. This guide covers **local development** setup. For demo and production deployment profiles, see:
+- [Dapr Component Baseline](./dapr/README.md) — Component boundaries, profiles, and replacement guidance
+- [OPS001 Component Replacement Runbook](../docs/production/ops001-component-replacement-runbook.md) — Step-by-step procedures for swapping components
+
 ---
 
 ## Prerequisites
@@ -275,5 +279,32 @@ docker-compose down
 
 ---
 
-This guide ensures that your local infrastructure is set up securely and integrates seamlessly with Dapr components. Let me know if you need further assistance!
+## Dapr Component Organization
+
+FPS uses a profile-based component structure to support pluggable deployment:
+
+```
+dapr/
+├── components/
+│   ├── local/                    # Local development (Docker Compose)
+│   ├── demo/                     # Demo environment (managed services)
+│   └── production-examples/      # Client production examples (Azure/AWS/GCP/K8s)
+├── configuration/
+│   └── fps-config.yaml           # Dapr configuration
+└── README.md                     # Component baseline documentation
+```
+
+**Current local components:**
+- `local/rabbitmq-pubsub.yaml` — RabbitMQ pub/sub
+- `local/mongodb-statestore.yaml` — MongoDB state store
+- `local/vault-secretstore.yaml` — HashiCorp Vault (needs manual review)
+- `local/minio-binding.yaml` — MinIO S3-compatible storage
+
+**Legacy components at root level** (`components/*.yaml`) will be removed after migration to profile-based structure is complete.
+
+For component replacement procedures, see [OPS001 Component Replacement Runbook](../docs/production/ops001-component-replacement-runbook.md).
+
+---
+
+This guide ensures that your local infrastructure is set up securely and integrates seamlessly with Dapr components.
 

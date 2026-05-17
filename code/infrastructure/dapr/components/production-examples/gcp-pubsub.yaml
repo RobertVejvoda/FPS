@@ -1,0 +1,33 @@
+# Production Example: GCP Pub/Sub Component
+# Profile: Client-owned production (Google Cloud Platform)
+# Purpose: Managed message broker for event-driven communication
+# Authentication: Uses Workload Identity or service account keys from Secret Manager
+# Region: Configure per client's data residency requirements
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.gcp.pubsub
+  version: v1
+  metadata:
+  - name: projectId
+    value: "{gcp-project-id}"
+  # Option 1: Workload Identity (recommended for GKE)
+  # Configured via Kubernetes service account annotation
+  # Option 2: Service account key (fallback)
+  - name: privateKeyId
+    secretKeyRef:
+      name: gcp-credentials
+      key: privateKeyId
+  - name: privateKey
+    secretKeyRef:
+      name: gcp-credentials
+      key: privateKey
+  - name: clientEmail
+    value: "{service-account}@{project}.iam.gserviceaccount.com"
+  - name: maxReconnectionAttempts
+    value: "30"
+  - name: connectionRecoveryInSec
+    value: "2"

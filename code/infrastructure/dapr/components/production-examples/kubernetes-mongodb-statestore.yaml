@@ -1,0 +1,38 @@
+# Production Example: Kubernetes-hosted MongoDB State Store Component
+# Profile: Client-owned production (Kubernetes with self-hosted MongoDB)
+# Purpose: MongoDB cluster deployed within client's Kubernetes environment
+# Note: Collection-per-tenant model - services must derive collection names from tenant context
+# Authentication: Connection string from Kubernetes secrets or external secret store
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: "mongodb-headless.database.svc.cluster.local:27017"
+  - name: databaseName
+    value: fps-production
+  - name: collectionName
+    value: default # Services override per tenant
+  - name: username
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-credentials
+      key: password
+  - name: authSource
+    value: admin
+  - name: params
+    value: "?replicaSet=rs0&ssl=true&retryWrites=true&w=majority"
+  - name: writeconcern
+    value: "majority"
+  - name: readconcern
+    value: "majority"
+auth:
+  secretStore: kubernetes

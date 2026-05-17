@@ -1,0 +1,33 @@
+# Production Example: AWS SNS/SQS Pub/Sub Component
+# Profile: Client-owned production (AWS)
+# Purpose: Managed message broker for event-driven communication
+# Authentication: Uses IAM Roles for Service Accounts (IRSA) or access keys from AWS Secrets Manager
+# Region: Must match client's data residency requirements
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.aws.snssqs
+  version: v1
+  metadata:
+  - name: region
+    value: "{aws-region}" # e.g., eu-west-1 for EU data residency
+  # Option 1: IAM Role (recommended for EKS/Fargate)
+  # Uses pod service account bound to IAM role
+  # Option 2: Access keys from secret store (fallback)
+  - name: accessKey
+    secretKeyRef:
+      name: aws-credentials
+      key: accessKey
+  - name: secretKey
+    secretKeyRef:
+      name: aws-credentials
+      key: secretKey
+  - name: messageVisibilityTimeout
+    value: "60"
+  - name: messageRetryLimit
+    value: "3"
+auth:
+  secretStore: awssecretsmanager

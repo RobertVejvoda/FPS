@@ -1,0 +1,34 @@
+# Local Development: MongoDB State Store Component
+# Profile: Local development with Docker Compose
+# Purpose: State store for command-side persistence (write model)
+# Note: Collection-per-tenant model - services must derive collection names from tenant context
+# Replacement: Can use MongoDB Atlas (demo/prod), Azure Cosmos DB with MongoDB API, or other MongoDB-compatible stores
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: bookingstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: host.docker.internal:27017
+  - name: databaseName
+    value: fps
+  - name: collectionName
+    value: bookings
+  - name: username
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-credentials
+      key: password
+  - name: authSource
+    value: admin
+  - name: params
+    value: "?authSource=admin&ssl=false"
+auth:
+  secretStore: vault

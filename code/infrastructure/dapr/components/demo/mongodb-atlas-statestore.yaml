@@ -1,0 +1,34 @@
+# Demo Environment: MongoDB Atlas State Store Component (Example)
+# Profile: Demo hosted environment
+# Purpose: Managed MongoDB for command-side persistence
+# Note: Collection-per-tenant model - services must derive collection names from tenant context
+# Cost: Use M0 free tier or low-cost M2/M5 for demo
+# Region: Must match demo environment region for GDPR compliance
+# Authentication: Connection string from Azure Key Vault or equivalent secret store
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: "{cluster-name}.mongodb.net"
+  - name: databaseName
+    value: fps-demo
+  - name: collectionName
+    value: default # Services override per tenant
+  - name: username
+    secretKeyRef:
+      name: mongodb-atlas-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-atlas-credentials
+      key: password
+  - name: params
+    value: "?retryWrites=true&w=majority&ssl=true"
+auth:
+  secretStore: azurekeyvault

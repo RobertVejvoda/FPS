@@ -1,0 +1,28 @@
+# Demo Environment: Azure Blob Storage Binding (Example)
+# Profile: Demo hosted environment (Azure Container Apps candidate)
+# Purpose: Object storage for reports, exports, and file attachments
+# Authentication: Uses Azure Managed Identity (recommended)
+# Cost: Use Standard tier with lifecycle management
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: blobstore
+spec:
+  type: bindings.azure.blobstorage
+  version: v1
+  metadata:
+  - name: accountName
+    value: "{storage-account-name}"
+  - name: containerName
+    value: "fps-demo-files"
+  # Managed Identity authentication (recommended)
+  - name: azureClientId
+    value: "{managed-identity-client-id}"
+  # Access key authentication (fallback)
+  # - name: accountKey
+  #   secretKeyRef:
+  #     name: storage-credentials
+  #     key: accountKey
+auth:
+  secretStore: azurekeyvault

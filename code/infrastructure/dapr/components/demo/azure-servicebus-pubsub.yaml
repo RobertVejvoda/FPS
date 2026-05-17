@@ -1,0 +1,35 @@
+# Demo Environment: Azure Service Bus Pub/Sub Component (Example)
+# Profile: Demo hosted environment (Azure Container Apps candidate)
+# Purpose: Managed message broker for event-driven communication
+# Cost: Low-cost tier suitable for demo traffic
+# Authentication: Uses Azure Managed Identity (recommended) or connection string from Key Vault
+# Replacement: Can swap to RabbitMQ, AWS SNS/SQS, GCP Pub/Sub, or other Dapr-compatible brokers
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.azure.servicebus.topics
+  version: v1
+  metadata:
+  - name: namespaceName
+    value: "{your-servicebus-namespace}.servicebus.windows.net"
+  # Option 1: Managed Identity (recommended)
+  - name: azureClientId
+    value: "{managed-identity-client-id}"
+  # Option 2: Connection string from secret store (fallback)
+  # - name: connectionString
+  #   secretKeyRef:
+  #     name: servicebus-credentials
+  #     key: connectionString
+  - name: consumerID
+    value: "fps-{service-name}"
+  - name: maxConcurrentHandlers
+    value: "10"
+  - name: timeoutInSec
+    value: "60"
+  - name: maxActiveMessages
+    value: "1000"
+auth:
+  secretStore: azurekeyvault

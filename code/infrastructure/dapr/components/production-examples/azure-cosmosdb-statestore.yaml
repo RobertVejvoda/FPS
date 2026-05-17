@@ -1,0 +1,35 @@
+# Production Example: Azure Cosmos DB (MongoDB API) State Store Component
+# Profile: Client-owned production (Azure)
+# Purpose: Globally distributed database with MongoDB API compatibility
+# Note: Collection-per-tenant model - services must derive collection names from tenant context
+# Region: Configure primary and secondary regions per client requirements
+# Authentication: Uses Azure Managed Identity or connection string from Key Vault
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: "{cosmos-account-name}.mongo.cosmos.azure.com:10255"
+  - name: databaseName
+    value: fps-production
+  - name: collectionName
+    value: default # Services override per tenant
+  - name: username
+    secretKeyRef:
+      name: cosmosdb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: cosmosdb-credentials
+      key: password
+  - name: params
+    value: "?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@{cosmos-account-name}@"
+  - name: writeconcern
+    value: "majority"
+auth:
+  secretStore: azurekeyvault

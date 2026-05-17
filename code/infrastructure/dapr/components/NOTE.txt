@@ -1,0 +1,13 @@
+SECRET STORE COMPONENTS REQUIRE MANUAL REVIEW
+==============================================
+
+Some component files could not be created automatically due to security review hooks.
+
+Missing files that need manual creation:
+- local/vault-secretstore.yaml (HashiCorp Vault for local dev)
+- demo/azure-keyvault-secretstore.yaml (Azure Key Vault for demo)
+
+Reference the existing vault.yaml file in the parent directory for local development.
+See the Dapr Component Baseline README for guidance on secret store components.
+
+These files should be reviewed and created manually to ensure proper secret handling.
