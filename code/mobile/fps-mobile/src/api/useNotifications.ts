@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -25,8 +25,6 @@ export function useNotifications(unreadOnly = false): {
   const { ready, apiBaseUrl, bearerToken, isConfigured } = useAuth();
   const [state, setState] = useState<NotificationsState>({ kind: 'idle' });
   const [refreshKey, setRefreshKey] = useState(0);
-  const unreadOnlyRef = useRef(unreadOnly);
-  unreadOnlyRef.current = unreadOnly;
 
   const load = useCallback(
     (isRefresh: boolean) => {
@@ -38,7 +36,7 @@ export function useNotifications(unreadOnly = false): {
       setState((prev) =>
         isRefresh && prev.kind === 'ok' ? { ...prev, isRefreshing: true } : { kind: 'loading' },
       );
-      fetchNotifications({ apiBaseUrl, bearerToken }, { unreadOnly: unreadOnlyRef.current, pageSize: 50 }).then(
+      fetchNotifications({ apiBaseUrl, bearerToken }, { unreadOnly, pageSize: 50 }).then(
         (result) => {
           if (cancelled) return;
           if (result.kind === 'ok') {
@@ -50,7 +48,7 @@ export function useNotifications(unreadOnly = false): {
       );
       return () => { cancelled = true; };
     },
-    [apiBaseUrl, bearerToken, isConfigured],
+    [apiBaseUrl, bearerToken, isConfigured, unreadOnly],
   );
 
   // Initial load and refresh
@@ -60,7 +58,6 @@ export function useNotifications(unreadOnly = false): {
       return;
     }
     return load(refreshKey > 0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, isConfigured, refreshKey, load]);
 
   // Poll every 30 seconds
