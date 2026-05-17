@@ -1,5 +1,7 @@
 [Profile module](../application-layer/profile) is designed to manage user-specific information and settings. It allows users to update their personal details, view and manage their booking history, provide vehicle information, and handle active sessions. Additionally, it includes features for enhancing account security through multi-factor authentication, viewing login history, and ensuring data security. Users can also access customer support, provide feedback, and manage notifications. This module aims to offer a comprehensive and secure way for users to manage their profiles and related activities.
 
+Profile facts may be entered by employees or imported from customer systems. Import ownership, data classification, validation, and source-of-truth rules are defined in [Customer Data Import and Integration](./customer-data-import).
+
 ### Business Services
 
 #### Personal Information Management Service
@@ -56,5 +58,4 @@
 - **Business Process**: Preference Management
     - `ConfigurePreferences()`
     - Events: `PreferencesUpdated`
-
 
