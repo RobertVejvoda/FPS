@@ -65,6 +65,19 @@ If any of these are missing, keep the issue in `Backlog` or add `blocked-questio
 | In review | A PR or review queue is active. |
 | Done | Issue is closed or completed, PR is merged where applicable, and tracker/docs are updated if needed. |
 
+## Automation
+
+`.github/workflows/agent-ready-router.yml` keeps issue cards on the board aligned with common delivery signals:
+
+| Signal | Board status |
+| --- | --- |
+| Issue is closed | Done |
+| Issue has `needs-codex-review` | In review |
+| Issue has `blocked-question` | Backlog |
+| Issue has `claude-ready`, `ready-to-implement`, `copilot`, or `needs-claude-action` | Ready |
+
+The sync is best-effort and must not block agent routing. For user-owned GitHub Projects, the workflow may need a `PROJECT_SYNC_TOKEN` secret with permission to update the project. If that token is missing or insufficient, agents should still use labels and comments as the source of truth and update the board manually when needed.
+
 ## Done Evidence
 
 Before moving an implementation issue to `Done`, confirm:
