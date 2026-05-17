@@ -18,6 +18,8 @@ public sealed class NotificationController(
     private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
 
     [HttpGet]
+    [ProducesResponseType<NotificationListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetHistoryAsync(
         [FromQuery] bool unreadOnly = false,
         [FromQuery] string? type = null,
@@ -37,6 +39,8 @@ public sealed class NotificationController(
     }
 
     [HttpGet("unread-count")]
+    [ProducesResponseType<UnreadCountResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetUnreadCountAsync(CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId) || string.IsNullOrEmpty(currentUser.TenantId))
@@ -47,6 +51,9 @@ public sealed class NotificationController(
     }
 
     [HttpPost("{notificationId:guid}/read")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> MarkReadAsync(Guid notificationId, CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId) || string.IsNullOrEmpty(currentUser.TenantId))

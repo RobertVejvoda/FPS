@@ -2,13 +2,16 @@
 // Refine when product design lands; MOB001 only needs placeholders.
 export const colors = {
   background: '#ffffff',
+  backgroundSecondary: '#f3f4f6',
   text: '#111827',
+  textDark: '#030712',
   textMuted: '#6b7280',
   border: '#e5e7eb',
   primary: '#1d4ed8',
   primaryText: '#ffffff',
   danger: '#b91c1c',
   warning: '#92400e',
+  success: '#15803d',
   cardBackground: '#f9fafb',
 } as const;
 
