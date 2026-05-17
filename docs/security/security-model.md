@@ -51,6 +51,8 @@ It is an architecture and product control document, not a legal certification. F
 | Confidential | Customer, employee, operational, or audit data that could affect privacy, fairness, security, or business operations. | Tenant ID, user ID, roles, employee profile, license plate, booking requests, allocation outcomes, penalties, notifications, support cases, audit records, PII mapping, policy configuration, reporting exports. | Authenticated and authorized access, tenant scoping, encryption in transit and at rest, masking in logs, audit for administrative and sensitive reads/writes. |
 | Secret | Credentials or cryptographic material that can grant access, decrypt data, impersonate users/services, or alter trust boundaries. | Access/refresh tokens, signing keys, OAuth client secrets, API keys, database connection strings, Vault secrets, GitHub tokens, private certificates, backup encryption keys, recovery credentials. | Secret manager storage, no plaintext logs or repository storage, rotation, short-lived credentials where possible, dual-control or approval for break-glass, access audit. |
 
+Customer employee/profile import is covered by [Customer Data Import and Integration](../business-layer/customer-data-import). Employee IDs, names, emails, vehicle facts, company-car eligibility, accessibility flags, and role/location mappings are Confidential. Integration credentials and API keys are Secret.
+
 ## Data Layer
 
 FPS stores tenant data in service-owned MongoDB databases with tenant-specific collections. Collection names are derived centrally from authenticated or trusted service context using sanitised tenant keys. Request bodies, query strings, headers from untrusted callers, and user-supplied collection names must not choose the tenant collection.

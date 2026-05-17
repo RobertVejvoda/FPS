@@ -1,5 +1,7 @@
 [Customer module](../application-layer/customer) is designed to manage all aspects related to customers within the Fair Parking System. It encompasses functionalities such as defining customer entities, managing user roles and permissions, handling billing and payments, ensuring data privacy and security, and providing customer support. This module aims to deliver a seamless and personalized experience for customers, enabling them to efficiently manage their interactions and transactions with the system.
 
+Customer employee/profile import and internal company-system integration are planned separately in [Customer Data Import and Integration](./customer-data-import). That page defines candidate import modes, employee/profile data classification, validation rules, and future slices before implementation.
+
 | User Story | Title |
 |------------|-------|
 | [US501](#us501-define-customer) | Define Customer |
@@ -88,4 +90,3 @@
 - Monthly, annual, pay-as-you-go, and freemium models are available.
 - Subscription models can be customized with specific features and limits.
 **Priority**: High
-

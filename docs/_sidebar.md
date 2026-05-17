@@ -27,6 +27,7 @@
   * [Reporting](./business-layer/reporting)
   * [Configuration](./business-layer/configuration)
   * [Customer](./business-layer/customer)
+  * [Customer data import](./business-layer/customer-data-import)
   * [Billing](./business-layer/billing)
   * [Feedback](./business-layer/feedback)
   * [Web app](./business-layer/web-app)

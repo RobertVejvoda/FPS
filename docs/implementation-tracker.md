@@ -68,6 +68,8 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | --- | --- | --- | --- | --- | --- | --- |
 | ID001 Authenticated User Context | Done | - | [#26](https://github.com/RobertVejvoda/FPS/pull/26) | PR author: RobertVejvoda | 2026-05-10 | Current user abstraction and `GET /me`. |
 | P001 Profile Vehicle Snapshot | Done | - | [#30](https://github.com/RobertVejvoda/FPS/pull/30), [#34](https://github.com/RobertVejvoda/FPS/pull/34) | PR author: RobertVejvoda | 2026-05-11 | Profile-owned eligibility/vehicle facts consumed by Booking. |
+| P002 Profile Import And Mapping | Planned | - | - | Unassigned | After `CUST002` | Implement first import path for employee/profile facts with tenant/user mapping, validation summary, and Confidential data controls. |
+| ID002 User Provisioning Integration | Planned | - | - | Unassigned | After `CUST002` | Map imported or IdP-provisioned users to Identity claims, role assignment, and deactivation behavior. |
 
 ### Notification And Audit
 
@@ -90,6 +92,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | CFG002 Admin Policy/Slot Management | Done | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | [#125](https://github.com/RobertVejvoda/FPS/pull/125) | `implemented-by: claude` | 2026-05-15 | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CFG003 Configuration Publication And Audit | Planned | - | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
+| CUST002 Customer Data Import Contract | Planned | - | - | Unassigned | Before `P002`/`ID002` | Define employee/profile import schema, classification, validation, preview/commit behavior, source-of-truth rules, and audit requirements. |
 | REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | REPORT002 Reporting Dashboards And Exports | Planned | - | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
 | BILL000 Commercialisation Impact Review | Planned | - | - | Unassigned | Before Billing implementation | Decide free/open core boundaries, paid add-on candidates, support subscription shape, and future dual-license posture before implementing product Billing behavior. |
@@ -127,6 +130,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | OPS002 Demo Environment Baseline | Planned | - | - | Unassigned | After OPS001 | Stand up or document a low-cost demo path that proves the product without assuming the final client production environment. |
 | OPS003 Client-Owned Production Integration | Planned | - | - | Unassigned | After OPS001/OPS002 | Document and implement the handoff model for client-owned production, including deployment assumptions, Dapr component replacement, and operational responsibilities. |
 | OPS004 Observability And Performance Evidence | Planned | - | - | Unassigned | Before client pilot | Expose usage, performance, logs, metrics, and traces so Prometheus/Grafana locally can be replaced by Dynatrace, Azure Monitor, OpenTelemetry Collector, or client tooling. |
+| OPS005 Integration Secrets And Observability | Planned | - | - | Unassigned | After `CUST002` | Define secret handling, audit, logs, metrics, retries, and error evidence for customer-system integration actors. |
 | DOCS001 Client Evaluation Pack | Planned | - | - | Unassigned | After demo plan stabilizes | Prepare shareable client material: product one-pager, role demo script, architecture overview, deployment/operations summary, security/GDPR summary, cost assumptions, and FAQ. |
 
 ## Slice Order Rationale
