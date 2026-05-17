@@ -9,11 +9,11 @@ FPS replaces manual email and spreadsheet coordination with a transparent bookin
 
 ## Executive Summary
 
-FPS is being built as a documentation-led product with focused implementation slices. The parking product is the first concrete reservation domain; the same pattern could later support other scarce workplace resources such as desks, chairs, or seats, but only after parking v1 is stable.
+FPS is being built as a documentation-led product. The parking product is the first concrete reservation domain; the same pattern could later support other scarce workplace resources such as desks, chairs, or seats, but only after parking v1 is stable.
 
 The implemented backend now covers Booking, Identity/Profile context, Notification, Audit, Reporting read models, and Configuration policy/slot management. The mobile employee flow covers login, booking submission, booking actions, and My Bookings. The next product direction is demo readiness, mobile completion, web/admin surfaces, client-owned deployment guidance, and production operations.
 
-Progress is tracked slice-by-slice in the [Implementation Tracker](./implementation-tracker) and mapped to requirements in [Requirements Traceability](./requirements-traceability).
+This site is the product and business-facing view of FPS: problem, goals, actors, policy model, architecture summary, trust story, roadmap, and demo/evaluation narrative. Detailed implementation notes, delivery board mechanics, agent routing, tooling, and runbooks belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki).
 
 ## Product Outcomes
 
@@ -38,69 +38,30 @@ Progress is tracked slice-by-slice in the [Implementation Tracker](./implementat
 - OpenAPI and generated TypeScript client contracts support web and React Native clients.
 - The React Native + Expo mobile app has the current employee self-service foundation.
 
-Use these pages first:
-
-- [Demo and Evaluation](./demo-and-evaluation): how different roles should experience FPS and what client-facing material is planned.
-- [Architecture Views](./architecture-views): ArchiMate-style hierarchy for business, application, technology, security, production, and implementation views.
-- [Implementation Tracker](./implementation-tracker): what is done, what is next, PRs, implementer attribution, and dates.
-- [Development Plan](./development-plan): detailed roadmap, slice scope, acceptance criteria, and open risks.
-- [Implementation](./implementation): how work is sliced, assigned, reviewed, tracked, and merged.
-- [Software Architecture](./technology-layer/software-architecture): current bounded contexts, integration model, technology choices, and tenant isolation decision.
-- [Security](./security): actors, roles, data classification, encryption, secret access, service-level controls, and GDPR alignment.
-- [Production](./production): production runtime model, cloud deployment path, operations, backups, restore, monitoring, incidents, and readiness gates.
-
 ## Reader Paths
 
 | Reader | Start here | Purpose |
 | --- | --- | --- |
-| Business evaluator | [Strategy](./strategy), [Business Layer](./business-layer), [Demo and Evaluation](./demo-and-evaluation) | Understand the problem, product value, roles, and demo story. |
-| Architect | [Architecture Views](./architecture-views), [Business Layer](./business-layer), [Application Layer](./application-layer), [Technology Layer](./technology-layer) | Understand the ArchiMate-style hierarchy and how capabilities map to services and technology. |
-| Security reviewer | [Security](./security), [Requirements Traceability](./requirements-traceability), [Production](./production) | Understand roles, data classes, GDPR, auditability, encryption, and operational controls. |
-| Client IT / operator | [Production](./production), [Hosting and Deployment Strategy](./production/hosting-deployment-strategy), [Monitoring](./production/monitoring) | Understand local, demo, and client-owned deployment, Dapr portability, observability, and operations. |
-| Implementer | [Implementation](./implementation), [Implementation Tracker](./implementation-tracker), [Development Plan](./development-plan) | Understand slice order, ownership, validation, and remaining work. |
+| Business evaluator | [Strategy](./strategy), [Business](./business-layer), [Demo and Evaluation](./demo-and-evaluation) | Understand the problem, product value, roles, and demo story. |
+| Product owner | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions), [Business Requirements](./business-layer/requirements) | Understand priorities, durable decisions, and outcome coverage. |
+| Architect | [Architecture Summary](./architecture-views), [Software Architecture](./technology-layer/software-architecture), [Technology Direction](./technology-layer) | Understand the capability model, bounded contexts, integration direction, and platform choices. |
+| Security or client IT reviewer | [Security](./security), [Security Model](./security/security-model), [Production Model](./production) | Understand tenant isolation, privacy, auditability, deployment ownership, and operational evidence. |
+| Maintainer or implementer | [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki) | Work with implementation slices, delivery-board mechanics, tooling, agent handoffs, and runbooks. |
 
-## Global Architecture Document
+## Site Scope
 
-1. **[Versions and decisions](./versions-and-decisions)**
+Keep GitHub Pages focused on material that is useful without repository context:
 
-Durable architecture decisions, version choices, licensing decisions, and implementation milestones.
+- product idea, goals, scope, and licensing;
+- personas, roles, requirements, and business process;
+- booking and allocation policy in business terms;
+- high-level architecture, security, and production posture;
+- roadmap, demo narrative, and durable decisions.
 
-2. **[Strategy and motivation](./strategy)**
+Move or mirror these working materials to the GitHub Wiki as they mature:
 
-Strategic goals, product scope, stakeholder outcomes, and high-level success measures for FPS.
-
-3. **[Architecture views](./architecture-views)**
-
-ArchiMate-style view hierarchy and placeholders for motivation, business, application, technology, data/security, production, and implementation views.
-
-4. **[Business layer](./business-layer)**
-
-Business requirements, domain processes, service contracts, and bounded-context rules.
-
-5. **[Implementation](./implementation)**
-
-Development plan, slice tracking, handoff workflow, validation gates, and tooling.
-
-6. **[Application layer](./application-layer)**
-
-Application structure, user-facing components, service responsibilities, and implementation conventions.
-
-7. **[Technology layer](./technology-layer)**
-
-Infrastructure, deployment, non-functional requirements, runtime technology choices, and the [Software Architecture](./technology-layer/software-architecture) overview.
-
-8. **[Security](./security)**
-
-Cross-cutting security model, data classification, authentication, authorization, privacy, auditability, operational controls, and service-specific security notes.
-
-9. **[Production](./production)**
-
-Local, demo, and client-owned production profiles, operational model, backup/restore, monitoring, incident handling, maintenance, and readiness evidence.
-
-10. **[Demo and evaluation](./demo-and-evaluation)**
-
-Role-based demo plan, client evaluation scenarios, and planned shareable client material.
-
-11. **[Glossary](./glossary)**
-
-Definitions and acronyms used across the product, business, application, and technology documentation.
+- implementation tracker, vertical slice specs, and acceptance criteria;
+- agent routing, assignment rules, and delivery board mechanics;
+- local development setup, tooling, CI details, and validation commands;
+- service-level technical notes, generated contract details, and runbooks;
+- historical coordination notes that are useful for maintainers but not product readers.

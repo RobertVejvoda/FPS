@@ -50,14 +50,11 @@ FPS production runtime is expected to contain:
 - [Incident Handling](./production/incident-handling): incident lifecycle, severity, communication, evidence, and follow-up.
 - [Maintenance](./production/maintenance): patching, upgrades, rollbacks, secret rotation, and operational upkeep.
 
-## Cloud And Environment Pages
+## Cloud And Environment Notes
 
-- [Development Setup](./production/dev-setup): local/open-source stack used to approximate production dependencies.
-- [AWS Setup](./production/aws-setup): AWS-oriented cost and service mapping.
-- [Azure Setup](./production/azure-setup): Azure-oriented cost and service mapping.
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
 
-The cloud setup pages are reference inputs only. `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FPS.
+Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FPS.
 
 ## Testing And Readiness
 

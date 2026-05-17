@@ -26,28 +26,32 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 
 ## Agent Routing
 
-`.github/workflows/agent-ready-router.yml` turns explicit GitHub labels into implementer actions:
+`.github/workflows/agent-ready-router.yml` keeps only FPS-specific routing glue that GitHub Project built-in workflows cannot infer:
 
 | Signal | Automated action |
 |---|---|
-| Issue has `ready-to-implement` + `copilot` and does not have `blocked-question` | Assigns the issue to GitHub Copilot coding agent |
-| Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and changes the label to `claude-ready` |
-| PR has `needs-claude-action` | Prepares a Claude handoff comment and changes the label to `claude-ready` |
+| Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Syncs the Delivery Kanban `Phase` field |
+| Issue has `blocked-question` | Syncs the Delivery Kanban status to `Backlog` |
+| Issue has `needs-codex-review` | Syncs the Delivery Kanban status to `In review` unless `blocked-question` is also present |
+| Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment, assigns Robert as the manual Claude runner, and removes `needs-claude-action` |
+| PR has `needs-claude-action` | Prepares a Claude handoff comment and removes `needs-claude-action` |
 
-`needs-claude-action` is a router trigger, not the durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. The durable waiting state is `claude-ready`.
+Ownership is assignment-first. Use the issue assignee to show whether Codex/Robert, Robert as manual Claude runner, Copilot, or a human owns the next action. Use the Project `Status` field for `Backlog`, `Ready`, `In progress`, `In review`, and `Done`. Labels should describe exceptional states or explicit action requests, not normal ownership.
+
+`needs-claude-action` is a router trigger, not a durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. For issues, the router also assigns Robert as the manual Claude runner. The durable waiting state is the assignee plus Project status and the handoff comment.
 
 Required setup:
 
-- `COPILOT_ASSIGNMENT_TOKEN` repository secret for Copilot assignment. GitHub requires a user token for Copilot coding agent assignment; `GITHUB_TOKEN` cannot assign agents.
+- `PROJECT_SYNC_TOKEN` repository secret with access to the user-owned FPS Delivery Kanban Project.
 - Copilot coding agent enabled for the repository/account.
 
 Safety notes:
 
-- `blocked-question` prevents automated implementer routing.
+- `blocked-question` prevents automated Claude handoff routing and syncs the board back to `Backlog`.
 - `active-coordination` is not an implementation trigger.
-- Copilot is assigned only to issues, not PRs.
+- Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
 - Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost.
-- `claude-ready` means the handoff is prepared and the item is waiting for a human to invoke Claude. It does not mean Claude has already run, is currently running, or has accepted the task.
+- `claude-ready` is legacy and should not be used for new routing.
 - Implementers should add `needs-codex-review` when they finish and should remove stale ready/action labels when permitted.
 
 ### What CI checks

@@ -18,20 +18,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync-issue-board-status:
-    name: Sync issue board status
+  sync-issue-board-fields:
+    name: Sync issue board fields
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'issues' &&
       github.event.issue.pull_request == null
     steps:
-      - name: Best-effort Project status sync
+      - name: Best-effort Project field sync
         continue-on-error: true
         env:
           PROJECT_SYNC_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           FALLBACK_GH_TOKEN: ${{ github.token }}
           ISSUE_LABELS_JSON: ${{ toJson(github.event.issue.labels.*.name) }}
-          ISSUE_STATE: ${{ github.event.issue.state }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           PROJECT_OWNER: RobertVejvoda
           PROJECT_NUMBER: "2"
@@ -45,98 +45,88 @@ jobs:
           fi
 
           labels="$(jq -r '.[]' <<< "$ISSUE_LABELS_JSON" | tr '\n' ' ')"
+          title_upper="$(tr '[:lower:]' '[:upper:]' <<< "$ISSUE_TITLE")"
 
-          status="Backlog"
-          if [ "$ISSUE_STATE" = "closed" ]; then
-            status="Done"
+          status=""
+          if grep -qw "blocked-question" <<< "$labels"; then
+            status="Backlog"
           elif grep -qw "needs-codex-review" <<< "$labels"; then
             status="In review"
-          elif grep -qw "blocked-question" <<< "$labels"; then
-            status="Backlog"
-          elif grep -qw "claude-ready" <<< "$labels" ||
-               grep -qw "ready-to-implement" <<< "$labels" ||
-               grep -qw "copilot" <<< "$labels" ||
-               grep -qw "needs-claude-action" <<< "$labels"; then
-            status="Ready"
+          fi
+
+          phase=""
+          case "$title_upper" in
+            B[0-9][0-9][0-9]*|*"("B[0-9][0-9][0-9]*")"*)
+              phase="Booking"
+              ;;
+            BK[0-9][0-9][0-9]*|A[0-9][0-9][0-9]*|CFG[0-9][0-9][0-9]*|CUST[0-9][0-9][0-9]*|ID[0-9][0-9][0-9]*|N[0-9][0-9][0-9]*|P[0-9][0-9][0-9]*|REPORT[0-9][0-9][0-9]*|*"("A[0-9][0-9][0-9]*")"*|*"("CFG[0-9][0-9][0-9]*")"*|*"("N[0-9][0-9][0-9]*")"*|*"("P[0-9][0-9][0-9]*")"*|*"("REPORT[0-9][0-9][0-9]*")"*)
+              phase="Platform"
+              ;;
+            MOB[0-9][0-9][0-9]*)
+              phase="Mobile"
+              ;;
+            WEB[0-9][0-9][0-9]*)
+              phase="Web"
+              ;;
+            OPS[0-9][0-9][0-9]*)
+              phase="Operations"
+              ;;
+            DOCS001*)
+              phase="Demo"
+              ;;
+            BILL[0-9][0-9][0-9]*)
+              phase="Commercialisation"
+              ;;
+            CI[0-9][0-9][0-9]*|DOCS:*)
+              phase="Foundation"
+              ;;
+          esac
+
+          if [ -z "$status" ] && [ -z "$phase" ]; then
+            echo "No board fields to sync"
+            exit 0
           fi
 
           project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
           project_id="$(jq -r '.id' <<< "$project_json")"
           fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
-          status_field_id="$(jq -r '.fields[] | select(.name == "Status") | .id' <<< "$fields_json")"
-          status_option_id="$(
-            jq -r --arg status "$status" \
-              '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' \
-              <<< "$fields_json"
-          )"
-
           item_id="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$ISSUE_URL" --format json --jq .id)"
-          gh project item-edit \
-            --project-id "$project_id" \
-            --id "$item_id" \
-            --field-id "$status_field_id" \
-            --single-select-option-id "$status_option_id"
 
-          echo "Synced issue board status to $status"
+          if [ -n "$phase" ]; then
+            phase_field_id="$(jq -r '.fields[] | select(.name == "Phase") | .id' <<< "$fields_json")"
+            phase_option_id="$(
+              jq -r --arg phase "$phase" \
+                '.fields[] | select(.name == "Phase") | .options[] | select(.name == $phase) | .id' \
+                <<< "$fields_json"
+            )"
 
-  route-copilot-issue:
-    name: Route ready issue to Copilot
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'issues' &&
-      github.event.issue.pull_request == null &&
-      contains(github.event.issue.labels.*.name, 'ready-to-implement') &&
-      contains(github.event.issue.labels.*.name, 'copilot') &&
-      !contains(github.event.issue.labels.*.name, 'blocked-question')
-    steps:
-      - name: Assign issue to GitHub Copilot coding agent
-        id: assign_copilot
-        env:
-          GH_TOKEN: ${{ secrets.COPILOT_ASSIGNMENT_TOKEN }}
-          FALLBACK_GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          if [ -z "$GH_TOKEN" ]; then
-            GH_TOKEN="$FALLBACK_GH_TOKEN" gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body \
-              "Automated router: Copilot routing is configured, but COPILOT_ASSIGNMENT_TOKEN is missing. GitHub requires a user token for Copilot coding agent assignment; GITHUB_TOKEN cannot assign agents."
-            echo "assigned=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            gh project item-edit \
+              --project-id "$project_id" \
+              --id "$item_id" \
+              --field-id "$phase_field_id" \
+              --single-select-option-id "$phase_option_id"
+
+            echo "Synced issue board phase to $phase"
           fi
 
-          payload="$(jq -n \
-            --arg repo "$GH_REPO" \
-            --arg base "master" \
-            --arg instructions "Follow AGENTS.md and .github/copilot-instructions.md. Implement only the assigned issue scope. If a blocking ambiguity remains, stop and comment instead of widening scope." \
-            '{
-              assignees: ["copilot-swe-agent[bot]"],
-              agent_assignment: {
-                target_repo: $repo,
-                base_branch: $base,
-                custom_instructions: $instructions,
-                custom_agent: "",
-                model: ""
-              }
-            }')"
+          if [ -n "$status" ]; then
+            status_field_id="$(jq -r '.fields[] | select(.name == "Status") | .id' <<< "$fields_json")"
+            status_option_id="$(
+              jq -r --arg status "$status" \
+                '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' \
+                <<< "$fields_json"
+            )"
 
-          gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/repos/$GH_REPO/issues/$ISSUE_NUMBER/assignees" \
-            --input - <<< "$payload"
+            gh project item-edit \
+              --project-id "$project_id" \
+              --id "$item_id" \
+              --field-id "$status_field_id" \
+              --single-select-option-id "$status_option_id"
 
-          echo "assigned=true" >> "$GITHUB_OUTPUT"
-
-      - name: Leave routing signal
-        if: steps.assign_copilot.outputs.assigned == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body \
-            "Automated router: issue is labeled ready-to-implement + copilot and is not blocked, so it was assigned to GitHub Copilot coding agent."
+            echo "Synced issue board status to $status"
+          else
+            echo "No exceptional board status to sync"
+          fi
 
   route-claude-issue:
     name: Prepare Claude issue handoff
@@ -152,6 +142,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
+          CLAUDE_MANUAL_RUNNER: RobertVejvoda
         run: |
           handoff_file="$RUNNER_TEMP/claude-issue-handoff.md"
           issue_json="$RUNNER_TEMP/claude-issue-context.json"
@@ -165,8 +156,8 @@ jobs:
           Automated Claude handoff prepared. No Anthropic API call was made.
 
           Use this prompt only when a human decides the task is worth spending Claude tokens.
-          After this comment is posted, the router removes needs-claude-action and adds claude-ready.
-          claude-ready means waiting for a human to invoke Claude with this prompt; it does not mean Claude has already run.
+          After this comment is posted, the router removes needs-claude-action.
+          Assignment and project Status are the durable ownership signals.
 
           ```text
           You are Claude acting as FPS Implementer.
@@ -196,8 +187,8 @@ jobs:
 
           gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
           gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
-            --remove-label needs-claude-action \
-            --add-label claude-ready
+            --add-assignee "$CLAUDE_MANUAL_RUNNER" \
+            --remove-label needs-claude-action
 
   route-claude-pr:
     name: Prepare Claude pull request handoff
@@ -228,8 +219,8 @@ jobs:
           Automated Claude handoff prepared. No Anthropic API call was made.
 
           Use this prompt only when a human decides the PR repair is worth spending Claude tokens.
-          After this comment is posted, the router removes needs-claude-action and adds claude-ready.
-          claude-ready means waiting for a human to invoke Claude with this prompt; it does not mean Claude has already run.
+          After this comment is posted, the router removes needs-claude-action.
+          Assignment and project Status are the durable ownership signals.
 
           ```text
           You are Claude acting as FPS Implementer.
@@ -278,5 +269,4 @@ jobs:
 
           gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
           gh pr edit "$PR_NUMBER" --repo "$GH_REPO" \
-            --remove-label needs-claude-action \
-            --add-label claude-ready
+            --remove-label needs-claude-action
