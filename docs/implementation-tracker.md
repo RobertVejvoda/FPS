@@ -68,8 +68,8 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | --- | --- | --- | --- | --- | --- | --- |
 | ID001 Authenticated User Context | Done | - | [#26](https://github.com/RobertVejvoda/FPS/pull/26) | PR author: RobertVejvoda | 2026-05-10 | Current user abstraction and `GET /me`. |
 | P001 Profile Vehicle Snapshot | Done | - | [#30](https://github.com/RobertVejvoda/FPS/pull/30), [#34](https://github.com/RobertVejvoda/FPS/pull/34) | PR author: RobertVejvoda | 2026-05-11 | Profile-owned eligibility/vehicle facts consumed by Booking. |
-| P002 Profile Import And Mapping | Planned | - | - | Unassigned | After `CUST002` | Implement first import path for employee/profile facts with tenant/user mapping, validation summary, and Confidential data controls. |
-| ID002 User Provisioning Integration | Planned | - | - | Unassigned | After `CUST002` | Map imported or IdP-provisioned users to Identity claims, role assignment, and deactivation behavior. |
+| P002 Profile Mapping And Minimal Facts | Planned | - | - | Unassigned | After `CUST002` | Implement SSO-derived profile mapping and minimal policy facts with tenant/user mapping, validation summary, and Confidential data controls. |
+| ID002 User Provisioning Integration | Planned | - | - | Unassigned | After `CUST002` | Map IdP subjects, claims/groups, role assignment, local-account fallback, and deactivation behavior. |
 
 ### Notification And Audit
 
@@ -92,7 +92,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | CFG002 Admin Policy/Slot Management | Done | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | [#125](https://github.com/RobertVejvoda/FPS/pull/125) | `implemented-by: claude` | 2026-05-15 | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CFG003 Configuration Publication And Audit | Planned | - | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
 | CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
-| CUST002 Customer Data Import Contract | Planned | - | - | Unassigned | Before `P002`/`ID002` | Define employee/profile import schema, classification, validation, preview/commit behavior, source-of-truth rules, and audit requirements. |
+| CUST002 SSO-First Customer Integration Contract | Planned | - | - | Unassigned | Before `P002`/`ID002` | Define SSO/OIDC mapping, minimal employee/profile data, local-account credential handling, classification, source-of-truth rules, and audit requirements. |
 | REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | REPORT002 Reporting Dashboards And Exports | Planned | - | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
 | BILL000 Commercialisation Impact Review | Planned | - | - | Unassigned | Before Billing implementation | Decide free/open core boundaries, paid add-on candidates, support subscription shape, and future dual-license posture before implementing product Billing behavior. |

@@ -26,7 +26,7 @@ FPS helps companies manage scarce parking capacity without turning HR into a man
 - [Allocation Process](./business-layer/process)
 - [Executable Allocation Rules](./business-layer/allocation-rules)
 - [Parking Policy Configuration](./business-layer/parking-policy-configuration)
-- [Customer Data Import and Integration](./business-layer/customer-data-import)
+- [SSO-First Customer Integration](./business-layer/customer-data-import)
 - [Business Strategy](./business-layer/strategy)
 - [Functional Architecture](./business-layer/functional-architecture)
 

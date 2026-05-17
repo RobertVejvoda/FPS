@@ -7,6 +7,7 @@ It is an architecture and product control document, not a legal certification. F
 ## Security Principles
 
 - Identity, tenant, user, and role context come from authenticated claims or trusted system context only.
+- Company users authenticate through the customer's identity provider by default; FPS does not store company passwords.
 - Authorization is tenant-scoped and least-privilege by default.
 - Confidential and Secret data must not be exposed in logs, events, GitHub issues, pull requests, telemetry labels, or employee-visible error messages.
 - Services fail closed when required identity, tenant, or role claims are missing.
@@ -49,9 +50,9 @@ It is an architecture and product control document, not a legal certification. F
 | Public | Approved for public release. | Open-source README, public docs, license, architecture overview without tenant data, public CI status. | Normal integrity review before publishing. No customer or secret content. |
 | Internal | Useful to contributors/operators but not sensitive customer data. | Development plan, non-sensitive runbooks, deployment topology, aggregate service health, non-customer test data. | Repository access control, review before sharing outside maintainers, no tenant identifiers unless already public. |
 | Confidential | Customer, employee, operational, or audit data that could affect privacy, fairness, security, or business operations. | Tenant ID, user ID, roles, employee profile, license plate, booking requests, allocation outcomes, penalties, notifications, support cases, audit records, PII mapping, policy configuration, reporting exports. | Authenticated and authorized access, tenant scoping, encryption in transit and at rest, masking in logs, audit for administrative and sensitive reads/writes. |
-| Secret | Credentials or cryptographic material that can grant access, decrypt data, impersonate users/services, or alter trust boundaries. | Access/refresh tokens, signing keys, OAuth client secrets, API keys, database connection strings, Vault secrets, GitHub tokens, private certificates, backup encryption keys, recovery credentials. | Secret manager storage, no plaintext logs or repository storage, rotation, short-lived credentials where possible, dual-control or approval for break-glass, access audit. |
+| Secret | Credentials or cryptographic material that can grant access, decrypt data, impersonate users/services, or alter trust boundaries. | Access/refresh tokens, local-account password hashes or credential verifiers, signing keys, OAuth client secrets, API keys, database connection strings, Vault secrets, GitHub tokens, private certificates, backup encryption keys, recovery credentials. | Secret manager storage or hardened Identity storage for credential verifiers, no plaintext logs or repository storage, rotation/reset controls, short-lived credentials where possible, dual-control or approval for break-glass, access audit. |
 
-Customer employee/profile import is covered by [Customer Data Import and Integration](../business-layer/customer-data-import). Employee IDs, names, emails, vehicle facts, company-car eligibility, accessibility flags, and role/location mappings are Confidential. Integration credentials and API keys are Secret.
+SSO-first company integration is covered by [SSO-First Customer Integration](../business-layer/customer-data-import). External subjects, employee IDs, names, emails, vehicle facts, company-car eligibility, accessibility flags, and role/location mappings are Confidential. Integration credentials, tokens, API keys, and FPS-local credential verifiers are Secret.
 
 ## Data Layer
 
@@ -76,6 +77,7 @@ Data at rest:
 | Dapr state store | Aggregate state and workflow state where used. | Same tenant-isolation rules as MongoDB; component strategy must not mix tenant data without explicit scoped keys. |
 | Mobile SecureStore | OIDC access/refresh token material where supported. | Native secure storage; logout clears token state and in-memory session state. |
 | Mobile AsyncStorage | Development bearer-token handoff only. | Development mode only; must not hold production credentials. |
+| Identity credential store | Password hashes or credential verifiers for FPS-local fallback accounts. | Hardened password hashing, no plaintext passwords, reset/rotation controls, restricted administrative access, and audit of privileged credential actions. |
 | Object storage/backups | Future exports, reports, backup archives. | Encryption at rest, tenant-scoped paths, retention policy, restricted download access. |
 | Vault/GitHub secrets/CI | Deployment credentials, API keys, certificates, signing material. | Secret store or CI secret facility; masked logs; scoped tokens; rotation and audit. |
 | Logs/traces/metrics | Operational telemetry and security events. | Redaction, retention limits, restricted access, and correlation IDs instead of raw private payloads. |
@@ -85,6 +87,7 @@ Data at rest:
 | Boundary | Protocol | Encryption/authentication requirement |
 | --- | --- | --- |
 | End user to FPS | HTTPS; OIDC Authorization Code + PKCE for mobile/web login. | TLS 1.2+; JWT validation by services; mobile app stores no client secret. |
+| Customer IdP to FPS | OIDC federation for normal company login. | Trusted issuer configuration, redirect URI validation, signed token validation, tenant mapping, and no storage of company passwords in FPS. |
 | API gateway routing | HTTP(S) behind Traefik. | TLS at the edge; internal service endpoints remain protected and tenant-aware. |
 | Service invocation | Dapr service invocation or HTTPS. | Dapr mTLS/Sentry for service identity; propagate user context only when the downstream service needs user-scoped authorization. |
 | Pub/sub | Dapr pub/sub over RabbitMQ/AMQP. | TLS and authenticated broker access in production; event contracts exclude Secret data. |
