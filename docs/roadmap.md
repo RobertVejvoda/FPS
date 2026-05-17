@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap explains the phase cards used in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). The board is for quick visibility; this page explains why the phases exist, what belongs inside each phase, and what must be true before the next phase is started.
+This roadmap explains the phase and slice cards used in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). Phase cards show high-level delivery direction; issue cards show concrete implementation slices.
 
 The detailed evidence remains in the [Implementation Tracker](./implementation-tracker). Requirement coverage remains in [Requirements Traceability](./requirements-traceability).
 
@@ -67,4 +67,14 @@ Use [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2) for
 | In review | PR or review queue is active. |
 | Done | Merged, closed, or otherwise completed. |
 
-Use the `Phase` field for broad grouping. Use GitHub issues and PRs for concrete work. When a phase or slice changes status, update both the board and the [Implementation Tracker](./implementation-tracker) if the change affects delivery evidence.
+Use the `Phase` field for broad grouping. Use GitHub issues as the canonical slice cards; PRs should link back to the issue they implement. Draft cards are acceptable only for phase markers or temporary planning notes that are not yet a slice.
+
+Agent workflow:
+
+| Actor | Board usage |
+| --- | --- |
+| Codex | Creates or updates slice issues, sets `Phase` and `Status`, keeps the [Implementation Tracker](./implementation-tracker) aligned, and routes ready issues. |
+| Claude | Looks for `Status = Ready` issue cards with `claude-ready` or a direct handoff comment. If a Ready issue lacks enough implementation detail, Claude should comment with the blocker instead of guessing. |
+| Copilot | Works only on issues explicitly labeled `copilot` and assigned to Copilot. Mechanical slices should still have clear expected files and acceptance criteria. |
+
+When a phase or slice changes status, update both the board and the [Implementation Tracker](./implementation-tracker) if the change affects delivery evidence. New slices should naturally appear on the board by creating a GitHub issue, adding it to `FPS Delivery Kanban`, setting the `Phase`, and setting `Status` to `Backlog`, `Ready`, `In progress`, `In review`, or `Done`.
