@@ -35,6 +35,8 @@ jobs:
           ISSUE_STATE: ${{ github.event.issue.state }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL_NAME: ${{ github.event.label.name }}
           GH_REPO: ${{ github.repository }}
           HUMAN_OWNER: RobertVejvoda
           PROJECT_OWNER: RobertVejvoda
@@ -51,6 +53,9 @@ jobs:
           labels="$(jq -r '.[]' <<< "$ISSUE_LABELS_JSON" | tr '\n' ' ')"
           title_upper="$(tr '[:lower:]' '[:upper:]' <<< "$ISSUE_TITLE")"
 
+          # Status
+          # Priority: closed > blocked-question > needs-codex-review
+          # Special case: removing blocked-question reverts to Ready.
           status=""
           if [ "$ISSUE_STATE" = "closed" ]; then
             status="Done"
@@ -58,87 +63,92 @@ jobs:
             status="Backlog"
           elif grep -qw "needs-codex-review" <<< "$labels"; then
             status="In review"
+          elif [ "${EVENT_ACTION:-}" = "unlabeled" ] && [ "${EVENT_LABEL_NAME:-}" = "blocked-question" ]; then
+            status="Ready"
           fi
 
+          # Phase
+          # Match known slice prefixes at the start or after punctuation, so both
+          # "B001 ..." and "Implement (B001) ..." route to the same phase.
           phase=""
-          case "$title_upper" in
-            B[0-9][0-9][0-9]*|*"("B[0-9][0-9][0-9]*")"*)
+          slice_prefix=""
+          if [[ "$title_upper" =~ (^|[^A-Z0-9])(REPORT|DOCS|CUST|BILL|CFG|MOB|OPS|WEB|BK|ID|CI|B|A|N|P)[0-9]{3} ]]; then
+            slice_prefix="${BASH_REMATCH[2]}"
+          fi
+
+          case "$slice_prefix" in
+            B)
               phase="Booking"
               ;;
-            BK[0-9][0-9][0-9]*|A[0-9][0-9][0-9]*|CFG[0-9][0-9][0-9]*|CUST[0-9][0-9][0-9]*|ID[0-9][0-9][0-9]*|N[0-9][0-9][0-9]*|P[0-9][0-9][0-9]*|REPORT[0-9][0-9][0-9]*|*"("A[0-9][0-9][0-9]*")"*|*"("CFG[0-9][0-9][0-9]*")"*|*"("N[0-9][0-9][0-9]*")"*|*"("P[0-9][0-9][0-9]*")"*|*"("REPORT[0-9][0-9][0-9]*")"*)
+            A|BK|CFG|CUST|ID|N|P|REPORT)
               phase="Platform"
               ;;
-            MOB[0-9][0-9][0-9]*)
+            MOB)
               phase="Mobile"
               ;;
-            WEB[0-9][0-9][0-9]*)
+            WEB)
               phase="Web"
               ;;
-            OPS[0-9][0-9][0-9]*)
+            OPS)
               phase="Operations"
               ;;
-            DOCS001*)
+            DOCS)
               phase="Demo"
               ;;
-            BILL[0-9][0-9][0-9]*)
+            BILL)
               phase="Commercialisation"
               ;;
-            CI[0-9][0-9][0-9]*|DOCS:*)
+            CI)
               phase="Foundation"
               ;;
           esac
+
+          if [ -z "$phase" ] && [[ "$title_upper" =~ ^DOCS: ]]; then
+            phase="Foundation"
+          fi
 
           if [ -z "$status" ] && [ -z "$phase" ]; then
             echo "No board fields to sync"
             exit 0
           fi
 
-          project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
-          project_id="$(jq -r '.id' <<< "$project_json")"
+          # Project sync
+          project_id="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json --jq .id)"
           fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
           item_id="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$ISSUE_URL" --format json --jq .id)"
 
           if [ -n "$phase" ]; then
             phase_field_id="$(jq -r '.fields[] | select(.name == "Phase") | .id' <<< "$fields_json")"
-            phase_option_id="$(
-              jq -r --arg phase "$phase" \
-                '.fields[] | select(.name == "Phase") | .options[] | select(.name == $phase) | .id' \
-                <<< "$fields_json"
-            )"
-
-            gh project item-edit \
-              --project-id "$project_id" \
-              --id "$item_id" \
-              --field-id "$phase_field_id" \
-              --single-select-option-id "$phase_option_id"
-
-            echo "Synced issue board phase to $phase"
+            phase_option_id="$(jq -r --arg v "$phase" \
+              '.fields[] | select(.name == "Phase") | .options[] | select(.name == $v) | .id' \
+              <<< "$fields_json")"
+            if gh project item-edit \
+                --project-id "$project_id" --id "$item_id" \
+                --field-id "$phase_field_id" --single-select-option-id "$phase_option_id"; then
+              echo "::notice::Board phase -> $phase"
+            else
+              echo "::warning::Failed to sync phase=$phase. Check PROJECT_SYNC_TOKEN and field names."
+            fi
           fi
 
           if [ -n "$status" ]; then
             status_field_id="$(jq -r '.fields[] | select(.name == "Status") | .id' <<< "$fields_json")"
-            status_option_id="$(
-              jq -r --arg status "$status" \
-                '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' \
-                <<< "$fields_json"
-            )"
-
-            gh project item-edit \
-              --project-id "$project_id" \
-              --id "$item_id" \
-              --field-id "$status_field_id" \
-              --single-select-option-id "$status_option_id"
-
-            echo "Synced issue board status to $status"
-          else
-            echo "No exceptional board status to sync"
+            status_option_id="$(jq -r --arg v "$status" \
+              '.fields[] | select(.name == "Status") | .options[] | select(.name == $v) | .id' \
+              <<< "$fields_json")"
+            if gh project item-edit \
+                --project-id "$project_id" --id "$item_id" \
+                --field-id "$status_field_id" --single-select-option-id "$status_option_id"; then
+              echo "::notice::Board status -> $status"
+            else
+              echo "::warning::Failed to sync status=$status. Check PROJECT_SYNC_TOKEN and field names."
+            fi
           fi
 
           if grep -qw "blocked-question" <<< "$labels"; then
             GH_TOKEN="$FALLBACK_GH_TOKEN" gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
               --add-assignee "$HUMAN_OWNER"
-
-            echo "Assigned issue to $HUMAN_OWNER for human decision"
+            echo "::notice::Assigned $HUMAN_OWNER (blocked-question)"
           fi
 
   sync-pr-human-handoff:
