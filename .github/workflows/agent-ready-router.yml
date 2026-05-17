@@ -31,8 +31,11 @@ jobs:
           PROJECT_SYNC_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           FALLBACK_GH_TOKEN: ${{ github.token }}
           ISSUE_LABELS_JSON: ${{ toJson(github.event.issue.labels.*.name) }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          GH_REPO: ${{ github.repository }}
+          HUMAN_OWNER: RobertVejvoda
           PROJECT_OWNER: RobertVejvoda
           PROJECT_NUMBER: "2"
         run: |
@@ -127,6 +130,39 @@ jobs:
           else
             echo "No exceptional board status to sync"
           fi
+
+          if grep -qw "blocked-question" <<< "$labels" ||
+             grep -qw "needs-codex-review" <<< "$labels"; then
+            GH_TOKEN="$FALLBACK_GH_TOKEN" gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
+              --add-assignee "$HUMAN_OWNER"
+
+            echo "Assigned issue to $HUMAN_OWNER for human/Codex action"
+          fi
+
+  sync-pr-human-handoff:
+    name: Sync pull request human handoff
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'blocked-question') ||
+        contains(github.event.pull_request.labels.*.name, 'needs-codex-review')
+      )
+    steps:
+      - name: Assign PR to human owner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HUMAN_OWNER: RobertVejvoda
+        run: |
+          set -euo pipefail
+
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" \
+            --add-assignee "$HUMAN_OWNER"
+
+          echo "Assigned PR to $HUMAN_OWNER for human/Codex action"
 
   route-claude-issue:
     name: Prepare Claude issue handoff

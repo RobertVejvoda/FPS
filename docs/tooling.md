@@ -33,12 +33,15 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Syncs the Delivery Kanban `Phase` field |
 | Issue has `blocked-question` | Syncs the Delivery Kanban status to `Backlog` |
 | Issue has `needs-codex-review` | Syncs the Delivery Kanban status to `In review` unless `blocked-question` is also present |
+| Issue or PR has `blocked-question` or `needs-codex-review` | Assigns Robert for human/Codex action |
 | Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and removes `needs-claude-action` |
 | PR has `needs-claude-action` | Prepares a Claude handoff comment and removes `needs-claude-action` |
 
 Ownership is assignment-first for assignable GitHub actors. Use the issue assignee to show whether Codex/Robert, Copilot, or a human owns the next action. Claude uses GitHub Web UI agent assignment rather than a normal issue assignee exposed through the assignees API. Use the Project `Status` field for `Backlog`, `Ready`, `In progress`, `In review`, and `Done`. Labels should describe exceptional states or explicit action requests, not normal ownership.
 
 `needs-claude-action` is a router trigger, not a durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. The durable Claude waiting state is the handoff comment plus Project status until Robert assigns the Claude agent through the GitHub Web UI.
+
+Reverse handoff from Claude, Copilot, or a human implementer should use normal GitHub state: leave the exact blocker or review request in a comment, add `blocked-question` or `needs-codex-review`, and assign Robert when permitted. The workflow assigns Robert for those labels as a fallback.
 
 Required setup:
 

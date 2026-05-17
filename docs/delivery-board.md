@@ -56,6 +56,17 @@ If any of these are missing, keep the issue in `Backlog` or add `blocked-questio
 | Claude | Uses GitHub Web UI agent assignment plus `Ready` status and a direct handoff comment as the durable signal. If the issue is ambiguous, Claude should ask on the issue instead of widening scope. |
 | Copilot | Uses assignment to the GitHub Copilot coding agent as the durable signal. Copilot candidates should be mechanical, file-bounded, and have explicit expected files and acceptance criteria. |
 
+## Reverse Handoff
+
+When Claude, Copilot, or a human implementer needs Codex/Robert action, use the same durable GitHub state a human would use:
+
+- leave a concise issue or PR comment with the exact blocker, review request, or decision needed;
+- add `blocked-question` when implementation must stop for a product/architecture decision;
+- add `needs-codex-review` when the work is ready for Codex review or validation;
+- assign Robert when permitted.
+
+The router assigns Robert automatically for issue and PR labels `blocked-question` and `needs-codex-review`. Claude agent assignment remains separate because GitHub exposes it through the Web UI agent picker rather than the normal assignees API.
+
 ## Status Rules
 
 | Status | Rule |
@@ -85,6 +96,7 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Sync board `Phase` for grouping/filtering. |
 | Issue has `blocked-question` | Sync board status to `Backlog`. |
 | Issue has `needs-codex-review` | Sync board status to `In review` unless `blocked-question` is also present. |
+| Issue or PR has `blocked-question` or `needs-codex-review` | Assign Robert for human/Codex action. |
 | Issue has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. Robert can then assign the Claude agent through the GitHub Web UI. |
 | PR has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. |
 
