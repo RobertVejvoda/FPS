@@ -66,6 +66,7 @@ All agents should keep session history small and handoffs explicit:
 **Not in effect (FPS-specific overrides)**
 - PR ownership: Claude opens PRs; Codex reviews. (The guide's "Codex opens PRs" rule does not apply.)
 - Task tracking: GitHub issues, not `.codex/tasks/active/` or `.codex/results/` files. TASK-XXX / RESULT-XXX schemas are reference material only.
+- Delivery board: use the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). GitHub issues are the canonical slice cards; phase draft cards are only high-level markers. New implementation slices should be added to the board with `Phase` and `Status` set.
 - Agent index file: this `AGENTS.md` is the canonical session index. No `CLAUDE.md` is maintained.
 - Docs structure: keep the existing `docs/` layout (layer-based folders + `versions-and-decisions.md`). Do not introduce `architecture.md` / `conventions.md` / `constraints.md` / `decisions.md` without explicit approval.
 - The guide's `.codex/tasks/active/**` CI auto-trigger is not adopted.
@@ -93,6 +94,9 @@ When Claude picks up a Codex-assigned slice, the first step is a routing self-ch
 
 Agents should use GitHub labels and short comments as the handoff signal. Do not rely on implicit conversation history.
 
+- The Kanban board `Status` field is the operational state: `Backlog`, `Ready`, `In progress`, `In review`, or `Done`.
+- Claude should look for board issue cards with `Status = Ready` plus `claude-ready` or a direct handoff comment. If the issue is not specific enough, Claude should comment with the missing information instead of starting broad work.
+- Copilot should work only on board issue cards labeled `copilot` and assigned to Copilot.
 - `ready-to-implement` means the issue is ready for an implementer to start, subject to its assignment and labels.
 - `copilot` plus assignment to `Copilot` means GitHub Copilot agent should start the issue.
 - `needs-claude-action` means the GitHub Actions router should prepare a Claude handoff. The router removes this label after posting the handoff so the same issue or PR can be routed again later.

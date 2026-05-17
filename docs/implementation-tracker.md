@@ -9,7 +9,9 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 ## Tracking Rules
 
 - Every implementation slice should have a stable slice ID.
-- Every slice should be linked to the issue or PR that carries its work.
+- Every implementation slice should have a GitHub issue and a card in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). Historical slices that predate issue-first tracking may remain PR-only in this page, but new work should not.
+- Every implementation PR should link back to the issue that carries its work.
+- Project board `Status` is the operational state. `Ready` means an issue has enough context for Codex, Claude, or Copilot to act; `Backlog` means the slice exists but still needs preparation or a predecessor.
 - Every implementation slice should name the business and non-functional requirements it implements or supports.
 - Future PRs should use `initiated-by:*` and `implemented-by:*` labels where possible so agent/user attribution is clear.
 - Historical rows before attribution labels became routine use the GitHub PR author or known PR labels. Treat those as repository metadata, not a perfect authorship record.
@@ -23,8 +25,8 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Booking core | Done | B001-B010 implemented and merged. |
 | Platform integration foundation | Done | ID001, BK011, P001, N001, A001, CFG001, API001, CI001 are merged. |
 | Mobile foundation | Done | MOB001-MOB005 are merged for the current employee mobile flow. |
-| Mobile product completion | Planned | Next employee slices are notifications, profile/vehicle display, draw/allocation detail, and production polish. |
-| Web app | Planned | Web employee self-service starts after mobile completion; HR/admin dashboards can now build on Configuration and Reporting APIs. |
+| Mobile product completion | Ready | `MOB006` is ready for Claude; later employee slices are profile/vehicle display, draw/allocation detail, and production polish. |
+| Web app | Backlog | Web employee self-service starts after mobile completion; HR/admin dashboards can now build on Configuration and Reporting APIs. |
 | Notification v1 completion | In progress | N002, N003, and N004 are implemented. Preferences and client consumption remain planned. |
 | Audit v1 completion | In progress | A001 and A002 are implemented. Retention, integrity, and export evidence remain planned. |
 | Production operations | In progress | OPS000 deployment profile baseline is merged. Next work is pluggable local/demo/client-owned deployment hardening, observability, and operational evidence. |
@@ -68,8 +70,8 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | --- | --- | --- | --- | --- | --- | --- |
 | ID001 Authenticated User Context | Done | - | [#26](https://github.com/RobertVejvoda/FPS/pull/26) | PR author: RobertVejvoda | 2026-05-10 | Current user abstraction and `GET /me`. |
 | P001 Profile Vehicle Snapshot | Done | - | [#30](https://github.com/RobertVejvoda/FPS/pull/30), [#34](https://github.com/RobertVejvoda/FPS/pull/34) | PR author: RobertVejvoda | 2026-05-11 | Profile-owned eligibility/vehicle facts consumed by Booking. |
-| P002 Profile Mapping And Minimal Facts | Planned | - | - | Unassigned | After `CUST002` | Implement SSO-derived profile mapping and minimal policy facts with tenant/user mapping, validation summary, and Confidential data controls. |
-| ID002 User Provisioning Integration | Planned | - | - | Unassigned | After `CUST002` | Map IdP subjects, claims/groups, role assignment, local-account fallback, and deactivation behavior. |
+| P002 Profile Mapping And Minimal Facts | Planned | [#146](https://github.com/RobertVejvoda/FPS/issues/146) | - | Unassigned | After `CUST002` | Implement SSO-derived profile mapping and minimal policy facts with tenant/user mapping, validation summary, and Confidential data controls. |
+| ID002 User Provisioning Integration | Planned | [#143](https://github.com/RobertVejvoda/FPS/issues/143) | - | Unassigned | After `CUST002` | Map IdP subjects, claims/groups, role assignment, local-account fallback, and deactivation behavior. |
 
 ### Notification And Audit
 
@@ -80,9 +82,9 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | N002 Notification API And Stream | Done | [#88](https://github.com/RobertVejvoda/FPS/issues/88) | [#93](https://github.com/RobertVejvoda/FPS/pull/93), [#94](https://github.com/RobertVejvoda/FPS/pull/94) | `implemented-by: claude` plus Codex SSE casing fix | 2026-05-14 | Notification history API, unread counts, mark-read API, and SSE stream. |
 | N003 Notification Email Delivery | Done | [#103](https://github.com/RobertVejvoda/FPS/issues/103) | [#111](https://github.com/RobertVejvoda/FPS/pull/111) | `implemented-by: claude` | 2026-05-15 | Email channel for v1 critical operational notifications, with a Dapr-ready provider boundary and local no-cost validation path. |
 | N004 Email Observability And Staging Validation | Done | [#122](https://github.com/RobertVejvoda/FPS/issues/122) | [#123](https://github.com/RobertVejvoda/FPS/pull/123) | `implemented-by: claude` | 2026-05-15 | Safe email failure logging, categories, and staging validation checklist. |
-| N005 Notification Preferences | Planned | - | - | Unassigned | After mobile notification consumption | User notification preferences for optional channels and reminders; mandatory operational notifications stay non-disableable. |
+| N005 Notification Preferences | Planned | [#144](https://github.com/RobertVejvoda/FPS/issues/144) | - | Unassigned | After mobile notification consumption | User notification preferences for optional channels and reminders; mandatory operational notifications stay non-disableable. |
 | A002 Audit Query And Erasure Support | Done | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | [#112](https://github.com/RobertVejvoda/FPS/pull/112) | `implemented-by: claude` | 2026-05-15 | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
-| A003 Audit Retention And Integrity | Planned | - | - | Unassigned | After A002 | Retention jobs, integrity verification, export evidence, and operational audit hardening. |
+| A003 Audit Retention And Integrity | Planned | [#145](https://github.com/RobertVejvoda/FPS/issues/145) | - | Unassigned | After A002 | Retention jobs, integrity verification, export evidence, and operational audit hardening. |
 
 ### Configuration, Customer, Reporting, And Billing
 
@@ -90,13 +92,13 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | --- | --- | --- | --- | --- | --- | --- |
 | CFG001 Parking Policy/Slot Source | Done | - | [#42](https://github.com/RobertVejvoda/FPS/pull/42) | PR author: RobertVejvoda | 2026-05-11 | Configuration-owned policy shape. |
 | CFG002 Admin Policy/Slot Management | Done | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | [#125](https://github.com/RobertVejvoda/FPS/pull/125) | `implemented-by: claude` | 2026-05-15 | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
-| CFG003 Configuration Publication And Audit | Planned | - | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
-| CUST001 Tenant Onboarding | Planned | - | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
-| CUST002 SSO-First Customer Integration Contract | Planned | - | - | Unassigned | Before `P002`/`ID002` | Define SSO/OIDC mapping, minimal employee/profile data, local-account credential handling, classification, source-of-truth rules, and audit requirements. |
+| CFG003 Configuration Publication And Audit | Planned | [#149](https://github.com/RobertVejvoda/FPS/issues/149) | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
+| CUST001 Tenant Onboarding | Planned | [#148](https://github.com/RobertVejvoda/FPS/issues/148) | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
+| CUST002 SSO-First Customer Integration Contract | Planned | [#141](https://github.com/RobertVejvoda/FPS/issues/141) | - | Codex/spec | Before `P002`/`ID002` | Define SSO/OIDC mapping, minimal employee/profile data, local-account credential handling, classification, source-of-truth rules, and audit requirements. |
 | REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
-| REPORT002 Reporting Dashboards And Exports | Planned | - | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
-| BILL000 Commercialisation Impact Review | Planned | - | - | Unassigned | Before Billing implementation | Decide free/open core boundaries, paid add-on candidates, support subscription shape, and future dual-license posture before implementing product Billing behavior. |
-| BILL001 Billing Stub To Workflow | Planned | - | - | Unassigned | After BILL000 | Subscription, invoice generation, and payment-provider integration only after the commercial model is approved. |
+| REPORT002 Reporting Dashboards And Exports | Planned | [#147](https://github.com/RobertVejvoda/FPS/issues/147) | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
+| BILL000 Commercialisation Impact Review | Planned | [#150](https://github.com/RobertVejvoda/FPS/issues/150) | - | Unassigned | Before Billing implementation | Decide free/open core boundaries, paid add-on candidates, support subscription shape, and future dual-license posture before implementing product Billing behavior. |
+| BILL001 Billing Stub To Workflow | Planned | [#153](https://github.com/RobertVejvoda/FPS/issues/153) | - | Unassigned | After BILL000 | Subscription, invoice generation, and payment-provider integration only after the commercial model is approved. |
 
 ### Mobile
 
@@ -107,31 +109,31 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | MOB003 Mobile Real Login | Done | [#75](https://github.com/RobertVejvoda/FPS/issues/75) | [#78](https://github.com/RobertVejvoda/FPS/pull/78) | `implemented-by: claude` plus Codex repair commit | 2026-05-14 | Real OIDC Authorization Code + PKCE login in Expo mobile app. |
 | MOB004 Mobile Booking Submission | Done | [#85](https://github.com/RobertVejvoda/FPS/issues/85) | [#87](https://github.com/RobertVejvoda/FPS/pull/87) | `implemented-by: claude` plus Codex review fix | 2026-05-14 | Employee request submission from mobile. |
 | MOB005 Mobile Booking Actions | Done | [#91](https://github.com/RobertVejvoda/FPS/issues/91) | [#95](https://github.com/RobertVejvoda/FPS/pull/95) | PR author: RobertVejvoda; Codex reviewed | 2026-05-14 | Cancel and confirm-usage actions from mobile. |
-| MOB006 Mobile Notifications | Planned | - | - | Unassigned | After current PR review queue | Notification list, unread count, mark-read action, and SSE or polling fallback using N002 APIs. |
-| MOB007 Mobile Profile And Vehicle Details | Planned | - | - | Unassigned | After MOB006 or when Profile editing rules are clear | Employee-visible profile, vehicle, company-car, and accessibility facts; editing only if business rules allow it. |
-| MOB008 Mobile Draw Status And Allocation Detail | Planned | - | - | Unassigned | After MOB007 | Employee-safe draw/allocation visibility without exposing hidden lottery internals. |
-| MOB009 Mobile Production Polish | Planned | - | - | Unassigned | Before mobile pilot | Session expiry, refresh recovery, environment config, error/empty/loading states, accessibility, and production QA. |
+| MOB006 Mobile Notifications | Ready | [#137](https://github.com/RobertVejvoda/FPS/issues/137) | - | `claude-ready` | Next mobile slice | Notification list, unread count, mark-read action, and SSE or polling fallback using N002 APIs. |
+| MOB007 Mobile Profile And Vehicle Details | Planned | [#135](https://github.com/RobertVejvoda/FPS/issues/135) | - | Unassigned | After MOB006 or when Profile editing rules are clear | Employee-visible profile, vehicle, company-car, and accessibility facts; editing only if business rules allow it. |
+| MOB008 Mobile Draw Status And Allocation Detail | Planned | [#136](https://github.com/RobertVejvoda/FPS/issues/136) | - | Unassigned | After MOB007 | Employee-safe draw/allocation visibility without exposing hidden lottery internals. |
+| MOB009 Mobile Production Polish | Planned | [#138](https://github.com/RobertVejvoda/FPS/issues/138) | - | Unassigned | Before mobile pilot | Session expiry, refresh recovery, environment config, error/empty/loading states, accessibility, and production QA. |
 
 ### Web
 
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| WEB001 Web Employee Self-Service | Planned | - | - | Unassigned | After mobile proves core UX/API path | React web employee self-service. |
-| WEB002 HR/Admin Dashboard | Planned | - | - | Unassigned | After reporting/configuration APIs mature | HR/facilities/admin operational UI. |
-| WEB003 Tenant Admin Console | Planned | - | - | Unassigned | After CUST001/CFG002 | Tenant users, roles, locations, policies, and slot administration. |
-| WEB004 Reporting Views | Planned | - | - | Unassigned | After REPORT001/REPORT002 | Parking summary, fairness metrics, utilization views, and exports. |
+| WEB001 Web Employee Self-Service | Planned | [#151](https://github.com/RobertVejvoda/FPS/issues/151) | - | Unassigned | After mobile proves core UX/API path | React web employee self-service. |
+| WEB002 HR/Admin Dashboard | Planned | [#154](https://github.com/RobertVejvoda/FPS/issues/154) | - | Unassigned | After reporting/configuration APIs mature | HR/facilities/admin operational UI. |
+| WEB003 Tenant Admin Console | Planned | [#152](https://github.com/RobertVejvoda/FPS/issues/152) | - | Unassigned | After CUST001/CFG002 | Tenant users, roles, locations, policies, and slot administration. |
+| WEB004 Reporting Views | Planned | [#155](https://github.com/RobertVejvoda/FPS/issues/155) | - | Unassigned | After REPORT001/REPORT002 | Parking summary, fairness metrics, utilization views, and exports. |
 
 ### Operations And Cloud
 
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | OPS000 Hosting and Deployment Strategy Options | Done | [#100](https://github.com/RobertVejvoda/FPS/issues/100) | [#102](https://github.com/RobertVejvoda/FPS/pull/102) | `implemented-by: claude` | 2026-05-15 | Deployment profile baseline merged; local, demo, and client-owned production profiles replace the earlier single-provider production assumption. |
-| OPS001 Pluggable Dapr Component Baseline | Planned | - | - | Unassigned | Next production slice | Define local/demo/client-owned component profiles for pub/sub, state, secrets, bindings, identity, and observability. |
-| OPS002 Demo Environment Baseline | Planned | - | - | Unassigned | After OPS001 | Stand up or document a low-cost demo path that proves the product without assuming the final client production environment. |
-| OPS003 Client-Owned Production Integration | Planned | - | - | Unassigned | After OPS001/OPS002 | Document and implement the handoff model for client-owned production, including deployment assumptions, Dapr component replacement, and operational responsibilities. |
-| OPS004 Observability And Performance Evidence | Planned | - | - | Unassigned | Before client pilot | Expose usage, performance, logs, metrics, and traces so Prometheus/Grafana locally can be replaced by Dynatrace, Azure Monitor, OpenTelemetry Collector, or client tooling. |
-| OPS005 Integration Secrets And Observability | Planned | - | - | Unassigned | After `CUST002` | Define secret handling, audit, logs, metrics, retries, and error evidence for customer-system integration actors. |
-| DOCS001 Client Evaluation Pack | Planned | - | - | Unassigned | After demo plan stabilizes | Prepare shareable client material: product one-pager, role demo script, architecture overview, deployment/operations summary, security/GDPR summary, cost assumptions, and FAQ. |
+| OPS001 Pluggable Dapr Component Baseline | Ready | [#139](https://github.com/RobertVejvoda/FPS/issues/139) | - | `claude-ready` | Next production slice | Define local/demo/client-owned component profiles for pub/sub, state, secrets, bindings, identity, and observability. |
+| OPS002 Demo Environment Baseline | Planned | [#140](https://github.com/RobertVejvoda/FPS/issues/140) | - | Unassigned | After OPS001 | Stand up or document a low-cost demo path that proves the product without assuming the final client production environment. |
+| OPS003 Client-Owned Production Integration | Planned | [#156](https://github.com/RobertVejvoda/FPS/issues/156) | - | Unassigned | After OPS001/OPS002 | Document and implement the handoff model for client-owned production, including deployment assumptions, Dapr component replacement, and operational responsibilities. |
+| OPS004 Observability And Performance Evidence | Planned | [#158](https://github.com/RobertVejvoda/FPS/issues/158) | - | Unassigned | Before client pilot | Expose usage, performance, logs, metrics, and traces so Prometheus/Grafana locally can be replaced by Dynatrace, Azure Monitor, OpenTelemetry Collector, or client tooling. |
+| OPS005 Integration Secrets And Observability | Planned | [#157](https://github.com/RobertVejvoda/FPS/issues/157) | - | Unassigned | After `CUST002` | Define secret handling, audit, logs, metrics, retries, and error evidence for customer-system integration actors. |
+| DOCS001 Client Evaluation Pack | Planned | [#142](https://github.com/RobertVejvoda/FPS/issues/142) | - | Unassigned | After demo plan stabilizes | Prepare shareable client material: product one-pager, role demo script, architecture overview, deployment/operations summary, security/GDPR summary, cost assumptions, and FAQ. |
 
 ## Slice Order Rationale
 
@@ -154,7 +156,7 @@ These are tracker maintenance tasks, not ordered delivery slices.
 | GitHub Actions Node runtime refresh | Deferred | [#96](https://github.com/RobertVejvoda/FPS/issues/96), [#97](https://github.com/RobertVejvoda/FPS/pull/97) | Superseded until hosting/deployment strategy is agreed. |
 | TestContainers-backed integration tests | Planned | Current validation skips Dapr/MongoDB integration tests | Unassigned |
 | Collection-per-tenant implementation hardening | Planned | Decision recorded in [Versions and Decisions](./versions-and-decisions) | Unassigned |
-| GitHub project / Kanban links | Done | [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2) links board-level phase status to tracker details | Codex |
+| GitHub project / Kanban links | Done | [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2) links phase status and slice issue cards to tracker details | Codex |
 
 ## Future Product Extension Notes
 
