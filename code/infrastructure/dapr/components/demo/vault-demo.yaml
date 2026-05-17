@@ -1,0 +1,34 @@
+# Demo profile — replace with Azure Key Vault (managed identity) or cloud equivalent.
+#
+# Azure Key Vault example:
+#
+# spec:
+#   type: secretstores.azure.keyvault
+#   version: v1
+#   metadata:
+#   - name: vaultName
+#     value: "fps-demo-kv"
+#   - name: azureClientId
+#     value: "{env:AZURE_CLIENT_ID}"
+#
+# HashiCorp Vault with injected token (acceptable for demo, not production):
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: secretstore
+spec:
+  type: secretstores.hashicorp.vault
+  version: v1
+  metadata:
+  - name: vaultAddr
+    value: "{env:VAULT_ADDR}"
+  - name: vaultToken
+    value: "{env:VAULT_TOKEN}"
+  - name: vaultKVPrefix
+    value: "dapr"
+  - name: vaultKVUsePrefix
+    value: "true"
+  - name: enginePath
+    value: "secret"
+  - name: vaultValueType
+    value: "map"

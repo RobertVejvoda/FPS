@@ -1,0 +1,30 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: notificationstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: host.docker.internal:27017
+  - name: databaseName
+    value: fps-notification
+  - name: collectionName
+    value: notifications
+  - name: username
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-credentials
+      key: password
+  - name: authSource
+    value: admin
+  - name: params
+    value: "?authSource=admin&ssl=false"
+scopes:
+- fps-notification
+auth:
+  secretStore: secretstore

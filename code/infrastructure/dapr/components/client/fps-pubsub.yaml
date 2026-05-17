@@ -1,0 +1,29 @@
+# Client-owned production — substitute with client-approved broker.
+# Supported options (Dapr component type → spec.type):
+#   RabbitMQ             pubsub.rabbitmq
+#   Azure Service Bus    pubsub.azure.servicebus.topics
+#   AWS SNS/SQS          pubsub.aws.snssqs
+#   GCP Pub/Sub          pubsub.gcp.pubsub
+#   Apache Kafka         pubsub.kafka
+#
+# The component name (fps-pubsub) and topic name (booking-events) must not change.
+# Application code uses only the logical name — no broker-specific SDK.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: fps-pubsub
+spec:
+  type: pubsub.rabbitmq         # Replace type and metadata for client broker
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: broker-connection
+      key: connectionString
+scopes:
+- fps-booking
+- fps-notification
+- fps-audit
+- fps-reporting
+auth:
+  secretStore: secretstore

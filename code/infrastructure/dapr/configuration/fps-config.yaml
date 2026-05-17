@@ -7,5 +7,13 @@ spec:
     samplingRate: "1"
     zipkin:
       endpointAddress: "http://zipkin:9411/api/v2/spans"
+    # Demo / client production: replace zipkin with otel for OpenTelemetry Collector export.
+    # otel:
+    #   endpointAddress: "http://otel-collector:4317"
+    #   isSecure: false
+    #   protocol: grpc
   mtls:
     enabled: false
+    # Demo / client production: enable mTLS when Dapr sidecar injection is managed by
+    # the platform (ACA Dapr, AKS Dapr extension, or self-hosted Placement+Sentry).
+    # enabled: true
