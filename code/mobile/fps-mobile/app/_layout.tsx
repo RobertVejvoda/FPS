@@ -15,6 +15,10 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="debug-session" options={{ presentation: 'modal' }} />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="booking/[requestId]"
+          options={{ headerShown: true, title: 'Booking Detail', headerBackTitle: 'Back' }}
+        />
       </Stack>
     </AuthProvider>
   );

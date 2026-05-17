@@ -5,6 +5,7 @@ import { colors, radius, spacing } from '@/theme';
 type BookingCardProps = {
   booking: BookingListItem;
   testID?: string;
+  onPress?: () => void;
   onCancel?: () => void;
   onConfirmUsage?: () => void;
   actionPending?: boolean;
@@ -43,7 +44,7 @@ function formatTime(timeStr: string): string {
   return `${displayHour}:${m.padStart(2, '0')} ${ampm}`;
 }
 
-export function BookingCard({ booking, testID, onCancel, onConfirmUsage, actionPending }: BookingCardProps) {
+export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage, actionPending }: BookingCardProps) {
   const badgeColor = STATUS_BADGE_COLOR[booking.status] ?? colors.textMuted;
   const nextAction =
     booking.nextAction && booking.nextAction.toLowerCase() !== 'none'
@@ -51,7 +52,13 @@ export function BookingCard({ booking, testID, onCancel, onConfirmUsage, actionP
       : null;
 
   return (
-    <View style={styles.card} testID={testID ?? `booking-card-${booking.requestId}`}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : 'none'}
+      style={({ pressed }) => [pressed && onPress ? { opacity: 0.85 } : undefined]}
+      testID={testID ?? `booking-card-${booking.requestId}`}
+    >
+    <View style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.date}>{formatDate(booking.requestedDate)}</Text>
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
@@ -103,6 +110,7 @@ export function BookingCard({ booking, testID, onCancel, onConfirmUsage, actionP
         <Text style={styles.nextAction}>{NEXT_ACTION_LABEL[nextAction] ?? nextAction}</Text>
       ) : null}
     </View>
+    </Pressable>
   );
 }
 
