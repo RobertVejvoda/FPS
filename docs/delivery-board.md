@@ -10,7 +10,7 @@ The board should answer four questions without reading the whole repository:
 | --- | --- |
 | Where are we heading? | Milestone and Roadmap phase. |
 | What matters next? | Priority. |
-| Who owns the next action? | Assignee, then Status. |
+| Who owns the next action? | Assignee or agent assignment, then Status. |
 | What evidence proves progress? | Linked issue, linked PR, tracker row, and validation notes. |
 
 ## Field Meaning
@@ -21,7 +21,7 @@ The board should answer four questions without reading the whole repository:
 | Phase | Product or architecture area such as Mobile, Operations, Platform, Web, Demo, or Commercialisation. | Keep this field correct on issue cards so the board can be grouped or filtered by area; do not use it as workflow state. |
 | Priority | Steering signal: `P0`, `P1`, or `P2`. | `P0` is current critical path, `P1` is near follow-up, `P2` is later backlog. |
 | Status | Operational state: Backlog, Ready, In progress, In review, or Done. | Agents should act only on issue cards in a state that matches their role. |
-| Assignee | Primary ownership signal: Codex/Robert, Robert as manual Claude runner, Copilot, or a human owner. | Assign the actor expected to take or supervise the next action. |
+| Assignee | Primary ownership signal for assignable GitHub actors: Codex/Robert, Copilot, or a human owner. | Assign the actor expected to take or supervise the next action. Claude uses GitHub Web UI agent assignment rather than normal issue assignment. |
 | Labels | Exceptional state and audit signal. | Use labels for blockers, review requests, explicit handoff generation, and attribution; do not use labels as the primary owner signal. |
 
 ## Milestones
@@ -43,7 +43,7 @@ An issue can move to `Ready` only when it has:
 - source-of-truth docs or explicit issue-local requirements;
 - scope and out-of-scope notes;
 - acceptance criteria or a clear review target;
-- assignee matching the expected next actor: Codex/Robert, Robert as manual Claude runner, Copilot, or human;
+- assignee or agent assignment matching the expected next actor: Codex/Robert, Claude agent, Copilot, or human;
 - validation expected from the implementer.
 
 If any of these are missing, keep the issue in `Backlog` or add `blocked-question`.
@@ -53,7 +53,7 @@ If any of these are missing, keep the issue in `Backlog` or add `blocked-questio
 | Actor | How to use the board |
 | --- | --- |
 | Codex | Owns issue preparation, milestone/priority/status hygiene, tracker updates, and PR review. Assign Codex/Robert when product/spec/review action is next. |
-| Claude | Uses assignment to Robert as the manual Claude runner plus `Ready` status and a direct handoff comment as the durable signal. If the issue is ambiguous, Claude should ask on the issue instead of widening scope. |
+| Claude | Uses GitHub Web UI agent assignment plus `Ready` status and a direct handoff comment as the durable signal. If the issue is ambiguous, Claude should ask on the issue instead of widening scope. |
 | Copilot | Uses assignment to the GitHub Copilot coding agent as the durable signal. Copilot candidates should be mechanical, file-bounded, and have explicit expected files and acceptance criteria. |
 
 ## Status Rules
@@ -85,7 +85,7 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Sync board `Phase` for grouping/filtering. |
 | Issue has `blocked-question` | Sync board status to `Backlog`. |
 | Issue has `needs-codex-review` | Sync board status to `In review` unless `blocked-question` is also present. |
-| Issue has `needs-claude-action` | Prepare a Claude handoff comment, assign Robert as the manual Claude runner, and remove `needs-claude-action`. |
+| Issue has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. Robert can then assign the Claude agent through the GitHub Web UI. |
 | PR has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. |
 
 The sync is best-effort and must not block agent routing. `PROJECT_SYNC_TOKEN` must have permission to update the user-owned Project. If that token is missing or insufficient, agents should still use assignees, labels, and comments as the source of truth and update the board manually when needed.
@@ -113,4 +113,4 @@ Phases remain useful as a field on real issue cards because they make the Kanban
 - Demo and client evaluation pack.
 - Commercialisation impact and Billing.
 
-Phase draft cards are optional roadmap markers only. They do not own work and should not be treated as containers for issue cards. Daily work should be driven by `Status`, `Assignee`, `Milestone`, and `Priority`; `Phase` is for grouping and filtering.
+Phase draft cards are optional roadmap markers only. They do not own work and should not be treated as containers for issue cards. Daily work should be driven by `Status`, assignee or agent assignment, `Milestone`, and `Priority`; `Phase` is for grouping and filtering.

@@ -142,7 +142,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          CLAUDE_MANUAL_RUNNER: RobertVejvoda
         run: |
           handoff_file="$RUNNER_TEMP/claude-issue-handoff.md"
           issue_json="$RUNNER_TEMP/claude-issue-context.json"
@@ -157,7 +156,7 @@ jobs:
 
           Use this prompt only when a human decides the task is worth spending Claude tokens.
           After this comment is posted, the router removes needs-claude-action.
-          Assignment and project Status are the durable ownership signals.
+          Assign the Claude agent through the GitHub Web UI when ready to start implementation.
 
           ```text
           You are Claude acting as FPS Implementer.
@@ -187,7 +186,6 @@ jobs:
 
           gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
           gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
-            --add-assignee "$CLAUDE_MANUAL_RUNNER" \
             --remove-label needs-claude-action
 
   route-claude-pr:

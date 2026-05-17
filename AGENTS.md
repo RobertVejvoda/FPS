@@ -79,10 +79,10 @@ All agents should keep session history small and handoffs explicit:
 - issue board `Phase` is synced best-effort from known slice/title prefixes for Kanban grouping;
 - issues labeled `blocked-question` sync to `Backlog`;
 - issues labeled `needs-codex-review` sync to `In review` unless `blocked-question` is also present;
-- issues labeled `needs-claude-action`, without `blocked-question`, receive a prepared Claude handoff comment, are assigned to Robert as the manual Claude runner, and have `needs-claude-action` removed;
+- issues labeled `needs-claude-action`, without `blocked-question`, receive a prepared Claude handoff comment and have `needs-claude-action` removed;
 - pull requests labeled `needs-claude-action` receive a prepared Claude handoff comment and have `needs-claude-action` removed.
 
-Ownership is now assignment-first. GitHub Project built-in workflows should handle generic lifecycle changes such as item-added, issue closed, and PR merged. Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly. Claude routing remains handoff-only; manual Claude invocation remains available when the prepared prompt is worth the token cost. Missing external agent services are operational blockers, not product decisions.
+Ownership is now assignment-first for assignable GitHub actors. GitHub Project built-in workflows should handle generic lifecycle changes such as item-added, issue closed, and PR merged. Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly. Claude routing remains handoff-only; assign the Claude agent through the GitHub Web UI when the handoff is ready and worth the token cost. Missing external agent services are operational blockers, not product decisions.
 
 Board status sync is intentionally non-blocking. If the repository token cannot write to the user-owned GitHub Project, configure `PROJECT_SYNC_TOKEN` with Project access; otherwise agents should update the board manually after changing labels or closing issues.
 
@@ -97,16 +97,16 @@ When Claude picks up a Codex-assigned slice, the first step is a routing self-ch
 
 ### Ready Signals
 
-Agents should use GitHub assignees as the primary ownership signal, with Project `Status` as the readiness/progress signal and short comments for handoff details. Labels describe exceptional state or explicit action requests; do not rely on implicit conversation history.
+Agents should use GitHub assignees as the primary ownership signal for assignable actors, with Project `Status` as the readiness/progress signal and short comments for handoff details. Labels describe exceptional state or explicit action requests; do not rely on implicit conversation history.
 
 - The Kanban board `Status` field is the operational state: `Backlog`, `Ready`, `In progress`, `In review`, or `Done`.
 - The board `Phase` field remains useful for product-area grouping and filtering, but agents should use `Status`, `Assignee`, `Milestone`, and `Priority` to decide what to do next.
-- The issue assignee is the primary actor signal: Codex/Robert for product/spec/review, Robert as manual Claude runner for Claude implementation, Copilot for GitHub Copilot coding agent work, or a human for manual work.
-- Claude-ready work should be assigned to Robert unless a real Claude GitHub identity exists. Claude should look for issue cards assigned to the manual Claude runner and carrying a direct handoff comment, with `Status = Ready` unless the comment says otherwise. If the issue is not specific enough, Claude should comment with the missing information instead of starting broad work.
+- The issue assignee is the primary actor signal for Codex/Robert, Copilot, or a human owner.
+- Claude-ready work uses GitHub's Web UI agent assignment, not a normal issue assignee exposed through the assignees API. A Claude handoff comment plus `Status = Ready` means the issue is prepared for Robert to assign to the Claude agent through the Web UI. If the issue is not specific enough, Claude should comment with the missing information instead of starting broad work.
 - Copilot should work only on issue cards assigned to Copilot. Copilot candidates should remain mechanical, file-bounded, and explicit about expected files and validation.
 - `ready-to-implement` is optional and secondary; `Status = Ready` plus assignee is the preferred readiness signal.
 - `copilot` is optional and secondary; assignment to Copilot is the durable signal.
-- `needs-claude-action` means the GitHub Actions router should prepare a Claude handoff. On issues, the router also assigns Robert as the manual Claude runner. The router removes this label after posting the handoff so the same issue or PR can be routed again later.
+- `needs-claude-action` means the GitHub Actions router should prepare a Claude handoff. The router removes this label after posting the handoff so the same issue or PR can be routed again later.
 - `claude-ready` is legacy and should not be used for new routing. A direct handoff comment plus assignment/status is the durable signal.
 - `needs-codex-review` means Codex should review or validate next.
 - `blocked-question` means no implementer should continue until Codex/Robert answers the concrete blocker.

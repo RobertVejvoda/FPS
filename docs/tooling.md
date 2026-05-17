@@ -33,12 +33,12 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Syncs the Delivery Kanban `Phase` field |
 | Issue has `blocked-question` | Syncs the Delivery Kanban status to `Backlog` |
 | Issue has `needs-codex-review` | Syncs the Delivery Kanban status to `In review` unless `blocked-question` is also present |
-| Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment, assigns Robert as the manual Claude runner, and removes `needs-claude-action` |
+| Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and removes `needs-claude-action` |
 | PR has `needs-claude-action` | Prepares a Claude handoff comment and removes `needs-claude-action` |
 
-Ownership is assignment-first. Use the issue assignee to show whether Codex/Robert, Robert as manual Claude runner, Copilot, or a human owns the next action. Use the Project `Status` field for `Backlog`, `Ready`, `In progress`, `In review`, and `Done`. Labels should describe exceptional states or explicit action requests, not normal ownership.
+Ownership is assignment-first for assignable GitHub actors. Use the issue assignee to show whether Codex/Robert, Copilot, or a human owns the next action. Claude uses GitHub Web UI agent assignment rather than a normal issue assignee exposed through the assignees API. Use the Project `Status` field for `Backlog`, `Ready`, `In progress`, `In review`, and `Done`. Labels should describe exceptional states or explicit action requests, not normal ownership.
 
-`needs-claude-action` is a router trigger, not a durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. For issues, the router also assigns Robert as the manual Claude runner. The durable waiting state is the assignee plus Project status and the handoff comment.
+`needs-claude-action` is a router trigger, not a durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. The durable Claude waiting state is the handoff comment plus Project status until Robert assigns the Claude agent through the GitHub Web UI.
 
 Required setup:
 
