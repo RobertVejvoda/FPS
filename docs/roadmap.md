@@ -28,6 +28,18 @@ The detailed evidence remains in the [Implementation Tracker](./implementation-t
 | 7. Demo and client evaluation pack | Ready | Prepare material for business, architecture, security, and operator evaluation. | Product one-pager, role-based demo scripts, architecture overview, deployment/operations summary, security/GDPR summary, cost/hosting assumptions, commercialisation options note, FAQ. | A new evaluator can understand value, architecture, security posture, deployment model, and roadmap without reading every internal page. | Materials should be based on working product and operational proof, not promises. |
 | 8. Commercialisation impact and Billing | Backlog | Decide how FPS can recover cost without weakening the free/open core. | `BILL000` impact review, free-core vs paid-add-on boundaries, support subscription shape, future dual-license posture, later `BILL001` billing workflow only after approval. | Commercial model is approved before implementation; billing behavior maps to real product decisions. | Billing too early would encode business assumptions before value, deployment, and support model are clear. |
 
+## Milestone Plan
+
+Milestones are delivery checkpoints across phases. Phases explain the product area and sequencing; milestones explain what we need to prove at a useful checkpoint.
+
+| Milestone | Board issues | Goal | Exit criteria | Why this milestone exists |
+| --- | --- | --- | --- | --- |
+| `Demo v0` | `MOB006`, `OPS001`, `OPS002`, `CUST002`, `DOCS001` | Show a credible first demo path: employee notifications, deployment component strategy, low-cost demo plan, SSO-first integration contract, and client-facing material outline. | A new evaluator can understand and see the employee flow, how FPS would run for demo, and how company identity/data integration will work. | This is the first point where FPS becomes explainable to someone outside the implementation team. |
+| `Employee Pilot` | `MOB007`, `MOB008`, `MOB009`, `N005` | Complete the employee-facing mobile experience enough for pilot use. | Mobile covers profile/vehicle facts, employee-safe allocation detail, notifications/preferences, session recovery, accessibility, and production polish. | User testing should happen only after the core employee journey is coherent, not while screens are still placeholders. |
+| `Client Evaluation` | `ID002`, `P002`, `CFG003`, `CUST001`, `REPORT002`, `WEB001`-`WEB004` | Give business, HR/facilities, architecture, and reporting stakeholders enough product surface to evaluate FPS. | Admin/reporting workflows, web surfaces, user/profile mapping, customer onboarding, and configuration publication are credible enough for review. | Client evaluators need more than the employee mobile app; they need operating, reporting, and onboarding evidence. |
+| `Production Handoff` | `A003`, `OPS003`, `OPS004`, `OPS005` | Prepare FPS for client-owned production operation. | Observability, performance evidence, audit retention/integrity, integration secret handling, and production responsibility split are documented and implemented where needed. | Production will run in the client's environment, so portability and operational evidence must be explicit. |
+| `Commercialisation Later` | `BILL000`, `BILL001` | Decide how FPS can recover cost without weakening the free/open core. | Commercial model is approved before Billing behavior is implemented. | Billing and paid features should follow product proof, not lead it. |
+
 ## Current Priority
 
 The current next product phase is **Phase 4: Mobile product completion**. It should be split into small implementation slices:
