@@ -90,6 +90,10 @@ vault kv put secret/rabbitmq-credentials username="admin" password="admin"
 vault kv put secret/minio-credentials accessKey="minioadmin" secretKey="minioadmin"
 ```
 
+OPS001 local components use the `secretstore` component with `vaultKVPrefix: dapr`.
+When using the profile-based components, store these secret names under the `secret/dapr/`
+prefix or set equivalent values through your local Vault management flow.
+
 ```bash
 vault status
 ```
@@ -116,107 +120,20 @@ To ensure that Vault data is not lost when the container restarts, the `vault` s
 
 ## Step 4: Configure Dapr Components
 
-Dapr components are configured in the `dapr/components` directory. Below are the key components:
+Dapr components are configured in profile-specific directories:
 
-### MongoDB State Store
+- `dapr/components/local`: loaded by local Docker Compose and local Dapr runs.
+- `dapr/components/demo`: templates for demo-hosted environments.
+- `dapr/components/client`: templates for client-owned production.
 
-```yaml
-apiVersion: dapr.io/v1alpha1
-kind: Component
-metadata:
-  name: statestore
-spec:
-  type: state.mongodb
-  version: v1
-  metadata:
-  - name: host
-    value: mongodb:27017
-  - name: databaseName
-    value: fps
-  - name: username
-    secretKeyRef:
-      name: mongodb-credentials
-      key: username
-  - name: password
-    secretKeyRef:
-      name: mongodb-credentials
-      key: password
-auth:
-  secretStore: vault
-```
+The local logical component names are:
 
-### RabbitMQ Pub/Sub
+- `bookingstore`: MongoDB state store for Booking.
+- `fps-pubsub`: RabbitMQ pub/sub for `booking-events`.
+- `s3store`: MinIO/S3-compatible output binding.
+- `secretstore`: Vault-backed secret store.
 
-```yaml
-apiVersion: dapr.io/v1alpha1
-kind: Component
-metadata:
-  name: pubsub
-spec:
-  type: pubsub.rabbitmq
-  version: v1
-  metadata:
-  - name: host
-    value: amqp://rabbitmq:5672
-  - name: username
-    secretKeyRef:
-      name: rabbitmq-credentials
-      key: username
-  - name: password
-    secretKeyRef:
-      name: rabbitmq-credentials
-      key: password
-auth:
-  secretStore: vault
-```
-
-### MinIO (S3-Compatible Storage)
-
-```yaml
-apiVersion: dapr.io/v1alpha1
-kind: Component
-metadata:
-  name: s3store
-spec:
-  type: bindings.aws.s3
-  version: v1
-  metadata:
-  - name: accessKey
-    secretKeyRef:
-      name: minio-credentials
-      key: accessKey
-  - name: secretKey
-    secretKeyRef:
-      name: minio-credentials
-      key: secretKey
-  - name: bucket
-    value: fps-bucket
-  - name: endpoint
-    value: http://minio:9000
-auth:
-  secretStore: vault
-```
-
-### Vault Secret Store
-
-```yaml
-apiVersion: dapr.io/v1alpha1
-kind: Component
-metadata:
-  name: vault
-spec:
-  type: secretstores.hashicorp.vault
-  version: v1
-  metadata:
-  - name: vaultAddr
-    value: http://vault:8200
-  - name: token
-    secretKeyRef:
-      name: vault-token
-      key: token
-auth:
-  secretStore: vault
-```
+See `dapr/README.md` for the full component contract, app scoping rules, and provider-swap guidance.
 
 ---
 
@@ -233,8 +150,8 @@ auth:
    Use the Dapr CLI to test the components. For example, to test the state store:
 
    ```bash
-   dapr run --app-id test-app --components-path ./dapr/components --dapr-http-port 3500
-   curl -X POST http://localhost:3500/v1.0/state/statestore -H "Content-Type: application/json" -d '[{"key":"test-key","value":"test-value"}]'
+   dapr run --app-id fps-booking --components-path ./dapr/components/local --dapr-http-port 3500
+   curl -X POST http://localhost:3500/v1.0/state/bookingstore -H "Content-Type: application/json" -d '[{"key":"test-key","value":"test-value"}]'
    ```
 
 3. **Access RabbitMQ**:
@@ -276,4 +193,3 @@ docker-compose down
 ---
 
 This guide ensures that your local infrastructure is set up securely and integrates seamlessly with Dapr components. Let me know if you need further assistance!
-

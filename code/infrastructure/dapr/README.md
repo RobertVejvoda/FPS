@@ -92,9 +92,9 @@ Indexes to create per collection:
 
 ## App Scoping
 
-Local components are unscoped for developer convenience (any local app can use any component).
-Demo and client components include `scopes:` lists — each component is visible only to the
-listed app IDs. App IDs follow the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
+State-store components are scoped to the owning service app ID in every profile. Pub/sub,
+binding, and secret-store components may be shared when multiple apps need them. App IDs
+follow the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
 
 ---
 
