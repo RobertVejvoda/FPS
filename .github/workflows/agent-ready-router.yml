@@ -53,8 +53,8 @@ jobs:
           labels="$(jq -r '.[]' <<< "$ISSUE_LABELS_JSON" | tr '\n' ' ')"
           title_upper="$(tr '[:lower:]' '[:upper:]' <<< "$ISSUE_TITLE")"
 
-          # ── Status ─────────────────────────────────────────────────────────
-          # Priority: closed > blocked-question > needs-codex-review > in-progress
+          # Status
+          # Priority: closed > blocked-question > needs-codex-review
           # Special case: removing blocked-question reverts to Ready.
           status=""
           if [ "$ISSUE_STATE" = "closed" ]; then
@@ -63,31 +63,47 @@ jobs:
             status="Backlog"
           elif grep -qw "needs-codex-review" <<< "$labels"; then
             status="In review"
-          elif grep -qw "in-progress" <<< "$labels"; then
-            status="In progress"
           elif [ "${EVENT_ACTION:-}" = "unlabeled" ] && [ "${EVENT_LABEL_NAME:-}" = "blocked-question" ]; then
             status="Ready"
           fi
 
-          # ── Phase ──────────────────────────────────────────────────────────
-          # Match slice prefixes using regex; parenthesised forms (B001) also match.
+          # Phase
+          # Match known slice prefixes at the start or after punctuation, so both
+          # "B001 ..." and "Implement (B001) ..." route to the same phase.
           phase=""
-          if [[ "$title_upper" =~ ^B[0-9]{3} ]] || [[ "$title_upper" =~ \(B[0-9]{3} ]]; then
-            phase="Booking"
-          elif [[ "$title_upper" =~ ^(BK|CFG|CUST|ID|REPORT)[0-9]{3} ]] \
-            || [[ "$title_upper" =~ ^[ANP][0-9]{3} ]]; then
-            phase="Platform"
-          elif [[ "$title_upper" =~ ^MOB[0-9]{3} ]]; then
-            phase="Mobile"
-          elif [[ "$title_upper" =~ ^WEB[0-9]{3} ]]; then
-            phase="Web"
-          elif [[ "$title_upper" =~ ^OPS[0-9]{3} ]]; then
-            phase="Operations"
-          elif [[ "$title_upper" =~ ^DOCS001 ]]; then
-            phase="Demo"
-          elif [[ "$title_upper" =~ ^BILL[0-9]{3} ]]; then
-            phase="Commercialisation"
-          elif [[ "$title_upper" =~ ^CI[0-9]{3} ]] || [[ "$title_upper" =~ ^DOCS: ]]; then
+          slice_prefix=""
+          if [[ "$title_upper" =~ (^|[^A-Z0-9])(REPORT|DOCS|CUST|BILL|CFG|MOB|OPS|WEB|BK|ID|CI|B|A|N|P)[0-9]{3} ]]; then
+            slice_prefix="${BASH_REMATCH[2]}"
+          fi
+
+          case "$slice_prefix" in
+            B)
+              phase="Booking"
+              ;;
+            A|BK|CFG|CUST|ID|N|P|REPORT)
+              phase="Platform"
+              ;;
+            MOB)
+              phase="Mobile"
+              ;;
+            WEB)
+              phase="Web"
+              ;;
+            OPS)
+              phase="Operations"
+              ;;
+            DOCS)
+              phase="Demo"
+              ;;
+            BILL)
+              phase="Commercialisation"
+              ;;
+            CI)
+              phase="Foundation"
+              ;;
+          esac
+
+          if [ -z "$phase" ] && [[ "$title_upper" =~ ^DOCS: ]]; then
             phase="Foundation"
           fi
 
@@ -96,7 +112,7 @@ jobs:
             exit 0
           fi
 
-          # ── Project sync ───────────────────────────────────────────────────
+          # Project sync
           project_id="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json --jq .id)"
           fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
           item_id="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$ISSUE_URL" --format json --jq .id)"
@@ -109,7 +125,7 @@ jobs:
             if gh project item-edit \
                 --project-id "$project_id" --id "$item_id" \
                 --field-id "$phase_field_id" --single-select-option-id "$phase_option_id"; then
-              echo "::notice::Board phase → $phase"
+              echo "::notice::Board phase -> $phase"
             else
               echo "::warning::Failed to sync phase=$phase. Check PROJECT_SYNC_TOKEN and field names."
             fi
@@ -123,7 +139,7 @@ jobs:
             if gh project item-edit \
                 --project-id "$project_id" --id "$item_id" \
                 --field-id "$status_field_id" --single-select-option-id "$status_option_id"; then
-              echo "::notice::Board status → $status"
+              echo "::notice::Board status -> $status"
             else
               echo "::warning::Failed to sync status=$status. Check PROJECT_SYNC_TOKEN and field names."
             fi
