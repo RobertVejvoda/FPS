@@ -14,6 +14,37 @@ Customer integration should answer three questions:
 | What profile facts affect parking eligibility? | Vehicle, company-car, accessibility, location, and policy-related eligibility facts come from minimal IdP claims, authorized admin entry, employee self-service, or a narrowly scoped import where needed. |
 | Which system owns the truth? | The customer IdP owns identity and login state. FPS stores only the mapped subject, tenant, role, and policy facts it needs to operate. |
 
+## Contract Boundaries
+
+This contract defines what FPS expects from customer identity and profile integration. It is intentionally provider-neutral: Azure Entra ID, Keycloak, Okta, Google Workspace, and other OIDC-compatible providers can be used if they can emit the required claims or be mapped through trusted tenant configuration.
+
+| Boundary | Contract |
+| --- | --- |
+| Authentication | Company employees authenticate through the customer IdP using OIDC/OAuth 2.0. FPS validates signed tokens and never handles the company password. |
+| Tenant resolution | `tenantId` comes from trusted issuer-to-tenant configuration, a trusted `tenant_id` claim emitted by the IdP, or verified provisioning metadata. FPS must not accept tenant identity from arbitrary request bodies. |
+| User resolution | SSO users are mapped by `(tenantId, issuer, externalSubject)`, where `externalSubject` is the stable OIDC `sub` or equivalent immutable subject. |
+| Authorization | FPS roles come from mapped IdP groups/roles or tenant-admin assignments. Role mapping is tenant-scoped, auditable, and does not create roles dynamically from untrusted claims. |
+| Profile facts | FPS stores only facts required for parking policy, notification, audit, reporting, and support. Broad HR records stay outside FPS. |
+| Local accounts | FPS-local accounts are fallback accounts only. Their credential verifiers are Secret data owned by Identity and are not imported from customer systems. |
+| Provisioning | SCIM or file/bootstrap import may create, update, or deactivate users and profile facts, but SSO remains the normal login and identity proof. |
+| Audit | Integration decisions must be attributable to a human actor, FPS system actor, or named customer integration identity. |
+
+## OIDC Tenant And Issuer Rules
+
+Each tenant integration must define a trusted issuer contract before users can authenticate:
+
+| Rule | Requirement |
+| --- | --- |
+| Trusted issuer | The token `iss` must match a configured issuer for the tenant or a configured multi-tenant issuer mapping. Unknown issuers fail closed. |
+| Audience | The token `aud` must match the FPS API/client audience expected for that environment. |
+| Signature and expiry | JWT signature, expiry, not-before, and standard validation rules must pass before claims are read. |
+| Tenant mapping | Tenant resolution must be deterministic. If both issuer mapping and `tenant_id` claim exist, they must agree or authentication fails. |
+| Subject mapping | The token must contain a stable subject. For OIDC this is `sub`; provider-specific identifiers may be used only if documented as immutable for that tenant. |
+| Role/group mapping | Raw IdP groups are mapped to FPS roles through tenant configuration. Unmapped groups are ignored unless the tenant configuration explicitly rejects them. |
+| Deactivation | A user who can no longer authenticate through the trusted IdP, or is marked inactive by trusted provisioning/admin state, must not be able to create new parking requests. Existing booking lifecycle handling remains governed by Booking rules. |
+
+FPS services consume only authenticated context after token validation. Employee-facing APIs must not accept caller-supplied tenant, user, or role values as replacements for authenticated context.
+
 ## Candidate Integration Modes
 
 | Mode | Use When | Data Shape | Notes |
@@ -46,6 +77,57 @@ Customer integration should answer three questions:
 | `credentialVerifier` | Local accounts only | Secret | FPS Identity | Password hash or equivalent verifier for FPS-owned accounts only. Never imported from a company system and never stored as plaintext. |
 | `refreshToken` | Optional | Secret | Customer IdP/FPS Identity | Store only if the selected auth flow requires it. Prefer short-lived access tokens and secure token storage. |
 
+## Source-Of-Truth Rules
+
+When the same fact can come from multiple systems, FPS uses the following precedence:
+
+| Fact | Preferred source | Fallback source | Rule |
+| --- | --- | --- | --- |
+| Login permission | Customer IdP | FPS-local account for fallback users | SSO users must prove identity through the IdP. Local users prove identity through FPS Identity only when explicitly created as fallback accounts. |
+| Tenant membership | Trusted issuer mapping or tenant claim | Verified provisioning/admin assignment | Conflicting tenant mappings fail closed. |
+| FPS roles | Mapped IdP groups/roles | Tenant admin assignment | Privileged role changes require audit and must be tenant-scoped. |
+| Active/inactive status | IdP/SCIM lifecycle | Tenant admin correction | Inactive users cannot create new requests. Corrections require actor and reason. |
+| Vehicle facts | Employee self-service or HR/fleet source, depending on tenant policy | Tenant admin correction | Store only fields required by policy. |
+| Company-car eligibility | HR/fleet source | Authorized tenant admin correction | Changes affect fairness and require audit. |
+| Accessibility eligibility | Authorized HR/admin source | Authorized correction | Store minimum operational flag only, not medical detail. |
+| Notification address | IdP claim or employee/admin profile | Local account email | Required only where email notification is enabled or local login needs it. |
+
+## Local Account Fallback
+
+Local FPS accounts are allowed for demo users, small tenants without SSO, break-glass administration, and explicitly approved fallback scenarios. They are not the default customer integration model.
+
+Local-account rules:
+
+- Local accounts must be tenant-scoped and visibly distinguishable from SSO-mapped users in admin/support views.
+- FPS Identity owns password hashing, reset, lockout, and credential-verifier storage for local accounts.
+- Credential verifiers, reset tokens, recovery codes, and equivalent material are Secret data.
+- Customer passwords, IdP passwords, and password hashes from external systems must not be imported into FPS.
+- Creating, disabling, resetting, or privilege-changing a local account requires audit with actor, reason, tenant, target user, and timestamp.
+- Break-glass accounts should be few, named, periodically reviewed, and disabled when no longer required.
+
+## File And Bootstrap Import Contract
+
+File/bootstrap import is an exception path for first setup or low-volume correction. It is not a broad HR-data ingestion model.
+
+Accepted file-import properties:
+
+- tenant-scoped input;
+- stable external subject or employee identifier;
+- active/inactive status;
+- only the profile facts needed by FPS policy and notification behavior;
+- import preview before commit;
+- idempotent create/update/deactivate behavior where possible;
+- encrypted storage while processing;
+- retention or deletion according to customer-approved policy.
+
+Rejected file-import content:
+
+- passwords, password hashes, recovery codes, tokens, client secrets, private keys, or API keys;
+- broad HR exports unrelated to parking policy;
+- medical details beyond minimum operational accessibility eligibility;
+- arbitrary tenant IDs that are not verified against trusted tenant configuration;
+- role names that are not mapped to the FPS role catalog.
+
 ## Security and Privacy Rules
 
 - SSO users authenticate with the customer IdP. FPS must not collect, import, store, log, or proxy the user's company password.
@@ -73,11 +155,22 @@ Customer integration should answer three questions:
 | Require reason and actor for manual corrections to imported eligibility facts. | Preserve fairness and auditability. |
 | Produce an import summary before file commit. | Let HR/admin review creates, updates, deactivations, and rejects. |
 
+## Downstream Slice Acceptance Criteria
+
+Future implementation slices that consume this contract must preserve these constraints:
+
+| Slice | Acceptance criteria |
+| --- | --- |
+| `P002` Profile Mapping And Minimal Facts | Stores only mapped profile facts required for policy, notification, audit, reporting, and support; records source and last-updated evidence for policy-sensitive facts; rejects ambiguous tenant/user mappings. |
+| `ID002` User Provisioning Integration | Maps `(tenantId, issuer, externalSubject)` to FPS users; validates trusted issuer/audience/subject; applies configured group-to-role mapping; handles inactive users fail-closed; keeps local-account credential handling inside Identity. |
+| `OPS005` Integration Secrets And Observability | Stores integration credentials only through the selected secret-management path; emits safe metrics/logs for success, rejection, retries, and validation failures without leaking Confidential or Secret data. |
+| `CUST001` Tenant Onboarding | Creates tenant integration configuration before live SSO users can authenticate; records trusted issuer, audience, tenant mapping, role mapping, and fallback-account policy. |
+
 ## Planned Slices
 
 | Slice | Purpose | Notes |
 | --- | --- | --- |
-| `CUST002` SSO-First Customer Integration Contract | Define SSO mapping, minimal profile data, classification, local-account fallback, validation, and audit behavior. | Documentation/spec slice before implementation. |
+| `CUST002` SSO-First Customer Integration Contract | Define SSO mapping, minimal profile data, classification, local-account fallback, validation, and audit behavior. | This page is the source-of-truth contract for downstream implementation slices. |
 | `P002` Profile Mapping And Minimal Facts | Implement profile mapping for SSO-derived users and the minimum policy facts needed by Booking. | File import is fallback/bootstrap, not the primary company integration. |
 | `ID002` User Provisioning Integration | Map IdP subjects, claims, groups, roles, local-account fallback, and deactivation behavior into Identity. | SSO/OIDC first; SCIM optional for lifecycle where available. |
 | `OPS005` Integration Secrets And Observability | Define secret handling, import logs, retry/error evidence, and metrics for integration actors. | Needed before customer-owned production integration. |
