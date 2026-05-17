@@ -1,6 +1,6 @@
 # Demo and Evaluation
 
-This page defines how FPS should be demonstrated to business stakeholders, client IT, operators, and future users. It also records future client-facing material that should be prepared once the product is ready enough to share outside the implementation team.
+This page defines how FPS should be demonstrated to business stakeholders, client IT, operators, and future users. The shareable evaluator-facing summary is available in the [Client Evaluation Pack](./client-evaluation-pack).
 
 ## Demo Goal
 
@@ -42,7 +42,7 @@ The demo should prove that FPS is more than a booking form. It should show a fai
 
 ## Client-Facing Materials
 
-These materials are planned, not implemented in this cleanup.
+The first version of these materials is collected in the [Client Evaluation Pack](./client-evaluation-pack). Keep this table as the checklist for future improvements.
 
 | Material | Audience | Purpose |
 | --- | --- | --- |
@@ -63,4 +63,4 @@ These materials are planned, not implemented in this cleanup.
 - Demo can be reset without manual database editing.
 - Expected notifications, audit records, and reporting results are predictable.
 - Local observability shows metrics/logs/traces for the demo flow.
-- Client-facing materials are linked from this page when prepared.
+- Client-facing materials are linked from this page and updated before external sharing.

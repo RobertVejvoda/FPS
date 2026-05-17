@@ -25,6 +25,7 @@
   * [Demo Environment](./production/demo-environment-baseline)
 * [Roadmap](./roadmap)
 * [Demo and Evaluation](./demo-and-evaluation)
+* [Client Evaluation Pack](./client-evaluation-pack)
 * [Versions and Decisions](./versions-and-decisions)
 * [Glossary](./glossary)
 * [Maintainer Wiki](https://github.com/RobertVejvoda/FPS/wiki)

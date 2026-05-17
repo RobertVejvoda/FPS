@@ -133,7 +133,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | OPS003 Client-Owned Production Integration | Planned | [#156](https://github.com/RobertVejvoda/FPS/issues/156) | - | Unassigned | After OPS001/OPS002 | Document and implement the handoff model for client-owned production, including deployment assumptions, Dapr component replacement, and operational responsibilities. |
 | OPS004 Observability And Performance Evidence | Planned | [#158](https://github.com/RobertVejvoda/FPS/issues/158) | - | Unassigned | Before client pilot | Expose usage, performance, logs, metrics, and traces so Prometheus/Grafana locally can be replaced by Dynatrace, Azure Monitor, OpenTelemetry Collector, or client tooling. |
 | OPS005 Integration Secrets And Observability | Planned | [#157](https://github.com/RobertVejvoda/FPS/issues/157) | - | Unassigned | After `CUST002` | Define secret handling, audit, logs, metrics, retries, and error evidence for customer-system integration actors. |
-| DOCS001 Client Evaluation Pack | Planned | [#142](https://github.com/RobertVejvoda/FPS/issues/142) | - | Unassigned | After OPS002 | Prepare shareable client material: product one-pager, role demo script, architecture overview, deployment/operations summary, security/GDPR summary, cost assumptions, and FAQ. |
+| DOCS001 Client Evaluation Pack | Done | [#142](https://github.com/RobertVejvoda/FPS/issues/142) | direct doc update | Codex/spec | 2026-05-17 | Adds a shareable client evaluation pack with product summary, evaluator paths, role demo script, architecture summary, deployment/operations summary, security/GDPR summary, cost assumptions, FAQ, and Demo v0 evidence. |
 
 ## Slice Order Rationale
 
