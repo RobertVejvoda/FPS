@@ -174,6 +174,8 @@ Backed by:
 
 Exact provider pricing changes frequently. Treat any numeric cloud estimates as planning placeholders until OPS002 validates current prices against the selected demo provider and expected demo traffic.
 
+OPS002 is now specified in [Demo Environment Baseline](./demo-environment-baseline). That page is the source of truth for demo scope, smoke checks, synthetic data, reset/teardown, and cost-evidence expectations.
+
 ---
 
 ## 4. Minimum Viable Deployment Architecture
@@ -280,7 +282,7 @@ Pseudonymised audit records (actor_hash) as per the existing architecture decisi
 
 ## 8. Open Questions Requiring Approval
 
-The following questions need answers from Robert and/or Codex before OPS001 begins:
+The following questions should be resolved as OPS002 turns the demo baseline into a concrete hosted environment:
 
 1. **Demo provider choice**: Which environment should OPS002 target first: Azure Container Apps, another low-cost managed container runtime, a lightweight Kubernetes environment, or a client-provided sandbox?
 
@@ -303,7 +305,7 @@ The following questions need answers from Robert and/or Codex before OPS001 begi
 | Slice | Scope | Depends on |
 |---|---|---|
 | **OPS001** Pluggable Dapr Component Baseline | Align local component files with demo/client component contracts. Add tenant collection/index provisioning guidance. Configure secret-store pattern. Write first operational runbook. | OPS000 baseline |
-| **OPS002** Demo Environment Baseline | Select and deploy a low-cost hosted demo profile. Build, deploy, seed, smoke test, and collect cost/usage evidence. | OPS001 |
+| **OPS002** Demo Environment Baseline | Define the low-cost hosted demo profile, required runtime components, synthetic data rules, smoke tests, reset/teardown path, and cost-evidence model. | OPS001 |
 | **OPS003** Client-Owned Production Integration | Document client deployment responsibilities, identity integration, network/security assumptions, backup/restore handoff, and release process. | OPS001, OPS002 evidence |
 | **OPS004** Observability And Performance Evidence | Wire OpenTelemetry metrics/logs/traces, local Prometheus/Grafana, demo dashboards, and client exporter examples such as Dynatrace. | OPS002 |
 | **DOCS001** Client Evaluation Pack | Prepare business summary, demo script, architecture overview, production operations summary, security/GDPR summary, cost assumptions, and FAQ. | Demo plan and current architecture docs |

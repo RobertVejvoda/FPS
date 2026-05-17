@@ -10,11 +10,12 @@ Read this section from high level to detail:
 
 1. **Environment profiles**: separate local development, demo, and client-owned production responsibilities.
 2. **Target runtime**: understand what must run and which cloud services are replaceable behind Dapr.
-2. **Availability and recovery**: define what can fail, how FPS keeps operating, and how much data loss/downtime is acceptable.
-3. **Data protection**: define backups, restore drills, tenant-scoped recovery, and secret recovery.
-4. **Operations**: define monitoring, alerts, incidents, maintenance, and runbooks.
-5. **Cloud setup**: compare candidate deployment profiles and keep cost visible.
-6. **Testing and readiness**: prove the environment before calling it production.
+3. **Demo baseline**: prove a low-cost hosted environment before client production work.
+4. **Availability and recovery**: define what can fail, how FPS keeps operating, and how much data loss/downtime is acceptable.
+5. **Data protection**: define backups, restore drills, tenant-scoped recovery, and secret recovery.
+6. **Operations**: define monitoring, alerts, incidents, maintenance, and runbooks.
+7. **Cloud setup**: compare candidate deployment profiles and keep cost visible.
+8. **Testing and readiness**: prove the environment before calling it production.
 
 ## Environment Profiles
 
@@ -53,6 +54,7 @@ FPS production runtime is expected to contain:
 ## Cloud And Environment Notes
 
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
+- [Demo Environment Baseline](./production/demo-environment-baseline): OPS002 baseline for low-cost hosted demo scope, components, seed data, smoke tests, cost evidence, reset, and teardown.
 
 Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FPS.
 
@@ -83,7 +85,7 @@ Production work is tracked through these slices:
 | --- | --- |
 | `OPS000` | Hosting and deployment strategy options; merged as the baseline for pluggable environments. |
 | `OPS001` | Pluggable Dapr component baseline, tenant collection/index provisioning, secrets, and runbooks. |
-| `OPS002` | Demo environment baseline and cost model for evaluation. |
+| `OPS002` | Demo environment baseline, smoke checklist, reset/teardown path, and cost evidence for evaluation. |
 | `OPS003` | Client-owned production integration guide. |
 | `OPS004` | Observability, performance evidence, backup/restore verification, and production runbooks. |
 

@@ -22,6 +22,7 @@
   * [Data Privacy](./security/data-privacy)
   * [Production Model](./production)
   * [Hosting Strategy](./production/hosting-deployment-strategy)
+  * [Demo Environment](./production/demo-environment-baseline)
 * [Roadmap](./roadmap)
 * [Demo and Evaluation](./demo-and-evaluation)
 * [Versions and Decisions](./versions-and-decisions)
