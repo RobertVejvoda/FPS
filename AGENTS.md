@@ -79,7 +79,7 @@ All agents should keep session history small and handoffs explicit:
 - issue board `Phase` is synced best-effort from known slice/title prefixes for Kanban grouping;
 - issues labeled `blocked-question` sync to `Backlog`;
 - issues labeled `needs-codex-review` sync to `In review` unless `blocked-question` is also present;
-- issues or pull requests labeled `blocked-question` or `needs-codex-review` are assigned to Robert for human/Codex action;
+- issues or pull requests labeled `blocked-question` are assigned to Robert for human decision;
 - issues labeled `needs-claude-action`, without `blocked-question`, receive a prepared Claude handoff comment and have `needs-claude-action` removed;
 - pull requests labeled `needs-claude-action` receive a prepared Claude handoff comment and have `needs-claude-action` removed.
 
@@ -113,7 +113,7 @@ Agents should use GitHub assignees as the primary ownership signal for assignabl
 - `blocked-question` means no implementer should continue until Codex/Robert answers the concrete blocker.
 - `active-coordination` marks the current coordination thread; it is not by itself implementation permission.
 
-Reverse handoff from implementers should look like normal human workflow: leave a concise comment with the exact blocker or review request, add `blocked-question` or `needs-codex-review`, and assign Robert when permitted. The router also assigns Robert for those labels on issues and PRs as a fallback. This is separate from Claude agent assignment, which currently remains a GitHub Web UI action.
+Reverse handoff from implementers should look like normal human workflow: leave a concise comment with the exact blocker or review request, then add `blocked-question` or `needs-codex-review`. Use `blocked-question` and assign Robert only when a real human product/architecture decision is needed. Use `needs-codex-review` without human assignment when Codex should review or validate next. This is separate from Claude agent assignment, which currently remains a GitHub Web UI action.
 
 When Codex signals work to an implementer, include a short comment with:
 
