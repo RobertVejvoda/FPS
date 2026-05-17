@@ -27,7 +27,7 @@ services:
       "--log-level", "debug" # Enable debug logs
     ]
     volumes:
-      - "./dapr/components:/components" 
+      - "./dapr/components/local:/components"
       - "./dapr/configuration/:/configuration"
     depends_on:
       - whoami

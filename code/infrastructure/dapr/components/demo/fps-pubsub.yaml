@@ -1,0 +1,43 @@
+# Demo profile — replace RabbitMQ with a managed broker.
+# Azure Service Bus example (swap the spec block; component name stays fps-pubsub):
+#
+# spec:
+#   type: pubsub.azure.servicebus.topics
+#   version: v1
+#   metadata:
+#   - name: namespaceName
+#     value: "fps-demo.servicebus.windows.net"
+#   - name: azureClientId          # user-assigned managed identity
+#     value: "{env:AZURE_CLIENT_ID}"
+#
+# Scope each component to the apps that need it.
+# Publisher: fps-booking  |  Subscribers: fps-notification, fps-audit, fps-reporting
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: fps-pubsub
+spec:
+  type: pubsub.rabbitmq
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: rabbitmq-host
+      key: connectionString
+  - name: durable
+    value: "true"
+  - name: deletedWhenUnused
+    value: "false"
+  - name: prefetchCount
+    value: "10"
+  - name: reconnectWait
+    value: "5s"
+  - name: enableTLS
+    value: "true"
+scopes:
+- fps-booking
+- fps-notification
+- fps-audit
+- fps-reporting
+auth:
+  secretStore: secretstore

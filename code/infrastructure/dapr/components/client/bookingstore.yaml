@@ -1,0 +1,36 @@
+# Client-owned production — substitute with client-approved MongoDB-compatible store.
+# Supported options (Dapr component type → spec.type):
+#   MongoDB              state.mongodb
+#   Azure Cosmos DB      state.azure.cosmosdb
+#   AWS DynamoDB         state.aws.dynamodb
+#
+# Database naming: fps-{service} per service (fps-booking, fps-notification, etc.)
+# Collection naming: {entityType} or {tenantId}_{entityType} for multi-tenant sharding.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: bookingstore
+spec:
+  type: state.mongodb           # Replace type and metadata for client store
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: mongodb-connection
+      key: host
+  - name: databaseName
+    value: fps-booking
+  - name: collectionName
+    value: bookings
+  - name: username
+    secretKeyRef:
+      name: mongodb-connection
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-connection
+      key: password
+scopes:
+- fps-booking
+auth:
+  secretStore: secretstore

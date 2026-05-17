@@ -1,0 +1,33 @@
+# Demo profile — MongoDB-compatible managed store.
+# Replace host with a managed MongoDB Atlas connection string or equivalent.
+# Use collection-per-tenant provisioning: {tenantId}_bookings.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: bookingstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: mongodb-connection
+      key: host
+  - name: databaseName
+    value: fps-booking
+  - name: collectionName
+    value: bookings
+  - name: username
+    secretKeyRef:
+      name: mongodb-connection
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-connection
+      key: password
+  - name: params
+    value: "?ssl=true&replicaSet=atlas-xxx"
+scopes:
+- fps-booking
+auth:
+  secretStore: secretstore

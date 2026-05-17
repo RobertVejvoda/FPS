@@ -6,7 +6,7 @@ namespace FPS.Booking.Infrastructure.Services;
 public class DaprEventPublisher : IEventPublisher
 {
     private readonly DaprClient _daprClient;
-    private const string PubsubName = "rabbitmq-pubsub";
+    private const string PubsubName = "fps-pubsub";
 
     public DaprEventPublisher(DaprClient daprClient) => _daprClient = daprClient;
 

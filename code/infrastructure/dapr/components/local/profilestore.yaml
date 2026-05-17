@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: bookingstore
+  name: profilestore
 spec:
   type: state.mongodb
   version: v1
@@ -9,9 +9,9 @@ spec:
   - name: host
     value: host.docker.internal:27017
   - name: databaseName
-    value: fps
+    value: fps-profile
   - name: collectionName
-    value: bookings
+    value: profiles
   - name: username
     secretKeyRef:
       name: mongodb-credentials
@@ -24,5 +24,7 @@ spec:
     value: admin
   - name: params
     value: "?authSource=admin&ssl=false"
+scopes:
+- fps-profile
 auth:
-  secretStore: vault
+  secretStore: secretstore

@@ -19,4 +19,4 @@ spec:
   - name: endpoint
     value: http://minio:9000
 auth:
-  secretStore: vault
+  secretStore: secretstore

@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: vault
+  name: secretstore
 spec:
   type: secretstores.hashicorp.vault
   version: v1
@@ -20,5 +20,5 @@ spec:
     value: "secret"
   - name: vaultValueType
     value: "map"
-auth:
-  secretStore: vault
+  # Local dev only. Demo and client profiles must use workload identity or a
+  # CI-injected token — never a committed credential.
