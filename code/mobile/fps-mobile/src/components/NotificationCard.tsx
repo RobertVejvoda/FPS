@@ -1,0 +1,158 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { NotificationItem } from '@/api/notifications';
+import { colors, radius, spacing } from '@/theme';
+
+const TYPE_LABEL: Record<string, string> = {
+  RequestSubmitted: 'Request submitted',
+  RequestRejected: 'Request rejected',
+  SlotAllocated: 'Slot allocated',
+  SlotAllocatedByReallocation: 'Slot reallocated',
+  RequestCancelledBeforeAllocation: 'Request cancelled',
+  AllocatedReservationCancelled: 'Reservation cancelled',
+  LateCancellationPenaltyApplied: 'Late cancellation penalty',
+  NoShowRecorded: 'No-show recorded',
+  NoShowPenaltyApplied: 'No-show penalty',
+  ManualCorrection: 'Manual correction',
+  DrawCompleted: 'Draw completed',
+};
+
+const TYPE_BADGE_COLOR: Record<string, string> = {
+  RequestSubmitted: colors.primary,
+  RequestRejected: colors.danger,
+  SlotAllocated: '#15803d',
+  SlotAllocatedByReallocation: '#15803d',
+  RequestCancelledBeforeAllocation: colors.textMuted,
+  AllocatedReservationCancelled: colors.textMuted,
+  LateCancellationPenaltyApplied: '#b45309',
+  NoShowRecorded: '#b45309',
+  NoShowPenaltyApplied: colors.danger,
+  ManualCorrection: '#6d28d9',
+  DrawCompleted: colors.primary,
+};
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+type NotificationCardProps = {
+  notification: NotificationItem;
+  onMarkRead?: () => void;
+  testID?: string;
+};
+
+export function NotificationCard({ notification, onMarkRead, testID }: NotificationCardProps) {
+  const label = TYPE_LABEL[notification.notificationType] ?? notification.notificationType;
+  const badgeColor = TYPE_BADGE_COLOR[notification.notificationType] ?? colors.textMuted;
+
+  return (
+    <View
+      style={[styles.card, !notification.isRead && styles.cardUnread]}
+      testID={testID ?? `notification-card-${notification.id}`}
+    >
+      <View style={styles.header}>
+        <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+          <Text style={styles.badgeText}>{label}</Text>
+        </View>
+        <Text style={styles.time}>{formatDateTime(notification.createdAt)}</Text>
+      </View>
+
+      <Text style={styles.message}>{notification.messageText}</Text>
+
+      {notification.relatedDate ? (
+        <Text style={styles.detail}>
+          {notification.relatedDate}
+          {notification.relatedTimeSlot ? `  ·  ${notification.relatedTimeSlot}` : ''}
+          {notification.locationId ? `  ·  ${notification.locationId}` : ''}
+        </Text>
+      ) : null}
+
+      {notification.nextAction ? (
+        <Text style={styles.nextAction}>{notification.nextAction}</Text>
+      ) : null}
+
+      {!notification.isRead && onMarkRead ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onMarkRead}
+          style={({ pressed }) => [styles.markRead, pressed && styles.markReadPressed]}
+          testID={`mark-read-${notification.id}`}
+        >
+          <Text style={styles.markReadText}>Mark as read</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  cardUnread: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  badge: {
+    paddingVertical: 2,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    flexShrink: 1,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+  },
+  time: {
+    fontSize: 12,
+    color: colors.textMuted,
+    flexShrink: 0,
+  },
+  message: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  detail: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  nextAction: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  markRead: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  markReadPressed: { opacity: 0.6 },
+  markReadText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+});
