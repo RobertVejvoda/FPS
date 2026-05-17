@@ -2,7 +2,7 @@
 
 This roadmap explains the phase and slice cards used in the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). Phase cards show high-level delivery direction; issue cards show concrete implementation slices.
 
-The detailed evidence remains in the [Implementation Tracker](./implementation-tracker). Requirement coverage remains in [Requirements Traceability](./requirements-traceability).
+The detailed evidence remains in the [Implementation Tracker](./implementation-tracker). Requirement coverage remains in [Requirements Traceability](./requirements-traceability). Operational board rules are defined in [Delivery Board](./delivery-board).
 
 ## Roadmap Principles
 
@@ -67,7 +67,7 @@ Use [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2) for
 | In review | PR or review queue is active. |
 | Done | Merged, closed, or otherwise completed. |
 
-Use the `Phase` field for broad grouping. Use GitHub issues as the canonical slice cards; PRs should link back to the issue they implement. Draft cards are acceptable only for phase markers or temporary planning notes that are not yet a slice.
+Use the `Phase` field for broad grouping. Use `Milestone` for release checkpoints, `Priority` for steering, and `Status` for operational state. Use GitHub issues as the canonical slice cards; PRs should link back to the issue they implement. Draft cards are acceptable only for phase markers or temporary planning notes that are not yet a slice.
 
 Agent workflow:
 
