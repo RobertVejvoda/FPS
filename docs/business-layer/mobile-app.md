@@ -42,6 +42,20 @@ MOB003 includes:
 
 MOB003 does not implement booking submission, cancellation, usage confirmation, push/SSE notifications, profile editing, native app-store packaging, tenant/user selection, Keycloak provisioning, or backend business behavior changes.
 
+## MOB007 Boundary
+
+MOB007 adds the read-only employee profile and vehicle details screen to the mobile app. It consumes authenticated identity from `GET /me` and employee-safe profile facts from `GET /profile/snapshot`.
+
+MOB007 includes:
+
+- display of authenticated user, tenant, and roles from `GET /me`;
+- display of profile status, parking eligibility, company-car eligibility, accessibility eligibility, reserved-space eligibility, and snapshot version;
+- display of active vehicles returned by Profile, including license plate or vehicle identifier, vehicle type, electric flag, and active state;
+- loading, missing-profile, unreachable, and error states for the Profile snapshot;
+- no caller-supplied tenant, user, role, or profile identifiers.
+
+MOB007 does not implement profile or vehicle editing, notification preferences, user provisioning, local-account management, backend Profile behavior changes, or broader SSO/customer integration behavior.
+
 ## Notifications
 - **Booking Alerts**: Receive booking confirmations
 - **Reminder Settings**: Configure notification preferences
