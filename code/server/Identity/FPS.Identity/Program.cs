@@ -50,7 +50,7 @@ builder.Services.AddAuthentication("Bearer")
         options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
 
