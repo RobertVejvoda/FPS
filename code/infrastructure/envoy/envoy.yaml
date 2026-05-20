@@ -16,6 +16,27 @@ static_resources:
                     - name: backend
                       domains: ["*"]
                       routes:
+                        # Employee mobile API surface — routes to host-run services.
+                        # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
+                        # On Linux: add --add-host=host.docker.internal:host-gateway to the envoy
+                        # service in docker-compose.yaml, or replace with 172.17.0.1.
+                        - match:
+                            prefix: "/profile"
+                          route:
+                            cluster: fps-profile
+                        - match:
+                            prefix: "/notifications"
+                          route:
+                            cluster: fps-notification
+                        - match:
+                            prefix: "/bookings"
+                          route:
+                            cluster: fps-booking
+                        - match:
+                            path: "/me"
+                          route:
+                            cluster: fps-identity
+                        # Existing whoami/Dapr sample route — preserved unchanged.
                         - match:
                             prefix: "/api/whoami/"
                           route:
@@ -27,6 +48,54 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
   clusters:
+    - name: fps-identity
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-identity
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5192 }
+
+    - name: fps-booking
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-booking
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5131 }
+
+    - name: fps-notification
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-notification
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5157 }
+
+    - name: fps-profile
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-profile
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5197 }
+
     - name: dapr
       connect_timeout: 0.25s
       type: STRICT_DNS
