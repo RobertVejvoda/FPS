@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers().AddDapr();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
+builder.Services.AddSingleton<INotificationPreferencesRepository, InMemoryNotificationPreferencesRepository>();
 builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroadcaster>();
 builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
 builder.Services.AddScoped<BookingEventNotificationHandler>();

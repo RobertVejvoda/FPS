@@ -7,6 +7,7 @@ public sealed class BookingEventNotificationHandler(
     INotificationRepository repository,
     INotificationBroadcaster broadcaster,
     IEmailNotificationSender emailSender,
+    INotificationPreferencesRepository preferencesRepository,
     ILogger<BookingEventNotificationHandler> logger)
 {
     private static readonly IReadOnlyDictionary<string, string> MessageTemplates = new Dictionary<string, string>
@@ -25,8 +26,19 @@ public sealed class BookingEventNotificationHandler(
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
+        var notificationClass = NotificationClassifier.Classify(envelope.EventType);
+
         foreach (var recipientId in ResolveRecipients(envelope))
         {
+            var prefs = await preferencesRepository.GetOrDefaultAsync(envelope.TenantId, recipientId, cancellationToken);
+            if (!prefs.AllowsDelivery(notificationClass))
+            {
+                logger.LogDebug(
+                    "Notification suppressed by user preference. TenantId={TenantId} RecipientId={RecipientId} NotificationType={NotificationType} Class={Class}",
+                    envelope.TenantId, recipientId, envelope.EventType, notificationClass);
+                continue;
+            }
+
             await HandleInAppAsync(envelope, recipientId, cancellationToken);
             await HandleEmailAsync(envelope, recipientId, cancellationToken);
         }
