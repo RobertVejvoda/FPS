@@ -141,11 +141,16 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | --- | --- |
 | Issue opened | `Status = Backlog`, `Owner = Codex` if Status is not already set. |
 | PR opened, synchronized, or reopened | Linked closing issues: `Status = In review`, `Owner = Codex`; `Implementer` set from `implemented-by: claude` or `implemented-by: copilot` attribution labels when present. |
-| PR review requests changes | Linked closing issues: `Status = Needs changes`, `Owner = current Implementer`. |
+| PR review submits `CHANGES_REQUESTED` | Linked closing issues: `Status = Needs changes`, `Owner = current Implementer`. |
+| Repository owner comments `/fps-state needs-changes [owner]` on PR | Linked closing issues: `Status = Needs changes`, `Owner = explicit owner or current Implementer`. Use this path when a formal CHANGES_REQUESTED review cannot be submitted (same-account limitation). |
+| Repository owner comments `/fps-state in-review` on PR | Linked closing issues: `Status = In review`, `Owner = Codex`. |
+| Repository owner comments `/fps-state blocked [Robert\|Codex]` on PR | Linked closing issues: `Status = Blocked`, `Owner = Robert` (default) or `Codex`. |
 | PR merged | Linked closing issues: `Status = Done`, `Owner = None`. |
 | Issue closed | `Status = Done`, `Owner = None`. |
 
 Linked issues are discovered via GitHub's `closingIssuesReferences` API; PRs must include `Closes #N`, `Fixes #N`, or equivalent keywords in the PR body. All board writes are best-effort and log `::notice::` on success or `::warning::` on failure. `PROJECT_SYNC_TOKEN` must have project write access; without it, writes may fall back to the read-only repository token.
+
+After pushing requested fixes, an implementer signals readiness for re-review by commenting `/fps-state in-review` on the PR (or by updating `Status = In review`, `Owner = Codex` on the board manually if the orchestrator is not yet on master).
 
 Transitions not yet automated — set these fields manually when they occur:
 
@@ -153,7 +158,6 @@ Transitions not yet automated — set these fields manually when they occur:
 | --- | --- |
 | Codex accepts a spec as ready | `Status = Ready`, `Owner = selected actor`, `Implementer = selected implementer`. |
 | Handoff is prepared or actor is assigned | `Status = Assigned`, `Owner = selected actor`. |
-| Product/architecture decision is needed | `Status = Blocked`, `Owner = Robert` or `Codex`, with a concrete blocker comment. |
 
 `.github/workflows/agent-ready-router.yml` handles remaining compatibility work:
 
