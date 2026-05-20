@@ -48,7 +48,20 @@ Reverse handoff from Claude, Copilot, or a human implementer should use Project 
 
 ### State handoff commands
 
-Until OPS007 automates Project field reconciliation, agents should update the FPS Delivery Kanban fields directly after changing responsibility.
+OPS007 automates many Project field transitions via `.github/workflows/delivery-state-orchestrator.yml`. For transitions not covered by the orchestrator — or when the orchestrator cannot write to the project — agents should update the FPS Delivery Kanban fields directly after changing responsibility.
+
+#### `/fps-state` comment command
+
+When a formal PR review cannot be submitted (for example, because the reviewer and PR author share the same GitHub account), post a PR comment with `/fps-state <command>` to trigger a state transition on all linked closing issues:
+
+| Command | Status | Owner |
+| --- | --- | --- |
+| `/fps-state needs-changes [Claude\|Copilot\|Codex\|Robert]` | `Needs changes` | Explicit owner, or current `Implementer` field if omitted |
+| `/fps-state in-review` | `In review` | `Codex` |
+| `/fps-state done` | `Done` | `None` |
+| `/fps-state blocked [Robert\|Codex]` | `Blocked` | `Robert` if omitted |
+
+Restrictions: only comments from the repository owner (`RobertVejvoda`) on PRs with linked `Closes #N` issues are acted upon. All writes are best-effort and non-blocking.
 
 FPS Delivery Kanban identifiers:
 
