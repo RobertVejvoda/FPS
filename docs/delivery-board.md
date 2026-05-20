@@ -99,8 +99,12 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Issue or PR has `blocked-question` | Assign Robert for human decision. |
 | Issue has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. Robert can then assign the Claude agent through the GitHub Web UI. |
 | PR has `needs-claude-action` | Prepare a Claude handoff comment and remove `needs-claude-action`. |
+| Issue is closed | Remove stale routing labels: `claude-ready`, `ready-to-implement`, `needs-claude-action`, `needs-codex-review`. |
+| PR is closed or merged | Remove stale routing labels: `claude-ready`, `needs-claude-action`, `needs-codex-review`. |
 
 The sync is best-effort and must not block agent routing. `PROJECT_SYNC_TOKEN` must have permission to update the user-owned Project. If that token is missing or insufficient, agents should still use assignees, labels, and comments as the source of truth and update the board manually when needed.
+
+Closed issues and closed pull requests are routing cleanup boundaries. Attribution labels such as `implemented-by: claude` are preserved; temporary routing labels are removed automatically so completed work does not remain visible as ready or in review.
 
 ## Done Evidence
 

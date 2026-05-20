@@ -37,10 +37,14 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 | Issue or PR has `blocked-question` | Assigns Robert for human decision |
 | Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and removes `needs-claude-action` |
 | PR has `needs-claude-action` | Prepares a Claude handoff comment and removes `needs-claude-action` |
+| Issue is closed | Removes stale routing labels: `claude-ready`, `ready-to-implement`, `needs-claude-action`, `needs-codex-review` |
+| PR is closed or merged | Removes stale routing labels: `claude-ready`, `needs-claude-action`, `needs-codex-review` |
 
 Ownership is assignment-first for assignable GitHub actors. Use the issue assignee to show whether Codex/Robert, Copilot, or a human owns the next action. Claude uses GitHub Web UI agent assignment rather than a normal issue assignee exposed through the assignees API. Use the Project `Status` field for `Backlog`, `Ready`, `In progress`, `In review`, and `Done`. Labels should describe exceptional states or explicit action requests, not normal ownership.
 
 `needs-claude-action` is a router trigger, not a durable waiting state. GitHub Actions removes it after posting the handoff so the same issue or PR can be routed again later by re-adding the label. The durable Claude waiting state is the handoff comment plus Project status until Robert assigns the Claude agent through the GitHub Web UI.
+
+Closed issues and closed pull requests are cleanup boundaries. The router removes stale routing labels automatically on close so completed work does not stay visible as ready for Claude, ready for implementation, or waiting for Codex review.
 
 Reverse handoff from Claude, Copilot, or a human implementer should use normal GitHub state: leave the exact blocker or review request in a comment, then add `blocked-question` or `needs-codex-review`. Assign Robert only for a real human decision. `needs-codex-review` uses label and board status only because Codex is not exposed as a normal GitHub assignee in this repository.
 
@@ -52,6 +56,7 @@ Required setup:
 Safety notes:
 
 - Closed issues take precedence over routing labels and are synced to `Done`.
+- Closed issues and closed pull requests remove stale routing labels as a backstop; attribution labels such as `implemented-by: claude` are preserved.
 - `blocked-question` prevents automated Claude handoff routing and syncs the board back to `Backlog`.
 - `active-coordination` is not an implementation trigger.
 - Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
