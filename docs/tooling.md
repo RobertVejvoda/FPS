@@ -32,21 +32,78 @@ The `docs` workflow runs on `push` to `master` when anything under `docs/**` cha
 |---|---|
 | Issue title has a known slice prefix such as `B`, `MOB`, `WEB`, `OPS`, `BILL`, `CI`, `DOCS001`, or platform prefixes such as `A`, `BK`, `CFG`, `CUST`, `ID`, `N`, `P`, `REPORT` | Syncs the Delivery Kanban `Phase` field |
 | Issue is closed | Syncs the Delivery Kanban status to `Done` |
-| Issue has `blocked-question` | Syncs the Delivery Kanban status to `Backlog` |
-| Issue has `needs-codex-review` | Syncs the Delivery Kanban status to `In review` unless `blocked-question` is also present |
-| Issue or PR has `blocked-question` | Assigns Robert for human decision |
-| Issue has `needs-claude-action` and does not have `blocked-question` | Prepares a Claude handoff comment and removes `needs-claude-action` |
-| PR has `needs-claude-action` | Prepares a Claude handoff comment and removes `needs-claude-action` |
+| Legacy Claude handoff is requested manually | Prepares a Claude handoff comment; Project fields should then record `Owner = Claude` and the appropriate `Status` |
 | Issue is closed | Removes stale routing labels: `claude-ready`, `ready-to-implement`, `needs-claude-action`, `needs-codex-review` |
 | PR is closed or merged | Removes stale routing labels: `claude-ready`, `needs-claude-action`, `needs-codex-review` |
 
-Ownership is assignment-first for assignable GitHub actors. Use the issue assignee to show whether Codex/Robert, Copilot, or a human owns the next action. Claude uses GitHub Web UI agent assignment rather than a normal issue assignee exposed through the assignees API. Use the Project `Status` field for `Backlog`, `Ready`, `In progress`, `In review`, and `Done`. Labels should describe exceptional states or explicit action requests, not normal ownership.
+Ownership is Project-field-first. Use `Status` for lifecycle state, `Owner` for the actor who must act next, and `Implementer` for the actor expected to implement or repair the slice. GitHub assignees and Claude/Copilot UI assignment may still invoke or notify an actor, but they are not the source of truth for workflow state. Labels must not be used for assignment.
 
-`needs-claude-action` is a router trigger, not a durable waiting state. GitHub Actions claims and removes it before posting the handoff so duplicate workflow events do not create duplicate prompts. The same issue or PR can be routed again later by re-adding the label. The durable Claude waiting state is the handoff comment plus Project status until Robert assigns the Claude agent through the GitHub Web UI.
+The state machine is documented in [Delivery Board](./delivery-board). Allowed statuses are `Backlog`, `Ready`, `Assigned`, `In progress`, `In review`, `Needs changes`, `Blocked`, and `Done`. `Owner` should contain `Codex`, `Claude`, `Copilot`, `Robert`, `Human`, or `None`. `Implementer` should contain `Claude`, `Copilot`, `Human`, `Codex`, or `None`.
+
+`needs-claude-action` is now only a temporary compatibility trigger while the router is being replaced. It is not a durable waiting state. The durable Claude waiting state is `Owner = Claude` plus a handoff comment, with GitHub Web UI assignment used only to invoke the agent when needed.
 
 Closed issues and closed pull requests are cleanup boundaries. The router removes stale routing labels automatically on close so completed work does not stay visible as ready for Claude, ready for implementation, or waiting for Codex review.
 
-Reverse handoff from Claude, Copilot, or a human implementer should use normal GitHub state: leave the exact blocker or review request in a comment, then add `blocked-question` or `needs-codex-review`. Assign Robert only for a real human decision. `needs-codex-review` uses label and board status only because Codex is not exposed as a normal GitHub assignee in this repository.
+Reverse handoff from Claude, Copilot, or a human implementer should use Project fields: leave the exact blocker or review request in a comment, then set `Status = In review`, `Owner = Codex` for review; `Status = Needs changes`, `Owner = Implementer` for requested fixes; or `Status = Blocked`, `Owner = Robert` for a real human decision.
+
+### State handoff commands
+
+Until OPS007 automates Project field reconciliation, agents should update the FPS Delivery Kanban fields directly after changing responsibility.
+
+FPS Delivery Kanban identifiers:
+
+| Field | ID |
+|---|---|
+| Project | `PVT_kwHOAMdNjM4ApbPD` |
+| Status | `PVTSSF_lAHOAMdNjM4ApbPDzgg1is0` |
+| Owner | `PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I` |
+| Implementer | `PVTSSF_lAHOAMdNjM4ApbPDzhTZl4E` |
+
+Common option IDs:
+
+| Field | Value | Option ID |
+|---|---|---|
+| Status | `In review` | `4cc61d42` |
+| Status | `Needs changes` | `57f4a681` |
+| Status | `Done` | `98236657` |
+| Owner | `Codex` | `7694f322` |
+| Owner | `Claude` | `765bf827` |
+| Owner | `None` | `a0ebe14c` |
+| Implementer | `Claude` | `907ea51b` |
+
+Find a Project item ID for an issue:
+
+```sh
+gh project item-list 2 --owner RobertVejvoda --format json --limit 100 \
+  --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id'
+```
+
+When Claude finishes a fix and wants Codex review:
+
+```sh
+ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzgg1is0 --single-select-option-id 4cc61d42
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id 7694f322
+```
+
+When Codex requests Claude changes:
+
+```sh
+ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzgg1is0 --single-select-option-id 57f4a681
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id 765bf827
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4E --single-select-option-id 907ea51b
+```
+
+After merge or issue close:
+
+```sh
+ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzgg1is0 --single-select-option-id 98236657
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id a0ebe14c
+```
+
+Also leave a short PR or issue comment saying what changed and what validation ran. Do not add assignment labels.
 
 Required setup:
 
@@ -57,12 +114,11 @@ Safety notes:
 
 - Closed issues take precedence over routing labels and are synced to `Done`.
 - Closed issues and closed pull requests remove stale routing labels as a backstop; attribution labels such as `implemented-by: claude` are preserved.
-- `blocked-question` prevents automated Claude handoff routing and syncs the board back to `Backlog`.
 - `active-coordination` is not an implementation trigger.
 - Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
 - Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost.
 - `claude-ready` is legacy and should not be used for new routing.
-- Implementers should add `needs-codex-review` when they finish and should remove stale ready/action labels when permitted.
+- Implementers should set `Status = In review`, `Owner = Codex` when they finish and should remove stale temporary routing labels when permitted.
 
 ### What CI checks
 

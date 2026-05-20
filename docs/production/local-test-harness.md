@@ -94,11 +94,74 @@ Stop shared infrastructure:
 docker compose -f code/infrastructure/docker-compose.yaml down
 ```
 
+## Running Services With Dapr Sidecars (OPS006C)
+
+Plain `dotnet run` starts a service without a Dapr sidecar. Endpoints that use `DaprClient` — such as Booking's state and pub/sub calls — return `500` because the sidecar gRPC port is not listening.
+
+Use the Dapr CLI multi-app run to start six FPS services each paired with a sidecar:
+
+```sh
+# 1. Infrastructure and auth (once per session)
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+./tools/dev-setup-auth.sh
+source ./tools/dev-env.sh
+
+# 2. Identity — no Dapr sidecar needed, plain dotnet run
+dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj &
+
+# 3. All other services with Dapr sidecars
+./tools/start-with-dapr.sh
+# or directly: dapr run -f dapr.yaml
+```
+
+`./tools/start-with-dapr.sh` requires the Dapr CLI (>= 1.12). Install once:
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | /bin/bash
+dapr init
+```
+
+The run file is `dapr.yaml` at the repository root. It starts these services:
+
+| App ID | Service | App port | Dapr HTTP | Dapr gRPC |
+| --- | --- | --- | --- | --- |
+| `fps-booking` | Booking | 5131 | 3601 | 50001 |
+| `fps-notification` | Notification | 5157 | 3607 | 50007 |
+| `fps-profile` | Profile | 5197 | 3617 | 50017 |
+| `fps-audit` | Audit | 5161 | 3611 | 50011 |
+| `fps-reporting` | Reporting | 5171 | 3621 | 50021 |
+| `fps-configuration` | Configuration | 5141 | 3631 | 50031 |
+
+### In-memory vs local components
+
+`dapr.yaml` loads `code/infrastructure/dapr/components/smoke` — in-memory state and pub/sub components that need no Vault or MongoDB credentials. State is lost on restart but Dapr sidecar connections work immediately.
+
+To use durable local state (MongoDB + RabbitMQ + Vault), change `resourcesPath` in `dapr.yaml` to `code/infrastructure/dapr/components/local` and ensure Vault is initialised with the required secrets.
+
+### Smoke commands with Dapr sidecars
+
+After starting Identity and `dapr run -f dapr.yaml`:
+
+```sh
+TOKEN=$(./tools/dev-auth.sh employee1)
+
+# Gateway auth passthrough — expects 401 / 200
+curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
+
+# Booking with Dapr sidecar — expects 200 (empty list)
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
+
+# Notification — expects 200
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+```
+
+`GET /profile/snapshot` still returns `404` for `employee1` until profile domain data is seeded (OPS006D).
+
 ## Mobile Testing Implication
 
-The mobile app expects one API base URL. The current baseline is enough for service-level checks, but it is not enough for a full mobile device pass because Identity, Booking, Notification, and Profile run on separate ports.
-
-For a full mobile pass, provide one gateway URL that routes:
+The mobile app expects one API base URL. The Envoy gateway added in OPS006B provides that URL at `http://localhost:10000`, routing all four mobile employee endpoints under one origin:
 
 | Mobile path | Target service |
 | --- | --- |
@@ -107,7 +170,65 @@ For a full mobile pass, provide one gateway URL that routes:
 | `/notifications` and notification actions | Notification |
 | `/profile/snapshot` | Profile |
 
-On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:<gateway-port>`, not `localhost`.
+## Local Mobile API Gateway (OPS006B)
+
+The Envoy proxy in Docker Compose now routes all mobile employee endpoints under one origin.
+**Gateway URL (simulator/browser):** `http://localhost:10000`
+**Gateway URL (physical phone on same LAN):** `http://<dev-machine-ip>:10000`
+
+Start the gateway by starting Docker Compose — Envoy is already in `docker-compose.yaml`:
+
+```sh
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+```
+
+Gateway route table:
+
+| Mobile path | Target service |
+| --- | --- |
+| `GET /me` | Identity `localhost:5192` |
+| `/bookings` and booking actions | Booking `localhost:5131` |
+| `/notifications` and notification actions | Notification `localhost:5157` |
+| `/profile/snapshot` | Profile `localhost:5197` |
+
+Authorization headers pass through unchanged. The gateway does not mint or verify tokens.
+
+**Linux note:** `host.docker.internal` is not available by default. Add the following to the `envoy-proxy` service in `docker-compose.yaml`:
+
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+Or replace `host.docker.internal` with `172.17.0.1` in `code/infrastructure/envoy/envoy.yaml`.
+
+### Gateway smoke commands
+
+Run after `docker compose up`, `dev-setup-auth.sh`, `dev-env.sh`, and all four services.
+
+**What passes today (gateway routing + auth passthrough):**
+
+```sh
+TOKEN=$(./tools/dev-auth.sh employee1)
+
+# Should return 401 without token
+curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
+# Should return 200 — gateway routes and bearer token is accepted
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
+# Should return 200 — Notification service uses in-memory storage
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+```
+
+**Full mobile E2E sequence:**
+
+- OPS006C (this page) resolves the Booking sidecar gap. `GET /bookings` returns `200` when Booking is started through `dapr run -f dapr.yaml` instead of plain `dotnet run`.
+- `GET /profile/snapshot` returns `404` for `employee1` until profile domain data is seeded by OPS006D.
+
+Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap.
+
+### Mobile session configuration
+
+On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:10000`, not `localhost`.
 
 Use Expo LAN mode when the phone and development machine are on the same network:
 
@@ -125,7 +246,7 @@ npm run start -- --tunnel --clear
 
 The developer session screen still requires both values:
 
-- API base URL: a single LAN-reachable gateway URL, not separate service ports;
+- API base URL: `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (phone);
 - bearer token: a local development token from `./tools/dev-auth.sh`.
 
 ## Seeding Local Demo Data (OPS006D)
