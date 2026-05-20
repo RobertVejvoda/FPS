@@ -202,4 +202,43 @@ public sealed class DashboardAndExportTests
 
         Assert.Single(lines); // header only
     }
+
+    // ── CSV formula injection hardening ─────────────────────────────────────
+
+    [Theory]
+    [InlineData("=CMD")]
+    [InlineData("+1+1")]
+    [InlineData("-1+1")]
+    [InlineData("@SUM(A1)")]
+    public void Csv_FormulaInjection_StartsWithRiskyChar_IsPrefixed(string injectedValue)
+    {
+        // Drive Escape via a ParkingMetrics whose LocationId carries the payload.
+        var metrics = new[] { new FPS.Reporting.Domain.ParkingMetrics
+        {
+            TenantId = "t", Date = "2026-05-01",
+            LocationId = injectedValue, TimeSlot = "09:00-17:00",
+        }};
+
+        var csv = CsvExport.FromMetrics(metrics);
+
+        // The cell must start with an apostrophe so spreadsheets treat it as text.
+        Assert.Contains($"'{injectedValue}", csv);
+        // The raw formula trigger must not appear unescaped at the start of a cell.
+        Assert.DoesNotContain($",{injectedValue},", csv);
+    }
+
+    [Fact]
+    public void Csv_SafeValue_NotPrefixed()
+    {
+        var metrics = new[] { new FPS.Reporting.Domain.ParkingMetrics
+        {
+            TenantId = "t", Date = "2026-05-01",
+            LocationId = "loc-1", TimeSlot = "09:00-17:00",
+        }};
+
+        var csv = CsvExport.FromMetrics(metrics);
+
+        Assert.Contains("loc-1", csv);
+        Assert.DoesNotContain("'loc-1", csv);
+    }
 }

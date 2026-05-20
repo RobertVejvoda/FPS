@@ -118,8 +118,15 @@ public static class CsvExport
         return sb.ToString();
     }
 
-    private static string Escape(string value) =>
-        value.Contains(',') || value.Contains('"') || value.Contains('\n')
+    private static string Escape(string value)
+    {
+        // Prefix formula-injection characters so spreadsheets don't execute them.
+        // Apostrophe causes Excel/Sheets to treat the cell as literal text.
+        if (value.Length > 0 && "=+-@\t\r".IndexOf(value[0]) >= 0)
+            value = "'" + value;
+
+        return value.Contains(',') || value.Contains('"') || value.Contains('\n')
             ? $"\"{value.Replace("\"", "\"\"")}\""
             : value;
+    }
 }
