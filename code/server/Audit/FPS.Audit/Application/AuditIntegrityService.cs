@@ -75,17 +75,41 @@ public sealed class AuditIntegrityService(IAuditRetentionRepository repository)
             EntityId: r.EntityId)).ToList();
     }
 
-    // Deterministic hash of (sorted by OccurredAt + AuditRecordId) record identifiers.
-    // Detects insertion or deletion of records; payload content is not hashed to avoid
-    // including Confidential data in the hash input.
+    // Deterministic hash of all audit evidence fields for each record in the range.
+    // Records are sorted by (OccurredAt, AuditRecordId) for stability.
+    // Payload is serialised and included in the hash so that content drift is detected.
+    // Hashing Confidential data is safe because it is never returned in hash output or export.
     private static string ComputeHash(IReadOnlyList<AuditRecord> records)
     {
-        var sb = new StringBuilder();
-        foreach (var r in records.OrderBy(r => r.OccurredAt).ThenBy(r => r.AuditRecordId))
-            sb.Append($"{r.SourceEventId}|{r.EventType}|{r.TenantId}|");
-
         using var sha = SHA256.Create();
-        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
+        using var ms = new System.IO.MemoryStream();
+
+        foreach (var r in records.OrderBy(r => r.OccurredAt).ThenBy(r => r.AuditRecordId))
+        {
+            // Each field that is part of the protected audit evidence is included.
+            // Null values are represented as the literal "<null>" to distinguish from empty.
+            var line = string.Join("|",
+                r.SourceEventId,
+                r.TenantId,
+                r.EventType,
+                r.EventVersion.ToString(),
+                r.OccurredAt.ToString("O"),
+                r.RecordedAt.ToString("O"),
+                r.CorrelationId,
+                r.CausationId ?? "<null>",
+                r.ActorType,
+                r.ActorHash ?? "<null>",
+                r.Source,
+                r.EntityType,
+                r.EntityId ?? "<null>",
+                r.Payload.ToJsonString());
+
+            var bytes = Encoding.UTF8.GetBytes(line + "\n");
+            ms.Write(bytes, 0, bytes.Length);
+        }
+
+        ms.Position = 0;
+        var hash = sha.ComputeHash(ms);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }

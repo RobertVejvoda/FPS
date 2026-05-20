@@ -120,22 +120,124 @@ public sealed class AuditIntegrityServiceTests
         Assert.Single(t1Export);
     }
 
-    private async Task Append(string tenantId, DateTime occurredAt)
+    // Drift-detection regression tests — verifies the hash covers all evidence fields.
+
+    [Fact]
+    public async Task Verify_PayloadMutated_ProducesDifferentHash()
     {
-        await repository.AppendAsync(new AuditRecord
+        var from = DateTime.UtcNow.AddDays(-7);
+        var to = DateTime.UtcNow;
+        var occurredAt = DateTime.UtcNow.AddDays(-1);
+        var sourceId = Guid.NewGuid().ToString();
+        var recordId = Guid.NewGuid();
+
+        var original = BaseRecord(recordId, sourceId, "t1", occurredAt);
+        await repository.AppendAsync(original);
+        var baseline = await service.VerifyAsync("t1", from, to);
+
+        // Simulate drift: same identifiers, but payload content changed
+        var driftedRepo = new InMemoryAuditRepository();
+        await driftedRepo.AppendAsync(new AuditRecord
         {
-            AuditRecordId = Guid.NewGuid(),
-            SourceEventId = Guid.NewGuid().ToString(),
+            AuditRecordId = original.AuditRecordId, SourceEventId = original.SourceEventId,
+            EventType = original.EventType, EventVersion = original.EventVersion,
+            OccurredAt = original.OccurredAt, RecordedAt = original.RecordedAt,
+            TenantId = original.TenantId, CorrelationId = original.CorrelationId,
+            ActorType = original.ActorType, ActorHash = original.ActorHash,
+            Source = original.Source, EntityType = original.EntityType, EntityId = original.EntityId,
+            Payload = new JsonObject { ["tampered"] = "yes" },  // mutated
+        });
+        var driftedService = new AuditIntegrityService(driftedRepo);
+        var driftedResult = await driftedService.VerifyAsync("t1", from, to, expectedHash: baseline.IntegrityHash);
+
+        Assert.True(driftedResult.HasMismatch, "Payload mutation must change the integrity hash");
+        Assert.Equal("mismatch", driftedResult.Result);
+        Assert.NotEqual(baseline.IntegrityHash, driftedResult.IntegrityHash);
+    }
+
+    [Fact]
+    public async Task Verify_ActorHashMutated_ProducesDifferentHash()
+    {
+        var from = DateTime.UtcNow.AddDays(-7);
+        var to = DateTime.UtcNow;
+        var occurredAt = DateTime.UtcNow.AddDays(-1);
+        var recordId = Guid.NewGuid();
+        var sourceId = Guid.NewGuid().ToString();
+
+        var original = BaseRecord(recordId, sourceId, "t1", occurredAt);
+        await repository.AppendAsync(original);
+        var baseline = await service.VerifyAsync("t1", from, to);
+
+        var driftedRepo = new InMemoryAuditRepository();
+        await driftedRepo.AppendAsync(new AuditRecord
+        {
+            AuditRecordId = original.AuditRecordId, SourceEventId = original.SourceEventId,
+            EventType = original.EventType, EventVersion = original.EventVersion,
+            OccurredAt = original.OccurredAt, RecordedAt = original.RecordedAt,
+            TenantId = original.TenantId, CorrelationId = original.CorrelationId,
+            ActorType = original.ActorType, ActorHash = "tampered-actor-hash",
+            Source = original.Source, EntityType = original.EntityType, EntityId = original.EntityId,
+            Payload = original.Payload,
+        });
+        var driftedService = new AuditIntegrityService(driftedRepo);
+        var driftedResult = await driftedService.VerifyAsync("t1", from, to, expectedHash: baseline.IntegrityHash);
+
+        Assert.True(driftedResult.HasMismatch, "ActorHash mutation must change the integrity hash");
+        Assert.NotEqual(baseline.IntegrityHash, driftedResult.IntegrityHash);
+    }
+
+    [Fact]
+    public async Task Verify_OccurredAtMutated_ProducesDifferentHash()
+    {
+        var from = DateTime.UtcNow.AddDays(-7);
+        var to = DateTime.UtcNow;
+        var occurredAt = DateTime.UtcNow.AddDays(-1);
+        var recordId = Guid.NewGuid();
+        var sourceId = Guid.NewGuid().ToString();
+
+        var original = BaseRecord(recordId, sourceId, "t1", occurredAt);
+        await repository.AppendAsync(original);
+        var baseline = await service.VerifyAsync("t1", from, to);
+
+        var driftedRepo = new InMemoryAuditRepository();
+        // Shift OccurredAt by one second — timestamp mutation must be detected
+        await driftedRepo.AppendAsync(new AuditRecord
+        {
+            AuditRecordId = original.AuditRecordId, SourceEventId = original.SourceEventId,
+            EventType = original.EventType, EventVersion = original.EventVersion,
+            OccurredAt = occurredAt.AddSeconds(1),  // mutated
+            RecordedAt = original.RecordedAt,
+            TenantId = original.TenantId, CorrelationId = original.CorrelationId,
+            ActorType = original.ActorType, ActorHash = original.ActorHash,
+            Source = original.Source, EntityType = original.EntityType, EntityId = original.EntityId,
+            Payload = original.Payload,
+        });
+        var driftedService = new AuditIntegrityService(driftedRepo);
+        var driftedResult = await driftedService.VerifyAsync("t1", from, to, expectedHash: baseline.IntegrityHash);
+
+        Assert.True(driftedResult.HasMismatch, "OccurredAt mutation must change the integrity hash");
+        Assert.NotEqual(baseline.IntegrityHash, driftedResult.IntegrityHash);
+    }
+
+    private async Task Append(string tenantId, DateTime occurredAt)
+        => await repository.AppendAsync(BaseRecord(Guid.NewGuid(), Guid.NewGuid().ToString(), tenantId, occurredAt));
+
+    private static AuditRecord BaseRecord(Guid recordId, string sourceId, string tenantId, DateTime occurredAt) =>
+        new()
+        {
+            AuditRecordId = recordId,
+            SourceEventId = sourceId,
             EventType = "booking.requestSubmitted",
             EventVersion = 1,
             OccurredAt = occurredAt,
             RecordedAt = occurredAt,
             TenantId = tenantId,
-            CorrelationId = $"corr-{tenantId}-{Guid.NewGuid():N}",
+            CorrelationId = $"corr-{tenantId}",
             ActorType = "employee",
+            ActorHash = "abc123",
             Source = "FPS.Booking",
             EntityType = "bookingRequest",
-            Payload = new JsonObject(),
-        });
-    }
+            EntityId = "req-1",
+            Payload = new JsonObject { ["amount"] = 10 },
+        };
 }
