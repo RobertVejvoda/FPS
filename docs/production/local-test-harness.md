@@ -42,14 +42,15 @@ Current local service URLs:
 | --- | --- |
 | Identity | `http://localhost:5192` |
 | Booking | `http://localhost:5131` |
+| Configuration | `http://localhost:5141` |
+| Audit | `http://localhost:5161` |
+| Reporting | `http://localhost:5171` |
 | Profile | `http://localhost:5197` |
 | Notification | `http://localhost:5157` |
 
-Configuration, Audit, and Reporting should be checked from their launch profiles before they are added to a scripted smoke path.
+Each runnable service has an `http` launch profile so plain `dotnet run --project ...` resolves to a stable port instead of the implicit Kestrel fallback. Avoid relying on port `5000`; on macOS this port may already be owned by Control Center, and multiple services would collide there.
 
-Avoid relying on implicit port `5000` for services without launch profiles. On macOS this port may already be owned by Control Center. Until each service has a launch profile or AppHost resource, pass an explicit HTTP URL when manually testing those services.
-
-Current smoke result from `2026-05-20`: Docker infrastructure is healthy, including Vault, RabbitMQ, and `whoami-dapr`. A direct backend service run currently hangs before binding a port at ASP.NET host creation. Treat this as the active `OPS006` blocker before mobile device retesting.
+Current smoke result from `2026-05-20`: Docker infrastructure is healthy, including Vault, RabbitMQ, and `whoami-dapr`. The service port collision has been narrowed to missing launch profiles on Configuration, Audit, and Reporting; those services now have stable local HTTP ports.
 
 Stop shared infrastructure:
 

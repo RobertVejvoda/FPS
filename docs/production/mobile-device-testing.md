@@ -83,6 +83,9 @@ Individual services can then be run from their projects when needed:
 ```sh
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
 dotnet run --project code/server/Booking/FPS.Booking.API/FPS.Booking.API.csproj
+dotnet run --project code/server/Configuration/FPS.Configuration/FPS.Configuration.csproj
+dotnet run --project code/server/Audit/FPS.Audit/FPS.Audit.csproj
+dotnet run --project code/server/Reporting/FPS.Reporting/FPS.Reporting.csproj
 dotnet run --project code/server/Profile/FPS.Profile/FPS.Profile.csproj
 dotnet run --project code/server/Notification/FPS.Notification/FPS.Notification.csproj
 ```
@@ -93,6 +96,9 @@ Current local service URLs:
 | --- | --- |
 | Identity | `http://localhost:5192` |
 | Booking | `http://localhost:5131` |
+| Configuration | `http://localhost:5141` |
+| Audit | `http://localhost:5161` |
+| Reporting | `http://localhost:5171` |
 | Profile | `http://localhost:5197` |
 | Notification | `http://localhost:5157` |
 
