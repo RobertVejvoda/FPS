@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { useSession } from '@/api/useSession';
@@ -16,6 +17,15 @@ export default function ProfileRoute() {
   const { apiBaseUrl, clearSession } = useAuth();
   const { state } = useSession();
   const { state: profileState, refresh } = useProfileSnapshot();
+
+  // Must be before any early return to satisfy Rules of Hooks.
+  // Redirects to login if the profile snapshot fetch finds the token has expired
+  // while the session check still passed (token expired mid-render cycle).
+  useEffect(() => {
+    if (profileState.kind === 'unauthenticated') {
+      clearSession().then(() => router.replace('/login'));
+    }
+  }, [profileState.kind, clearSession, router]);
 
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
@@ -72,6 +82,8 @@ export default function ProfileRoute() {
       />
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel="Sign out"
+        accessibilityHint="Clears your session and returns to the login screen"
         onPress={async () => {
           await clearSession();
           router.replace('/login');
@@ -230,8 +242,10 @@ const styles = StyleSheet.create({
   },
   signOut: {
     marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.danger,

@@ -122,6 +122,8 @@ export default function LoginRoute() {
         {configured ? (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Sign in"
+            accessibilityHint="Opens the identity provider login page"
             disabled={!canSignIn}
             onPress={() => {
               setStatus({ kind: 'loading' });
@@ -143,6 +145,8 @@ export default function LoginRoute() {
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Developer session"
+          accessibilityHint="Enter an API base URL and bearer token manually"
           onPress={() => router.push('/debug-session')}
           style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}
           testID="button-dev-session"
