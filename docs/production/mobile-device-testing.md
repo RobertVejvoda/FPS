@@ -43,7 +43,16 @@ npm run android
 npm run web
 ```
 
-For a physical phone, scan the Expo QR code and keep the phone on a network that can reach the API base URL. A phone cannot use the developer machine's `localhost`; use a LAN address such as `http://<dev-machine-ip>:<gateway-port>`, a tunnel, or a hosted demo URL.
+For a physical phone, scan the Expo QR code from Expo Go and keep the phone on a network that can reach the development machine. If the QR code does not scan or the phone cannot open it, restart Expo with an explicit host mode:
+
+```sh
+npm run start -- --lan --clear
+npm run start -- --tunnel --clear
+```
+
+Use `--lan` when the phone and development machine are on the same reachable network. Use `--tunnel` when Wi-Fi isolation, VPN, firewall rules, or multiple network adapters prevent the phone from reaching the LAN URL. If scanning still fails, use Expo Go's manual URL entry with the `exp://...` URL printed by Expo.
+
+A phone cannot use the developer machine's `localhost`; use a LAN address such as `http://<dev-machine-ip>:<gateway-port>`, a tunnel, or a hosted demo URL for backend API access.
 
 ## API Run Profile
 

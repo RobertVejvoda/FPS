@@ -34,6 +34,19 @@ npm run android        # Android emulator
 npm run web            # Web target
 ```
 
+If the QR code does not scan from a physical phone, start Expo with an explicit
+host mode:
+
+```sh
+npm run start -- --lan --clear
+npm run start -- --tunnel --clear
+```
+
+Use `--lan` when the phone and development machine are on the same reachable
+network. Use `--tunnel` when Wi-Fi isolation, VPN, firewall rules, or multiple
+network adapters prevent the phone from reaching the LAN URL. In Expo Go, use
+the manual URL entry if the QR itself is hard to scan.
+
 The app can use real OIDC login when the environment is configured, or a
 developer session for smoke testing. For developer sessions, paste an API base
 URL and a bearer token issued by a development Identity service. Values are
