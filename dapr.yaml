@@ -14,7 +14,12 @@
 version: 1
 common:
   resourcesPath: code/infrastructure/dapr/components/smoke
-  configFilePath: code/infrastructure/dapr/configuration/fps-config.yaml
+  # configFilePath is intentionally omitted for this smoke run.
+  # fps-config.yaml references http://zipkin:9411 which is only reachable inside
+  # the Docker network, not from host-based sidecar processes. Dapr defaults
+  # (mTLS disabled, no tracing export) are correct for local smoke testing.
+  # For durable local state with tracing: use components/local and add a
+  # configFilePath pointing to a local-host-compatible tracing endpoint.
   env:
     ASPNETCORE_ENVIRONMENT: Development
 

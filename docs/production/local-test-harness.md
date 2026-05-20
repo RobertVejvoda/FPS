@@ -161,9 +161,7 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 
 ## Mobile Testing Implication
 
-The mobile app expects one API base URL. The current baseline is enough for service-level checks, but it is not enough for a full mobile device pass because Identity, Booking, Notification, and Profile run on separate ports.
-
-For a full mobile pass, provide one gateway URL that routes:
+The mobile app expects one API base URL. The Envoy gateway added in OPS006B provides that URL at `http://localhost:10000`, routing all four mobile employee endpoints under one origin:
 
 | Mobile path | Target service |
 | --- | --- |
@@ -172,7 +170,9 @@ For a full mobile pass, provide one gateway URL that routes:
 | `/notifications` and notification actions | Notification |
 | `/profile/snapshot` | Profile |
 
-On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:<gateway-port>`, not `localhost`.
+OPS006C (this page) makes `/bookings` and `/notifications/unread-count` return `200` by pairing each service with a Dapr sidecar. `GET /profile/snapshot` returns `404` until profile domain data is seeded by OPS006D.
+
+On a physical phone, use the LAN IP of the development machine, not `localhost`: `http://<dev-machine-ip>:10000`.
 
 Use Expo LAN mode when the phone and development machine are on the same network:
 
