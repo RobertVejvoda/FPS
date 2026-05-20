@@ -37,7 +37,8 @@ export async function fetchAuditRecords(
     const res = await fetch(`${apiBaseUrl}/audit${query ? `?${query}` : ''}`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
-    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /audit returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as AuditListResponse };
   } catch (e) {
@@ -55,7 +56,8 @@ export async function erasePiiMapping(
       method: 'DELETE',
       headers: { Authorization: `Bearer ${bearerToken}` },
     });
-    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (res.ok) return { kind: 'ok', data: {} };
     return { kind: 'error', status: res.status, message: `DELETE /audit/pii-mappings returned ${res.status}` };
   } catch (e) {

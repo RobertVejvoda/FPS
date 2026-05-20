@@ -27,7 +27,8 @@ export async function fetchNotifications(
     const res = await fetch(`${apiBaseUrl}/notifications`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
-    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /notifications returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as NotificationListResponse };
   } catch (e) {
@@ -43,7 +44,8 @@ export async function fetchUnreadCount(
     const res = await fetch(`${apiBaseUrl}/notifications/unread-count`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
-    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /notifications/unread-count returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as { count: number } };
   } catch (e) {
@@ -61,7 +63,8 @@ export async function markNotificationRead(
       method: 'POST',
       headers: { Authorization: `Bearer ${bearerToken}` },
     });
-    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (res.ok) return { kind: 'ok', data: {} };
     return { kind: 'error', status: res.status, message: `POST /notifications/${notificationId}/read returned ${res.status}` };
   } catch (e) {

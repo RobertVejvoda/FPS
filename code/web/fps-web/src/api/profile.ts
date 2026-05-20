@@ -28,7 +28,8 @@ export async function fetchProfileSnapshot(
     const res = await fetch(`${apiBaseUrl}/profile/snapshot`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
-    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /profile/snapshot returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as ProfileSnapshot };
   } catch (e) {
