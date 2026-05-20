@@ -11,6 +11,9 @@ public sealed class UserProfile
     public bool ReservedSpaceEligible { get; init; }
     public IReadOnlyList<Vehicle> Vehicles { get; init; } = [];
     public string SnapshotVersion { get; init; } = string.Empty;
+    public DateTimeOffset UpdatedAt { get; init; } = DateTimeOffset.UtcNow;
+    // Source of the profile facts: "sso-claims", "admin-seed", "admin-entry", or "import".
+    public string FactSource { get; init; } = string.Empty;
 
     public bool IsActive => Status == ProfileStatus.Active;
     public IReadOnlyList<Vehicle> ActiveVehicles => Vehicles.Where(v => v.IsActive).ToList();
