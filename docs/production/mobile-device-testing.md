@@ -66,7 +66,7 @@ The mobile app expects one API base URL for employee endpoints such as:
 
 The preferred test profile is a demo or local gateway URL that exposes those endpoints under one origin and validates the same bearer token or OIDC session.
 
-Current local development has backend services on separate ports, and the checked-in infrastructure proxy is not yet a full mobile API gateway. That means a complete end-to-end phone test cannot be finished from only the individual service URLs. Until the gateway or hosted demo URL exists, use the mobile app for UI/device smoke and verify service behavior separately through backend/API tests.
+The local Envoy gateway (OPS006B) routes all mobile employee endpoints under one origin at `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (physical device). Full end-to-end mobile testing against the local backend is now possible. See the [Local Test Harness](./local-test-harness) gateway section for the full start sequence, smoke commands, and Linux notes.
 
 The local run path and preferred Aspire/AppHost direction are documented in the [Local Test Harness](./local-test-harness) page.
 

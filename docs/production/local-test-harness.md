@@ -107,7 +107,60 @@ For a full mobile pass, provide one gateway URL that routes:
 | `/notifications` and notification actions | Notification |
 | `/profile/snapshot` | Profile |
 
-On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:<gateway-port>`, not `localhost`.
+## Local Mobile API Gateway (OPS006B)
+
+The Envoy proxy in Docker Compose now routes all mobile employee endpoints under one origin.
+**Gateway URL (simulator/browser):** `http://localhost:10000`
+**Gateway URL (physical phone on same LAN):** `http://<dev-machine-ip>:10000`
+
+Start the gateway by starting Docker Compose — Envoy is already in `docker-compose.yaml`:
+
+```sh
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+```
+
+Gateway route table:
+
+| Mobile path | Target service |
+| --- | --- |
+| `GET /me` | Identity `localhost:5192` |
+| `/bookings` and booking actions | Booking `localhost:5131` |
+| `/notifications` and notification actions | Notification `localhost:5157` |
+| `/profile/snapshot` | Profile `localhost:5197` |
+
+Authorization headers pass through unchanged. The gateway does not mint or verify tokens.
+
+**Linux note:** `host.docker.internal` is not available by default. Add the following to the `envoy-proxy` service in `docker-compose.yaml`:
+
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+Or replace `host.docker.internal` with `172.17.0.1` in `code/infrastructure/envoy/envoy.yaml`.
+
+### Gateway smoke commands
+
+Run after `docker compose up`, `dev-setup-auth.sh`, `dev-env.sh`, and all four services:
+
+```sh
+TOKEN=$(./tools/dev-auth.sh employee1)
+
+# Should return 401 without token
+curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
+# Should return 200 with token
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
+# Should return 200 with token
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
+# Should return 200 with token
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+# Should return 200 with token
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
+```
+
+### Mobile session configuration
+
+On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:10000`, not `localhost`.
 
 Use Expo LAN mode when the phone and development machine are on the same network:
 
@@ -125,7 +178,7 @@ npm run start -- --tunnel --clear
 
 The developer session screen still requires both values:
 
-- API base URL: a single LAN-reachable gateway URL, not separate service ports;
+- API base URL: `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (phone);
 - bearer token: a local development token from `./tools/dev-auth.sh`.
 
 ## Preferred Next Harness
