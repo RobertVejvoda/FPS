@@ -137,6 +137,41 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         Assert.Equal("real-tenant", json.GetProperty("tenantId").GetString());
     }
 
+    [Fact]
+    public async Task GetMe_DeactivatedUser_Returns403()
+    {
+        // A deactivated user has a valid JWT (authenticated) but is denied by the default
+        // authorization policy (forbidden). 403 is correct; 401 would imply "not authenticated".
+        var store = factory.Services.GetRequiredService<FPS.SharedKernel.Identity.IDeactivatedUserStore>();
+        store.Deactivate("tenant-deactivated", "deactivated-user");
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("deactivated-user", "tenant-deactivated"));
+
+        var response = await client.GetAsync("/me");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        store.Reactivate("tenant-deactivated", "deactivated-user");
+    }
+
+    [Fact]
+    public async Task GetMe_ReactivatedUser_Returns200()
+    {
+        var store = factory.Services.GetRequiredService<FPS.SharedKernel.Identity.IDeactivatedUserStore>();
+        store.Deactivate("tenant-reactivate", "user-to-reactivate");
+        store.Reactivate("tenant-reactivate", "user-to-reactivate");
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("user-to-reactivate", "tenant-reactivate"));
+
+        var response = await client.GetAsync("/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     private static string CreateToken(string userId, string tenantId, params string[] roles)
         => CreateToken(userId, tenantId, DateTime.UtcNow.AddHours(1), roles);
 

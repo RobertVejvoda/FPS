@@ -40,6 +40,8 @@ public sealed class ProfileAdminController(
                 .Select(v => new Vehicle(v.VehicleId, v.LicensePlate, v.VehicleType, v.IsElectric, v.IsActive))
                 .ToList(),
             SnapshotVersion = "seed-v1",
+            FactSource = "admin-seed",
+            UpdatedAt = DateTimeOffset.UtcNow,
         };
 
         await repository.SaveAsync(profile, cancellationToken);

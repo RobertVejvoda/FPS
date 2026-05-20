@@ -1,7 +1,9 @@
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -194,6 +196,62 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
         var client = ClientWithToken("user-1", "tenant-1", "admin");
         var response = await client.PutAsync("/configuration/locations/loc-1/slots", JsonContent("""{"slots":[]}"""));
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    // Cross-service ID002 verification: TenantClaimsTransformation applies to Configuration too.
+
+    [Fact]
+    public async Task GetParkingPolicy_WithMappedIdpGroup_IsAcceptedAfterTenantRoleMapping()
+    {
+        // Configure tenant role mapping: idp_hr_group → hr_manager for tenant-mapped
+        var mappingFactory = factory.WithWebHostBuilder(b =>
+        {
+            b.UseEnvironment("Test");
+            b.ConfigureAppConfiguration((_, cfg) =>
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["TenantRoleMapping:tenant-mapped:idp_hr_group"] = "hr_manager",
+                }));
+            b.ConfigureTestServices(services =>
+                services.PostConfigureAll<JwtBearerOptions>(opts =>
+                {
+                    opts.Authority = null;
+                    opts.RequireHttpsMetadata = false;
+                    opts.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = false, ValidateAudience = false, ValidateLifetime = true,
+                        ClockSkew = TimeSpan.Zero, IssuerSigningKey = TestKey,
+                        RoleClaimType = ClaimTypes.Role, NameClaimType = ClaimTypes.NameIdentifier
+                    };
+                }));
+        });
+
+        // User token has raw IdP group "idp_hr_group" — not a native FPS role
+        var client = mappingFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("user-x", "tenant-mapped", "idp_hr_group"));
+
+        var response = await client.GetAsync("/configuration/parking-policy");
+
+        // Transformation maps idp_hr_group → hr_manager, which satisfies [Authorize(Roles = "hr_manager")]
+        Assert.True(
+            response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200 or 404 after role mapping, got {response.StatusCode}");
+    }
+
+    [Fact]
+    public async Task PutParkingPolicy_DeactivatedUser_Returns403()
+    {
+        var store = factory.Services.GetRequiredService<IDeactivatedUserStore>();
+        store.Deactivate("tenant-1", "deactivated-admin");
+
+        var client = ClientWithToken("deactivated-admin", "tenant-1", "admin");
+        var response = await client.PutAsync("/configuration/parking-policy", JsonContent(ValidPolicyBody()));
+
+        // Default policy rejects users with fps_deactivated=true even when they hold the right role
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        store.Reactivate("tenant-1", "deactivated-admin");
     }
 
     private HttpClient ClientWithToken(string userId, string tenantId, string role)
