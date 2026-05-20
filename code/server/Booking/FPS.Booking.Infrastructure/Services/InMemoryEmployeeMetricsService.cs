@@ -1,6 +1,7 @@
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.ValueObjects;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FPS.Booking.Infrastructure.Services;
 
@@ -8,13 +9,13 @@ namespace FPS.Booking.Infrastructure.Services;
 // Replace with MongoDB read-side when infrastructure test phase is complete.
 public sealed class InMemoryEmployeeMetricsService : IEmployeeMetricsService
 {
-    private readonly IPenaltyRepository penaltyRepository;
+    private readonly IServiceScopeFactory scopeFactory;
     private readonly Dictionary<string, List<DateOnly>> allocationHistory = new();
 
-    public InMemoryEmployeeMetricsService(IPenaltyRepository penaltyRepository)
+    public InMemoryEmployeeMetricsService(IServiceScopeFactory scopeFactory)
     {
-        ArgumentNullException.ThrowIfNull(penaltyRepository);
-        this.penaltyRepository = penaltyRepository;
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        this.scopeFactory = scopeFactory;
     }
 
     public async Task<IReadOnlyDictionary<string, EmployeeMetrics>> GetMetricsSnapshotAsync(
@@ -64,6 +65,8 @@ public sealed class InMemoryEmployeeMetricsService : IEmployeeMetricsService
         DateOnly asOfDate,
         CancellationToken cancellationToken = default)
     {
+        using var scope = scopeFactory.CreateScope();
+        var penaltyRepository = scope.ServiceProvider.GetRequiredService<IPenaltyRepository>();
         var penalties = await penaltyRepository.GetActiveByRequestorAsync(
             tenantId, requestorId, asOfDate, cancellationToken);
         return penalties.Where(p => p.ExpiryDate >= asOfDate).Sum(p => p.Score);

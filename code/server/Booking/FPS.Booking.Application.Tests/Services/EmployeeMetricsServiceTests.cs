@@ -1,4 +1,5 @@
 using FPS.Booking.Infrastructure.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FPS.Booking.Application.Tests.Services;
 
@@ -12,7 +13,11 @@ public sealed class EmployeeMetricsServiceTests
         penaltyRepo.Setup(r => r.GetActiveByRequestorAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PenaltyDto>());
-        sut = new InMemoryEmployeeMetricsService(penaltyRepo.Object);
+
+        var services = new ServiceCollection()
+            .AddScoped(_ => penaltyRepo.Object)
+            .BuildServiceProvider();
+        sut = new InMemoryEmployeeMetricsService(services.GetRequiredService<IServiceScopeFactory>());
     }
     private const string TenantId = "tenant-1";
     private const string RequestorId = "user-1";
