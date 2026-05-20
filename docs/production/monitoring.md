@@ -41,26 +41,37 @@ done
 
 Expected result when all services are up: each port returns `Healthy`.
 
-## OpenTelemetry Export
+## OpenTelemetry Export (Follow-Up Gap)
 
-FPS services emit OpenTelemetry-compatible traces and structured logs through ASP.NET Core's built-in instrumentation. To route telemetry to an OTLP-compatible collector, set these environment variables before starting services:
+FPS services use ASP.NET Core's built-in request logging (`ILogger`) which produces structured log output to stdout. This is visible in container logs and can be forwarded by any log shipper. However, OTLP trace and metric export requires the OpenTelemetry SDK and exporter packages to be registered in each service — this has not been added in this slice.
 
-```sh
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318   # OTLP/HTTP endpoint
-export OTEL_SERVICE_NAME=fps-booking                        # override per service
-export OTEL_TRACES_EXPORTER=otlp
-export OTEL_METRICS_EXPORTER=otlp
-export OTEL_LOGS_EXPORTER=otlp
-```
+**What this slice delivers:** `GET /health` endpoints on all services (implemented). Structured logs to stdout (built-in).
 
-For local tracing with Jaeger:
+**What a follow-up slice should add** to activate OTLP traces and metrics:
 
-```sh
-docker run -d -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-```
+1. Add NuGet packages to SharedKernel (or each service):
+   - `OpenTelemetry.Extensions.Hosting`
+   - `OpenTelemetry.Instrumentation.AspNetCore`
+   - `OpenTelemetry.Exporter.OpenTelemetryProtocol`
 
-For client production, point `OTEL_EXPORTER_OTLP_ENDPOINT` at the client's OpenTelemetry Collector. The collector routes to Dynatrace, Azure Monitor, Grafana, Splunk, or any OTLP-compatible backend. No application code change is needed when switching exporters.
+2. Register in each service `Program.cs`:
+   ```csharp
+   builder.Services.AddOpenTelemetry()
+       .WithTracing(b => b
+           .AddAspNetCoreInstrumentation()
+           .AddOtlpExporter())
+       .WithMetrics(b => b
+           .AddAspNetCoreInstrumentation()
+           .AddOtlpExporter());
+   ```
+
+3. Set env vars before starting services:
+   ```sh
+   export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+   export OTEL_SERVICE_NAME=fps-booking   # one per service
+   ```
+
+Once the SDK is registered, pointing `OTEL_EXPORTER_OTLP_ENDPOINT` at a client's OpenTelemetry Collector (Dynatrace, Azure Monitor, Grafana, Splunk, etc.) requires only a config change — no application code change.
 
 **Redaction:** configure the OTLP collector to drop `http.request.header.authorization` and similar credential-bearing attributes. See [Integration Evidence](./integration-evidence) for redaction guidance.
 

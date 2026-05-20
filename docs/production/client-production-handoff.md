@@ -62,7 +62,7 @@ See `docs/security/security-model.md` for the data classification and SSO-first 
 | Database | Private network access only. Connection string provided via Dapr secretstore, not environment variable. |
 | Message broker | Private network access. Credentials provided via Dapr secretstore. |
 | Secret store | Reachable from Dapr sidecars at runtime. Vault token or cloud credential via workload identity where supported. |
-| Observability | OTLP endpoint reachable from services. No sensitive data (tokens, passwords, PII) in telemetry labels. See `integration-secrets.md`. |
+| Observability | OTLP endpoint reachable from services. No sensitive data (tokens, passwords, PII) in telemetry labels. See [Integration Evidence](./integration-evidence). |
 | Admin access | Time-bound, audited, and restricted to named operators. No standing admin access to production data. |
 
 ## Backup And Restore Handoff
