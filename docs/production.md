@@ -55,7 +55,9 @@ FPS production runtime is expected to contain:
 
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
 - [Demo Environment Baseline](./production/demo-environment-baseline): OPS002 baseline for low-cost hosted demo scope, components, seed data, smoke tests, cost evidence, reset, and teardown.
-- [Local Test Harness](./production/local-test-harness): current local run instructions and preferred Aspire/AppHost direction for full-stack smoke testing.
+- [Client Production Handoff](./production/client-production-handoff): OPS003 responsibility split, Dapr component replacement boundaries, identity integration requirements, backup/restore handoff, release process, and client IT checklist.
+- [Integration Evidence](./production/integration-evidence): OPS005 safe credential handling and evidence boundaries for integration actors.
+- [Local Test Harness](./production/local-test-harness): current local run instructions and one-command harness for full-stack smoke testing.
 
 Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FPS.
 

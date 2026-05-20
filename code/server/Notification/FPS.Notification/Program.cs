@@ -1,6 +1,7 @@
 using FPS.Notification.Application;
 using FPS.Notification.Identity;
 using FPS.Notification.Infrastructure;
+using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddFpsHealthChecks();
 
 var app = builder.Build();
 
@@ -33,6 +35,7 @@ app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
+app.MapFpsHealthChecks();
 app.Run();
 
 public partial class Program { }

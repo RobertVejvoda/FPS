@@ -27,6 +27,43 @@ Client production examples include Dynatrace, Azure Monitor/Application Insights
 | Infrastructure | container restarts, CPU/memory, storage growth, cache health, broker health, Dapr sidecar health |
 | Security | privileged access, secret access, failed authorization, GDPR erasure requests, data export access |
 
+## Health Checks
+
+All FPS services expose `GET /health` returning a JSON body with overall status and per-check results:
+
+```sh
+# Smoke all service health endpoints after starting the local harness
+for port in 5192 5131 5197 5157 5161 5171 5141; do
+  status=$(curl -s http://localhost:$port/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['status'])" 2>/dev/null || echo "UNREACHABLE")
+  echo ":$port $status"
+done
+```
+
+Expected result when all services are up: each port returns `Healthy`.
+
+## OpenTelemetry Export
+
+FPS services emit OpenTelemetry-compatible traces and structured logs through ASP.NET Core's built-in instrumentation. To route telemetry to an OTLP-compatible collector, set these environment variables before starting services:
+
+```sh
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318   # OTLP/HTTP endpoint
+export OTEL_SERVICE_NAME=fps-booking                        # override per service
+export OTEL_TRACES_EXPORTER=otlp
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp
+```
+
+For local tracing with Jaeger:
+
+```sh
+docker run -d -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+```
+
+For client production, point `OTEL_EXPORTER_OTLP_ENDPOINT` at the client's OpenTelemetry Collector. The collector routes to Dynatrace, Azure Monitor, Grafana, Splunk, or any OTLP-compatible backend. No application code change is needed when switching exporters.
+
+**Redaction:** configure the OTLP collector to drop `http.request.header.authorization` and similar credential-bearing attributes. See [Integration Evidence](./integration-evidence) for redaction guidance.
+
 ## Open Source Monitoring
 
 Open source tools are the preferred local baseline and a valid client-production option when the client operates them:
