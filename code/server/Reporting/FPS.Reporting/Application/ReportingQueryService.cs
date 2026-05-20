@@ -15,6 +15,47 @@ public sealed class ReportingQueryService(IReportingQueryRepository repository)
         var items = await repository.QueryFairnessAsync(request, tenantId, cancellationToken);
         return new FairnessResponse(items.Select(FairnessEntry.From).ToList());
     }
+
+    public async Task<DashboardResponse> GetDashboardAsync(ReportingQueryRequest request, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
+
+        var totalDemand = items.Sum(m => m.DemandCount);
+        var totalAllocations = items.Sum(m => m.AllocationCount);
+        var totalRejections = items.Sum(m => m.RejectionCount);
+        var totalCancellations = items.Sum(m => m.CancellationCount);
+        var totalNoShows = items.Sum(m => m.NoShowCount);
+        var totalPenalties = items.Sum(m => m.PenaltyCount);
+        var overallRate = totalDemand > 0 ? (double)totalAllocations / totalDemand : 0.0;
+
+        var rejectionsByReason = items
+            .SelectMany(m => m.RejectionByReason)
+            .GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
+
+        var dailyTrend = items
+            .GroupBy(m => m.Date)
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                var demand = g.Sum(m => m.DemandCount);
+                var allocated = g.Sum(m => m.AllocationCount);
+                return new DailyTrendEntry(g.Key, demand, allocated,
+                    demand > 0 ? (double)allocated / demand : 0.0);
+            })
+            .ToList();
+
+        return new DashboardResponse(
+            totalDemand, totalAllocations, totalRejections,
+            totalCancellations, totalNoShows, totalPenalties,
+            overallRate, rejectionsByReason, dailyTrend);
+    }
+
+    public async Task<string> GetSummaryCsvAsync(ReportingQueryRequest request, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
+        return CsvExport.FromMetrics(items);
+    }
 }
 
 public sealed record ParkingMetricsSummary(
@@ -46,3 +87,46 @@ public sealed record FairnessEntry(string RequestorHash, int RequestCount, int A
 }
 
 public sealed record FairnessResponse(IReadOnlyList<FairnessEntry> Items);
+
+public sealed record DailyTrendEntry(string Date, int Demand, int Allocations, double AllocationRate);
+
+public sealed record DashboardResponse(
+    int TotalDemand,
+    int TotalAllocations,
+    int TotalRejections,
+    int TotalCancellations,
+    int TotalNoShows,
+    int TotalPenalties,
+    double OverallAllocationRate,
+    IReadOnlyDictionary<string, int> RejectionsByReason,
+    IReadOnlyList<DailyTrendEntry> DailyTrend);
+
+public static class CsvExport
+{
+    public static string FromMetrics(IEnumerable<ParkingMetrics> metrics)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Date,LocationId,TimeSlot,Demand,Allocations,AllocationRate,Rejections,Cancellations,NoShows,Penalties");
+        foreach (var m in metrics)
+        {
+            sb.AppendLine(string.Join(",",
+                Escape(m.Date), Escape(m.LocationId), Escape(m.TimeSlot),
+                m.DemandCount, m.AllocationCount,
+                m.AllocationRate.ToString("F4", System.Globalization.CultureInfo.InvariantCulture),
+                m.RejectionCount, m.CancellationCount, m.NoShowCount, m.PenaltyCount));
+        }
+        return sb.ToString();
+    }
+
+    private static string Escape(string value)
+    {
+        // Prefix formula-injection characters so spreadsheets don't execute them.
+        // Apostrophe causes Excel/Sheets to treat the cell as literal text.
+        if (value.Length > 0 && "=+-@\t\r".IndexOf(value[0]) >= 0)
+            value = "'" + value;
+
+        return value.Contains(',') || value.Contains('"') || value.Contains('\n')
+            ? $"\"{value.Replace("\"", "\"\"")}\""
+            : value;
+    }
+}
