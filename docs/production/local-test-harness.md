@@ -249,6 +249,52 @@ The developer session screen still requires both values:
 - API base URL: `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (phone);
 - bearer token: a local development token from `./tools/dev-auth.sh`.
 
+## Seeding Local Demo Data (OPS006D)
+
+After starting services (Identity + `dapr run -f dapr.yaml`), run the seed script once:
+
+```sh
+./tools/dev-seed.sh
+```
+
+This seeds Profile snapshots for `employee1`, `employee2`, and `employee3` by:
+1. Getting a ROPC token per user from local Keycloak.
+2. Decoding the JWT `sub` claim to get the Dapr/service user ID.
+3. Calling `PUT /profile/admin/snapshot` (Development-only endpoint) with synthetic profile facts.
+
+**Configuration** (tenant policy + 10 parking slots at `LOC-MAIN`) is seeded automatically by the Configuration service when it starts in `Development` mode.
+
+**Bookings** — empty list (`GET /bookings` → `200 []`) is the documented local baseline. Submit a booking via the mobile app or Booking API to create entries.
+
+**Notifications** — unread count `0` is the documented baseline. Events are published in-memory (smoke components) so booking submissions create notification records.
+
+### Seed demo data table
+
+| User | ParkingEligible | CompanyCar | Vehicle | Accessibility |
+| --- | --- | --- | --- | --- |
+| `employee1` | ✓ | — | Sedan ABC001 | — |
+| `employee2` | ✓ | ✓ | — | — |
+| `employee3` | ✓ | — | — | ✓ |
+
+### Reset / re-seed
+
+The seed script is idempotent — run it again after a service restart:
+
+```sh
+./tools/dev-seed.sh
+```
+
+### Post-seed smoke
+
+```sh
+TOKEN=$(./tools/dev-auth.sh employee1)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+```
+
+All three should return `200`.
+
 ## Preferred Next Harness
 
 The local identity and bearer-token path now exists through `OPS006A`. The next harness work should close the remaining full-stack gaps: seeded FPS domain data, one mobile API gateway/base URL, coordinated startup, and reset instructions.
