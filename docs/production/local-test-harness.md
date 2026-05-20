@@ -107,7 +107,65 @@ For a full mobile pass, provide one gateway URL that routes:
 | `/notifications` and notification actions | Notification |
 | `/profile/snapshot` | Profile |
 
-On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:<gateway-port>`, not `localhost`.
+## Local Mobile API Gateway (OPS006B)
+
+The Envoy proxy in Docker Compose now routes all mobile employee endpoints under one origin.
+**Gateway URL (simulator/browser):** `http://localhost:10000`
+**Gateway URL (physical phone on same LAN):** `http://<dev-machine-ip>:10000`
+
+Start the gateway by starting Docker Compose — Envoy is already in `docker-compose.yaml`:
+
+```sh
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+```
+
+Gateway route table:
+
+| Mobile path | Target service |
+| --- | --- |
+| `GET /me` | Identity `localhost:5192` |
+| `/bookings` and booking actions | Booking `localhost:5131` |
+| `/notifications` and notification actions | Notification `localhost:5157` |
+| `/profile/snapshot` | Profile `localhost:5197` |
+
+Authorization headers pass through unchanged. The gateway does not mint or verify tokens.
+
+**Linux note:** `host.docker.internal` is not available by default. Add the following to the `envoy-proxy` service in `docker-compose.yaml`:
+
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+Or replace `host.docker.internal` with `172.17.0.1` in `code/infrastructure/envoy/envoy.yaml`.
+
+### Gateway smoke commands
+
+Run after `docker compose up`, `dev-setup-auth.sh`, `dev-env.sh`, and all four services.
+
+**What passes today (gateway routing + auth passthrough):**
+
+```sh
+TOKEN=$(./tools/dev-auth.sh employee1)
+
+# Should return 401 without token
+curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
+# Should return 200 — gateway routes and bearer token is accepted
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
+# Should return 200 — Notification service uses in-memory storage
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+```
+
+**Known gaps (not yet unblocked by OPS006B):**
+
+- `GET /bookings` returns `500` when Booking is started with plain `dotnet run`. Booking uses Dapr state and pub/sub; it requires a running Dapr sidecar (`daprd`). This is resolved by the Aspire/AppHost harness (`OPS006`) or by running Booking inside the Dapr self-hosted environment.
+- `GET /profile/snapshot` returns `404` for `employee1` because no profile data has been seeded yet. Profile uses in-memory storage; a seed step is needed before this endpoint returns `200`.
+
+Full mobile E2E testing — where all four endpoints return valid data — requires OPS006 (coordinated startup with Dapr sidecars) and a domain seed step for Profile data. The gateway closes the routing gap; the remaining blockers are service orchestration and seed data.
+
+### Mobile session configuration
+
+On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:10000`, not `localhost`.
 
 Use Expo LAN mode when the phone and development machine are on the same network:
 
@@ -125,7 +183,7 @@ npm run start -- --tunnel --clear
 
 The developer session screen still requires both values:
 
-- API base URL: a single LAN-reachable gateway URL, not separate service ports;
+- API base URL: `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (phone);
 - bearer token: a local development token from `./tools/dev-auth.sh`.
 
 ## Preferred Next Harness
