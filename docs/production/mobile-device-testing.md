@@ -66,7 +66,7 @@ The mobile app expects one API base URL for employee endpoints such as:
 
 The preferred test profile is a demo or local gateway URL that exposes those endpoints under one origin and validates the same bearer token or OIDC session.
 
-The local Envoy gateway (OPS006B) routes all mobile employee endpoints under one origin at `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (physical device). Full end-to-end mobile testing against the local backend is now possible. See the [Local Test Harness](./local-test-harness) gateway section for the full start sequence, smoke commands, and Linux notes.
+The local Envoy gateway (OPS006B) routes all mobile employee endpoints under one origin at `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (physical device). This closes the routing gap — the mobile app can now be configured with a single API base URL. However, full E2E mobile testing still requires Dapr sidecars for Booking (plain `dotnet run` returns 500) and seeded profile data for `/profile/snapshot`. See the [Local Test Harness](./local-test-harness) gateway section for the current smoke commands, known gaps, and Linux notes.
 
 The local run path and preferred Aspire/AppHost direction are documented in the [Local Test Harness](./local-test-harness) page.
 

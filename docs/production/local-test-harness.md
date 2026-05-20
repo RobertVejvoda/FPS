@@ -141,22 +141,27 @@ Or replace `host.docker.internal` with `172.17.0.1` in `code/infrastructure/envo
 
 ### Gateway smoke commands
 
-Run after `docker compose up`, `dev-setup-auth.sh`, `dev-env.sh`, and all four services:
+Run after `docker compose up`, `dev-setup-auth.sh`, `dev-env.sh`, and all four services.
+
+**What passes today (gateway routing + auth passthrough):**
 
 ```sh
 TOKEN=$(./tools/dev-auth.sh employee1)
 
 # Should return 401 without token
 curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
-# Should return 200 with token
+# Should return 200 — gateway routes and bearer token is accepted
 curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
-# Should return 200 with token
-curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
-# Should return 200 with token
+# Should return 200 — Notification service uses in-memory storage
 curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
-# Should return 200 with token
-curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
 ```
+
+**Known gaps (not yet unblocked by OPS006B):**
+
+- `GET /bookings` returns `500` when Booking is started with plain `dotnet run`. Booking uses Dapr state and pub/sub; it requires a running Dapr sidecar (`daprd`). This is resolved by the Aspire/AppHost harness (`OPS006`) or by running Booking inside the Dapr self-hosted environment.
+- `GET /profile/snapshot` returns `404` for `employee1` because no profile data has been seeded yet. Profile uses in-memory storage; a seed step is needed before this endpoint returns `200`.
+
+Full mobile E2E testing — where all four endpoints return valid data — requires OPS006 (coordinated startup with Dapr sidecars) and a domain seed step for Profile data. The gateway closes the routing gap; the remaining blockers are service orchestration and seed data.
 
 ### Mobile session configuration
 
