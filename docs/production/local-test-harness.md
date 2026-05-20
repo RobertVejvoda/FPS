@@ -346,8 +346,8 @@ All four should return `200`.
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Script exits with "Wrong .NET SDK" | System dotnet resolves before `$HOME/.dotnet` | Prepend `$HOME/.dotnet` to `PATH` and retry |
-| Service port not ready (WARNING) | Dapr sidecar or service startup slow | Check `logs/local-harness/dapr-run.log`; retry with `./tools/start-local-harness.sh` after `./tools/stop-local-harness.sh` |
-| Seed step fails | Profile service not yet ready, or Keycloak realm missing | Wait 10 s and run `./tools/dev-seed.sh` manually |
+| Script exits non-zero with service port error | Dapr sidecar or service startup slow or crashed | Check `logs/local-harness/dapr-run.log`; run `./tools/stop-local-harness.sh` then retry |
+| Seed step fails (script exits non-zero) | Profile service not yet ready, or Keycloak realm missing | Services are still running — fix the cause and re-run `./tools/dev-seed.sh`, or run `./tools/stop-local-harness.sh` and restart |
 | `/bookings` returns 500 | Dapr sidecar not connected | Check `logs/local-harness/dapr-run.log` for sidecar startup errors |
 | Keycloak timeout | Keycloak container slow to initialise | Wait 30 s and retry; check `docker compose logs keycloak` |
 

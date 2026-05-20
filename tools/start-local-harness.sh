@@ -45,8 +45,20 @@ wait_port() {
     i=$((i + 1))
     sleep 2
   done
-  log "WARNING: $label (:$port) did not become ready in time — check $LOG_DIR/"
-  return 0
+  return 1
+}
+
+require_port() {
+  port="$1"
+  label="$2"
+  limit="${3:-60}"
+  logfile="${4:-$LOG_DIR/service.log}"
+  wait_port "$port" "$label" "$limit" || {
+    printf '[harness] ERROR: %s did not bind :%-4s within %ss\n' "$label" "$port" "$((limit * 2))" >&2
+    printf '[harness]   Check log: %s\n' "$logfile" >&2
+    printf '[harness]   Run: ./tools/stop-local-harness.sh\n' >&2
+    exit 1
+  }
 }
 
 # ── Prerequisites ─────────────────────────────────────────────────────────────
@@ -67,7 +79,7 @@ docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" up -d
 
 # ── Keycloak health ───────────────────────────────────────────────────────────
 
-wait_port 8180 "Keycloak" 60
+require_port 8180 "Keycloak" 60 "docker compose logs keycloak"
 
 # ── Auth setup ────────────────────────────────────────────────────────────────
 
@@ -85,7 +97,7 @@ cd "$REPO_ROOT"
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj \
   > "$LOG_DIR/identity.log" 2>&1 &
 echo "$!" >> "$PID_FILE"
-wait_port 5192 "Identity" 60
+require_port 5192 "Identity" 60 "$LOG_DIR/identity.log"
 
 # ── Six services with Dapr sidecars ───────────────────────────────────────────
 
@@ -95,17 +107,22 @@ cd "$REPO_ROOT"
 dapr run -f dapr.yaml > "$LOG_DIR/dapr-run.log" 2>&1 &
 echo "$!" >> "$PID_FILE"
 
-wait_port 5131 "Booking"       90
-wait_port 5157 "Notification"  90
-wait_port 5197 "Profile"       90
-wait_port 5161 "Audit"         90
-wait_port 5171 "Reporting"     90
-wait_port 5141 "Configuration" 90
+require_port 5131 "Booking"       90 "$LOG_DIR/dapr-run.log"
+require_port 5157 "Notification"  90 "$LOG_DIR/dapr-run.log"
+require_port 5197 "Profile"       90 "$LOG_DIR/dapr-run.log"
+require_port 5161 "Audit"         90 "$LOG_DIR/dapr-run.log"
+require_port 5171 "Reporting"     90 "$LOG_DIR/dapr-run.log"
+require_port 5141 "Configuration" 90 "$LOG_DIR/dapr-run.log"
 
 # ── Seed demo data ────────────────────────────────────────────────────────────
 
 log "Seeding demo profile data..."
-"$REPO_ROOT/tools/dev-seed.sh" || log "WARNING: seed step failed — run ./tools/dev-seed.sh manually"
+"$REPO_ROOT/tools/dev-seed.sh" || {
+  printf '[harness] ERROR: Seed step failed.\n' >&2
+  printf '[harness]   Services are running — fix the issue and re-run ./tools/dev-seed.sh\n' >&2
+  printf '[harness]   Or run ./tools/stop-local-harness.sh to clean up.\n' >&2
+  exit 1
+}
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 

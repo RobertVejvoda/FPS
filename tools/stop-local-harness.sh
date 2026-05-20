@@ -24,9 +24,21 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
-# Backstop: kill by process name pattern
-pkill -f "FPS.Identity" 2>/dev/null && log "Killed remaining Identity processes" || true
-pkill -f "daprd"        2>/dev/null && log "Killed remaining Dapr sidecar processes" || true
+# Kill all FPS service processes by name pattern.
+# dapr run -f dapr.yaml spawns one dotnet process per app plus one daprd sidecar per app.
+# Killing the tracked dapr-run PID sends SIGTERM to the dapr process but the child dotnet
+# processes may survive. Kill them explicitly by assembly/project name.
+for pattern in \
+  "FPS.Identity" \
+  "FPS.Booking.API" \
+  "FPS.Notification" \
+  "FPS.Profile" \
+  "FPS.Audit" \
+  "FPS.Reporting" \
+  "FPS.Configuration" \
+  "daprd"; do
+  pkill -f "$pattern" 2>/dev/null && log "Stopped $pattern processes" || true
+done
 
 # Stop Docker Compose
 if [ "${1:-}" = "--reset" ]; then
