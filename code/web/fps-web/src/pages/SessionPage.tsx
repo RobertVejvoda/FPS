@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 export function SessionPage() {
   const { apiBaseUrl, bearerToken, save, clear } = useAuth();
+  const navigate = useNavigate();
   const [urlInput, setUrlInput] = useState(apiBaseUrl);
   const [tokenInput, setTokenInput] = useState(bearerToken);
   const [error, setError] = useState('');
@@ -14,7 +16,7 @@ export function SessionPage() {
       return;
     }
     save(urlInput, tokenInput);
-    setError('');
+    navigate('/bookings');
   }
 
   return (
