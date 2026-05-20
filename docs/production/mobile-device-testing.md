@@ -19,7 +19,7 @@ Do not wait until the whole product is finished before testing on a device. Use 
 - Expo Go on a phone, or an iOS simulator / Android emulator.
 - Mobile dependencies installed from `code/mobile/fps-mobile`.
 - A single API base URL reachable from the device.
-- A valid OIDC login configuration or a short-lived development bearer token.
+- A valid OIDC login configuration or a development bearer token from `./tools/dev-auth.sh`.
 - Synthetic tenant, user, vehicle, booking, and notification data.
 
 Secret values, bearer tokens, and real user data must not be committed, pasted into issues, or captured in screenshots.
@@ -70,17 +70,19 @@ Current local development has backend services on separate ports, and the checke
 
 The local run path and preferred Aspire/AppHost direction are documented in the [Local Test Harness](./local-test-harness) page.
 
-Local infrastructure can be started for service-level verification. Create `fps_network` first if it does not already exist:
+Local infrastructure and demo auth can be started for service-level verification:
 
 ```sh
-cd code/infrastructure
-docker network create fps_network
-docker compose up -d
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+./tools/dev-setup-auth.sh
+source ./tools/dev-env.sh
+./tools/dev-auth.sh employee1
 ```
 
 Individual services can then be run from their projects when needed:
 
 ```sh
+source ./tools/dev-env.sh
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
 dotnet run --project code/server/Booking/FPS.Booking.API/FPS.Booking.API.csproj
 dotnet run --project code/server/Configuration/FPS.Configuration/FPS.Configuration.csproj
@@ -125,7 +127,9 @@ Use real OIDC login when the environment has a configured issuer, client ID, sco
 For developer smoke, use the Developer Session screen to paste:
 
 - API base URL;
-- short-lived development bearer token.
+- development bearer token from `./tools/dev-auth.sh employee1`.
+
+Available local users are `employee1`, `employee2`, `employee3`, and `hr-admin`. Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm.
 
 Clear the session after testing from the Profile screen or debug-session screen. Development token generation and seeded OIDC demo users should be documented before `MOB009` is accepted.
 
@@ -203,6 +207,5 @@ Pilot-grade mobile acceptance requires:
 
 - Provide a local or hosted API gateway URL that routes all mobile employee endpoints under one origin.
 - Add an Aspire AppHost or equivalent local harness for one-command full-stack smoke testing.
-- Document development token generation or seeded OIDC demo users.
 - Add a repeatable seed/reset command for the mobile demo data set.
 - Decide whether `MOB009` should include automated mobile component or end-to-end tests beyond TypeScript validation.

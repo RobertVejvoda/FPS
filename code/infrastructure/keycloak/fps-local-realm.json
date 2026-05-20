@@ -1,0 +1,136 @@
+{
+  "realm": "fps-local",
+  "enabled": true,
+  "displayName": "FPS Local Development",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "accessTokenLifespan": 3600,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "fps-mobile-dev",
+      "name": "FPS Mobile Dev",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "access.token.lifespan": "3600"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "tenant_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "user.attribute": "foo",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "fps-mobile-dev-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fps-mobile-dev",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "employee",
+        "description": "FPS employee — submit and manage own parking requests"
+      },
+      {
+        "name": "hr-admin",
+        "description": "HR or facility manager — view reports and manage configuration"
+      },
+      {
+        "name": "auditor",
+        "description": "Audit access — query audit records"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "employee1",
+      "enabled": true,
+      "email": "employee1@fps-local",
+      "firstName": "Alice",
+      "lastName": "Employee",
+      "attributes": {
+        "tenant_id": ["tenant-1"]
+      },
+      "realmRoles": ["employee"],
+      "credentials": []
+    },
+    {
+      "username": "employee2",
+      "enabled": true,
+      "email": "employee2@fps-local",
+      "firstName": "Bob",
+      "lastName": "CompanyCar",
+      "attributes": {
+        "tenant_id": ["tenant-1"]
+      },
+      "realmRoles": ["employee"],
+      "credentials": []
+    },
+    {
+      "username": "employee3",
+      "enabled": true,
+      "email": "employee3@fps-local",
+      "firstName": "Carol",
+      "lastName": "NoVehicle",
+      "attributes": {
+        "tenant_id": ["tenant-1"]
+      },
+      "realmRoles": ["employee"],
+      "credentials": []
+    },
+    {
+      "username": "hr-admin",
+      "enabled": true,
+      "email": "hr-admin@fps-local",
+      "firstName": "Demo",
+      "lastName": "HRAdmin",
+      "attributes": {
+        "tenant_id": ["tenant-1"]
+      },
+      "realmRoles": ["employee", "hr-admin"],
+      "credentials": []
+    }
+  ]
+}
