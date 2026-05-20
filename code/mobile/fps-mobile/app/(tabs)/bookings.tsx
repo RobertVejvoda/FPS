@@ -151,6 +151,21 @@ export default function BookingsRoute() {
         renderItem={({ item }) => (
           <BookingCard
             booking={item}
+            onPress={() => router.push({
+              pathname: '/booking/[requestId]',
+              params: {
+                requestId: item.requestId,
+                requestedDate: item.requestedDate,
+                timeSlotStart: item.timeSlotStart,
+                timeSlotEnd: item.timeSlotEnd,
+                locationId: item.locationId ?? '',
+                status: item.status,
+                reason: item.reason ?? '',
+                allocatedSlotId: item.allocatedSlotId ?? '',
+                createdAt: item.createdAt,
+                lastStatusChangedAt: item.lastStatusChangedAt,
+              },
+            })}
             onCancel={item.nextAction === 'cancel' ? () => handleCancel(item.requestId) : undefined}
             onConfirmUsage={item.nextAction === 'confirmUsage' ? () => handleConfirmUsage(item.requestId) : undefined}
             actionPending={pendingActionId === item.requestId}
