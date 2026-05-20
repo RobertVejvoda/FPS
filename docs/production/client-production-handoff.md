@@ -12,7 +12,7 @@ This page defines the responsibilities, boundaries, and checklist for handing FP
 | Secret management | Documents which secrets are required and how they are referenced through Dapr secretstore. | Provisions and rotates secrets in the client-approved secret store (Vault, Key Vault, AWS Secrets Manager, or equivalent). |
 | Infrastructure | Provides Docker Compose, Dapr component YAML templates, and sizing assumptions. | Provisions container hosting, databases, broker, cache, secret store, object storage, and networking. |
 | Database provisioning | Documents collection-per-tenant naming convention, required indexes, and backup/restore procedures. | Creates MongoDB databases, provisions collections, applies indexes, and manages backup schedules and retention. |
-| Observability | Instruments services with OpenTelemetry; documents required signals. | Configures OTLP collector/exporter for the client monitoring platform, defines alert thresholds, and owns operational dashboards. |
+| Observability | Provides health endpoints, safe logging guidance, and required signal definitions; OpenTelemetry SDK export remains a follow-up implementation gap. | Configures log shipping and, once implemented, OTLP collector/exporter for the client monitoring platform; defines alert thresholds and owns operational dashboards. |
 | Backup and restore | Provides restore runbooks and test procedures. | Schedules backups, tests restores, and owns the recovery time and recovery point targets for production. |
 | Release | Publishes release notes and migration guidance per release. | Decides when to apply releases, runs pre-release smoke checks in the client environment, and maintains rollback capability. |
 | Incident response | Available for escalation on application defects. | Owns first-line incident response, platform incidents, and client-specific data or access issues. |
@@ -62,7 +62,7 @@ See `docs/security/security-model.md` for the data classification and SSO-first 
 | Database | Private network access only. Connection string provided via Dapr secretstore, not environment variable. |
 | Message broker | Private network access. Credentials provided via Dapr secretstore. |
 | Secret store | Reachable from Dapr sidecars at runtime. Vault token or cloud credential via workload identity where supported. |
-| Observability | OTLP endpoint reachable from services. No sensitive data (tokens, passwords, PII) in telemetry labels. See [Integration Evidence](./integration-evidence). |
+| Observability | `/health` reachable from services. When OTLP export is implemented, telemetry must not include sensitive data (tokens, passwords, PII) in labels. See [Integration Evidence](./integration-evidence). |
 | Admin access | Time-bound, audited, and restricted to named operators. No standing admin access to production data. |
 
 ## Backup And Restore Handoff
@@ -99,7 +99,7 @@ Before going live with the first production tenant:
 - [ ] MongoDB databases provisioned with collection-per-tenant naming; indexes applied.
 - [ ] RabbitMQ or equivalent message broker configured and reachable.
 - [ ] `/health` endpoint reachable and returning `Healthy` for each service.
-- [ ] OpenTelemetry OTLP export configured and traces/metrics visible in the client monitoring platform.
+- [ ] Service health and stdout logs visible in client tooling; OpenTelemetry OTLP export added or explicitly accepted as a follow-up gap before production go-live.
 - [ ] Backup schedule configured; restore drill completed and evidenced.
 - [ ] HTTPS/TLS certificate applied to external ingress.
 - [ ] Dapr mTLS enabled in production component configuration.
