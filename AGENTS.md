@@ -110,7 +110,7 @@ Agents should use GitHub assignees as the primary ownership signal for assignabl
 - Copilot should work only on issue cards assigned to Copilot. Copilot candidates should remain mechanical, file-bounded, and explicit about expected files and validation.
 - `ready-to-implement` is optional and secondary; `Status = Ready` plus assignee is the preferred readiness signal.
 - `copilot` is optional and secondary; assignment to Copilot is the durable signal.
-- `needs-claude-action` means the GitHub Actions router should prepare a Claude handoff. The router removes this label after posting the handoff so the same issue or PR can be routed again later.
+- `needs-claude-action` means the GitHub Actions router should prepare a Claude handoff. The router claims and removes this label before posting the handoff so duplicate workflow events do not create duplicate prompts, and the same issue or PR can be routed again later.
 - `claude-ready` is legacy and should not be used for new routing. A direct handoff comment plus assignment/status is the durable signal. If present, the router removes it automatically when the issue or PR closes.
 - `needs-codex-review` means Codex should review or validate next.
 - `blocked-question` means no implementer should continue until Codex/Robert answers the concrete blocker.

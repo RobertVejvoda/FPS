@@ -255,6 +255,12 @@ jobs:
           handoff_file="$RUNNER_TEMP/claude-issue-handoff.md"
           issue_json="$RUNNER_TEMP/claude-issue-context.json"
 
+          if ! gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
+              --remove-label needs-claude-action; then
+            echo "needs-claude-action was already removed; skipping duplicate handoff"
+            exit 0
+          fi
+
           gh issue view "$ISSUE_NUMBER" --repo "$GH_REPO" \
             --json title,url,body,labels,comments \
             > "$issue_json"
@@ -264,7 +270,7 @@ jobs:
           Automated Claude handoff prepared. No Anthropic API call was made.
 
           Use this prompt only when a human decides the task is worth spending Claude tokens.
-          After this comment is posted, the router removes needs-claude-action.
+          The router claimed and removed needs-claude-action before posting this comment.
           Assign the Claude agent through the GitHub Web UI when ready to start implementation.
 
           ```text
@@ -294,8 +300,6 @@ jobs:
           } > "$handoff_file"
 
           gh issue comment "$ISSUE_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
-          gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
-            --remove-label needs-claude-action
 
   route-claude-pr:
     name: Prepare Claude pull request handoff
@@ -315,6 +319,12 @@ jobs:
           pr_json="$RUNNER_TEMP/claude-pr-context.json"
           review_comments_json="$RUNNER_TEMP/claude-pr-review-comments.json"
 
+          if ! gh pr edit "$PR_NUMBER" --repo "$GH_REPO" \
+              --remove-label needs-claude-action; then
+            echo "needs-claude-action was already removed; skipping duplicate handoff"
+            exit 0
+          fi
+
           gh pr view "$PR_NUMBER" --repo "$GH_REPO" \
             --json title,url,body,headRefName,baseRefName,labels,comments,reviews,files \
             > "$pr_json"
@@ -326,7 +336,7 @@ jobs:
           Automated Claude handoff prepared. No Anthropic API call was made.
 
           Use this prompt only when a human decides the PR repair is worth spending Claude tokens.
-          After this comment is posted, the router removes needs-claude-action.
+          The router claimed and removed needs-claude-action before posting this comment.
           Assignment and project Status are the durable ownership signals.
 
           ```text
@@ -375,5 +385,3 @@ jobs:
           } > "$handoff_file"
 
           gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body-file "$handoff_file"
-          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" \
-            --remove-label needs-claude-action
