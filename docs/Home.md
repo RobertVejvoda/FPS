@@ -11,7 +11,7 @@ FPS replaces manual email and spreadsheet coordination with a transparent bookin
 
 FPS is being built as a documentation-led product. The parking product is the first concrete reservation domain; the same pattern could later support other scarce workplace resources such as desks, chairs, or seats, but only after parking v1 is stable.
 
-The implemented backend now covers Booking, Identity/Profile context, Notification, Audit, Reporting read models, and Configuration policy/slot management. The mobile employee flow covers login, booking submission, booking actions, and My Bookings. The next product direction is demo readiness, mobile completion, web/admin surfaces, client-owned deployment guidance, and production operations.
+The implemented backend now covers Booking, Identity/Profile context, Notification, Audit, Reporting read models, and Configuration policy/slot management. The mobile employee flow covers login, booking submission, booking actions, My Bookings, notifications, profile details, allocation status, and demo/pilot polish. The next product direction is repeatable local testing, client-evaluation features, web/admin surfaces, client-owned deployment guidance, and production operations.
 
 This site is the product and business-facing view of FPS: problem, goals, actors, policy model, architecture summary, trust story, roadmap, and demo/evaluation narrative. Detailed implementation notes, delivery board mechanics, agent routing, tooling, and runbooks belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki).
 
@@ -36,7 +36,7 @@ This site is the product and business-facing view of FPS: problem, goals, actors
 - Reporting supports tenant-scoped parking summary and fairness read models.
 - Configuration supports admin/HR-managed tenant policy, location override, and slot/capacity APIs.
 - OpenAPI and generated TypeScript client contracts support web and React Native clients.
-- The React Native + Expo mobile app has the current employee self-service foundation.
+- The React Native + Expo mobile app has the current employee self-service path for demo/pilot evaluation.
 
 ## Reader Paths
 

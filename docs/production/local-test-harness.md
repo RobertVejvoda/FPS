@@ -157,7 +157,7 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
 ```
 
-`GET /profile/snapshot` still returns `404` for `employee1` until profile domain data is seeded (OPS006D).
+`GET /profile/snapshot` returns `200` for seeded demo users after running the OPS006D seed script. Run `./tools/dev-seed.sh` after the services are started.
 
 ## Mobile Testing Implication
 
@@ -222,9 +222,9 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 **Full mobile E2E sequence:**
 
 - OPS006C (this page) resolves the Booking sidecar gap. `GET /bookings` returns `200` when Booking is started through `dapr run -f dapr.yaml` instead of plain `dotnet run`.
-- `GET /profile/snapshot` returns `404` for `employee1` until profile domain data is seeded by OPS006D.
+- OPS006D resolves the profile seed gap. `GET /profile/snapshot` returns `200` for `employee1`, `employee2`, and `employee3` after `./tools/dev-seed.sh`.
 
-Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap.
+Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap. The remaining OPS006 parent work is coordinated startup and health/log visibility through an AppHost or equivalent harness.
 
 ### Mobile session configuration
 
@@ -297,7 +297,7 @@ All three should return `200`.
 
 ## Preferred Next Harness
 
-The local identity and bearer-token path now exists through `OPS006A`. The next harness work should close the remaining full-stack gaps: seeded FPS domain data, one mobile API gateway/base URL, coordinated startup, and reset instructions.
+The local identity and bearer-token path exists through `OPS006A`, the gateway through `OPS006B`, the Dapr sidecar run path through `OPS006C`, and synthetic seed/reset through `OPS006D`. The remaining harness work is coordinated startup and diagnostics: one command or AppHost entrypoint that starts or references dependencies, launches services with sidecars/gateway, and makes health/log status visible.
 
 Implemented `OPS006A` local auth sequence:
 
@@ -309,7 +309,7 @@ source ./tools/dev-env.sh
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
 ```
 
-After `OPS006A`, add a local AppHost slice when implementation work is scheduled. .NET Aspire is the preferred candidate because the server stack is already .NET and the system needs coordinated local startup, logs, health, and dependency visibility. Treat Aspire as a developer/test harness, not as the client production deployment decision.
+Add a local AppHost slice when implementation work is scheduled. .NET Aspire is the preferred candidate because the server stack is already .NET and the system needs coordinated local startup, logs, health, and dependency visibility. Treat Aspire as a developer/test harness, not as the client production deployment decision.
 
 The first useful AppHost should:
 
