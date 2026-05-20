@@ -11,7 +11,7 @@
 #   ./tools/dev-seed.sh --reset   (re-seeds; safe to run multiple times)
 #
 # Seeded data:
-#   - Profile snapshots for employee1, employee2, employee3 via GET /me + POST /profile/admin/snapshot
+#   - Profile snapshots for employee1, employee2, employee3 via GET /me + PUT /profile/admin/snapshot
 #   - Configuration (policy + slots) is seeded automatically by Configuration service on startup
 #   - Bookings: empty list is the documented baseline (GET /bookings returns 200 [])
 #   - Notifications: empty is the documented baseline (unread-count returns 0)
