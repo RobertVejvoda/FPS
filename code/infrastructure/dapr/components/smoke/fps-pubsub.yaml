@@ -1,0 +1,9 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: fps-pubsub
+spec:
+  type: pubsub.in-memory
+  version: v1
+# Smoke-test only. Events are not durable and are lost on restart.
+# Use local/ components for full state/pubsub behaviour with Docker dependencies.
