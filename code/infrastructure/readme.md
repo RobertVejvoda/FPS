@@ -57,37 +57,30 @@ This will start the following services:
 
 ---
 
-## Step 3: Configure Vault for Secrets Management
+## Step 3: Configure Vault for Local Secrets
 
-Vault is used to securely store credentials for Dapr components. Follow these steps to set up Vault:
+The local Docker Compose profile runs Vault in development mode for repeatable local testing. This is not a production Vault setup. Demo and client-owned environments must use a real secret-management setup and must not reuse the local token.
 
-1. **Access Vault**:
+1. **Access Vault UI**:
    - Open your browser and navigate to `http://localhost:8200`.
    - Use the token `dev-only-token` to log in.
 
-2. **Enable KV Secrets Engine**:
-   Run the following command to enable the KV secrets engine:
-
-   ```bash
-   vault secrets enable -path=secret kv
-   ```
-
-3. **Store Secrets**:
-   Add the required secrets for Dapr components:
-
+2. **Configure the local Vault CLI session**:
 
 ```bash
 export VAULT_ADDR=http://127.0.0.1:8200
 export VAULT_TOKEN=dev-only-token
 ```
 
-or persist in file...
+For convenience on a local-only development machine:
 
 ```bash
 echo 'export VAULT_ADDR=http://127.0.0.1:8200' >> ~/.zshrc
 echo 'export VAULT_TOKEN=dev-only-token' >> ~/.zshrc
 source ~/.zshrc
 ```
+
+3. **Store local component secrets**:
 
 ```bash
 vault kv put secret/vault-token token="dev-only-token"
@@ -106,21 +99,11 @@ vault status
 
 ---
 
-## Persisting Vault Data
+## Vault Persistence
 
-To ensure that Vault data is not lost when the container restarts, the `vault` service is configured to use the `file` storage backend. The data is stored in the `./vault/data` directory on the host machine.
+Local Vault runs in development mode. Secrets are local-only and may need to be re-seeded after the Vault container is recreated. The checked-in `vault/config/vault-config.json` is retained for future non-dev local experiments, but it is not mounted by the default Docker Compose profile because the official Vault entrypoint already loads `/vault/config` automatically.
 
-### Steps to Verify Persistence
-
-1. **Store a Secret**:
-   Use the Vault CLI to store a secret:
-
-   ```bash
-   export VAULT_ADDR=http://127.0.0.1:8200
-   export VAULT_TOKEN=root
-
-   vault kv put secret/test-key value="test-value"
-   ```
+If you switch away from dev mode, do not pass both `server` and an explicit `-config=/vault/config/...` argument while also mounting config under `/vault/config`; that loads the listener twice and fails with `bind: address already in use`.
 
 ---
 
@@ -211,6 +194,8 @@ See `../../docs/production/local-test-harness.md` for:
   ```bash
   docker logs <container-id>
   ```
+
+  The `whoami-dapr` sidecar is only a local Dapr smoke service. Application components such as `fps-pubsub` and `s3store` are scoped to the real FPS service app IDs so the sample sidecar does not require RabbitMQ or MinIO credentials.
 
 - **RabbitMQ Connection Issues**:
   Verify that the RabbitMQ container is running and accessible at `http://localhost:15672`.

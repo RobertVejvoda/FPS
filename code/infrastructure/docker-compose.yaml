@@ -17,6 +17,7 @@ services:
 
   whoami-dapr:
     image: "daprio/daprd:1.14.4"
+    restart: unless-stopped
     command: [
       "./daprd",
       "-app-id", "whoami",
@@ -30,7 +31,12 @@ services:
       - "./dapr/components/local:/components"
       - "./dapr/configuration/:/configuration"
     depends_on:
-      - whoami
+      whoami:
+        condition: service_started
+      vault:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     network_mode: "service:whoami"
 
 
@@ -47,12 +53,15 @@ services:
       - VAULT_API_ADDR=http://0.0.0.0:8200
       - VAULT_ADDRESS=http://0.0.0.0:8200
     volumes:
-      - ./vault/config/vault-config.json:/vault/config/vault-config.json
       - vault_data:/vault/data
-    # command: server -dev
-    # Using -dev mode first for testing
-    # Later you can switch back to:
-    command: server -config=/vault/config/vault-config.json    
+    # Local dev mode matches the checked-in Dapr local component token.
+    # Do not mount /vault/config in dev mode, or the listener is loaded twice.
+    command: server -dev -dev-root-token-id=dev-only-token -dev-listen-address=0.0.0.0:8200
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   minio:
     image: minio/minio
@@ -91,6 +100,11 @@ services:
       - RABBITMQ_DEFAULT_PASS=admin
     networks:
       - web
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     
 
   mongodb:

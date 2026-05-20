@@ -2,6 +2,11 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: fps-pubsub
+scopes:
+- fps-booking
+- fps-notification
+- fps-audit
+- fps-reporting
 spec:
   type: pubsub.rabbitmq
   version: v1

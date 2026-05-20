@@ -2,6 +2,8 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: s3store
+scopes:
+- fps-reporting
 spec:
   type: bindings.aws.s3
   version: v1
