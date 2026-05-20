@@ -8,8 +8,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-builder.Services.AddSingleton<ITenantRoleMapper, ConfiguredTenantRoleMapper>();
-builder.Services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
 builder.Services.AddLogging();
 builder.Services.AddHttpClient();
 builder.Services.AddOpenApi("v1", options =>
@@ -52,7 +50,7 @@ builder.Services.AddAuthentication("Bearer")
         options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
 

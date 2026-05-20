@@ -138,9 +138,11 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
     }
 
     [Fact]
-    public async Task GetMe_DeactivatedUser_Returns401()
+    public async Task GetMe_DeactivatedUser_Returns403()
     {
-        var store = factory.Services.GetRequiredService<FPS.Identity.Identity.IDeactivatedUserStore>();
+        // A deactivated user has a valid JWT (authenticated) but is denied by the default
+        // authorization policy (forbidden). 403 is correct; 401 would imply "not authenticated".
+        var store = factory.Services.GetRequiredService<FPS.SharedKernel.Identity.IDeactivatedUserStore>();
         store.Deactivate("tenant-deactivated", "deactivated-user");
 
         var client = factory.CreateClient();
@@ -149,7 +151,7 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
 
         var response = await client.GetAsync("/me");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
         store.Reactivate("tenant-deactivated", "deactivated-user");
     }
@@ -157,7 +159,7 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task GetMe_ReactivatedUser_Returns200()
     {
-        var store = factory.Services.GetRequiredService<FPS.Identity.Identity.IDeactivatedUserStore>();
+        var store = factory.Services.GetRequiredService<FPS.SharedKernel.Identity.IDeactivatedUserStore>();
         store.Deactivate("tenant-reactivate", "user-to-reactivate");
         store.Reactivate("tenant-reactivate", "user-to-reactivate");
 

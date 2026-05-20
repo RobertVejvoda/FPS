@@ -1,4 +1,3 @@
-using FPS.Identity.Identity;
 using FPS.Identity.Models;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -9,7 +8,7 @@ namespace FPS.Identity.Controllers;
 [ApiController]
 [Route("me")]
 [Authorize]
-public sealed class MeController(ICurrentUser currentUser, IDeactivatedUserStore deactivatedUsers) : ControllerBase
+public sealed class MeController(ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet(Name = "GetCurrentUser")]
     [ProducesResponseType(typeof(MeResponse), StatusCodes.Status200OK)]
@@ -17,9 +16,6 @@ public sealed class MeController(ICurrentUser currentUser, IDeactivatedUserStore
     public IActionResult Get()
     {
         if (string.IsNullOrEmpty(currentUser.UserId) || string.IsNullOrEmpty(currentUser.TenantId))
-            return Unauthorized();
-
-        if (deactivatedUsers.IsDeactivated(currentUser.TenantId, currentUser.UserId))
             return Unauthorized();
 
         return Ok(new MeResponse(currentUser.UserId, currentUser.TenantId, currentUser.Roles));

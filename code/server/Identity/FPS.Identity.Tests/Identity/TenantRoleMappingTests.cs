@@ -1,4 +1,4 @@
-using FPS.Identity.Identity;
+using FPS.SharedKernel.Identity;
 using Microsoft.Extensions.Configuration;
 
 namespace FPS.Identity.Tests.Identity;

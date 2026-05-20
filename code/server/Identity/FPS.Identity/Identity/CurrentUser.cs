@@ -10,7 +10,7 @@ public sealed class CurrentUser : ICurrentUser
     public IReadOnlyList<string> Roles { get; }
     public bool IsAuthenticated { get; }
 
-    public CurrentUser(IHttpContextAccessor httpContextAccessor, ITenantRoleMapper roleMapper)
+    public CurrentUser(IHttpContextAccessor httpContextAccessor)
     {
         var principal = httpContextAccessor.HttpContext?.User;
         IsAuthenticated = principal?.Identity?.IsAuthenticated ?? false;
@@ -21,10 +21,8 @@ public sealed class CurrentUser : ICurrentUser
 
         TenantId = principal?.FindFirstValue("tenant_id") ?? string.Empty;
 
-        var rawRoles = principal?.FindAll(ClaimTypes.Role).Select(c => c.Value) ?? [];
-        Roles = string.IsNullOrEmpty(TenantId)
-            ? []
-            : roleMapper.MapToRoles(TenantId, rawRoles);
+        // Roles are already mapped by TenantClaimsTransformation before authorization runs.
+        Roles = principal?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList() ?? [];
     }
 
     public bool IsInRole(string role) => Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
