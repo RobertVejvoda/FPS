@@ -1,6 +1,7 @@
 using FPS.Profile.Application;
 using FPS.Profile.Identity;
 using FPS.Profile.Infrastructure;
+using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -51,6 +52,7 @@ builder.Services.AddAuthentication("Bearer")
         options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
     });
 
+builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -60,6 +62,7 @@ app.MapScalarApiReference(options => options.WithTitle("Profile API"));
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapFpsHealthChecks();
 app.Run();
 
 public partial class Program { }

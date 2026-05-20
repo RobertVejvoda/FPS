@@ -27,6 +27,54 @@ Client production examples include Dynatrace, Azure Monitor/Application Insights
 | Infrastructure | container restarts, CPU/memory, storage growth, cache health, broker health, Dapr sidecar health |
 | Security | privileged access, secret access, failed authorization, GDPR erasure requests, data export access |
 
+## Health Checks
+
+All FPS services expose `GET /health` returning a JSON body with overall status and per-check results:
+
+```sh
+# Smoke all service health endpoints after starting the local harness
+for port in 5192 5131 5197 5157 5161 5171 5141; do
+  status=$(curl -s http://localhost:$port/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['status'])" 2>/dev/null || echo "UNREACHABLE")
+  echo ":$port $status"
+done
+```
+
+Expected result when all services are up: each port returns `Healthy`.
+
+## OpenTelemetry Export (Follow-Up Gap)
+
+FPS services use ASP.NET Core's built-in request logging (`ILogger`) which produces structured log output to stdout. This is visible in container logs and can be forwarded by any log shipper. However, OTLP trace and metric export requires the OpenTelemetry SDK and exporter packages to be registered in each service — this has not been added in this slice.
+
+**What this slice delivers:** `GET /health` endpoints on all services (implemented). Structured logs to stdout (built-in).
+
+**What a follow-up slice should add** to activate OTLP traces and metrics:
+
+1. Add NuGet packages to SharedKernel (or each service):
+   - `OpenTelemetry.Extensions.Hosting`
+   - `OpenTelemetry.Instrumentation.AspNetCore`
+   - `OpenTelemetry.Exporter.OpenTelemetryProtocol`
+
+2. Register in each service `Program.cs`:
+   ```csharp
+   builder.Services.AddOpenTelemetry()
+       .WithTracing(b => b
+           .AddAspNetCoreInstrumentation()
+           .AddOtlpExporter())
+       .WithMetrics(b => b
+           .AddAspNetCoreInstrumentation()
+           .AddOtlpExporter());
+   ```
+
+3. Set env vars before starting services:
+   ```sh
+   export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+   export OTEL_SERVICE_NAME=fps-booking   # one per service
+   ```
+
+Once the SDK is registered, pointing `OTEL_EXPORTER_OTLP_ENDPOINT` at a client's OpenTelemetry Collector (Dynatrace, Azure Monitor, Grafana, Splunk, etc.) requires only a config change — no application code change.
+
+**Redaction:** configure the OTLP collector to drop `http.request.header.authorization` and similar credential-bearing attributes. See [Integration Evidence](./integration-evidence) for redaction guidance.
+
 ## Open Source Monitoring
 
 Open source tools are the preferred local baseline and a valid client-production option when the client operates them:

@@ -1,6 +1,7 @@
 using Dapr.Client;
 using FPS.Booking.API.Identity;
 using FPS.Booking.Infrastructure;
+using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -52,6 +53,7 @@ builder.Services.AddAuthentication("Bearer")
         options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
     });
 
+builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -64,6 +66,7 @@ app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
+app.MapFpsHealthChecks();
 app.Run();
 
 public partial class Program { }

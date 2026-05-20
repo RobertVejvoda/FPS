@@ -2,6 +2,7 @@ using FPS.Configuration.Application;
 using FPS.Configuration.Domain;
 using FPS.Configuration.Identity;
 using FPS.Configuration.Infrastructure;
+using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,7 @@ builder.Services.AddAuthentication("Bearer")
         options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
     });
 
+builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -89,6 +91,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+app.MapFpsHealthChecks();
 app.Run();
 
 public partial class Program { }
