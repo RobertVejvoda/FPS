@@ -9,15 +9,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers().AddDapr();
 builder.Services.AddHttpContextAccessor();
 
-// Share the same in-memory instance for both append and query interfaces.
+// Share the same in-memory instance for append, query, and retention interfaces.
 var inMemoryAuditRepo = new InMemoryAuditRepository();
 builder.Services.AddSingleton<IAuditRepository>(inMemoryAuditRepo);
 builder.Services.AddSingleton<IAuditQueryRepository>(inMemoryAuditRepo);
+builder.Services.AddSingleton<IAuditRetentionRepository>(inMemoryAuditRepo);
 builder.Services.AddSingleton<IPiiMappingRepository, InMemoryPiiMappingRepository>();
 
 builder.Services.AddScoped<BookingEventAuditHandler>();
 builder.Services.AddScoped<AuditQueryService>();
 builder.Services.AddScoped<PiiErasureService>();
+builder.Services.AddScoped<AuditRetentionService>();
+builder.Services.AddScoped<AuditIntegrityService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 builder.Services.AddAuthentication("Bearer")

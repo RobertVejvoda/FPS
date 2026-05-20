@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 namespace FPS.Audit.Infrastructure;
 
 // Phase 1 stub — replace with MongoDB append-only collection.
-public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepository
+public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepository, IAuditRetentionRepository
 {
     private readonly ConcurrentDictionary<string, AuditRecord> store = new();
 
@@ -38,5 +38,37 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
             .ToList();
 
         return Task.FromResult(((IReadOnlyList<AuditRecord>)items, totalCount));
+    }
+
+    public Task<int> CountOlderThanAsync(string tenantId, DateTime cutoff, CancellationToken cancellationToken = default)
+    {
+        var count = store.Values.Count(r => r.TenantId == tenantId && r.OccurredAt < cutoff);
+        return Task.FromResult(count);
+    }
+
+    public Task<int> DeleteOlderThanAsync(string tenantId, DateTime cutoff, CancellationToken cancellationToken = default)
+    {
+        var toDelete = store.Values
+            .Where(r => r.TenantId == tenantId && r.OccurredAt < cutoff)
+            .Select(r => r.SourceEventId)
+            .ToList();
+
+        foreach (var id in toDelete)
+            store.TryRemove(id, out _);
+
+        return Task.FromResult(toDelete.Count);
+    }
+
+    public Task<IReadOnlyList<AuditRecord>> GetRangeAsync(
+        string tenantId, DateTime from, DateTime to, int maxRecords, CancellationToken cancellationToken = default)
+    {
+        var records = store.Values
+            .Where(r => r.TenantId == tenantId && r.OccurredAt >= from && r.OccurredAt <= to)
+            .OrderBy(r => r.OccurredAt)
+            .ThenBy(r => r.AuditRecordId)
+            .Take(maxRecords)
+            .ToList();
+
+        return Task.FromResult((IReadOnlyList<AuditRecord>)records);
     }
 }
