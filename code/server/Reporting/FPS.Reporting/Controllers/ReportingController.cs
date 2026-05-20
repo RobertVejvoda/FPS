@@ -29,6 +29,26 @@ public sealed class ReportingController(ReportingQueryService queryService, ICur
         var result = await queryService.GetFairnessAsync(request, currentUser.TenantId, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("/reports/parking/dashboard")]
+    public async Task<IActionResult> GetDashboard([FromQuery] ReportingQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await queryService.GetDashboardAsync(request, currentUser.TenantId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("/reports/parking/summary.csv")]
+    public async Task<IActionResult> GetSummaryCsv([FromQuery] ReportingQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var csv = await queryService.GetSummaryCsvAsync(request, currentUser.TenantId, cancellationToken);
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fps-parking-summary.csv");
+    }
 }
 
 internal static class ReportingRoles
