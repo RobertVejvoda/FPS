@@ -61,7 +61,19 @@ On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machin
 
 ## Preferred Next Harness
 
-Add a local AppHost slice when implementation work is scheduled. .NET Aspire is the preferred candidate because the server stack is already .NET and the system needs coordinated local startup, logs, health, and dependency visibility. Treat Aspire as a developer/test harness, not as the client production deployment decision.
+Create the local seed and token path before the AppHost/gateway work. Without stable identity, seeded data, and a repeatable bearer-token command, mobile and full-stack testing stays manual and inconsistent.
+
+First implementation slice: `OPS006A Local Demo Seed And Dev Token`.
+
+`OPS006A` should provide:
+
+- local Keycloak realm, client, users, tenant claims, and roles;
+- seeded tenant, location, policy, slot, profile, booking, and notification data;
+- a local-only token helper such as `./tools/dev-token.sh employee1`;
+- a reset/reseed path that can be rerun without manual database edits;
+- documentation for the exact run order from clean local infrastructure to a mobile bearer token.
+
+After `OPS006A`, add a local AppHost slice when implementation work is scheduled. .NET Aspire is the preferred candidate because the server stack is already .NET and the system needs coordinated local startup, logs, health, and dependency visibility. Treat Aspire as a developer/test harness, not as the client production deployment decision.
 
 The first useful AppHost should:
 
