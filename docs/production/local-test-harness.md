@@ -50,20 +50,6 @@ Current local service URLs:
 
 Each runnable service has an `http` launch profile so plain `dotnet run --project ...` resolves to a stable port instead of the implicit Kestrel fallback. Avoid relying on port `5000`; on macOS this port may already be owned by Control Center, and multiple services would collide there.
 
-Use these URLs for local service smoke checks:
-
-| Service | Smoke URL | Expected result without token |
-| --- | --- | --- |
-| Identity | `http://localhost:5192/openapi/v1.json` | `200` |
-| Booking | `http://localhost:5131/openapi/v1.json` | `200` |
-| Profile | `http://localhost:5197/openapi/v1.json` | `200` |
-| Notification | `http://localhost:5157/openapi/v1.json` | `200` |
-| Configuration | `http://localhost:5141/configuration/parking-policy` | `401` |
-| Audit | `http://localhost:5161/audit` | `401` |
-| Reporting | `http://localhost:5171/reports/parking/summary` | `401` |
-
-Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. Use the protected endpoint `401` check for those services until an approved API-documentation approach is adopted for them.
-
 Current smoke result from `2026-05-20`: Docker infrastructure is healthy, including Vault, RabbitMQ, and `whoami-dapr`. The service port collision has been narrowed to missing launch profiles on Configuration, Audit, and Reporting; those services now have stable local HTTP ports.
 
 Stop shared infrastructure:
