@@ -82,27 +82,20 @@ jobs:
 
           gh pr edit "$PR_NUMBER" --repo "$GH_REPO" "${remove_args[@]}"
 
-  sync-issue-board-fields:
-    name: Sync issue board fields
+  sync-issue-phase:
+    name: Sync issue Phase field
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'issues' &&
       github.event.issue.pull_request == null
     steps:
-      - name: Best-effort Project field sync
+      - name: Sync Phase from slice prefix in issue title
         continue-on-error: true
         env:
           PROJECT_SYNC_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           FALLBACK_GH_TOKEN: ${{ github.token }}
-          ISSUE_LABELS_JSON: ${{ toJson(github.event.issue.labels.*.name) }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_STATE: ${{ github.event.issue.state }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
-          EVENT_ACTION: ${{ github.event.action }}
-          EVENT_LABEL_NAME: ${{ github.event.label.name }}
-          GH_REPO: ${{ github.repository }}
-          HUMAN_OWNER: RobertVejvoda
           PROJECT_OWNER: RobertVejvoda
           PROJECT_NUMBER: "2"
         run: |
@@ -114,26 +107,10 @@ jobs:
             export GH_TOKEN="$FALLBACK_GH_TOKEN"
           fi
 
-          labels="$(jq -r '.[]' <<< "$ISSUE_LABELS_JSON" | tr '\n' ' ')"
           title_upper="$(tr '[:lower:]' '[:upper:]' <<< "$ISSUE_TITLE")"
 
-          # Status
-          # Priority: closed > blocked-question > needs-codex-review
-          # Special case: removing blocked-question reverts to Ready.
-          status=""
-          if [ "$ISSUE_STATE" = "closed" ]; then
-            status="Done"
-          elif grep -qw "blocked-question" <<< "$labels"; then
-            status="Backlog"
-          elif grep -qw "needs-codex-review" <<< "$labels"; then
-            status="In review"
-          elif [ "${EVENT_ACTION:-}" = "unlabeled" ] && [ "${EVENT_LABEL_NAME:-}" = "blocked-question" ]; then
-            status="Ready"
-          fi
-
-          # Phase
-          # Match known slice prefixes at the start or after punctuation, so both
-          # "B001 ..." and "Implement (B001) ..." route to the same phase.
+          # Phase — match known slice prefixes at the start or after punctuation,
+          # so both "B001 ..." and "Implement (B001) ..." route to the same phase.
           phase=""
           slice_prefix=""
           if [[ "$title_upper" =~ (^|[^A-Z0-9])(REPORT|DOCS|CUST|BILL|CFG|MOB|OPS|WEB|BK|ID|CI|B|A|N|P)[0-9]{3} ]]; then
@@ -171,71 +148,26 @@ jobs:
             phase="Foundation"
           fi
 
-          if [ -z "$status" ] && [ -z "$phase" ]; then
-            echo "No board fields to sync"
+          if [ -z "$phase" ]; then
+            echo "No phase to sync"
             exit 0
           fi
 
-          # Project sync
           project_id="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json --jq .id)"
           fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
           item_id="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$ISSUE_URL" --format json --jq .id)"
 
-          if [ -n "$phase" ]; then
-            phase_field_id="$(jq -r '.fields[] | select(.name == "Phase") | .id' <<< "$fields_json")"
-            phase_option_id="$(jq -r --arg v "$phase" \
-              '.fields[] | select(.name == "Phase") | .options[] | select(.name == $v) | .id' \
-              <<< "$fields_json")"
-            if gh project item-edit \
-                --project-id "$project_id" --id "$item_id" \
-                --field-id "$phase_field_id" --single-select-option-id "$phase_option_id"; then
-              echo "::notice::Board phase -> $phase"
-            else
-              echo "::warning::Failed to sync phase=$phase. Check PROJECT_SYNC_TOKEN and field names."
-            fi
+          phase_field_id="$(jq -r '.fields[] | select(.name == "Phase") | .id' <<< "$fields_json")"
+          phase_option_id="$(jq -r --arg v "$phase" \
+            '.fields[] | select(.name == "Phase") | .options[] | select(.name == $v) | .id' \
+            <<< "$fields_json")"
+          if gh project item-edit \
+              --project-id "$project_id" --id "$item_id" \
+              --field-id "$phase_field_id" --single-select-option-id "$phase_option_id"; then
+            echo "::notice::Board phase -> $phase"
+          else
+            echo "::warning::Failed to sync phase=$phase. Check PROJECT_SYNC_TOKEN and field names."
           fi
-
-          if [ -n "$status" ]; then
-            status_field_id="$(jq -r '.fields[] | select(.name == "Status") | .id' <<< "$fields_json")"
-            status_option_id="$(jq -r --arg v "$status" \
-              '.fields[] | select(.name == "Status") | .options[] | select(.name == $v) | .id' \
-              <<< "$fields_json")"
-            if gh project item-edit \
-                --project-id "$project_id" --id "$item_id" \
-                --field-id "$status_field_id" --single-select-option-id "$status_option_id"; then
-              echo "::notice::Board status -> $status"
-            else
-              echo "::warning::Failed to sync status=$status. Check PROJECT_SYNC_TOKEN and field names."
-            fi
-          fi
-
-          if grep -qw "blocked-question" <<< "$labels"; then
-            GH_TOKEN="$FALLBACK_GH_TOKEN" gh issue edit "$ISSUE_NUMBER" --repo "$GH_REPO" \
-              --add-assignee "$HUMAN_OWNER"
-            echo "::notice::Assigned $HUMAN_OWNER (blocked-question)"
-          fi
-
-  sync-pr-human-handoff:
-    name: Sync pull request human handoff
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.labels.*.name, 'blocked-question')
-    steps:
-      - name: Assign PR to human owner
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HUMAN_OWNER: RobertVejvoda
-        run: |
-          set -euo pipefail
-
-          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" \
-            --add-assignee "$HUMAN_OWNER"
-
-          echo "Assigned PR to $HUMAN_OWNER for human decision"
 
   route-claude-issue:
     name: Prepare Claude issue handoff

@@ -48,7 +48,7 @@ Reverse handoff from Claude, Copilot, or a human implementer should use Project 
 
 ### State handoff commands
 
-Until OPS007 automates Project field reconciliation, agents should update the FPS Delivery Kanban fields directly after changing responsibility.
+OPS007 automates many Project field transitions via `.github/workflows/delivery-state-orchestrator.yml`. For transitions not covered by the orchestrator — or when the orchestrator cannot write to the project — agents should update the FPS Delivery Kanban fields directly after changing responsibility.
 
 FPS Delivery Kanban identifiers:
 
