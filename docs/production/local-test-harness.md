@@ -15,6 +15,15 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d
 
 If `fps_network` already exists, Docker will report that and the command can be ignored.
 
+Before starting backend services, confirm the repository-local .NET 10 SDK is first on `PATH`:
+
+```sh
+which dotnet
+dotnet --info
+```
+
+Expected SDK: `10.0.203` from `$HOME/.dotnet/dotnet`. If a shell resolves `/usr/local/share/dotnet/dotnet`, run from the repository root or prepend `$HOME/.dotnet` to `PATH`.
+
 Run services as needed:
 
 ```sh
@@ -38,6 +47,10 @@ Current local service URLs:
 
 Configuration, Audit, and Reporting should be checked from their launch profiles before they are added to a scripted smoke path.
 
+Avoid relying on implicit port `5000` for services without launch profiles. On macOS this port may already be owned by Control Center. Until each service has a launch profile or AppHost resource, pass an explicit HTTP URL when manually testing those services.
+
+Current smoke result from `2026-05-20`: Docker infrastructure is healthy, including Vault, RabbitMQ, and `whoami-dapr`. A direct backend service run currently hangs before binding a port at ASP.NET host creation. Treat this as the active `OPS006` blocker before mobile device retesting.
+
 Stop shared infrastructure:
 
 ```sh
@@ -58,6 +71,25 @@ For a full mobile pass, provide one gateway URL that routes:
 | `/profile/snapshot` | Profile |
 
 On a physical phone, use a LAN-reachable gateway URL such as `http://<dev-machine-ip>:<gateway-port>`, not `localhost`.
+
+Use Expo LAN mode when the phone and development machine are on the same network:
+
+```sh
+cd code/mobile/fps-mobile
+npm run start -- --lan --clear
+```
+
+If the QR code cannot be opened from the phone, retry with Expo tunnel mode:
+
+```sh
+cd code/mobile/fps-mobile
+npm run start -- --tunnel --clear
+```
+
+The developer session screen still requires both values:
+
+- API base URL: a single LAN-reachable gateway URL, not separate service ports;
+- bearer token: a local development token from `OPS006A`.
 
 ## Preferred Next Harness
 
@@ -116,7 +148,8 @@ Use the right tool for each test level:
 Use this minimum workflow:
 
 1. Start shared infrastructure with Docker Compose.
-2. Run only the backend services needed for the scenario.
-3. Verify service endpoints individually.
-4. Run mobile Expo smoke for UI/device behavior.
-5. Record that full mobile end-to-end testing is blocked until a gateway or hosted demo URL exists.
+2. Run the backend smoke checks. Do not continue to mobile device testing if a service cannot bind its configured HTTP port.
+3. Seed local demo data and generate a development bearer token through `OPS006A`.
+4. Start a local gateway or equivalent single API base URL for mobile.
+5. Run Expo in LAN mode, falling back to tunnel mode when QR discovery fails.
+6. Record that full mobile end-to-end testing is blocked until the service startup blocker, seed/token path, and gateway URL all pass.
