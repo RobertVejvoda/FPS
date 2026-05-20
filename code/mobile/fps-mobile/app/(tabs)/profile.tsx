@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { useSession } from '@/api/useSession';
@@ -51,6 +52,13 @@ export default function ProfileRoute() {
     );
   }
 
+  // Redirect to login if the profile snapshot call finds the session has expired.
+  useEffect(() => {
+    if (profileState.kind === 'unauthenticated') {
+      clearSession().then(() => router.replace('/login'));
+    }
+  }, [profileState.kind, clearSession, router]);
+
   const { me } = state;
   return (
     <Screen scroll>
@@ -72,6 +80,8 @@ export default function ProfileRoute() {
       />
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel="Sign out"
+        accessibilityHint="Clears your session and returns to the login screen"
         onPress={async () => {
           await clearSession();
           router.replace('/login');
@@ -230,8 +240,10 @@ const styles = StyleSheet.create({
   },
   signOut: {
     marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.danger,

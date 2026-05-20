@@ -60,6 +60,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
     backgroundColor: colors.primary,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   actionPressed: { opacity: 0.7 },
   actionLabel: {

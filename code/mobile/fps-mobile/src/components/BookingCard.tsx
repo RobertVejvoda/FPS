@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.sm,
     alignItems: 'center',
-    minHeight: 36,
+    minHeight: 44,
     justifyContent: 'center',
   },
   cancelButton: {
