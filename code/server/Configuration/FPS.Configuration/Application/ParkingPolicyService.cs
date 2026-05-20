@@ -7,6 +7,9 @@ public sealed class ParkingPolicyService(IParkingPolicyRepository repository)
     public Task<ParkingPolicy?> GetTenantDefaultAsync(string tenantId, CancellationToken ct)
         => repository.GetTenantDefaultAsync(tenantId, ct);
 
+    public Task<IReadOnlyList<ParkingPolicy>> GetHistoryAsync(string tenantId, string? locationId, int limit, CancellationToken ct)
+        => repository.GetHistoryAsync(tenantId, locationId, limit, ct);
+
     public async Task<ParkingPolicy?> GetEffectivePolicyAsync(string tenantId, string locationId, CancellationToken ct)
     {
         var locationOverride = await repository.GetLocationOverrideAsync(tenantId, locationId, ct);

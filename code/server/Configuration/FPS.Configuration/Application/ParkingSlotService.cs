@@ -2,16 +2,30 @@ using FPS.Configuration.Domain;
 
 namespace FPS.Configuration.Application;
 
-public sealed class ParkingSlotService(IParkingSlotRepository repository)
+public sealed class ParkingSlotService(IParkingSlotRepository repository, ISlotChangeRepository changeRepository)
 {
     public Task<IReadOnlyList<ParkingSlot>> GetByLocationAsync(string tenantId, string locationId, CancellationToken ct)
         => repository.GetByLocationAsync(tenantId, locationId, ct);
 
-    public async Task<IReadOnlyList<string>> ReplaceAsync(string tenantId, string locationId, IReadOnlyList<ParkingSlot> slots, CancellationToken ct)
+    public Task<IReadOnlyList<SlotChangeRecord>> GetChangeHistoryAsync(string tenantId, string locationId, int limit, CancellationToken ct)
+        => changeRepository.GetHistoryAsync(tenantId, locationId, limit, ct);
+
+    public async Task<IReadOnlyList<string>> ReplaceAsync(
+        string tenantId, string locationId, IReadOnlyList<ParkingSlot> slots,
+        string changedByUserId, string? changeReason, CancellationToken ct)
     {
         var errors = Validate(slots);
         if (errors.Count > 0) return errors;
         await repository.ReplaceLocationSlotsAsync(tenantId, locationId, slots, ct);
+        await changeRepository.RecordAsync(new SlotChangeRecord
+        {
+            TenantId = tenantId,
+            LocationId = locationId,
+            ChangedByUserId = changedByUserId,
+            ChangedAt = DateTimeOffset.UtcNow,
+            ChangeReason = string.IsNullOrWhiteSpace(changeReason) ? null : changeReason.Trim(),
+            SlotCount = slots.Count,
+        }, ct);
         return [];
     }
 
