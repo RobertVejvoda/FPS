@@ -295,45 +295,61 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/u
 
 All three should return `200`.
 
-## Preferred Next Harness
+## Local Harness
 
-The local identity and bearer-token path exists through `OPS006A`, the gateway through `OPS006B`, the Dapr sidecar run path through `OPS006C`, and synthetic seed/reset through `OPS006D`. The remaining harness work is coordinated startup and diagnostics: one command or AppHost entrypoint that starts or references dependencies, launches services with sidecars/gateway, and makes health/log status visible.
+`tools/start-local-harness.sh` is the one-command entry point for local full-stack smoke testing. It starts Docker Compose infrastructure, configures Keycloak, launches Identity and the six Dapr-paired services in the background, waits for each service port to bind, then seeds demo data.
 
-Implemented `OPS006A` local auth sequence:
+Prerequisites (install once):
+
+- Docker Desktop running.
+- Dapr CLI >= 1.12 installed and initialised: `curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | /bin/bash && dapr init`
+- .NET 10.0.203 SDK from `$HOME/.dotnet/dotnet` first on `PATH`.
+
+Start:
 
 ```sh
-docker compose -f code/infrastructure/docker-compose.yaml up -d
-./tools/dev-setup-auth.sh
-source ./tools/dev-env.sh
-./tools/dev-auth.sh employee1
-dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
+./tools/start-local-harness.sh
 ```
 
-Add a local AppHost slice when implementation work is scheduled. .NET Aspire is the preferred candidate because the server stack is already .NET and the system needs coordinated local startup, logs, health, and dependency visibility. Treat Aspire as a developer/test harness, not as the client production deployment decision.
+The script waits for each service before seeding data and prints a smoke command set when all services are ready. Service logs go to `logs/local-harness/`.
 
-The first useful AppHost should:
+Stop (keeps Docker volumes — data survives restart):
 
-- start or reference MongoDB, RabbitMQ, Vault, MinIO, Keycloak, and observability dependencies;
-- start Identity, Booking, Profile, Notification, Audit, Reporting, and Configuration from source;
-- load the local Dapr component path from `code/infrastructure/dapr/components/local`;
-- expose a single local mobile API gateway URL;
-- show service health, logs, and traces in one dashboard;
-- document seeded demo users and data reset;
-- avoid committing or printing real secrets.
+```sh
+./tools/stop-local-harness.sh
+```
 
-Suggested slice name: `OPS006 Local Test Harness`.
+Full reset (removes Docker volumes — returns environment to a clean state):
 
-## AppHost Acceptance Criteria
+```sh
+./tools/stop-local-harness.sh --reset
+```
 
-The AppHost or equivalent harness is acceptable when:
+After a full reset, re-run `./tools/start-local-harness.sh` to rebuild the Keycloak realm and reseed demo data.
 
-- one documented command starts the local test stack;
-- the mobile app can use one API base URL for the employee flow;
-- health checks identify which dependency or service is down;
-- seeded synthetic data supports login, bookings, notifications, and profile scenarios;
-- stop/reset instructions return the environment to a known state;
-- existing Docker Compose and Dapr component docs remain valid;
-- `./tools/validate.sh` still passes for code changes.
+### Smoke commands
+
+Run in a separate shell after the harness is ready:
+
+```sh
+TOKEN=$(./tools/dev-auth.sh employee1)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
+curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
+curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
+```
+
+All four should return `200`.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Script exits with "Wrong .NET SDK" | System dotnet resolves before `$HOME/.dotnet` | Prepend `$HOME/.dotnet` to `PATH` and retry |
+| Script exits non-zero with service port error | Dapr sidecar or service startup slow or crashed | Check `logs/local-harness/dapr-run.log`; run `./tools/stop-local-harness.sh` then retry |
+| Seed step fails (script exits non-zero) | Profile service not yet ready, or Keycloak realm missing | Services are still running — fix the cause and re-run `./tools/dev-seed.sh`, or run `./tools/stop-local-harness.sh` and restart |
+| `/bookings` returns 500 | Dapr sidecar not connected | Check `logs/local-harness/dapr-run.log` for sidecar startup errors |
+| Keycloak timeout | Keycloak container slow to initialise | Wait 30 s and retry; check `docker compose logs keycloak` |
 
 ## Testing Split
 
@@ -343,17 +359,6 @@ Use the right tool for each test level:
 | --- | --- | --- |
 | Unit and slice tests | `dotnet test` / existing test projects | Fast behavioral validation in CI. |
 | Repository and component integration | Testcontainers where deterministic CI coverage is needed | MongoDB, Dapr, and broker behavior around one service. |
-| Local full-stack smoke | Aspire AppHost or equivalent local harness | Verify services, dependencies, gateway, logs, and mobile API base URL together. |
+| Local full-stack smoke | `./tools/start-local-harness.sh` | Verify services, dependencies, gateway, logs, and mobile API base URL together. |
 | Manual device smoke | Expo Go, simulator, or emulator | Verify real mobile navigation, auth, rendering, and error states. |
 | Hosted demo evidence | Demo environment runbook | Prove external evaluator path with HTTPS, seeded users, and operational evidence. |
-
-## Until AppHost Exists
-
-Use this minimum workflow:
-
-1. Start shared infrastructure with Docker Compose.
-2. Run the backend smoke checks. Do not continue to mobile device testing if a service cannot bind its configured HTTP port.
-3. Run `./tools/dev-setup-auth.sh`, source `./tools/dev-env.sh`, and generate a development bearer token with `./tools/dev-auth.sh employee1`.
-4. Start a local gateway or equivalent single API base URL for mobile.
-5. Run Expo in LAN mode, falling back to tunnel mode when QR discovery fails.
-6. Record that full mobile end-to-end testing is blocked until domain seed data and the gateway URL both pass.
