@@ -51,6 +51,26 @@ public sealed class ParkingPolicyController(ParkingPolicyService service, ICurre
         var errors = await service.SaveLocationOverrideAsync(policy, ct);
         return errors.Count > 0 ? BadRequest(new { errors }) : NoContent();
     }
+
+    [HttpGet("/configuration/parking-policy/history")]
+    public async Task<IActionResult> GetTenantHistory([FromQuery] int limit = 20, CancellationToken ct = default)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var history = await service.GetHistoryAsync(currentUser.TenantId, null, Math.Clamp(limit, 1, 100), ct);
+        return Ok(history);
+    }
+
+    [HttpGet("/configuration/locations/{locationId}/parking-policy/history")]
+    public async Task<IActionResult> GetLocationHistory(string locationId, [FromQuery] int limit = 20, CancellationToken ct = default)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var history = await service.GetHistoryAsync(currentUser.TenantId, locationId, Math.Clamp(limit, 1, 100), ct);
+        return Ok(history);
+    }
 }
 
 public sealed record PutParkingPolicyRequest(

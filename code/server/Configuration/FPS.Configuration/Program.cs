@@ -11,6 +11,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IParkingPolicyRepository, InMemoryParkingPolicyRepository>();
 builder.Services.AddSingleton<IParkingSlotRepository, InMemoryParkingSlotRepository>();
+builder.Services.AddSingleton<ISlotChangeRepository, InMemorySlotChangeRepository>();
 
 builder.Services.AddScoped<ParkingPolicyService>();
 builder.Services.AddScoped<ParkingSlotService>();
