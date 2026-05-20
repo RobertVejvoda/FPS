@@ -46,6 +46,65 @@ Closed issues and closed pull requests are cleanup boundaries. The router remove
 
 Reverse handoff from Claude, Copilot, or a human implementer should use Project fields: leave the exact blocker or review request in a comment, then set `Status = In review`, `Owner = Codex` for review; `Status = Needs changes`, `Owner = Implementer` for requested fixes; or `Status = Blocked`, `Owner = Robert` for a real human decision.
 
+### State handoff commands
+
+Until OPS007 automates Project field reconciliation, agents should update the FPS Delivery Kanban fields directly after changing responsibility.
+
+FPS Delivery Kanban identifiers:
+
+| Field | ID |
+|---|---|
+| Project | `PVT_kwHOAMdNjM4ApbPD` |
+| Status | `PVTSSF_lAHOAMdNjM4ApbPDzgg1is0` |
+| Owner | `PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I` |
+| Implementer | `PVTSSF_lAHOAMdNjM4ApbPDzhTZl4E` |
+
+Common option IDs:
+
+| Field | Value | Option ID |
+|---|---|---|
+| Status | `In review` | `4cc61d42` |
+| Status | `Needs changes` | `57f4a681` |
+| Status | `Done` | `98236657` |
+| Owner | `Codex` | `7694f322` |
+| Owner | `Claude` | `765bf827` |
+| Owner | `None` | `a0ebe14c` |
+| Implementer | `Claude` | `907ea51b` |
+
+Find a Project item ID for an issue:
+
+```sh
+gh project item-list 2 --owner RobertVejvoda --format json --limit 100 \
+  --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id'
+```
+
+When Claude finishes a fix and wants Codex review:
+
+```sh
+ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzgg1is0 --single-select-option-id 4cc61d42
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id 7694f322
+```
+
+When Codex requests Claude changes:
+
+```sh
+ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzgg1is0 --single-select-option-id 57f4a681
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id 765bf827
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4E --single-select-option-id 907ea51b
+```
+
+After merge or issue close:
+
+```sh
+ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzgg1is0 --single-select-option-id 98236657
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id a0ebe14c
+```
+
+Also leave a short PR or issue comment saying what changed and what validation ran. Do not add assignment labels.
+
 Required setup:
 
 - `PROJECT_SYNC_TOKEN` repository secret with access to the user-owned FPS Delivery Kanban Project.
