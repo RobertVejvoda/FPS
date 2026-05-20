@@ -1,5 +1,6 @@
 using FPS.Notification.Application;
 using FPS.Notification.Domain;
+using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -15,6 +16,7 @@ public sealed class BookingEventNotificationHandlerTests
     public BookingEventNotificationHandlerTests()
     {
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
+            new InMemoryNotificationPreferencesRepository(),
             NullLogger<BookingEventNotificationHandler>.Instance);
         emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
