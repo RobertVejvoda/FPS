@@ -18,6 +18,15 @@ export default function ProfileRoute() {
   const { state } = useSession();
   const { state: profileState, refresh } = useProfileSnapshot();
 
+  // Must be before any early return to satisfy Rules of Hooks.
+  // Redirects to login if the profile snapshot fetch finds the token has expired
+  // while the session check still passed (token expired mid-render cycle).
+  useEffect(() => {
+    if (profileState.kind === 'unauthenticated') {
+      clearSession().then(() => router.replace('/login'));
+    }
+  }, [profileState.kind, clearSession, router]);
+
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <Screen>
@@ -51,13 +60,6 @@ export default function ProfileRoute() {
       </Screen>
     );
   }
-
-  // Redirect to login if the profile snapshot call finds the session has expired.
-  useEffect(() => {
-    if (profileState.kind === 'unauthenticated') {
-      clearSession().then(() => router.replace('/login'));
-    }
-  }, [profileState.kind, clearSession, router]);
 
   const { me } = state;
   return (
