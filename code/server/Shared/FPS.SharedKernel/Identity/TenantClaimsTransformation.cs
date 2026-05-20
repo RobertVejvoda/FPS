@@ -11,6 +11,10 @@ namespace FPS.SharedKernel.Identity;
 // via AddFpsAuthorization(), so all [Authorize]-protected endpoints fail closed for
 // deactivated users without requiring changes to individual controllers.
 //
+// IClaimsTransformation may be invoked more than once for a principal. The transformation
+// uses fps_transformed=true as a marker to skip re-mapping on subsequent calls, keeping
+// the result stable regardless of invocation count.
+//
 // Note: IDeactivatedUserStore is in-memory per service. For cross-service deactivation
 // enforcement, the primary mechanism is Keycloak user deactivation (which prevents token
 // issuance). The in-memory store covers fast-path denial within a single service instance.
@@ -19,9 +23,14 @@ public sealed class TenantClaimsTransformation(
     IDeactivatedUserStore deactivatedUsers) : IClaimsTransformation
 {
     internal const string DeactivatedClaim = "fps_deactivated";
+    private const string TransformedClaim = "fps_transformed";
 
     public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
+        // Skip if already transformed — IClaimsTransformation can be called more than once.
+        if (principal.HasClaim(TransformedClaim, "true"))
+            return Task.FromResult(principal);
+
         var tenantId = principal.FindFirstValue("tenant_id") ?? string.Empty;
         var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? principal.FindFirstValue("sub")
@@ -50,6 +59,7 @@ public sealed class TenantClaimsTransformation(
             identity.AddClaim(new Claim(DeactivatedClaim, "true"));
         }
 
+        identity.AddClaim(new Claim(TransformedClaim, "true"));
         return Task.FromResult(cloned);
     }
 }
