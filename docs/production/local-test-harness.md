@@ -9,11 +9,32 @@ Use Docker Compose for shared infrastructure and run the .NET services from sour
 From the repository root:
 
 ```sh
-docker network create fps_network
 docker compose -f code/infrastructure/docker-compose.yaml up -d
 ```
 
-If `fps_network` already exists, Docker will report that and the command can be ignored.
+`docker-compose.yaml` creates the required Docker network when it starts. If a local Docker network already exists from an older setup, Compose can reuse it.
+
+Set up local identity once after Keycloak is running:
+
+```sh
+./tools/dev-setup-auth.sh
+```
+
+This imports the `fps-local` realm, creates the local demo users, and sets local-only demo passwords. Re-run it whenever the local Keycloak realm needs to be reset.
+
+Before each backend service shell, source the local issuer settings:
+
+```sh
+source ./tools/dev-env.sh
+```
+
+Get a bearer token for a demo user when the mobile app or API smoke test needs one:
+
+```sh
+./tools/dev-auth.sh employee1
+```
+
+Available local users are `employee1`, `employee2`, `employee3`, and `hr-admin`. Treat generated bearer tokens as secrets: do not commit them, paste them into issues, or include them in screenshots.
 
 Before starting backend services, confirm the repository-local .NET 10 SDK is first on `PATH`:
 
@@ -27,6 +48,7 @@ Expected SDK: `10.0.203` from `$HOME/.dotnet/dotnet`. If a shell resolves `/usr/
 Run services as needed:
 
 ```sh
+source ./tools/dev-env.sh
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
 dotnet run --project code/server/Booking/FPS.Booking.API/FPS.Booking.API.csproj
 dotnet run --project code/server/Profile/FPS.Profile/FPS.Profile.csproj
@@ -104,21 +126,21 @@ npm run start -- --tunnel --clear
 The developer session screen still requires both values:
 
 - API base URL: a single LAN-reachable gateway URL, not separate service ports;
-- bearer token: a local development token from `OPS006A`.
+- bearer token: a local development token from `./tools/dev-auth.sh`.
 
 ## Preferred Next Harness
 
-Create the local seed and token path before the AppHost/gateway work. Without stable identity, seeded data, and a repeatable bearer-token command, mobile and full-stack testing stays manual and inconsistent.
+The local identity and bearer-token path now exists through `OPS006A`. The next harness work should close the remaining full-stack gaps: seeded FPS domain data, one mobile API gateway/base URL, coordinated startup, and reset instructions.
 
-First implementation slice: `OPS006A Local Demo Seed And Dev Token`.
+Implemented `OPS006A` local auth sequence:
 
-`OPS006A` should provide:
-
-- local Keycloak realm, client, users, tenant claims, and roles;
-- seeded tenant, location, policy, slot, profile, booking, and notification data;
-- a local-only token helper such as `./tools/dev-token.sh employee1`;
-- a reset/reseed path that can be rerun without manual database edits;
-- documentation for the exact run order from clean local infrastructure to a mobile bearer token.
+```sh
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+./tools/dev-setup-auth.sh
+source ./tools/dev-env.sh
+./tools/dev-auth.sh employee1
+dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
+```
 
 After `OPS006A`, add a local AppHost slice when implementation work is scheduled. .NET Aspire is the preferred candidate because the server stack is already .NET and the system needs coordinated local startup, logs, health, and dependency visibility. Treat Aspire as a developer/test harness, not as the client production deployment decision.
 
@@ -164,7 +186,7 @@ Use this minimum workflow:
 
 1. Start shared infrastructure with Docker Compose.
 2. Run the backend smoke checks. Do not continue to mobile device testing if a service cannot bind its configured HTTP port.
-3. Seed local demo data and generate a development bearer token through `OPS006A`.
+3. Run `./tools/dev-setup-auth.sh`, source `./tools/dev-env.sh`, and generate a development bearer token with `./tools/dev-auth.sh employee1`.
 4. Start a local gateway or equivalent single API base URL for mobile.
 5. Run Expo in LAN mode, falling back to tunnel mode when QR discovery fails.
-6. Record that full mobile end-to-end testing is blocked until the service startup blocker, seed/token path, and gateway URL all pass.
+6. Record that full mobile end-to-end testing is blocked until domain seed data and the gateway URL both pass.
