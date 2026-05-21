@@ -51,6 +51,10 @@ public sealed class EmployeeBootstrapService(
         if (existing is not null)
             return (null, "An employee with this external subject is already registered for this tenant.");
 
+        if (request.EmployeeId is not null &&
+            await profileRepository.EmployeeIdExistsAsync(tenantId, request.EmployeeId, ct))
+            return (null, $"Employee ID '{request.EmployeeId}' is already registered for this tenant.");
+
         var profile = BuildProfile(tenantId, subjectHash, request);
         await profileRepository.SaveAsync(profile, ct);
         SyncDeactivatedStore(tenantId, subjectHash, profile.IsActive);
@@ -70,7 +74,11 @@ public sealed class EmployeeBootstrapService(
         {
             TenantId = tenantId,
             UserId = subjectHash,
+            EmployeeId = existing.EmployeeId,
             Status = request.IsActive ? ProfileStatus.Active : ProfileStatus.Inactive,
+            FpsRoles = request.FpsRoles,
+            NotificationAddress = request.NotificationAddress,
+            HomeLocationId = request.HomeLocationId,
             ParkingEligible = request.ParkingEligible,
             HasCompanyCar = request.HasCompanyCar,
             AccessibilityEligible = request.AccessibilityEligible,
@@ -119,6 +127,7 @@ public sealed class EmployeeBootstrapService(
         var errors = new List<string>();
         var valid = new List<(BootstrapEmployeeRequest req, string hash)>();
         var seenHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenEmployeeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Phase 1: validate all rows — no saves yet.
         for (var i = 0; i < requests.Count; i++)
@@ -133,6 +142,15 @@ public sealed class EmployeeBootstrapService(
             { errors.Add($"{label}: duplicate external subject within this batch."); continue; }
             if (await profileRepository.GetAsync(tenantId, hash, ct) is not null)
             { errors.Add($"{label}: subject already registered for this tenant."); continue; }
+
+            if (req.EmployeeId is not null)
+            {
+                if (seenEmployeeIds.Contains(req.EmployeeId))
+                { errors.Add($"{label}: duplicate employee ID within this batch."); continue; }
+                if (await profileRepository.EmployeeIdExistsAsync(tenantId, req.EmployeeId, ct))
+                { errors.Add($"{label}: employee ID '{req.EmployeeId}' already registered."); continue; }
+                seenEmployeeIds.Add(req.EmployeeId);
+            }
 
             seenHashes.Add(hash);
             valid.Add((req, hash));
@@ -162,7 +180,11 @@ public sealed class EmployeeBootstrapService(
         {
             TenantId = tenantId,
             UserId = subjectHash,
+            EmployeeId = req.EmployeeId,
             Status = req.IsActive ? ProfileStatus.Active : ProfileStatus.Inactive,
+            FpsRoles = req.FpsRoles,
+            NotificationAddress = req.NotificationAddress,
+            HomeLocationId = req.HomeLocationId,
             ParkingEligible = req.ParkingEligible,
             HasCompanyCar = req.HasCompanyCar,
             AccessibilityEligible = req.AccessibilityEligible,

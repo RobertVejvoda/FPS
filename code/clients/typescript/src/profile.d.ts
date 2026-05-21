@@ -4,6 +4,164 @@
  */
 
 export interface paths {
+    "/profile/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BootstrapRequest"];
+                    "text/json": components["schemas"]["BootstrapRequest"];
+                    "application/*+json": components["schemas"]["BootstrapRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile/bootstrap/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportRequest"];
+                    "text/json": components["schemas"]["ImportRequest"];
+                    "application/*+json": components["schemas"]["ImportRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile/bootstrap/{subjectHash}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    subjectHash: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRequest"];
+                    "text/json": components["schemas"]["UpdateRequest"];
+                    "application/*+json": components["schemas"]["UpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile/bootstrap/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeactivateRequest"];
+                    "text/json": components["schemas"]["DeactivateRequest"];
+                    "application/*+json": components["schemas"]["DeactivateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile/snapshot": {
         parameters: {
             query?: never;
@@ -24,6 +182,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BootstrapRequest: {
+            externalSubject: null | string;
+            employeeId: null | string;
+            isActive: boolean;
+            fpsRoles: null | string[];
+            notificationAddress: null | string;
+            homeLocationId: null | string;
+            parkingEligible: boolean;
+            hasCompanyCar: boolean;
+            accessibilityEligible: boolean;
+            reservedSpaceEligible: boolean;
+        };
+        DeactivateRequest: {
+            externalSubject: null | string;
+        };
+        ImportRequest: {
+            employees: null | components["schemas"]["BootstrapRequest"][];
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -42,6 +218,16 @@ export interface components {
             reservedSpaceEligible: boolean;
             vehicles: components["schemas"]["VehicleSnapshot"][];
             snapshotVersion: string;
+        };
+        UpdateRequest: {
+            isActive: boolean;
+            fpsRoles: null | string[];
+            notificationAddress: null | string;
+            homeLocationId: null | string;
+            parkingEligible: boolean;
+            hasCompanyCar: boolean;
+            accessibilityEligible: boolean;
+            reservedSpaceEligible: boolean;
         };
         VehicleSnapshot: {
             vehicleId: string;

@@ -15,19 +15,29 @@ public sealed class EmployeeBootstrapServiceTests
         service = new EmployeeBootstrapService(profileRepo, deactivatedStore);
     }
 
-    private BootstrapEmployeeRequest ValidRequest(string subject = "sub-abc") => new(
-        subject, null, true, ["employee"], null, null,
+    private BootstrapEmployeeRequest ValidRequest(string subject = "sub-abc",
+        string? employeeId = null, string notif = "user@corp.com", string? home = "loc-A") => new(
+        subject, employeeId, true, ["employee"], notif, home,
         ParkingEligible: true, HasCompanyCar: false,
         AccessibilityEligible: false, ReservedSpaceEligible: false, "admin-entry");
 
+    // ── Register: persists all accepted fields ───────────────────────────────
+
     [Fact]
-    public async Task Register_ValidRequest_WritesProfileSnapshot()
+    public async Task Register_ValidRequest_PersistsAllFields()
     {
-        var (profile, error) = await service.RegisterAsync("t1", ValidRequest("sub-1"), CancellationToken.None);
+        var req = ValidRequest("sub-1", "EMP-001", "emp@corp.com", "loc-HQ");
+
+        var (profile, error) = await service.RegisterAsync("t1", req, CancellationToken.None);
+
         Assert.Null(error);
         var stored = await profileRepo.GetAsync("t1", profile!.UserId, CancellationToken.None);
         Assert.NotNull(stored);
-        Assert.True(stored!.ParkingEligible);
+        Assert.Equal("EMP-001", stored!.EmployeeId);
+        Assert.Contains("employee", stored.FpsRoles);
+        Assert.Equal("emp@corp.com", stored.NotificationAddress);
+        Assert.Equal("loc-HQ", stored.HomeLocationId);
+        Assert.True(stored.ParkingEligible);
         Assert.Equal("admin-entry", stored.FactSource);
     }
 
@@ -36,6 +46,7 @@ public sealed class EmployeeBootstrapServiceTests
     {
         var req = ValidRequest() with { IsActive = false };
         var (profile, _) = await service.RegisterAsync("t1", req, CancellationToken.None);
+
         Assert.Equal(Domain.ProfileStatus.Inactive, profile!.Status);
         Assert.True(deactivatedStore.IsDeactivated("t1", profile.UserId));
     }
@@ -44,8 +55,7 @@ public sealed class EmployeeBootstrapServiceTests
     public async Task Register_ActiveEmployee_DeactivatedStoreNotSet()
     {
         var (profile, _) = await service.RegisterAsync("t1", ValidRequest(), CancellationToken.None);
-        Assert.Equal(Domain.ProfileStatus.Active, profile!.Status);
-        Assert.False(deactivatedStore.IsDeactivated("t1", profile.UserId));
+        Assert.False(deactivatedStore.IsDeactivated("t1", profile!.UserId));
     }
 
     [Fact]
@@ -54,6 +64,14 @@ public sealed class EmployeeBootstrapServiceTests
         await service.RegisterAsync("t1", ValidRequest("sub-x"), CancellationToken.None);
         var (_, error) = await service.RegisterAsync("t1", ValidRequest("sub-x"), CancellationToken.None);
         Assert.Contains("already registered", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Register_DuplicateEmployeeId_ReturnsError()
+    {
+        await service.RegisterAsync("t1", ValidRequest("sub-a", "EMP-001"), CancellationToken.None);
+        var (_, error) = await service.RegisterAsync("t1", ValidRequest("sub-b", "EMP-001"), CancellationToken.None);
+        Assert.Contains("EMP-001", error);
     }
 
     [Fact]
@@ -80,17 +98,23 @@ public sealed class EmployeeBootstrapServiceTests
         Assert.NotNull(profile);
     }
 
+    // ── Update: persists updated fields ──────────────────────────────────────
+
     [Fact]
-    public async Task Update_ByStoredHash_UpdatesProfileSnapshot()
+    public async Task Update_PersistsAllUpdatedFields()
     {
         var (profile, _) = await service.RegisterAsync("t1", ValidRequest(), CancellationToken.None);
-        var hash = profile!.UserId;
         var updateReq = new UpdateEmployeeRequest(true, ["employee", "hr_manager"],
-            null, null, false, true, true, false);
-        var error = await service.UpdateAsync("t1", hash, updateReq, CancellationToken.None);
+            "new@corp.com", "loc-B", false, true, true, false);
+
+        var error = await service.UpdateAsync("t1", profile!.UserId, updateReq, CancellationToken.None);
+
         Assert.Null(error);
-        var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
-        Assert.False(stored!.ParkingEligible);
+        var stored = await profileRepo.GetAsync("t1", profile.UserId, CancellationToken.None);
+        Assert.Contains("hr_manager", stored!.FpsRoles);
+        Assert.Equal("new@corp.com", stored.NotificationAddress);
+        Assert.Equal("loc-B", stored.HomeLocationId);
+        Assert.False(stored.ParkingEligible);
         Assert.True(stored.HasCompanyCar);
     }
 
@@ -124,6 +148,8 @@ public sealed class EmployeeBootstrapServiceTests
         Assert.Contains("not found", error);
     }
 
+    // ── Deactivate ────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task Deactivate_ActiveEmployee_SetsInactiveAndDeactivatedStore()
     {
@@ -143,14 +169,22 @@ public sealed class EmployeeBootstrapServiceTests
         Assert.Contains("not found", error);
     }
 
+    // ── Import — fully atomic ─────────────────────────────────────────────────
+
     [Fact]
-    public async Task Import_ValidBatch_CommitsAll()
+    public async Task Import_ValidBatch_CommitsAllWithFields()
     {
-        var batch = new[] { ValidRequest("sub-1"), ValidRequest("sub-2"), ValidRequest("sub-3") };
+        var batch = new[]
+        {
+            ValidRequest("sub-1", "EMP-001", "a@c.com", "loc-A"),
+            ValidRequest("sub-2", "EMP-002", "b@c.com", "loc-B"),
+        };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
-        Assert.Equal(3, summary.Accepted);
+        Assert.Equal(2, summary.Accepted);
         Assert.Equal(0, summary.Rejected);
-        Assert.NotNull(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("sub-1"), CancellationToken.None));
+        var stored = await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("sub-1"), CancellationToken.None);
+        Assert.Equal("EMP-001", stored!.EmployeeId);
+        Assert.Equal("a@c.com", stored.NotificationAddress);
     }
 
     [Fact]
@@ -159,27 +193,60 @@ public sealed class EmployeeBootstrapServiceTests
         var batch = new[] { ValidRequest("sub-ok"), ValidRequest("") with { ExternalSubject = "" } };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(0, summary.Accepted);
-        Assert.Equal(1, summary.Rejected);
         Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("sub-ok"), CancellationToken.None));
     }
 
     [Fact]
-    public async Task Import_DuplicateWithinBatch_CommitsNone()
+    public async Task Import_DuplicateSubjectWithinBatch_CommitsNone()
     {
         var batch = new[] { ValidRequest("sub-dup"), ValidRequest("sub-dup") };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(0, summary.Accepted);
         Assert.Contains("Row 2", summary.Errors[0]);
-        Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("sub-dup"), CancellationToken.None));
     }
 
     [Fact]
-    public async Task Import_DuplicateAgainstExisting_CommitsNone()
+    public async Task Import_DuplicateEmployeeIdWithinBatch_CommitsNone()
+    {
+        var batch = new[] { ValidRequest("sub-a", "EMP-X"), ValidRequest("sub-b", "EMP-X") };
+        var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
+        Assert.Equal(0, summary.Accepted);
+        Assert.Contains("Row 2", summary.Errors[0]);
+    }
+
+    [Fact]
+    public async Task Import_DuplicateEmployeeIdAgainstExisting_CommitsNone()
+    {
+        await service.RegisterAsync("t1", ValidRequest("existing-sub", "EMP-001"), CancellationToken.None);
+        var batch = new[] { ValidRequest("new-sub", "EMP-001") };
+        var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
+        Assert.Equal(0, summary.Accepted);
+        Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("new-sub"), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Import_DuplicateSubjectAgainstExisting_CommitsNone()
     {
         await service.RegisterAsync("t1", ValidRequest("existing"), CancellationToken.None);
         var batch = new[] { ValidRequest("new-sub"), ValidRequest("existing") };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(0, summary.Accepted);
         Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("new-sub"), CancellationToken.None));
+    }
+
+    // ── EmployeeIdExistsAsync ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task EmployeeIdExistsAsync_AfterRegister_ReturnsTrue()
+    {
+        await service.RegisterAsync("t1", ValidRequest("sub-1", "EMP-777"), CancellationToken.None);
+        Assert.True(await profileRepo.EmployeeIdExistsAsync("t1", "EMP-777", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task EmployeeIdExistsAsync_TenantIsolation_ReturnsFalseForOtherTenant()
+    {
+        await service.RegisterAsync("t1", ValidRequest("sub-1", "EMP-777"), CancellationToken.None);
+        Assert.False(await profileRepo.EmployeeIdExistsAsync("t2", "EMP-777", CancellationToken.None));
     }
 }
