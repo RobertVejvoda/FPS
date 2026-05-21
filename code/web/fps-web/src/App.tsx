@@ -8,6 +8,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { ReportingPage } from './pages/ReportingPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { AuditPage } from './pages/AuditPage';
+import { TenantAdminPage } from './pages/TenantAdminPage';
 
 const navItems = [
   { to: '/bookings', label: 'Bookings' },
@@ -16,6 +17,7 @@ const navItems = [
   { to: '/reporting', label: 'Reports' },
   { to: '/configuration', label: 'Configuration' },
   { to: '/audit', label: 'Audit' },
+  { to: '/tenant-admin', label: 'Admin' },
 ];
 
 function Shell() {
@@ -64,6 +66,7 @@ function Shell() {
           <Route path="/reporting" element={<ReportingPage />} />
           <Route path="/configuration" element={<ConfigurationPage />} />
           <Route path="/audit" element={<AuditPage />} />
+          <Route path="/tenant-admin" element={<TenantAdminPage />} />
           <Route path="*" element={<Navigate to="/bookings" replace />} />
         </Routes>
       </main>
