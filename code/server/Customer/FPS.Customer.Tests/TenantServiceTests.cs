@@ -45,6 +45,49 @@ public sealed class TenantServiceTests
     }
 
     [Fact]
+    public async Task Create_SlugWithOnlySpecialChars_ReturnsError()
+    {
+        var (tenant, error) = await service.CreateAsync("@@@", "Corp", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.Null(tenant);
+        Assert.Contains("Slug", error);
+    }
+
+    [Fact]
+    public async Task Create_SlugNormalization_TrimAndLowercaseBeforeUniquenessCheck()
+    {
+        await service.CreateAsync("acme", "ACME", "eu", "UTC", [], CancellationToken.None);
+
+        // " ACME " normalizes to "acme" — should collide.
+        var (tenant, error) = await service.CreateAsync(" ACME ", "ACME 2", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.Null(tenant);
+        Assert.Contains("already in use", error);
+    }
+
+    [Fact]
+    public async Task Create_SlugCollisionAfterSanitization_ReturnsError()
+    {
+        // "a b" sanitizes to "a-b"; "a@b" also sanitizes to "a-b" — must collide.
+        await service.CreateAsync("a b", "Corp A", "eu", "UTC", [], CancellationToken.None);
+
+        var (tenant, error) = await service.CreateAsync("a@b", "Corp B", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.Null(tenant);
+        Assert.Contains("already in use", error);
+    }
+
+    [Fact]
+    public async Task Create_StoredSlugIsAlwaysSanitizedForm()
+    {
+        var (tenant, _) = await service.CreateAsync(" My Corp! ", "My Corp", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.NotNull(tenant);
+        Assert.Equal("my-corp", tenant!.Slug); // trailing dash stripped by sanitizer
+        Assert.Equal(tenant.Slug, tenant.Provisioning.TenantSlug);
+    }
+
+    [Fact]
     public async Task Update_ValidInput_PersistsChanges()
     {
         var (created, _) = await service.CreateAsync("acme", "ACME Corp", "eu-west", "Europe/London", [], CancellationToken.None);

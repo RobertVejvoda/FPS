@@ -15,9 +15,12 @@ public sealed record TenantProvisioningMetadata
 
     private static readonly Regex SafeSlug = new(@"[^a-z0-9\-]", RegexOptions.Compiled);
 
+    public static string Sanitize(string slug) =>
+        SafeSlug.Replace(slug.Trim().ToLowerInvariant(), "-").Trim('-');
+
     public static TenantProvisioningMetadata Generate(string tenantId, string slug)
     {
-        var safe = SafeSlug.Replace(slug.ToLowerInvariant(), "-").Trim('-');
+        var safe = Sanitize(slug);
         var collections = new Dictionary<string, string>
         {
             ["customer"] = $"fps-{safe}-tenants",

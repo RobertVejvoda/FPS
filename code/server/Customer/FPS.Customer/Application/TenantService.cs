@@ -9,14 +9,15 @@ public sealed class TenantService(ITenantRepository repository)
         IReadOnlyList<TenantSupportContact> supportContacts,
         CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(slug)) return (null, "Slug is required.");
         if (string.IsNullOrWhiteSpace(displayName)) return (null, "Display name is required.");
         if (string.IsNullOrWhiteSpace(region)) return (null, "Region is required.");
         if (string.IsNullOrWhiteSpace(timeZone)) return (null, "Time zone is required.");
-        if (await repository.SlugExistsAsync(slug, ct)) return (null, $"Slug '{slug}' is already in use.");
+
+        var safeSlug = TenantProvisioningMetadata.Sanitize(slug);
+        if (string.IsNullOrEmpty(safeSlug)) return (null, "Slug is required and must contain at least one alphanumeric character.");
+        if (await repository.SlugExistsAsync(safeSlug, ct)) return (null, $"Slug '{safeSlug}' is already in use.");
 
         var tenantId = Guid.NewGuid().ToString();
-        var safeSlug = slug.Trim().ToLowerInvariant();
         var tenant = new TenantWorkspace
         {
             TenantId = tenantId,
