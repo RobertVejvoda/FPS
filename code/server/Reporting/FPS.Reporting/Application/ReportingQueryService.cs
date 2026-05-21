@@ -56,6 +56,62 @@ public sealed class ReportingQueryService(IReportingQueryRepository repository)
         var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
         return CsvExport.FromMetrics(items);
     }
+
+    public async Task<UtilizationResponse> GetUtilizationAsync(ReportingQueryRequest request, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
+        var entries = items
+            .GroupBy(m => m.LocationId)
+            .Select(g =>
+            {
+                var demand = g.Sum(m => m.DemandCount);
+                var allocated = g.Sum(m => m.AllocationCount);
+                return new UtilizationEntry(
+                    g.Key,
+                    demand,
+                    allocated,
+                    g.Sum(m => m.RejectionCount),
+                    g.Sum(m => m.CancellationCount),
+                    g.Sum(m => m.NoShowCount),
+                    demand > 0 ? (double)allocated / demand : 0.0);
+            })
+            .OrderBy(e => e.LocationId)
+            .ToList();
+        return new UtilizationResponse(entries);
+    }
+
+    public async Task<ReasonCodeResponse> GetReasonCodeReportAsync(ReportingQueryRequest request, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var m in items)
+        {
+            foreach (var (reason, count) in m.RejectionByReason)
+                counts[reason] = counts.GetValueOrDefault(reason) + count;
+
+            if (m.CancellationCount > 0)
+                counts["cancellation"] = counts.GetValueOrDefault("cancellation") + m.CancellationCount;
+            if (m.NoShowCount > 0)
+                counts["no_show"] = counts.GetValueOrDefault("no_show") + m.NoShowCount;
+        }
+
+        var totalDemand = items.Sum(m => m.DemandCount);
+        var entries = counts
+            .OrderByDescending(kv => kv.Value)
+            .ThenBy(kv => kv.Key)
+            .Select(kv => new ReasonCodeEntry(
+                kv.Key, kv.Value,
+                totalDemand > 0 ? (double)kv.Value / totalDemand : 0.0))
+            .ToList();
+        return new ReasonCodeResponse(entries, totalDemand);
+    }
+
+    public async Task<string> GetAllocationOutcomesCsvAsync(ReportingQueryRequest request, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
+        return CsvExport.FromAllocationOutcomes(items);
+    }
 }
 
 public sealed record ParkingMetricsSummary(
@@ -101,6 +157,21 @@ public sealed record DashboardResponse(
     IReadOnlyDictionary<string, int> RejectionsByReason,
     IReadOnlyList<DailyTrendEntry> DailyTrend);
 
+public sealed record UtilizationEntry(
+    string LocationId,
+    int TotalDemand,
+    int TotalAllocations,
+    int TotalRejections,
+    int TotalCancellations,
+    int TotalNoShows,
+    double AllocationRate);
+
+public sealed record UtilizationResponse(IReadOnlyList<UtilizationEntry> Items);
+
+public sealed record ReasonCodeEntry(string ReasonCode, int Count, double RateOfDemand);
+
+public sealed record ReasonCodeResponse(IReadOnlyList<ReasonCodeEntry> Items, int TotalDemand);
+
 public static class CsvExport
 {
     public static string FromMetrics(IEnumerable<ParkingMetrics> metrics)
@@ -118,14 +189,32 @@ public static class CsvExport
         return sb.ToString();
     }
 
-    private static string Escape(string value)
+    public static string FromAllocationOutcomes(IEnumerable<ParkingMetrics> metrics)
     {
-        // Prefix formula-injection characters so spreadsheets don't execute them.
-        // Apostrophe causes Excel/Sheets to treat the cell as literal text.
-        if (value.Length > 0 && "=+-@\t\r".IndexOf(value[0]) >= 0)
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Date,LocationId,TimeSlot,Demand,Allocations,AllocationRate,Rejections,Cancellations,NoShows");
+        foreach (var m in metrics)
+        {
+            sb.AppendLine(string.Join(",",
+                Escape(m.Date), Escape(m.LocationId), Escape(m.TimeSlot),
+                m.DemandCount, m.AllocationCount,
+                m.AllocationRate.ToString("F4", System.Globalization.CultureInfo.InvariantCulture),
+                m.RejectionCount, m.CancellationCount, m.NoShowCount));
+        }
+        return sb.ToString();
+    }
+
+    public static string Escape(string value)
+    {
+        // Normalize line endings — embedded CR/LF would break CSV rows.
+        value = value.Replace("\r\n", " ").Replace('\r', ' ').Replace('\n', ' ');
+
+        // Neutralize spreadsheet formula-injection: prefix with apostrophe so
+        // Excel/Sheets treats the cell as literal text.
+        if (value.Length > 0 && "=+-@|".IndexOf(value[0]) >= 0)
             value = "'" + value;
 
-        return value.Contains(',') || value.Contains('"') || value.Contains('\n')
+        return value.Contains(',') || value.Contains('"')
             ? $"\"{value.Replace("\"", "\"\"")}\""
             : value;
     }
