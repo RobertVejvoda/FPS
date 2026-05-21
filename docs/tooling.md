@@ -40,7 +40,7 @@ Ownership is Project-field-first. Use `Status` for lifecycle state, `Owner` for 
 
 The state machine is documented in [Delivery Board](./delivery-board). Allowed statuses are `Backlog`, `Ready`, `Assigned`, `In progress`, `In review`, `Needs changes`, `Blocked`, and `Done`. `Owner` should contain `Codex`, `Claude`, `Copilot`, `Robert`, `Human`, or `None`. `Implementer` should contain `Claude`, `Copilot`, `Human`, `Codex`, or `None`.
 
-`needs-claude-action` is now only a temporary compatibility trigger while the router is being replaced. It is not a durable waiting state. The durable Claude waiting state is `Owner = Claude` plus a handoff comment, with GitHub Web UI assignment used only to invoke the agent when needed.
+`needs-claude-action` is now only a temporary compatibility trigger while the router is being replaced. It is not a durable waiting state. The durable Claude waiting state is `Owner = Claude` plus a handoff comment, with GitHub Web UI assignment used only to invoke the agent when needed. Claude-bound `/fps-route` commands assign the issue to Robert as a notification-only hook so he can open the issue and invoke or reassign Claude through the GitHub UI.
 
 Closed issues and closed pull requests are cleanup boundaries. The router removes stale routing labels automatically on close so completed work does not stay visible as ready for Claude, ready for implementation, or waiting for Codex review.
 
@@ -79,6 +79,8 @@ When an implementer needs to hand work to another actor, post `/fps-route <comma
 | `/fps-route blocked [Robert\|Codex\|Claude\|Copilot]` | `Blocked` | explicit owner, or `Robert` if omitted | unchanged |
 
 Restrictions: `/fps-route` is accepted from trusted repository collaborators and known agent bots whose login identifies them as Copilot or Claude. It is for normal handoff only. Repository-owner `/fps-state` remains the authoritative override for correcting bad state.
+
+Claude invocation note: when `/fps-route assign Claude` or `/fps-route claude-fix` runs, the workflow also assigns the target issue to `RobertVejvoda` and posts a short comment explaining that the assignee is notification-only. Robert should then use the GitHub UI to invoke or reassign Claude. Do not treat the GitHub assignee as the work owner when the board says `Owner = Claude`.
 
 FPS Delivery Kanban identifiers:
 
@@ -158,7 +160,7 @@ Safety notes:
 - Closed issues and closed pull requests remove stale routing labels as a backstop; attribution labels such as `implemented-by: claude` are preserved.
 - `active-coordination` is not an implementation trigger.
 - Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
-- Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost.
+- Claude routing is handoff plus Robert notification. Manual Claude invocation through the GitHub UI remains required when the prepared prompt is worth the token cost.
 - `claude-ready` is legacy and should not be used for new routing.
 - Implementers should comment `/fps-route codex-review` when they finish. If the workflow cannot run, set `Status = In review`, `Owner = Codex` manually and remove stale temporary routing labels when permitted.
 

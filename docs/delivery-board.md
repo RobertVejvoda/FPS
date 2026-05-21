@@ -23,7 +23,7 @@ The board should answer four questions without reading the whole repository:
 | Status | State-machine lifecycle state. | Allowed values are `Backlog`, `Ready`, `Assigned`, `In progress`, `In review`, `Needs changes`, `Blocked`, and `Done`. Agents should act only when `Status` and `Owner` point at them. |
 | Owner | Actor responsible for the next action. | Allowed values should include `Codex`, `Claude`, `Copilot`, `Robert`, `Human`, and `None`. This is the primary assignment signal for workflow, including non-assignable agents. |
 | Implementer | Actor expected to implement or repair the slice when implementation is needed. | Allowed values should include `Claude`, `Copilot`, `Human`, `Codex`, and `None`. This preserves routing intent while `Owner` can move between implementer and reviewer. |
-| Assignee | GitHub-native assignment where the actor is assignable. | Use for humans and Copilot when available. Do not rely on assignee for Claude or Codex because they are not consistently exposed as normal GitHub assignees. |
+| Assignee | GitHub-native assignment where the actor is assignable. | Use for humans and Copilot when available. For Claude routes, Robert may be assigned only as a notification/UI-invocation hook; the Project `Owner` remains the durable responsibility signal. Do not rely on assignee for Claude or Codex ownership. |
 | Labels | Slice taxonomy and durable attribution only. | Labels must not be used for assignment or workflow state. They may describe slice type/classification or attribution such as `implemented-by: claude`. |
 
 ## State Machine
@@ -113,15 +113,17 @@ Implementers can request these transitions by leaving a short `/fps-route` comme
 | Command | Result |
 | --- | --- |
 | `/fps-route codex-review` | `Status = In review`, `Owner = Codex`. |
-| `/fps-route claude-fix` | `Status = Needs changes`, `Owner = Claude`, `Implementer = Claude`. |
+| `/fps-route claude-fix` | `Status = Needs changes`, `Owner = Claude`, `Implementer = Claude`; assigns Robert for Claude UI invocation. |
 | `/fps-route copilot-fix` | `Status = Needs changes`, `Owner = Copilot`, `Implementer = Copilot`. |
 | `/fps-route claude-question` | `Status = Blocked`, `Owner = Codex`, `Implementer = Claude`. |
 | `/fps-route robert-decision` | `Status = Blocked`, `Owner = Robert`. |
-| `/fps-route assign Claude` | `Status = Assigned`, `Owner = Claude`, `Implementer = Claude`. |
+| `/fps-route assign Claude` | `Status = Assigned`, `Owner = Claude`, `Implementer = Claude`; assigns Robert for Claude UI invocation. |
 | `/fps-route assign Copilot` | `Status = Assigned`, `Owner = Copilot`, `Implementer = Copilot`. |
 | `/fps-route blocked [Robert\|Codex\|Claude\|Copilot]` | `Status = Blocked`, `Owner = Robert` if omitted, otherwise the explicit owner. |
 
 On an issue comment, `/fps-route` updates that issue's board card. On a PR comment, it updates linked closing issues discovered from the PR body. `/fps-route` is accepted from trusted repository collaborators and known agent bots; `/fps-state` remains the repository-owner override for authoritative state corrections.
+
+For Claude-bound routes, the workflow also assigns the issue to Robert and posts a short note. This is intentionally notification-only: Robert receives the GitHub notification, opens the issue, and invokes or reassigns Claude through the GitHub UI. The board `Owner = Claude` remains the durable workflow state.
 
 Claude agent invocation remains separate because GitHub exposes it through the Web UI agent picker rather than the normal assignees API. The board fields still record durable ownership.
 
@@ -161,8 +163,8 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Repository owner comments `/fps-state in-review` on PR | Linked closing issues: `Status = In review`, `Owner = Codex`. |
 | Repository owner comments `/fps-state blocked [Robert\|Codex]` on PR | Linked closing issues: `Status = Blocked`, `Owner = Robert` (default) or `Codex`. |
 | Trusted actor comments `/fps-route codex-review` on an issue or PR | Target issue, or PR linked closing issues: `Status = In review`, `Owner = Codex`. |
-| Trusted actor comments `/fps-route claude-fix` on an issue or PR | Target issue, or PR linked closing issues: `Status = Needs changes`, `Owner = Claude`, `Implementer = Claude`. |
-| Trusted actor comments `/fps-route assign Claude` on an issue or PR | Target issue, or PR linked closing issues: `Status = Assigned`, `Owner = Claude`, `Implementer = Claude`. |
+| Trusted actor comments `/fps-route claude-fix` on an issue or PR | Target issue, or PR linked closing issues: `Status = Needs changes`, `Owner = Claude`, `Implementer = Claude`; assign Robert for notification/UI invocation. |
+| Trusted actor comments `/fps-route assign Claude` on an issue or PR | Target issue, or PR linked closing issues: `Status = Assigned`, `Owner = Claude`, `Implementer = Claude`; assign Robert for notification/UI invocation. |
 | PR merged | Linked closing issues: `Status = Done`, `Owner = None`. |
 | Issue closed | `Status = Done`, `Owner = None`. |
 
