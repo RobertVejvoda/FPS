@@ -44,7 +44,7 @@ The state machine is documented in [Delivery Board](./delivery-board). Allowed s
 
 Closed issues and closed pull requests are cleanup boundaries. The router removes stale routing labels automatically on close so completed work does not stay visible as ready for Claude, ready for implementation, or waiting for Codex review.
 
-Reverse handoff from Claude, Copilot, or a human implementer should use Project fields: leave the exact blocker or review request in a comment, then set `Status = In review`, `Owner = Codex` for review; `Status = Needs changes`, `Owner = Implementer` for requested fixes; or `Status = Blocked`, `Owner = Robert` for a real human decision.
+Reverse handoff from Claude, Copilot, or a human implementer should use Project fields. The preferred path is a short `/fps-route` comment on the issue or PR; the workflow then updates the board. If automation is unavailable, leave the exact blocker or review request in a comment, then set `Status = In review`, `Owner = Codex` for review; `Status = Needs changes`, `Owner = Implementer` for requested fixes; or `Status = Blocked`, `Owner = Robert` for a real human decision.
 
 ### State handoff commands
 
@@ -62,6 +62,23 @@ When a formal PR review cannot be submitted (for example, because the reviewer a
 | `/fps-state blocked [Robert\|Codex]` | `Blocked` | `Robert` if omitted |
 
 Restrictions: only comments from the repository owner (`RobertVejvoda`) on PRs with linked `Closes #N` issues are acted upon. All writes are best-effort and non-blocking.
+
+#### `/fps-route` comment command
+
+When an implementer needs to hand work to another actor, post `/fps-route <command>` as the first line of an issue or PR comment. On an issue, the command updates that issue's FPS Delivery Kanban card. On a PR, it updates linked closing issues from the PR body.
+
+| Command | Status | Owner | Implementer |
+| --- | --- | --- | --- |
+| `/fps-route codex-review` | `In review` | `Codex` | unchanged |
+| `/fps-route claude-fix` | `Needs changes` | `Claude` | `Claude` |
+| `/fps-route copilot-fix` | `Needs changes` | `Copilot` | `Copilot` |
+| `/fps-route claude-question` | `Blocked` | `Codex` | `Claude` |
+| `/fps-route robert-decision` | `Blocked` | `Robert` | unchanged |
+| `/fps-route assign Claude` | `Assigned` | `Claude` | `Claude` |
+| `/fps-route assign Copilot` | `Assigned` | `Copilot` | `Copilot` |
+| `/fps-route blocked [Robert\|Codex\|Claude\|Copilot]` | `Blocked` | explicit owner, or `Robert` if omitted | unchanged |
+
+Restrictions: `/fps-route` is accepted from trusted repository collaborators and known agent bots whose login identifies them as Copilot or Claude. It is for normal handoff only. Repository-owner `/fps-state` remains the authoritative override for correcting bad state.
 
 FPS Delivery Kanban identifiers:
 
@@ -91,7 +108,13 @@ gh project item-list 2 --owner RobertVejvoda --format json --limit 100 \
   --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id'
 ```
 
-When Claude finishes a fix and wants Codex review:
+When Claude or Copilot finishes a fix and wants Codex review, prefer a PR comment:
+
+```sh
+gh pr comment PR_NUMBER --body "/fps-route codex-review"
+```
+
+Manual fallback when the route command is unavailable:
 
 ```sh
 ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
@@ -99,7 +122,13 @@ gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-i
 gh project item-edit --id "$ITEM_ID" --project-id PVT_kwHOAMdNjM4ApbPD --field-id PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I --single-select-option-id 7694f322
 ```
 
-When Codex requests Claude changes:
+When Codex requests Claude changes, prefer a PR comment:
+
+```sh
+gh pr comment PR_NUMBER --body "/fps-state needs-changes Claude"
+```
+
+Manual fallback when the state command is unavailable:
 
 ```sh
 ITEM_ID="$(gh project item-list 2 --owner RobertVejvoda --format json --limit 100 --jq '.items[] | select(.content.number == ISSUE_NUMBER) | .id')"
@@ -131,7 +160,7 @@ Safety notes:
 - Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
 - Claude routing is handoff-only. Manual Claude invocation remains available when the prepared prompt is worth the token cost.
 - `claude-ready` is legacy and should not be used for new routing.
-- Implementers should set `Status = In review`, `Owner = Codex` when they finish and should remove stale temporary routing labels when permitted.
+- Implementers should comment `/fps-route codex-review` when they finish. If the workflow cannot run, set `Status = In review`, `Owner = Codex` manually and remove stale temporary routing labels when permitted.
 
 ### What CI checks
 

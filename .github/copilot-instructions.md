@@ -57,11 +57,17 @@ When implementation is ready for review:
 - Open or update one focused PR for the assigned issue.
 - Link the issue with `Closes #NN` or `Refs #NN` as appropriate.
 - Add `implemented-by: copilot` and `needs-codex-review` labels when permitted.
-- If labels cannot be changed, leave a PR comment saying the work is ready for Codex review.
+- Leave a PR comment with `/fps-route codex-review` so the Delivery Kanban moves to `Status = In review`, `Owner = Codex`.
 - Do not merge the PR.
 - Do not keep the PR as draft unless blocked.
 - If blocked, comment with the concrete blocker and do not widen scope.
 - If Codex comments on the PR, address only that PR feedback and keep the existing PR scope.
+
+When the next action belongs to another actor, use a route comment instead of assignment labels:
+
+- `/fps-route claude-fix` when the slice should go to Claude for implementation repair.
+- `/fps-route robert-decision` when a product, architecture, or operational decision is required.
+- `/fps-route blocked Codex` when the spec or acceptance criteria need Codex clarification.
 
 ## Attribution
 

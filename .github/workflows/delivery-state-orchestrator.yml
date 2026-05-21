@@ -17,6 +17,19 @@ on:
   pull_request_review:
     types: [submitted]
   workflow_dispatch:
+    inputs:
+      route_target_issue:
+        description: "Optional issue number for manual /fps-route test or repair"
+        required: false
+        type: string
+      route_command:
+        description: "Optional /fps-route command, such as codex-review, assign, blocked"
+        required: false
+        type: string
+      route_owner:
+        description: "Optional owner argument for assign/blocked, such as Claude, Copilot, Codex, Robert"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -36,6 +49,7 @@ env:
   FIELD_OWNER: PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I
   FIELD_IMPLEMENTER: PVTSSF_lAHOAMdNjM4ApbPDzhTZl4E
   OPT_STATUS_BACKLOG: f75ad846
+  OPT_STATUS_ASSIGNED: 49905531
   OPT_STATUS_IN_REVIEW: 4cc61d42
   OPT_STATUS_NEEDS_CHANGES: 57f4a681
   OPT_STATUS_DONE: 98236657
@@ -47,6 +61,7 @@ env:
   OPT_OWNER_NONE: a0ebe14c
   OPT_IMPL_CLAUDE: 907ea51b
   OPT_IMPL_COPILOT: b9bfc717
+  OPT_IMPL_NONE: 571cc0a4
 
 jobs:
   issue-opened-defaults:
@@ -467,5 +482,205 @@ jobs:
                 --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
                 && echo "::notice::Issue #$ISSUE_NUM Owner -> $OWNER_DISPLAY" \
                 || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+            fi
+          done
+
+  route-comment-command:
+    name: Issue or PR comment /fps-route command
+    runs-on: ubuntu-latest
+    if: >
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.action == 'created' &&
+        startsWith(github.event.comment.body, '/fps-route ')
+      ) ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        inputs.route_target_issue != '' &&
+        inputs.route_command != ''
+      )
+    steps:
+      - name: Apply route command to target issues
+        continue-on-error: true
+        env:
+          BOARD_PAT: ${{ secrets.PROJECT_SYNC_TOKEN }}
+          FALLBACK_PAT: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.route_target_issue }}
+          IS_PR_COMMENT: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request != null }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          COMMENT_ASSOCIATION: ${{ github.event.comment.author_association }}
+          ROUTE_COMMAND_INPUT: ${{ inputs.route_command }}
+          ROUTE_OWNER_INPUT: ${{ inputs.route_owner }}
+          REPO_OWNER: RobertVejvoda
+        run: |
+          set -euo pipefail
+          if [ -n "${BOARD_PAT:-}" ]; then
+            export GH_TOKEN="$BOARD_PAT"
+          else
+            export GH_TOKEN="$FALLBACK_PAT"
+            echo "::warning::PROJECT_SYNC_TOKEN not set; project writes may fail"
+          fi
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            COMMENT_BODY="/fps-route $ROUTE_COMMAND_INPUT ${ROUTE_OWNER_INPUT:-}"
+            COMMENT_AUTHOR="$REPO_OWNER"
+            COMMENT_ASSOCIATION="OWNER"
+            IS_PR_COMMENT="false"
+          fi
+
+          # /fps-route is a lightweight reverse-handoff command. It may be used by
+          # trusted humans and known agent bots, but it is intentionally less
+          # authoritative than the owner-only /fps-state override.
+          ALLOWED="false"
+          case "$COMMENT_ASSOCIATION" in
+            OWNER|MEMBER|COLLABORATOR)
+              ALLOWED="true"
+              ;;
+          esac
+          if [[ "$COMMENT_AUTHOR" == *"[bot]" ]] &&
+             { [[ "$COMMENT_AUTHOR" == *copilot* ]] || [[ "$COMMENT_AUTHOR" == *claude* ]]; }; then
+            ALLOWED="true"
+          fi
+          if [ "$ALLOWED" != "true" ]; then
+            echo "::notice::Ignoring /fps-route from untrusted author $COMMENT_AUTHOR ($COMMENT_ASSOCIATION)"
+            exit 0
+          fi
+
+          # Parse: /fps-route <command> [<owner>]
+          COMMAND="$(echo "$COMMENT_BODY" | awk 'NR==1{print $2}' | head -1)"
+          ARG_OWNER="$(echo "$COMMENT_BODY" | awk 'NR==1{print $3}' | head -1)"
+
+          STATUS_OPT=""
+          STATUS_NAME=""
+          OWNER_OPTION=""
+          OWNER_DISPLAY=""
+          IMPL_OPTION=""
+          IMPL_DISPLAY=""
+
+          set_owner() {
+            case "$1" in
+              Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE";  OWNER_DISPLAY="Claude" ;;
+              Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT"; OWNER_DISPLAY="Copilot" ;;
+              Codex)   OWNER_OPTION="$OPT_OWNER_CODEX";   OWNER_DISPLAY="Codex" ;;
+              Robert)  OWNER_OPTION="$OPT_OWNER_ROBERT";  OWNER_DISPLAY="Robert" ;;
+              None)    OWNER_OPTION="$OPT_OWNER_NONE";    OWNER_DISPLAY="None" ;;
+              *)
+                echo "::notice::Unsupported route owner '$1'; supported: Claude, Copilot, Codex, Robert, None"
+                exit 0
+                ;;
+            esac
+          }
+
+          set_implementer() {
+            case "$1" in
+              Claude)  IMPL_OPTION="$OPT_IMPL_CLAUDE";  IMPL_DISPLAY="Claude" ;;
+              Copilot) IMPL_OPTION="$OPT_IMPL_COPILOT"; IMPL_DISPLAY="Copilot" ;;
+              None)    IMPL_OPTION="$OPT_IMPL_NONE";    IMPL_DISPLAY="None" ;;
+              *)
+                echo "::notice::Unsupported route implementer '$1'; supported: Claude, Copilot, None"
+                exit 0
+                ;;
+            esac
+          }
+
+          case "$COMMAND" in
+            codex-review)
+              STATUS_OPT="$OPT_STATUS_IN_REVIEW"
+              STATUS_NAME="In review"
+              set_owner Codex
+              ;;
+            claude-fix)
+              STATUS_OPT="$OPT_STATUS_NEEDS_CHANGES"
+              STATUS_NAME="Needs changes"
+              set_owner Claude
+              set_implementer Claude
+              ;;
+            copilot-fix)
+              STATUS_OPT="$OPT_STATUS_NEEDS_CHANGES"
+              STATUS_NAME="Needs changes"
+              set_owner Copilot
+              set_implementer Copilot
+              ;;
+            claude-question)
+              STATUS_OPT="$OPT_STATUS_BLOCKED"
+              STATUS_NAME="Blocked"
+              set_owner Codex
+              set_implementer Claude
+              ;;
+            robert-decision)
+              STATUS_OPT="$OPT_STATUS_BLOCKED"
+              STATUS_NAME="Blocked"
+              set_owner Robert
+              ;;
+            assign)
+              STATUS_OPT="$OPT_STATUS_ASSIGNED"
+              STATUS_NAME="Assigned"
+              if [ -z "$ARG_OWNER" ]; then
+                echo "::notice::Usage: /fps-route assign <Claude|Copilot|Codex|Robert>"
+                exit 0
+              fi
+              set_owner "$ARG_OWNER"
+              case "$ARG_OWNER" in
+                Claude|Copilot) set_implementer "$ARG_OWNER" ;;
+              esac
+              ;;
+            blocked)
+              STATUS_OPT="$OPT_STATUS_BLOCKED"
+              STATUS_NAME="Blocked"
+              [ -z "$ARG_OWNER" ] && ARG_OWNER="Robert"
+              set_owner "$ARG_OWNER"
+              ;;
+            *)
+              echo "::notice::Unknown /fps-route command: $COMMAND; supported: codex-review, claude-fix, copilot-fix, claude-question, robert-decision, assign, blocked"
+              exit 0
+              ;;
+          esac
+
+          REPO_OWNER_NAME="${GH_REPO%%/*}"
+          REPO_NAME="${GH_REPO##*/}"
+
+          if [ "$IS_PR_COMMENT" = "true" ]; then
+            TARGET_ISSUES="$(gh api graphql \
+              -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){closingIssuesReferences(first:10){nodes{number}}}}}' \
+              -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$ISSUE_NUMBER" \
+              --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' \
+              2>/dev/null || true)"
+          else
+            TARGET_ISSUES="$ISSUE_NUMBER"
+          fi
+
+          if [ -z "$TARGET_ISSUES" ]; then
+            echo "::notice::No target issues found for /fps-route $COMMAND"
+            exit 0
+          fi
+
+          for TARGET_ISSUE in $TARGET_ISSUES; do
+            ISSUE_URL="https://github.com/$GH_REPO/issues/$TARGET_ISSUE"
+            ITEM_ID="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" \
+              --url "$ISSUE_URL" --format json --jq .id 2>/dev/null || true)"
+            if [ -z "$ITEM_ID" ]; then
+              echo "::warning::Could not get project item for issue #$TARGET_ISSUE; skipping"
+              continue
+            fi
+
+            gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+              --field-id "$FIELD_STATUS" --single-select-option-id "$STATUS_OPT" \
+              && echo "::notice::Issue #$TARGET_ISSUE Status -> $STATUS_NAME" \
+              || echo "::warning::Failed to set Status for issue #$TARGET_ISSUE"
+
+            if [ -n "$OWNER_OPTION" ]; then
+              gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
+                && echo "::notice::Issue #$TARGET_ISSUE Owner -> $OWNER_DISPLAY" \
+                || echo "::warning::Failed to set Owner for issue #$TARGET_ISSUE"
+            fi
+
+            if [ -n "$IMPL_OPTION" ]; then
+              gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                --field-id "$FIELD_IMPLEMENTER" --single-select-option-id "$IMPL_OPTION" \
+                && echo "::notice::Issue #$TARGET_ISSUE Implementer -> $IMPL_DISPLAY" \
+                || echo "::warning::Failed to set Implementer for issue #$TARGET_ISSUE"
             fi
           done
