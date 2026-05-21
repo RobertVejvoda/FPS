@@ -88,7 +88,7 @@ Data at rest:
 | --- | --- | --- |
 | End user to FPS | HTTPS; OIDC Authorization Code + PKCE for mobile/web login. | TLS 1.2+; JWT validation by services; mobile app stores no client secret. |
 | Customer IdP to FPS | OIDC federation for normal company login. | Trusted issuer configuration, redirect URI validation, signed token validation, tenant mapping, and no storage of company passwords in FPS. |
-| API gateway routing | HTTP(S) behind Traefik. | TLS at the edge; internal service endpoints remain protected and tenant-aware. |
+| API gateway routing | HTTP(S) behind a selected ingress/API gateway. | TLS at the edge; internal service endpoints remain protected and tenant-aware. Local harness uses Envoy; production may use Traefik, cloud-native ingress, or a client-approved gateway. |
 | Service invocation | Dapr service invocation or HTTPS. | Dapr mTLS/Sentry for service identity; propagate user context only when the downstream service needs user-scoped authorization. |
 | Pub/sub | Dapr pub/sub over RabbitMQ/AMQP. | TLS and authenticated broker access in production; event contracts exclude Secret data. |
 | State persistence | Dapr state store and MongoDB driver. | Authenticated database connections, TLS in production, encryption at rest, and tenant-specific collections. |

@@ -1,6 +1,8 @@
 # Feedback Business
 
-[Feedback module](../application-layer/feedback) is designed to facilitate communication between users and the development team. It allows users to submit their feedback, view responses, and stay informed about the status of their feedback. This module helps the development team gather valuable insights, address user concerns, and improve the overall user experience by categorizing and managing feedback efficiently.
+Feedback is a deferred business capability. It is not part of the current FPS implementation baseline and should not be presented as an available product feature.
+
+If approved later, Feedback should support customer-success and support workflows without distracting from the current parking-first value proposition.
 
 
 ### Submit Feedback

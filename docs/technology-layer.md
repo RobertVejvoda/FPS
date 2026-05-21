@@ -13,12 +13,12 @@ Production operation is also a top-level architecture section. See [Production](
 - **.NET 10**: Core framework for backend services.
 - **React**: Frontend library for web user interfaces.
 - **React Native + Expo**: Mobile platform.
-- **Docker**: Containerization platform for consistent deployment.
-- **Kubernetes**: Orchestration platform for managing containerized applications.
-- **Dapr 1.14+**: Runtime for state, pub/sub, service invocation, sidecars, and future workflows.
-- **RabbitMQ via Dapr pub/sub**: Event bus for Booking events consumed by Notification, Audit, and future read models.
-- **MongoDB**: Dapr-backed write store and MongoDB-driver read store, isolated collection-per-tenant inside service-owned databases.
-- **Keycloak**: OIDC/OAuth 2.0 identity provider.
+- **Docker / containers**: Packaging and local runtime baseline.
+- **Dapr 1.14+**: Provider-neutral runtime boundary for state, pub/sub, service invocation, sidecars, secrets, and future workflows.
+- **Dapr pub/sub**: Event bus contract for Booking events consumed by Notification, Audit, Reporting, and future read models. RabbitMQ is the durable local provider, not the core architecture.
+- **Dapr state store / MongoDB-compatible storage**: Persistence direction for production profiles. Smoke/evaluation profiles may use in-memory repositories where explicitly documented.
+- **OIDC/OAuth 2.0 identity provider**: Keycloak is the local/default development provider; client production can use a trusted company IdP with mapped claims.
+- **Kubernetes / Helm**: Optional deployment target when a demo or client environment requires it, not a core product dependency.
 
 
 ### Domain Map

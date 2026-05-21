@@ -1,13 +1,13 @@
 # Microservice Security Patterns
 
-Implements security measures specific to microservices architecture. This includes using API gateways for centralized authentication and authorization, service mesh for secure service-to-service communication, and distributed tracing for monitoring and logging across microservices.
+Implements security measures specific to microservices architecture. This includes an ingress/API gateway for a single client entry point, service-to-service identity through Dapr or trusted internal transport, and distributed tracing for monitoring and logging across microservices. The gateway product is deployment-profile specific.
 
 ### Tenant Isolation
 
-- **Dedicated tenant spaces**: Each tenant has its own dedicated space, ensuring that their data and resources are isolated from other tenants.
-- **Strict data segregation**: Data from different tenants is strictly segregated to prevent any unauthorized access or data leakage.
-- **Tenant-specific encryption keys**: Each tenant's data is encrypted with unique encryption keys, enhancing security and ensuring that even if one key is compromised, other tenants' data remains secure.
-- **Resource isolation per tenant**: Resources such as databases, storage, and compute instances are isolated per tenant to prevent any cross-tenant interference or access.
+- **Tenant-scoped data access**: Services derive tenant scope from authenticated or trusted service context.
+- **Strict data segregation**: Data from different tenants is segregated by tenant-safe keys, tenant-specific collections, or an approved equivalent partitioning strategy.
+- **Provider-neutral encryption**: Confidential data is encrypted in transit and at rest using the selected deployment profile's storage and secret-management controls.
+- **Resource isolation by profile**: Local/demo/client environments may choose stronger physical isolation where required, but the core application must enforce tenant isolation even when infrastructure resources are shared.
 
 ### JWT Token Management
 
@@ -18,7 +18,7 @@ Implements security measures specific to microservices architecture. This includ
 - **Role-based access control (RBAC)**: Access to resources is managed based on user roles defined in the JWT token, ensuring that users can only access resources they are authorized to.
 
 
-- **API Gateway**: Acts as a single entry point for all client requests, providing a layer of security by enforcing authentication, authorization, and rate limiting.
+- **API Gateway / ingress**: Acts as a single entry point for client requests. It handles routing, TLS termination, and optional rate limiting; backend services still validate JWTs and required tenant/user/role claims.
 
 
 todo: sequence diagram

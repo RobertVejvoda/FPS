@@ -14,11 +14,11 @@
 | [Booking](./application-layer/booking) | Manage booking requests and allocations | Internal | High | High | Simple |
 | [Configuration](./application-layer/configuration) | Manage configuration options | Internal | Standard | High | Simple |
 | [Customer](./application-layer/customer) | Manage customer and tenant information | Confidential | High | High | Simple |
-| [Feedback](./application-layer/feedback) | Manage user feedback | Internal | Standard | High | Simple |
+| [Feedback](./application-layer/feedback) | Deferred feedback capability | Internal | Standard | Standard | Simple |
 | [Notification](./application-layer/notification) | Manage and send notifications | Internal | Standard | High | Simple |
 | [Profile](./application-layer/profile) | Manage customer users and profiles | Confidential | High | High | Simple |
 | [Reporting](./application-layer/reporting) | Generate and retrieve reports | Internal | Standard | High | Simple |
-| [Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard)[^1]| Development-time dashboard for monitoring cloud-native app metrics, logs and traces | Internal | Standard | High | Simple |
+| [Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard)[^1]| Development-time dashboard for monitoring local distributed app metrics, logs and traces | Internal | Standard | High | Simple |
 
 
 ![Application Architecture 2](./images/fps-application-arch-2.png)
