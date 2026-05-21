@@ -108,6 +108,21 @@ When Claude, Copilot, or a human implementer needs Codex/Robert action, use the 
 - set `Status = In review`, `Owner = Codex` when the work is ready for Codex review or validation;
 - set `Status = Needs changes`, `Owner = Implementer` when Codex review requests implementation changes.
 
+Implementers can request these transitions by leaving a short `/fps-route` comment on the issue or PR:
+
+| Command | Result |
+| --- | --- |
+| `/fps-route codex-review` | `Status = In review`, `Owner = Codex`. |
+| `/fps-route claude-fix` | `Status = Needs changes`, `Owner = Claude`, `Implementer = Claude`. |
+| `/fps-route copilot-fix` | `Status = Needs changes`, `Owner = Copilot`, `Implementer = Copilot`. |
+| `/fps-route claude-question` | `Status = Blocked`, `Owner = Codex`, `Implementer = Claude`. |
+| `/fps-route robert-decision` | `Status = Blocked`, `Owner = Robert`. |
+| `/fps-route assign Claude` | `Status = Assigned`, `Owner = Claude`, `Implementer = Claude`. |
+| `/fps-route assign Copilot` | `Status = Assigned`, `Owner = Copilot`, `Implementer = Copilot`. |
+| `/fps-route blocked [Robert\|Codex\|Claude\|Copilot]` | `Status = Blocked`, `Owner = Robert` if omitted, otherwise the explicit owner. |
+
+On an issue comment, `/fps-route` updates that issue's board card. On a PR comment, it updates linked closing issues discovered from the PR body. `/fps-route` is accepted from trusted repository collaborators and known agent bots; `/fps-state` remains the repository-owner override for authoritative state corrections.
+
 Claude agent invocation remains separate because GitHub exposes it through the Web UI agent picker rather than the normal assignees API. The board fields still record durable ownership.
 
 ## Status Rules
@@ -145,12 +160,15 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Repository owner comments `/fps-state needs-changes [owner]` on PR | Linked closing issues: `Status = Needs changes`, `Owner = explicit owner or current Implementer`. Use this path when a formal CHANGES_REQUESTED review cannot be submitted (same-account limitation). |
 | Repository owner comments `/fps-state in-review` on PR | Linked closing issues: `Status = In review`, `Owner = Codex`. |
 | Repository owner comments `/fps-state blocked [Robert\|Codex]` on PR | Linked closing issues: `Status = Blocked`, `Owner = Robert` (default) or `Codex`. |
+| Trusted actor comments `/fps-route codex-review` on an issue or PR | Target issue, or PR linked closing issues: `Status = In review`, `Owner = Codex`. |
+| Trusted actor comments `/fps-route claude-fix` on an issue or PR | Target issue, or PR linked closing issues: `Status = Needs changes`, `Owner = Claude`, `Implementer = Claude`. |
+| Trusted actor comments `/fps-route assign Claude` on an issue or PR | Target issue, or PR linked closing issues: `Status = Assigned`, `Owner = Claude`, `Implementer = Claude`. |
 | PR merged | Linked closing issues: `Status = Done`, `Owner = None`. |
 | Issue closed | `Status = Done`, `Owner = None`. |
 
 Linked issues are discovered via GitHub's `closingIssuesReferences` API; PRs must include `Closes #N`, `Fixes #N`, or equivalent keywords in the PR body. All board writes are best-effort and log `::notice::` on success or `::warning::` on failure. `PROJECT_SYNC_TOKEN` must have project write access; without it, writes may fall back to the read-only repository token.
 
-After pushing requested fixes, an implementer signals readiness for re-review by commenting `/fps-state in-review` on the PR (or by updating `Status = In review`, `Owner = Codex` on the board manually if the orchestrator is not yet on master).
+After pushing requested fixes, an implementer signals readiness for re-review by commenting `/fps-route codex-review` on the PR (or by updating `Status = In review`, `Owner = Codex` on the board manually if the orchestrator is not yet on master). `/fps-state in-review` remains available as the repository-owner override.
 
 Transitions not yet automated — set these fields manually when they occur:
 
