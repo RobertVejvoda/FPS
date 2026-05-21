@@ -2,13 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  fetchReportingDashboard, fetchReportingSummary, fetchReportingFairness, downloadCsvReport,
+  fetchReportingDashboard, fetchReportingSummary, fetchReportingFairness,
+  fetchUtilizationReport, fetchReasonCodeReport,
+  downloadCsvReport, downloadAllocationOutcomesCsv,
   type DashboardResponse, type SummaryResponse, type FairnessResponse,
+  type UtilizationResponse, type ReasonCodeResponse,
 } from '../api/reporting';
 
 type DashState = { kind: 'loading' } | { kind: 'ok'; data: DashboardResponse } | { kind: 'forbidden' } | { kind: 'error'; message: string };
 type SumState = { kind: 'loading' } | { kind: 'ok'; data: SummaryResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 type FairState = { kind: 'loading' } | { kind: 'ok'; data: FairnessResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
+type UtilState = { kind: 'loading' } | { kind: 'ok'; data: UtilizationResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
+type RcState = { kind: 'loading' } | { kind: 'ok'; data: ReasonCodeResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 
 export function ReportingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
@@ -16,12 +21,17 @@ export function ReportingPage() {
   const [dash, setDash] = useState<DashState>({ kind: 'loading' });
   const [sum, setSum] = useState<SumState>({ kind: 'loading' });
   const [fair, setFair] = useState<FairState>({ kind: 'loading' });
+  const [util, setUtil] = useState<UtilState>({ kind: 'loading' });
+  const [rc, setRc] = useState<RcState>({ kind: 'loading' });
   const [csvBusy, setCsvBusy] = useState(false);
+  const [outcomesBusy, setOutcomesBusy] = useState(false);
 
   const load = useCallback(() => {
     setDash({ kind: 'loading' });
     setSum({ kind: 'loading' });
     setFair({ kind: 'loading' });
+    setUtil({ kind: 'loading' });
+    setRc({ kind: 'loading' });
     const cfg = { apiBaseUrl, bearerToken };
 
     fetchReportingDashboard(cfg).then((r) => {
@@ -44,23 +54,45 @@ export function ReportingPage() {
       if (r.kind === 'ok') setFair({ kind: 'ok', data: r.data });
       else setFair({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load fairness.' });
     });
+
+    fetchUtilizationReport(cfg).then((r) => {
+      if (r.kind === 'unauthenticated') return;
+      if (r.kind === 'error' && r.status === 403) { setUtil({ kind: 'skip' }); return; }
+      if (r.kind === 'ok') setUtil({ kind: 'ok', data: r.data });
+      else setUtil({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load utilization.' });
+    });
+
+    fetchReasonCodeReport(cfg).then((r) => {
+      if (r.kind === 'unauthenticated') return;
+      if (r.kind === 'error' && r.status === 403) { setRc({ kind: 'skip' }); return; }
+      if (r.kind === 'ok') setRc({ kind: 'ok', data: r.data });
+      else setRc({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load reason codes.' });
+    });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleCsvDownload() {
     setCsvBusy(true);
     const result = await downloadCsvReport({ apiBaseUrl, bearerToken });
     setCsvBusy(false);
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (result.kind === 'ok') {
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'parking-summary.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    if (result.kind === 'ok') triggerDownload(result.blob, 'parking-summary.csv');
+  }
+
+  async function handleOutcomesCsvDownload() {
+    setOutcomesBusy(true);
+    const result = await downloadAllocationOutcomesCsv({ apiBaseUrl, bearerToken });
+    setOutcomesBusy(false);
+    if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+    if (result.kind === 'ok') triggerDownload(result.blob, 'parking-allocation-outcomes.csv');
   }
 
   if (dash.kind === 'loading') return <p style={muted}>Loading report…</p>;
@@ -77,9 +109,14 @@ export function ReportingPage() {
     <div style={page}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Parking Reports</h2>
-        <button onClick={handleCsvDownload} disabled={csvBusy} style={btn}>
-          {csvBusy ? 'Downloading…' : 'Download CSV'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleOutcomesCsvDownload} disabled={outcomesBusy} style={btnSm}>
+            {outcomesBusy ? 'Downloading…' : 'Allocation outcomes CSV'}
+          </button>
+          <button onClick={handleCsvDownload} disabled={csvBusy} style={btn}>
+            {csvBusy ? 'Downloading…' : 'Download summary CSV'}
+          </button>
+        </div>
       </div>
 
       <div style={grid}>
@@ -108,13 +145,7 @@ export function ReportingPage() {
           <h3 style={cardTitle}>Daily Trend</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead>
-                <tr>
-                  {['Date', 'Demand', 'Allocations', 'Rate'].map(h => (
-                    <th key={h} style={th}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
+              <thead><tr>{['Date', 'Demand', 'Allocations', 'Rate'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {d.dailyTrend.map(row => (
                   <tr key={row.date}>
@@ -130,18 +161,59 @@ export function ReportingPage() {
         </section>
       )}
 
+      {util.kind === 'ok' && util.data.items.length > 0 && (
+        <section style={card}>
+          <h3 style={cardTitle}>Utilization By Location</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tbl}>
+              <thead><tr>{['Location', 'Demand', 'Allocated', 'Rate', 'Rejected', 'Cancelled', 'No-shows'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {util.data.items.map(row => (
+                  <tr key={row.locationId}>
+                    <td style={td}>{row.locationId}</td>
+                    <td style={td}>{row.totalDemand}</td>
+                    <td style={td}>{row.totalAllocations}</td>
+                    <td style={td}>{(row.allocationRate * 100).toFixed(1)}%</td>
+                    <td style={td}>{row.totalRejections}</td>
+                    <td style={td}>{row.totalCancellations}</td>
+                    <td style={td}>{row.totalNoShows}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {util.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Utilization: {util.message}</p>}
+
+      {rc.kind === 'ok' && rc.data.items.length > 0 && (
+        <section style={card}>
+          <h3 style={cardTitle}>Reason Codes</h3>
+          <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>Total demand: {rc.data.totalDemand}</p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tbl}>
+              <thead><tr>{['Reason', 'Count', '% of demand'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {rc.data.items.map(row => (
+                  <tr key={row.reasonCode}>
+                    <td style={td}>{row.reasonCode}</td>
+                    <td style={td}>{row.count}</td>
+                    <td style={td}>{(row.rateOfDemand * 100).toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {rc.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Reason codes: {rc.message}</p>}
+
       {sum.kind === 'ok' && sum.data.items.length > 0 && (
         <section style={card}>
           <h3 style={cardTitle}>Daily Summary</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead>
-                <tr>
-                  {['Date', 'Location', 'Slot', 'Demand', 'Alloc', 'Rate', 'Rejected', 'Cancelled', 'No-shows'].map(h => (
-                    <th key={h} style={th}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
+              <thead><tr>{['Date', 'Location', 'Slot', 'Demand', 'Alloc', 'Rate', 'Rejected', 'Cancelled', 'No-shows'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {sum.data.items.map((row, i) => (
                   <tr key={i}>
@@ -168,13 +240,7 @@ export function ReportingPage() {
           <h3 style={cardTitle}>Fairness</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead>
-                <tr>
-                  {['Requestor', 'Requests', 'Allocations', 'Rate'].map(h => (
-                    <th key={h} style={th}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
+              <thead><tr>{['Requestor', 'Requests', 'Allocations', 'Rate'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {fair.data.items.map(row => (
                   <tr key={row.requestorHash}>
@@ -209,6 +275,7 @@ const card: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7
 const cardTitle: React.CSSProperties = { margin: '0 0 10px', fontSize: 15, fontWeight: 700 };
 const muted: React.CSSProperties = { color: '#6b7280', fontSize: 13 };
 const btn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
+const btnSm: React.CSSProperties = { ...btn, background: '#374151', padding: '8px 14px', fontSize: 13 };
 const tbl: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13 };
 const th: React.CSSProperties = { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 500 };
 const td: React.CSSProperties = { padding: '6px 8px', borderBottom: '1px solid #f3f4f6' };

@@ -49,6 +49,36 @@ public sealed class ReportingController(ReportingQueryService queryService, ICur
         var csv = await queryService.GetSummaryCsvAsync(request, currentUser.TenantId, cancellationToken);
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fps-parking-summary.csv");
     }
+
+    [HttpGet("/reports/parking/utilization")]
+    public async Task<IActionResult> GetUtilization([FromQuery] ReportingQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await queryService.GetUtilizationAsync(request, currentUser.TenantId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("/reports/parking/reason-codes")]
+    public async Task<IActionResult> GetReasonCodes([FromQuery] ReportingQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await queryService.GetReasonCodeReportAsync(request, currentUser.TenantId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("/reports/parking/allocation-outcomes.csv")]
+    public async Task<IActionResult> GetAllocationOutcomesCsv([FromQuery] ReportingQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var csv = await queryService.GetAllocationOutcomesCsvAsync(request, currentUser.TenantId, cancellationToken);
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fps-allocation-outcomes.csv");
+    }
 }
 
 internal static class ReportingRoles
