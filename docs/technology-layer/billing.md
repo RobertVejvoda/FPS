@@ -1,46 +1,31 @@
 # Billing Technology
 
-The Billing component is responsible for handling all financial transactions within the system. It ensures secure processing of payments, manages billing, and integrates with various payment gateways.
+This page is a documentation-only guardrail. It does not approve product Billing implementation.
+
+Billing technology is deferred. FPS currently has no active Billing service, financial collection API, invoice engine, or Billing data store. The commercialisation decision is documented in [Commercialisation Impact Review](../strategy-layer/commercialisation).
 
 ![Software Architecture - Customer](../images/fps-software-arch-customer.png)
 
-## REST API Endpoints
+## Current Technology Boundary
 
-### Payment Methods
+| Area | Position |
+| --- | --- |
+| Billing API | Not implemented. |
+| Billing service | Not implemented. |
+| Commercial data store | Not created. |
+| Invoice workflow | Deferred. |
+| Subscription enforcement | Deferred. |
+| Financial collection scope | Avoided by not processing financial collection data in FPS. |
 
-| Endpoint | Method | Purpose | Response | Status |
-|----------|--------|---------|----------|---------|
-| `/api/payment-methods` | GET | List available payment methods | Payment method array | 200 OK |
-| `/api/payment-methods` | POST | Add new payment method | Created payment method | 201 Created |
-| `/api/payment-methods/{id}` | DELETE | Remove payment method | No content | 204 No Content |
+## Future Technical Direction
 
-### Invoices
+If a future approved commercial model requires in-product Billing, start with tenant-scoped contract metadata instead of financial collection:
 
-| Endpoint | Method | Purpose | Response | Status |
-|----------|--------|---------|----------|---------|
-| `/api/invoices` | GET | List all invoices | Invoice array | 200 OK |
-| `/api/invoices/{id}` | GET | Get invoice details | Invoice object | 200 OK |
-| `/api/invoices/generate` | POST | Generate new invoice | Created invoice | 201 Created |
-| `/api/invoices/{id}/status` | PUT | Update invoice status | Updated invoice | 200 OK |
+| Component candidate | Purpose | Notes |
+| --- | --- | --- |
+| Commercial account API | Read/update tenant commercial account summary and support/service package status. | Restrict to commercial/admin roles and audit every change. |
+| External invoice reference store | Store references to invoices managed outside FPS. | Prefer external accounting workflow before building invoice generation. |
+| Commercial audit publisher | Publish commercial-record changes to Audit. | Must not include employee booking details unless separately approved. |
+| Provider adapter | Optional later adapter for external commercial-system events. | Requires explicit tax, webhook, secret, security, privacy, and operational review. |
 
-### Transactions
-
-| Endpoint | Method | Purpose | Response | Status |
-|----------|--------|---------|----------|---------|
-| `/api/transactions` | GET | List all transactions | Transaction array | 200 OK |
-| `/api/transactions/{id}` | GET | Get transaction details | Transaction object | 200 OK |
-| `/api/transactions/refund` | POST | Process refund | Refund details | 200 OK |
-| `/api/transactions/dispute` | POST | Create dispute | Dispute details | 201 Created |
-
-
-## Software Components
-
-| Software Component | Type | Purpose | Technology |
-|-------------------|------|----------|------------|
-| billing-api | API | External interface for customer billings and payments | Web API (REST) |
-| billing-data | Data | Data access and persistence | Relational DB |
-| billing-engine | Processing | Handles billing and invoice processing | Web API
-
-## Packaging
-
-![Billing](../images/fps-software-pack-billing.png)
+Detailed transaction, refund, dispute, and fraud-handling APIs are not current scope.

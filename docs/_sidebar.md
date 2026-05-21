@@ -3,6 +3,7 @@
   * [Approach](./strategy-layer/approach)
   * [Core Values](./strategy-layer/core-values)
   * [Licensing](./strategy-layer/licensing)
+  * [Commercialisation](./strategy-layer/commercialisation)
 * [Business](./business-layer)
   * [Personas](./business-layer/personas)
   * [Roles](./business-layer/roles)

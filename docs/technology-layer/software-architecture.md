@@ -27,7 +27,7 @@ Current implementation work is documentation-led and proceeds through vertical s
 | Configuration | Tenant/location parking policy and slot/capacity inputs. | Booking consumes policy and capacity contracts. |
 | Customer | Tenant ownership and onboarding. | Defines tenant boundaries and future provisioning. |
 | Reporting | Materialised read models and analytics. | Consumes Booking events/read models without driving Booking state. |
-| Billing | Subscription and invoice workflows. | Future metering and invoicing. |
+| Billing | Deferred commercial account capability. | Future contract/support records only after commercial approval. |
 
 Boundary rules are defined in [Booking Context Contract](../business-layer/booking-context-contract), [Booking Event Contracts](../business-layer/booking-event-contracts), and [Booking Authorization](../business-layer/booking-authorization).
 
@@ -39,7 +39,7 @@ Boundary rules are defined in [Booking Context Contract](../business-layer/booki
 | [Mobile App](./mobile-app) | Mobile App | React Native 0.81.5 + Expo SDK 54 |
 | [Identity](./identity) | Authentication & Authorization | .NET 10 Web API |
 | [Audit](./audit) | Audit Service | .NET 10 Web API |
-| [Billing](./billing) | Billing Service | .NET 10 Web API |
+| [Billing](./billing) | Deferred Billing Service | Future .NET 10 Web API if approved |
 | [Booking](./booking) | Booking Service | .NET 10 Web API |
 | [Configuration](./configuration) | Configuration Service | .NET 10 Web API |
 | [Customer](./customer) | Customer Service | .NET 10 Web API |

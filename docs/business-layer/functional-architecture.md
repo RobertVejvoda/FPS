@@ -67,18 +67,11 @@ The functional architecture of the Fair Parking System (FPS) is designed to ensu
 
 ### [Billing and Payments](./billing)
 
-  - **Secure Transactions**: Ensures all financial transactions are encrypted and secure, protecting user data and preventing fraud.
-  - **Multiple Payment Methods**: Supports various payment methods including credit/debit cards, digital wallets, and bank transfers to provide flexibility to users.
-  - **Payment Gateway Integration**: Seamlessly integrates with multiple payment gateways to facilitate smooth and reliable payment processing.
-  - **Automated Billing**: Automates the billing process to reduce manual effort and minimize errors, ensuring timely and accurate invoicing.
-  - **Customizable Invoices**: Allows customization of invoices to include company branding, detailed breakdowns, and personalized messages.
-  - **Real-time Reporting**: Provides real-time financial reports to track transactions, revenue, and other key metrics for informed decision-making.
-  - **Tenant-specific Payment Settings**: Offers configurable payment settings tailored to the needs of different tenants or user groups.
-  - **Subscription Models**: Supports various subscription models, enabling recurring billing and management of subscription plans.
-  - **Payment Notifications**: Sends automated notifications to users for payment confirmations, due dates, and other important updates.
-  - **Refund Processing**: Facilitates easy and efficient processing of refunds, ensuring customer satisfaction and compliance with policies.
-  - **Transaction History**: Maintains a comprehensive history of all transactions for record-keeping and auditing purposes.
-  - **Dispute Resolution**: Provides mechanisms for resolving payment disputes, ensuring fair and transparent handling of issues.
+  - **Deferred Product Scope**: Billing is not an active FPS product capability until the commercial offer is approved.
+  - **Commercial Account Direction**: A future Billing slice may record tenant-level support, implementation, hosted-demo, dual-license, or subscription status.
+  - **External Invoice Preference**: Initial paid work can rely on external contract/accounting tools rather than in-product invoice generation.
+  - **Employee Data Boundary**: Employee booking and allocation details should not become commercial inputs by default.
+  - **Auditability**: Future commercial-record changes must be tenant-scoped and auditable without exposing employee booking details.
 
 
 ### [Reporting](./reporting)
@@ -108,7 +101,7 @@ The functional architecture of the Fair Parking System (FPS) is designed to ensu
   Manages customer data, ensuring privacy and compliance, and offers tailored services.
   - **User Management**: Comprehensive user management features, including role-based access control, ensuring only authorized personnel can access sensitive data.
   - **Custom Reporting**: Ability to generate, save, and modify custom reports in various formats, with scheduling and automatic generation options.
-  - **Billing and Payments**: Robust billing system supporting multiple payment methods, detailed invoices, and automated billing processes.
+  - **Commercial Account Management**: Future tenant-level commercial records only after the commercial model is approved.
   - **Data Privacy and Security**: Secure storage and transmission of customer data, regular security audits, and timely breach notifications.
   - **Customer Support**: Dedicated support portal with multiple channels, tracking response and resolution times.
   - **Integration with Third-Party Services**: APIs for integration with third-party services, with documentation and support for API usage.
