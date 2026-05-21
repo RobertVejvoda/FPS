@@ -170,3 +170,39 @@ export async function fetchSlotHistory(
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
 }
+
+export async function fetchLocationPolicyHistory(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  locationId: string,
+): Promise<FetchResult<PolicyHistoryItem[]>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/configuration/locations/${encodeURIComponent(locationId)}/parking-policy/history`, { headers: auth(bearerToken) });
+    const early = handle401403<PolicyHistoryItem[]>(res.status); if (early) return early;
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /configuration/locations parking-policy/history returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as PolicyHistoryItem[] };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function saveSlots(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  locationId: string,
+  slots: SlotDto[],
+  changeReason: string | null,
+): Promise<FetchResult<Record<string, never>>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/configuration/locations/${encodeURIComponent(locationId)}/slots`, {
+      method: 'PUT',
+      headers: { ...auth(bearerToken), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slots, changeReason }),
+    });
+    const early = handle401403<Record<string, never>>(res.status); if (early) return early;
+    if (res.ok) return { kind: 'ok', data: {} };
+    return { kind: 'error', status: res.status, message: `PUT /configuration/locations slots returned ${res.status}` };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}

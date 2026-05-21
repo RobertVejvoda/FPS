@@ -4,7 +4,8 @@ import { useAuth } from '../auth/AuthContext';
 import {
   fetchParkingPolicy, saveParkingPolicy,
   fetchLocationPolicy, saveLocationPolicy,
-  fetchPolicyHistory, fetchSlots, fetchSlotHistory,
+  fetchPolicyHistory, fetchLocationPolicyHistory,
+  fetchSlots, saveSlots, fetchSlotHistory,
   type ParkingPolicy, type PolicyHistoryItem, type SlotDto, type SlotHistoryItem,
 } from '../api/configuration';
 
@@ -22,7 +23,12 @@ type LocState =
   | { kind: 'error'; message: string };
 
 type HistoryState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ok'; items: PolicyHistoryItem[] } | { kind: 'error'; message: string };
-type SlotsState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ok'; slots: SlotDto[]; history: SlotHistoryItem[] } | { kind: 'error'; message: string };
+type LocHistoryState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ok'; items: PolicyHistoryItem[] } | { kind: 'error'; message: string };
+type SlotsState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ok'; slots: SlotDto[]; dirty: Record<string, Partial<SlotDto>>; history: SlotHistoryItem[] }
+  | { kind: 'error'; message: string };
 
 export function ConfigurationPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
@@ -38,8 +44,12 @@ export function ConfigurationPage() {
   const [locSaving, setLocSaving] = useState(false);
   const [locSaveMsg, setLocSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const [history, setHistory] = useState<HistoryState>({ kind: 'idle' });
+  const [tenantHistory, setTenantHistory] = useState<HistoryState>({ kind: 'idle' });
+  const [locHistory, setLocHistory] = useState<LocHistoryState>({ kind: 'idle' });
   const [slots, setSlots] = useState<SlotsState>({ kind: 'idle' });
+  const [slotsSaving, setSlotsSaving] = useState(false);
+  const [slotsSaveMsg, setSlotsSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [slotsChangeReason, setSlotsChangeReason] = useState('');
 
   const loadTenant = useCallback(() => {
     setTenant({ kind: 'loading' });
@@ -79,18 +89,28 @@ export function ConfigurationPage() {
     const id = locationId.trim();
     if (!id) return;
     setLocState({ kind: 'loading' });
+    setLocHistory({ kind: 'loading' });
     setSlots({ kind: 'loading' });
+
     fetchLocationPolicy(cfg, id).then((r) => {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'error' && r.status === 403) { setLocState({ kind: 'forbidden' }); return; }
       if (r.kind === 'ok') setLocState({ kind: 'ok', policy: r.data, dirty: {} });
       else setLocState({ kind: 'error', message: 'message' in r ? r.message : 'No location policy.' });
     });
+
+    fetchLocationPolicyHistory(cfg, id).then((r) => {
+      if (r.kind === 'unauthenticated') return;
+      if (r.kind === 'ok') setLocHistory({ kind: 'ok', items: r.data });
+      else setLocHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load location history.' });
+    });
+
     Promise.all([fetchSlots(cfg, id), fetchSlotHistory(cfg, id)]).then(([sr, hr]) => {
       if (sr.kind === 'ok' && hr.kind === 'ok') {
-        setSlots({ kind: 'ok', slots: sr.data, history: hr.data });
+        setSlots({ kind: 'ok', slots: sr.data, dirty: {}, history: hr.data });
       } else {
-        const msg = sr.kind !== 'ok' && 'message' in sr ? sr.message : hr.kind !== 'ok' && 'message' in hr ? hr.message : 'Failed to load slots.';
+        const msg = sr.kind !== 'ok' && 'message' in sr ? sr.message
+          : hr.kind !== 'ok' && 'message' in hr ? hr.message : 'Failed to load slots.';
         setSlots({ kind: 'error', message: msg });
       }
     });
@@ -119,12 +139,37 @@ export function ConfigurationPage() {
     setTimeout(() => setLocSaveMsg(null), 4000);
   }
 
-  function loadHistory() {
-    setHistory({ kind: 'loading' });
+  function patchSlot(slotId: string, field: keyof SlotDto, value: unknown) {
+    setSlots(prev => {
+      if (prev.kind !== 'ok') return prev;
+      return { ...prev, dirty: { ...prev.dirty, [slotId]: { ...(prev.dirty[slotId] ?? {}), [field]: value } } };
+    });
+  }
+
+  async function handleSaveSlots() {
+    if (slots.kind !== 'ok') return;
+    const id = locationId.trim();
+    const merged = slots.slots.map(s => ({ ...s, ...(slots.dirty[s.slotId] ?? {}) }));
+    setSlotsSaving(true);
+    const r = await saveSlots(cfg, id, merged, slotsChangeReason.trim() || null);
+    setSlotsSaving(false);
+    if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+    if (r.kind === 'ok') {
+      setSlotsSaveMsg({ ok: true, text: 'Slots saved.' });
+      setSlots(prev => prev.kind === 'ok' ? { ...prev, slots: merged, dirty: {} } : prev);
+      setSlotsChangeReason('');
+    } else {
+      setSlotsSaveMsg({ ok: false, text: 'message' in r ? r.message : 'Failed to save slots.' });
+    }
+    setTimeout(() => setSlotsSaveMsg(null), 4000);
+  }
+
+  function loadTenantHistory() {
+    setTenantHistory({ kind: 'loading' });
     fetchPolicyHistory(cfg).then((r) => {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-      if (r.kind === 'ok') setHistory({ kind: 'ok', items: r.data });
-      else setHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load history.' });
+      if (r.kind === 'ok') setTenantHistory({ kind: 'ok', items: r.data });
+      else setTenantHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load history.' });
     });
   }
 
@@ -161,36 +206,16 @@ export function ConfigurationPage() {
 
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ ...cardTitle, marginBottom: 0 }}>Policy Version History</h3>
-          {history.kind === 'idle' && <button onClick={loadHistory} style={btnSm}>Load history</button>}
-          {history.kind === 'loading' && <span style={muted}>Loading…</span>}
+          <h3 style={{ ...cardTitle, marginBottom: 0 }}>Tenant Policy Version History</h3>
+          {tenantHistory.kind === 'idle' && <button onClick={loadTenantHistory} style={btnSm}>Load history</button>}
+          {tenantHistory.kind === 'loading' && <span style={muted}>Loading…</span>}
         </div>
-        {history.kind === 'ok' && (
-          history.items.length === 0 ? <p style={muted}>No history.</p> : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={tbl}>
-                <thead>
-                  <tr>
-                    {['Version', 'Published at', 'Published by', 'Reason'].map(h => (
-                      <th key={h} style={th}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.items.map(item => (
-                    <tr key={item.version}>
-                      <td style={td}>{item.version}</td>
-                      <td style={td}>{item.publishedAt}</td>
-                      <td style={td}>{item.publishedByHash ?? '—'}</td>
-                      <td style={td}>{item.publicationReason ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {tenantHistory.kind === 'ok' && (
+          tenantHistory.items.length === 0 ? <p style={muted}>No history.</p> : (
+            <HistoryTable items={tenantHistory.items} />
           )
         )}
-        {history.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{history.message}</p>}
+        {tenantHistory.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{tenantHistory.message}</p>}
       </section>
 
       <section style={card}>
@@ -228,11 +253,36 @@ export function ConfigurationPage() {
           </div>
         )}
 
+        {(locHistory.kind === 'loading' || (locHistory.kind === 'ok' && locHistory.items.length > 0) || locHistory.kind === 'error') && (
+          <div style={{ marginTop: 20 }}>
+            <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>Location Policy History</h4>
+            {locHistory.kind === 'loading' && <p style={muted}>Loading…</p>}
+            {locHistory.kind === 'ok' && <HistoryTable items={locHistory.items} />}
+            {locHistory.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{locHistory.message}</p>}
+          </div>
+        )}
+
         {slots.kind === 'loading' && <p style={{ ...muted, marginTop: 16 }}>Loading slots…</p>}
         {slots.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 16 }}>{slots.message}</p>}
         {slots.kind === 'ok' && (
           <div style={{ marginTop: 20 }}>
-            <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>Slots ({slots.slots.length})</h4>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Slots ({slots.slots.length})</h4>
+              {Object.keys(slots.dirty).length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    value={slotsChangeReason}
+                    onChange={e => setSlotsChangeReason(e.target.value)}
+                    placeholder="Change reason (optional)"
+                    style={{ border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 10px', fontSize: 13, outline: 'none', width: 220 }}
+                  />
+                  <button onClick={handleSaveSlots} disabled={slotsSaving} style={{ ...btnSm, opacity: slotsSaving ? 0.5 : 1 }}>
+                    {slotsSaving ? 'Saving…' : 'Save slots'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {slotsSaveMsg && <SaveBanner ok={slotsSaveMsg.ok} text={slotsSaveMsg.text} />}
             {slots.slots.length === 0 ? <p style={muted}>No slots configured.</p> : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={tbl}>
@@ -244,17 +294,28 @@ export function ConfigurationPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {slots.slots.map(s => (
-                      <tr key={s.slotId}>
-                        <td style={td}>{s.slotId}</td>
-                        <td style={td}>{s.isActive ? 'Yes' : 'No'}</td>
-                        <td style={td}>{s.hasCharger ? 'Yes' : 'No'}</td>
-                        <td style={td}>{s.isAccessible ? 'Yes' : 'No'}</td>
-                        <td style={td}>{s.isCompanyCarOnly ? 'Yes' : 'No'}</td>
-                        <td style={td}>{s.isMotorcycleCapacity ? 'Yes' : 'No'}</td>
-                        <td style={td}>{s.reservedForUserId ?? '—'}</td>
-                      </tr>
-                    ))}
+                    {slots.slots.map(s => {
+                      const d = slots.dirty[s.slotId] ?? {};
+                      const v = { ...s, ...d };
+                      return (
+                        <tr key={s.slotId}>
+                          <td style={td}>{s.slotId}</td>
+                          <td style={td}><input type="checkbox" checked={v.isActive} onChange={e => patchSlot(s.slotId, 'isActive', e.target.checked)} /></td>
+                          <td style={td}><input type="checkbox" checked={v.hasCharger} onChange={e => patchSlot(s.slotId, 'hasCharger', e.target.checked)} /></td>
+                          <td style={td}><input type="checkbox" checked={v.isAccessible} onChange={e => patchSlot(s.slotId, 'isAccessible', e.target.checked)} /></td>
+                          <td style={td}><input type="checkbox" checked={v.isCompanyCarOnly} onChange={e => patchSlot(s.slotId, 'isCompanyCarOnly', e.target.checked)} /></td>
+                          <td style={td}><input type="checkbox" checked={v.isMotorcycleCapacity} onChange={e => patchSlot(s.slotId, 'isMotorcycleCapacity', e.target.checked)} /></td>
+                          <td style={td}>
+                            <input
+                              value={v.reservedForUserId ?? ''}
+                              onChange={e => patchSlot(s.slotId, 'reservedForUserId', e.target.value || null)}
+                              placeholder="—"
+                              style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: '3px 6px', fontSize: 12, width: 120, outline: 'none' }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -319,9 +380,35 @@ function PolicyForm({ policy, onPatch }: { policy: ParkingPolicy; onPatch: (fiel
   );
 }
 
+function HistoryTable({ items }: { items: PolicyHistoryItem[] }) {
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={tbl}>
+        <thead>
+          <tr>
+            {['Version', 'Published at', 'Published by', 'Reason'].map(h => (
+              <th key={h} style={th}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(item => (
+            <tr key={item.version}>
+              <td style={td}>{item.version}</td>
+              <td style={td}>{item.publishedAt}</td>
+              <td style={td}>{item.publishedByHash ?? '—'}</td>
+              <td style={td}>{item.publicationReason ?? '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function SaveBanner({ ok, text }: { ok: boolean; text: string }) {
   return (
-    <div style={{ padding: '10px 16px', borderRadius: 8, background: ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}`, color: ok ? '#166534' : '#b91c1c', fontSize: 13, fontWeight: 500 }}>
+    <div style={{ padding: '10px 16px', borderRadius: 8, background: ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}`, color: ok ? '#166534' : '#b91c1c', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>
       {text}
     </div>
   );
