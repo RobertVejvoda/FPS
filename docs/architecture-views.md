@@ -2,6 +2,8 @@
 
 This page prepares an ArchiMate-style hierarchy for FPS architecture documentation. It is a navigation and structure page: detailed diagrams and models can be added over time without changing the overall story.
 
+Core architecture pages describe provider-neutral product, service, data, security, and integration contracts. Local, demo, Azure, AWS, Kubernetes, and client-owned deployment details belong under [Production](./production) as environment profiles or implementation examples. Do not make Azure, AWS, Kubernetes, Traefik, Envoy, or any other runtime product part of the core design unless the decision is recorded in [Versions and Decisions](./versions-and-decisions).
+
 ## Viewpoint Map
 
 | View | Audience | Question Answered | Current Source Pages |
@@ -23,9 +25,9 @@ This page prepares an ArchiMate-style hierarchy for FPS architecture documentati
 | Strategy / Motivation | [Strategy](./strategy) | Product goals, value, constraints, licensing, future extension notes. |
 | Business | [Business Layer](./business-layer) | Actors, roles, business requirements, processes, policies, reason codes, booking lifecycle. |
 | Application | [Software Architecture](./technology-layer/software-architecture) | Bounded contexts, service responsibilities, integration direction, and user-facing app surfaces. |
-| Technology | [Technology Layer](./technology-layer) | Runtime technologies, service packages, Dapr boundaries, data stores, non-functional requirements. |
+| Technology | [Technology Layer](./technology-layer) | Provider-neutral runtime technologies, service packages, Dapr boundaries, data stores, and non-functional requirements. |
 | Security | [Security](./security) | Data classification, authentication, authorization, encryption, audit, compliance, security operations. |
-| Production / Operations | [Production](./production) | Deployment options, observability, backup/restore, incidents, maintenance, readiness evidence. |
+| Production / Operations | [Production](./production) | Local/demo/client deployment profiles, provider-specific options, observability, backup/restore, incidents, maintenance, readiness evidence. |
 | Working delivery detail | [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki) | Slice order, PR evidence, validation, remaining gaps, GitHub links, and maintainer process. |
 
 ## Planned View Content
@@ -41,6 +43,7 @@ This page prepares an ArchiMate-style hierarchy for FPS architecture documentati
 ## Modeling Rules
 
 - Prefer ArchiMate-style concepts and clear view names over framework-heavy process text.
+- Keep core architecture provider-neutral. Reference provider-specific setup only from production/deployment pages.
 - Keep views layered but connected: business capability should trace to application services, technology components, security controls, and implementation slices.
 - Use placeholders when the model is not mature yet; do not invent decisions that are not recorded in [Versions and Decisions](./versions-and-decisions).
 - When a view becomes durable, link it from this page and update the corresponding layer index.

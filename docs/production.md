@@ -33,7 +33,7 @@ FPS production runtime is expected to contain:
 | --- | --- | --- |
 | Container hosting | Runs the .NET services, web app, and supporting workers. | Replaceable by profile: local containers, low-cost demo hosting, or client-owned platform. |
 | Dapr sidecars | Service invocation, pub/sub, state-store integration, secret access, and future workflows. | Dapr remains the portability boundary. |
-| API ingress | Public HTTPS entry point and routing to services. | Traefik or cloud-native ingress, with TLS and rate limiting. |
+| API ingress | Public HTTPS entry point and routing to services. | Local Envoy for the current harness; production can use Traefik, cloud-native ingress, or a client-approved gateway, with TLS and rate limiting. |
 | Identity provider | OIDC/OAuth login, JWT claims, roles, and tenant/user context. | Keycloak or cloud-managed equivalent. |
 | Write/read persistence | Service-owned MongoDB databases with tenant-specific collections. | MongoDB-compatible managed or self-hosted option. |
 | Message broker | Booking events to Notification, Audit, Reporting, and future consumers. | RabbitMQ via Dapr pub/sub. |

@@ -2,7 +2,7 @@
 
 ## What We Are Building
 
-The **Fair Parking System (FPS)** is a multi-tenant SaaS platform that replaces manual, email-based parking management with a transparent, algorithm-driven allocation system. The core idea is a daily **Draw process**: employees submit requests for the next day's slot; a weighted lottery runs nightly and assigns slots fairly, favouring those who park least often.
+The **Fair Parking System (FPS)** is a multi-tenant application platform that replaces manual, email-based parking management with a transparent, algorithm-driven allocation system. The core idea is a daily **Draw process**: employees submit requests for the next day's slot; a weighted lottery runs nightly and assigns slots fairly, favouring those who park least often.
 
 The system is not a simple CRUD app — the Draw is a long-running distributed process that locks slots, runs an allocation algorithm, fires notifications, and updates metrics. This makes it an ideal candidate for **Dapr Workflows**.
 
@@ -75,7 +75,7 @@ This package is referenced by all services — it must remain stable and have no
 | Cache / session | Redis | Identity sessions, rate limiting |
 | Message broker | **RabbitMQ via Dapr pub/sub** | All async domain events |
 | Auth | **Keycloak** (OIDC/OAuth 2.0) | JWT tokens, RBAC, MFA |
-| API gateway | Traefik | Routing, TLS, rate limiting |
+| API gateway / ingress | Provider-neutral gateway | Routing, TLS, rate limiting; local harness currently uses Envoy |
 | Dev orchestration | **.NET Aspire** | Local dev, service discovery, dashboard |
 | Observability | Prometheus + Grafana + Loki + Jaeger | Already designed |
 | Secrets | Vault | All credentials, API keys |
@@ -919,7 +919,7 @@ Implementation notes for Claude:
 - [ ] Email channel (SMTP or SendGrid)
 - [ ] In-app notification history API and unread-count API
 - [ ] V1 mandatory channels: in-app and email for critical operational notifications
-- [ ] **SSE endpoint** `GET /notifications/stream` — clients connect, events from Dapr pub/sub are bridged to connected SSE clients; no Azure dependency, no extra infrastructure
+- [ ] **SSE endpoint** `GET /notifications/stream` — clients connect, events from Dapr pub/sub are bridged to connected SSE clients; no provider dependency, no extra infrastructure
 - [ ] Idempotent — duplicate events must not send duplicate emails
 - [ ] Implement notification behavior against `docs/business-layer/notification.md`
 
@@ -1012,7 +1012,7 @@ Current slice mapping:
 - [ ] Client-owned production integration guide prepared
 - [ ] Runtime-appropriate scaling configuration documented
 - [ ] Vault integration for all secrets
-- [ ] OpenTelemetry metrics/logs/traces exported locally and documented for client platforms such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent
+- [ ] OpenTelemetry metrics/logs/traces exported locally and documented for selected client observability platforms
 - [ ] Load testing (k6 or NBomber) against NFR targets
 - [ ] Penetration testing pass
 - [ ] Runbooks for Draw process failure, Keycloak outage, database failover
