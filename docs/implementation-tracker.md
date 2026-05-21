@@ -31,7 +31,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Audit v1 completion | Done | A001, A002, A004, and A005 are implemented, covering append-only records, query/erasure support, retention, integrity verification, and export evidence. |
 | Production operations | In progress | OPS000-OPS002 and OPS006A-OPS006D are merged. Next work is coordinated local harness/AppHost, client-owned deployment hardening, observability, and operational evidence. |
 | Configuration management | In progress | CFG001 and CFG002 are implemented. Web configuration surfaces exist; publication and deeper audit integration remain planned. |
-| Reporting foundation | In progress | REPORT001 read models and first web reporting views are implemented. Custom report scheduling and richer export formats remain planned. |
+| Reporting foundation | In progress | REPORT001 read models, REPORT002 dashboard/export foundation, and WEB006 web reporting views are implemented. Next reporting work is fixed operational report catalog and export hardening. |
 
 ## Slice Tracker
 
@@ -103,7 +103,8 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | CUST007 Tenant Readiness Check | Planned | [#205](https://github.com/RobertVejvoda/FPS/issues/205) | - | `implemented-by: claude` target | After `CUST004`-`CUST006` | Validate identity, first admin, policy, slots, profile facts, booking smoke path, notification, audit, and reporting evidence before live use. |
 | CUST002 SSO-First Customer Integration Contract | Done | [#141](https://github.com/RobertVejvoda/FPS/issues/141) | direct doc update | Codex/spec | 2026-05-17 | Defines SSO/OIDC issuer and tenant mapping, minimal employee/profile data, local-account credential handling, import constraints, source-of-truth rules, audit/GDPR requirements, and downstream acceptance criteria for `P002`, `ID002`, `OPS005`, and `CUST001`. |
 | REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
-| REPORT002 Reporting Dashboards And Exports | Planned | [#147](https://github.com/RobertVejvoda/FPS/issues/147) | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
+| REPORT002 Reporting Dashboards And Exports | Done | [#147](https://github.com/RobertVejvoda/FPS/issues/147) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Dashboard aggregates, web reporting views, and summary CSV export are implemented through REPORT001/WEB006 work. |
+| REPORT003 Operational Report Catalog And Export Hardening | Planned | - | - | `implemented-by: claude` target | After REPORT002 | Fixed manager-safe operational report catalog: utilization, reason-code, and outcome exports with privacy-safe shaping and CSV hardening. |
 | BILL000 Commercialisation Impact Review | Planned | [#150](https://github.com/RobertVejvoda/FPS/issues/150) | - | Unassigned | Before Billing implementation | Decide free/open core boundaries, paid add-on candidates, support subscription shape, and future dual-license posture before implementing product Billing behavior. |
 | BILL001 Billing Stub To Workflow | Planned | [#153](https://github.com/RobertVejvoda/FPS/issues/153) | - | Unassigned | After BILL000 | Subscription, invoice generation, and payment-provider integration only after the commercial model is approved. |
 
