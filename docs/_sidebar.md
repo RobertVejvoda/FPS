@@ -10,6 +10,7 @@
   * [Process](./business-layer/process)
   * [Booking](./business-layer/booking)
   * [Allocation Rules](./business-layer/allocation-rules)
+  * [Tenant Onboarding](./business-layer/tenant-onboarding)
   * [Customer Integration](./business-layer/customer-data-import)
   * [Mobile App](./business-layer/mobile-app)
   * [Web App](./business-layer/web-app)

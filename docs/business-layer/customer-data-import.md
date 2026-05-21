@@ -2,6 +2,8 @@
 
 FPS should integrate with a company primarily through the company's identity provider. For normal enterprise use, employees authenticate with SSO and FPS stores only the minimum profile and eligibility facts needed for booking, notification, audit, reporting, and support. FPS must not become a copy of the customer's HR or identity database.
 
+Use [Tenant Onboarding](./tenant-onboarding) for the end-to-end sequence that creates a new company tenant, configures identity, creates the first administrator, sets up parking policy/slots, loads pilot employee facts, and proves readiness.
+
 Local FPS-created accounts are an explicit fallback for demo, small tenants, break-glass administration, or customers without SSO. When FPS owns such an account, credential verifiers such as password hashes are Secret data and must be handled by the Identity service using hardened credential storage. Plaintext passwords are never stored.
 
 ## Integration Goal
@@ -165,6 +167,7 @@ Future implementation slices that consume this contract must preserve these cons
 | `ID002` User Provisioning Integration | Maps `(tenantId, issuer, externalSubject)` to FPS users; validates trusted issuer/audience/subject; applies configured group-to-role mapping; handles inactive users fail-closed; keeps local-account credential handling inside Identity. |
 | `OPS005` Integration Secrets And Observability | Stores integration credentials only through the selected secret-management path; emits safe metrics/logs for success, rejection, retries, and validation failures without leaking Confidential or Secret data. |
 | `CUST001` Tenant Onboarding | Creates tenant integration configuration before live SSO users can authenticate; records trusted issuer, audience, tenant mapping, role mapping, and fallback-account policy. |
+| `CUST007` Tenant Readiness Check | Verifies tenant setup, identity, first admin, policy, slots, profile facts, booking smoke path, notification, audit, and reporting evidence before live use. |
 
 ## Planned Slices
 
