@@ -558,6 +558,7 @@ jobs:
           OWNER_DISPLAY=""
           IMPL_OPTION=""
           IMPL_DISPLAY=""
+          CLAUDE_INVOCATION_REQUIRED="false"
 
           set_owner() {
             case "$1" in
@@ -596,6 +597,7 @@ jobs:
               STATUS_NAME="Needs changes"
               set_owner Claude
               set_implementer Claude
+              CLAUDE_INVOCATION_REQUIRED="true"
               ;;
             copilot-fix)
               STATUS_OPT="$OPT_STATUS_NEEDS_CHANGES"
@@ -623,7 +625,11 @@ jobs:
               fi
               set_owner "$ARG_OWNER"
               case "$ARG_OWNER" in
-                Claude|Copilot) set_implementer "$ARG_OWNER" ;;
+                Claude)
+                  set_implementer "$ARG_OWNER"
+                  CLAUDE_INVOCATION_REQUIRED="true"
+                  ;;
+                Copilot) set_implementer "$ARG_OWNER" ;;
               esac
               ;;
             blocked)
@@ -682,5 +688,16 @@ jobs:
                 --field-id "$FIELD_IMPLEMENTER" --single-select-option-id "$IMPL_OPTION" \
                 && echo "::notice::Issue #$TARGET_ISSUE Implementer -> $IMPL_DISPLAY" \
                 || echo "::warning::Failed to set Implementer for issue #$TARGET_ISSUE"
+            fi
+
+            if [ "$CLAUDE_INVOCATION_REQUIRED" = "true" ]; then
+              gh issue edit "$TARGET_ISSUE" --repo "$GH_REPO" --add-assignee "$REPO_OWNER" \
+                && echo "::notice::Issue #$TARGET_ISSUE assigned to $REPO_OWNER for Claude UI invocation" \
+                || echo "::warning::Failed to assign issue #$TARGET_ISSUE to $REPO_OWNER"
+
+              gh issue comment "$TARGET_ISSUE" --repo "$GH_REPO" \
+                --body "Claude route prepared. GitHub assignee @$REPO_OWNER is notification-only so Robert can invoke or reassign Claude through the GitHub UI. Durable owner remains Claude in the FPS Delivery Kanban." \
+                && echo "::notice::Issue #$TARGET_ISSUE Claude invocation note posted" \
+                || echo "::warning::Failed to post Claude invocation note for issue #$TARGET_ISSUE"
             fi
           done
