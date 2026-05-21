@@ -249,28 +249,30 @@ public sealed class TenantRoleMappingTests
     }
 
     [Fact]
-    public async Task Transform_ConfiguredTenant_MissingConfiguredSubjectClaim_FailsClosed()
+    public async Task Transform_ConfiguredTenant_MissingConfiguredSubjectClaim_StripsRolesAndDeactivates()
     {
+        // Enforcement active; "oid" required but token only has "sub" — raw admin must not survive.
         var store = new InMemoryTenantIdentityConfigStore();
         store.Register("tenant-1");
-        // Config requires "oid" as subject, but token only has "sub"
         store.SetClaimConfig("tenant-1", new TenantClaimConfig("tenant_id", "oid", []));
 
         var transform = new TenantClaimsTransformation(
             new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
 
         var principal = PrincipalWithClaims(
-            ("tenant_id", "tenant-1"), ("sub", "user-1")); // "oid" absent
+            ("tenant_id", "tenant-1"), ("sub", "user-1"),
+            (ClaimTypes.Role, "admin")); // raw admin claim — must be stripped
 
         var result = await transform.TransformAsync(principal);
 
-        // No transform applied — returned as-is (no fps_transformed claim)
-        Assert.False(result.HasClaim(TransformedMarker, "true"));
+        Assert.True(result.HasClaim("fps_deactivated", "true"));
+        Assert.Empty(result.FindAll(ClaimTypes.Role));
     }
 
     [Fact]
-    public async Task Transform_ConfiguredTenant_MissingTenantClaim_FailsClosed()
+    public async Task Transform_ConfiguredTenant_MissingTenantClaim_StripsRolesAndDeactivates()
     {
+        // Token carries default "tenant_id" but config requires "tid" — raw admin must not survive.
         var store = new InMemoryTenantIdentityConfigStore();
         store.Register("tenant-1");
         store.SetClaimConfig("tenant-1", new TenantClaimConfig("tid", "sub", []));
@@ -278,15 +280,47 @@ public sealed class TenantRoleMappingTests
         var transform = new TenantClaimsTransformation(
             new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
 
-        // Token has "tenant_id" but config requires "tid"
         var principal = PrincipalWithClaims(
-            ("tenant_id", "tenant-1"), ("sub", "user-1"));
+            ("tenant_id", "tenant-1"), ("sub", "user-1"),
+            (ClaimTypes.Role, "admin")); // raw admin claim — must be stripped
 
         var result = await transform.TransformAsync(principal);
 
-        Assert.False(result.HasClaim(TransformedMarker, "true"));
+        Assert.True(result.HasClaim("fps_deactivated", "true"));
+        Assert.Empty(result.FindAll(ClaimTypes.Role));
     }
 
-    // Access the internal constant for the transformed marker claim name.
-    private const string TransformedMarker = "fps_transformed";
+    [Fact]
+    public async Task Transform_EnforcementActive_MissingDefaultTenantClaim_StripsRoles()
+    {
+        // Enforcement active; token has no tenant_id at all — raw roles must not survive.
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("some-tenant"); // enforcement now active
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        var principal = PrincipalWithClaims(("sub", "user-1"), (ClaimTypes.Role, "admin"));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.True(result.HasClaim("fps_deactivated", "true"));
+        Assert.Empty(result.FindAll(ClaimTypes.Role));
+    }
+
+    [Fact]
+    public async Task Transform_EnforcementInactive_MissingTenantClaim_ReturnsOriginalUnchanged()
+    {
+        // Before any tenant configured (enforcement inactive) — backward-compatible pass-through.
+        var store = new InMemoryTenantIdentityConfigStore(); // empty
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        var principal = PrincipalWithClaims(("sub", "user-1"), (ClaimTypes.Role, "admin"));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
 }

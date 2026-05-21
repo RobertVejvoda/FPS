@@ -6,17 +6,18 @@ namespace FPS.SharedKernel.Identity;
 // Runs on every authenticated request (before authorization) to:
 // 1. Extract tenant/subject using configured claim names for configured tenants.
 // 2. Replace raw IdP role claims with tenant-mapped FPS role names.
-// 3. Add fps_deactivated=true for unconfigured tenants (when enforcement active)
-//    or for users in the per-service deactivation store.
+// 3. Add fps_deactivated=true for unconfigured tenants (when enforcement active),
+//    missing required claims (when enforcement active), or deactivated users.
 //
-// For configured tenants the transformation uses the stored TenantClaimName,
-// SubjectClaimName, and RoleClaimNames from ITenantIdentityConfigStore. Tokens
-// that do not carry the configured tenant/subject claim fail closed — no transform,
-// no roles. This enforces the contract that stable subjects and correct claim names
-// are required before a user is recognized.
+// FAIL-CLOSED CONTRACT:
+// When enforcement is active (any tenant registered) OR per-tenant claim config exists,
+// a principal with a missing/empty tenant or subject claim has its role claims stripped
+// and fps_deactivated=true added. It is never returned with raw role claims intact.
+// When enforcement is inactive (store empty) and no claim config exists, missing claims
+// result in the original principal being returned unchanged (backward-compatible).
 //
-// IClaimsTransformation may be invoked more than once per principal; fps_transformed=true
-// guards against double-mapping.
+// IClaimsTransformation may be invoked more than once; fps_transformed=true prevents
+// double-processing.
 public sealed class TenantClaimsTransformation(
     ITenantRoleMapper roleMapper,
     IDeactivatedUserStore deactivatedUsers,
@@ -24,8 +25,6 @@ public sealed class TenantClaimsTransformation(
 {
     internal const string DeactivatedClaim = "fps_deactivated";
     private const string TransformedClaim = "fps_transformed";
-
-    // Default claim names used when no tenant-specific config exists.
     private const string DefaultTenantClaim = "tenant_id";
     private const string DefaultSubjectClaim = "sub";
 
@@ -34,26 +33,27 @@ public sealed class TenantClaimsTransformation(
         if (principal.HasClaim(TransformedClaim, "true"))
             return Task.FromResult(principal);
 
-        // Phase 1: extract tenant from the default claim (bootstrap step).
+        var enforcement = identityConfigStore.IsEnforcementActive;
+
+        // Step 1: extract tenant from default claim.
         var tenantId = principal.FindFirstValue(DefaultTenantClaim) ?? string.Empty;
         if (string.IsNullOrEmpty(tenantId))
-            return Task.FromResult(principal);
+            return enforcement ? FailClosed(principal) : Task.FromResult(principal);
 
-        // Phase 2: resolve per-tenant claim names for configured tenants.
-        var claimConfig = identityConfigStore is InMemoryTenantIdentityConfigStore concreteStore
-            ? concreteStore.GetClaimConfig(tenantId)
-            : null;
+        // Step 2: per-tenant claim config (populated by Customer service on configure).
+        var claimConfig = (identityConfigStore as InMemoryTenantIdentityConfigStore)
+            ?.GetClaimConfig(tenantId);
 
-        // If tenant is configured and has a non-default TenantClaimName, re-read tenantId.
+        // Step 3: re-derive tenantId from the configured TenantClaimName if it differs.
         if (claimConfig is not null &&
             !string.Equals(claimConfig.TenantClaimName, DefaultTenantClaim, StringComparison.OrdinalIgnoreCase))
         {
             tenantId = principal.FindFirstValue(claimConfig.TenantClaimName) ?? string.Empty;
             if (string.IsNullOrEmpty(tenantId))
-                return Task.FromResult(principal); // fail closed: required claim absent
+                return FailClosed(principal); // configured tenant claim absent → fail closed
         }
 
-        // Extract stable subject using configured SubjectClaimName, or defaults.
+        // Step 4: extract stable subject using configured SubjectClaimName or defaults.
         var subjectClaimName = claimConfig?.SubjectClaimName ?? DefaultSubjectClaim;
         var userId = principal.FindFirstValue(subjectClaimName)
             ?? (string.Equals(subjectClaimName, DefaultSubjectClaim, StringComparison.OrdinalIgnoreCase)
@@ -62,12 +62,15 @@ public sealed class TenantClaimsTransformation(
             ?? string.Empty;
 
         if (string.IsNullOrEmpty(userId))
-            return Task.FromResult(principal); // fail closed: stable subject absent
+            return (enforcement || claimConfig is not null)
+                ? FailClosed(principal)   // required stable subject absent → fail closed
+                : Task.FromResult(principal);
 
+        // Step 5: clone and rebuild role claims.
         var cloned = principal.Clone();
         var identity = (ClaimsIdentity)cloned.Identity!;
 
-        // Phase 3: materialize raw roles before removing any claims (LINQ is lazy).
+        // Materialize before removing — LINQ over ClaimsIdentity is lazy.
         List<string> rawRoleValues;
         if (claimConfig?.RoleClaimNames is { Count: > 0 } roleClaimNames)
         {
@@ -82,14 +85,13 @@ public sealed class TenantClaimsTransformation(
             rawRoleValues = identity.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
         }
 
-        // Remove all existing role claims before replacing with mapped values.
         foreach (var claim in identity.FindAll(ClaimTypes.Role).ToList())
             identity.RemoveClaim(claim);
         foreach (var role in roleMapper.MapToRoles(tenantId, rawRoleValues))
             identity.AddClaim(new Claim(ClaimTypes.Role, role));
 
-        // Reject unconfigured tenants when enforcement is active.
-        if (identityConfigStore.IsEnforcementActive && !identityConfigStore.IsConfigured(tenantId))
+        // Step 6: enforcement and deactivation checks.
+        if (enforcement && !identityConfigStore.IsConfigured(tenantId))
         {
             foreach (var role in identity.FindAll(ClaimTypes.Role).ToList())
                 identity.RemoveClaim(role);
@@ -102,6 +104,19 @@ public sealed class TenantClaimsTransformation(
             identity.AddClaim(new Claim(DeactivatedClaim, "true"));
         }
 
+        identity.AddClaim(new Claim(TransformedClaim, "true"));
+        return Task.FromResult(cloned);
+    }
+
+    // Clones principal, strips role claims, adds fps_deactivated+fps_transformed.
+    // Ensures enforcement-active fail paths never return raw token roles.
+    private static Task<ClaimsPrincipal> FailClosed(ClaimsPrincipal original)
+    {
+        var cloned = original.Clone();
+        var identity = (ClaimsIdentity)cloned.Identity!;
+        foreach (var role in identity.FindAll(ClaimTypes.Role).ToList())
+            identity.RemoveClaim(role);
+        identity.AddClaim(new Claim(DeactivatedClaim, "true"));
         identity.AddClaim(new Claim(TransformedClaim, "true"));
         return Task.FromResult(cloned);
     }
