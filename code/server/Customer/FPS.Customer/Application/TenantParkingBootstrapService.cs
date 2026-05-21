@@ -6,15 +6,26 @@ public sealed class TenantParkingBootstrapService(
     ITenantParkingBootstrapRepository bootstrapRepository,
     ITenantRepository tenantRepository)
 {
-    public async Task<string?> RecordDefaultPolicyAsync(string tenantId, string actorHash, CancellationToken ct)
+    public async Task<string?> RecordDefaultPolicyAsync(
+        string tenantId,
+        string timeZone, string drawCutOffTime, int dailyRequestCap, int allocationLookbackDays,
+        string actorHash, CancellationToken ct)
     {
+        var validationError = BootstrapPolicySnapshot.Validate(timeZone, drawCutOffTime, dailyRequestCap, allocationLookbackDays);
+        if (validationError is not null) return validationError;
+
         var tenant = await tenantRepository.GetAsync(tenantId, ct);
         if (tenant is null) return "Tenant not found.";
         if (tenant.LifecycleState == TenantLifecycleState.Archived)
             return "Cannot configure parking for an archived tenant.";
 
+        var snapshot = new BootstrapPolicySnapshot(
+            timeZone.Trim(), drawCutOffTime.Trim(),
+            dailyRequestCap, allocationLookbackDays,
+            actorHash, DateTimeOffset.UtcNow);
+
         var bootstrap = await bootstrapRepository.GetOrCreateAsync(tenantId, ct);
-        bootstrap.RecordDefaultPolicy(actorHash);
+        bootstrap.RecordDefaultPolicy(snapshot);
         await bootstrapRepository.SaveAsync(bootstrap, ct);
         return null;
     }

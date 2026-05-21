@@ -23,25 +23,48 @@ public sealed class TenantParkingBootstrapTests
         return t!.TenantId;
     }
 
-    // ── RecordDefaultPolicy ──────────────────────────────────────────────────
+    private Task<string?> RecordPolicy(string tenantId, string actor = "actor-hash",
+        string tz = "Europe/London", string cutOff = "18:00", int cap = 500, int lookback = 10) =>
+        service.RecordDefaultPolicyAsync(tenantId, tz, cutOff, cap, lookback, actor, CancellationToken.None);
+
+    // ── RecordDefaultPolicy — happy path ─────────────────────────────────────
 
     [Fact]
-    public async Task RecordPolicy_ValidTenant_SetsDefaultPolicyConfigured()
+    public async Task RecordPolicy_ValidInput_SetsDefaultPolicyConfigured()
     {
         var tenantId = await CreateTenant();
 
-        var error = await service.RecordDefaultPolicyAsync(tenantId, "actor-hash", CancellationToken.None);
+        var error = await RecordPolicy(tenantId, actor: "actor-42");
 
         Assert.Null(error);
         var bootstrap = await service.GetAsync(tenantId, CancellationToken.None);
         Assert.True(bootstrap.DefaultPolicyConfigured);
-        Assert.Equal("actor-hash", bootstrap.PolicyRecordedByHash);
+        Assert.NotNull(bootstrap.PolicySnapshot);
+        Assert.Equal("Europe/London", bootstrap.PolicySnapshot!.TimeZone);
+        Assert.Equal("18:00", bootstrap.PolicySnapshot.DrawCutOffTime);
+        Assert.Equal(500, bootstrap.PolicySnapshot.DailyRequestCap);
+        Assert.Equal(10, bootstrap.PolicySnapshot.AllocationLookbackDays);
+        Assert.Equal("actor-42", bootstrap.PolicySnapshot.RecordedByHash);
+    }
+
+    [Fact]
+    public async Task RecordPolicy_Idempotent_OverwritesSnapshot()
+    {
+        var tenantId = await CreateTenant();
+        await RecordPolicy(tenantId, tz: "UTC");
+
+        var error = await RecordPolicy(tenantId, tz: "America/New_York", cap: 100);
+
+        Assert.Null(error);
+        var bootstrap = await service.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal("America/New_York", bootstrap.PolicySnapshot!.TimeZone);
+        Assert.Equal(100, bootstrap.PolicySnapshot.DailyRequestCap);
     }
 
     [Fact]
     public async Task RecordPolicy_UnknownTenant_ReturnsError()
     {
-        var error = await service.RecordDefaultPolicyAsync("no-such", "actor", CancellationToken.None);
+        var error = await RecordPolicy("no-such");
 
         Assert.Contains("not found", error);
     }
@@ -52,22 +75,53 @@ public sealed class TenantParkingBootstrapTests
         var tenantId = await CreateTenant("arch");
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Archived, "actor", null, null, CancellationToken.None);
 
-        var error = await service.RecordDefaultPolicyAsync(tenantId, "actor", CancellationToken.None);
+        var error = await RecordPolicy(tenantId);
 
         Assert.Contains("archived", error, StringComparison.OrdinalIgnoreCase);
     }
 
+    // ── RecordDefaultPolicy — validation ─────────────────────────────────────
+
     [Fact]
-    public async Task RecordPolicy_Idempotent_CanBeCalledAgain()
+    public async Task RecordPolicy_EmptyTimeZone_ReturnsError()
     {
         var tenantId = await CreateTenant();
-        await service.RecordDefaultPolicyAsync(tenantId, "actor-1", CancellationToken.None);
+        var error = await RecordPolicy(tenantId, tz: "");
+        Assert.Contains("TimeZone", error);
+    }
 
-        var error = await service.RecordDefaultPolicyAsync(tenantId, "actor-2", CancellationToken.None);
+    [Fact]
+    public async Task RecordPolicy_InvalidCutOffTimeFormat_ReturnsError()
+    {
+        var tenantId = await CreateTenant();
+        var error = await RecordPolicy(tenantId, cutOff: "6pm");
+        Assert.Contains("HH:mm", error);
+    }
 
-        Assert.Null(error);
+    [Fact]
+    public async Task RecordPolicy_ZeroDailyRequestCap_ReturnsError()
+    {
+        var tenantId = await CreateTenant();
+        var error = await RecordPolicy(tenantId, cap: 0);
+        Assert.Contains("DailyRequestCap", error);
+    }
+
+    [Fact]
+    public async Task RecordPolicy_ZeroLookbackDays_ReturnsError()
+    {
+        var tenantId = await CreateTenant();
+        var error = await RecordPolicy(tenantId, lookback: 0);
+        Assert.Contains("AllocationLookbackDays", error);
+    }
+
+    [Fact]
+    public async Task RecordPolicy_InvalidInput_DoesNotSetPolicyConfigured()
+    {
+        var tenantId = await CreateTenant();
+        await RecordPolicy(tenantId, tz: ""); // invalid — should not persist
+
         var bootstrap = await service.GetAsync(tenantId, CancellationToken.None);
-        Assert.Equal("actor-2", bootstrap.PolicyRecordedByHash);
+        Assert.False(bootstrap.DefaultPolicyConfigured);
     }
 
     // ── RecordLocation ───────────────────────────────────────────────────────
@@ -91,7 +145,6 @@ public sealed class TenantParkingBootstrapTests
     public async Task RecordLocation_ZeroSlots_NotUsable()
     {
         var tenantId = await CreateTenant();
-
         await service.RecordLocationAsync(tenantId, "loc-empty", 0, false, "actor", CancellationToken.None);
 
         var bootstrap = await service.GetAsync(tenantId, CancellationToken.None);
@@ -102,7 +155,6 @@ public sealed class TenantParkingBootstrapTests
     public async Task RecordLocation_NegativeSlots_ReturnsError()
     {
         var tenantId = await CreateTenant();
-
         var error = await service.RecordLocationAsync(tenantId, "loc-A", -1, false, "actor", CancellationToken.None);
 
         Assert.NotNull(error);
@@ -113,7 +165,6 @@ public sealed class TenantParkingBootstrapTests
     public async Task RecordLocation_EmptyLocationId_ReturnsError()
     {
         var tenantId = await CreateTenant();
-
         var error = await service.RecordLocationAsync(tenantId, "", 5, false, "actor", CancellationToken.None);
 
         Assert.NotNull(error);
@@ -140,7 +191,7 @@ public sealed class TenantParkingBootstrapTests
         var t1 = await CreateTenant("corp-a");
         var t2 = await CreateTenant("corp-b");
 
-        await service.RecordDefaultPolicyAsync(t1, "a", CancellationToken.None);
+        await RecordPolicy(t1);
         await service.RecordLocationAsync(t1, "loc-1", 5, false, "a", CancellationToken.None);
 
         var b2 = await service.GetAsync(t2, CancellationToken.None);
@@ -154,7 +205,6 @@ public sealed class TenantParkingBootstrapTests
     public async Task IsComplete_NoPolicyNoLocation_False()
     {
         var tenantId = await CreateTenant();
-
         Assert.False(await service.IsCompleteAsync(tenantId, CancellationToken.None));
     }
 
@@ -162,8 +212,7 @@ public sealed class TenantParkingBootstrapTests
     public async Task IsComplete_PolicyOnly_False()
     {
         var tenantId = await CreateTenant();
-        await service.RecordDefaultPolicyAsync(tenantId, "actor", CancellationToken.None);
-
+        await RecordPolicy(tenantId);
         Assert.False(await service.IsCompleteAsync(tenantId, CancellationToken.None));
     }
 
@@ -171,9 +220,8 @@ public sealed class TenantParkingBootstrapTests
     public async Task IsComplete_PolicyAndUsableLocation_True()
     {
         var tenantId = await CreateTenant();
-        await service.RecordDefaultPolicyAsync(tenantId, "actor", CancellationToken.None);
+        await RecordPolicy(tenantId);
         await service.RecordLocationAsync(tenantId, "loc-A", 5, false, "actor", CancellationToken.None);
-
         Assert.True(await service.IsCompleteAsync(tenantId, CancellationToken.None));
     }
 
@@ -181,7 +229,6 @@ public sealed class TenantParkingBootstrapTests
     public async Task TransitionToReady_WithoutBootstrap_IsBlocked()
     {
         var tenantId = await CreateTenant();
-        // Walk the lifecycle forward to Seeded
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
 
@@ -197,8 +244,8 @@ public sealed class TenantParkingBootstrapTests
         var tenantId = await CreateTenant();
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
-        await service.RecordDefaultPolicyAsync(tenantId, "actor", CancellationToken.None);
-        await service.RecordLocationAsync(tenantId, "loc-A", 0, false, "actor", CancellationToken.None); // zero slots
+        await RecordPolicy(tenantId);
+        await service.RecordLocationAsync(tenantId, "loc-A", 0, false, "actor", CancellationToken.None);
 
         var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", null, null, CancellationToken.None);
 
@@ -212,10 +259,10 @@ public sealed class TenantParkingBootstrapTests
         var tenantId = await CreateTenant();
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
         await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
-        await service.RecordDefaultPolicyAsync(tenantId, "actor", CancellationToken.None);
+        await RecordPolicy(tenantId);
         await service.RecordLocationAsync(tenantId, "loc-A", 10, false, "actor", CancellationToken.None);
 
-        var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", "all checks passed", null, CancellationToken.None);
+        var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", "checks passed", null, CancellationToken.None);
 
         Assert.Null(error);
         var tenant = await tenantService.GetAsync(tenantId, CancellationToken.None);
@@ -225,11 +272,8 @@ public sealed class TenantParkingBootstrapTests
     [Fact]
     public async Task TransitionToSuspended_DoesNotRequireBootstrap()
     {
-        // Bootstrap guard only applies to Ready, not to other transitions.
         var tenantId = await CreateTenant();
-
         var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Suspended, "actor", null, null, CancellationToken.None);
-
         Assert.Null(error);
     }
 }
