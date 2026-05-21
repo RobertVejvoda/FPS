@@ -25,4 +25,8 @@ public sealed record BookingIntegrationPayload(
     string? NewStatus,
     string? ReasonCode,
     string? ReasonText,
-    IReadOnlyList<string>? AffectedRecipientIds);
+    IReadOnlyList<string>? AffectedRecipientIds,
+    string? AllocationId = null,
+    string? SlotId = null,
+    string? AllocationSource = null,
+    string? ReallocatedFromBookingRequestId = null);

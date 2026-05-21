@@ -67,7 +67,8 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
                 dto.RequestedAt);
 
             var publisher = eventPublisher.WithContext(new BookingPublishContext(
-                command.TenantId, Guid.NewGuid().ToString(), "system", null));
+                command.TenantId, Guid.NewGuid().ToString(), "system", null,
+                SubjectRequestorId: dto.RequestedBy));
             request.MarkNoShow(publisher);
 
             await repository.UpdateBookingRequestStatusAsync(

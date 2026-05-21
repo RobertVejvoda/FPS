@@ -11,5 +11,6 @@ public enum BookingRejectionCode
     RequestorIneligible,
     SameDayBookingDisabled,
     NoCapacityForSameDay,
-    ProfileUnavailable
+    ProfileUnavailable,
+    DrawNotSelected
 }

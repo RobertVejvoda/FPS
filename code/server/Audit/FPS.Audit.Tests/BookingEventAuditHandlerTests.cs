@@ -147,11 +147,11 @@ public sealed class BookingEventAuditHandlerTests
     public async Task Handle_AdditivePayloadField_IsPreservedInAuditRecord()
     {
         // drawAttemptId is an event-specific additive field not in the base contract.
+        // allocationId is now a named field — pass it via the explicit constructor parameter.
         var envelope = BuildEnvelopeWithExtras("booking.drawCompleted",
             extras: new Dictionary<string, JsonElement>
             {
                 ["drawAttemptId"] = JsonDocument.Parse("\"draw-99\"").RootElement,
-                ["allocationId"] = JsonDocument.Parse("\"alloc-42\"").RootElement
             });
 
         await handler.HandleAsync(envelope);
@@ -159,9 +159,32 @@ public sealed class BookingEventAuditHandlerTests
         repository.Verify(r => r.AppendAsync(
             It.Is<AuditRecord>(a =>
                 PayloadJson(a).Contains("drawAttemptId") &&
-                PayloadJson(a).Contains("draw-99") &&
-                PayloadJson(a).Contains("allocationId") &&
-                PayloadJson(a).Contains("alloc-42")),
+                PayloadJson(a).Contains("draw-99")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AllocationPayloadFields_ArePresentInAuditRecord()
+    {
+        var envelope = BuildEnvelope("booking.slotAllocated");
+        // Reconstruct with the explicit allocation fields populated
+        var withAlloc = envelope with
+        {
+            Payload = envelope.Payload with
+            {
+                AllocationId = "alloc-42",
+                SlotId = "slot-7",
+                AllocationSource = "draw",
+            }
+        };
+
+        await handler.HandleAsync(withAlloc);
+
+        repository.Verify(r => r.AppendAsync(
+            It.Is<AuditRecord>(a =>
+                PayloadJson(a).Contains("alloc-42") &&
+                PayloadJson(a).Contains("slot-7") &&
+                PayloadJson(a).Contains("draw")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

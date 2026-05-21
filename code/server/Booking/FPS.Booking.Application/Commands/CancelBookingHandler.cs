@@ -56,7 +56,8 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         var request = RestoreRequest(dto);
 
         var publisher = eventPublisher.WithContext(new BookingPublishContext(
-            command.TenantId, Guid.NewGuid().ToString(), "employee", command.RequestorId));
+            command.TenantId, Guid.NewGuid().ToString(), "employee", command.RequestorId,
+            SubjectRequestorId: dto.RequestedBy));
         request.Cancel(command.Reason, publisher);
 
         await repository.UpdateBookingRequestStatusAsync(
@@ -149,7 +150,9 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
 
         var winnerRequest = RestoreRequest(winner);
         var reallocationPublisher = eventPublisher.WithContext(new BookingPublishContext(
-            command.TenantId, Guid.NewGuid().ToString(), "system", null));
+            command.TenantId, Guid.NewGuid().ToString(), "system", null,
+            SubjectRequestorId: winner.RequestedBy,
+            AllocationSource: "reallocation"));
         winnerRequest.Allocate(reallocationPublisher);
 
         await repository.UpdateBookingRequestStatusAsync(winner.RequestId, "Allocated", cancellationToken: cancellationToken);

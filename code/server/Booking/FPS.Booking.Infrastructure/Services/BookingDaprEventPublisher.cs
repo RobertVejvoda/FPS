@@ -40,6 +40,10 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
         private BookingIntegrationEnvelope? MapToEnvelope<TEvent>(TEvent evt) where TEvent : IDomainEvent
         {
+            // SubjectRequestorId from context is the affected booking requestor — used as
+            // Payload.RequestorId when the domain event doesn't carry it directly.
+            var requestorId = ctx.SubjectRequestorId;
+
             BookingIntegrationPayload? payload = evt switch
             {
                 BookingRequestSubmittedEvent e => new(
@@ -54,7 +58,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
                 BookingRequestRejectedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
-                    RequestorId: null,
+                    RequestorId: requestorId,
                     LocationId: null, Date: null, TimeSlot: null,
                     PreviousStatus: null,
                     NewStatus: "Rejected",
@@ -64,7 +68,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
                 BookingRequestCancelledEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
-                    RequestorId: null,
+                    RequestorId: requestorId,
                     LocationId: null, Date: null, TimeSlot: null,
                     PreviousStatus: null,
                     NewStatus: "Cancelled",
@@ -74,13 +78,16 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
                 SlotAllocationCreatedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
-                    RequestorId: null,
+                    RequestorId: requestorId,
                     LocationId: null,
                     Date: e.Period.Start.ToString("yyyy-MM-dd"),
                     TimeSlot: $"{e.Period.Start:HH:mm}-{e.Period.End:HH:mm}",
                     PreviousStatus: null,
                     NewStatus: "Allocated",
-                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null),
+                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    AllocationId: e.AllocationId.Value.ToString(),
+                    SlotId: e.SlotId.Value.ToString(),
+                    AllocationSource: ctx.AllocationSource ?? "unknown"),
 
                 BookingRequestReallocatedEvent e => new(
                     BookingRequestId: e.NewRequestId.Value.ToString(),
@@ -88,8 +95,12 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     LocationId: null, Date: null, TimeSlot: null,
                     PreviousStatus: null,
                     NewStatus: "Allocated",
-                    ReasonCode: "reallocation", ReasonText: null,
-                    AffectedRecipientIds: null),
+                    ReasonCode: null, ReasonText: null,
+                    AffectedRecipientIds: [e.OriginalCancelledRequestId.Value.ToString()],
+                    AllocationId: null,
+                    SlotId: e.SlotId.Value.ToString(),
+                    AllocationSource: "reallocation",
+                    ReallocatedFromBookingRequestId: e.OriginalCancelledRequestId.Value.ToString()),
 
                 DrawAttemptStartedEvent e => new(
                     BookingRequestId: null,
@@ -119,7 +130,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
                 BookingRequestNoShowEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
-                    RequestorId: null,
+                    RequestorId: requestorId,
                     LocationId: null, Date: null, TimeSlot: null,
                     PreviousStatus: null,
                     NewStatus: "NoShow",
@@ -127,7 +138,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
                 BookingRequestUsedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
-                    RequestorId: null,
+                    RequestorId: requestorId,
                     LocationId: null, Date: null, TimeSlot: null,
                     PreviousStatus: null,
                     NewStatus: "Used",
@@ -135,7 +146,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
 
                 ManualCorrectionAppliedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
-                    RequestorId: null,
+                    RequestorId: requestorId,
                     LocationId: null, Date: null, TimeSlot: null,
                     PreviousStatus: e.OldValue,
                     NewStatus: e.NewValue,

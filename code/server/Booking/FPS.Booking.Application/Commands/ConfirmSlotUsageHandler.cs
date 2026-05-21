@@ -49,7 +49,8 @@ public sealed class ConfirmSlotUsageHandler : IRequestHandler<ConfirmSlotUsageCo
             dto.RequestedAt);
 
         var publisher = eventPublisher.WithContext(new BookingPublishContext(
-            command.TenantId, Guid.NewGuid().ToString(), "system", null));
+            command.TenantId, Guid.NewGuid().ToString(), "system", null,
+            SubjectRequestorId: dto.RequestedBy));
         request.ConfirmUsage(source, confirmedAt, publisher);
 
         await repository.UpdateBookingRequestUsageAsync(

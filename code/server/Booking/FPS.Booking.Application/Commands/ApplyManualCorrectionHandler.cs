@@ -51,7 +51,8 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
             dto.RequestedAt);
 
         var publisher = eventPublisher.WithContext(new BookingPublishContext(
-            command.TenantId, Guid.NewGuid().ToString(), "admin", command.Actor));
+            command.TenantId, Guid.NewGuid().ToString(), "admin", command.Actor,
+            SubjectRequestorId: dto.RequestedBy));
         request.ApplyManualCorrection(
             command.CorrectionType, command.OldValue, command.NewValue,
             command.Actor, command.Reason, appliedAt, publisher);

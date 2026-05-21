@@ -5,4 +5,9 @@ public sealed record BookingPublishContext(
     string CorrelationId,
     string ActorType,
     string? ActorId,
-    string? CausationId = null);
+    string? CausationId = null,
+    // Affected employee (booking requestor) — used as Payload.RequestorId when the domain
+    // event doesn't carry it directly.
+    string? SubjectRequestorId = null,
+    // Allocation source for booking.slotAllocated: "draw", "sameDay", "reallocation", or "manualCorrection".
+    string? AllocationSource = null);

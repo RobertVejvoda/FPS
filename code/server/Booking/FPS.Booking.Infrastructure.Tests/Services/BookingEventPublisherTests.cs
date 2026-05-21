@@ -207,4 +207,104 @@ public sealed class BookingEventPublisherTests
 
         Assert.Equal("tenant-X", captured!.TenantId);
     }
+
+    // ── SubjectRequestorId flows to Payload.RequestorId ───────────────────────
+
+    [Fact]
+    public async Task PublishAsync_CancelledEvent_RequestorIdFromContext()
+    {
+        BookingIntegrationEnvelope? captured = null;
+        dapr.Setup(d => d.PublishEventAsync(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<BookingIntegrationEnvelope>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, BookingIntegrationEnvelope, CancellationToken>(
+                (_, _, env, _) => captured = env)
+            .Returns(Task.CompletedTask);
+
+        var requestorId = Guid.NewGuid().ToString();
+        var ctx = new BookingPublishContext("tenant-1", "corr", "employee", null,
+            SubjectRequestorId: requestorId);
+        var evt = new BookingRequestCancelledEvent(BookingRequestId.New(), "Cancelled by user");
+        await publisher.WithContext(ctx).PublishAsync(evt);
+
+        Assert.Equal("booking.requestCancelled", captured!.EventType);
+        Assert.Equal(requestorId, captured.Payload.RequestorId);
+    }
+
+    [Fact]
+    public async Task PublishAsync_NoShowEvent_RequestorIdFromContext()
+    {
+        BookingIntegrationEnvelope? captured = null;
+        dapr.Setup(d => d.PublishEventAsync(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<BookingIntegrationEnvelope>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, BookingIntegrationEnvelope, CancellationToken>(
+                (_, _, env, _) => captured = env)
+            .Returns(Task.CompletedTask);
+
+        var requestorId = Guid.NewGuid().ToString();
+        var ctx = new BookingPublishContext("tenant-1", "corr", "system", null,
+            SubjectRequestorId: requestorId);
+        await publisher.WithContext(ctx).PublishAsync(new BookingRequestNoShowEvent(BookingRequestId.New()));
+
+        Assert.Equal("booking.noShowRecorded", captured!.EventType);
+        Assert.Equal(requestorId, captured.Payload.RequestorId);
+    }
+
+    // ── allocation envelope fields ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task PublishAsync_SlotAllocationCreated_IncludesAllocationFields()
+    {
+        BookingIntegrationEnvelope? captured = null;
+        dapr.Setup(d => d.PublishEventAsync(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<BookingIntegrationEnvelope>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, BookingIntegrationEnvelope, CancellationToken>(
+                (_, _, env, _) => captured = env)
+            .Returns(Task.CompletedTask);
+
+        var requestorId = Guid.NewGuid().ToString();
+        var ctx = new BookingPublishContext("tenant-1", "corr", "system", null,
+            SubjectRequestorId: requestorId, AllocationSource: "draw");
+        var slot = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(8));
+        var allocId = SlotAllocationId.New();
+        var slotId = ParkingSlotId.FromString("SLOT-42");
+        var evt = new SlotAllocationCreatedEvent(allocId, BookingRequestId.New(), slotId, slot);
+        await publisher.WithContext(ctx).PublishAsync(evt);
+
+        Assert.Equal("booking.slotAllocated", captured!.EventType);
+        Assert.Equal(requestorId, captured.Payload.RequestorId);
+        Assert.Equal(allocId.Value.ToString(), captured.Payload.AllocationId);
+        Assert.Equal("SLOT-42", captured.Payload.SlotId);
+        Assert.Equal("draw", captured.Payload.AllocationSource);
+    }
+
+    // ── reallocation: original request id and AffectedRecipientIds ────────────
+
+    [Fact]
+    public async Task PublishAsync_ReallocatedEvent_IncludesReallocatedFromAndRecipients()
+    {
+        BookingIntegrationEnvelope? captured = null;
+        dapr.Setup(d => d.PublishEventAsync(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<BookingIntegrationEnvelope>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, BookingIntegrationEnvelope, CancellationToken>(
+                (_, _, env, _) => captured = env)
+            .Returns(Task.CompletedTask);
+
+        var newRequestId = BookingRequestId.New();
+        var cancelledRequestId = BookingRequestId.New();
+        var newRequestorId = UserId.FromString(Guid.NewGuid().ToString());
+        var evt = new BookingRequestReallocatedEvent(
+            newRequestId, newRequestorId,
+            ParkingSlotId.FromString("SLOT-7"),
+            cancelledRequestId);
+        await publisher.WithContext(testCtx).PublishAsync(evt);
+
+        Assert.Equal("booking.slotAllocated", captured!.EventType);
+        Assert.Equal("reallocation", captured.Payload.AllocationSource);
+        Assert.Equal(cancelledRequestId.Value.ToString(), captured.Payload.ReallocatedFromBookingRequestId);
+        Assert.Contains(cancelledRequestId.Value.ToString(), captured.Payload.AffectedRecipientIds!);
+    }
 }

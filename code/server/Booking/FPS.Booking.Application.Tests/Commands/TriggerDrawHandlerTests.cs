@@ -125,7 +125,59 @@ public sealed class TriggerDrawHandlerTests
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Per-decision outcome events ───────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_DrawWaitlistsRequest_DoesNotPublishRejectedEvent()
+    {
+        // Regular (non-company-car) request with no available slots → Waitlisted, not Rejected.
+        // No booking.requestRejected event should be published for waitlisted decisions.
+        var pending = PendingDto();
+        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([pending]);
+
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.Equal(0, result.RejectedCount);
+        Assert.Equal(1, result.WaitlistedCount);
+        publisher.Verify(p => p.PublishAsync(
+            It.IsAny<FPS.Booking.Domain.Events.BookingRequestRejectedEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_DrawAllocatesRequest_PublishesSlotAllocatedEvent()
+    {
+        var pending = PendingDto();
+        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([pending]);
+
+        slotService.Setup(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("S1"))]);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        publisher.Verify(p => p.PublishAsync(
+            It.IsAny<FPS.Booking.Domain.Events.SlotAllocationCreatedEvent>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
+
+    private static BookingRequestDto PendingDto() => new()
+    {
+        RequestId = Guid.NewGuid(),
+        RequestedBy = Guid.NewGuid().ToString(),
+        PlannedArrivalTime = SlotStart,
+        PlannedDepartureTime = SlotEnd,
+        RequestedAt = DateTime.UtcNow.AddHours(-1),
+        Status = "Pending",
+        LocationId = "loc-1",
+    };
 
     private static TriggerDrawCommand ValidCommand() => new(
         TenantId: "tenant-1",

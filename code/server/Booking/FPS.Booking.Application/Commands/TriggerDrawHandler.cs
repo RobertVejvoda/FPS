@@ -100,6 +100,11 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
             var dto = pendingForKey.FirstOrDefault(d => d.RequestId == decision.RequestId.Value);
             if (dto is null) continue;
 
+            var decisionPublisher = eventPublisher.WithContext(new BookingPublishContext(
+                cmd.TenantId, Guid.NewGuid().ToString(), "system", null,
+                SubjectRequestorId: decision.RequestorId.Value.ToString(),
+                AllocationSource: "draw"));
+
             switch (decision.Outcome)
             {
                 case DrawOutcome.Allocated:
@@ -107,15 +112,23 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
                         decision.RequestId.Value, "Allocated", cancellationToken: cancellationToken);
                     await metricsService.IncrementRecentAllocationAsync(
                         cmd.TenantId, decision.RequestorId.Value.ToString(), cmd.Date, cancellationToken);
+                    if (decision.SlotId is not null)
+                        _ = decisionPublisher.PublishAsync(new FPS.Booking.Domain.Events.SlotAllocationCreatedEvent(
+                            FPS.Booking.Domain.ValueObjects.SlotAllocationId.New(),
+                            decision.RequestId, decision.SlotId, timeSlot));
                     break;
 
                 case DrawOutcome.Rejected:
                     await bookingRepository.UpdateBookingRequestStatusAsync(
                         decision.RequestId.Value, "Rejected", decision.Reason, cancellationToken);
+                    _ = decisionPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestRejectedEvent(
+                        decision.RequestId,
+                        BookingRejectionCode.DrawNotSelected,
+                        decision.Reason ?? "Not selected in draw"));
                     break;
 
                 case DrawOutcome.Waitlisted:
-                    // Remains Pending — no status update needed
+                    // Remains Pending — no status update or integration event needed
                     break;
             }
         }
