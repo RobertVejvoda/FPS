@@ -1,8 +1,22 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { SessionPage } from './pages/SessionPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { NewBookingPage } from './pages/NewBookingPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { ReportingPage } from './pages/ReportingPage';
+import { ConfigurationPage } from './pages/ConfigurationPage';
+import { AuditPage } from './pages/AuditPage';
+
+const navItems = [
+  { to: '/bookings', label: 'Bookings' },
+  { to: '/profile', label: 'Profile' },
+  { to: '/notifications', label: 'Notifications' },
+  { to: '/reporting', label: 'Reports' },
+  { to: '/configuration', label: 'Configuration' },
+  { to: '/audit', label: 'Audit' },
+];
 
 function Shell() {
   const { isConfigured, clear } = useAuth();
@@ -12,11 +26,31 @@ function Shell() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>FPS Employee Portal</span>
+      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#111827', flexShrink: 0 }}>FPS Portal</span>
+        <nav style={{ display: 'flex', gap: 2, overflowX: 'auto', flexShrink: 1 }}>
+          {navItems.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              style={({ isActive }) => ({
+                padding: '6px 12px',
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: 'none',
+                borderRadius: 6,
+                color: isActive ? '#1d4ed8' : '#6b7280',
+                background: isActive ? '#eff6ff' : 'transparent',
+                whiteSpace: 'nowrap',
+              })}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
         <button
           onClick={() => { clear(); navigate('/session'); }}
-          style={{ background: 'none', border: 'none', color: '#b91c1c', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
+          style={{ background: 'none', border: 'none', color: '#b91c1c', fontSize: 13, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
         >
           Sign out
         </button>
@@ -25,6 +59,11 @@ function Shell() {
         <Routes>
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/bookings/new" element={<NewBookingPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/reporting" element={<ReportingPage />} />
+          <Route path="/configuration" element={<ConfigurationPage />} />
+          <Route path="/audit" element={<AuditPage />} />
           <Route path="*" element={<Navigate to="/bookings" replace />} />
         </Routes>
       </main>
