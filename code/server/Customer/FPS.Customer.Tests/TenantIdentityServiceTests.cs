@@ -10,13 +10,15 @@ public sealed class TenantIdentityServiceTests
     private readonly InMemoryTenantRepository tenantRepo = new();
     private readonly InMemoryTenantIdentityRepository identityRepo = new();
     private readonly InMemoryTenantIdentityConfigStore configStore = new();
+    private readonly InMemoryTenantRoleMappingStore roleMappingStore;
     private readonly TenantService tenantService;
     private readonly TenantIdentityService service;
 
     public TenantIdentityServiceTests()
     {
+        roleMappingStore = new InMemoryTenantRoleMappingStore(configStore);
         tenantService = new TenantService(tenantRepo);
-        service = new TenantIdentityService(identityRepo, tenantRepo, configStore);
+        service = new TenantIdentityService(identityRepo, tenantRepo, configStore, roleMappingStore);
     }
 
     private async Task<string> CreateTenant(string slug = "acme")
@@ -243,5 +245,86 @@ public sealed class TenantIdentityServiceTests
 
         Assert.False(store.IsEnforcementActive);
         Assert.False(store.IsConfigured("tenant-a"));
+    }
+
+    // ── Role mapping enforcement ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task Configure_WiresRoleMappingIntoStore()
+    {
+        var tenantId = await CreateTenant();
+        var mapping = new Dictionary<string, string> { ["idp-admin"] = "admin", ["idp-hr"] = "hr_manager" };
+
+        await service.ConfigureAsync(MakeConfig(tenantId, roleMapping: mapping), CancellationToken.None);
+
+        // Mapped role passes through
+        var mapped = roleMappingStore.MapToRoles(tenantId, ["idp-admin"]);
+        Assert.Equal(["admin"], mapped);
+    }
+
+    [Fact]
+    public async Task RoleMapping_ConfiguredTenant_UnmappedRoleDropped()
+    {
+        var tenantId = await CreateTenant();
+        var mapping = new Dictionary<string, string> { ["idp-admin"] = "admin" };
+
+        await service.ConfigureAsync(MakeConfig(tenantId, roleMapping: mapping), CancellationToken.None);
+
+        // Raw "admin" claim from token is not in the mapping → dropped
+        var result = roleMappingStore.MapToRoles(tenantId, ["admin", "idp-admin"]);
+        Assert.Equal(["admin"], result); // only "idp-admin"→"admin" survives
+    }
+
+    [Fact]
+    public async Task RoleMapping_ConfiguredTenant_NoMappingDropsAllRoles()
+    {
+        var tenantId = await CreateTenant();
+        // Configure with empty role mapping
+        await service.ConfigureAsync(MakeConfig(tenantId, roleMapping: new Dictionary<string, string>()), CancellationToken.None);
+
+        var result = roleMappingStore.MapToRoles(tenantId, ["admin", "employee"]);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void RoleMapping_UnconfiguredTenant_PassesThrough()
+    {
+        // Enforcement not active — incoming roles pass through unchanged.
+        var result = roleMappingStore.MapToRoles("unconfigured-tenant", ["admin", "employee"]);
+        Assert.Equal(["admin", "employee"], result);
+    }
+
+    [Fact]
+    public async Task RoleMapping_TenantScoped_DoesNotCrossTenantsMapping()
+    {
+        var t1 = await CreateTenant("corp-a");
+        var t2 = await CreateTenant("corp-b");
+        await service.ConfigureAsync(MakeConfig(t1, roleMapping: new Dictionary<string, string> { ["a-admin"] = "admin" }), CancellationToken.None);
+        await service.ConfigureAsync(MakeConfig(t2, roleMapping: new Dictionary<string, string> { ["b-hr"] = "hr_manager" }), CancellationToken.None);
+
+        var t1Roles = roleMappingStore.MapToRoles(t1, ["a-admin", "b-hr"]);
+        var t2Roles = roleMappingStore.MapToRoles(t2, ["a-admin", "b-hr"]);
+
+        // t1: only a-admin maps, b-hr is dropped
+        Assert.Equal(["admin"], t1Roles);
+        // t2: only b-hr maps, a-admin is dropped
+        Assert.Equal(["hr_manager"], t2Roles);
+    }
+
+    // ── Blank subject guard ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RegisterAdmin_EmptySubjectHash_ReturnsError()
+    {
+        // The service validates the SubjectHash is non-empty before storing.
+        var tenantId = await CreateTenant();
+        await service.ConfigureAsync(MakeConfig(tenantId), CancellationToken.None);
+
+        var error = await service.RegisterAdminAsync(
+            new TenantAdminRecord(tenantId, "", TenantAdminType.SsoMapped, "actor", DateTimeOffset.UtcNow, null, true),
+            CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("Subject", error, StringComparison.OrdinalIgnoreCase);
     }
 }

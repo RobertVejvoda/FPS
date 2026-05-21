@@ -52,12 +52,15 @@ public sealed class TenantIdentityController(
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId)) return Unauthorized();
 
+        if (string.IsNullOrWhiteSpace(request.SubjectOrMarker))
+            return BadRequest(new { error = "Subject or marker is required. Provide the stable SSO subject or a local-account marker." });
+
         if (!Enum.TryParse<TenantAdminType>(request.AdminType, ignoreCase: true, out var adminType))
             return BadRequest(new { error = $"Unknown admin type: {request.AdminType}. Use SsoMapped or Local." });
 
         var admin = new TenantAdminRecord(
             TenantId: tenantId,
-            SubjectHash: Hash(request.SubjectOrMarker ?? string.Empty),
+            SubjectHash: Hash(request.SubjectOrMarker),
             AdminType: adminType,
             CreatedByHash: Hash(currentUser.UserId),
             CreatedAt: DateTimeOffset.UtcNow,

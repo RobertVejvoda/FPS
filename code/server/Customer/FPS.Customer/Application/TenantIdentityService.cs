@@ -6,7 +6,8 @@ namespace FPS.Customer.Application;
 public sealed class TenantIdentityService(
     ITenantIdentityRepository repository,
     ITenantRepository tenantRepository,
-    InMemoryTenantIdentityConfigStore configStore)
+    InMemoryTenantIdentityConfigStore configStore,
+    InMemoryTenantRoleMappingStore roleMappingStore)
 {
     public async Task<string?> ConfigureAsync(TenantIdentityConfig config, CancellationToken ct)
     {
@@ -24,6 +25,7 @@ public sealed class TenantIdentityService(
 
         await repository.SaveConfigAsync(config, ct);
         configStore.Register(config.TenantId);
+        roleMappingStore.SetMapping(config.TenantId, config.RoleMapping);
         return null;
     }
 
