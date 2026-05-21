@@ -39,6 +39,24 @@ public sealed class EmployeeBootstrapController(
         return Ok(summary);
     }
 
+    [HttpPut("/tenants/{tenantId}/employee-bootstrap/{subjectHash}")]
+    public async Task<IActionResult> Update(
+        string tenantId, string subjectHash, [FromBody] UpdateBootstrapRequest request, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId)) return Unauthorized();
+
+        var actorHash = EmployeeBootstrapService.Hash(currentUser.UserId);
+        var updateReq = new UpdateEmployeeRequest(
+            request.IsActive, request.FpsRoles ?? [], request.NotificationAddress,
+            request.HomeLocationId, request.ParkingEligible,
+            request.HasCompanyCar, request.AccessibilityEligible, request.ReservedSpaceEligible);
+
+        var error = await service.UpdateAsync(tenantId, subjectHash, updateReq, actorHash, ct);
+        if (error == "Tenant not found." || error == "Employee not found.") return NotFound();
+        if (error is not null) return BadRequest(new { error });
+        return NoContent();
+    }
+
     [HttpPost("/tenants/{tenantId}/employee-bootstrap/deactivate")]
     public async Task<IActionResult> Deactivate(
         string tenantId, [FromBody] DeactivateRequest request, CancellationToken ct)
@@ -102,3 +120,13 @@ public sealed record EmployeeBootstrapRequest(
 public sealed record ImportRequest(IReadOnlyList<EmployeeBootstrapRequest>? Employees);
 
 public sealed record DeactivateRequest(string? ExternalSubject);
+
+public sealed record UpdateBootstrapRequest(
+    bool IsActive,
+    IReadOnlyList<string>? FpsRoles,
+    string? NotificationAddress,
+    string? HomeLocationId,
+    bool ParkingEligible,
+    bool HasCompanyCar,
+    bool AccessibilityEligible,
+    bool ReservedSpaceEligible);

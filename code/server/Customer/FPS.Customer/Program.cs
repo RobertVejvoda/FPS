@@ -3,6 +3,7 @@ using FPS.Customer.Identity;
 using FPS.Customer.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
+using FPS.SharedKernel.Profile;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -14,6 +15,9 @@ builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
 builder.Services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
 builder.Services.AddSingleton<IEmployeeBootstrapRepository, InMemoryEmployeeBootstrapRepository>();
+// NullProfileBootstrapSink: Customer service unit tests / standalone startup don't
+// have the Profile service in-process. Production wires the Profile repo here.
+builder.Services.AddSingleton<IProfileBootstrapSink, NullProfileBootstrapSink>();
 builder.Services.AddScoped<TenantService>();
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();

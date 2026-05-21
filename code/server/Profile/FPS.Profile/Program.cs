@@ -3,6 +3,7 @@ using FPS.Profile.Identity;
 using FPS.Profile.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
+using FPS.SharedKernel.Profile;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -10,7 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
+// Register the repository as both IProfileRepository and IProfileBootstrapSink
+// so the Customer service can write bootstrap facts that Booking reads via snapshots.
+var profileRepo = new InMemoryProfileRepository();
+builder.Services.AddSingleton<IProfileRepository>(profileRepo);
+builder.Services.AddSingleton<IProfileBootstrapSink>(profileRepo);
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddOpenApi("v1", options =>
 {
