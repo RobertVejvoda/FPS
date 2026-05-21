@@ -13,9 +13,11 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
 builder.Services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
+builder.Services.AddSingleton<IEmployeeBootstrapRepository, InMemoryEmployeeBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
+builder.Services.AddScoped<EmployeeBootstrapService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddOpenApi("v1", options =>
 {
