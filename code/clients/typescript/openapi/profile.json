@@ -5,6 +5,164 @@
     "version": "v1"
   },
   "paths": {
+    "/profile/bootstrap": {
+      "post": {
+        "tags": [
+          "EmployeeBootstrap"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/profile/bootstrap/import": {
+      "post": {
+        "tags": [
+          "EmployeeBootstrap"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/profile/bootstrap/{subjectHash}": {
+      "put": {
+        "tags": [
+          "EmployeeBootstrap"
+        ],
+        "parameters": [
+          {
+            "name": "subjectHash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/profile/bootstrap/deactivate": {
+      "post": {
+        "tags": [
+          "EmployeeBootstrap"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeactivateRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeactivateRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeactivateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/profile/snapshot": {
       "get": {
         "tags": [
@@ -63,6 +221,102 @@
   },
   "components": {
     "schemas": {
+      "BootstrapRequest": {
+        "required": [
+          "externalSubject",
+          "employeeId",
+          "isActive",
+          "fpsRoles",
+          "notificationAddress",
+          "homeLocationId",
+          "parkingEligible",
+          "hasCompanyCar",
+          "accessibilityEligible",
+          "reservedSpaceEligible"
+        ],
+        "type": "object",
+        "properties": {
+          "externalSubject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "employeeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "fpsRoles": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "notificationAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homeLocationId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parkingEligible": {
+            "type": "boolean"
+          },
+          "hasCompanyCar": {
+            "type": "boolean"
+          },
+          "accessibilityEligible": {
+            "type": "boolean"
+          },
+          "reservedSpaceEligible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DeactivateRequest": {
+        "required": [
+          "externalSubject"
+        ],
+        "type": "object",
+        "properties": {
+          "externalSubject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ImportRequest": {
+        "required": [
+          "employees"
+        ],
+        "type": "object",
+        "properties": {
+          "employees": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BootstrapRequest"
+            }
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -147,6 +401,57 @@
           }
         }
       },
+      "UpdateRequest": {
+        "required": [
+          "isActive",
+          "fpsRoles",
+          "notificationAddress",
+          "homeLocationId",
+          "parkingEligible",
+          "hasCompanyCar",
+          "accessibilityEligible",
+          "reservedSpaceEligible"
+        ],
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "fpsRoles": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "notificationAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homeLocationId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parkingEligible": {
+            "type": "boolean"
+          },
+          "hasCompanyCar": {
+            "type": "boolean"
+          },
+          "accessibilityEligible": {
+            "type": "boolean"
+          },
+          "reservedSpaceEligible": {
+            "type": "boolean"
+          }
+        }
+      },
       "VehicleSnapshot": {
         "required": [
           "vehicleId",
@@ -185,6 +490,9 @@
     }
   },
   "tags": [
+    {
+      "name": "EmployeeBootstrap"
+    },
     {
       "name": "ProfileSnapshot"
     }

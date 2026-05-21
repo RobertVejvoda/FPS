@@ -10,6 +10,13 @@ public sealed class UserProfile
     public bool AccessibilityEligible { get; init; }
     public bool ReservedSpaceEligible { get; init; }
     public IReadOnlyList<Vehicle> Vehicles { get; init; } = [];
+    // Optional staff/employee identifier — only stored when policy or support requires it.
+    public string? EmployeeId { get; init; }
+    // Tenant-scoped FPS roles for this user (employee, hr_manager, admin, report_viewer).
+    public IReadOnlyList<string> FpsRoles { get; init; } = [];
+    // Operational notification email — omit when not needed.
+    public string? NotificationAddress { get; init; }
+    public string? HomeLocationId { get; init; }
     public string SnapshotVersion { get; init; } = string.Empty;
     public DateTimeOffset UpdatedAt { get; init; } = DateTimeOffset.UtcNow;
     // Source of the profile facts: "sso-claims", "admin-seed", "admin-entry", or "import".

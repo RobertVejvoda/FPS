@@ -11,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
+builder.Services.AddScoped<EmployeeBootstrapService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddOpenApi("v1", options =>
 {
