@@ -26,12 +26,12 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Platform integration foundation | Done | ID001, BK011, P001, N001, A001, CFG001, API001, CI001 are merged. |
 | Mobile foundation | Done | MOB001-MOB005 are merged for the current employee mobile flow. |
 | Mobile product completion | Done | MOB006-MOB009 are merged for notifications, profile/vehicle display, employee-safe allocation detail, and demo/pilot polish. |
-| Web app | Backlog | Web employee self-service starts after mobile completion; HR/admin dashboards can now build on Configuration and Reporting APIs. |
+| Web app | In progress | WEB005-WEB008 are merged for profile, notifications, reporting, configuration, and audit web surfaces. Remaining web work is employee self-service and broader tenant administration. |
 | Notification v1 completion | Done | N002-N005 are implemented, including API/stream, email channel, observability, and user preferences. |
-| Audit v1 completion | In progress | A001 and A002 are implemented. Retention, integrity, and export evidence remain planned. |
+| Audit v1 completion | Done | A001, A002, A004, and A005 are implemented, covering append-only records, query/erasure support, retention, integrity verification, and export evidence. |
 | Production operations | In progress | OPS000-OPS002 and OPS006A-OPS006D are merged. Next work is coordinated local harness/AppHost, client-owned deployment hardening, observability, and operational evidence. |
-| Configuration management | In progress | CFG001 and CFG002 are implemented. Publication, version history, and audit integration remain planned. |
-| Reporting foundation | In progress | REPORT001 read models are implemented. Dashboards, exports, and web views remain planned. |
+| Configuration management | In progress | CFG001 and CFG002 are implemented. Web configuration surfaces exist; publication and deeper audit integration remain planned. |
+| Reporting foundation | In progress | REPORT001 read models and first web reporting views are implemented. Custom report scheduling and richer export formats remain planned. |
 
 ## Slice Tracker
 
@@ -84,7 +84,9 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | N004 Email Observability And Staging Validation | Done | [#122](https://github.com/RobertVejvoda/FPS/issues/122) | [#123](https://github.com/RobertVejvoda/FPS/pull/123) | `implemented-by: claude` | 2026-05-15 | Safe email failure logging, categories, and staging validation checklist. |
 | N005 Notification Preferences | Done | [#144](https://github.com/RobertVejvoda/FPS/issues/144) | [#177](https://github.com/RobertVejvoda/FPS/pull/177) | `implemented-by: claude` | 2026-05-20 | User notification preferences for optional channels and reminders; mandatory operational notifications stay non-disableable. |
 | A002 Audit Query And Erasure Support | Done | [#105](https://github.com/RobertVejvoda/FPS/issues/105) | [#112](https://github.com/RobertVejvoda/FPS/pull/112) | `implemented-by: claude` | 2026-05-15 | Auditor query API and GDPR PII mapping erasure support; retention and integrity jobs remain out of scope. |
-| A003 Audit Retention And Integrity | Planned | [#145](https://github.com/RobertVejvoda/FPS/issues/145) | - | Unassigned | After A002 | Retention jobs, integrity verification, export evidence, and operational audit hardening. |
+| A003 Audit Retention And Integrity | Done | [#145](https://github.com/RobertVejvoda/FPS/issues/145) | [#198](https://github.com/RobertVejvoda/FPS/pull/198) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Parent marker completed by `A004` and `A005`. |
+| A004 Audit Retention Job | Done | [#196](https://github.com/RobertVejvoda/FPS/issues/196) | [#198](https://github.com/RobertVejvoda/FPS/pull/198) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Retention job and retention evidence. |
+| A005 Audit Integrity Verification And Export Evidence | Done | [#197](https://github.com/RobertVejvoda/FPS/issues/197) | [#198](https://github.com/RobertVejvoda/FPS/pull/198) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Integrity verification and export evidence. |
 
 ### Configuration, Customer, Reporting, And Billing
 
@@ -93,7 +95,12 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | CFG001 Parking Policy/Slot Source | Done | - | [#42](https://github.com/RobertVejvoda/FPS/pull/42) | PR author: RobertVejvoda | 2026-05-11 | Configuration-owned policy shape. |
 | CFG002 Admin Policy/Slot Management | Done | [#107](https://github.com/RobertVejvoda/FPS/issues/107) | [#125](https://github.com/RobertVejvoda/FPS/pull/125) | `implemented-by: claude` | 2026-05-15 | Admin-facing management for tenant policy, location overrides, and slot/capacity configuration. |
 | CFG003 Configuration Publication And Audit | Planned | [#149](https://github.com/RobertVejvoda/FPS/issues/149) | - | Unassigned | After CFG002 | Publish policy/slot changes safely to Booking consumers, preserve version history, and audit policy-sensitive changes. |
-| CUST001 Tenant Onboarding | Planned | [#148](https://github.com/RobertVejvoda/FPS/issues/148) | - | Unassigned | After production provisioning model | Tenant creation and initial admin/user setup. |
+| CUST001 Tenant Onboarding Contract And Runbook | In progress | [#148](https://github.com/RobertVejvoda/FPS/issues/148) | - | Codex/spec | Client Evaluation | Defines the company onboarding sequence, tenant lifecycle, first-admin setup, identity mapping, parking bootstrap, employee/profile bootstrap, and readiness checks. Source: [Tenant Onboarding](./business-layer/tenant-onboarding). |
+| CUST003 Tenant Workspace And Lifecycle | Planned | - | - | Unassigned | After `CUST001` | Create tenant workspace, lifecycle state, service provisioning metadata, and audit-safe tenant metadata. |
+| CUST004 Tenant Identity Setup And First Admin | Planned | - | - | Unassigned | After `CUST003` | Configure trusted issuer/audience/role mapping and first administrator or break-glass local account. |
+| CUST005 Tenant Parking Bootstrap | Planned | - | - | Unassigned | After `CUST003`/`CFG002` | Use Configuration APIs to set tenant default policy, first location, and initial slots/capacity. |
+| CUST006 Tenant Employee/Profile Bootstrap | Planned | - | - | Unassigned | After `CUST004`/`P002` | Load minimal pilot employee/profile facts while preserving SSO-first and file-import constraints. |
+| CUST007 Tenant Readiness Check | Planned | - | - | Unassigned | After `CUST004`-`CUST006` | Validate identity, first admin, policy, slots, profile facts, booking smoke path, notification, audit, and reporting evidence before live use. |
 | CUST002 SSO-First Customer Integration Contract | Done | [#141](https://github.com/RobertVejvoda/FPS/issues/141) | direct doc update | Codex/spec | 2026-05-17 | Defines SSO/OIDC issuer and tenant mapping, minimal employee/profile data, local-account credential handling, import constraints, source-of-truth rules, audit/GDPR requirements, and downstream acceptance criteria for `P002`, `ID002`, `OPS005`, and `CUST001`. |
 | REPORT001 Reporting Read Models | Done | [#109](https://github.com/RobertVejvoda/FPS/issues/109) | [#124](https://github.com/RobertVejvoda/FPS/pull/124) | `implemented-by: claude` | 2026-05-15 | Tenant-scoped operational reporting read models and summary/fairness APIs; exports and dashboards remain out of scope. |
 | REPORT002 Reporting Dashboards And Exports | Planned | [#147](https://github.com/RobertVejvoda/FPS/issues/147) | - | Unassigned | After REPORT001 | Dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views. |
@@ -119,9 +126,13 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Slice | Status | Issue | PR | Implementer signal | Merged / target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | WEB001 Web Employee Self-Service | Planned | [#151](https://github.com/RobertVejvoda/FPS/issues/151) | - | Unassigned | After mobile proves core UX/API path | React web employee self-service. |
-| WEB002 HR/Admin Dashboard | Planned | [#154](https://github.com/RobertVejvoda/FPS/issues/154) | - | Unassigned | After reporting/configuration APIs mature | HR/facilities/admin operational UI. |
-| WEB003 Tenant Admin Console | Planned | [#152](https://github.com/RobertVejvoda/FPS/issues/152) | - | Unassigned | After CUST001/CFG002 | Tenant users, roles, locations, policies, and slot administration. |
-| WEB004 Reporting Views | Planned | [#155](https://github.com/RobertVejvoda/FPS/issues/155) | - | Unassigned | After REPORT001/REPORT002 | Parking summary, fairness metrics, utilization views, and exports. |
+| WEB002 HR/Admin Dashboard | Done | [#154](https://github.com/RobertVejvoda/FPS/issues/154) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Parent marker completed by WEB006-WEB008 web admin/reporting/audit surfaces. |
+| WEB003 Tenant Admin Console | Planned | [#152](https://github.com/RobertVejvoda/FPS/issues/152) | - | Unassigned | After CUST001/CUST003-CUST007 | Tenant users, roles, lifecycle, locations, policies, and onboarding administration beyond the current policy/slot surface. |
+| WEB004 Reporting Views | Done | [#155](https://github.com/RobertVejvoda/FPS/issues/155) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Parent marker completed by WEB006 reporting dashboard, summary/fairness views, and CSV export. |
+| WEB005 Web Profile And Notification Center | Done | [#192](https://github.com/RobertVejvoda/FPS/issues/192) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Web profile snapshot and notification center. |
+| WEB006 Web Reporting Dashboard And CSV Export | Done | [#193](https://github.com/RobertVejvoda/FPS/issues/193) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Reporting dashboard, daily summary, fairness views, and CSV export. |
+| WEB007 Web Configuration Policy And Slot Admin | Done | [#194](https://github.com/RobertVejvoda/FPS/issues/194) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Tenant policy, location override, slot editing, and history evidence surfaces. |
+| WEB008 Web Audit Console | Done | [#195](https://github.com/RobertVejvoda/FPS/issues/195) | [#199](https://github.com/RobertVejvoda/FPS/pull/199) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Audit query console and GDPR PII erasure action. |
 
 ### Operations And Cloud
 
