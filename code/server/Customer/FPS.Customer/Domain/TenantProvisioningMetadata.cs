@@ -15,8 +15,8 @@ public sealed record TenantProvisioningMetadata
 
     private static readonly Regex SafeSlug = new(@"[^a-z0-9\-]", RegexOptions.Compiled);
 
-    public static string Sanitize(string slug) =>
-        SafeSlug.Replace(slug.Trim().ToLowerInvariant(), "-").Trim('-');
+    public static string Sanitize(string? slug) =>
+        slug is null ? string.Empty : SafeSlug.Replace(slug.Trim().ToLowerInvariant(), "-").Trim('-');
 
     public static TenantProvisioningMetadata Generate(string tenantId, string slug)
     {

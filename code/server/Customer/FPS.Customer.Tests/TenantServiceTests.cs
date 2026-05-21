@@ -45,6 +45,16 @@ public sealed class TenantServiceTests
     }
 
     [Fact]
+    public async Task Create_NullSlug_ReturnsErrorWithoutThrowing()
+    {
+        var (tenant, error) = await service.CreateAsync(null, "ACME Corp", "eu-west", "Europe/London", [], CancellationToken.None);
+
+        Assert.Null(tenant);
+        Assert.NotNull(error);
+        Assert.Contains("Slug", error);
+    }
+
+    [Fact]
     public async Task Create_SlugWithOnlySpecialChars_ReturnsError()
     {
         var (tenant, error) = await service.CreateAsync("@@@", "Corp", "eu", "UTC", [], CancellationToken.None);

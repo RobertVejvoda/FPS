@@ -36,6 +36,14 @@ public sealed class TenantControllerTests
     }
 
     [Fact]
+    public async Task Create_NullSlug_Returns400NotThrows()
+    {
+        var result = await controller.Create(new CreateTenantRequest(null, "Corp", "eu", "UTC", []), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
     public async Task Create_DuplicateSlug_Returns400()
     {
         await controller.Create(new CreateTenantRequest("dup", "Dup", "eu", "UTC", []), CancellationToken.None);

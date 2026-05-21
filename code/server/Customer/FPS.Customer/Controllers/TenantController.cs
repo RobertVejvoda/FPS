@@ -100,7 +100,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
 }
 
 public sealed record CreateTenantRequest(
-    string Slug,
+    string? Slug,
     string DisplayName,
     string Region,
     string TimeZone,

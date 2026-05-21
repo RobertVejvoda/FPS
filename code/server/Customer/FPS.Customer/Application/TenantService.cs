@@ -5,7 +5,7 @@ namespace FPS.Customer.Application;
 public sealed class TenantService(ITenantRepository repository)
 {
     public async Task<(TenantWorkspace? tenant, string? error)> CreateAsync(
-        string slug, string displayName, string region, string timeZone,
+        string? slug, string displayName, string region, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,
         CancellationToken ct)
     {
