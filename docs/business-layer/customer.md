@@ -1,21 +1,21 @@
 # Customer Business
 
-[Customer module](../application-layer/customer) is designed to manage all aspects related to customers within the Fair Parking System. It encompasses functionalities such as defining customer entities, managing user roles and permissions, handling billing and payments, ensuring data privacy and security, and providing customer support. This module aims to deliver a seamless and personalized experience for customers, enabling them to efficiently manage their interactions and transactions with the system.
+[Customer module](../application-layer/customer) is designed to manage customer and tenant setup within the Fair Parking System. It encompasses customer entities, tenant lifecycle, user roles and permissions, data privacy and security, and support-facing information. Billing is deferred until the commercial model is approved.
 
 Customer employee onboarding and internal company-system integration are planned separately in [Tenant Onboarding](./tenant-onboarding) and [SSO-First Customer Integration](./customer-data-import). Tenant Onboarding defines how a new company is created, configured, checked, and made ready for employees. SSO-First Customer Integration defines the identity/profile data contract for SSO, local fallback accounts, imports, data classification, validation rules, and downstream implementation slices.
 
 | User Story | Title |
 |------------|-------|
 | [US501](#us501-define-customer) | Define Customer |
-| [US502](#us502-scalable-pricing-models) | Scalable Pricing Models |
+| [US502](#us502-commercial-model-validation) | Commercial Model Validation |
 | [US503](#us503-user-management-features) | User Management Features |
 | [US504](#us504-custom-reporting) | Custom Reporting |
-| [US505](#us505-billing-and-payments) | Billing and Payments |
+| [US505](#us505-commercial-account-readiness) | Commercial Account Readiness |
 | [US506](#us506-data-privacy-and-security) | Data Privacy and Security |
 | [US507](#us507-customer-support) | Customer Support |
 | [US508](#us508-integration-with-third-party-services) | Integration with Third-Party Services |
-| [US509](#us509-tenant-payment-settings) | Tenant Payment Settings |
-| [US510](#us510-subscription-models) | Subscription Models |
+| [US509](#us509-tenant-commercial-settings) | Tenant Commercial Settings |
+| [US510](#us510-support-or-service-subscription) | Support Or Service Subscription |
 
 ### US501: Define Customer
 **Description**: As a system architect, I want to define a customer as a company utilizing the Fair Parking System's services, ensuring data isolation for privacy and compliance.
@@ -24,11 +24,12 @@ Customer employee onboarding and internal company-system integration are planned
 - Tailored services and personalized experiences are provided.
 **Priority**: High
 
-### US502: Scalable Pricing Models
-**Description**: As a product manager, I want the system to support scalable and flexible pricing models based on usage patterns, data storage needs, and premium features.
+### US502: Commercial Model Validation
+**Description**: As a product manager, I want commercial options to be validated before pricing or product Billing is implemented.
 **Acceptance Criteria**:
-- Pricing models are scalable and flexible.
-- Customers are charged based on usage patterns and selected features.
+- Commercial options are documented as planning candidates, not public promises.
+- Product pricing is not published until approved.
+- Billing implementation is gated by an approved support, implementation, hosted-demo, dual-license, or subscription offer.
 **Priority**: High
 
 ### US503: User Management Features
@@ -47,12 +48,12 @@ Customer employee onboarding and internal company-system integration are planned
 - Reports can be scheduled for automatic generation.
 **Priority**: Medium
 
-### US505: Billing and Payments
-**Description**: As a customer, I want to view and download invoices based on actual usage and selected features, with support for multiple payment methods.
+### US505: Commercial Account Readiness
+**Description**: As a commercial owner, I want future customer commercial records to be tenant-scoped, auditable, and separate from employee booking data.
 **Acceptance Criteria**:
-- Multiple payment methods are supported.
-- Invoices are generated based on usage and features.
-- Customers can view and download invoices.
+- Commercial account records are tenant-scoped.
+- Employee booking data is not used commercially unless explicitly approved.
+- External invoice references are preferred before in-product financial collection.
 **Priority**: High
 
 ### US506: Data Privacy and Security
@@ -79,16 +80,16 @@ Customer employee onboarding and internal company-system integration are planned
 - Integration settings can be managed through the customer interface.
 **Priority**: Medium
 
-### US509: Tenant Payment Settings
-**Description**: As a tenant, I want to configure my own payment settings, ensuring isolated and independently managed transactions.
+### US509: Tenant Commercial Settings
+**Description**: As a tenant administrator, I want future commercial settings to be limited to contract and support information, not financial collection details.
 **Acceptance Criteria**:
-- Payment settings can be configured by tenants.
-- Transactions are isolated and managed independently.
+- Commercial settings are tenant-scoped and role-protected.
+- Financial collection details are not stored in FPS unless later approved.
 **Priority**: High
 
-### US510: Subscription Models
-**Description**: As a tenant, I want various subscription models (monthly, annual, pay-as-you-go, freemium) to choose from, with customizable features and limits.
+### US510: Support Or Service Subscription
+**Description**: As a customer sponsor, I want support or service subscription information to be clear if FPS is adopted commercially.
 **Acceptance Criteria**:
-- Monthly, annual, pay-as-you-go, and freemium models are available.
-- Subscription models can be customized with specific features and limits.
+- Support or service subscription terms can be represented after approval.
+- Core fairness, audit, privacy, and tenant operation features are not made unusable without a paid unlock.
 **Priority**: High

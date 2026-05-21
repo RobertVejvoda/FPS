@@ -24,14 +24,13 @@ The Customer component is responsible for managing customers in a multi-tenant a
 | `/api/customers/{id}/users` | GET | List customer users | Array of users | 200 OK |
 | `/api/customers/{id}/users/{userId}` | DELETE | Remove user from customer | None | 204 No Content |
 
-### Subscription & Billing
+### Commercial Account Readiness
 
 | Endpoint | Method | Purpose | Response | Status |
 |----------|--------|---------|----------|---------|
-| `/api/customers/{id}/subscription` | GET | Get subscription details | Subscription object | 200 OK |
-| `/api/customers/{id}/subscription` | PUT | Update subscription | Subscription object | 200 OK |
-| `/api/customers/{id}/invoices` | GET | List customer invoices | Array of invoices | 200 OK |
-| `/api/customers/{id}/payment-methods` | GET | List payment methods | Array of payment methods | 200 OK |
+| `/api/customers/{id}/commercial-account` | GET | Future tenant commercial account summary if approved | Commercial account object | Deferred |
+| `/api/customers/{id}/commercial-account` | PUT | Future commercial account update if approved | Commercial account object | Deferred |
+| `/api/customers/{id}/external-invoices` | GET | Future references to invoices managed outside FPS if approved | Array of invoice references | Deferred |
 
 ### Settings
 
@@ -79,5 +78,4 @@ The Customer component is responsible for managing customers in a multi-tenant a
 ## Packaging
 
 ![Customer](../images/fps-software-pack-customer.png)
-
 

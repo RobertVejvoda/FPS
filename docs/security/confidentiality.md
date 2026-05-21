@@ -13,7 +13,7 @@ Confidentiality within the Fair Parking System (FPS) is crucial to ensure that s
 | Authentication Service       | Confidential          |
 | Notification                 | Internal              |
 | Logging, metrics             | Internal              |
-| Payment Gateway              | Confidential          |
+| Future Commercial Integration | Confidential          |
 | Third-Party Integrations     | Internal              |
 
 ### Microsoft Applications Confidentiality
@@ -32,4 +32,3 @@ Confidentiality within the Fair Parking System (FPS) is crucial to ensure that s
 | Azure Blob Storage           | Internal              |
 | Azure Cosmos DB              | Internal              |
 | Azure Container Registry     | Internal              |
-

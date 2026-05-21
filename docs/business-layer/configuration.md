@@ -136,14 +136,14 @@ package "Integration" {
         [Notification Manager]
 }
 cloud "External Services" {
-        [Payment Gateways]
+        [Commercial Systems]
         [External APIs]
         [Notification Services]
 }
 is --> [Gateway Manager]
 is --> [API Controller]
 is --> [Notification Manager]
-[Gateway Manager] --> [Payment Gateways]
+[Gateway Manager] --> [Commercial Systems]
 [API Controller] --> [External APIs]
 [Notification Manager] --> [Notification Services]
 @enduml

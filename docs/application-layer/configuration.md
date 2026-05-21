@@ -10,8 +10,8 @@
 - **Manage User Roles**  
     Facilitates role creation, modification, and assignment to control access throughout the system.
 
-- **Configure Payment Gateways**  
-    Supports the secure setup and validation of payment processing configurations.
+- **Configure Commercial Settings**
+    Future commercial settings are deferred until the commercial model is approved.
 
 - **Set Notification Preferences**  
     Provides users with the ability to select and save their preferred methods for receiving updates.
@@ -33,4 +33,3 @@
 
 - **Manage Localization Settings**  
     Offers the ability to add or update language packs, ensuring the application supports multiple regions and languages.
-

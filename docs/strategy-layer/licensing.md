@@ -10,7 +10,7 @@ FPS is licensed as open-source software under **AGPL-3.0-or-later**. The durable
 | Source availability | Modified network-service deployments must make corresponding source available under AGPL terms. |
 | Client production | Clients can run FPS in their own environment, subject to AGPL obligations and any separate written agreement. |
 | Pricing | No product pricing is decided in the documentation. |
-| Commercial offer | Not defined yet. Do not publish subscription prices, discounts, referral credits, or sales commitments until there is an approved business model. |
+| Commercial offer | First planning frame is documented in [Commercialisation Impact Review](./commercialisation). Do not publish subscription prices, discounts, referral credits, or sales commitments until there is an approved business model. |
 
 ## Why AGPL Fits FPS
 
@@ -21,7 +21,7 @@ FPS is licensed as open-source software under **AGPL-3.0-or-later**. The durable
 
 ## Future Commercial Options
 
-The project may later define a commercial model, but it should be recorded as a separate business decision before any public pricing appears in the docs. Candidate options:
+The project may later define a commercial model, but it should be recorded as a separate business decision before any public pricing appears in the docs. The current impact review is [Commercialisation Impact Review](./commercialisation). Candidate options:
 
 | Option | Description | Notes |
 | --- | --- | --- |

@@ -949,7 +949,7 @@ Implementation notes for Claude:
 - [ ] Tenant management (this is the multi-tenancy anchor service)
 - [ ] Tenant onboarding workflow (Dapr Workflow: create tenant → provision slots → create admin user → send welcome)
 - [ ] User-to-tenant assignment
-- [ ] Subscription tier management
+- [ ] Future commercial account metadata only after commercial approval
 
 Current slice mapping:
 
@@ -959,7 +959,7 @@ Current slice mapping:
 
 ---
 
-### Phase 5 — Reporting & Billing (Week 13–15)
+### Phase 5 — Reporting & Deferred Billing (Week 13–15)
 
 **Reporting** (`FPS.Reporting`):
 - [ ] Subscribe to events and materialise read models in MongoDB
@@ -968,16 +968,17 @@ Current slice mapping:
 - [ ] Dashboard aggregates for HR managers
 
 **Billing** (`FPS.Billing`):
-- [ ] Subscription plans (Small/Medium/Large pricing)
-- [ ] Monthly invoice generation (Dapr Workflow: calculate → generate PDF → send → record)
-- [ ] Payment provider integration (stub, expandable to Stripe/PayU)
-- [ ] Metering: track per-slot allocations for usage-based billing
+- [ ] Deferred commercial account capability after `BILL000`
+- [ ] No invoice engine, financial collection workflow, or subscription enforcement until commercial approval
+- [ ] Prefer tenant-level support/service contract records over employee-level metering
+- [ ] Keep core fairness, audit, privacy, and tenant operation outside paid unlocks
 
 Current slice mapping:
 
 - `REPORT001` Reporting Read Models: tenant-scoped operational reporting read models and summary/fairness APIs.
 - `REPORT002` Reporting Dashboards And Exports: dashboard-facing aggregates, CSV/PDF export path, and manager-safe report views.
-- `BILL001` Billing Stub To Workflow: subscription, invoice generation, and payment-provider integration.
+- `BILL000` Commercialisation Impact Review: open-core boundary, paid service candidates, support subscription direction, and Billing gate.
+- `BILL001` Billing Stub To Workflow: deferred until the commercial model is approved.
 
 ---
 
@@ -1120,7 +1121,7 @@ These need answers before the relevant phase begins:
 | 6 | ~~Same-day slot requests outside the Draw?~~ → **Yes — immediate allocation, same 500 cap** | ✅ Decided | — |
 | 7 | ~~Company car pre-allocations — manual or automatic?~~ → **Same auto-scheduler as all employees; always approved (Tier 1 in Draw)** | ✅ Decided | — |
 | 8 | ~~GDPR deletion: pseudonymise or redact?~~ → **Pseudonymise — `actor_hash` in audit log, separate `PiiMapping` collection** | ✅ Decided | — |
-| 9 | ~~Payment provider?~~ → **Stub (`IPaymentProvider`) — real provider wired in later** | ✅ Decided | — |
+| 9 | ~~Payment provider?~~ → **Deferred; no provider until commercial approval** | ✅ Superseded by BILL000 | [Commercialisation Impact Review](./strategy-layer/commercialisation) |
 | 10 | ~~Real-time channel?~~ → **SSE via Notification service, bridged from Dapr pub/sub** | ✅ Decided | — |
 | 11 | ~~What determines Tier 2 lottery weight?~~ → **`1 / (1 + RecentAllocationCount + ActivePenaltyScore)` from draw-time user metrics** | ✅ Decided | — |
 | 12 | ~~What are the executable Draw rules?~~ → **See `docs/business-layer/allocation-rules.md`** | ✅ Decided | — |

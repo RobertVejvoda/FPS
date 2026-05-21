@@ -5,13 +5,13 @@
     - Identify the number of employees who require parking and their specific needs.
 
 2. **Pilot Program for Small Companies**
-    - Start with small companies (up to 50 employees) to test the system.
+    - Start with small companies, initially below about 150 employees, to test the parking-first fairness story.
     - Offer a free trial period to gather feedback and make necessary adjustments.
 
 3. **Expand to Medium-Sized Companies**
-    - Once the system is refined, expand to medium-sized companies (50-200 employees).
-    - Provide tiered pricing based on the number of employees and parking slots required.
+    - Once the system is refined, expand to medium-sized companies where parking allocation is still a visible operational pain.
+    - Validate paid support, implementation, production readiness, and client-specific integration before defining product pricing.
 
 4. **Global Rollout for Large Enterprises**
-    - After successful implementation in small and medium-sized companies, roll out the system to large enterprises (200+ employees) worldwide.
-    - Customize the system to meet the specific needs of different regions and cultures.
+    - Treat large enterprises as a later option, not the first target.
+    - Revisit deployment, support, legal, privacy, and licensing obligations before committing to larger enterprise rollout.
