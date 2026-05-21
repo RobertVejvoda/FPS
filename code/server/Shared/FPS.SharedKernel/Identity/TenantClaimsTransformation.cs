@@ -20,7 +20,8 @@ namespace FPS.SharedKernel.Identity;
 // issuance). The in-memory store covers fast-path denial within a single service instance.
 public sealed class TenantClaimsTransformation(
     ITenantRoleMapper roleMapper,
-    IDeactivatedUserStore deactivatedUsers) : IClaimsTransformation
+    IDeactivatedUserStore deactivatedUsers,
+    ITenantIdentityConfigStore identityConfigStore) : IClaimsTransformation
 {
     internal const string DeactivatedClaim = "fps_deactivated";
     private const string TransformedClaim = "fps_transformed";
@@ -49,10 +50,20 @@ public sealed class TenantClaimsTransformation(
         foreach (var role in roleMapper.MapToRoles(tenantId, rawRoles.Select(c => c.Value)))
             identity.AddClaim(new Claim(ClaimTypes.Role, role));
 
+        // Reject users from tenants with no registered identity config once enforcement is active.
+        // Enforcement becomes active as soon as any tenant has been configured via the Customer API.
+        // Until then (empty store) all authenticated tenants are allowed — backward-compatible.
+        if (identityConfigStore.IsEnforcementActive && !identityConfigStore.IsConfigured(tenantId))
+        {
+            foreach (var role in identity.FindAll(ClaimTypes.Role).ToList())
+                identity.RemoveClaim(role);
+            identity.AddClaim(new Claim(DeactivatedClaim, "true"));
+        }
+
         // Deactivated users: strip all role claims so [Authorize(Roles = "...")] fails,
         // and add a marker claim so the DefaultPolicy assertion also rejects them.
         // This covers both role-based and policy-based authorization without changing controllers.
-        if (deactivatedUsers.IsDeactivated(tenantId, userId))
+        else if (deactivatedUsers.IsDeactivated(tenantId, userId))
         {
             foreach (var role in identity.FindAll(ClaimTypes.Role).ToList())
                 identity.RemoveClaim(role);

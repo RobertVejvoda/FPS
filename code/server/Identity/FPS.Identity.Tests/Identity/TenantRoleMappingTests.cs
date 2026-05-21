@@ -14,11 +14,13 @@ public sealed class TenantRoleMappingTests
         return new ConfiguredTenantRoleMapper(config);
     }
 
-    private static TenantClaimsTransformation TransformationWithMapping(Dictionary<string, string?> mapping)
+    private static TenantClaimsTransformation TransformationWithMapping(
+        Dictionary<string, string?> mapping,
+        InMemoryTenantIdentityConfigStore? configStore = null)
     {
         var mapper = MapperWithConfig(mapping);
         var store = new InMemoryDeactivatedUserStore();
-        return new TenantClaimsTransformation(mapper, store);
+        return new TenantClaimsTransformation(mapper, store, configStore ?? new InMemoryTenantIdentityConfigStore());
     }
 
     private static ClaimsPrincipal PrincipalWithRole(string tenantId, string userId, string role)
@@ -123,7 +125,7 @@ public sealed class TenantRoleMappingTests
     {
         var mapper = MapperWithConfig([]);
         var store = new InMemoryDeactivatedUserStore();
-        var transform = new TenantClaimsTransformation(mapper, store);
+        var transform = new TenantClaimsTransformation(mapper, store, new InMemoryTenantIdentityConfigStore());
 
         var principal = PrincipalWithRole("tenant-1", "user-deactivated", "employee");
         store.Deactivate("tenant-1", "user-deactivated");
@@ -151,5 +153,48 @@ public sealed class TenantRoleMappingTests
         // Exactly one role claim — not doubled or lost
         Assert.Single(twice.FindAll(ClaimTypes.Role));
         Assert.True(twice.HasClaim(ClaimTypes.Role, "FpsRole"));
+    }
+
+    // Identity config store enforcement
+
+    [Fact]
+    public async Task Transform_EmptyConfigStore_AllowsAnyTenant()
+    {
+        // Before any tenant is configured, enforcement is inactive.
+        var store = new InMemoryTenantIdentityConfigStore();
+        var transform = TransformationWithMapping([], store);
+
+        var principal = PrincipalWithRole("tenant-unknown", "user-1", "employee");
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
+    public async Task Transform_ConfiguredTenant_Allowed()
+    {
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");
+        var transform = TransformationWithMapping([], store);
+
+        var principal = PrincipalWithRole("tenant-1", "user-1", "employee");
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
+    public async Task Transform_UnconfiguredTenant_AfterEnforcementActive_IsRejected()
+    {
+        // Once any tenant is registered, users from unconfigured tenants are deactivated.
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");   // enforcement now active
+        var transform = TransformationWithMapping([], store);
+
+        var principal = PrincipalWithRole("tenant-unknown", "user-x", "employee");
+        var result = await transform.TransformAsync(principal);
+
+        Assert.True(result.HasClaim("fps_deactivated", "true"));
+        Assert.Empty(result.FindAll(ClaimTypes.Role));
     }
 }

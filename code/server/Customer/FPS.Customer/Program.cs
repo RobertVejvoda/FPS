@@ -11,7 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
+builder.Services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
 builder.Services.AddScoped<TenantService>();
+builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddOpenApi("v1", options =>
 {
@@ -55,6 +57,11 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsAuthorization();
+// Override the default ITenantIdentityConfigStore with the concrete singleton so
+// TenantIdentityService can call Register() and TenantClaimsTransformation can enforce it.
+var identityConfigStore = new InMemoryTenantIdentityConfigStore();
+builder.Services.AddSingleton<ITenantIdentityConfigStore>(identityConfigStore);
+builder.Services.AddSingleton(identityConfigStore);
 
 var app = builder.Build();
 
