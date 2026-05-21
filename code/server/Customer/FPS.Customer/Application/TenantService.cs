@@ -2,7 +2,9 @@ using FPS.Customer.Domain;
 
 namespace FPS.Customer.Application;
 
-public sealed class TenantService(ITenantRepository repository)
+public sealed class TenantService(
+    ITenantRepository repository,
+    ITenantParkingBootstrapRepository? parkingBootstrap = null)
 {
     public async Task<(TenantWorkspace? tenant, string? error)> CreateAsync(
         string? slug, string displayName, string region, string timeZone,
@@ -61,6 +63,16 @@ public sealed class TenantService(ITenantRepository repository)
     {
         var tenant = await repository.GetAsync(tenantId, ct);
         if (tenant is null) return "Tenant not found.";
+
+        // Enforce parking bootstrap before allowing Ready state.
+        if (to == TenantLifecycleState.Ready && parkingBootstrap is not null)
+        {
+            var bootstrap = await parkingBootstrap.GetOrCreateAsync(tenantId, ct);
+            if (!bootstrap.DefaultPolicyConfigured)
+                return "Tenant cannot become Ready: parking policy has not been bootstrapped.";
+            if (!bootstrap.HasUsableLocation)
+                return "Tenant cannot become Ready: at least one location with active slots is required.";
+        }
 
         var error = tenant.TryTransition(to, actorId, reason, evidence);
         if (error is not null) return error;
