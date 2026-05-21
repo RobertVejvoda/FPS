@@ -1,39 +1,47 @@
 # Reporting Application
 
-[Reporting](../technology-layer/reporting) is a simple service that provides a predefined set of reports. It allows users to access and generate standard reports without the need for custom report creation.
-
+Reporting provides a predefined set of parking operations reports. It is not a custom report builder. Application behavior is centered on tenant-scoped read models, manager-safe query endpoints, and deterministic exports that can be consumed by the web app or downloaded for client review.
 
 ## Application Functions
 
+### Parking Summary
 
-### Real-time Reporting
-- Processes live occupancy data from sensors.
-- Automatically updates report dashboards for both users and administrators.
+- Query tenant-scoped daily parking request, allocation, rejection, cancellation, confirmation, and no-show counts.
+- Group results by date, location, and safe report filters.
+- Return empty report responses instead of errors when no data exists for the selected range.
 
-### Revenue Reporting
-- Aggregates revenue data across daily, weekly, and monthly intervals.
-- Provides breakdowns by total revenue and revenue per parking space.
+### Fairness Reporting
 
-### System Monitoring
-- Collects system error logs and incident data.
-- Enables filtering by date, severity, and operational status for prompt issue resolution.
+- Show allocation fairness over time using pseudonymised or aggregated metrics.
+- Avoid hidden lottery internals such as seeds, raw ordering, internal weights, or diagnostics that would undermine the fairness model.
+- Support manager review without exposing another employee's private details unless role policy explicitly permits it.
 
-### Backup and Recovery Reporting
-- Monitors backup operations and recovery processes.
-- Supports filtering by date and status to ensure data integrity.
+### Utilization Reporting
 
-### Historical Data Analysis
-- Analyzes past usage trends for long-term performance insights.
-- Assists in identifying patterns and optimizing operations.
+- Report capacity and allocation utilization by location, date/time, and configured slot or capability category.
+- Help HR/facilities identify under-used or overloaded capacity.
+- Keep slot metadata safe for the manager role and avoid exposing reserved-space details that are not operationally necessary.
 
-### Violation and Activity Reporting
-- Generates reports to track parking violations.
-- Compiles user activity data, including login history and active session monitoring.
-- Provides insights into two-factor authentication usage and user account deletion requests.
+### Reason-Code Reporting
 
-### Additional Reporting Functions
-- Gathers customer feedback to improve service quality.
-- Reports on parking slot utilization for space optimization.
-- Tracks third-party integration usage to monitor external dependencies.
+- Aggregate rejection, cancellation, no-show, and expiry reasons.
+- Use documented reason codes and employee-safe reason groups.
+- Support root-cause review without exposing internal algorithm diagnostics.
 
+### Export
 
+- Export approved operational reports as deterministic CSV.
+- Preserve tenant isolation and privacy-safe shaping in export output.
+- Neutralize spreadsheet formula injection.
+
+## Boundaries
+
+Reporting does not decide Booking state and must not replace Audit.
+
+Out of scope for the reporting application:
+
+- raw audit payloads, retention, integrity, and GDPR erasure evidence;
+- billing, invoice, payment, or revenue reports;
+- infrastructure health, backup, incident, and telemetry reports;
+- broad login/session monitoring;
+- custom report designers and scheduled report delivery.
