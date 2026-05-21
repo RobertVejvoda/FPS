@@ -9,6 +9,9 @@ public sealed class InMemoryTenantParkingBootstrapRepository : ITenantParkingBoo
     private readonly ConcurrentDictionary<string, TenantParkingBootstrap> store =
         new(StringComparer.OrdinalIgnoreCase);
 
+    public Task<TenantParkingBootstrap?> GetAsync(string tenantId, CancellationToken ct) =>
+        Task.FromResult(store.TryGetValue(tenantId, out var b) ? b : null);
+
     public Task<TenantParkingBootstrap> GetOrCreateAsync(string tenantId, CancellationToken ct) =>
         Task.FromResult(store.GetOrAdd(tenantId, id => new TenantParkingBootstrap { TenantId = id }));
 

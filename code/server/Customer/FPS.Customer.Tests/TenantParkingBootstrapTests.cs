@@ -8,12 +8,22 @@ public sealed class TenantParkingBootstrapTests
 {
     private readonly InMemoryTenantRepository tenantRepo = new();
     private readonly InMemoryTenantParkingBootstrapRepository bootstrapRepo = new();
+    private readonly InMemoryTenantIdentityRepository identityRepo = new();
     private readonly TenantService tenantService;
+    private readonly TenantService tenantServiceWithReadiness;
     private readonly TenantParkingBootstrapService service;
 
     public TenantParkingBootstrapTests()
     {
         tenantService = new TenantService(tenantRepo, bootstrapRepo);
+        var readiness = new TenantReadinessService(
+            tenantRepo, identityRepo, bootstrapRepo,
+            new NoOpProfileReadinessProbe(),
+            new NoOpBookingReadinessProbe(),
+            new NoOpNotificationReadinessProbe(),
+            new NoOpAuditReadinessProbe(),
+            new NoOpReportingReadinessProbe());
+        tenantServiceWithReadiness = new TenantService(tenantRepo, bootstrapRepo, readiness);
         service = new TenantParkingBootstrapService(bootstrapRepo, tenantRepo);
     }
 
@@ -255,28 +265,30 @@ public sealed class TenantParkingBootstrapTests
     public async Task TransitionToReady_WithoutBootstrap_IsBlocked()
     {
         var tenantId = await CreateTenant();
-        await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
-        await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
+        await tenantServiceWithReadiness.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
+        await tenantServiceWithReadiness.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
 
-        var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", null, null, CancellationToken.None);
+        var error = await tenantServiceWithReadiness.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", null, null, CancellationToken.None);
 
         Assert.NotNull(error);
-        Assert.Contains("parking policy", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot become Ready", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ParkingPolicy", error);
     }
 
     [Fact]
     public async Task TransitionToReady_PolicyButNoSlots_IsBlocked()
     {
         var tenantId = await CreateTenant();
-        await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
-        await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
+        await tenantServiceWithReadiness.TransitionAsync(tenantId, TenantLifecycleState.Configured, "actor", null, null, CancellationToken.None);
+        await tenantServiceWithReadiness.TransitionAsync(tenantId, TenantLifecycleState.Seeded, "actor", null, null, CancellationToken.None);
         await RecordPolicy(tenantId);
         await service.RecordLocationAsync(tenantId, "loc-A", 0, false, "actor", CancellationToken.None);
 
-        var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", null, null, CancellationToken.None);
+        var error = await tenantServiceWithReadiness.TransitionAsync(tenantId, TenantLifecycleState.Ready, "actor", null, null, CancellationToken.None);
 
         Assert.NotNull(error);
-        Assert.Contains("slots", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot become Ready", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ParkingLocation", error);
     }
 
     [Fact]

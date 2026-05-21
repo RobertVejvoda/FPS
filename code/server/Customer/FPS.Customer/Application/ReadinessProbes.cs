@@ -30,37 +30,39 @@ public interface IReportingReadinessProbe
 }
 
 // No-op stubs — replaced with real HTTP/Dapr probes in later phases.
+// These return Failed because the checks are required for live readiness;
+// a deployment without connected probes cannot be marked Ready.
 public sealed class NoOpProfileReadinessProbe : IProfileReadinessProbe
 {
     public Task<ReadinessCheckResult> CheckAsync(string tenantId, CancellationToken ct) =>
-        Task.FromResult(ReadinessCheckResult.Skipped("ProfileFacts",
-            "Profile service probe not connected in this deployment."));
+        Task.FromResult(ReadinessCheckResult.Fail("ProfileFacts",
+            "Profile service probe not connected. Connect probe before marking tenant Ready."));
 }
 
 public sealed class NoOpBookingReadinessProbe : IBookingReadinessProbe
 {
     public Task<ReadinessCheckResult> CheckAsync(string tenantId, CancellationToken ct) =>
-        Task.FromResult(ReadinessCheckResult.Skipped("BookingSmokeTest",
-            "Booking service probe not connected in this deployment."));
+        Task.FromResult(ReadinessCheckResult.Fail("BookingSmokeTest",
+            "Booking service probe not connected. Connect probe before marking tenant Ready."));
 }
 
 public sealed class NoOpNotificationReadinessProbe : INotificationReadinessProbe
 {
     public Task<ReadinessCheckResult> CheckAsync(string tenantId, CancellationToken ct) =>
-        Task.FromResult(ReadinessCheckResult.Skipped("NotificationReachable",
-            "Notification service probe not connected in this deployment."));
+        Task.FromResult(ReadinessCheckResult.Fail("NotificationReachable",
+            "Notification service probe not connected. Connect probe before marking tenant Ready."));
 }
 
 public sealed class NoOpAuditReadinessProbe : IAuditReadinessProbe
 {
     public Task<ReadinessCheckResult> CheckAsync(string tenantId, CancellationToken ct) =>
-        Task.FromResult(ReadinessCheckResult.Skipped("AuditEvidence",
-            "Audit service probe not connected in this deployment."));
+        Task.FromResult(ReadinessCheckResult.Fail("AuditEvidence",
+            "Audit service probe not connected. Connect probe before marking tenant Ready."));
 }
 
 public sealed class NoOpReportingReadinessProbe : IReportingReadinessProbe
 {
     public Task<ReadinessCheckResult> CheckAsync(string tenantId, CancellationToken ct) =>
-        Task.FromResult(ReadinessCheckResult.Skipped("ReportingEvidence",
-            "Reporting service probe not connected in this deployment."));
+        Task.FromResult(ReadinessCheckResult.Fail("ReportingEvidence",
+            "Reporting service probe not connected. Connect probe before marking tenant Ready."));
 }

@@ -4,7 +4,8 @@ namespace FPS.Customer.Application;
 
 public sealed class TenantService(
     ITenantRepository repository,
-    ITenantParkingBootstrapRepository? parkingBootstrap = null)
+    ITenantParkingBootstrapRepository? parkingBootstrap = null,
+    TenantReadinessService? readinessService = null)
 {
     public async Task<(TenantWorkspace? tenant, string? error)> CreateAsync(
         string? slug, string displayName, string region, string timeZone,
@@ -64,14 +65,18 @@ public sealed class TenantService(
         var tenant = await repository.GetAsync(tenantId, ct);
         if (tenant is null) return "Tenant not found.";
 
-        // Enforce parking bootstrap before allowing Ready state.
-        if (to == TenantLifecycleState.Ready && parkingBootstrap is not null)
+        // Enforce full readiness before allowing Ready state.
+        if (to == TenantLifecycleState.Ready && readinessService is not null)
         {
-            var bootstrap = await parkingBootstrap.GetOrCreateAsync(tenantId, ct);
-            if (!bootstrap.DefaultPolicyConfigured)
-                return "Tenant cannot become Ready: parking policy has not been bootstrapped.";
-            if (!bootstrap.HasUsableLocation)
-                return "Tenant cannot become Ready: at least one location with active slots is required.";
+            var (report, readinessError) = await readinessService.CheckAsync(tenantId, dryRun: false, ct);
+            if (readinessError is not null) return readinessError;
+            if (!report!.IsReady)
+            {
+                var failed = report.Checks
+                    .Where(c => c.Status == ReadinessStatus.Failed)
+                    .Select(c => c.Name);
+                return $"Tenant cannot become Ready. Failing checks: {string.Join(", ", failed)}.";
+            }
         }
 
         var error = tenant.TryTransition(to, actorId, reason, evidence);

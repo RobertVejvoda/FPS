@@ -119,8 +119,8 @@ public sealed class TenantReadinessService(
 
     private async Task<ReadinessCheckResult> CheckParkingPolicyAsync(string tenantId, CancellationToken ct)
     {
-        var bootstrap = await parkingBootstrapRepository.GetOrCreateAsync(tenantId, ct);
-        if (!bootstrap.DefaultPolicyConfigured)
+        var bootstrap = await parkingBootstrapRepository.GetAsync(tenantId, ct);
+        if (bootstrap is null || !bootstrap.DefaultPolicyConfigured)
             return ReadinessCheckResult.Fail("ParkingPolicy",
                 "Parking default policy has not been bootstrapped.");
         return ReadinessCheckResult.Pass("ParkingPolicy");
@@ -128,8 +128,8 @@ public sealed class TenantReadinessService(
 
     private async Task<ReadinessCheckResult> CheckParkingLocationAsync(string tenantId, CancellationToken ct)
     {
-        var bootstrap = await parkingBootstrapRepository.GetOrCreateAsync(tenantId, ct);
-        if (!bootstrap.HasUsableLocation)
+        var bootstrap = await parkingBootstrapRepository.GetAsync(tenantId, ct);
+        if (bootstrap is null || !bootstrap.HasUsableLocation)
             return ReadinessCheckResult.Fail("ParkingLocation",
                 "No location with active slots found. Add at least one location with capacity.");
         return ReadinessCheckResult.Pass("ParkingLocation");

@@ -4,12 +4,43 @@ using FPS.Customer.Infrastructure;
 
 namespace FPS.Customer.Tests;
 
+// Passing stubs for tests that simulate a fully connected deployment.
+file sealed class PassProfileProbe : IProfileReadinessProbe
+{
+    public Task<ReadinessCheckResult> CheckAsync(string t, CancellationToken c) =>
+        Task.FromResult(ReadinessCheckResult.Pass("ProfileFacts"));
+}
+file sealed class PassBookingProbe : IBookingReadinessProbe
+{
+    public Task<ReadinessCheckResult> CheckAsync(string t, CancellationToken c) =>
+        Task.FromResult(ReadinessCheckResult.Pass("BookingSmokeTest"));
+}
+file sealed class PassNotificationProbe : INotificationReadinessProbe
+{
+    public Task<ReadinessCheckResult> CheckAsync(string t, CancellationToken c) =>
+        Task.FromResult(ReadinessCheckResult.Pass("NotificationReachable"));
+}
+file sealed class PassAuditProbe : IAuditReadinessProbe
+{
+    public Task<ReadinessCheckResult> CheckAsync(string t, CancellationToken c) =>
+        Task.FromResult(ReadinessCheckResult.Pass("AuditEvidence"));
+}
+file sealed class PassReportingProbe : IReportingReadinessProbe
+{
+    public Task<ReadinessCheckResult> CheckAsync(string t, CancellationToken c) =>
+        Task.FromResult(ReadinessCheckResult.Pass("ReportingEvidence"));
+}
+
 public sealed class TenantReadinessServiceTests
 {
     private readonly InMemoryTenantRepository tenantRepo = new();
     private readonly InMemoryTenantIdentityRepository identityRepo = new();
     private readonly InMemoryTenantParkingBootstrapRepository parkingRepo = new();
+
+    // Uses no-op (failing) probes — simulates a deployment without connected services.
     private readonly TenantReadinessService service;
+    // Uses passing probes — simulates a fully connected deployment.
+    private readonly TenantReadinessService connectedService;
 
     public TenantReadinessServiceTests()
     {
@@ -20,6 +51,14 @@ public sealed class TenantReadinessServiceTests
             new NoOpNotificationReadinessProbe(),
             new NoOpAuditReadinessProbe(),
             new NoOpReportingReadinessProbe());
+
+        connectedService = new TenantReadinessService(
+            tenantRepo, identityRepo, parkingRepo,
+            new PassProfileProbe(),
+            new PassBookingProbe(),
+            new PassNotificationProbe(),
+            new PassAuditProbe(),
+            new PassReportingProbe());
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -30,7 +69,7 @@ public sealed class TenantReadinessServiceTests
         var tenant = new TenantWorkspace
         {
             TenantId = Guid.NewGuid().ToString(),
-            Slug = "acme",
+            Slug = $"acme-{Guid.NewGuid():N}",
             DisplayName = "ACME Corp",
             Region = "eu-west",
             TimeZone = "Europe/London",
@@ -87,7 +126,7 @@ public sealed class TenantReadinessServiceTests
         await parkingRepo.SaveAsync(bootstrap, CancellationToken.None);
     }
 
-    private async Task<string> FullyReadyTenantAsync()
+    private async Task<string> FullyConfiguredTenantAsync()
     {
         var tenantId = await SeedTenantAsync(TenantLifecycleState.Seeded);
         await SeedIdentityAsync(tenantId);
@@ -239,32 +278,44 @@ public sealed class TenantReadinessServiceTests
         Assert.Equal(ReadinessStatus.Failed, pl.Status);
     }
 
-    // ── out-of-process probes skipped ─────────────────────────────────────────
+    // ── out-of-process probes block Ready when not connected ──────────────────
 
     [Fact]
-    public async Task Check_OutOfProcessProbes_AreSkipped()
+    public async Task Check_OutOfProcessProbes_FailWhenNotConnected()
     {
         var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
         var (report, _) = await service.CheckAsync(tenantId, false, CancellationToken.None);
-        var skippedNames = new[] { "ProfileFacts", "BookingSmokeTest", "NotificationReachable",
+        var probeNames = new[] { "ProfileFacts", "BookingSmokeTest", "NotificationReachable",
             "AuditEvidence", "ReportingEvidence" };
-        foreach (var name in skippedNames)
+        foreach (var name in probeNames)
         {
             var check = report!.Checks.Single(c => c.Name == name);
-            Assert.Equal(ReadinessStatus.Skipped, check.Status);
+            Assert.Equal(ReadinessStatus.Failed, check.Status);
+            Assert.Contains("not connected", check.Reason);
         }
     }
 
-    // ── full pass ─────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task Check_OutOfProcessProbesNotConnected_BlocksIsReady()
+    {
+        var tenantId = await FullyConfiguredTenantAsync();
+        // No-op probes return Failed — local checks pass but overall not ready.
+        var (report, _) = await service.CheckAsync(tenantId, false, CancellationToken.None);
+        Assert.False(report!.IsReady);
+        Assert.All(report.Checks.Where(c => c.Name is "LifecycleState" or "IdentityConfig"
+                or "ActiveAdmin" or "RoleMapping" or "ParkingPolicy" or "ParkingLocation"),
+            c => Assert.Equal(ReadinessStatus.Passed, c.Status));
+    }
+
+    // ── full pass (connected deployment) ─────────────────────────────────────
 
     [Fact]
-    public async Task Check_AllLocalChecksPassing_IsReadyTrue()
+    public async Task Check_AllChecksPassing_IsReadyTrue()
     {
-        var tenantId = await FullyReadyTenantAsync();
-        var (report, _) = await service.CheckAsync(tenantId, false, CancellationToken.None);
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
         Assert.True(report!.IsReady);
-        Assert.All(report.Checks, c =>
-            Assert.NotEqual(ReadinessStatus.Failed, c.Status));
+        Assert.All(report.Checks, c => Assert.Equal(ReadinessStatus.Passed, c.Status));
     }
 
     // ── dry-run ───────────────────────────────────────────────────────────────
@@ -272,8 +323,8 @@ public sealed class TenantReadinessServiceTests
     [Fact]
     public async Task Check_DryRun_ReportsIsDryRunTrue()
     {
-        var tenantId = await FullyReadyTenantAsync();
-        var (report, _) = await service.CheckAsync(tenantId, dryRun: true, CancellationToken.None);
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, dryRun: true, CancellationToken.None);
         Assert.True(report!.IsDryRun);
         Assert.True(report.IsReady);
     }
@@ -287,16 +338,62 @@ public sealed class TenantReadinessServiceTests
         Assert.False(report.IsReady);
     }
 
+    [Fact]
+    public async Task Check_DryRun_DoesNotCreateBootstrapRecord()
+    {
+        var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
+        // Tenant has no parking bootstrap — readiness check must not create one.
+        await service.CheckAsync(tenantId, dryRun: true, CancellationToken.None);
+        var existing = await parkingRepo.GetAsync(tenantId, CancellationToken.None);
+        Assert.Null(existing);
+    }
+
+    [Fact]
+    public async Task Check_NonDryRun_DoesNotCreateBootstrapRecord()
+    {
+        var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
+        await service.CheckAsync(tenantId, dryRun: false, CancellationToken.None);
+        var existing = await parkingRepo.GetAsync(tenantId, CancellationToken.None);
+        Assert.Null(existing);
+    }
+
+    // ── transition guard ──────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task TransitionToReady_WhenReadinessFails_ReturnsError()
+    {
+        // TenantService wired with a connected readiness service but no identity/admin/parking seeded.
+        var tenantId = await SeedTenantAsync(TenantLifecycleState.Seeded);
+        var tenantService = new TenantService(tenantRepo, parkingRepo, connectedService);
+        var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready,
+            "actor", null, null, CancellationToken.None);
+        Assert.NotNull(error);
+        Assert.Contains("cannot become Ready", error);
+        Assert.Contains("Failing checks", error);
+    }
+
+    [Fact]
+    public async Task TransitionToReady_WhenAllChecksPassing_Succeeds()
+    {
+        var tenantId = await FullyConfiguredTenantAsync();
+        var tenantService = new TenantService(tenantRepo, parkingRepo, connectedService);
+        var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready,
+            "actor", null, null, CancellationToken.None);
+        Assert.Null(error);
+        var tenant = await tenantRepo.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal(TenantLifecycleState.Ready, tenant!.LifecycleState);
+    }
+
     // ── tenant isolation ──────────────────────────────────────────────────────
 
     [Fact]
     public async Task Check_TenantIsolation_OtherTenantDataNotCrossed()
     {
-        var tenantA = await FullyReadyTenantAsync();
+        var tenantA = await FullyConfiguredTenantAsync();
         var tenantB = await SeedTenantAsync(TenantLifecycleState.Configured);
 
-        var (reportA, _) = await service.CheckAsync(tenantA, false, CancellationToken.None);
-        var (reportB, _) = await service.CheckAsync(tenantB, false, CancellationToken.None);
+        var (reportA, _) = await connectedService.CheckAsync(tenantA, false, CancellationToken.None);
+        var (reportB, _) = await connectedService.CheckAsync(tenantB, false, CancellationToken.None);
 
         Assert.True(reportA!.IsReady);
         Assert.False(reportB!.IsReady);
@@ -307,8 +404,8 @@ public sealed class TenantReadinessServiceTests
     [Fact]
     public async Task Check_Output_DoesNotLeakIssuerOrAudience()
     {
-        var tenantId = await FullyReadyTenantAsync();
-        var (report, _) = await service.CheckAsync(tenantId, false, CancellationToken.None);
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
         foreach (var check in report!.Checks)
         {
             Assert.DoesNotContain("https://idp.example.com", check.Reason ?? string.Empty);
