@@ -14,6 +14,9 @@ public static class FpsAuthorizationExtensions
     {
         services.AddSingleton<ITenantRoleMapper, ConfiguredTenantRoleMapper>();
         services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
+        // Default: no-enforcement store (enforcement activates when Customer service registers tenants).
+        // Services that host the Customer identity config replace this with InMemoryTenantIdentityConfigStore.
+        services.AddSingleton<ITenantIdentityConfigStore, InMemoryTenantIdentityConfigStore>();
         services.AddScoped<IClaimsTransformation, TenantClaimsTransformation>();
 
         services.AddAuthorization(options =>

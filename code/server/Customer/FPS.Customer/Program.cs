@@ -11,8 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
+builder.Services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
+builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddOpenApi("v1", options =>
@@ -57,6 +59,18 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsAuthorization();
+// Override the default ITenantIdentityConfigStore with the concrete singleton so
+// TenantIdentityService can call Register() and TenantClaimsTransformation can enforce it.
+var identityConfigStore = new InMemoryTenantIdentityConfigStore();
+builder.Services.AddSingleton<ITenantIdentityConfigStore>(identityConfigStore);
+builder.Services.AddSingleton(identityConfigStore);
+
+// Replace ConfiguredTenantRoleMapper with the API-backed store. When a tenant is
+// registered in the config store, only explicitly mapped roles are passed through.
+// Unconfigured tenants fall back to pass-through (backward-compatible).
+var roleMappingStore = new InMemoryTenantRoleMappingStore(identityConfigStore);
+builder.Services.AddSingleton<ITenantRoleMapper>(roleMappingStore);
+builder.Services.AddSingleton(roleMappingStore);
 
 var app = builder.Build();
 
