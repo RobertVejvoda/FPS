@@ -148,4 +148,50 @@ public sealed class TenantServiceTests
 
         Assert.Contains("not found", error);
     }
+
+    [Fact]
+    public async Task Create_GeneratesProvisioningMetadataFromSlug()
+    {
+        var (tenant, _) = await service.CreateAsync("my-company", "My Company", "eu", "UTC", [], CancellationToken.None);
+
+        var p = tenant!.Provisioning;
+        Assert.Equal(tenant.TenantId, p.TenantId);
+        Assert.Equal("my-company", p.TenantSlug);
+        Assert.NotEmpty(p.ServiceCollections);
+        Assert.All(p.ServiceCollections.Values, v => Assert.Contains("my-company", v));
+    }
+
+    [Fact]
+    public async Task Create_ProvisioningMetadata_IsDeterministicForSameSlug()
+    {
+        var (t1, _) = await service.CreateAsync("alpha", "Alpha", "eu", "UTC", [], CancellationToken.None);
+        var (t2, _) = await service.CreateAsync("beta", "Beta", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.NotEqual(t1!.Provisioning.ServiceCollections["booking"], t2!.Provisioning.ServiceCollections["booking"]);
+        Assert.Contains("alpha", t1.Provisioning.ServiceCollections["booking"]);
+        Assert.Contains("beta", t2.Provisioning.ServiceCollections["booking"]);
+    }
+
+    [Fact]
+    public async Task Create_ProvisioningMetadata_SanitizesSlugInCollectionNames()
+    {
+        // Slug sanitization strips chars that aren't alphanumeric/hyphen.
+        var (tenant, _) = await service.CreateAsync("clean-slug", "Clean", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.All(tenant!.Provisioning.ServiceCollections.Values, v =>
+        {
+            Assert.DoesNotContain(" ", v);
+            Assert.DoesNotContain("@", v);
+        });
+    }
+
+    [Fact]
+    public async Task Create_ProvisioningMetadata_CoversAllExpectedServices()
+    {
+        var (tenant, _) = await service.CreateAsync("svc-test", "Svc Test", "eu", "UTC", [], CancellationToken.None);
+
+        var keys = tenant!.Provisioning.ServiceCollections.Keys.ToHashSet();
+        foreach (var svc in new[] { "customer", "booking", "notification", "profile", "audit", "configuration", "reporting" })
+            Assert.Contains(svc, keys);
+    }
 }

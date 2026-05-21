@@ -15,14 +15,17 @@ public sealed class TenantService(ITenantRepository repository)
         if (string.IsNullOrWhiteSpace(timeZone)) return (null, "Time zone is required.");
         if (await repository.SlugExistsAsync(slug, ct)) return (null, $"Slug '{slug}' is already in use.");
 
+        var tenantId = Guid.NewGuid().ToString();
+        var safeSlug = slug.Trim().ToLowerInvariant();
         var tenant = new TenantWorkspace
         {
-            TenantId = Guid.NewGuid().ToString(),
-            Slug = slug.Trim().ToLowerInvariant(),
+            TenantId = tenantId,
+            Slug = safeSlug,
             DisplayName = displayName.Trim(),
             Region = region.Trim(),
             TimeZone = timeZone.Trim(),
             SupportContacts = supportContacts,
+            Provisioning = TenantProvisioningMetadata.Generate(tenantId, safeSlug),
         };
 
         await repository.SaveAsync(tenant, ct);

@@ -12,6 +12,7 @@ public sealed class TenantWorkspace
     public IReadOnlyList<TenantSupportContact> SupportContacts { get; set; } = [];
     public TenantLifecycleState LifecycleState { get; private set; } = TenantLifecycleState.Draft;
     public IReadOnlyList<TenantStateTransition> Transitions => transitions.AsReadOnly();
+    public TenantProvisioningMetadata Provisioning { get; init; } = new();
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 

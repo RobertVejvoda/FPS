@@ -80,10 +80,22 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         }) });
     }
 
+    [HttpGet("/tenants/{tenantId}/provisioning")]
+    public async Task<IActionResult> GetProvisioning(string tenantId, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated) return Unauthorized();
+
+        var tenant = await service.GetAsync(tenantId, ct);
+        if (tenant is null) return NotFound();
+        var p = tenant.Provisioning;
+        return Ok(new ProvisioningResponse(p.TenantId, p.TenantSlug, p.GeneratedAt, p.ServiceCollections));
+    }
+
     private static TenantResponse ToResponse(TenantWorkspace t) => new(
         t.TenantId, t.Slug, t.DisplayName, t.Region, t.TimeZone,
         t.LifecycleState.ToString(),
         t.SupportContacts.Select(c => new ContactDto(c.Name, c.Email, c.Role)).ToList(),
+        t.Provisioning.ServiceCollections,
         t.CreatedAt, t.UpdatedAt);
 }
 
@@ -111,5 +123,12 @@ public sealed record TenantResponse(
     string TimeZone,
     string LifecycleState,
     IReadOnlyList<ContactDto> SupportContacts,
+    IReadOnlyDictionary<string, string> ServiceCollections,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+public sealed record ProvisioningResponse(
+    string TenantId,
+    string TenantSlug,
+    DateTimeOffset GeneratedAt,
+    IReadOnlyDictionary<string, string> ServiceCollections);

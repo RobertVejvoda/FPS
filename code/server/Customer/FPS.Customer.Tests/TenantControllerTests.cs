@@ -124,4 +124,70 @@ public sealed class TenantControllerTests
         var tenant = await repository.GetAsync(tenantId, CancellationToken.None);
         Assert.Equal("Updated Name", tenant!.DisplayName);
     }
+
+    [Fact]
+    public async Task Create_IncludesServiceCollectionsInResponse()
+    {
+        var request = new CreateTenantRequest("my-corp", "My Corp", "eu", "UTC", []);
+
+        var result = await controller.Create(request, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result);
+        var response = Assert.IsType<TenantResponse>(created.Value);
+        Assert.NotEmpty(response.ServiceCollections);
+        Assert.Contains("booking", response.ServiceCollections.Keys);
+        Assert.Contains("audit", response.ServiceCollections.Keys);
+        Assert.All(response.ServiceCollections.Values, v => Assert.Contains("my-corp", v));
+    }
+
+    [Fact]
+    public async Task GetProvisioning_ExistingTenant_ReturnsDeterministicCollectionNames()
+    {
+        var created = await controller.Create(new CreateTenantRequest("acme-co", "ACME Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.GetProvisioning(tenantId, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var prov = Assert.IsType<ProvisioningResponse>(ok.Value);
+        Assert.Equal("acme-co", prov.TenantSlug);
+        Assert.Equal(tenantId, prov.TenantId);
+        Assert.All(prov.ServiceCollections.Values, v =>
+        {
+            Assert.Contains("acme-co", v);
+            Assert.DoesNotContain("password", v);
+            Assert.DoesNotContain("secret", v);
+        });
+        Assert.Contains("booking", prov.ServiceCollections.Keys);
+        Assert.Contains("notification", prov.ServiceCollections.Keys);
+        Assert.Contains("profile", prov.ServiceCollections.Keys);
+        Assert.Contains("audit", prov.ServiceCollections.Keys);
+        Assert.Contains("configuration", prov.ServiceCollections.Keys);
+        Assert.Contains("reporting", prov.ServiceCollections.Keys);
+    }
+
+    [Fact]
+    public async Task GetProvisioning_UnknownTenant_Returns404()
+    {
+        var result = await controller.GetProvisioning("no-such-id", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetProvisioning_CollectionNamesDeriveFromSlugNotCallerId()
+    {
+        var result1 = await controller.Create(new CreateTenantRequest("slug-a", "Co A", "eu", "UTC", []), CancellationToken.None);
+        var id1 = ((TenantResponse)((CreatedAtActionResult)result1).Value!).TenantId;
+
+        var result2 = await controller.Create(new CreateTenantRequest("slug-b", "Co B", "eu", "UTC", []), CancellationToken.None);
+        var id2 = ((TenantResponse)((CreatedAtActionResult)result2).Value!).TenantId;
+
+        var prov1 = (ProvisioningResponse)((OkObjectResult)await controller.GetProvisioning(id1, CancellationToken.None)).Value!;
+        var prov2 = (ProvisioningResponse)((OkObjectResult)await controller.GetProvisioning(id2, CancellationToken.None)).Value!;
+
+        Assert.NotEqual(prov1.ServiceCollections["booking"], prov2.ServiceCollections["booking"]);
+        Assert.Contains("slug-a", prov1.ServiceCollections["booking"]);
+        Assert.Contains("slug-b", prov2.ServiceCollections["booking"]);
+    }
 }
