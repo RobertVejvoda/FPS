@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace FPS.Customer.Domain;
 
 public sealed record BootstrapLocation(
@@ -22,18 +20,22 @@ public sealed record BootstrapPolicySnapshot(
     string RecordedByHash,
     DateTimeOffset RecordedAt)
 {
-    private static readonly Regex TimePattern = new(@"^\d{2}:\d{2}$", RegexOptions.Compiled);
+    // Mirror the v1 cap limit from Configuration.Domain.ParkingPolicy.
+    public const int V1DailyRequestCapLimit = 500;
 
     public static string? Validate(string timeZone, string drawCutOffTime, int dailyRequestCap, int allocationLookbackDays)
     {
         if (string.IsNullOrWhiteSpace(timeZone))
             return "TimeZone is required.";
-        if (string.IsNullOrWhiteSpace(drawCutOffTime) || !TimePattern.IsMatch(drawCutOffTime))
-            return "DrawCutOffTime must be in HH:mm format (e.g. 18:00).";
-        if (dailyRequestCap < 1)
-            return "DailyRequestCap must be at least 1.";
-        if (allocationLookbackDays < 1)
-            return "AllocationLookbackDays must be at least 1.";
+        // Use TimeOnly.TryParse so values like "99:99" are rejected even if they match HH:mm shape.
+        if (string.IsNullOrWhiteSpace(drawCutOffTime) || !TimeOnly.TryParseExact(drawCutOffTime, "HH:mm", out _))
+            return "DrawCutOffTime must be a valid HH:mm time (e.g. 18:00).";
+        if (dailyRequestCap <= 0)
+            return "DailyRequestCap must be greater than zero.";
+        if (dailyRequestCap > V1DailyRequestCapLimit)
+            return $"DailyRequestCap exceeds the v1 limit of {V1DailyRequestCapLimit}.";
+        if (allocationLookbackDays < 0)
+            return "AllocationLookbackDays must be non-negative.";
         return null;
     }
 }

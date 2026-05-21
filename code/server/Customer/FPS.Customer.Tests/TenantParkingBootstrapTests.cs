@@ -107,11 +107,37 @@ public sealed class TenantParkingBootstrapTests
     }
 
     [Fact]
-    public async Task RecordPolicy_ZeroLookbackDays_ReturnsError()
+    public async Task RecordPolicy_ZeroLookbackDays_IsValid()
     {
+        // Configuration allows allocationLookbackDays >= 0 (non-negative), not >= 1.
         var tenantId = await CreateTenant();
         var error = await RecordPolicy(tenantId, lookback: 0);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public async Task RecordPolicy_NegativeLookbackDays_ReturnsError()
+    {
+        var tenantId = await CreateTenant();
+        var error = await RecordPolicy(tenantId, lookback: -1);
         Assert.Contains("AllocationLookbackDays", error);
+    }
+
+    [Fact]
+    public async Task RecordPolicy_DailyCapExceedsV1Limit_ReturnsError()
+    {
+        var tenantId = await CreateTenant();
+        var error = await RecordPolicy(tenantId, cap: BootstrapPolicySnapshot.V1DailyRequestCapLimit + 1);
+        Assert.Contains("v1 limit", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RecordPolicy_DrawCutOffTimeInvalidShape_ReturnsError()
+    {
+        // "99:99" matches HH:mm regex but is not a valid TimeOnly — must be rejected.
+        var tenantId = await CreateTenant();
+        var error = await RecordPolicy(tenantId, cutOff: "99:99");
+        Assert.Contains("HH:mm", error);
     }
 
     [Fact]
