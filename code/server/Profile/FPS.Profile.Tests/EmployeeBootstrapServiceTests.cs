@@ -169,6 +169,22 @@ public sealed class EmployeeBootstrapServiceTests
         Assert.Contains("not found", error);
     }
 
+    [Fact]
+    public async Task Deactivate_PreservesAllProfileFields()
+    {
+        var req = ValidRequest("sub-deact", "EMP-999", "emp@corp.com", "loc-HQ");
+        await service.RegisterAsync("t1", req, CancellationToken.None);
+        var error = await service.DeactivateAsync("t1", "sub-deact", CancellationToken.None);
+        Assert.Null(error);
+        var hash = EmployeeBootstrapService.Hash("sub-deact");
+        var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        Assert.Equal(Domain.ProfileStatus.Inactive, stored!.Status);
+        Assert.Equal("EMP-999", stored.EmployeeId);
+        Assert.Contains("employee", stored.FpsRoles);
+        Assert.Equal("emp@corp.com", stored.NotificationAddress);
+        Assert.Equal("loc-HQ", stored.HomeLocationId);
+    }
+
     // ── Import — fully atomic ─────────────────────────────────────────────────
 
     [Fact]

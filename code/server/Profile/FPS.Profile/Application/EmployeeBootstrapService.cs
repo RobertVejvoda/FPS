@@ -105,6 +105,10 @@ public sealed class EmployeeBootstrapService(
         {
             TenantId = tenantId, UserId = subjectHash,
             Status = ProfileStatus.Inactive,
+            EmployeeId = existing.EmployeeId,
+            FpsRoles = existing.FpsRoles,
+            NotificationAddress = existing.NotificationAddress,
+            HomeLocationId = existing.HomeLocationId,
             ParkingEligible = existing.ParkingEligible,
             HasCompanyCar = existing.HasCompanyCar,
             AccessibilityEligible = existing.AccessibilityEligible,
