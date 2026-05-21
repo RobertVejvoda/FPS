@@ -11,7 +11,7 @@ public sealed class CancelBookingHandlerTests
     private readonly Mock<IPenaltyRepository> penaltyRepository = new();
     private readonly Mock<IDrawRepository> drawRepository = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
-    private readonly Mock<IEventPublisher> eventPublisher = new();
+    private readonly Mock<IBookingEventPublisher> eventPublisher = new();
     private readonly CancelBookingHandler handler;
 
     private static readonly TenantPolicy DefaultPolicy = new(500, new TimeOnly(18, 0), "UTC", true, 10, 1, 2);
@@ -45,6 +45,9 @@ public sealed class CancelBookingHandlerTests
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
+        eventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     // ── B003 path: Pending cancellation (unchanged) ───────────────────────────

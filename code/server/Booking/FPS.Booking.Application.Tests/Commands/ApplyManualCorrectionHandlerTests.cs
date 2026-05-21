@@ -7,7 +7,7 @@ public sealed class ApplyManualCorrectionHandlerTests
 {
     private readonly Mock<IBookingRepository> repository = new();
     private readonly Mock<ICorrectionAuditRepository> auditRepository = new();
-    private readonly Mock<IEventPublisher> eventPublisher = new();
+    private readonly Mock<IBookingEventPublisher> eventPublisher = new();
     private readonly ApplyManualCorrectionHandler handler;
 
     public ApplyManualCorrectionHandlerTests()
@@ -22,6 +22,9 @@ public sealed class ApplyManualCorrectionHandlerTests
         auditRepository.Setup(r => r.SaveAsync(
             It.IsAny<CorrectionAuditDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
+        eventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     // ── Reason validation ─────────────────────────────────────────────────────

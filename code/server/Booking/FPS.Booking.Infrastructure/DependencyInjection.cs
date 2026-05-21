@@ -29,7 +29,9 @@ public static class DependencyInjection
         services.AddHttpClient<IProfileSnapshotService, HttpProfileSnapshotService>(client =>
             client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fps-profile"));
         services.AddSingleton<DrawService>();
-        services.AddScoped<IEventPublisher, DaprEventPublisher>();
+        services.AddScoped<BookingDaprEventPublisher>();
+        services.AddScoped<IBookingEventPublisher>(sp => sp.GetRequiredService<BookingDaprEventPublisher>());
+        services.AddScoped<IEventPublisher>(sp => sp.GetRequiredService<BookingDaprEventPublisher>());
         services.AddScoped<ITenantPolicyService, DefaultTenantPolicyService>();
 
         return services;

@@ -8,7 +8,7 @@ public sealed class SubmitBookingRequestHandlerTests
     private readonly Mock<IEmployeeMetricsService> metricsService = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly Mock<IProfileSnapshotService> profileService = new();
-    private readonly Mock<IEventPublisher> publisher = new();
+    private readonly Mock<IBookingEventPublisher> publisher = new();
     private readonly SubmitBookingRequestHandler handler;
 
     private static readonly ProfileSnapshot DefaultProfile = new(
@@ -70,6 +70,9 @@ public sealed class SubmitBookingRequestHandlerTests
         metricsService
             .Setup(m => m.IncrementRecentAllocationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        publisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(publisher.Object);
+        publisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     // ── B001: future booking ──────────────────────────────────────────────────

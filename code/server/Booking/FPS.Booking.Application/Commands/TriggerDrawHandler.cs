@@ -4,7 +4,6 @@ using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 using FPS.Booking.Domain.Services;
 using FPS.Booking.Domain.ValueObjects;
-using FPS.SharedKernel.DomainEvents;
 using MediatR;
 
 namespace FPS.Booking.Application.Commands;
@@ -17,7 +16,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
     private readonly IEmployeeMetricsService metricsService;
     private readonly IAvailableSlotService slotService;
     private readonly ITenantPolicyService policyService;
-    private readonly IEventPublisher eventPublisher;
+    private readonly IBookingEventPublisher eventPublisher;
     private readonly DrawService drawService;
 
     public TriggerDrawHandler(
@@ -27,7 +26,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
         IEmployeeMetricsService metricsService,
         IAvailableSlotService slotService,
         ITenantPolicyService policyService,
-        IEventPublisher eventPublisher,
+        IBookingEventPublisher eventPublisher,
         DrawService drawService)
     {
         ArgumentNullException.ThrowIfNull(bookingRepository);
@@ -89,7 +88,9 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
             cmd.TenantId, requestorIds, cmd.Date, policy.AllocationLookbackDays, cancellationToken);
 
         var seed = GenerateSeed(drawKey);
-        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptStartedEvent(drawKey, seed, DateTime.UtcNow));
+        var publisher = eventPublisher.WithContext(new BookingPublishContext(
+            cmd.TenantId, Guid.NewGuid().ToString(), "system", null));
+        _ = publisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptStartedEvent(drawKey, seed, DateTime.UtcNow));
 
         var result = drawService.RunDraw(pendingRequests, availableSlots, metrics, seed);
 
@@ -146,7 +147,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
 
         await drawRepository.SaveAsync(attempt, cancellationToken);
 
-        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptCompletedEvent(
+        _ = publisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptCompletedEvent(
             drawKey, seed,
             attempt.AllocatedCount, attempt.RejectedCount, attempt.WaitlistedCount,
             DateTime.UtcNow));

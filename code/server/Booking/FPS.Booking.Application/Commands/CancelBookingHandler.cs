@@ -19,7 +19,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
     private readonly IPenaltyRepository penaltyRepository;
     private readonly IDrawRepository drawRepository;
     private readonly ITenantPolicyService policyService;
-    private readonly IEventPublisher eventPublisher;
+    private readonly IBookingEventPublisher eventPublisher;
     private readonly DrawService drawService;
 
     public CancelBookingHandler(
@@ -28,7 +28,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         IPenaltyRepository penaltyRepository,
         IDrawRepository drawRepository,
         ITenantPolicyService policyService,
-        IEventPublisher eventPublisher,
+        IBookingEventPublisher eventPublisher,
         DrawService drawService)
     {
         ArgumentNullException.ThrowIfNull(repository);
@@ -55,7 +55,9 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         var wasAllocated = dto.Status == "Allocated";
         var request = RestoreRequest(dto);
 
-        request.Cancel(command.Reason, eventPublisher);
+        var publisher = eventPublisher.WithContext(new BookingPublishContext(
+            command.TenantId, Guid.NewGuid().ToString(), "employee", command.RequestorId));
+        request.Cancel(command.Reason, publisher);
 
         await repository.UpdateBookingRequestStatusAsync(
             command.RequestId, request.Status.ToString(), command.Reason, cancellationToken);
@@ -98,12 +100,14 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             SourceEventId = sourceEventId
         }, cancellationToken);
 
-        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
-            BookingRequestId.FromGuid(dto.RequestId),
-            UserId.FromString(dto.RequestedBy),
-            PenaltyType.LateCancellation,
-            penalty.Score,
-            sourceEventId));
+        _ = eventPublisher.WithContext(new BookingPublishContext(
+            command.TenantId, Guid.NewGuid().ToString(), "system", null))
+            .PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
+                BookingRequestId.FromGuid(dto.RequestId),
+                UserId.FromString(dto.RequestedBy),
+                PenaltyType.LateCancellation,
+                penalty.Score,
+                sourceEventId));
     }
 
     private async Task TryReallocateAsync(BookingRequestDto cancelledDto, CancelBookingCommand command, CancellationToken cancellationToken)
@@ -144,11 +148,13 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         if (winner is null) return;
 
         var winnerRequest = RestoreRequest(winner);
-        winnerRequest.Allocate(eventPublisher);
+        var reallocationPublisher = eventPublisher.WithContext(new BookingPublishContext(
+            command.TenantId, Guid.NewGuid().ToString(), "system", null));
+        winnerRequest.Allocate(reallocationPublisher);
 
         await repository.UpdateBookingRequestStatusAsync(winner.RequestId, "Allocated", cancellationToken: cancellationToken);
 
-        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestReallocatedEvent(
+        _ = reallocationPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestReallocatedEvent(
             BookingRequestId.FromGuid(winner.RequestId),
             UserId.FromString(winner.RequestedBy),
             releasedSlot.SlotId,

@@ -12,7 +12,7 @@ public sealed class TriggerDrawHandlerTests
     private readonly Mock<IEmployeeMetricsService> metricsService = new();
     private readonly Mock<IAvailableSlotService> slotService = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
-    private readonly Mock<IEventPublisher> publisher = new();
+    private readonly Mock<IBookingEventPublisher> publisher = new();
     private readonly TriggerDrawHandler handler;
 
     private static readonly TenantPolicy DefaultPolicy = new(500, new TimeOnly(18, 0), "UTC", true, 10);
@@ -48,6 +48,9 @@ public sealed class TriggerDrawHandlerTests
 
         drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        publisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(publisher.Object);
+        publisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     // ── Happy path ────────────────────────────────────────────────────────────

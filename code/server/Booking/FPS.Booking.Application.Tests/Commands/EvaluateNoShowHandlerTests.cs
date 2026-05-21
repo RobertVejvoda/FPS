@@ -6,7 +6,7 @@ public sealed class EvaluateNoShowHandlerTests
     private readonly Mock<IBookingQueryRepository> queryRepository = new();
     private readonly Mock<IPenaltyRepository> penaltyRepository = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
-    private readonly Mock<IEventPublisher> eventPublisher = new();
+    private readonly Mock<IBookingEventPublisher> eventPublisher = new();
     private readonly EvaluateNoShowHandler handler;
 
     private static readonly TenantPolicy EnabledPolicy = new(
@@ -41,6 +41,9 @@ public sealed class EvaluateNoShowHandlerTests
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
+        eventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     // ── Policy guards ─────────────────────────────────────────────────────────
