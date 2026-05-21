@@ -197,4 +197,96 @@ public sealed class TenantRoleMappingTests
         Assert.True(result.HasClaim("fps_deactivated", "true"));
         Assert.Empty(result.FindAll(ClaimTypes.Role));
     }
+
+    // Per-tenant claim name enforcement
+
+    private static ClaimsPrincipal PrincipalWithClaims(params (string type, string value)[] claims)
+    {
+        var identity = new ClaimsIdentity(
+            claims.Select(c => new Claim(c.type, c.value)), "test");
+        return new ClaimsPrincipal(identity);
+    }
+
+    [Fact]
+    public async Task Transform_ConfiguredTenant_UsesStoredRoleClaimName()
+    {
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");
+        store.SetClaimConfig("tenant-1", new TenantClaimConfig("tenant_id", "sub", ["groups"]));
+
+        var roleMappingStore = new InMemoryTenantRoleMappingStore(store);
+        roleMappingStore.SetMapping("tenant-1", new Dictionary<string, string> { ["fp-admins"] = "admin" });
+
+        var transform = new TenantClaimsTransformation(roleMappingStore, new InMemoryDeactivatedUserStore(), store);
+
+        // Token has "groups" claim, not ClaimTypes.Role
+        var principal = PrincipalWithClaims(
+            ("tenant_id", "tenant-1"), ("sub", "user-1"), ("groups", "fp-admins"));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.True(result.HasClaim(ClaimTypes.Role, "admin"));
+        Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
+    public async Task Transform_ConfiguredTenant_UsesStoredSubjectClaimName()
+    {
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");
+        store.SetClaimConfig("tenant-1", new TenantClaimConfig("tenant_id", "oid", []));
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        // Token has "oid" as stable subject — transform should proceed
+        var principal = PrincipalWithClaims(
+            ("tenant_id", "tenant-1"), ("oid", "stable-object-id"));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
+    public async Task Transform_ConfiguredTenant_MissingConfiguredSubjectClaim_FailsClosed()
+    {
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");
+        // Config requires "oid" as subject, but token only has "sub"
+        store.SetClaimConfig("tenant-1", new TenantClaimConfig("tenant_id", "oid", []));
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        var principal = PrincipalWithClaims(
+            ("tenant_id", "tenant-1"), ("sub", "user-1")); // "oid" absent
+
+        var result = await transform.TransformAsync(principal);
+
+        // No transform applied — returned as-is (no fps_transformed claim)
+        Assert.False(result.HasClaim(TransformedMarker, "true"));
+    }
+
+    [Fact]
+    public async Task Transform_ConfiguredTenant_MissingTenantClaim_FailsClosed()
+    {
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");
+        store.SetClaimConfig("tenant-1", new TenantClaimConfig("tid", "sub", []));
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        // Token has "tenant_id" but config requires "tid"
+        var principal = PrincipalWithClaims(
+            ("tenant_id", "tenant-1"), ("sub", "user-1"));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.HasClaim(TransformedMarker, "true"));
+    }
+
+    // Access the internal constant for the transformed marker claim name.
+    private const string TransformedMarker = "fps_transformed";
 }

@@ -26,6 +26,8 @@ public sealed class TenantIdentityService(
         await repository.SaveConfigAsync(config, ct);
         configStore.Register(config.TenantId);
         roleMappingStore.SetMapping(config.TenantId, config.RoleMapping);
+        configStore.SetClaimConfig(config.TenantId, new TenantClaimConfig(
+            config.TenantClaimName, config.SubjectClaimName, config.RoleClaimNames));
         return null;
     }
 
