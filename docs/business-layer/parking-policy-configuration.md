@@ -73,17 +73,19 @@ A location may override:
 - automatic reallocation enablement;
 - company-car overflow behavior when future product versions support more options;
 - supported slot capabilities.
+- resource map version and zone preference behavior.
 
 Location overrides must not silently remove required tenant-wide compliance, audit, or role-based access controls.
 
 ## Slot Capability Configuration
 
-Each location must define its parking slots or capacity pools.
+Each location must define its parking slots or capacity pools. In the broader FairSpot model, this is the parking-specific resource map.
 
 A slot or capacity pool may define:
 
 - slot ID or pool ID;
 - location;
+- zone or section;
 - time-slot availability;
 - supported vehicle types;
 - EV charging availability;
@@ -94,6 +96,45 @@ A slot or capacity pool may define:
 - active/inactive status.
 
 FPS must not allocate a request to a slot that does not satisfy the request's configured constraints.
+
+## Resource Map Upload
+
+Customers should be able to upload or maintain a tenant-scoped resource map for each location.
+
+For parking, the map represents spaces, sections, and capacity pools. Future resource modules can reuse the same concept for desks, chairs, seats, lockers, chargers, or other limited resources.
+
+Rules:
+
+- map publication requires validation before it affects allocation;
+- maps must be versioned and auditable;
+- each resource must have a stable ID or stable pool ID;
+- resources may belong to a zone;
+- zones may have employee-visible labels;
+- resources may have capabilities and restrictions;
+- inactive resources must not be allocated;
+- historical allocations should retain the map/resource version used at allocation time.
+
+## Zone Preference Policy
+
+A tenant or location may configure how employee and team zone preferences affect allocation.
+
+Suggested policy fields:
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| `zonePreferenceEnabled` | `false` | Enables employees to choose a preferred zone. |
+| `teamDefaultZoneEnabled` | `false` | Enables team/department default zones. |
+| `zoneFallbackEnabled` | `true` | Allows allocation outside preferred/default zone when compatible capacity exists. |
+| `strictZonePreferenceAllowed` | `false` | Future option. When enabled and selected, an employee can choose to be rejected/waitlisted rather than assigned elsewhere. |
+| `fallbackVisibleToEmployee` | `true` | Employee views should show that the assigned resource is outside the preferred zone. |
+
+Rules:
+
+- zone preference is soft by default;
+- team default zones are soft by default;
+- reserved zones require explicit reserved-space policy;
+- fallback allocation must still satisfy hard resource constraints;
+- audit records should capture requested zone, default team zone, assigned zone, and fallback reason where applicable.
 
 ## Reserved-Space Policy
 
