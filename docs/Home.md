@@ -1,19 +1,19 @@
-# Fair Parking System
+# FairSpot
 
 ![CI](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml/badge.svg?branch=master)
 ![Docs](https://github.com/RobertVejvoda/FPS/actions/workflows/docs.yml/badge.svg?branch=master)
 
-The Fair Parking System (FPS) is an open-source, multi-tenant SaaS platform for companies where more employees need parking than the building can provide.
+FairSpot is an open-source, multi-tenant fair allocation platform for companies where demand for shared workplace resources exceeds supply. Parking is the first product module.
 
-FPS replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Employees request parking, company-car obligations are handled first, and remaining spaces are allocated by documented fairness rules so access improves over time instead of depending on who emailed HR first.
+FairSpot replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Employees request parking, company-car obligations are handled first, and remaining spaces are allocated by documented fairness rules so access improves over time instead of depending on who emailed HR first.
 
 ## Executive Summary
 
-FPS is being built as a documentation-led product. The parking product is the first concrete reservation domain; the same pattern could later support other scarce workplace resources such as desks, chairs, or seats, but only after parking v1 is stable.
+FairSpot is being built as a documentation-led product. The parking product is the first concrete reservation domain; the same pattern could later support other scarce workplace resources such as desks, chairs, seats, lockers, or chargers, but only after parking v1 is stable.
 
 The implemented backend now covers Booking, Identity/Profile context, Notification, Audit, Reporting read models, and Configuration policy/slot management. The mobile employee flow covers login, booking submission, booking actions, My Bookings, notifications, profile details, allocation status, and demo/pilot polish. The next product direction is repeatable local testing, client-evaluation features, web/admin surfaces, client-owned deployment guidance, and production operations.
 
-This site is the product and business-facing view of FPS: problem, goals, actors, policy model, architecture summary, trust story, roadmap, and demo/evaluation narrative. Detailed implementation notes, delivery board mechanics, agent routing, tooling, and runbooks belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki).
+This site is the product and business-facing view of FairSpot: problem, goals, actors, policy model, architecture summary, trust story, roadmap, and demo/evaluation narrative. Detailed implementation notes, delivery board mechanics, agent routing, tooling, and runbooks belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki).
 
 ## Product Outcomes
 

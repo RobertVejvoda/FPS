@@ -2,7 +2,7 @@
 
 Many companies have fewer parking spaces than employees who want to use them. When parking is managed by email, spreadsheets, or informal agreements, HR becomes the bottleneck and employees perceive the process as arbitrary. First-come, first-served allocation is simple, but it rewards speed and insider knowledge rather than actual business need or fair access.
 
-Fair Parking System (FPS) replaces manual parking coordination with a transparent, automated allocation process. Employees request parking for specific time slots, the system allocates available capacity using configurable fairness rules, and all affected users receive clear status updates. The customer value is reduced administration, higher employee trust, better parking utilization, and auditable policy enforcement.
+FairSpot replaces manual parking coordination with a transparent, automated allocation process. Employees request parking for specific time slots, the system allocates available capacity using configurable fairness rules, and all affected users receive clear status updates. The customer value is reduced administration, higher employee trust, better parking utilization, and auditable policy enforcement.
 
 ## Business Goals
 
@@ -54,11 +54,11 @@ Employees must receive clear status updates for request submission, allocation o
 
 ### BR005: Cancellation and Reallocation
 
-Employees must be able to cancel requests and reservations. If a confirmed space becomes available, FPS should offer or allocate it to another eligible employee according to customer policy.
+Employees must be able to cancel requests and reservations. If a confirmed space becomes available, FairSpot should offer or allocate it to another eligible employee according to customer policy.
 
 ### BR006: Usage Confirmation
 
-FPS should support confirmation of actual parking usage, either by user action, access-control integration, QR code, card reader, or another customer-specific signal. Usage data is required for fairness, penalties, and reporting.
+FairSpot should support confirmation of actual parking usage, either by user action, access-control integration, QR code, card reader, or another customer-specific signal. Usage data is required for fairness, penalties, and reporting.
 
 ### BR007: Penalties and Adjustments
 

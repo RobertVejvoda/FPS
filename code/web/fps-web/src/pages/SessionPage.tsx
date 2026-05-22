@@ -22,7 +22,7 @@ export function SessionPage() {
   return (
     <div style={outer}>
       <div style={card}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>FPS Employee Portal</h1>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>FairSpot Employee Portal</h1>
         <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
           Enter the API base URL and a bearer token from a running backend.
           Real OIDC login is configured via environment variables in later slices.

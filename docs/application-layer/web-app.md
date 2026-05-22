@@ -1,6 +1,6 @@
 # Web Application
 
-The web application frontend consists of multiple modules providing a comprehensive user interface for the Fair Parking System.
+The web application frontend consists of multiple modules providing a comprehensive user interface for FairSpot.
 
 ## Application Functions
 

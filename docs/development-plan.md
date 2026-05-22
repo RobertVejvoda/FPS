@@ -2,7 +2,7 @@
 
 ## What We Are Building
 
-The **Fair Parking System (FPS)** is a multi-tenant application platform that replaces manual, email-based parking management with a transparent, algorithm-driven allocation system. The core idea is a daily **Draw process**: employees submit requests for the next day's slot; a weighted lottery runs nightly and assigns slots fairly, favouring those who park least often.
+**FairSpot** is a multi-tenant fair allocation platform that replaces manual, email-based parking management with a transparent, algorithm-driven allocation system. Parking is the first module. The core idea is a daily **Draw process**: employees submit requests for the next day's slot; a weighted lottery runs nightly and assigns slots fairly, favouring those who park least often.
 
 The system is not a simple CRUD app — the Draw is a long-running distributed process that locks slots, runs an allocation algorithm, fires notifications, and updates metrics. This makes it an ideal candidate for **Dapr Workflows**.
 
