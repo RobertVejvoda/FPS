@@ -55,12 +55,12 @@ Boundary rules are defined in [Booking Context Contract](../business-layer/booki
 
 | Integration | Pattern | Notes |
 | --- | --- | --- |
-| API access | HTTP through an ingress/API gateway | JWT-based authentication, service endpoints stay tenant-aware. Local harness currently uses Envoy; production may use Traefik, cloud-native ingress, or a client-approved gateway. |
+| API access | HTTP through an ingress/API gateway | JWT-based authentication, service endpoints stay tenant-aware. The concrete gateway is selected by the deployment profile. |
 | Service-to-service command data | Synchronous HTTP or Dapr service invocation where required for command decisions | Booking may synchronously query Configuration and Profile when required to accept/reject a command. |
-| Domain outcomes | Dapr pub/sub | Booking events feed Notification, Audit, and Reporting read models. Smoke profile uses in-memory pub/sub; local durable profile uses RabbitMQ; demo/client profile selects the broker behind the same Dapr component contract. |
+| Domain outcomes | Dapr pub/sub | Booking events feed Notification, Audit, and Reporting read models. Each deployment profile binds the same logical pub/sub component to an approved broker or provider-native event service. |
 | Workflow/orchestration | Dapr Workflows where durability is needed | Draw workflow can be introduced when operational replay/long-running orchestration is required. |
-| Write persistence | Dapr state store | Booking uses Dapr state. Smoke profile uses in-memory state; local durable and production profiles target MongoDB-compatible state with tenant-safe keys or tenant-specific collections. |
-| Read persistence | Service-owned read models | Target production direction is MongoDB-compatible read models with tenant-specific collections. Several evaluation-baseline services still use in-memory repositories and need persistence adapters before production. |
+| Write persistence | Dapr state store or service persistence adapter | Booking uses a persistence boundary that must preserve tenant scope. Each deployment profile binds that boundary to an approved operational/document store. |
+| Read persistence | Service-owned read models | Production read models use service-owned stores with tenant-safe collections, partitions, or keys. Several evaluation-baseline services still use in-memory repositories and need persistence adapters before production. |
 
 Cross-domain failures follow [Booking Context Contract](../business-layer/booking-context-contract): required command inputs fail safely, while observer services such as Notification and Audit must not roll back persisted Booking state.
 
@@ -68,29 +68,29 @@ Cross-domain failures follow [Booking Context Contract](../business-layer/bookin
 
 | App. Component | Software Component | Name | Technology |
 |------------------- | ------------------- | ---- | ------- |
-| Authentication | Keycloak | Identity and Access Management | Java |
-| Traces and metrics | Prometheus | Monitoring and Alerting | Go |
-| Monitoring | Grafana | Analytics and Monitoring | Various |
-| Logging | Loki | Log Aggregation | Go |
-| Tracing | Jaeger | Distributed Tracing | Go |
+| Authentication | OIDC/OAuth provider | Identity and Access Management | Deployment-profile choice |
+| Metrics | OpenTelemetry-compatible metrics backend | Monitoring and alerting | Deployment-profile choice |
+| Dashboards | Observability dashboard platform | Analytics and monitoring | Deployment-profile choice |
+| Logging | Log aggregation backend | Operational log search and retention | Deployment-profile choice |
+| Tracing | Distributed tracing backend | Request correlation and diagnostics | Deployment-profile choice |
 | Write store (CQRS) | Dapr state store | Aggregate persistence behind a swappable component contract | Dapr-compatible provider |
-| Read store (CQRS) | Service-owned read model store | Query/projection read models; production target is MongoDB-compatible storage | Provider-neutral |
+| Read store (CQRS) | Service-owned read model store | Query/projection read models with tenant-safe storage boundaries | Provider-neutral |
 | Event Bus | Dapr pub/sub | Booking event delivery behind a swappable component contract | Dapr-compatible broker |
-| Cache | Redis-compatible cache | Optional cache, rate limiting, and short-lived operational state | Provider-neutral |
-| API Gateway | Ingress/API gateway | External routing, TLS termination, and optional rate limiting | Local Envoy, Traefik, cloud-native ingress, or client-approved equivalent |
-| File Storage | S3-compatible object storage | Reports, exports, backup artifacts, and future attachments | MinIO, cloud object storage, or client-approved equivalent |
-| Secret Management | Secret store | Runtime credentials and certificates behind Dapr secret-store pattern | Vault, cloud key vault, or client-approved equivalent |
+| Cache | Cache/session store | Optional cache, rate limiting, and short-lived operational state | Deployment-profile choice |
+| API Gateway | Ingress/API gateway | External routing, TLS termination, and optional rate limiting | Deployment-profile choice |
+| File Storage | Object storage | Reports, exports, backup artifacts, and future attachments | Deployment-profile choice |
+| Secret Management | Secret store | Runtime credentials and certificates behind Dapr secret-store pattern | Deployment-profile choice |
 
-> **Multi-tenancy**: each service owns its data boundary and resolves tenant scope from authenticated or trusted service context. Production persistence should use tenant-safe keys or tenant-specific collections such as `{tenantKey}_booking_requests`, with collection/key names derived centrally from a sanitised tenant key and never supplied by callers.
+> **Multi-tenancy**: each service owns its data boundary and resolves tenant scope from authenticated or trusted service context. Production persistence must use tenant-safe keys, collections, or partitions, with storage identifiers derived centrally from a sanitised tenant key and never supplied by callers.
 
 Collection-per-tenant impact:
 
-- Provisioning creates tenant-specific collections/indexes or equivalent tenant-safe storage partitions instead of per-tenant service databases.
+- Provisioning creates tenant-specific collections, partitions, indexes, or equivalent tenant-safe storage structures instead of per-tenant service databases.
 - Repository and query helpers must centralise collection-name derivation so tenant keys are sanitised consistently.
-- Dapr state-store usage must either route to tenant-specific collections through a documented component strategy or use state keys that cannot cross tenants; do not mix approaches ad hoc.
-- Backup, restore, retention, and support tooling must operate at collection scope when a single tenant is targeted.
-- Cross-tenant analytics must explicitly enumerate allowed tenant collections and enforce authorization before aggregation.
-- Database-level credentials no longer provide tenant isolation by themselves; application/service authorization and collection resolver tests become more important.
+- Dapr state-store usage must either route to tenant-specific storage structures through a documented component strategy or use state keys that cannot cross tenants; do not mix approaches ad hoc.
+- Backup, restore, retention, and support tooling must operate at the tenant storage scope when a single tenant is targeted.
+- Cross-tenant analytics must explicitly enumerate allowed tenant scopes and enforce authorization before aggregation.
+- Store-level credentials no longer provide tenant isolation by themselves; application/service authorization and tenant resolver tests become more important.
 
 ## Security
 
@@ -98,21 +98,21 @@ FPS security is centred on authenticated context, tenant isolation, least privil
 
 | Concern | Architecture decision |
 | --- | --- |
-| Identity provider | OIDC provides JWTs. Local development uses Keycloak; client production may use Keycloak, Entra ID, Okta, or another trusted IdP as long as required claims are mapped. Stable claim mapping is documented in [Versions and Decisions](../versions-and-decisions). |
+| Identity provider | OIDC provides JWTs. The provider is selected by the deployment profile or client, as long as required claims are mapped. Stable claim mapping is documented in [Versions and Decisions](../versions-and-decisions). |
 | Current user context | Services resolve `tenantId`, `userId`, and roles from authenticated claims through `ICurrentUser`; request bodies, query strings, or caller-supplied identity headers must not override identity. |
-| Tenant isolation | MongoDB collection-per-tenant, resolved from authenticated/service context before reads or writes. Collection names must use a sanitised tenant key and must not be caller supplied. |
+| Tenant isolation | Tenant-scoped storage boundaries are resolved from authenticated/service context before reads or writes. Storage names/keys/partitions must use a sanitised tenant key and must not be caller supplied. |
 | Service-to-service security | Dapr mTLS/Sentry is the platform baseline; user-context forwarding is used only where the downstream service must make a user-scoped decision. |
 | Authorization | Booking authorization rules are documented in [Booking Authorization](../business-layer/booking-authorization); services must fail closed on missing required identity claims. |
 | Privacy | Audit stores pseudonymised user references (`actorHash`, requestor/affected-user hashes) and must not store raw names, emails, profile private data, or raw user IDs in audit records. |
 | Event safety | Booking events must not include secrets, stack traces, lottery seeds, internal weights, or private details about unrelated employees. |
-| Secrets | Credentials and API keys come from a secret store through the documented Dapr/hosting boundary. Local uses Vault-compatible setup; demo/client may use Vault or platform secret stores. |
-| Observability | OpenTelemetry is the portability boundary. Local uses Prometheus/Grafana/Loki/Jaeger-style tooling where configured; client production can export to approved observability platforms. |
+| Secrets | Credentials and API keys come from a secret store through the documented Dapr/hosting boundary. The concrete secret-management product is selected by the deployment profile. |
+| Observability | OpenTelemetry is the portability boundary. Metrics, logs, traces, dashboards, and alerting backends are selected by the deployment profile or client operations standard. |
 
 Detailed security documentation is maintained under [Security](../security), especially [Security Model](../security/security-model), [Authentication](../security/authentication), [Authorization](../security/authorization), [Data Privacy](../security/data-privacy), [Traceability](../security/traceability), and [Microservice Security Patterns](../security/microservice-security-patterns).
 
 ### Dapr
 
-Dapr is a design boundary, not a cloud decision. Local development can use self-hosted Dapr sidecars. Demo and client production may use managed Dapr, Kubernetes Dapr, or self-hosted sidecars as long as the same logical component names and contracts are preserved.
+Dapr is a design boundary, not a cloud decision. Local development can use self-hosted Dapr sidecars. Demo and client production may use managed, platform-provided, or self-hosted Dapr runtimes as long as the same logical component names and contracts are preserved.
 
 | Capability | Dapr responsibility | Production note |
 | --- | --- | --- |
@@ -136,11 +136,7 @@ This section provides a list of tools and frameworks used in the project, along 
 | React Native  | 0.81.5  | VSCode | TypeScript | npm package         | MIT     | Cross-platform mobile app framework |
 | Expo          | 54.0.33 | VSCode | TypeScript | npm package         | MIT     | Managed React Native workflow — no native build tooling required |
 | .NET 10        | 10.0    | VSCode | C#        | NuGet package       | MIT     | Framework for building various types of applications |
-| Java           | 11      | IntelliJ| Java     | JAR file            | GPL     | General-purpose programming language |
 | Docker         | Current supported local/CI version | VSCode | N/A | Docker image | Apache 2.0 | Platform for developing, shipping, and running applications in containers |
-| Helm           | Optional 3.x | VSCode | N/A      | Helm chart          | Apache 2.0 | Package manager when the selected deployment profile uses Kubernetes |
 | Dapr           | 1.14+   | VSCode | Various  | Docker image        | Apache 2.0  | Runtime for building distributed applications (Workflows require 1.10+) |
-| Kubernetes     | Optional target provider-supported version | VSCode | YAML | Helm chart | Apache 2.0 | Deployment option when required by demo/client environment; not a core product dependency |
-| Terraform      | 1.x     | VSCode | HCL      | Binary              | MPL 2.0 | Infrastructure as code tool |
-| Ansible        | Future/optional | VSCode | YAML     | Package             | GPL 3.0 | Automation tool for IT tasks |
+| Infrastructure as code | Profile-specific | VSCode | Profile-specific | Profile-specific | Profile-specific | Deployment automation for the selected local, demo, or client production profile |
 | Git            | Current contributor version | VSCode | N/A | Binary | GPL 2.0 | Version control system |

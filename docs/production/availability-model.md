@@ -29,8 +29,8 @@ FPS availability is based on graceful degradation. Booking state changes are aut
 | Dependency | Used by | Production control |
 | --- | --- | --- |
 | Identity provider | Mobile, web, APIs | Health checks, backup config, documented recovery, token/key rotation plan. |
-| MongoDB | Service persistence/read models | Backups, indexes, tenant collection provisioning, restore drills. |
-| RabbitMQ via Dapr pub/sub | Notification, Audit, Reporting | Durable queues where needed, dead-letter/retry strategy, duplicate handling. |
+| Service-owned data stores | Service persistence/read models | Backups, indexes, tenant-scope provisioning, restore drills. |
+| Dapr pub/sub broker/provider | Notification, Audit, Reporting | Durable delivery where needed, dead-letter/retry strategy, duplicate handling. |
 | Dapr sidecars/components | Service invocation, state, pub/sub, secrets | Version pinning, component validation, health probes. |
 | Ingress/TLS | External access | Certificate renewal, routing tests, WAF/rate limits where selected. |
 | Secret store | Runtime credentials | Access audit, backup/recovery, rotation runbook. |

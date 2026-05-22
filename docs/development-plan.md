@@ -69,18 +69,18 @@ This package is referenced by all services — it must remain stable and have no
 | Distributed runtime | **Dapr 1.14+** | ⚠️ Docs said 1.4.0 — updated; Workflows require 1.10+ |
 | Workflows | **Dapr Workflow** | .NET SDK `Dapr.Workflow` |
 | CQRS | MediatR | Commands and queries dispatched per service |
-| Write side (CQRS) | **Dapr state store → MongoDB** | Aggregate persistence by ID; tenant isolated by tenant-specific MongoDB collections |
-| Read side (CQRS) | **MongoDB driver** | Projections, aggregation pipelines, reporting queries |
-| Multi-tenancy | **Collection-per-tenant** | Each tenant gets tenant-specific collections in a service-owned MongoDB database; collection names are resolved from authenticated/service context |
-| Cache / session | Redis | Identity sessions, rate limiting |
-| Message broker | **RabbitMQ via Dapr pub/sub** | All async domain events |
-| Auth | **Keycloak** (OIDC/OAuth 2.0) | JWT tokens, RBAC, MFA |
-| API gateway / ingress | Provider-neutral gateway | Routing, TLS, rate limiting; local harness currently uses Envoy |
+| Write side (CQRS) | **Dapr state store / persistence adapter** | Aggregate persistence by ID; tenant isolated by tenant-safe collections, partitions, or keys |
+| Read side (CQRS) | **Service-owned read model store** | Projections, aggregation, and reporting queries behind the selected deployment profile store |
+| Multi-tenancy | **Tenant-scoped storage boundary** | Tenant-specific collections, partitions, or keys are resolved from authenticated/service context |
+| Cache / session | Cache/session store | Identity sessions, rate limiting, and short-lived operational state |
+| Message broker | **Dapr pub/sub** | All async domain events; concrete broker/provider selected by profile |
+| Auth | **OIDC/OAuth 2.0 provider** | JWT tokens, RBAC, MFA, tenant/user/role claims |
+| API gateway / ingress | Provider-neutral gateway | Routing, TLS, and rate limiting selected by deployment profile |
 | Dev orchestration | **.NET Aspire** | Local dev, service discovery, dashboard |
-| Observability | Prometheus + Grafana + Loki + Jaeger | Already designed |
-| Secrets | Vault | All credentials, API keys |
-| Object storage | MinIO | Files, report exports |
-| IaC | Terraform + Helm | K8s manifests |
+| Observability | OpenTelemetry-compatible backend | Metrics, logs, traces, dashboards, and alerts selected by profile |
+| Secrets | Secret-management platform | All credentials, API keys, certificates, and recovery material |
+| Object storage | Object storage | Files, report exports, backup artifacts, and future attachments |
+| IaC | Profile-specific infrastructure as code | Local/demo/client production tooling can differ while preserving contracts |
 | Frontend (web) | React | Consistent with mobile stack |
 | Frontend (mobile) | **React Native 0.81.5 + Expo SDK 54** | Managed workflow, no native build tooling; checked in at `code/mobile/fps-mobile` |
 
@@ -139,7 +139,7 @@ This section tracks historical gaps that were found while planning and the remai
 FPS targets **Dapr 1.14+**. Dapr Workflows require at least 1.10, and the current architecture treats durable workflow adoption as a future hardening step where needed.
 
 **2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved, revised 14.5.2026*
-The current decision is collection-per-tenant in MongoDB. Services use a service-owned database and resolve tenant-specific collection names from authenticated/service context.
+The current decision is tenant-scoped storage inside service-owned stores. The current implementation direction uses collection-per-tenant where the selected store supports it, but the durable architecture rule is that services resolve tenant-specific storage names, partitions, or keys from authenticated/service context.
 
 **3. Draw algorithm edge cases were underspecified** ✅ *Resolved for Booking Phase 1*
 Executable Draw rules are now documented in `docs/business-layer/allocation-rules.md` and implemented across Booking slices `B001`-`B010`.
@@ -159,10 +159,10 @@ Audit records store `actor_hash` (SHA-256 of `user_id`). A separate `PiiMapping`
 ### Remaining Risks
 
 **8. Production authentication and authorization**
-The code has authenticated context and claim mapping, but production Keycloak/OIDC setup, token lifecycle, and full role-policy wiring are still planned.
+The code has authenticated context and claim mapping, but production OIDC provider setup, token lifecycle, and full role-policy wiring are still planned.
 
-**9. Production Dapr/MongoDB/tenant provisioning**
-The architecture is decided, but production-grade component configuration, tenant collection/index provisioning, secrets, demo deployment proof, client-owned production guidance, and runbooks remain future operational work.
+**9. Production Dapr/component/tenant provisioning**
+The architecture is decided, but production-grade component configuration, tenant storage/index provisioning, secrets, demo deployment proof, client-owned production guidance, and runbooks remain future operational work.
 
 **10. Notification and Audit hardening**
 Notification history/SSE/email and audit query/PII erasure are implemented. Preferences, retention, integrity jobs, exports, and operational evidence remain planned.
@@ -187,7 +187,7 @@ Goal: every developer can run the full stack locally with a single command.
 
 - [ ] Set up `.NET Aspire` app host (`FPS.AppHost`)
 - [ ] Configure Dapr sidecars per service in Aspire
-- [ ] Dapr components: RabbitMQ pub/sub, MongoDB state store, Redis cache, Vault secrets
+- [ ] Dapr components: pub/sub, state store, cache, and secret-store profiles
 - [x] Shared `docker-compose.yaml` for infrastructure exists under `code/infrastructure` (production-grade Dapr component and collection provisioning hardening remains)
 - [x] `FPS.SharedKernel` compiles and is referenced by services
 - [x] Establish `FPS.sln` for server-side cross-service navigation and validation
@@ -287,7 +287,7 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 **Infrastructure layer** (`FPS.Booking.Infrastructure`):
 - [x] Dapr state store client — save/load Booking request state and related Booking read-model data
 - [x] Booking query repository — bookings by date, requests per user, draw inputs, allocation history
-- [ ] Tenant collection resolver — resolves tenant-scoped MongoDB collection names per request/service context
+- [ ] Tenant storage resolver — resolves tenant-scoped storage names, partitions, or keys per request/service context
 - [x] Dapr pub/sub publisher for domain events
 - [ ] Dapr pub/sub subscriber for `configuration.slotsUpdated`
 - [x] Remove: EF Core, SQL Server, `BookingDbContext` (already exists in code — dead code to delete)
@@ -306,7 +306,7 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 - [x] Unit: Domain (allocation algorithm, aggregate invariants)
 - [x] Application handler tests
 - [x] API controller tests with mocked application layer
-- [ ] Integration: Dapr state store and MongoDB queries against real MongoDB (TestContainers)
+- [ ] Integration: Dapr state store and read-model queries against the selected local persistence provider (TestContainers where useful)
   - Integration test scaffolding exists, but current validation skips these tests.
 
 ---
@@ -329,7 +329,7 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `CI001` Build Status and CI Visibility | Make repository health visible and keep CI reliable across code, tooling, generated clients, and docs. | Merged. |
 | Done | `MOB001` React Native App Shell | Scaffold React Native + Expo mobile client and generated API-client consumption. | Merged. Uses development bearer-token handoff only. |
 | Done | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | Merged. Read-only, authenticated-scoped, cursor-paginated `GET /bookings` screen. |
-| Done | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC/Keycloak flow. | Merged in PR #78. |
+| Done | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC flow. | Merged in PR #78. |
 | Done | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Merged in PR #87. |
 | Done | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Merged in [PR #95](https://github.com/RobertVejvoda/FPS/pull/95). Uses existing Booking endpoints and employee-safe error/reason handling. |
 | Done | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Implemented in PR #93; SSE JSON casing follow-up in [PR #94](https://github.com/RobertVejvoda/FPS/pull/94). Email remains separate. |
@@ -362,7 +362,7 @@ Acceptance criteria:
 Stop and ask before implementation if:
 
 - required claim names are ambiguous;
-- the slice would require a full Keycloak deployment or provisioning flow;
+- the slice would require a full OIDC provider deployment or provisioning flow;
 - Booking endpoint migration cannot be kept small;
 - implementation would introduce mobile, Profile vehicle, Notification, or Audit behavior.
 
@@ -370,7 +370,7 @@ Stop and ask before implementation if:
 - [x] Shared authenticated user context abstraction and claim mapping
 - [x] JWT validation middleware/test path for current APIs
 - [x] `GET /me` — current user from token claims
-- [ ] Production Keycloak/OIDC integration and provisioning
+- [ ] Production OIDC provider integration and provisioning
 - [ ] User roles fully wired to production authorization policies: `employee`, `hr_manager`, `admin`, `auditor`, `accounting`
 - [ ] Service-to-service auth via Dapr mTLS (Sentry) — no extra work needed
 
@@ -406,7 +406,7 @@ Out of scope:
 - New Booking business behavior, status transitions, allocation rules, or response fields.
 - Profile vehicle or company-car snapshot integration.
 - Notification or Audit consumers.
-- Keycloak deployment/provisioning automation.
+- OIDC provider deployment/provisioning automation.
 - Mobile/web frontend changes.
 - Admin/system endpoint authorization redesign, except for preserving existing behavior while avoiding accidental trust in employee identity headers.
 
@@ -468,7 +468,7 @@ Out of scope:
 - Booking allocation rule changes beyond consuming Profile-provided facts.
 - Profile UI, mobile UI, or self-service vehicle management screens.
 - HR/admin bulk profile management.
-- Keycloak user provisioning or identity lifecycle.
+- OIDC provider user provisioning or identity lifecycle.
 - Notification, Audit, Reporting, or Configuration work.
 - Storing Profile private data in Booking responses or exposing it to other employees.
 
@@ -652,7 +652,7 @@ Out of scope:
 - React web implementation, React Native screens, Expo setup, or UI state management.
 - Changing Booking, Profile, Notification, Audit, or Identity business behavior to make client generation easier.
 - Creating new public APIs that are not already required by implemented slices.
-- Auth provider provisioning, login UI, token refresh UX, or Keycloak deployment automation.
+- Auth provider provisioning, login UI, token refresh UX, or OIDC provider deployment automation.
 - SSE streaming client implementation for notifications; this remains a later frontend/mobile slice.
 - Publishing the generated client to npm or setting up package release automation.
 
@@ -757,14 +757,14 @@ Mobile app shell contract:
 | Platform | React Native + Expo managed workflow. |
 | Language | TypeScript. |
 | API contract | Use `@fps/api-client` generated types from `code/clients/typescript`; do not hand-copy DTOs. |
-| Auth in MOB001 | Developer-provided bearer token only. Real login, token refresh, Keycloak browser flow, MFA, and secure production session lifecycle are later slices. |
+| Auth in MOB001 | Developer-provided bearer token only. Real login, token refresh, browser-based OIDC flow, MFA, and secure production session lifecycle are later slices. |
 | Navigation | Shell-level navigation only; screens may use typed mock data or read-only API probes. |
 | Configuration | API base URL must be environment/config driven, not hard-coded to one developer machine. |
 | State | Keep state local and simple; no global state framework unless the app shell genuinely needs it. |
 
 Out of scope:
 
-- Real username/password login, SSO, Keycloak, token refresh, biometric auth, MFA, or production credential storage.
+- Real username/password login, SSO, OIDC provider setup, token refresh, biometric auth, MFA, or production credential storage.
 - Booking submission, cancellation, usage confirmation, no-show handling, or Draw status workflows beyond placeholders or read-only probes.
 - Push notifications, SSE streaming, notification preferences, unread-count APIs, or mobile background delivery.
 - Maps, payments, feedback, profile editing, admin/HR screens, reporting, billing, or tenant onboarding.
@@ -829,7 +829,7 @@ Mobile display rules:
 Out of scope:
 
 - Booking submission, booking cancellation, usage confirmation, no-show handling, or Draw status screens.
-- Real login, token refresh, Keycloak, MFA, biometric auth, or production credential storage.
+- Real login, token refresh, OIDC provider setup, MFA, biometric auth, or production credential storage.
 - Push notifications, SSE streaming, notification preferences, unread-count APIs, or background updates.
 - Profile editing, vehicle management, maps, payments, feedback, HR/admin screens, reporting, or billing.
 - Backend API behavior changes unless `GET /bookings` is unusable as documented; if so, stop and ask before changing the backend.
@@ -886,7 +886,7 @@ Out of scope:
 - Booking submission, cancellation, usage confirmation, no-show handling, or Draw status screens.
 - Push notifications, SSE streaming, notification preferences, unread-count APIs, or background updates.
 - Profile editing, vehicle management, maps, payments, feedback, HR/admin screens, reporting, or billing.
-- Keycloak provisioning, realm/client setup automation, MFA policy design, tenant onboarding, or backend business behavior changes.
+- OIDC provider provisioning, realm/client setup automation, MFA policy design, tenant onboarding, or backend business behavior changes.
 - App-store packaging, EAS build, OTA updates, native module customisation, or generated native projects.
 
 Acceptance criteria:
@@ -906,7 +906,7 @@ Implementation notes for Claude:
 - Keep MOB003 focused on authentication only.
 - Prefer Expo managed workflow packages and local state over adding a broad app framework.
 - If current Identity/OpenAPI endpoints cannot support the flow without backend changes, stop and ask Codex before changing backend code.
-- If Keycloak-specific configuration is needed, document the required settings instead of implementing provisioning automation in this slice.
+- If OIDC-provider-specific configuration is needed, document the required settings instead of implementing provisioning automation in this slice.
 
 ---
 
@@ -962,7 +962,7 @@ Current slice mapping:
 ### Phase 5 — Reporting & Deferred Billing (Week 13–15)
 
 **Reporting** (`FPS.Reporting`):
-- [ ] Subscribe to events and materialise read models in MongoDB
+- [ ] Subscribe to events and materialise service-owned read models
 - [ ] Queries: utilisation rate, peak times, fairness metrics per user, penalty history
 - [ ] Export: CSV, PDF
 - [ ] Dashboard aggregates for HR managers
@@ -1011,17 +1011,17 @@ Current slice mapping:
 - [ ] Repeatable deployment path to the selected demo environment
 - [ ] Client-owned production integration guide prepared
 - [ ] Runtime-appropriate scaling configuration documented
-- [ ] Vault integration for all secrets
+- [ ] Secret-management integration for all secrets
 - [ ] OpenTelemetry metrics/logs/traces exported locally and documented for selected client observability platforms
 - [ ] Load testing (k6 or NBomber) against NFR targets
 - [ ] Penetration testing pass
-- [ ] Runbooks for Draw process failure, Keycloak outage, database failover
+- [ ] Runbooks for Draw process failure, identity provider outage, and data-store failover
 - [ ] Client-specific high availability and region strategy documented
 
 Current slice mapping:
 
 - `OPS000` Deployment Profile Strategy: establish local, demo, and client-owned production profiles with Dapr portability and cost as first-class constraints.
-- `OPS001` Pluggable Dapr Component Baseline: Dapr components, MongoDB tenant collections/index provisioning, secrets, and runbooks.
+- `OPS001` Pluggable Dapr Component Baseline: Dapr components, tenant storage/index provisioning, secrets, and runbooks.
 - `OPS002` Demo Environment Baseline: provision or document a hosted demo path with ingress/TLS, Dapr components, persistence, broker, identity provider, secrets, deployment, smoke tests, and rollback notes.
 - `OPS003` Client-Owned Production Integration: define the client handoff model, deployment responsibilities, identity integration, network/security assumptions, backup/restore, and release process.
 - `OPS004` Observability And Performance Evidence: dashboards, alerts, traces, usage stats, backup/restore checks, and incident evidence for demo and client operation.
@@ -1091,7 +1091,7 @@ public class BookingDrawWorkflow : Workflow<DrawInput, DrawResult>
 
 - Domain layer: pure unit tests, no mocks, no infrastructure — fast
 - Application layer: unit tests with mocked repositories
-- Infrastructure layer: integration tests with TestContainers (real MongoDB, real Redis)
+- Infrastructure layer: integration tests with TestContainers or equivalent local component providers
 - API layer: integration tests with `WebApplicationFactory`
 - Minimum 80% coverage on Domain + Application layers (NFR502)
 - Draw algorithm: property-based tests (FsCheck or similar) to verify fairness invariants
@@ -1113,7 +1113,7 @@ These need answers before the relevant phase begins:
 
 | # | Question | Needed By | Owner |
 |---|---|---|---|
-| 1 | ~~Multi-tenancy isolation strategy?~~ → **Collection-per-tenant in service-owned MongoDB databases** | ✅ Decided | — |
+| 1 | ~~Multi-tenancy isolation strategy?~~ → **tenant-scoped storage boundary inside service-owned stores** | ✅ Decided | — |
 | 2 | ~~Mobile platform: React Native or .NET MAUI?~~ → **React Native + Expo** | ✅ Decided | — |
 | 3 | ~~Volume of booking requests per Draw?~~ → **max 500 per tenant per Draw** | ✅ Decided | — |
 | 4 | ~~Hard cut-off time for request submission?~~ → **Configurable per tenant, default 18:00** | ✅ Decided | — |

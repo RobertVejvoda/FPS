@@ -15,10 +15,11 @@ Production operation is also a top-level architecture section. See [Production](
 - **React Native + Expo**: Mobile platform.
 - **Docker / containers**: Packaging and local runtime baseline.
 - **Dapr 1.14+**: Provider-neutral runtime boundary for state, pub/sub, service invocation, sidecars, secrets, and future workflows.
-- **Dapr pub/sub**: Event bus contract for Booking events consumed by Notification, Audit, Reporting, and future read models. RabbitMQ is the durable local provider, not the core architecture.
-- **Dapr state store / MongoDB-compatible storage**: Persistence direction for production profiles. Smoke/evaluation profiles may use in-memory repositories where explicitly documented.
-- **OIDC/OAuth 2.0 identity provider**: Keycloak is the local/default development provider; client production can use a trusted company IdP with mapped claims.
-- **Kubernetes / Helm**: Optional deployment target when a demo or client environment requires it, not a core product dependency.
+- **Dapr pub/sub**: Event bus contract for Booking events consumed by Notification, Audit, Reporting, and future read models. The concrete broker is selected by deployment profile.
+- **Dapr state store / persistence adapters**: Persistence boundary for service-owned state and read models. The concrete operational/document store is selected by deployment profile.
+- **OIDC/OAuth 2.0 identity provider**: Identity boundary for JWT issuer, tenant/user claims, roles, and SSO. The concrete IdP is selected by local, demo, or client production profile.
+- **OpenTelemetry**: Telemetry boundary for metrics, logs, traces, dashboards, and alerting. Client production exports to the client's approved observability platform.
+- **Profile-specific deployment tooling**: Local, demo, Azure, AWS, Kubernetes, or client-owned environments may use different infrastructure-as-code and runtime tooling without changing application service contracts.
 
 
 ### Domain Map
