@@ -12,6 +12,8 @@ What the local harness already provides, from `local-test-harness.md` and the re
 
 ### 1.1 Application Services
 
+**In the current harness** — started by `tools/start-with-dapr.sh` (or `dapr run -f dapr.yaml`) plus a plain `dotnet run` for Identity:
+
 | Service | Port | Dapr sidecar | Notes |
 |---|---|---|---|
 | Identity (FPS.Identity) | 5192 | No | OIDC issuer, `/me`, token exchange |
@@ -21,7 +23,12 @@ What the local harness already provides, from `local-test-harness.md` and the re
 | Audit (FPS.Audit) | 5161 | Yes | Audit record consumer |
 | Reporting (FPS.Reporting) | 5171 | Yes | Read-model consumer |
 | Configuration (FPS.Configuration) | 5141 | Yes | Parking policy and slot management |
-| Customer (FPS.Customer) | (no stable port) | No | Tenant onboarding, readiness |
+
+**Exists in code but not in the harness:**
+
+| Service | Status | Notes |
+|---|---|---|
+| Customer (FPS.Customer) | No launch profile, not started by harness | Tenant onboarding and readiness; needed for CUST-slice API flows but not the employee demo path |
 
 ### 1.2 Infrastructure Components (Docker Compose)
 
@@ -43,17 +50,19 @@ What the local harness already provides, from `local-test-harness.md` and the re
 
 ### 1.3 Dapr Component Contracts
 
-| Logical name | Building block | Local provider | Current demo template |
-|---|---|---|---|
-| `fps-pubsub` | pub/sub | RabbitMQ | Azure Service Bus or managed RabbitMQ |
-| `bookingstore` | state | MongoDB | MongoDB Atlas |
-| `profilestore` | state | MongoDB | MongoDB Atlas |
-| `notificationstore` | state | MongoDB | MongoDB Atlas |
-| `auditstore` | state | MongoDB | MongoDB Atlas |
-| `configstore` | state | MongoDB | MongoDB Atlas |
-| `reportingstore` | state | MongoDB | MongoDB Atlas |
-| `secretstore` | secret store | HashiCorp Vault | Azure Key Vault or Vault managed |
-| `s3store` | output binding | MinIO | Cloud S3-compatible store |
+Demo component templates in `code/infrastructure/dapr/components/demo/` are **partial**. OPS007B must add the missing state-store components.
+
+| Logical name | Building block | Local provider | Demo template exists? | Demo candidate |
+|---|---|---|---|---|
+| `fps-pubsub` | pub/sub | RabbitMQ | **Yes** (`fps-pubsub.yaml`) | Azure Service Bus or managed RabbitMQ |
+| `bookingstore` | state | MongoDB | **Yes** (`bookingstore.yaml`) | MongoDB Atlas or managed MongoDB |
+| `secretstore` | secret store | HashiCorp Vault | **Yes** (`vault-demo.yaml`) | Azure Key Vault or Vault managed |
+| `profilestore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas (same pattern as bookingstore) |
+| `notificationstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
+| `auditstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
+| `configstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
+| `reportingstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
+| `s3store` | output binding | MinIO | **No — OPS007B must add** | Cloud S3-compatible store |
 
 ### 1.4 Identity
 
@@ -96,7 +105,7 @@ For one credible employee demo, the hosted environment needs:
 | Observability | Enough to show latency, event flow, and error rate during a demo |
 | Secret management | No secrets in manifests or screenshots |
 
-Customer and mobile services are not required for Demo v0.
+The Customer service is not required for the Demo v0 employee flow. App-store packaging is out of scope, but the hosted backend, OIDC issuer, and ingress must support mobile app configuration and mobile employee smoke — the mobile app must be able to point at the demo URL and log in with seeded users.
 
 ---
 
@@ -167,18 +176,29 @@ Profile B (ACA) is the right next step *after* a successful Demo v0 walkthrough 
 
 - It validates the Dapr component swap (the core portability claim)
 - It demonstrates cloud-native deployment to evaluators who ask about production topology
-- The demo Dapr component templates already exist in `components/demo/`
+- Three demo Dapr component templates already exist (`fps-pubsub`, `bookingstore`, `vault-demo`); the remaining six are derived from the same MongoDB/Vault pattern and OPS007B adds them
 - It sets up the evidence base for client production conversations
 
 Profile C (Fly.io) adds complexity without a compensating benefit and is not recommended.
 
 ### Profile A Implementation Prerequisites
 
-1. Domain or subdomain for the demo URL (e.g. `fps-demo.yourdomain.com`)
+**Business decisions (Robert/Codex must answer — see [Open Decisions](#open-decisions)):**
+
+1. Domain or subdomain for the demo URL (e.g. `fps-demo.yourdomain.com`) — TLS and OIDC redirect URIs depend on it
 2. VPS provider choice (Hetzner, DigitalOcean, or other)
 3. SSH key for VM access
 
-That is the complete blocker list. Everything else is scripted from the existing local harness.
+**Implementation risks and known checks (OPS007B must address):**
+
+- **Linux Dapr multi-app run** — `dapr.yaml` is developed and tested on macOS; verify the multi-app run file and `start-with-dapr.sh` work unchanged on the target Linux distribution
+- **TLS and OIDC redirect URLs** — Let's Encrypt cert provisioning, Traefik/Nginx TLS termination config, and Keycloak redirect URIs must all reference the final domain before any smoke test
+- **Firewall rules** — only HTTPS (443) and SSH (22) should be publicly exposed; Dapr gRPC, MongoDB, Vault, and RabbitMQ ports must be internal-only
+- **Persistent volumes** — MongoDB, Keycloak, Vault, and MinIO data must survive VM reboots via named Docker volumes; no container uses ephemeral storage for demo data
+- **Service restart strategy** — Docker restart policies (`unless-stopped`) for infrastructure and application containers; define expected boot order and startup health checks
+- **Docker network availability** — the Compose-managed network must already exist or be created on VM start; multi-app Dapr run must resolve service hostnames correctly on the VM
+- **Missing demo Dapr component templates** — `profilestore`, `notificationstore`, `auditstore`, `configstore`, `reportingstore`, and `s3store` templates do not exist yet; Profile A uses the local components unchanged, so this is not a blocker for Profile A but is a blocker for Profile B
+- **Smoke vs durable components** — Profile A reuses local components (MongoDB on Docker, RabbitMQ on Docker); these are durable between restarts if volumes are configured correctly, but a VM failure loses data since there is no off-VM backup by default
 
 ---
 
@@ -205,7 +225,7 @@ The following assumptions are recorded. If any are wrong, the recommendation abo
 
 - The demo is for technical/business evaluation, not a load test or security audit. A single VM is acceptable.
 - Demo data is synthetic only. No real customer data in the hosted environment.
-- The demo does not require mobile app access (web + API is sufficient for Demo v0).
+- App-store packaging is out of scope, but the backend, OIDC issuer, and ingress must support mobile app configuration and mobile employee smoke for Demo v0.
 - A 30-second restart window for demo reset is acceptable.
 - Cost visibility requires recording actual provider pricing before sharing externally; the estimates above are indicative only.
-- The existing `dapr.yaml` multi-app run file works without changes on a Linux VM (it runs on macOS today).
+- Linux compatibility of `dapr.yaml` and `start-with-dapr.sh` must be verified during OPS007B before assuming the multi-app run works unchanged.
