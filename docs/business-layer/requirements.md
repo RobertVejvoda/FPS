@@ -48,6 +48,20 @@ FPS must allocate limited parking capacity using transparent and configurable fa
 
 Customers must be able to configure parking rules for their organization, including locations, spaces, time slots, eligibility, reserved-space policies, company-car handling, motorcycles, EV charging, accessibility needs, and penalties.
 
+### BR003A: Resource Map and Zone Preferences
+
+Customers should be able to upload or maintain a map of allocatable resources, such as parking spaces, desks, chairs, seats, lockers, or chargers. The map should support zones so the allocation process can prefer an employee's requested zone or team default area before falling back to another suitable resource when preferred capacity is unavailable.
+
+Rules:
+
+- a resource map defines locations, zones, individual resources or capacity pools, and resource capabilities;
+- zones can represent floors, office areas, parking sections, team neighborhoods, accessibility areas, charger areas, or other customer-defined groupings;
+- employees may express a preferred zone when requesting a resource;
+- teams or departments may have default zones that are preferred but not absolute reservations unless policy marks them as reserved;
+- allocation should first try preferred and default zones, then fall back to any compatible available resource when policy allows;
+- fallback allocation must be visible to the employee as a valid allocation outside the preferred zone, not as a policy error;
+- strict requirements such as accessibility, vehicle capability, time availability, and reserved-only restrictions must still win over preferences.
+
 ### BR004: Real-Time Status and Notifications
 
 Employees must receive clear status updates for request submission, allocation outcome, cancellation, reallocation, and reminders. Notifications should be available in the application and may also be delivered by email, push notification, or calendar integration.
@@ -88,7 +102,7 @@ FPS must support customer growth in users, locations, parking spaces, and reques
 
 1. Employees submit parking requests for future or current time slots.
 2. FPS validates eligibility, duplicate requests, time slot availability, vehicle constraints, and local policy.
-3. The allocation process assigns available spaces using the configured fairness rules.
+3. The allocation process assigns available spaces using the configured fairness rules, zone preferences, team defaults, and fallback policy.
 4. Employees receive allocation results and reminders.
 5. Employees cancel or confirm usage when needed.
 6. Released or unused spaces are reallocated according to policy.
@@ -102,7 +116,8 @@ The full allocation description is documented in [Slot Allocation Process](./pro
 
 - Employee parking requests and status tracking.
 - Fair allocation of limited parking capacity.
-- Time-slot, location, space, and vehicle constraints.
+- Time-slot, location, zone, space, and vehicle constraints.
+- Resource maps for spaces, zones, capacity pools, and resource capabilities.
 - Reserved-space and company-car policy support.
 - Notifications, cancellations, reallocations, and usage confirmation.
 - Reporting, audit trail, and role-based access.

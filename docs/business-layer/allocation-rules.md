@@ -9,6 +9,7 @@ These rules cover:
 - scheduled Draw allocation for future time slots;
 - same-day immediate allocation;
 - cancellation reallocation;
+- resource maps, zones, employee preferences, and fallback allocation;
 - allocation metrics used by Tier 2 weighting;
 - penalty defaults;
 - audit data required to explain allocation outcomes.
@@ -20,6 +21,10 @@ These rules cover:
 | Draw key | Tenant, location, date, and time slot being allocated. |
 | Eligible request | A request that passes tenant policy, duplicate, time slot, vehicle, and capacity constraints. |
 | Matching slot | A slot that can satisfy the request's location, time, vehicle, accessibility, EV, motorcycle, reserved, or company-car requirements. |
+| Resource map | Customer-maintained map of allocatable resources, such as parking spaces, desks, chairs, seats, lockers, chargers, or capacity pools. |
+| Zone | Customer-defined grouping inside a location, such as a parking section, floor, desk neighborhood, team area, accessibility area, or charger area. |
+| Preferred zone | Employee-selected zone for a request. The allocation process should try it first when policy allows, but it is not a hard requirement by default. |
+| Team default zone | Zone normally associated with a team, department, or internal group. It is preferred before general fallback, but not reserved unless policy marks it as reserved. |
 | Tier 1 | Company-car allocation tier. |
 | Tier 2 | Weighted lottery tier for remaining eligible non-company-car requests. |
 | RecentAllocationCount | Successful non-company-car allocations in the tenant lookback window, including same-day allocations. |
@@ -44,13 +49,15 @@ The Draw applies rules in this order:
 
 1. Resolve tenant, location, date, and time slot.
 2. Exclude invalid, duplicate, late, and ineligible requests.
-3. Resolve matching slots and reserved-space constraints.
-4. Allocate Tier 1 company-car requests.
-5. Reject Tier 1 overflow when company-car requests exceed available matching capacity.
-6. Allocate remaining eligible requests through Tier 2 weighted lottery.
-7. Persist allocations, rejections, and pending waitlist outcomes.
-8. Update user metrics.
-9. Publish notifications and audit events.
+3. Resolve the active resource map, zones, resource capabilities, and reserved-space constraints.
+4. Resolve preferred zone and team default zone preferences for each eligible request.
+5. Allocate Tier 1 company-car requests.
+6. Reject Tier 1 overflow when company-car requests exceed available matching capacity.
+7. Allocate remaining eligible requests through Tier 2 weighted lottery.
+8. Assign each winner to the best compatible resource using zone preference and fallback rules.
+9. Persist allocations, rejections, and pending waitlist outcomes.
+10. Update user metrics.
+11. Publish notifications and audit events.
 
 ## Tier 1 Company-Car Allocation
 
@@ -104,7 +111,46 @@ Slot matching must consider:
 - reserved-space or company-car restrictions;
 - slot availability after previous allocations in the same Draw.
 
-When multiple matching slots are available for a winning request, FPS should choose the most constrained suitable slot first. This preserves flexible slots for later requests.
+When multiple matching slots are available for a winning request, FairSpot should choose the best suitable slot using this order:
+
+1. hard constraints: active resource, tenant, location, time slot, vehicle/resource capability, accessibility, EV/charger, reserved-only, and policy restrictions;
+2. employee preferred zone when configured and available;
+3. team default zone when configured and available;
+4. most constrained suitable resource outside the preferred/default zone when fallback is allowed.
+
+This preserves flexible slots for later requests while still giving employees a reasonable chance to receive the area they prefer.
+
+## Resource Maps and Zones
+
+FairSpot should support uploaded or maintained maps of allocatable resources. Parking remains the first implementation target, but the same model should also support workplace desks, chairs, seats, lockers, chargers, or similar limited resources.
+
+A resource map may define:
+
+- location and optional floor/section metadata;
+- zones and zone labels visible to employees;
+- individual resources or capacity pools;
+- resource capabilities such as EV charging, accessibility, vehicle type, chair/desk type, equipment, or reserved-only status;
+- default team or department zones;
+- active/inactive resources;
+- display labels safe to show to employees.
+
+Resource map upload should be treated as configuration data. It must be tenant-scoped, auditable, versioned, and validated before publication. A published map affects future requests and future Draws only unless an authorized role explicitly reprocesses an existing allocation.
+
+## Zone Preference and Fallback
+
+Zone preference is a placement preference, not a fairness weight by default.
+
+Rules:
+
+- employee preferred zone and team default zone should influence resource assignment after eligibility and fairness selection;
+- a preferred zone must not make an otherwise eligible employee fail allocation when another compatible resource is available, unless tenant policy marks the preference as strict;
+- team default zones are soft placement preferences unless policy marks the zone as reserved for that team;
+- strict accessibility, vehicle/resource capability, time availability, and reserved-only restrictions override preferences;
+- if preferred/default zones are full, FairSpot should allocate another compatible resource when fallback is enabled;
+- employee-visible allocation detail should indicate when the assigned resource is outside the preferred zone;
+- audit records should capture preferred zone, team default zone, assigned zone, and whether fallback was used.
+
+This mechanism supports practical workplace patterns: teams can normally sit or park near their default area, while scarce capacity remains usable across the company when the preferred area is full.
 
 ## Randomness and Reproducibility
 
