@@ -4,6 +4,8 @@ Production describes how FPS is hosted, operated, recovered, and validated once 
 
 The goal for v1 is not to operate production for clients directly. FPS must prove that the platform can be run locally, demonstrated in a realistic hosted environment, and deployed into a client-owned production environment with clear operational evidence. Dapr is the component portability boundary; OpenTelemetry is the telemetry portability boundary.
 
+FairSpot is therefore a **bring-your-own-cloud** platform. The core architecture defines contracts for identity, ingress, service integration, persistence, messaging, secrets, object storage, observability, backup, restore, and operations. Local, Azure, AWS, Kubernetes, or client-owned infrastructure can satisfy those contracts with different concrete services as long as tenant isolation, security controls, and operational evidence remain intact.
+
 ## Production Story
 
 Read this section from high level to detail:
@@ -21,7 +23,7 @@ Read this section from high level to detail:
 
 | Profile | Owner | Purpose | Expected shape |
 | --- | --- | --- | --- |
-| Local | FPS delivery team | Develop and validate behavior cheaply. | Docker Compose or local containers, local Dapr sidecars/components, MongoDB, RabbitMQ, Redis, Prometheus/Grafana, and local tracing. |
+| Local | FPS delivery team | Develop and validate behavior cheaply. | Docker Compose or local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
 | Demo | FPS delivery team | Show a working system to evaluators and collect performance/usage evidence. | Low-cost hosted deployment using replaceable Dapr components; exact provider remains a planning decision. |
 | Client production | Client IT / operations | Run FPS with the client's identity, hosting, monitoring, backup, and security controls. | Client-owned cloud or on-premise environment, Dapr-compatible components, OpenTelemetry export to the client's observability platform, documented backup/restore and support boundaries. |
 
@@ -33,14 +35,14 @@ FPS production runtime is expected to contain:
 | --- | --- | --- |
 | Container hosting | Runs the .NET services, web app, and supporting workers. | Replaceable by profile: local containers, low-cost demo hosting, or client-owned platform. |
 | Dapr sidecars | Service invocation, pub/sub, state-store integration, secret access, and future workflows. | Dapr remains the portability boundary. |
-| API ingress | Public HTTPS entry point and routing to services. | Local Envoy for the current harness; production can use Traefik, cloud-native ingress, or a client-approved gateway, with TLS and rate limiting. |
-| Identity provider | OIDC/OAuth login, JWT claims, roles, and tenant/user context. | Keycloak or cloud-managed equivalent. |
-| Write/read persistence | Service-owned MongoDB databases with tenant-specific collections. | MongoDB-compatible managed or self-hosted option. |
-| Message broker | Booking events to Notification, Audit, Reporting, and future consumers. | RabbitMQ via Dapr pub/sub. |
-| Cache/session support | Cache, rate limiting, and short-lived operational state. | Redis-compatible service. |
-| Secret management | Credentials, certificates, API keys, and deployment secrets. | Vault or cloud-native secret store. |
-| Object storage | Reports, exports, backup artifacts, and future attachments. | S3-compatible storage such as MinIO or cloud object storage. |
-| Observability | Metrics, logs, traces, dashboards, alerting, and usage evidence. | Local Prometheus/Grafana; demo stack to prove behavior; client production exports through OpenTelemetry to platforms such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent. |
+| API ingress | Public HTTPS entry point and routing to services. | Selected by deployment profile; must support TLS, routing, and rate limiting/WAF where required. |
+| Identity provider | OIDC/OAuth login, JWT claims, roles, and tenant/user context. | Selected by deployment profile or client IdP standard. |
+| Write/read persistence | Service-owned operational and read-model stores with tenant-safe collections, partitions, or keys. | Selected by deployment profile; must support backup, restore, encryption, and repeatable tenant provisioning. |
+| Message broker | Booking events to Notification, Audit, Reporting, and future consumers. | Dapr pub/sub component bound to an approved broker or provider-native event service. |
+| Cache/session support | Cache, rate limiting, and short-lived operational state. | Selected by deployment profile. |
+| Secret management | Credentials, certificates, API keys, and deployment secrets. | Selected by deployment profile; no inline secrets in manifests or logs. |
+| Object storage | Reports, exports, backup artifacts, and future attachments. | Selected by deployment profile; tenant-scoped paths and encryption required. |
+| Observability | Metrics, logs, traces, dashboards, alerting, and usage evidence. | OpenTelemetry-compatible export to the selected local, demo, or client observability platform. |
 
 ## Operational Pages
 
@@ -72,8 +74,8 @@ Minimum readiness before a hosted pilot:
 - deployment can be repeated without manual server edits;
 - ingress uses HTTPS and documented hostnames;
 - tenant and user context come from the identity provider;
-- MongoDB tenant collections and indexes are provisioned repeatably;
-- RabbitMQ/Dapr pub-sub is configured and validated;
+- tenant storage scopes and indexes are provisioned repeatably;
+- Dapr pub/sub is configured and validated with the selected broker/provider;
 - secrets are injected from a secret-management system, not committed files;
 - backup and restore have been tested at least once;
 - metrics, logs, traces, usage counters, and alert routing exist;

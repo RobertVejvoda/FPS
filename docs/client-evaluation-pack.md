@@ -67,7 +67,7 @@ Key architecture links:
 
 | Profile | Owner | Purpose | Current expectation |
 | --- | --- | --- | --- |
-| Local | FPS delivery team | Development and validation. | Local containers, local Dapr components, MongoDB, RabbitMQ, Redis, and local observability. |
+| Local | FPS delivery team | Development and validation. | Local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
 | Demo | FPS delivery team | Evaluation environment and operational evidence. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
 | Client production | Client IT / operations | Real operation under client controls. | Client-owned platform, IdP, persistence, secrets, observability, backups, incident process, and release controls. |
 
@@ -93,9 +93,9 @@ Cost discussion should stay profile-based until a provider and region are select
 | Cost area | Assumption to validate |
 | --- | --- |
 | Container runtime | Idle cost, minimum replicas, scale-to-zero support, and always-on identity requirements. |
-| Persistence | MongoDB-compatible storage tier, backups, tenant collection volume, and restore evidence. |
+| Persistence | Selected storage tier, backups, tenant storage volume, provisioning model, and restore evidence. |
 | Broker | Dapr-compatible broker choice and message visibility. |
-| Secrets | Vault/provider key vault cost and integration effort. |
+| Secrets | Secret-management platform cost, access model, and integration effort. |
 | Observability | Log/trace retention, sampling, dashboard cost, and exporter target. |
 | Network/ingress | HTTPS endpoint, custom domain, certificates, egress, and private networking needs. |
 
@@ -110,7 +110,7 @@ Provider prices change frequently. Do not present numeric cost commitments witho
 | Does FairSpot store company passwords? | No. Company passwords must stay with the IdP. FairSpot-local credential verifiers are fallback Secret data only. |
 | Can employees see other employees or lottery internals? | Employee views must remain safe: own bookings, own notifications, and understandable reasons without exposing other employees or hidden allocation internals. |
 | Who operates production? | The current direction is client-owned production. FairSpot provides architecture, deployment guidance, component boundaries, and evidence; managed operation is not promised. |
-| Can a client use Azure, AWS, Kubernetes, or another platform? | The design keeps provider choices behind Dapr, OIDC, MongoDB-compatible persistence, and OpenTelemetry boundaries. Each provider still needs tested component manifests and runbooks. |
+| Can a client use Azure, AWS, Kubernetes, or another platform? | Yes. The design keeps provider choices behind Dapr, OIDC, service-owned persistence, secret-management, object-storage, and OpenTelemetry boundaries. Each provider still needs tested component manifests and runbooks. |
 | Is billing implemented? | No. Commercialisation and billing are later decisions. The current AGPL project can still support paid implementation, support, and client-specific integration services. |
 | What is needed before a client pilot? | Hosted demo evidence, mobile polish/profile/draw visibility, web/admin surfaces where needed, observability and backup/restore evidence, and a client-owned production handoff model. |
 

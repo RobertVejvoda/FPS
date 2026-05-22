@@ -22,8 +22,8 @@ The baseline is acceptable if it can provide:
 - container deployment from built images;
 - Dapr sidecars or equivalent Dapr runtime support;
 - Dapr pub/sub, state store, and secret-store components;
-- MongoDB-compatible persistence with backup/restore evidence;
-- an OIDC provider or demo Keycloak instance;
+- service-owned persistence with tenant-safe collections, partitions, or keys, plus backup/restore evidence;
+- an OIDC provider with seeded demo users and roles;
 - OpenTelemetry-compatible metrics, logs, and traces;
 - documented cost assumptions and teardown/scale-down instructions.
 
@@ -32,7 +32,7 @@ The baseline is acceptable if it can provide:
 | Runtime part | Demo requirement | Notes |
 | --- | --- | --- |
 | API ingress | Public HTTPS endpoint with platform-managed or documented TLS. | Demo can use a platform hostname. Custom domains are optional. |
-| Identity | Demo OIDC provider or Keycloak with seeded users and roles. | Identity may need to stay always on; do not assume scale-to-zero for active sessions. |
+| Identity | Demo OIDC provider with seeded users and roles. | Identity may need to stay always on; do not assume scale-to-zero for active sessions. |
 | Booking | Hosted service with Dapr enabled. | Must prove booking submission, draw/allocation status paths already implemented, and employee-safe reads. |
 | Profile | Hosted service with Dapr enabled. | Seed only minimum profile and vehicle facts needed for demo scenarios. |
 | Notification | Hosted service with Dapr enabled. | Must prove notification records and mobile/API consumption; external email can use a safe demo provider or stub if clearly marked. |
@@ -50,16 +50,16 @@ OPS002 must use the component names and profile boundaries established by OPS001
 
 | Component | Demo baseline | Evidence required |
 | --- | --- | --- |
-| Pub/sub | Dapr-compatible broker such as RabbitMQ, managed broker, or provider-native broker behind Dapr. | A booking event reaches Notification, Audit, and Reporting consumers where implemented. |
-| State store | MongoDB-compatible store. | Tenant-specific collections and indexes are provisioned or verified repeatably. |
-| Secret store | Vault, provider key vault, or another real secret-management service behind Dapr. | No secret values appear in manifests, logs, screenshots, or docs. |
+| Pub/sub | Dapr-compatible broker or provider-native event service behind Dapr. | A booking event reaches Notification, Audit, and Reporting consumers where implemented. |
+| State store | Service-owned store behind the Dapr state-store/persistence contract. | Tenant-safe collections, partitions, keys, and indexes are provisioned or verified repeatably. |
+| Secret store | Real secret-management service behind Dapr. | No secret values appear in manifests, logs, screenshots, or docs. |
 | Bindings | Cron/scheduler and optional input bindings as required by implemented slices. | Draw or scheduled behavior can be triggered or explicitly marked out of the demo script. |
 | Service invocation | Dapr service invocation or platform routing for internal service calls. | Internal endpoints are not exposed publicly unless required. |
 | Observability | OpenTelemetry collector/exporter path. | Logs, traces, and basic metrics are visible for a demo run. |
 
 ## Secrets And Data Handling
 
-Demo secrets are still Secret data. They must be created through repository environment secrets, runtime managed identity, provider key vault, Vault, or another selected secret store. They must not be committed to git or pasted into GitHub issues.
+Demo secrets are still Secret data. They must be created through repository environment secrets, runtime managed identity, or another selected secret store. They must not be committed to git or pasted into GitHub issues.
 
 Demo data rules:
 
@@ -101,7 +101,7 @@ Before the environment is used for a demo, record the result of:
 | Auth | Seeded employee and admin/operator users can authenticate. |
 | Tenant context | APIs derive tenant/user from authenticated context, not request body values. |
 | Dapr health | Required sidecars/components report healthy or equivalent runtime status. |
-| Persistence | Tenant collections/indexes exist for services used in the demo. |
+| Persistence | Tenant storage scopes/indexes exist for services used in the demo. |
 | Pub/sub | Booking event reaches at least Notification and Audit consumers. |
 | Notification API | Notification history and unread count respond for the seeded employee. |
 | Audit API | Audit query returns expected seeded/demo events for authorized access only. |

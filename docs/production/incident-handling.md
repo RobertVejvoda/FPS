@@ -1,30 +1,48 @@
-### Incident Handling Approach
+# Incident Handling
 
-When running our solution in our own Kubernetes cluster, we follow a structured incident handling approach to ensure quick resolution and minimal downtime. The key components involved in our incident handling process are:
+Incident handling defines how FairSpot detects, triages, contains, resolves, and learns from production or demo failures. The process is provider-neutral: the concrete monitoring, logging, tracing, ticketing, and communication tools are selected by the deployment profile or client operations standard.
 
-1. **Monitoring and Alerting**:
-    - **Prometheus**: Used for monitoring the performance and health of the services. It collects metrics from various endpoints and provides real-time alerts.
-    - **Grafana**: Provides a visualization layer on top of Prometheus metrics, enabling us to create dashboards for monitoring system health and performance.
-    - **Alertmanager**: Integrated with Prometheus to handle alerts by routing them to the appropriate on-call personnel via email, Slack, or other communication channels.
+## Incident Inputs
 
-2. **Logging**:
-    - **Loki**: Aggregates logs from all services running in the cluster, making it easier to search and analyze logs during an incident.
-    - **Grafana**: Also used to visualize logs collected by Loki, providing a unified interface for metrics and logs.
+| Input | Purpose |
+| --- | --- |
+| Metrics and alerts | Detect service errors, latency, failed jobs, unavailable dependencies, event backlog, storage pressure, and cost anomalies. |
+| Logs | Reconstruct service behavior using correlation IDs without exposing Secret data or raw confidential payloads. |
+| Traces | Follow requests across ingress, services, Dapr sidecars/components, and downstream dependencies. |
+| Audit records | Confirm whether policy-sensitive business actions occurred and who or what initiated them. |
+| Security logs | Review authentication failures, privileged access, secret access, unusual API usage, and break-glass actions. |
+| Backup/restore evidence | Determine recovery point, data-loss window, and restore feasibility. |
 
-3. **Tracing**:
-    - **Jaeger**: Used for distributed tracing, allowing us to track the flow of requests through various microservices. This helps in identifying performance bottlenecks and pinpointing the root cause of issues.
+## Severity Model
 
-4. **Secret Management**:
-    - **Vault**: Manages sensitive information such as API keys, passwords, and certificates. It ensures that secrets are securely stored and accessed only by authorized services.
+| Severity | Example | Expected response |
+| --- | --- | --- |
+| Sev 1 | Data isolation breach, confirmed secret exposure, booking mutation corruption, or complete production outage during business hours. | Immediate containment, customer/security escalation, credential rotation where needed, executive/customer communication, post-incident review. |
+| Sev 2 | Login outage, Draw failure, unavailable Booking commands, failed audit ingestion for auditable mutations, or major event-processing backlog. | Same-day response, workaround or rollback, customer update where production is affected, follow-up issue. |
+| Sev 3 | Notification delay, stale reporting, degraded admin view, non-critical dependency warning, or recoverable demo issue. | Triage during working hours, record root cause, repair or backlog. |
+| Sev 4 | Documentation gap, noisy alert, minor dashboard defect, or low-risk operational improvement. | Backlog or maintenance window. |
 
-5. **Database Management**:
-    - **PostgreSQL** and **MongoDB**: Ensure that our relational and NoSQL databases are running optimally. Regular backups and monitoring are in place to prevent data loss and ensure data integrity.
+## Response Lifecycle
 
-6. **Message Brokering**:
-    - **RabbitMQ** and **Redis**: Handle asynchronous communication between services. Monitoring these components ensures that message queues are processed efficiently and without delays.
+1. **Detect**: receive alert, customer report, smoke-test failure, or operator observation.
+2. **Classify**: set severity, affected tenants/environments, affected data classes, and whether security/privacy is involved.
+3. **Contain**: stop unsafe writes, disable a failing integration, roll back a release, rotate exposed credentials, or isolate a tenant scope where needed.
+4. **Diagnose**: use metrics, logs, traces, audit records, deployment history, and dependency health.
+5. **Recover**: retry failed work, restore data, replay/rebuild projections, redeploy known-good images, or apply a targeted fix.
+6. **Validate**: run service health checks, login, booking read/write, notification consumption, audit ingestion, reporting projection checks, and tenant isolation checks.
+7. **Communicate**: update the affected client/operator with impact, status, workaround, recovery, and follow-up.
+8. **Review**: record root cause, timeline, data impact, secrets impact, recovery time, data-loss window, and prevention tasks.
 
-7. **Edge Routing**:
-    - **Traefik**: Manages incoming traffic and routes it to the appropriate services. It also provides SSL termination and load balancing to ensure high availability.
+## Security And Privacy Incidents
 
-8. **Object Storage**:
-    - **MinIO**: Provides high-performance, S3 compatible object storage for storing large volumes of unstructured data.
+Security or privacy incidents require additional handling:
+
+- identify affected tenants, users, roles, data classes, and systems;
+- preserve relevant audit/security evidence without copying secrets into tickets or chats;
+- rotate exposed credentials, signing keys, certificates, or integration secrets;
+- assess notification obligations with the customer/data protection contact;
+- record decisions, approvals, containment actions, and follow-up controls.
+
+## Provider-Specific Runbooks
+
+The core process stays generic. Provider-specific commands, dashboards, cloud console paths, backup tooling, and support contacts belong in the selected deployment profile or client-owned runbook.
