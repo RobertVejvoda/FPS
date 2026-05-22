@@ -102,8 +102,8 @@ export default function LoginRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>FPS Mobile</Text>
-        <Text style={styles.subtitle}>Parking management for employees</Text>
+        <Text style={styles.title}>FairSpot</Text>
+        <Text style={styles.subtitle}>Fair access to workplace parking</Text>
 
         {!configured ? (
           <View style={styles.notice}>

@@ -29,7 +29,7 @@ function Shell() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#111827', flexShrink: 0 }}>FPS Portal</span>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#111827', flexShrink: 0 }}>FairSpot</span>
         <nav style={{ display: 'flex', gap: 2, overflowX: 'auto', flexShrink: 1 }}>
           {navItems.map(item => (
             <NavLink

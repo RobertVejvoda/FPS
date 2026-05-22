@@ -1,10 +1,10 @@
 # Demo and Evaluation
 
-This page defines how FPS should be demonstrated to business stakeholders, client IT, operators, and future users. The shareable evaluator-facing summary is available in the [Client Evaluation Pack](./client-evaluation-pack).
+This page defines how FairSpot should be demonstrated to business stakeholders, client IT, operators, and future users. The shareable evaluator-facing summary is available in the [Client Evaluation Pack](./client-evaluation-pack).
 
 ## Demo Goal
 
-The demo should prove that FPS is more than a booking form. It should show a fair, auditable reservation process for scarce shared resources, currently parking. Future resources such as workplace desks, chairs, or seats may reuse the same tenant, policy, notification, audit, and reporting foundations after parking v1 is stable.
+The demo should prove that FairSpot is more than a booking form. It should show fair access to limited workplace resources, currently parking. Future resources such as workplace desks, chairs, seats, lockers, or chargers may reuse the same tenant, policy, notification, audit, and reporting foundations after parking v1 is stable.
 
 ## Demo Roles
 
@@ -16,7 +16,7 @@ The demo should prove that FPS is more than a booking form. It should show a fai
 | Tenant admin | User roles, tenant/location setup, policy configuration, slot setup. | Admin can see which setup is required before go-live. |
 | Auditor / compliance | Audit query, pseudonymised actor references, GDPR PII mapping erasure behavior. | Audit evidence exists without exposing unnecessary personal data. |
 | Client IT / operator | Local stack, demo deployment option, Dapr components, metrics/logs/traces, backup/restore and incident notes. | IT can see how FPS plugs into their environment and observability stack. |
-| Sponsor / procurement | Product value, deployment ownership model, cost path, license posture, implementation roadmap. | Sponsor can decide whether FPS is worth a pilot. |
+| Sponsor / procurement | Product value, deployment ownership model, cost path, license posture, implementation roadmap. | Sponsor can decide whether FairSpot is worth a pilot. |
 
 ## Demo Data Set
 

@@ -1,6 +1,6 @@
 # Strategy
 
-FPS starts with parking because parking is a concrete, high-friction reservation problem: demand often exceeds supply, allocation decisions affect employees directly, and manual coordination creates poor evidence. The strategic goal is to turn that process into a fair, auditable, tenant-isolated reservation platform.
+FairSpot starts with parking because parking is a concrete, high-friction reservation problem: demand often exceeds supply, allocation decisions affect employees directly, and manual coordination creates poor evidence. The strategic goal is to turn that process into a fair, auditable, tenant-isolated allocation platform for limited workplace resources.
 
 Parking remains the v1 product focus. Future resource domains such as desks, chairs, or company seats should reuse the same platform ideas only after parking reaches a stable demo and hosted baseline.
 

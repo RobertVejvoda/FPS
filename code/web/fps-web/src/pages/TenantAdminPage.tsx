@@ -55,7 +55,7 @@ function deriveNextAction(checks: ReadinessCheckDto[]): NextAction | null {
     case 'RoleMapping':
       return {
         label: 'Fix role mapping',
-        detail: failedCheck.reason ?? 'Role mapping references unknown FPS roles. Update identity configuration.',
+        detail: failedCheck.reason ?? 'Role mapping references unknown FairSpot roles. Update identity configuration.',
       };
     case 'ParkingPolicy':
       return {

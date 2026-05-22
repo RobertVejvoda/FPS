@@ -1,6 +1,6 @@
 # fps-mobile
 
-Expo managed React Native + TypeScript app shell for the Fair Parking System.
+Expo managed React Native + TypeScript app shell for FairSpot.
 
 This package contains the Expo managed React Native employee app. It started as
 the MOB001 app shell and now includes the current employee mobile flow for login,

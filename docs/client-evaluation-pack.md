@@ -1,17 +1,17 @@
 # Client Evaluation Pack
 
-This pack gives a new evaluator enough context to decide whether FPS is worth a pilot without reading the full repository. It is intentionally business-first, with links into architecture, security, operations, and roadmap detail where needed.
+This pack gives a new evaluator enough context to decide whether FairSpot is worth a pilot without reading the full repository. It is intentionally business-first, with links into architecture, security, operations, and roadmap detail where needed.
 
 ## One-Page Product Summary
 
 | Topic | Summary |
 | --- | --- |
 | Problem | Shared company parking often has more demand than capacity. Manual email/spreadsheet coordination is opaque, slow, hard to audit, and can feel unfair to employees. |
-| Product | FPS is an open-source, multi-tenant parking allocation system with documented fairness rules, booking workflows, notifications, audit records, reporting, and tenant policy configuration. |
+| Product | FairSpot is an open-source, multi-tenant fair allocation platform for limited workplace resources. Parking is the first module, with documented fairness rules, booking workflows, notifications, audit records, reporting, and tenant policy configuration. |
 | Primary user value | Employees can request, view, cancel, and confirm parking from mobile without seeing hidden allocation internals or other employees' data. |
 | Business value | HR/facilities teams can configure policy and capacity, reduce manual coordination, and explain allocation outcomes using audit and reporting evidence. |
 | Trust value | Allocation rules, notifications, audit, GDPR erasure behavior, and tenant isolation are explicit rather than implicit operational habits. |
-| Deployment posture | FPS is designed for local development, a low-cost hosted demo, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
+| Deployment posture | FairSpot is designed for local development, a low-cost hosted demo, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
 | Current status | Core backend flow, mobile employee foundation, notification/audit/reporting/configuration services, Dapr component baseline, SSO-first integration contract, and demo environment baseline are documented or implemented. |
 | Near-term gaps | Mobile profile/draw visibility/polish, web/admin surfaces, hosted demo evidence, client-owned production handoff, observability hardening, and pilot-specific evidence. |
 
@@ -43,7 +43,7 @@ Use synthetic demo data only unless a customer-approved pilot explicitly changes
 
 ## Architecture Overview
 
-FPS is organized around bounded services and explicit integration boundaries:
+FairSpot is organized around bounded services and explicit integration boundaries:
 
 | Area | Current shape |
 | --- | --- |
@@ -71,16 +71,16 @@ Key architecture links:
 | Demo | FPS delivery team | Evaluation environment and operational evidence. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
 | Client production | Client IT / operations | Real operation under client controls. | Client-owned platform, IdP, persistence, secrets, observability, backups, incident process, and release controls. |
 
-The demo environment baseline is documented in [Demo Environment Baseline](./production/demo-environment-baseline). Client production handoff remains a later slice; FPS should not promise managed production operation until that model is explicitly approved.
+The demo environment baseline is documented in [Demo Environment Baseline](./production/demo-environment-baseline). Client production handoff remains a later slice; FairSpot should not promise managed production operation until that model is explicitly approved.
 
 ## Security And GDPR Summary
 
-| Topic | FPS position |
+| Topic | FairSpot position |
 | --- | --- |
 | Tenant isolation | Tenant context comes from authenticated or trusted service context. Employee APIs must not accept arbitrary tenant/user values from request bodies. |
-| Data minimisation | FPS stores the minimum employee/profile facts needed for booking, notification, audit, reporting, and support. |
-| SSO-first integration | Company employees authenticate through the customer's IdP by default. FPS does not store company passwords. |
-| Local accounts | FPS-local accounts are fallback/break-glass/demo accounts. Credential verifiers are Secret data owned by Identity. |
+| Data minimisation | FairSpot stores the minimum employee/profile facts needed for booking, notification, audit, reporting, and support. |
+| SSO-first integration | Company employees authenticate through the customer's IdP by default. FairSpot does not store company passwords. |
+| Local accounts | FairSpot-local accounts are fallback/break-glass/demo accounts. Credential verifiers are Secret data owned by Identity. |
 | Audit | Audit records use stable/pseudonymised identifiers where possible and preserve allocation and policy-sensitive evidence. |
 | GDPR erasure | PII mapping erasure can remove identity mapping while preserving anonymous audit history. |
 | Secrets | Tokens, keys, client secrets, connection strings, credential verifiers, and integration credentials are Secret data and must not appear in docs, logs, issues, or manifests. |
@@ -105,11 +105,11 @@ Provider prices change frequently. Do not present numeric cost commitments witho
 
 | Question | Answer |
 | --- | --- |
-| Is FPS only for parking? | Parking is the first concrete v1 domain. The same tenant, policy, notification, audit, and reporting pattern may later support other scarce workplace resources after parking is stable. |
-| Does FPS replace the customer's identity provider? | No. FPS is SSO-first and expects company users to authenticate through the customer IdP where possible. |
-| Does FPS store company passwords? | No. Company passwords must stay with the IdP. FPS-local credential verifiers are fallback Secret data only. |
+| Is FairSpot only for parking? | Parking is the first concrete v1 domain. The same tenant, policy, notification, audit, and reporting pattern may later support other scarce workplace resources after parking is stable. |
+| Does FairSpot replace the customer's identity provider? | No. FairSpot is SSO-first and expects company users to authenticate through the customer IdP where possible. |
+| Does FairSpot store company passwords? | No. Company passwords must stay with the IdP. FairSpot-local credential verifiers are fallback Secret data only. |
 | Can employees see other employees or lottery internals? | Employee views must remain safe: own bookings, own notifications, and understandable reasons without exposing other employees or hidden allocation internals. |
-| Who operates production? | The current direction is client-owned production. FPS provides architecture, deployment guidance, component boundaries, and evidence; managed operation is not promised. |
+| Who operates production? | The current direction is client-owned production. FairSpot provides architecture, deployment guidance, component boundaries, and evidence; managed operation is not promised. |
 | Can a client use Azure, AWS, Kubernetes, or another platform? | The design keeps provider choices behind Dapr, OIDC, MongoDB-compatible persistence, and OpenTelemetry boundaries. Each provider still needs tested component manifests and runbooks. |
 | Is billing implemented? | No. Commercialisation and billing are later decisions. The current AGPL project can still support paid implementation, support, and client-specific integration services. |
 | What is needed before a client pilot? | Hosted demo evidence, mobile polish/profile/draw visibility, web/admin surfaces where needed, observability and backup/restore evidence, and a client-owned production handoff model. |
