@@ -280,10 +280,10 @@ public sealed class BookingEventPublisherTests
         Assert.Equal("draw", captured.Payload.AllocationSource);
     }
 
-    // ── reallocation: original request id and AffectedRecipientIds ────────────
+    // ── reallocation: original request ID preserved, AffectedRecipientIds null ─
 
     [Fact]
-    public async Task PublishAsync_ReallocatedEvent_IncludesReallocatedFromAndRecipients()
+    public async Task PublishAsync_ReallocatedEvent_IncludesReallocatedFromAndNullRecipients()
     {
         BookingIntegrationEnvelope? captured = null;
         dapr.Setup(d => d.PublishEventAsync(
@@ -305,6 +305,8 @@ public sealed class BookingEventPublisherTests
         Assert.Equal("booking.slotAllocated", captured!.EventType);
         Assert.Equal("reallocation", captured.Payload.AllocationSource);
         Assert.Equal(cancelledRequestId.Value.ToString(), captured.Payload.ReallocatedFromBookingRequestId);
-        Assert.Contains(cancelledRequestId.Value.ToString(), captured.Payload.AffectedRecipientIds!);
+        // Original requestor is notified via the already-published booking.requestCancelled event,
+        // not via AffectedRecipientIds (which must contain employee IDs, not request IDs).
+        Assert.Null(captured.Payload.AffectedRecipientIds);
     }
 }

@@ -96,7 +96,9 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     PreviousStatus: null,
                     NewStatus: "Allocated",
                     ReasonCode: null, ReasonText: null,
-                    AffectedRecipientIds: [e.OriginalCancelledRequestId.Value.ToString()],
+                    // AffectedRecipientIds is intentionally null here: the original requestor is
+                    // notified via the booking.requestCancelled event already published by Cancel().
+                    AffectedRecipientIds: null,
                     AllocationId: null,
                     SlotId: e.SlotId.Value.ToString(),
                     AllocationSource: "reallocation",
