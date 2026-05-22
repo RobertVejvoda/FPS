@@ -1,10 +1,10 @@
 using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
+using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 using FPS.Booking.Domain.Exceptions;
 using FPS.Booking.Domain.ValueObjects;
-using FPS.SharedKernel.DomainEvents;
 using MediatR;
 
 namespace FPS.Booking.Application.Commands;
@@ -13,12 +13,12 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
 {
     private readonly IBookingRepository repository;
     private readonly ICorrectionAuditRepository auditRepository;
-    private readonly IEventPublisher eventPublisher;
+    private readonly IBookingEventPublisher eventPublisher;
 
     public ApplyManualCorrectionHandler(
         IBookingRepository repository,
         ICorrectionAuditRepository auditRepository,
-        IEventPublisher eventPublisher)
+        IBookingEventPublisher eventPublisher)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(auditRepository);
@@ -50,9 +50,12 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
             Enum.Parse<BookingRequestStatus>(dto.Status),
             dto.RequestedAt);
 
+        var publisher = eventPublisher.WithContext(new BookingPublishContext(
+            command.TenantId, Guid.NewGuid().ToString(), "admin", command.Actor,
+            SubjectRequestorId: dto.RequestedBy));
         request.ApplyManualCorrection(
             command.CorrectionType, command.OldValue, command.NewValue,
-            command.Actor, command.Reason, appliedAt, eventPublisher);
+            command.Actor, command.Reason, appliedAt, publisher);
 
         await PersistCorrectionAsync(dto, command, appliedAt, cancellationToken);
 

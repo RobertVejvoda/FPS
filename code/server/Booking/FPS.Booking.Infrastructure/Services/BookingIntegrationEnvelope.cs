@@ -1,9 +1,8 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
+namespace FPS.Booking.Infrastructure.Services;
 
-namespace FPS.Audit.Application;
-
-public sealed record BookingEventEnvelope(
+// Publisher-side envelope — serializes to the same JSON shape that Notification,
+// Audit, and Reporting consumers expect on the "booking-events" topic.
+public sealed record BookingIntegrationEnvelope(
     string EventId,
     string EventType,
     int EventVersion,
@@ -14,9 +13,9 @@ public sealed record BookingEventEnvelope(
     string ActorType,
     string? ActorId,
     string Source,
-    BookingEventPayload Payload);
+    BookingIntegrationPayload Payload);
 
-public sealed record BookingEventPayload(
+public sealed record BookingIntegrationPayload(
     string? BookingRequestId,
     string? RequestorId,
     string? LocationId,
@@ -30,9 +29,4 @@ public sealed record BookingEventPayload(
     string? AllocationId = null,
     string? SlotId = null,
     string? AllocationSource = null,
-    string? ReallocatedFromBookingRequestId = null)
-{
-    // Captures any future additive payload fields not yet in the known contract.
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement>? AdditionalData { get; init; }
-}
+    string? ReallocatedFromBookingRequestId = null);

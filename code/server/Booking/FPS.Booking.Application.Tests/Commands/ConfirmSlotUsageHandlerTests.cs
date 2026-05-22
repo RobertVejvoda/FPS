@@ -6,7 +6,7 @@ namespace FPS.Booking.Application.Tests.Commands;
 public sealed class ConfirmSlotUsageHandlerTests
 {
     private readonly Mock<IBookingRepository> repository = new();
-    private readonly Mock<IEventPublisher> eventPublisher = new();
+    private readonly Mock<IBookingEventPublisher> eventPublisher = new();
     private readonly ConfirmSlotUsageHandler handler;
 
     public ConfirmSlotUsageHandlerTests()
@@ -17,6 +17,9 @@ public sealed class ConfirmSlotUsageHandlerTests
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
             It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
+        eventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     // ── Happy path ────────────────────────────────────────────────────────────

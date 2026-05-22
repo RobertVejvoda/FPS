@@ -17,7 +17,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     private readonly IEmployeeMetricsService metricsService;
     private readonly ITenantPolicyService policyService;
     private readonly IProfileSnapshotService profileSnapshotService;
-    private readonly IEventPublisher eventPublisher;
+    private readonly IBookingEventPublisher eventPublisher;
 
     public SubmitBookingRequestHandler(
         IBookingRepository repository,
@@ -26,7 +26,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         IEmployeeMetricsService metricsService,
         ITenantPolicyService policyService,
         IProfileSnapshotService profileSnapshotService,
-        IEventPublisher eventPublisher)
+        IBookingEventPublisher eventPublisher)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(queryRepository);
@@ -109,11 +109,17 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             context = SubmissionContext.Create(policy.DailyRequestCap, existingCount, hasOverlap, isCutOffPassed);
         }
 
-        var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, eventPublisher);
+        var publishCtx = new BookingPublishContext(
+            cmd.TenantId, Guid.NewGuid().ToString(), "employee", cmd.RequestorId,
+            SubjectRequestorId: cmd.RequestorId,
+            AllocationSource: "sameDay");
+        var publisher = eventPublisher.WithContext(publishCtx);
+
+        var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, publisher);
 
         if (isSameDay && request.Status == BookingRequestStatus.Pending && sameDaySlot is not null)
         {
-            request.Allocate(eventPublisher);
+            request.Allocate(publisher);
 
             if (!snapshot.HasCompanyCar)
             {

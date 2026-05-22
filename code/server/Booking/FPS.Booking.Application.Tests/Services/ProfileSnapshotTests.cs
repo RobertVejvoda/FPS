@@ -18,7 +18,7 @@ public sealed class ProfileSnapshotTests
     private readonly Mock<IEmployeeMetricsService> metricsService = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly Mock<IProfileSnapshotService> profileService = new();
-    private readonly Mock<IEventPublisher> publisher = new();
+    private readonly Mock<IBookingEventPublisher> publisher = new();
     private readonly SubmitBookingRequestHandler handler;
 
     private static readonly TenantPolicy DefaultPolicy = new(
@@ -44,6 +44,8 @@ public sealed class ProfileSnapshotTests
         queryRepository.Setup(r => r.AddToUserIndexAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>())).ReturnsAsync(new List<AvailableSlot>());
         metricsService.Setup(m => m.IncrementRecentAllocationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        publisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(publisher.Object);
+        publisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
 
     [Fact]

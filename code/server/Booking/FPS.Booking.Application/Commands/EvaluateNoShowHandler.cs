@@ -15,14 +15,14 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
     private readonly IBookingQueryRepository queryRepository;
     private readonly IPenaltyRepository penaltyRepository;
     private readonly ITenantPolicyService policyService;
-    private readonly IEventPublisher eventPublisher;
+    private readonly IBookingEventPublisher eventPublisher;
 
     public EvaluateNoShowHandler(
         IBookingRepository repository,
         IBookingQueryRepository queryRepository,
         IPenaltyRepository penaltyRepository,
         ITenantPolicyService policyService,
-        IEventPublisher eventPublisher)
+        IBookingEventPublisher eventPublisher)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(queryRepository);
@@ -66,12 +66,15 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
                 BookingRequestStatus.Allocated,
                 dto.RequestedAt);
 
-            request.MarkNoShow(eventPublisher);
+            var publisher = eventPublisher.WithContext(new BookingPublishContext(
+                command.TenantId, Guid.NewGuid().ToString(), "system", null,
+                SubjectRequestorId: dto.RequestedBy));
+            request.MarkNoShow(publisher);
 
             await repository.UpdateBookingRequestStatusAsync(
                 dto.RequestId, "NoShow", command.Reason, cancellationToken);
 
-            await ApplyNoShowPenaltyAsync(dto, policy, today, cancellationToken);
+            await ApplyNoShowPenaltyAsync(dto, policy, today, command.TenantId, cancellationToken);
 
             markedCount++;
         }
@@ -80,7 +83,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
     }
 
     private async Task ApplyNoShowPenaltyAsync(
-        BookingRequestDto dto, TenantPolicy policy, DateOnly today, CancellationToken cancellationToken)
+        BookingRequestDto dto, TenantPolicy policy, DateOnly today, string tenantId, CancellationToken cancellationToken)
     {
         var sourceEventId = $"noshow:{dto.RequestId}:NoShow";
 
@@ -108,11 +111,13 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
             SourceEventId = sourceEventId
         }, cancellationToken);
 
-        _ = eventPublisher.PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
-            BookingRequestId.FromGuid(dto.RequestId),
-            UserId.FromString(dto.RequestedBy),
-            PenaltyType.NoShow,
-            penalty.Score,
-            sourceEventId));
+        _ = eventPublisher.WithContext(new BookingPublishContext(
+            tenantId, Guid.NewGuid().ToString(), "system", null))
+            .PublishAsync(new FPS.Booking.Domain.Events.PenaltyAppliedEvent(
+                BookingRequestId.FromGuid(dto.RequestId),
+                UserId.FromString(dto.RequestedBy),
+                PenaltyType.NoShow,
+                penalty.Score,
+                sourceEventId));
     }
 }
