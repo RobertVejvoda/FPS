@@ -165,8 +165,16 @@ Use real OIDC login from the Sign in screen. For the local smoke profile:
 
 - issuer and token endpoint come from the device-reachable Keycloak URL printed by the script;
 - client ID is `fps-mobile-dev`;
-- redirect URIs are accepted by the local Keycloak mobile client for Expo Go/development redirects;
+- redirect URIs are accepted by the local Keycloak mobile client for Expo Go, native-scheme, localhost, LAN, Tailscale, and Expo AuthSession proxy redirects;
 - demo password defaults to `Dev1234!`.
+
+If Keycloak shows `invalid parameter: redirect_uri`, re-run the local realm import after pulling the latest repository changes:
+
+```sh
+./tools/dev-setup-auth.sh
+```
+
+That reapplies the `fps-mobile-dev` redirect allow-list.
 
 For developer smoke, use the Developer Session screen to paste:
 
