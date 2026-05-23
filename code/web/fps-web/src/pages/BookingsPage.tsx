@@ -15,6 +15,17 @@ function localDate(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function countByStatus(items: BookingListItem[], statuses: string[]): number {
+  return items.filter(item => statuses.includes(item.status)).length;
+}
+
+function nextActionLabel(items: BookingListItem[]): string {
+  const action = items.find(item => item.nextAction)?.nextAction;
+  if (action === 'confirmUsage') return 'Confirm usage';
+  if (action === 'cancel') return 'Cancellation available';
+  return 'No action needed';
+}
+
 export function BookingsPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
@@ -63,12 +74,29 @@ export function BookingsPage() {
     } else showToast(false, 'message' in result ? result.message : 'Could not confirm usage.');
   }
 
+  const okState = state.kind === 'ok' ? state : null;
+  const allocatedCount = okState ? countByStatus(okState.items, ['Allocated', 'UsageConfirmed']) : 0;
+  const waitingCount = okState ? countByStatus(okState.items, ['Submitted', 'Pending', 'Waitlisted']) : 0;
+  const issueCount = okState ? countByStatus(okState.items, ['Rejected', 'Cancelled', 'Expired', 'NoShow']) : 0;
+
   return (
-    <div style={page}>
-      <div style={header}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>My Bookings</h2>
-        <button onClick={() => navigate('/bookings/new')} style={primaryBtn}>New request</button>
-      </div>
+    <div className="page-stack">
+      <section className="page-hero">
+        <div>
+          <h2>My parking</h2>
+          <p>Today’s requests, allocation status, and next action in one place.</p>
+        </div>
+        <button onClick={() => navigate('/bookings/new')} className="btn-secondary">New request</button>
+      </section>
+
+      {okState ? (
+        <div className="metric-grid">
+          <MetricCard label={filter === 'upcoming' ? 'Upcoming requests' : 'Recent requests'} value={okState.items.length} />
+          <MetricCard label="Allocated" value={allocatedCount} />
+          <MetricCard label="Waiting" value={waitingCount} />
+          <MetricCard label={issueCount > 0 ? 'Needs attention' : 'Next action'} value={issueCount > 0 ? issueCount : nextActionLabel(okState.items)} />
+        </div>
+      ) : null}
 
       <div style={{ display: 'flex', gap: 0, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', alignSelf: 'flex-start' }}>
         {(['upcoming', 'recent'] as const).map((f) => (
@@ -89,14 +117,19 @@ export function BookingsPage() {
       ) : null}
 
       {state.kind === 'loading' ? (
-        <p style={{ color: '#6b7280' }}>Loading…</p>
+        <div className="panel"><p style={{ color: '#6b7280', margin: 0 }}>Loading…</p></div>
       ) : state.kind === 'error' ? (
-        <div>
+        <div className="panel">
           <p style={{ color: '#b91c1c' }}>{state.message}</p>
-          <button onClick={() => load(filter)} style={primaryBtn}>Retry</button>
+          <button onClick={() => load(filter)} className="btn-primary">Retry</button>
         </div>
       ) : state.items.length === 0 ? (
-        <p style={{ color: '#6b7280' }}>No {filter} bookings.</p>
+        <section className="panel">
+          <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No {filter} bookings</h3>
+          <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>
+            Create a request to see allocation status and fairness outcomes here.
+          </p>
+        </section>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {state.items.map((b) => (
@@ -114,8 +147,14 @@ export function BookingsPage() {
   );
 }
 
-const page: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 16 };
-const header: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between' };
-const primaryBtn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' };
+function MetricCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="metric-card">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 const filterBtn: React.CSSProperties = { background: '#fff', border: 'none', padding: '8px 20px', fontSize: 14, fontWeight: 500, color: '#6b7280', cursor: 'pointer' };
-const filterActive: React.CSSProperties = { background: '#1d4ed8', color: '#fff' };
+const filterActive: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff' };

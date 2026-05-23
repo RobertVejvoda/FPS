@@ -7,5 +7,12 @@
     "redirectUri": "http://localhost:5200/auth/callback",
     "postLogoutRedirectUri": "http://localhost:5200/"
   },
+  "branding": {
+    "productName": "FairSpot",
+    "tenantName": "Demo Company",
+    "logoUrl": "",
+    "primaryColor": "#2563eb",
+    "accentColor": "#16a34a"
+  },
   "devTokenFallbackEnabled": false
 }

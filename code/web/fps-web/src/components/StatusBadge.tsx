@@ -1,5 +1,6 @@
 const COLOR: Record<string, string> = {
   Submitted: '#1d4ed8',
+  Pending: '#1d4ed8',
   Allocated: '#15803d',
   Rejected: '#b91c1c',
   Cancelled: '#6b7280',
@@ -7,7 +8,6 @@ const COLOR: Record<string, string> = {
   Waitlisted: '#92400e',
   UsageConfirmed: '#15803d',
   NoShow: '#b45309',
-  Pending: '#1d4ed8',
 };
 
 export function StatusBadge({ status }: { status: string }) {
