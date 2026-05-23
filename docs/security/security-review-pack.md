@@ -89,7 +89,7 @@ FPS supports GDPR-aligned operation through these mechanisms:
 | Rectification | Profile update via PUT /profile; booking cancellation via existing booking API |
 | Erasure | `DELETE /audit/pii-mappings/{userId}` pseudonymises audit actor; profile and booking data deletion documented (see gaps) |
 | Audit accountability | Append-only audit log with actor, tenant, timestamp, reason for every sensitive action |
-| Pseudonymisation | Audit records store `userId` (a token subject), not employee names; PII mapping resides separately in Profile service |
+| Pseudonymisation | Audit records store `actor_hash` (SHA-256 of the token subject), not names; PII mapping (hash → identity) resides separately and is deletable via `DELETE /audit/pii-mappings/{userId}` |
 | Data portability | Reporting exports available to authorised roles; structured JSON/CSV format |
 | DPA and residency | **Customer responsibility** — FPS does not sign DPAs or choose data residency; client operates the infrastructure |
 
@@ -166,7 +166,11 @@ This approach aligns with GDPR Article 25 (data protection by design) and Recita
 
 ## Retention Schedules
 
-FairSpot requires explicit retention periods before production use. Current implementation status: **documented placeholders only; enforcement jobs not yet implemented.**
+FairSpot requires explicit retention periods before production use. Implementation status varies by data type:
+
+- **Audit**: `DELETE /audit/retention` is implemented (A004); client must configure the period and schedule invocation.
+- **Bookings, notifications, security logs**: retention jobs are not yet implemented — these are documented gaps.
+- All schedules: client is responsible for aligning periods with their legal basis and jurisdiction.
 
 | Data Type | Recommended Retention | Deletion Method | Implementation Status |
 |-----------|----------------------|-----------------|----------------------|
@@ -343,7 +347,7 @@ The following gaps are documented in the [Gap Register](./gap-register) and must
 | Log inspection | Confirm no PII, tokens, or passwords appear in container stdout |
 | Erasure | Test `DELETE /audit/pii-mappings/{userId}` and verify profile/booking data handling |
 | Backup/restore | Run restore drill per [Backup And Restore](../production/backup-restore) |
-| Incident response | Review [Incident Response](./incident-response) and confirm contacts are populated |
+| Incident response | Review [Incident Handling](../production/incident-handling) and confirm contacts are populated |
 | Data ownership | Review "What FairSpot Stores" vs "What Remains in Customer IdP" table above |
 | Retention schedules | Confirm client-approved retention periods and enforcement plan |
 | Privileged access | Review break-glass procedure, operator access log, and secret rotation rules |
