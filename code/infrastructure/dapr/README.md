@@ -102,6 +102,7 @@ follow the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
 
 The `fps-config.yaml` Dapr configuration enables tracing at 100% sampling rate (local).
 - **Local**: Zipkin at `http://zipkin:9411/api/v2/spans`
+- **Local host UI**: Docker Compose maps Zipkin to `http://localhost:19411` to avoid colliding with Dapr's default local Zipkin on host port `9411`.
 - **Demo / client**: Uncomment the `otel:` block and point at an OpenTelemetry Collector.
   The collector then exports to Azure Monitor, Grafana, Dynatrace, Splunk, or equivalent.
 

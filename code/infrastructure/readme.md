@@ -152,6 +152,9 @@ See `dapr/README.md` for the full component contract, app scoping rules, and pro
 5. **Access Grafana**:
    Open your browser and navigate to `http://localhost:3000`. Use the credentials `admin/admin` to log in.
 
+6. **Access Zipkin**:
+   Open your browser and navigate to `http://localhost:19411`. The container still listens on `9411` inside the Docker network, but the host port is moved to `19411` so it does not collide with Dapr's default local Zipkin on `9411`.
+
 ---
 
 ## Step 6: Stop the Infrastructure

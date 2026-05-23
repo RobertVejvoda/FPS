@@ -186,7 +186,8 @@ services:
   zipkin:
     image: openzipkin/zipkin
     ports:
-      - "9411:9411"
+      # Keep host 9411 free for `dapr init`, which starts Dapr's default Zipkin.
+      - "19411:9411"
     networks:
       - web
     

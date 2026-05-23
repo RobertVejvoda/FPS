@@ -116,7 +116,7 @@ To achieve comprehensive observability with tracing, metrics, and logs using ope
      tracing:
        samplingRate: "1"
        zipkin:
-         endpointAddress: "http://localhost:9411/api/v2/spans"
+         endpointAddress: "http://localhost:19411/api/v2/spans"
      metrics:
        enabled: true
        prometheus:
@@ -125,4 +125,3 @@ To achieve comprehensive observability with tracing, metrics, and logs using ope
        enabled: true
        loki:
          endpoint: "http://localhost:3100/loki/api/v1/push"
-
