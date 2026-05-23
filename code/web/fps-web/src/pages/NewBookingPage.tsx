@@ -116,12 +116,24 @@ export function NewBookingPage() {
       ) : (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Field label="Facility *" error={errors.facilityId}>
-            <input value={form.facilityId} onChange={(e) => set('facilityId', e.target.value)} placeholder="e.g. FAC-001" style={inputStyle} />
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>Facility identifier (e.g. FAC-001, Building-A)</p>
+            <select
+              value={form.facilityId}
+              onChange={(e) => set('facilityId', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">Select a facility…</option>
+              <option value="00000000-0000-0000-0000-000000000001">Main Building</option>
+            </select>
           </Field>
           <Field label="Location (optional)" error={errors.locationId}>
-            <input value={form.locationId} onChange={(e) => set('locationId', e.target.value)} placeholder="Optional location" style={inputStyle} />
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>Location within facility (e.g. LOC-001, Parking-North)</p>
+            <select
+              value={form.locationId}
+              onChange={(e) => set('locationId', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">Any location</option>
+              <option value="LOC-MAIN">LOC-MAIN — Main office</option>
+            </select>
           </Field>
 
           {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (

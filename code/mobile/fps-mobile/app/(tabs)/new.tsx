@@ -284,23 +284,24 @@ export default function NewBookingRoute() {
               </>
             )}
 
-            <FieldRow label="Planned Arrival *" error={fieldErrors.plannedArrival}>
+            {/* v1 text fallback — a native DateTimePicker is a follow-up UX003 improvement */}
+            <FieldRow label="Planned Arrival * (YYYY-MM-DD HH:MM)" error={fieldErrors.plannedArrival}>
               <TextInput
                 style={[styles.input, fieldErrors.plannedArrival ? styles.inputError : null]}
                 value={form.plannedArrival}
                 onChangeText={v => set('plannedArrival', v)}
-                placeholder="YYYY-MM-DD HH:MM"
+                placeholder="2026-06-01 08:00"
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numbers-and-punctuation"
               />
             </FieldRow>
 
-            <FieldRow label="Planned Departure *" error={fieldErrors.plannedDeparture}>
+            <FieldRow label="Planned Departure * (YYYY-MM-DD HH:MM)" error={fieldErrors.plannedDeparture}>
               <TextInput
                 style={[styles.input, fieldErrors.plannedDeparture ? styles.inputError : null]}
                 value={form.plannedDeparture}
                 onChangeText={v => set('plannedDeparture', v)}
-                placeholder="YYYY-MM-DD HH:MM"
+                placeholder="2026-06-01 18:00"
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numbers-and-punctuation"
               />
