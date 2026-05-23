@@ -153,14 +153,10 @@ After running `sh ./tools/start-smoke-web.sh`, the web app starts at `http://loc
 
 For business reports:
 
-1. Sign in with `hr-admin` or `report-viewer` after WEB009 lands, or use the current development session handoff with:
+1. Open `http://localhost:5200` and sign in with `hr-admin` or `report-viewer` using the OIDC login screen. Keycloak must be running (`docker compose up -d keycloak`) and the realm imported (`./tools/dev-setup-auth.sh`).
 
-   ```sh
-   ./tools/dev-auth.sh hr-admin
-   ```
-
-2. In the web app, use API base URL `http://localhost:10000`.
-3. Open **Reports**. The page shows total demand, allocations, allocation rate, rejections, cancellations, no-shows, daily trend, utilization by location, reason-code counts, fairness rows using pseudonymised requestor hashes, and CSV downloads.
+2. Open **Reports**.
+3. The page shows total demand, allocations, allocation rate, rejections, cancellations, no-shows, daily trend, utilization by location, reason-code counts, fairness rows using pseudonymised requestor hashes, and CSV downloads.
 
 Direct API checks use an `hr-admin` or `report-viewer` token:
 

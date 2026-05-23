@@ -1,8 +1,8 @@
 {
   "apiBaseUrl": "http://localhost:10000",
   "oidc": {
-    "authority": "http://localhost:8080/realms/fps",
-    "clientId": "fps-web",
+    "authority": "http://localhost:8180/realms/fps-local",
+    "clientId": "fps-web-dev",
     "scopes": "openid profile email",
     "redirectUri": "http://localhost:5200/auth/callback",
     "postLogoutRedirectUri": "http://localhost:5200/"
