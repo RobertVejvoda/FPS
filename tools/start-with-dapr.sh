@@ -1,7 +1,7 @@
 #!/bin/sh
 # start-with-dapr.sh — Start FPS services with Dapr sidecars for local smoke testing.
 #
-# Uses the Dapr CLI multi-app run file (dapr.yaml) which starts six FPS services
+# Uses the Dapr CLI multi-app run file (dapr.yaml) which starts seven FPS services
 # each paired with a Dapr sidecar loaded with in-memory components.
 #
 # Identity does not need a sidecar and must be started separately:
@@ -10,7 +10,7 @@
 #
 # Usage:
 #   source ./tools/dev-env.sh        # export local Keycloak issuer settings
-#   ./tools/start-with-dapr.sh       # start six FPS services with Dapr sidecars
+#   ./tools/start-with-dapr.sh       # start seven FPS services with Dapr sidecars
 #
 # Requirements:
 #   - Dapr CLI >= 1.12 installed and initialised (dapr init)
