@@ -5,9 +5,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { isMobileEmployeeRole } from '@/auth/roles';
 
 export default function TabsLayout() {
-  const unreadCount = useUnreadCount();
   const { roles } = useAuth();
   const isEmployee = isMobileEmployeeRole(roles);
+  const unreadCount = useUnreadCount(isEmployee);
 
   return (
     <Tabs

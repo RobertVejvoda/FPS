@@ -5,12 +5,12 @@ import { fetchUnreadCount } from './notifications';
 
 const POLL_INTERVAL_MS = 30_000;
 
-export function useUnreadCount(): number {
+export function useUnreadCount(enabled = true): number {
   const { isConfigured, apiBaseUrl, bearerToken } = useAuth();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (!isConfigured) {
+    if (!enabled || !isConfigured) {
       setCount(0);
       return;
     }
@@ -36,7 +36,7 @@ export function useUnreadCount(): number {
       clearInterval(id);
       sub.remove();
     };
-  }, [isConfigured, apiBaseUrl, bearerToken]);
+  }, [enabled, isConfigured, apiBaseUrl, bearerToken]);
 
   return count;
 }
