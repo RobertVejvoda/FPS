@@ -18,7 +18,7 @@ This is an architecture and product control document. It does not certify GDPR c
 | Encryption in transit | TLS at ingress | [Network Security](./network-security) |
 | Encryption at rest | Delegated to infrastructure | Gap — see [Gap Register](./gap-register) |
 | Observability / logging | Structured stdout + OTel traces | [Logging and Monitoring](./logging-monitoring) |
-| Incident response | Runbook exists | [Incident Response](./incident-response) |
+| Incident response | Runbook exists | [Incident Handling](../production/incident-handling) |
 | BYOC responsibility split | Explicit | [Client Production Handoff](../production/client-production-handoff) |
 | Known gaps | Documented | [Gap Register](./gap-register) |
 
