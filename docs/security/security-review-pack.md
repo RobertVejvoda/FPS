@@ -133,6 +133,219 @@ OpenTelemetry trace export (OTLP) is implemented in the OBS001 baseline. Metrics
 
 ---
 
+## Data Ownership and BYOC Boundaries
+
+FairSpot is designed for client-owned operation where the client controls the infrastructure, data residency, and identity provider. This section clarifies what FairSpot stores versus what remains in the customer's systems.
+
+### What FairSpot Stores (Confidential)
+
+FairSpot stores the **minimum** tenant and employee data required for parking operations:
+
+| Data | Purpose | Source | Classification |
+|------|---------|--------|---------------|
+| Tenant configuration | Policy, locations, spaces, capacity | Admin/Configuration API | Confidential |
+| User profile identifiers | Subject mapping from IdP (`sub`), optional `employeeId` | SSO/OIDC claims or admin import | Confidential |
+| Vehicle facts | License plate, vehicle type where policy requires | Employee self-service or HR import | Confidential |
+| Eligibility flags | Company car, accessibility, home location | HR/admin or IdP claims | Confidential |
+| Booking requests & outcomes | Request, allocation, cancellation, usage confirmation | Employee/Draw/System | Confidential |
+| Notifications | In-app records, delivery metadata | Notification service | Confidential |
+| Audit records | Action, actor hash, resource, timestamp, reason | All services | Confidential |
+| Reporting projections | Aggregated usage, fairness metrics | Reporting service | Confidential |
+
+**Key constraint**: FairSpot collects only what is necessary for parking operations, audit, notification, and reporting. It does not replicate the customer's full HR database.
+
+### What Remains in the Customer IdP
+
+The following **always** remain with the customer and are **never** stored in FairSpot:
+
+| Data | Owner | Notes |
+|------|-------|-------|
+| Company passwords | Customer IdP | FairSpot validates tokens; it never sees or stores passwords. |
+| MFA state and recovery codes | Customer IdP | MFA policy and enforcement are IdP responsibilities. |
+| Full employee directory | Customer HR/IdP | FairSpot imports only mapped profile facts needed for policy. |
+| Organizational structure | Customer HR | Department, manager, cost centre stay with the customer unless explicitly required for parking policy. |
+| Employment contracts | Customer HR | Start date, termination, contract type are not FairSpot data unless policy explicitly needs them. |
+| Payroll and compensation | Customer HR/Finance | Never imported or stored by FairSpot. |
+
+### Pseudonymisation Strategy
+
+FairSpot uses **pseudonymisation** to balance auditability with privacy:
+
+- **Audit records** store `actor_hash` (SHA-256 of `userId`), not names or emails.
+- **PII mapping** is stored separately in a mapping table that links `actor_hash` to real identity.
+- **On GDPR erasure**: the PII mapping row is deleted; audit records remain immutable and anonymous.
+- **Benefit**: Allocation fairness and audit evidence survive erasure while direct PII is removed.
+
+This approach aligns with GDPR Article 25 (data protection by design) and Recital 26 (pseudonymisation as a safeguard).
+
+---
+
+## Retention Schedules
+
+FairSpot requires explicit retention periods before production use. Current implementation status: **documented placeholders only; enforcement jobs not yet implemented.**
+
+| Data Type | Recommended Retention | Deletion Method | Implementation Status |
+|-----------|----------------------|-----------------|----------------------|
+| **Booking requests (allocated)** | 1 year after booking date | Automated job deletes old booking aggregates | Gap — see [Gap Register](./gap-register) § GDPR |
+| **Booking requests (rejected/cancelled)** | 90 days after final status | Automated job | Gap |
+| **In-app notifications** | 90 days after creation | Automated job deletes old notification records | Gap |
+| **Audit records (business actions)** | 7 years (or per jurisdiction) | Automated job deletes old records OR archive to cold storage | Gap — A004 planned |
+| **Audit PII mapping** | Same as audit records, or shorter where erasure is requested | `DELETE /audit/erasure/{userId}` (implemented) | Implemented for manual erasure; bulk retention job not yet implemented |
+| **Security logs** | 1 year (or per incident retention policy) | Infrastructure log retention (client responsibility) | Client responsibility |
+| **Reporting projections** | 2 years | Automated job or manual export + delete | Gap |
+| **Backups** | 30 days rolling for operational backups; 7 years for compliance archives where required | Backup lifecycle policy in client infrastructure | Client responsibility |
+| **Temporary import files** | Delete after processing or 7 days, whichever is shorter | Automated cleanup or manual admin action | Gap — not yet implemented |
+
+**Client responsibility**: The retention schedule must align with the customer's legal basis, jurisdiction (GDPR, CCPA, local laws), and data processing agreement. FairSpot provides the deletion mechanisms; the client configures and enforces the schedule.
+
+**Production-blocking**: Retention jobs for bookings, notifications, and audit records must be implemented or explicitly deferred with client approval before production use.
+
+---
+
+## Privileged and Break-Glass Access
+
+FairSpot enforces least-privilege access by default. Administrative and break-glass access requires explicit justification, time-bounding, and audit.
+
+### Privileged Roles
+
+| Role | Scope | Permitted Actions | Audit Requirement |
+|------|-------|------------------|------------------|
+| `admin` | Tenant-scoped | Create/modify tenant config, users, roles, locations, spaces, policy | All admin actions audited with actor, tenant, resource, reason |
+| `hr_manager` | Tenant + location-scoped | View/modify bookings for operational exceptions, manual allocation, penalty adjustment | Requires reason field; audited |
+| `auditor` | Tenant-scoped, read-only | Query audit records, export reports | Audit access audited |
+| `report_viewer` | Tenant-scoped, read-only | View aggregated reporting, fairness summaries | Not audited (operational read) |
+| `employee` | Own data only | Request, cancel, confirm own bookings; view own notifications | Standard audit for booking lifecycle |
+
+**No cross-tenant roles exist.** Admin for Tenant A cannot see or modify Tenant B data.
+
+### Break-Glass Access (Production Operator / IT Support)
+
+Break-glass access is **not a role** in FairSpot. It is an operational procedure for client IT when normal access is insufficient:
+
+| Scenario | Access Method | Required Controls |
+|----------|---------------|------------------|
+| Database-level investigation | Direct database read access | Named operator, approval ticket, time-bound session (e.g. 2 hours), post-access review |
+| Secret access (e.g. database connection string, API key) | Secret store admin access | Dual control where possible, approval, rotation after access, audit entry |
+| Incident response (data corruption, security event) | Temporary elevated FairSpot admin role + database access | Incident ticket, executive/security approval, full action log, post-incident review |
+| Backup restore | Restore script + approved backup file | Change request, tested procedure, validation checklist |
+
+**Audit requirement**: All break-glass actions must be recorded in a client-maintained access log with:
+- Operator identity
+- Approval source (ticket ID, approver name)
+- Reason and affected tenant/user/resource
+- Timestamp and duration
+- Actions taken
+- Post-access follow-up (e.g., secret rotation, data validation)
+
+**Secret rotation rule**: Any secret accessed by a human operator must be rotated immediately after the incident is resolved.
+
+---
+
+## Secret Management and Rotation
+
+FairSpot uses **Dapr secretstore** as the abstraction boundary. The concrete secret store (Vault, Azure Key Vault, AWS Secrets Manager, etc.) is a client deployment choice.
+
+### Secret Inventory
+
+| Secret Type | Where Stored | Rotation Schedule | Rotation Method |
+|-------------|--------------|------------------|-----------------|
+| Database connection strings | Dapr secretstore | Quarterly or on exposure | Client rotates in secret store; FairSpot services restart to pick up new value |
+| Message broker credentials | Dapr secretstore | Quarterly or on exposure | Client rotates; Dapr component restart |
+| OIDC client secret (if required) | Dapr secretstore | Annually or on exposure | Client rotates at IdP and in secret store |
+| Object storage credentials | Dapr secretstore | Quarterly or on exposure | Client rotates |
+| Local account credential verifiers | Identity service database (hashed) | On user reset or security incident | Identity service API handles reset; hashes are never exported |
+| Backup encryption keys | Client key management | Annually or on exposure | Client responsibility |
+| CI/CD secrets (GitHub tokens, registry credentials) | GitHub Secrets or equivalent | Annually or on exposure | Delivery team rotates |
+
+**Client responsibility**: Secret rotation schedules, automation, and monitoring are owned by the client. FairSpot provides the secretstore abstraction; it does not rotate secrets automatically.
+
+**Production requirement**: A documented secret rotation runbook must exist before go-live, covering all production secrets and break-glass recovery scenarios.
+
+---
+
+## DPIA and Data Processing Agreement Inputs
+
+FairSpot is an architecture and product; it does not certify GDPR compliance. A **Data Protection Impact Assessment (DPIA)** and **Data Processing Agreement (DPA)** are client/legal responsibilities. This section provides product inputs for those documents.
+
+### DPIA Inputs
+
+| DPIA Question | FairSpot Input |
+|---------------|----------------|
+| What personal data is processed? | Employee subject ID, optional employee ID, vehicle license plate (where policy requires), company-car flag, accessibility flag, home location, booking requests, allocation outcomes, notifications, audit actor hash. See [Data Privacy](./data-privacy). |
+| What is the purpose? | Fair allocation of limited parking capacity, operational notifications, audit evidence, fairness reporting, tenant policy configuration. |
+| What is the legal basis? | **Client determines legal basis.** FairSpot supports legitimate interest, consent, or contract performance depending on client policy. Privacy notice delivery is client responsibility. |
+| Who has access? | Employees (own data), HR/facilities (tenant-scoped operational data), auditors (tenant audit records), admins (tenant config). No cross-tenant access. See [Security Model](./security-model) § Role to Data Access. |
+| Where is data stored? | Client-controlled infrastructure. Data residency determined by client deployment region. FairSpot is provider-neutral; client chooses Azure, AWS, GCP, on-premises, etc. |
+| How long is data retained? | Configurable retention periods. Recommended defaults: bookings 1 year, notifications 90 days, audit 7 years. Client enforces retention; FairSpot provides deletion mechanisms. See Retention Schedules above. |
+| What are the risks? | Fairness perception if allocation internals leak; privacy risk if tenant isolation fails; security risk if secrets are exposed. Mitigations: pseudonymised audit, tenant-scoped queries, secret store, TLS, audit controls. See [Gap Register](./gap-register). |
+| What safeguards are in place? | SSO-first (no company passwords stored), pseudonymised audit, tenant isolation, data minimisation, encryption in transit, secret management, role-based access, audit trails, GDPR erasure support. |
+
+### DPA and Subprocessor Guidance
+
+FairSpot is designed for **client-owned infrastructure** (BYOC). In this model:
+
+- **Controller**: The client (employer/facilities owner).
+- **Processor**: The client's IT operations or chosen managed-service provider.
+- **FairSpot role**: Software supplier; not a processor unless FairSpot team operates infrastructure on client's behalf (not the current model).
+
+**Subprocessors**: The client must list subprocessors in their DPA. Typical subprocessors in a FairSpot deployment:
+
+| Service | Subprocessor Examples | Purpose |
+|---------|----------------------|---------|
+| Container hosting | Azure, AWS, GCP, or on-premises | Runtime environment |
+| Database | MongoDB Atlas, AWS DocumentDB, Azure Cosmos DB, or self-hosted | Persistence |
+| Identity provider | Azure AD, Okta, Keycloak (self-hosted) | Authentication |
+| Secret store | HashiCorp Vault, Azure Key Vault, AWS Secrets Manager | Secret management |
+| Object storage | Azure Blob, AWS S3, MinIO (self-hosted) | Exports, backups |
+| Observability | Grafana Cloud, Datadog, Splunk, or self-hosted | Logs, metrics, traces |
+| Email delivery (if enabled) | SendGrid, AWS SES, or SMTP relay | Notification delivery |
+
+**Client responsibility**: Maintain the subprocessor list, sign DPAs with each subprocessor where required, and update privacy notices when subprocessors change.
+
+---
+
+## Implementation Gaps Blocking Production Use
+
+The following gaps are documented in the [Gap Register](./gap-register) and must be resolved before production deployment:
+
+### GDPR and Data Privacy
+
+| Gap | Severity | Blocker? | Planned Resolution |
+|-----|----------|----------|-------------------|
+| Full employee data erasure path not implemented | High | **Yes** | Coordinated erasure flow across Profile, Booking, Notification, Audit services. Issue to be created. |
+| Retention schedules not enforced | High | **Yes** | Automated retention jobs for bookings (1 year), notifications (90 days), audit (7 years or client policy). A004 exists for audit; booking/notification jobs to be sliced. |
+| No consent or privacy notice flow | Medium | **No** (client UX/legal responsibility) | Client must implement at IdP or application layer. FairSpot does not display or record consent. |
+| DPIA not completed | Medium | **Yes** (legal/client responsibility) | Client legal team completes DPIA using inputs from this document. |
+
+### Security and Access Control
+
+| Gap | Severity | Blocker? | Planned Resolution |
+|-----|----------|----------|-------------------|
+| Encryption at rest not configured | High | **Yes** | Client enables encryption on all stores. FairSpot delegates to infrastructure; no code change needed. |
+| TLS for internal service-to-service traffic (Dapr mTLS) | Medium | **Yes** | Enable Dapr mTLS in production `fps-config.yaml`. Client responsibility. |
+| Infrastructure-layer tenant isolation (shared stores) | Medium | **Yes** | Planned in OPS008. Current design uses application-layer tenant keys; production should use per-tenant collections or schemas. |
+| No rate limiting on authentication endpoints | Medium | **Yes** | Envoy rate-limit policy to be configured before go-live. |
+| No Web Application Firewall (WAF) | Medium | **Yes** | Client must add WAF or cloud-native DDoS protection in production. |
+
+### Observability and Incident Response
+
+| Gap | Severity | Blocker? | Planned Resolution |
+|-----|----------|----------|-------------------|
+| Prometheus metrics not yet emitted | Medium | **No** (OBS002 in progress) | OBS002 adds metrics export. Non-blocking; monitoring is still possible via logs and traces. |
+| Alerting rules not configured | Medium | **Yes** | OBS003 to define critical alert rules (service down, Draw failure, audit ingestion failure). |
+| Log shipping to SIEM not configured | Medium | **No** (client responsibility) | Client configures log shipper (Fluent Bit, Fluentd, Splunk forwarder) to ship container stdout to SIEM. |
+
+### Backup and Restore
+
+| Gap | Severity | Blocker? | Planned Resolution |
+|-----|----------|----------|-------------------|
+| No tenant-scoped restore procedure tested | High | **Yes** | Document and test per-tenant restore from backup. Planned in backup-restore.md update. |
+| Backup encryption key ownership undefined | Medium | **Yes** | Client must define key ownership and recovery process before first production backup. |
+
+**Recommendation**: Treat all **"Yes"** blockers as mandatory pre-production tasks. Schedule a security and operations review with the client 4–6 weeks before planned go-live.
+
+---
+
 ## Security Review Checklist for Client Evaluators
 
 | Item | Check |
@@ -147,3 +360,8 @@ OpenTelemetry trace export (OTLP) is implemented in the OBS001 baseline. Metrics
 | Erasure | Test `DELETE /audit/erasure/{userId}` and verify profile/booking data handling |
 | Backup/restore | Run restore drill per [Backup And Restore](../production/backup-restore) |
 | Incident response | Review [Incident Response](./incident-response) and confirm contacts are populated |
+| Data ownership | Review "What FairSpot Stores" vs "What Remains in Customer IdP" table above |
+| Retention schedules | Confirm client-approved retention periods and enforcement plan |
+| Privileged access | Review break-glass procedure, operator access log, and secret rotation rules |
+| DPIA inputs | Provide DPIA inputs table to client legal/DPO for assessment |
+| Production gaps | Review [Gap Register](./gap-register) and confirm all blockers have resolution plans |
