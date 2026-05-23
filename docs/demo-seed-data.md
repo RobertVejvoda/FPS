@@ -35,13 +35,15 @@ After running `dev-seed.sh`, 7 pending booking requests exist:
 
 | Employee | Vehicle | Days ahead | Notes |
 |----------|---------|-----------|-------|
-| employee1 | EMP1001 (Sedan) | +1 | Standard booking |
-| employee1 | EMP1002 (EV) | +3 | EV space preference |
-| employee1 | EMP1001 (Sedan) | +5 | Additional booking |
-| employee2 | COMPANY001 | +2 | Company car priority |
-| employee2 | COMPANY001 | +4 | Company car priority |
-| employee3 | EMP3001 | +1 | Accessible spot request |
-| employee3 | EMP3001 | +3 | Accessible spot request |
+| employee1 | EMP1001 (Sedan) | +2 | Standard booking |
+| employee1 | EMP1002 (EV) | +4 | EV space preference |
+| employee1 | EMP1001 (Sedan) | +6 | Additional booking |
+| employee2 | COMPANY001 | +3 | Company car priority |
+| employee2 | COMPANY001 | +5 | Company car priority |
+| employee3 | EMP3001 | +2 | Accessible spot request |
+| employee3 | EMP3001 | +4 | Accessible spot request |
+
+All bookings use dates ≥+2 days to stay clear of the draw cutoff that applies to same-day/+1 requests, ensuring they land as `Pending` regardless of time of day.
 
 These bookings trigger Dapr pub/sub events (when sidecars are running), which populate:
 - **Notifications**: each booking creates an in-app notification for the requestor

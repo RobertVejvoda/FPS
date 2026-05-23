@@ -144,10 +144,10 @@ seed_booking() {
       \"plannedDepartureTime\": \"$departure\"
     }" 2>/dev/null || echo "000")
 
-  if [[ "$http_code" = "202" || "$http_code" = "200" || "$http_code" = "422" ]]; then
-    ok "Booking $username $booking_date (HTTP $http_code)"
+  if [[ "$http_code" = "202" ]]; then
+    ok "Booking $username $booking_date (202 Accepted → pending)"
   else
-    err "Booking $username $booking_date HTTP $http_code"
+    err "Booking $username $booking_date HTTP $http_code (expected 202 — check policy cutoff, eligibility, or service logs)"
     return 1
   fi
 }
@@ -180,18 +180,19 @@ seed_profile "auditor"       "false" "false" '[]'
 echo ""
 echo "-- Bookings (generates notifications, audit records, and reporting data) --"
 
+# Dates start at +2 to stay clear of the draw cutoff that applies to +1/same-day requests.
 # employee1: two regular bookings + one EV booking
-seed_booking "employee1" "EMP1001" "Sedan" "false" "false" "false" "1"
-seed_booking "employee1" "EMP1002" "Sedan" "true"  "false" "false" "3"
-seed_booking "employee1" "EMP1001" "Sedan" "false" "false" "false" "5"
+seed_booking "employee1" "EMP1001" "Sedan" "false" "false" "false" "2"
+seed_booking "employee1" "EMP1002" "Sedan" "true"  "false" "false" "4"
+seed_booking "employee1" "EMP1001" "Sedan" "false" "false" "false" "6"
 
 # employee2: company car bookings
-seed_booking "employee2" "COMPANY001" "Sedan" "false" "true" "false" "2"
-seed_booking "employee2" "COMPANY001" "Sedan" "false" "true" "false" "4"
+seed_booking "employee2" "COMPANY001" "Sedan" "false" "true" "false" "3"
+seed_booking "employee2" "COMPANY001" "Sedan" "false" "true" "false" "5"
 
 # employee3: accessible spot requests
-seed_booking "employee3" "EMP3001" "Sedan" "false" "false" "true" "1"
-seed_booking "employee3" "EMP3001" "Sedan" "false" "false" "true" "3"
+seed_booking "employee3" "EMP3001" "Sedan" "false" "false" "true" "2"
+seed_booking "employee3" "EMP3001" "Sedan" "false" "false" "true" "4"
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
