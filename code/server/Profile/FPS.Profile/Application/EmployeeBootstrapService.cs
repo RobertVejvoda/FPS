@@ -6,7 +6,7 @@ namespace FPS.Profile.Application;
 file static class KnownFpsRoles
 {
     internal static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase)
-        { "employee", "hr_manager", "admin", "report_viewer" };
+        { "employee", "hr_manager", "admin", "report_viewer", "auditor" };
 }
 
 public sealed record BootstrapEmployeeRequest(
@@ -219,6 +219,8 @@ public sealed class EmployeeBootstrapService(
             ? $"Unknown FPS role(s): {string.Join(", ", unknown)}. Allowed: {string.Join(", ", KnownFpsRoles.All)}."
             : null;
     }
+
+    public static bool IsKnownRole(string role) => KnownFpsRoles.All.Contains(role);
 
     public static string Hash(string value) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(

@@ -163,6 +163,70 @@
         ]
       }
     },
+    "/profile/admin/hr-import/preview": {
+      "post": {
+        "tags": [
+          "HrImport"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "employees": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/profile/admin/hr-import/commit": {
+      "post": {
+        "tags": [
+          "HrImport"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "employees": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/profile/snapshot": {
       "get": {
         "tags": [
@@ -299,6 +363,10 @@
             ]
           }
         }
+      },
+      "IFormFile": {
+        "type": "string",
+        "format": "binary"
       },
       "ImportRequest": {
         "required": [
@@ -492,6 +560,9 @@
   "tags": [
     {
       "name": "EmployeeBootstrap"
+    },
+    {
+      "name": "HrImport"
     },
     {
       "name": "ProfileSnapshot"
