@@ -24,8 +24,8 @@ export function SessionPage() {
       <div style={card}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>FairSpot Employee Portal</h1>
         <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
-          Enter the API base URL and a bearer token from a running backend.
-          Real OIDC login is configured via environment variables in later slices.
+          Use the API base URL and development bearer token printed by the web smoke script.
+          Production OIDC sign-in will replace this manual handoff.
         </p>
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label style={labelStyle}>
@@ -33,7 +33,7 @@ export function SessionPage() {
             <input
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="http://localhost:5100"
+              placeholder="http://localhost:10000"
               autoComplete="off"
               style={inputStyle}
             />
