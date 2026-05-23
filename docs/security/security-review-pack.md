@@ -101,7 +101,7 @@ FPS supports GDPR-aligned operation through these mechanisms:
 
 ## Audit
 
-All sensitive actions — booking submission, allocation, cancellation, no-show, admin policy changes, audit erasure — produce append-only audit events via the Audit service. Audit records include: tenant ID, actor user ID (pseudonymised subject), action, resource, timestamp, and reason where applicable.
+All sensitive actions — booking submission, allocation, cancellation, no-show, admin policy changes, audit erasure — produce append-only audit events via the Audit service. Audit records include: tenant ID, actor_hash (SHA-256 of the token subject — not the raw user ID), action, resource, timestamp, and reason where applicable.
 
 Audit access is restricted to `auditor` and `admin` roles. Raw PII mapping (connecting userId to a real name) requires a separate approved access path.
 
@@ -178,7 +178,7 @@ FairSpot requires explicit retention periods before production use. Implementati
 | **Booking requests (rejected/cancelled)** | 90 days after final status | Automated job | Gap |
 | **In-app notifications** | 90 days after creation | Automated job deletes old notification records | Gap |
 | **Audit records (business actions)** | 7 years (or per jurisdiction) | `DELETE /audit/retention` (implemented, A004) | Implemented; client must configure retention period and schedule invocation |
-| **Audit PII mapping** | Same as audit records, or shorter where erasure is requested | `DELETE /audit/pii-mappings/{userId}` (implemented) | Implemented for manual erasure; bulk retention job not yet implemented |
+| **Audit PII mapping** | Same as audit records, or shorter where erasure is requested | `DELETE /audit/pii-mappings/{userId}` (implemented) | Implemented; `DELETE /audit/retention` also covers PII mapping records when retention period is configured |
 | **Security logs** | 1 year (or per incident retention policy) | Infrastructure log retention (client responsibility) | Client responsibility |
 | **Reporting projections** | 2 years | Automated job or manual export + delete | Gap |
 | **Backups** | 30 days rolling for operational backups; 7 years for compliance archives where required | Backup lifecycle policy in client infrastructure | Client responsibility |
