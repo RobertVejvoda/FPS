@@ -29,6 +29,7 @@ type AuthState = {
   phaseError: string | undefined;
   apiBaseUrl: string;
   bearerToken: string;
+  roles: string[];
   isConfigured: boolean;
   devFallbackEnabled: boolean;
   login: () => Promise<void>;
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [phaseError, setPhaseError] = useState<string | undefined>(undefined);
   const [apiBaseUrl, setApiBaseUrl] = useState('');
   const [bearerToken, setBearerToken] = useState('');
+  const [roles, setRoles] = useState<string[]>([]);
   const [devFallbackEnabled, setDevFallbackEnabled] = useState(false);
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (cancelled) return;
             if (result.kind === 'ok') {
               setBearerToken(user.access_token);
+              setRoles(result.data.roles as string[]);
               setPhase('authenticated');
             } else if (result.kind === 'unreachable') {
               setPhaseError(result.message);
@@ -114,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (result.kind === 'ok') {
               setApiBaseUrl(storedBase);
               setBearerToken(storedToken);
+              setRoles(result.data.roles as string[]);
               setPhase('authenticated');
               return;
             }
@@ -139,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (result.kind === 'ok') {
           setBearerToken(user.access_token);
+          setRoles(result.data.roles as string[]);
           setPhase('authenticated');
         } else if (result.kind === 'unreachable') {
           setPhaseError(result.message);
@@ -171,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     clearCredentials();
     setBearerToken('');
+    setRoles([]);
     const um = userManagerRef.current;
     if (um) {
       try { await um.removeUser(); } catch { /* best effort */ }
@@ -193,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPhase('validating');
     const result = await fetchMe({ apiBaseUrl: normalizedBase, bearerToken: normalizedToken });
     if (result.kind === 'ok') {
+      setRoles(result.data.roles as string[]);
       setPhase('authenticated');
     } else if (result.kind === 'unreachable') {
       setPhaseError(result.message);
@@ -205,6 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => {
     clearCredentials();
     setBearerToken('');
+    setRoles([]);
     setApiBaseUrl(configRef.current?.apiBaseUrl ?? '');
     setPhase('unauthenticated');
   }, []);
@@ -215,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phaseError,
       apiBaseUrl,
       bearerToken,
+      roles,
       isConfigured: phase === 'authenticated',
       devFallbackEnabled,
       login,
@@ -222,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       save,
       clear,
     }),
-    [phase, phaseError, apiBaseUrl, bearerToken, devFallbackEnabled, login, logout, save, clear],
+    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, login, logout, save, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
