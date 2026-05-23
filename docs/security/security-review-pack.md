@@ -186,7 +186,7 @@ FairSpot requires explicit retention periods before production use. Implementati
 
 **Client responsibility**: The retention schedule must align with the customer's legal basis, jurisdiction (GDPR, CCPA, local laws), and data processing agreement. FairSpot provides the deletion mechanisms; the client configures and enforces the schedule.
 
-**Production-blocking**: Retention jobs for bookings, notifications, and audit records must be implemented or explicitly deferred with client approval before production use.
+**Production-blocking**: Retention jobs for bookings and notifications are not yet implemented and must be built or explicitly deferred with client approval before production use. Audit retention is implemented (A004); the client must configure the retention period and schedule invocation.
 
 ---
 
