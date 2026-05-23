@@ -1,0 +1,88 @@
+{
+  "name": "FPS Backend/Web",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "containerEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "FPS_INFRA_HOST": "host.docker.internal",
+    "KEYCLOAK_URL": "http://host.docker.internal:8180"
+  },
+  "runArgs": [
+    "--add-host=host.docker.internal:host-gateway"
+  ],
+  "remoteEnv": {
+    "PATH": "${containerEnv:HOME}/.dotnet:${containerEnv:HOME}/.dotnet/tools:${containerEnv:HOME}/.dapr/bin:${containerEnv:PATH}"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [
+    5200,
+    10000,
+    5192,
+    5131,
+    5197,
+    5157,
+    5141,
+    5161,
+    5171,
+    8180,
+    8200,
+    15672,
+    9001,
+    3000,
+    19411,
+    3601,
+    3607,
+    3617,
+    3611,
+    3621,
+    3631
+  ],
+  "portsAttributes": {
+    "5200": {
+      "label": "FPS Web"
+    },
+    "10000": {
+      "label": "FPS API Gateway"
+    },
+    "8180": {
+      "label": "Keycloak"
+    },
+    "8200": {
+      "label": "Vault"
+    },
+    "15672": {
+      "label": "RabbitMQ"
+    },
+    "19411": {
+      "label": "Zipkin"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-azuretools.vscode-dapr",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "code/server/FPS.sln",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

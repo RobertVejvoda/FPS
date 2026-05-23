@@ -38,6 +38,31 @@ Both scripts leave Docker infrastructure running when stopped with Ctrl-C. They 
 
 The scripts also check frontend dependencies before starting Vite or Expo. They prefer user-installed Node/npm from Homebrew or `/usr/local/bin` over embedded tool runtimes. If `node_modules` is missing or a native optional package probe fails, they run `npm ci` from the app lockfile to repair the local dependency tree. On macOS they also ad-hoc sign local `.node` binaries after install to avoid native optional dependency code-signature failures from packages such as Rollup.
 
+## Devcontainer
+
+Use the devcontainer for repeatable backend and web smoke development when local host tooling is noisy or missing. It provides:
+
+- .NET 10 SDK;
+- Node LTS and npm;
+- Dapr CLI plus `dapr init --slim`;
+- Docker CLI access to the host Docker engine;
+- VS Code tasks for validation, infrastructure startup, smoke scripts, and web/mobile typechecks.
+
+Open the repository in VS Code or Cursor and choose **Reopen in Container**. After the post-create setup completes:
+
+```sh
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+./tools/start-smoke-web.sh
+```
+
+The devcontainer uses the host Docker engine. If Docker Compose bind mounts do not resolve correctly from inside the container on your machine, start Docker infrastructure from a host terminal and then run the smoke script inside the devcontainer. Keep the API/service ports forwarded by the editor.
+
+When running inside the devcontainer, the harness uses `FPS_INFRA_HOST=host.docker.internal` and `KEYCLOAK_URL=http://host.docker.internal:8180` so backend processes in the container can reach infrastructure published by the host Docker engine. On the host machine these default to `localhost`.
+
+For focused backend debugging, start the smoke harness and use the .NET debugger's attach-to-process flow against the service process you need to inspect. This keeps Dapr sidecars and local auth behavior aligned with the same path used by smoke testing.
+
+Physical mobile QR/LAN testing is still host-first. The devcontainer is useful for mobile typechecking and API/backend behavior, but Expo device networking is simpler from the host machine unless tunnel mode is intentionally configured.
+
 Set up local identity once after Keycloak is running:
 
 ```sh

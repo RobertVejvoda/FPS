@@ -1,19 +1,75 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "build-server",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/code/server/FPS.sln"
-            ],
-            "problemMatcher": "$msCompile",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-server",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/code/server/FPS.sln"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "validate",
+      "type": "shell",
+      "command": "./tools/validate.sh",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "infra: up",
+      "type": "shell",
+      "command": "docker compose -f code/infrastructure/docker-compose.yaml up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "infra: down",
+      "type": "shell",
+      "command": "docker compose -f code/infrastructure/docker-compose.yaml down",
+      "problemMatcher": []
+    },
+    {
+      "label": "smoke: web",
+      "type": "shell",
+      "command": "./tools/start-smoke-web.sh",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "smoke: mobile",
+      "type": "shell",
+      "command": "./tools/start-smoke-mobile.sh",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "harness: stop services",
+      "type": "shell",
+      "command": "./tools/stop-local-harness.sh --services-only",
+      "problemMatcher": []
+    },
+    {
+      "label": "web: typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "options": {
+        "cwd": "${workspaceFolder}/code/web/fps-web"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "mobile: typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "options": {
+        "cwd": "${workspaceFolder}/code/mobile/fps-mobile"
+      },
+      "problemMatcher": "$tsc"
+    }
+  ]
 }

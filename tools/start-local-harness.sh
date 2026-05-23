@@ -26,6 +26,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_DIR="$REPO_ROOT/logs/local-harness"
 PID_FILE="$LOG_DIR/pids"
 SKIP_INFRA=false
+INFRA_HOST="${FPS_INFRA_HOST:-localhost}"
 
 log()  { printf '[harness] %s\n' "$*"; }
 fail() { printf '[harness] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -54,10 +55,11 @@ wait_port() {
   port="$1"
   label="$2"
   limit="${3:-60}"
+  host="${4:-localhost}"
   i=0
-  log "Waiting for $label on :$port..."
+  log "Waiting for $label on $host:$port..."
   while [ "$i" -lt "$limit" ]; do
-    if nc -z localhost "$port" 2>/dev/null; then
+    if nc -z "$host" "$port" 2>/dev/null; then
       log "$label ready"
       return 0
     fi
@@ -72,7 +74,8 @@ require_port() {
   label="$2"
   limit="${3:-60}"
   logfile="${4:-$LOG_DIR/service.log}"
-  wait_port "$port" "$label" "$limit" || {
+  host="${5:-localhost}"
+  wait_port "$port" "$label" "$limit" "$host" || {
     printf '[harness] ERROR: %s did not bind :%-4s within %ss\n' "$label" "$port" "$((limit * 2))" >&2
     printf '[harness]   Check log: %s\n' "$logfile" >&2
     printf '[harness]   Run: ./tools/stop-local-harness.sh\n' >&2
@@ -102,7 +105,7 @@ fi
 
 # ── Keycloak health ───────────────────────────────────────────────────────────
 
-require_port 8180 "Keycloak" 60 "docker compose logs keycloak"
+require_port 8180 "Keycloak" 60 "docker compose logs keycloak" "$INFRA_HOST"
 
 # ── Auth setup ────────────────────────────────────────────────────────────────
 
