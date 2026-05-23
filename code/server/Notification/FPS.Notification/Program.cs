@@ -2,6 +2,7 @@ using FPS.Notification.Application;
 using FPS.Notification.Identity;
 using FPS.Notification.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
+using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -58,6 +59,7 @@ builder.Services.AddOpenApi("v1", options =>
 });
 
 builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsObservability("fps-notification", builder.Configuration);
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -69,6 +71,7 @@ app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
+app.UseFpsRequestTraceLogging();
 app.MapFpsHealthChecks();
 app.Run();
 

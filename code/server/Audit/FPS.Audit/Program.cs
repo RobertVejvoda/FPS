@@ -3,6 +3,7 @@ using FPS.Audit.Domain;
 using FPS.Audit.Identity;
 using FPS.Audit.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
+using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +36,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsObservability("fps-audit", builder.Configuration);
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -44,6 +46,7 @@ app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
+app.UseFpsRequestTraceLogging();
 app.MapFpsHealthChecks();
 app.Run();
 

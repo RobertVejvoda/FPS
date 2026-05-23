@@ -2,6 +2,7 @@ using Dapr.Client;
 using FPS.Booking.API.Identity;
 using FPS.Booking.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
+using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -54,6 +55,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsObservability("fps-booking", builder.Configuration);
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -66,6 +68,7 @@ app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
+app.UseFpsRequestTraceLogging();
 app.MapFpsHealthChecks();
 app.Run();
 
