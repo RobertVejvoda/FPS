@@ -53,6 +53,19 @@ URL and a bearer token issued by a development Identity service. Values are
 stored in `AsyncStorage` on the device only — they are never bundled, committed,
 or sent anywhere off-device.
 
+For local OIDC smoke testing from a physical phone, prefer the repository helper
+from the repo root:
+
+```sh
+sh ./tools/start-smoke-mobile.sh
+```
+
+The script configures Expo with the local `fps-mobile-dev` client, a
+device-reachable Keycloak issuer, and a device-reachable API base URL. If
+Tailscale is installed, it prefers the development machine's Tailscale IPv4
+address. Override with `FPS_MOBILE_HOST`, `FPS_MOBILE_KEYCLOAK_URL`, or
+`FPS_MOBILE_API_BASE_URL` when needed.
+
 The mobile app expects one API base URL that exposes the employee endpoints for
 Identity, Booking, Notification, and Profile. A physical device cannot use the
 developer machine's `localhost`; use a LAN-reachable gateway, tunnel, or hosted

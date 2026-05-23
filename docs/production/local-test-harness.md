@@ -370,6 +370,13 @@ The developer session screen still requires both values:
 - API base URL: `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (phone);
 - bearer token: a local development token from `./tools/dev-auth.sh`.
 
+For real mobile OIDC login, prefer `sh ./tools/start-smoke-mobile.sh`. The script exports Expo runtime config for the local `fps-mobile-dev` client and uses one device-reachable host for both Keycloak and the API gateway. When Tailscale is installed, it prefers the Mac's Tailscale IPv4 address; otherwise it uses the LAN address. Override detection with:
+
+```sh
+FPS_MOBILE_HOST=<host-or-ip> sh ./tools/start-smoke-mobile.sh
+FPS_MOBILE_KEYCLOAK_URL=http://<host-or-ip>:8180 FPS_MOBILE_API_BASE_URL=http://<host-or-ip>:10000 sh ./tools/start-smoke-mobile.sh
+```
+
 ## Seeding Local Demo Data (OPS006D)
 
 After starting services (Identity + `dapr run -f dapr.yaml`), run the seed script once:

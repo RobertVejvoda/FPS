@@ -23,7 +23,8 @@
       "redirectUris": ["*"],
       "webOrigins": ["*"],
       "attributes": {
-        "access.token.lifespan": "3600"
+        "access.token.lifespan": "3600",
+        "pkce.code.challenge.method": "S256"
       },
       "protocolMappers": [
         {

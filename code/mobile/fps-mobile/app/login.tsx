@@ -17,27 +17,35 @@ type LoginStatus =
   | { kind: 'cancelled' }
   | { kind: 'error'; message: string };
 
-function useOptionalDiscovery(configured: boolean, issuerUrl: string) {
-  const [discovery, setDiscovery] = useState<AuthSession.DiscoveryDocument | null>(null);
+type DiscoveryState = {
+  discovery: AuthSession.DiscoveryDocument | null;
+  error: string | null;
+};
+
+function useOptionalDiscovery(configured: boolean, issuerUrl: string): DiscoveryState {
+  const [state, setState] = useState<DiscoveryState>({ discovery: null, error: null });
 
   useEffect(() => {
     let isMounted = true;
-    setDiscovery(null);
+    setState({ discovery: null, error: null });
 
     if (!configured) return () => { isMounted = false; };
 
     AuthSession.resolveDiscoveryAsync(issuerUrl)
       .then(result => {
-        if (isMounted) setDiscovery(result);
+        if (isMounted) setState({ discovery: result, error: null });
       })
       .catch(() => {
-        if (isMounted) setDiscovery(null);
+        if (isMounted) setState({
+          discovery: null,
+          error: 'Identity provider is not reachable from this device.',
+        });
       });
 
     return () => { isMounted = false; };
   }, [configured, issuerUrl]);
 
-  return discovery;
+  return state;
 }
 
 export default function LoginRoute() {
@@ -49,7 +57,7 @@ export default function LoginRoute() {
 
   const redirectUri = AuthSession.makeRedirectUri({ path: 'login-callback' });
 
-  const discovery = useOptionalDiscovery(configured, oidcConfig.issuerUrl);
+  const { discovery, error: discoveryError } = useOptionalDiscovery(configured, oidcConfig.issuerUrl);
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -139,6 +147,8 @@ export default function LoginRoute() {
           <Text style={styles.hint}>Sign in was cancelled.</Text>
         ) : status.kind === 'error' ? (
           <Text style={styles.error}>{status.message}</Text>
+        ) : discoveryError ? (
+          <Text style={styles.error}>{discoveryError}</Text>
         ) : null}
 
         {configured ? (

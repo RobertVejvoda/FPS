@@ -16,6 +16,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MOBILE_DIR="$REPO_ROOT/code/mobile/fps-mobile"
 EXPO_PID=""
 EXPO_MODE="${EXPO_MODE:-lan}"
+REALM="${FPS_LOCAL_REALM:-fps-local}"
+CLIENT_ID="${FPS_LOCAL_CLIENT:-fps-mobile-dev}"
 
 cleanup() {
   if [ -n "$EXPO_PID" ] && kill -0 "$EXPO_PID" 2>/dev/null; then
@@ -35,13 +37,31 @@ detect_lan_ip() {
   return 1
 }
 
+detect_tailscale_ip() {
+  if command -v tailscale >/dev/null 2>&1; then
+    tailscale ip -4 2>/dev/null | awk 'NR == 1 { print; exit }' && return 0
+  fi
+  return 1
+}
+
 trap cleanup INT TERM EXIT
+
+LAN_IP="$(detect_lan_ip || true)"
+TAILSCALE_IP="$(detect_tailscale_ip || true)"
+MOBILE_HOST="${FPS_MOBILE_HOST:-${TAILSCALE_IP:-${LAN_IP:-localhost}}}"
+MOBILE_KEYCLOAK_URL="${FPS_MOBILE_KEYCLOAK_URL:-http://$MOBILE_HOST:8180}"
+MOBILE_API_BASE_URL="${FPS_MOBILE_API_BASE_URL:-http://$MOBILE_HOST:10000}"
+
+export KEYCLOAK_URL="$MOBILE_KEYCLOAK_URL"
+export FPS_MOBILE_AUTH_ISSUER_URL="${FPS_MOBILE_AUTH_ISSUER_URL:-$MOBILE_KEYCLOAK_URL/realms/$REALM}"
+export FPS_MOBILE_AUTH_CLIENT_ID="${FPS_MOBILE_AUTH_CLIENT_ID:-$CLIENT_ID}"
+export FPS_MOBILE_AUTH_SCOPES="${FPS_MOBILE_AUTH_SCOPES:-openid profile email}"
+export FPS_MOBILE_API_BASE_URL="$MOBILE_API_BASE_URL"
 
 cd "$REPO_ROOT"
 "$REPO_ROOT/tools/start-local-harness.sh" --skip-infra
 
 TOKEN="$("$REPO_ROOT/tools/dev-auth.sh" employee1)"
-LAN_IP="$(detect_lan_ip || true)"
 
 printf '\n'
 printf '================================================\n'
@@ -51,10 +71,16 @@ printf ' API base URL, simulator/browser: http://localhost:10000\n'
 if [ -n "$LAN_IP" ]; then
   printf ' API base URL, physical phone:    http://%s:10000\n' "$LAN_IP"
 fi
+if [ -n "$TAILSCALE_IP" ]; then
+  printf ' API base URL, Tailscale phone:   http://%s:10000\n' "$TAILSCALE_IP"
+fi
+printf ' Mobile OIDC issuer:              %s\n' "$FPS_MOBILE_AUTH_ISSUER_URL"
+printf ' Mobile OIDC client:              %s\n' "$FPS_MOBILE_AUTH_CLIENT_ID"
 printf ' Demo user: employee1\n'
+printf ' Demo password: %s\n' "${FPS_DEV_PASSWORD:-Dev1234!}"
 printf ' Bearer token: %s\n' "$TOKEN"
 printf '\n'
-printf 'Use the Developer Session screen if OIDC login is not configured.\n'
+printf 'Use Sign in for OIDC login, or Developer Session for manual token smoke testing.\n'
 printf 'Set EXPO_MODE=tunnel before running this script if LAN QR scanning fails.\n'
 printf 'Stop with Ctrl-C. Docker infrastructure will stay running.\n'
 printf '================================================\n'
