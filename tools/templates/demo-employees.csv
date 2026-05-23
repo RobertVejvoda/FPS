@@ -1,0 +1,8 @@
+external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active
+employee1,Alex Demo,,employee,HQ,A,true,false,false,false,true
+employee2,Sam Demo,,employee,HQ,,true,true,false,false,true
+employee3,Jordan Demo,,employee,HQ,,true,false,true,false,true
+hr1,HR Manager,,hr_manager,HQ,,false,false,false,false,true
+admin1,Tenant Admin,,admin,HQ,,false,false,false,false,true
+viewer1,Report Viewer,,report_viewer,HQ,,false,false,false,false,true
+auditor1,Auditor,,auditor,HQ,,false,false,false,false,true

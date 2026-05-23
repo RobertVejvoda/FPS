@@ -1,0 +1,12 @@
+external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active
+# external_subject: stable identifier from company IdP (e.g. username or sub claim) — required
+# display_name: optional, used in UI only, not stored as HR record
+# email: optional, used for notifications only
+# roles: comma-separated list from: employee, hr_manager, admin, report_viewer, auditor
+# home_location: location code matching a configured FPS location (e.g. HQ, BRANCH_A)
+# preferred_zone: parking zone preference (e.g. A, B, COVERED) — leave blank for none
+# parking_eligible: true/false
+# has_company_car: true/false
+# accessibility_eligible: true/false — triggers accessible space priority
+# reserved_space_eligible: true/false — for fixed-space holders
+# active: true/false — false = account disabled, excluded from draws

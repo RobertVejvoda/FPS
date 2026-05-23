@@ -1,0 +1,3 @@
+external_subject,vehicle_alias,vehicle_license_plate,vehicle_type,vehicle_is_electric,active
+employee1,Daily Driver,ABC-1234,car,false,true
+employee3,Electric Car,EV-9999,car,true,true
