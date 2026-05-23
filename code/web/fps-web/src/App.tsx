@@ -1,5 +1,15 @@
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
+import {
+  canAccessAudit,
+  canAccessBookings,
+  canAccessConfiguration,
+  canAccessNotifications,
+  canAccessProfile,
+  canAccessReporting,
+  canAccessTenantAdmin,
+  defaultRoute,
+} from './auth/roles';
 import { SessionPage } from './pages/SessionPage';
 import { OidcCallbackPage } from './pages/OidcCallbackPage';
 import { BookingsPage } from './pages/BookingsPage';
@@ -10,21 +20,26 @@ import { ReportingPage } from './pages/ReportingPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { AuditPage } from './pages/AuditPage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
+import { ForbiddenPage } from './pages/ForbiddenPage';
 
-const navItems = [
-  { to: '/bookings', label: 'Bookings' },
-  { to: '/profile', label: 'Profile' },
-  { to: '/notifications', label: 'Notifications' },
-  { to: '/reporting', label: 'Reports' },
-  { to: '/configuration', label: 'Configuration' },
-  { to: '/audit', label: 'Audit' },
-  { to: '/tenant-admin', label: 'Admin' },
-];
+function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
+  return allowed ? <>{children}</> : <ForbiddenPage />;
+}
 
 function Shell() {
-  const { isConfigured, logout, branding } = useAuth();
+  const { isConfigured, logout, branding, roles } = useAuth();
 
   if (!isConfigured) return <Navigate to="/session" replace />;
+
+  const navItems = [
+    canAccessBookings(roles) && { to: '/bookings', label: 'Bookings' },
+    canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
+    canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
+    canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
+    canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
+    canAccessAudit(roles) && { to: '/audit', label: 'Audit' },
+    canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: 'Admin' },
+  ].filter(Boolean) as { to: string; label: string }[];
 
   return (
     <div className="app-shell">
@@ -58,15 +73,15 @@ function Shell() {
       </header>
       <main className="app-main">
         <Routes>
-          <Route path="/bookings" element={<BookingsPage />} />
-          <Route path="/bookings/new" element={<NewBookingPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/reporting" element={<ReportingPage />} />
-          <Route path="/configuration" element={<ConfigurationPage />} />
-          <Route path="/audit" element={<AuditPage />} />
-          <Route path="/tenant-admin" element={<TenantAdminPage />} />
-          <Route path="*" element={<Navigate to="/bookings" replace />} />
+          <Route path="/bookings" element={<Guard allowed={canAccessBookings(roles)}><BookingsPage /></Guard>} />
+          <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
+          <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
+          <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
+          <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
+          <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
+          <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
+          <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
+          <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />
         </Routes>
       </main>
     </div>
