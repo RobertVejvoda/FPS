@@ -22,7 +22,7 @@ This pack gives a new evaluator enough context to decide whether FairSpot is wor
 | Sponsor / business owner | [Strategy](./strategy), [Demo and Evaluation](./demo-and-evaluation), [Roadmap](./roadmap) | Product value, demo scope, pilot readiness, and roadmap credibility. |
 | HR / facilities | [Business](./business-layer), [Allocation Rules](./business-layer/allocation-rules), [Booking](./business-layer/booking) | Policy fit, fairness rules, employee-visible reasons, and operational workflow. |
 | Client IT / architect | [Architecture Summary](./architecture-views), [Production](./production), [Hosting Strategy](./production/hosting-deployment-strategy) | Service boundaries, Dapr/OpenTelemetry portability, identity integration, and deployment ownership. |
-| Security / DPO | [Security Model](./security/security-model), [Data Privacy](./security/data-privacy), [Customer Integration](./business-layer/customer-data-import) | Tenant isolation, data classification, audit, GDPR erasure, SSO, secrets, and local-account fallback. |
+| Security / DPO | [Security Review Pack](./security/security-review-pack), [Gap Register](./security/gap-register), [Security Model](./security/security-model), [Data Privacy](./security/data-privacy) | Security posture overview, BYOC boundaries, GDPR alignment, known gaps, and client review checklist. |
 | Operator | [Demo Environment Baseline](./production/demo-environment-baseline), [Monitoring](./production/monitoring), [Backup And Restore](./production/backup-restore) | Runtime shape, smoke tests, telemetry, backup/restore, reset, rollback, and cost evidence. |
 
 ## Role-Based Demo Script
