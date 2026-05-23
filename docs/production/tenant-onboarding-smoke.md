@@ -1,0 +1,215 @@
+# Tenant Onboarding E2E Smoke Scenario
+
+This document defines the end-to-end smoke scenario for onboarding a synthetic company tenant in FPS. Each step is marked with its implementation status for the local demo environment.
+
+**Status legend:**
+- ✅ **Implemented** — runnable today via API or script
+- 🔧 **Manual** — requires manual steps in a UI or config file
+- 🟡 **Evaluation-grade** — exists but uses demo shortcuts not suitable for production
+- ❌ **Missing** — not yet implemented; blocker issue noted
+
+**Synthetic tenant:** `acme-corp`, a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
+
+---
+
+## Pre-conditions
+
+1. Local infrastructure running: `docker compose -f code/infrastructure/docker-compose.yaml up -d`
+2. Local harness running: `./tools/start-local-harness.sh`
+3. Keycloak available at `http://localhost:8180`
+4. All service health checks green:
+   ```bash
+   for port in 5192 5131 5197 5157 5161 5171 5141 5181; do
+     status=$(curl -s http://localhost:$port/health | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "UNREACHABLE")
+     echo "  :$port → $status"
+   done
+   ```
+
+---
+
+## Step 1 — Create Tenant Workspace
+
+**Status:** ✅ Implemented
+
+Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds `tenant-1` on startup so the API is exercisable without a UI.
+
+**Verify tenant exists:**
+```bash
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1 | python3 -m json.tool
+```
+
+**Expected:** Tenant record with `tenantId=tenant-1`, `slug=demo-company`, lifecycle state `Seeded`.
+
+---
+
+## Step 2 — Configure Identity and Role Mapping
+
+**Status:** 🔧 Manual (Keycloak) + 🟡 Evaluation-grade (role mapping)
+
+The local Keycloak realm (`fps-local`) is imported from `code/infrastructure/keycloak/fps-local-realm.json` which pre-configures the OIDC client, roles, and demo users. This represents step 2 for evaluation.
+
+**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `tenant-1` that maps Keycloak realm roles directly to FPS roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
+
+**Verify identity is wired:**
+```bash
+TOKEN=$(./tools/dev-auth.sh employee1)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
+```
+
+**Expected:** `{"userId": "employee1", "tenantId": "tenant-1", "roles": ["employee"]}`
+
+**Blocker for production:** IdP configuration UI and documented per-tenant group-to-role mapping workflow.
+
+---
+
+## Step 3 — Create First Administrator
+
+**Status:** 🟡 Evaluation-grade
+
+`tenant-admin` is pre-configured in Keycloak with the `admin` role for `tenant-1`. This represents the first administrator for evaluation.
+
+**Verify:**
+```bash
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
+```
+
+**Expected:** `{"userId": "tenant-admin", "tenantId": "tenant-1", "roles": ["admin"]}`
+
+**Blocker for production:** Formal first-admin provisioning path (mapped SSO user or FPS-local break-glass account creation via API). Follow-up: CUST004 evidence.
+
+---
+
+## Step 4 — Parking Bootstrap (Location, Policy, Slots)
+
+**Status:** 🟡 Evaluation-grade
+
+The Configuration service seed creates `LOC-MAIN` with 10 parking slots and a default policy. This represents steps 4 for evaluation.
+
+**Verify:**
+```bash
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/parking-policy | python3 -m json.tool
+```
+
+**Expected:** Policy document with slot count, time zone, and effective date.
+
+**Blocker for production:** Tenant admin UI for location/slot/policy setup. Configuration service API is implemented but no web UI exists yet. Follow-up: UX001/web admin surface.
+
+---
+
+## Step 5 — Employee and Profile Bootstrap
+
+**Status:** 🟡 Evaluation-grade (seed) / ✅ Implemented (API)
+
+Profile service provides `POST /profile/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for `employee1`, `employee2`, `employee3`.
+
+**Run the employee seed:**
+```bash
+./tools/dev-seed.sh
+```
+
+**Verify profiles exist:**
+```bash
+TOKEN=$(./tools/dev-auth.sh employee1)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot | python3 -m json.tool
+```
+
+**Expected:** Profile snapshot with parking eligibility, vehicle details (for employee1), and accessibility flags.
+
+**HR import template:** `tools/templates/demo-employees.csv` and `demo-vehicles.csv` define the full employee set matching Keycloak users. Run validation:
+```bash
+./tools/validate-hr-import.sh tools/templates/demo-employees.csv tools/templates/demo-vehicles.csv
+```
+
+**Blocker for production:** Web-based HR import upload (DATA002 in progress). Current path requires manual API calls or the seed script.
+
+---
+
+## Step 6 — Readiness Check
+
+**Status:** ✅ Implemented
+
+The Customer service exposes `GET /tenants/{tenantId}/readiness` which checks identity, policy, profile, booking, notification, audit, and reporting readiness probes.
+
+```bash
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1/readiness | python3 -m json.tool
+```
+
+**Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
+
+Note: The readiness check probes use no-op implementations in the local demo. Full probe wiring is evaluation-grade.
+
+---
+
+## Step 7 — First Booking Smoke
+
+**Status:** ✅ Implemented
+
+After the tenant is configured and employees are seeded, submit a booking request via the gateway.
+
+```bash
+TOKEN=$(./tools/dev-auth.sh employee1)
+
+# Submit a booking request for tomorrow at LOC-MAIN
+TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d)
+
+curl -s -X POST http://localhost:10000/bookings \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"locationId\": \"LOC-MAIN\",
+    \"date\": \"$TOMORROW\",
+    \"reason\": \"onboarding smoke test\"
+  }" | python3 -m json.tool
+
+# Verify booking appears in the list
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | python3 -m json.tool
+```
+
+**Expected:** Booking request with status `Pending` and employee-visible reason.
+
+---
+
+## Step 8 — Audit Evidence
+
+**Status:** ✅ Implemented
+
+Verify that admin and booking actions produced audit records.
+
+```bash
+TOKEN=$(./tools/dev-auth.sh auditor)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3 -m json.tool
+```
+
+**Expected:** Audit records covering tenant setup events and the booking submission from step 7.
+
+---
+
+## Summary: Step Status
+
+| Step | Description | Status | Blocker |
+|------|-------------|--------|---------|
+| 1 | Create tenant workspace | ✅ Implemented | `POST /tenants` implemented; local demo pre-seeds |
+| 2 | Configure identity and role mapping | 🔧 Manual + 🟡 Eval | IdP config UI, per-tenant mapping API |
+| 3 | Create first administrator | 🟡 Evaluation-grade | First-admin provisioning API |
+| 4 | Parking bootstrap (location, policy, slots) | 🟡 Evaluation-grade | Tenant admin web UI |
+| 5 | Employee and profile bootstrap | 🟡 Eval (seed) / ✅ API | Web HR import upload (DATA002) |
+| 6 | Readiness check | ✅ Implemented | Probe implementations are no-op |
+| 7 | First booking smoke | ✅ Implemented | — |
+| 8 | Audit evidence | ✅ Implemented | — |
+
+---
+
+## Follow-up Issues
+
+The following gaps must be resolved before this scenario can run without manual or evaluation-grade shortcuts in a real pilot:
+
+- Tenant admin web UI for tenant creation via `POST /tenants` (API implemented, no web form yet)
+- Tenant admin web UI for location/slot/policy setup (UX001 track)
+- First-admin provisioning API (CUST004)
+- Web-based HR import upload (DATA002)
+- Full readiness probe implementations (CUST007 track)
+- Tenant lifecycle state machine enforcement (`Draft` → `Configured` → `Seeded` → `Ready`)
