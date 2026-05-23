@@ -1,5 +1,6 @@
 using FPS.Identity.Identity;
 using FPS.SharedKernel.HealthChecks;
+using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -12,6 +13,7 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddLogging();
 builder.Services.AddHttpClient();
 builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsObservability("fps-identity", builder.Configuration);
 builder.Services.AddOpenApi("v1", options =>
 {
     options.AddDocumentTransformer((doc, _, _) =>
@@ -62,6 +64,7 @@ app.MapScalarApiReference(options => options.WithTitle("Identity API"));
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseFpsRequestTraceLogging();
 app.MapFpsHealthChecks();
 app.Run();
 

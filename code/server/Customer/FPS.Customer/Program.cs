@@ -2,6 +2,7 @@ using FPS.Customer.Application;
 using FPS.Customer.Identity;
 using FPS.Customer.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
+using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -64,6 +65,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsObservability("fps-customer", builder.Configuration);
 builder.Services.AddFpsAuthorization();
 // Override the default ITenantIdentityConfigStore with the concrete singleton so
 // TenantIdentityService can call Register() and TenantClaimsTransformation can enforce it.
@@ -85,6 +87,7 @@ app.MapScalarApiReference(options => options.WithTitle("Customer API"));
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseFpsRequestTraceLogging();
 app.MapFpsHealthChecks();
 app.Run();
 

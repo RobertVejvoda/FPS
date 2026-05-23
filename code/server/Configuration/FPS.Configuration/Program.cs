@@ -3,6 +3,7 @@ using FPS.Configuration.Domain;
 using FPS.Configuration.Identity;
 using FPS.Configuration.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
+using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsObservability("fps-configuration", builder.Configuration);
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
@@ -91,6 +93,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+app.UseFpsRequestTraceLogging();
 app.MapFpsHealthChecks();
 app.Run();
 
