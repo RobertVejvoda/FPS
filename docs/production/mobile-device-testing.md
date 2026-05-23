@@ -146,7 +146,7 @@ For developer smoke, use the Developer Session screen to paste:
 - API base URL;
 - development bearer token from `./tools/dev-auth.sh employee1`.
 
-Available local users are `employee1`, `employee2`, `employee3`, and `hr-admin`. Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm.
+Available local users are `employee1`, `employee2`, `employee3`, `hr-admin`, `tenant-admin`, `report-viewer`, and `auditor`. Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm. Mobile employee smoke testing should normally use an `employee*` account; web/admin smoke testing should use the role-specific operator accounts documented in [Local Test Harness](./local-test-harness).
 
 Clear the session after testing from the Profile screen or debug-session screen. Development token generation and seeded OIDC demo users should be documented before `MOB009` is accepted.
 

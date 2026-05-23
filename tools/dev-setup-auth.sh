@@ -16,7 +16,7 @@ ADMIN_PASS="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 REALM="fps-local"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
-USERS="employee1 employee2 employee3 hr-admin"
+USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor"
 
 echo "== FPS local Keycloak setup =="
 echo "Keycloak: $KEYCLOAK_URL"

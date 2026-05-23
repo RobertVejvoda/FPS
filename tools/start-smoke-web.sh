@@ -28,19 +28,22 @@ trap cleanup INT TERM EXIT
 cd "$REPO_ROOT"
 "$REPO_ROOT/tools/start-local-harness.sh" --skip-infra
 
-TOKEN="$("$REPO_ROOT/tools/dev-auth.sh" employee1)"
-
 printf '\n'
 printf '================================================\n'
 printf ' FPS Web Smoke — Ready\n'
 printf '================================================\n'
-printf ' Web app:      http://localhost:5200\n'
-printf ' API base URL: http://localhost:10000\n'
-printf ' Demo user:    employee1\n'
-printf ' Bearer token: %s\n' "$TOKEN"
+printf ' Web app:  http://localhost:5200\n'
 printf '\n'
-printf 'Paste the API base URL and bearer token into the web Session page.\n'
-printf 'Stop with Ctrl-C. Docker infrastructure will stay running.\n'
+printf ' Sign in:  open http://localhost:5200 and click Sign in.\n'
+printf '           Use a seeded fps-local user, e.g.:\n'
+printf '             username: employee1\n'
+printf '             password: Dev1234!  (set by dev-setup-auth.sh)\n'
+printf '\n'
+printf ' Fallback: to use a manual bearer token instead, set\n'
+printf '           devTokenFallbackEnabled=true in public/config.json\n'
+printf '           and paste the output of: ./tools/dev-auth.sh employee1\n'
+printf '\n'
+printf ' Stop with Ctrl-C. Docker infrastructure will stay running.\n'
 printf '================================================\n'
 printf '\n'
 
