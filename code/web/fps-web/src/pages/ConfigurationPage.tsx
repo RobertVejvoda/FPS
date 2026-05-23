@@ -220,11 +220,12 @@ export function ConfigurationPage() {
 
       <section style={card}>
         <h3 style={cardTitle}>Location Configuration</h3>
+        <p style={{ ...muted, margin: '0 0 8px' }}>Enter a location identifier to view and edit its parking policy and slot configuration.</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <input
             value={locationId}
             onChange={e => setLocationId(e.target.value)}
-            placeholder="Location ID"
+            placeholder="Location identifier (e.g. LOC-001)"
             style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none' }}
           />
           <button onClick={loadLocation} disabled={!locationId.trim()} style={{ ...btn, opacity: !locationId.trim() ? 0.5 : 1 }}>
