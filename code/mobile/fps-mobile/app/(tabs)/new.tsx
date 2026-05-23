@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { submitBooking } from '@/api/bookings';
+import { fetchProfileSnapshot, type ProfileSnapshot, type VehicleSnapshot } from '@/api/profile';
 import { colors, radius, spacing } from '@/theme';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
@@ -20,6 +21,7 @@ const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] 
 type FormState = {
   facilityId: string;
   locationId: string;
+  selectedVehicleId: string;
   licensePlate: string;
   vehicleType: string;
   isElectric: boolean;
@@ -32,6 +34,7 @@ type FormState = {
 const INITIAL_FORM: FormState = {
   facilityId: '',
   locationId: '',
+  selectedVehicleId: '',
   licensePlate: '',
   vehicleType: 'Sedan',
   isElectric: false,
@@ -78,7 +81,7 @@ function parseDatetime(input: string): string | null {
 function validate(form: FormState): FieldErrors {
   const errors: FieldErrors = {};
   if (!form.facilityId.trim()) errors.facilityId = 'Required';
-  if (!form.licensePlate.trim()) errors.licensePlate = 'Required';
+  if (!form.licensePlate.trim()) errors.licensePlate = 'Select a vehicle or enter license plate';
   const arrival = parseDatetime(form.plannedArrival);
   const departure = parseDatetime(form.plannedDeparture);
   if (!arrival) errors.plannedArrival = 'Use YYYY-MM-DD HH:MM';
@@ -92,13 +95,40 @@ function validate(form: FormState): FieldErrors {
 export default function NewBookingRoute() {
   const router = useRouter();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
+  const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
 
+  useEffect(() => {
+    fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
+      if (res.kind === 'unauthenticated') {
+        clearSession().then(() => router.replace('/login'));
+        return;
+      }
+      if (res.kind === 'ok') setProfile(res.profile);
+      setProfileLoading(false);
+    });
+  }, [apiBaseUrl, bearerToken, clearSession, router]);
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
     setFieldErrors(prev => ({ ...prev, [key]: undefined }));
+  };
+
+  const selectVehicle = (vehicleId: string) => {
+    const vehicle = profile?.vehicles.find((v) => v.vehicleId === vehicleId);
+    if (vehicle) {
+      setForm(prev => ({
+        ...prev,
+        selectedVehicleId: vehicleId,
+        licensePlate: vehicle.licensePlate,
+        vehicleType: vehicle.vehicleType,
+        isElectric: vehicle.isElectric,
+      }));
+      setFieldErrors(prev => ({ ...prev, licensePlate: undefined, vehicleType: undefined }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -167,97 +197,134 @@ export default function NewBookingRoute() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.heading}>New Booking</Text>
 
-        <FieldRow label="Facility ID *" error={fieldErrors.facilityId}>
-          <TextInput
-            style={[styles.input, fieldErrors.facilityId ? styles.inputError : null]}
-            value={form.facilityId}
-            onChangeText={v => set('facilityId', v)}
-            placeholder="e.g. FAC-001"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-          />
-        </FieldRow>
+        {profileLoading ? (
+          <Text style={styles.mutedText}>Loading vehicles…</Text>
+        ) : (
+          <>
+            <FieldRow label="Facility *" error={fieldErrors.facilityId}>
+              <TextInput
+                style={[styles.input, fieldErrors.facilityId ? styles.inputError : null]}
+                value={form.facilityId}
+                onChangeText={v => set('facilityId', v)}
+                placeholder="e.g. FAC-001"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+              />
+              <Text style={styles.hint}>Facility identifier (e.g. FAC-001, Building-A)</Text>
+            </FieldRow>
 
-        <FieldRow label="Location ID" error={fieldErrors.locationId}>
-          <TextInput
-            style={styles.input}
-            value={form.locationId}
-            onChangeText={v => set('locationId', v)}
-            placeholder="Optional"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-          />
-        </FieldRow>
+            <FieldRow label="Location" error={fieldErrors.locationId}>
+              <TextInput
+                style={styles.input}
+                value={form.locationId}
+                onChangeText={v => set('locationId', v)}
+                placeholder="Optional location"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+              />
+              <Text style={styles.hint}>Location within facility (e.g. LOC-001, Parking-North)</Text>
+            </FieldRow>
 
-        <FieldRow label="License Plate *" error={fieldErrors.licensePlate}>
-          <TextInput
-            style={[styles.input, fieldErrors.licensePlate ? styles.inputError : null]}
-            value={form.licensePlate}
-            onChangeText={v => set('licensePlate', v)}
-            placeholder="e.g. ABC123"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="characters"
-          />
-        </FieldRow>
+            {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
+              <FieldRow label="Vehicle *" error={fieldErrors.licensePlate}>
+                <View style={styles.vehicleList}>
+                  {profile.vehicles.filter(v => v.isActive).map((v) => (
+                    <Pressable
+                      key={v.vehicleId}
+                      style={({ pressed }) => [
+                        styles.vehicleCard,
+                        form.selectedVehicleId === v.vehicleId && styles.vehicleCardActive,
+                        pressed && styles.vehicleCardPressed,
+                      ]}
+                      onPress={() => selectVehicle(v.vehicleId)}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.vehicleCardPlate}>{v.licensePlate}</Text>
+                      <Text style={styles.vehicleCardMeta}>
+                        {v.vehicleType} · {v.isElectric ? 'Electric' : 'Standard'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </FieldRow>
+            ) : (
+              <>
+                <FieldRow label="License Plate *" error={fieldErrors.licensePlate}>
+                  <TextInput
+                    style={[styles.input, fieldErrors.licensePlate ? styles.inputError : null]}
+                    value={form.licensePlate}
+                    onChangeText={v => set('licensePlate', v)}
+                    placeholder="e.g. ABC123"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="characters"
+                  />
+                  <Text style={styles.hint}>No vehicles in profile. Add vehicles in Profile for faster booking.</Text>
+                </FieldRow>
 
-        <FieldRow label="Vehicle Type *" error={fieldErrors.vehicleType}>
-          <View style={styles.pills}>
-            {VEHICLE_TYPES.map(vt => (
-              <Pressable
-                key={vt}
-                style={({ pressed }) => [
-                  styles.pill,
-                  form.vehicleType === vt && styles.pillActive,
-                  pressed && styles.pillPressed,
-                ]}
-                onPress={() => set('vehicleType', vt)}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.pillText, form.vehicleType === vt && styles.pillTextActive]}>
-                  {vt}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </FieldRow>
+                <FieldRow label="Vehicle Type *" error={fieldErrors.vehicleType}>
+                  <View style={styles.pills}>
+                    {VEHICLE_TYPES.map(vt => (
+                      <Pressable
+                        key={vt}
+                        style={({ pressed }) => [
+                          styles.pill,
+                          form.vehicleType === vt && styles.pillActive,
+                          pressed && styles.pillPressed,
+                        ]}
+                        onPress={() => set('vehicleType', vt)}
+                        accessibilityRole="button"
+                      >
+                        <Text style={[styles.pillText, form.vehicleType === vt && styles.pillTextActive]}>
+                          {vt}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </FieldRow>
+              </>
+            )}
 
-        <FieldRow label="Planned Arrival *" error={fieldErrors.plannedArrival}>
-          <TextInput
-            style={[styles.input, fieldErrors.plannedArrival ? styles.inputError : null]}
-            value={form.plannedArrival}
-            onChangeText={v => set('plannedArrival', v)}
-            placeholder="YYYY-MM-DD HH:MM"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-          />
-        </FieldRow>
+            <FieldRow label="Planned Arrival *" error={fieldErrors.plannedArrival}>
+              <TextInput
+                style={[styles.input, fieldErrors.plannedArrival ? styles.inputError : null]}
+                value={form.plannedArrival}
+                onChangeText={v => set('plannedArrival', v)}
+                placeholder="YYYY-MM-DD HH:MM"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+              />
+            </FieldRow>
 
-        <FieldRow label="Planned Departure *" error={fieldErrors.plannedDeparture}>
-          <TextInput
-            style={[styles.input, fieldErrors.plannedDeparture ? styles.inputError : null]}
-            value={form.plannedDeparture}
-            onChangeText={v => set('plannedDeparture', v)}
-            placeholder="YYYY-MM-DD HH:MM"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-          />
-        </FieldRow>
+            <FieldRow label="Planned Departure *" error={fieldErrors.plannedDeparture}>
+              <TextInput
+                style={[styles.input, fieldErrors.plannedDeparture ? styles.inputError : null]}
+                value={form.plannedDeparture}
+                onChangeText={v => set('plannedDeparture', v)}
+                placeholder="YYYY-MM-DD HH:MM"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+              />
+            </FieldRow>
 
-        <ToggleRow
-          label="Electric vehicle"
-          value={form.isElectric}
-          onValueChange={v => set('isElectric', v)}
-        />
-        <ToggleRow
-          label="Requires accessible spot"
-          value={form.requiresAccessibleSpot}
-          onValueChange={v => set('requiresAccessibleSpot', v)}
-        />
-        <ToggleRow
-          label="Company car"
-          value={form.isCompanyCar}
-          onValueChange={v => set('isCompanyCar', v)}
-        />
+            {form.selectedVehicleId ? null : (
+              <ToggleRow
+                label="Electric vehicle"
+                value={form.isElectric}
+                onValueChange={v => set('isElectric', v)}
+              />
+            )}
+            <ToggleRow
+              label="Requires accessible spot"
+              value={form.requiresAccessibleSpot}
+              onValueChange={v => set('requiresAccessibleSpot', v)}
+            />
+            <ToggleRow
+              label="Company car"
+              value={form.isCompanyCar}
+              onValueChange={v => set('isCompanyCar', v)}
+            />
+          </>
+        )}
 
         {submitStatus.kind === 'rejected' && (
           <View style={styles.rejectionBox}>
@@ -341,8 +408,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   heading: { fontSize: 22, fontWeight: '700', color: colors.text },
+  mutedText: { fontSize: 14, color: colors.textMuted },
   field: { gap: spacing.xs },
   label: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+  hint: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -354,6 +423,21 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: colors.danger },
   fieldError: { fontSize: 12, color: colors.danger },
+  vehicleList: { gap: spacing.sm },
+  vehicleCard: {
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    backgroundColor: colors.cardBackground,
+  },
+  vehicleCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#eff6ff',
+  },
+  vehicleCardPressed: { opacity: 0.7 },
+  vehicleCardPlate: { fontSize: 16, fontWeight: '600', color: colors.text },
+  vehicleCardMeta: { fontSize: 13, color: colors.textMuted, marginTop: spacing.xs },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   pill: {
     borderWidth: 1,
