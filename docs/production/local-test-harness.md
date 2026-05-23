@@ -14,6 +14,13 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d
 
 `docker-compose.yaml` creates the required Docker network when it starts. If a local Docker network already exists from an older setup, Compose can reuse it.
 
+Local-only infrastructure defaults:
+
+- Keycloak admin credentials are the Docker Compose/dev-script defaults used by `tools/dev-setup-auth.sh`; override them with `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` if needed.
+- Vault runs in dev mode for local Docker Compose. Use the local Vault token documented in `code/infrastructure/readme.md`, or set `VAULT_ADDR` and `VAULT_TOKEN` for your shell before using Vault CLI commands.
+
+These values are disposable development defaults for the local Docker Compose profile only. Do not reuse them for demo, pilot, or client-owned environments.
+
 If Docker infrastructure is already running and you want a one-shot smoke run for an app surface, use:
 
 ```sh
