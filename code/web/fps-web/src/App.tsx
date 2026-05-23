@@ -4,8 +4,11 @@ import {
   canAccessAudit,
   canAccessBookings,
   canAccessConfiguration,
+  canAccessNotifications,
+  canAccessProfile,
   canAccessReporting,
   canAccessTenantAdmin,
+  defaultRoute,
 } from './auth/roles';
 import { SessionPage } from './pages/SessionPage';
 import { OidcCallbackPage } from './pages/OidcCallbackPage';
@@ -24,14 +27,14 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
 }
 
 function Shell() {
-  const { isConfigured, logout, roles } = useAuth();
+  const { isConfigured, logout, branding, roles } = useAuth();
 
   if (!isConfigured) return <Navigate to="/session" replace />;
 
   const navItems = [
     canAccessBookings(roles) && { to: '/bookings', label: 'Bookings' },
-    { to: '/profile', label: 'Profile' },
-    { to: '/notifications', label: 'Notifications' },
+    canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
+    canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
     canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
     canAccessAudit(roles) && { to: '/audit', label: 'Audit' },
@@ -39,24 +42,23 @@ function Shell() {
   ].filter(Boolean) as { to: string; label: string }[];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 24px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#111827', flexShrink: 0 }}>FairSpot</span>
-        <nav style={{ display: 'flex', gap: 2, overflowX: 'auto', flexShrink: 1 }}>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="brand-lockup">
+          <div className="brand-mark" aria-hidden="true">
+            {branding.logoUrl ? <img src={branding.logoUrl} alt="" /> : branding.productName.slice(0, 1)}
+          </div>
+          <div className="brand-title">
+            <strong>{branding.productName}</strong>
+            {branding.tenantName ? <span>{branding.tenantName}</span> : null}
+          </div>
+        </div>
+        <nav className="app-nav" aria-label="Main navigation">
           {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
-              style={({ isActive }) => ({
-                padding: '6px 12px',
-                fontSize: 13,
-                fontWeight: 500,
-                textDecoration: 'none',
-                borderRadius: 6,
-                color: isActive ? '#1d4ed8' : '#6b7280',
-                background: isActive ? '#eff6ff' : 'transparent',
-                whiteSpace: 'nowrap',
-              })}
+              className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
             >
               {item.label}
             </NavLink>
@@ -64,22 +66,22 @@ function Shell() {
         </nav>
         <button
           onClick={() => { void logout(); }}
-          style={{ background: 'none', border: 'none', color: '#b91c1c', fontSize: 13, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+          className="btn-danger"
         >
           Sign out
         </button>
       </header>
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px' }}>
+      <main className="app-main">
         <Routes>
           <Route path="/bookings" element={<Guard allowed={canAccessBookings(roles)}><BookingsPage /></Guard>} />
           <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
+          <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
           <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
           <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
           <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
           <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
-          <Route path="*" element={<Navigate to="/bookings" replace />} />
+          <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />
         </Routes>
       </main>
     </div>

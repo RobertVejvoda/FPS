@@ -38,6 +38,8 @@ Both scripts leave Docker infrastructure running when stopped with Ctrl-C. They 
 
 The scripts also check frontend dependencies before starting Vite or Expo. They prefer user-installed Node/npm from Homebrew or `/usr/local/bin` over embedded tool runtimes. If `node_modules` is missing or a native optional package probe fails, they run `npm ci` from the app lockfile to repair the local dependency tree. On macOS they also ad-hoc sign local `.node` binaries after install to avoid native optional dependency code-signature failures from packages such as Rollup.
 
+Web OIDC login is bound to `http://localhost:5200/auth/callback` in the local Keycloak `fps-web-dev` client and in `code/web/fps-web/public/config.json`. Web logout is bound to `http://localhost:5200/` through the same client. If port `5200` is already occupied, stop the other web process first; do not use a Vite fallback port such as `5201` unless you also update the runtime config and Keycloak redirect URI. The local Envoy gateway also allows browser CORS preflight only from `http://localhost:5200`.
+
 ## Devcontainer
 
 Use the devcontainer for repeatable backend and web smoke development when local host tooling is noisy or missing. It provides:
@@ -117,6 +119,7 @@ dotnet run --project code/server/Notification/FPS.Notification/FPS.Notification.
 dotnet run --project code/server/Audit/FPS.Audit/FPS.Audit.csproj
 dotnet run --project code/server/Reporting/FPS.Reporting/FPS.Reporting.csproj
 dotnet run --project code/server/Configuration/FPS.Configuration/FPS.Configuration.csproj
+dotnet run --project code/server/Customer/FPS.Customer/FPS.Customer.csproj
 ```
 
 Current local service URLs:
@@ -130,6 +133,7 @@ Current local service URLs:
 | Reporting | `http://localhost:5171` |
 | Profile | `http://localhost:5197` |
 | Notification | `http://localhost:5157` |
+| Customer | `http://localhost:5181` |
 
 Each runnable service has an `http` launch profile so plain `dotnet run --project ...` resolves to a stable port instead of the implicit Kestrel fallback. Avoid relying on port `5000`; on macOS this port may already be owned by Control Center, and multiple services would collide there.
 
@@ -140,12 +144,13 @@ Use these URLs for local service smoke checks:
 | Identity | `http://localhost:5192/openapi/v1.json` | `200` |
 | Booking | `http://localhost:5131/openapi/v1.json` | `200` |
 | Profile | `http://localhost:5197/openapi/v1.json` | `200` |
-| Notification | `http://localhost:5157/openapi/v1.json` | `200` |
+| Notification | `http://localhost:5157/notifications/unread-count` | `401` |
 | Configuration | `http://localhost:5141/configuration/parking-policy` | `401` |
 | Audit | `http://localhost:5161/audit` | `401` |
 | Reporting | `http://localhost:5171/reports/parking/summary` | `401` |
+| Customer | `http://localhost:5181/openapi/v1.json` | `200` |
 
-Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. Use the protected endpoint `401` check for those services until an approved API-documentation approach is adopted for them.
+Notification, Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. Use the protected endpoint `401` check for those services until an approved API-documentation approach is adopted for them.
 
 ## Admin Reports And Operator Views
 
@@ -209,7 +214,7 @@ docker compose -f code/infrastructure/docker-compose.yaml down
 
 Plain `dotnet run` starts a service without a Dapr sidecar. Endpoints that use `DaprClient` — such as Booking's state and pub/sub calls — return `500` because the sidecar gRPC port is not listening.
 
-Use the Dapr CLI multi-app run to start six FPS services each paired with a sidecar:
+Use the Dapr CLI multi-app run to start seven FPS services each paired with a sidecar:
 
 ```sh
 # 1. Infrastructure and auth (once per session)
@@ -243,6 +248,7 @@ The run file is `dapr.yaml` at the repository root. It starts these services:
 | `fps-audit` | Audit | 5161 | 3611 | 50011 |
 | `fps-reporting` | Reporting | 5171 | 3621 | 50021 |
 | `fps-configuration` | Configuration | 5141 | 3631 | 50031 |
+| `fps-customer` | Customer | 5181 | 3641 | 50041 |
 
 ### In-memory vs local components
 
@@ -283,7 +289,7 @@ The mobile app expects one API base URL. The Envoy gateway added in OPS006B prov
 
 ## Local Mobile API Gateway (OPS006B)
 
-The Envoy proxy in Docker Compose now routes all mobile employee endpoints under one origin.
+The Envoy proxy in Docker Compose now routes employee and operator API endpoints under one origin for mobile and browser web smoke testing. The local gateway allows browser CORS from `http://localhost:5200`, matching the web OIDC redirect origin.
 **Gateway URL (simulator/browser):** `http://localhost:10000`
 **Gateway URL (physical phone on same LAN):** `http://<dev-machine-ip>:10000`
 
@@ -301,6 +307,10 @@ Gateway route table:
 | `/bookings` and booking actions | Booking `localhost:5131` |
 | `/notifications` and notification actions | Notification `localhost:5157` |
 | `/profile/snapshot` | Profile `localhost:5197` |
+| `/reports` | Reporting `localhost:5171` |
+| `/audit` | Audit `localhost:5161` |
+| `/configuration` | Configuration `localhost:5141` |
+| `/tenants` | Customer `localhost:5181` |
 
 Authorization headers pass through unchanged. The gateway does not mint or verify tokens.
 
@@ -360,6 +370,17 @@ The developer session screen still requires both values:
 - API base URL: `http://localhost:10000` (simulator) or `http://<dev-machine-ip>:10000` (phone);
 - bearer token: a local development token from `./tools/dev-auth.sh`.
 
+For real mobile OIDC login, prefer `sh ./tools/start-smoke-mobile.sh`. The script exports Expo runtime config for the local `fps-mobile-dev` client and uses one device-reachable host for both Keycloak and the API gateway. When Tailscale is installed, it prefers the Mac's Tailscale IPv4 address; otherwise it uses the LAN address. Override detection with:
+
+```sh
+FPS_MOBILE_HOST=<host-or-ip> sh ./tools/start-smoke-mobile.sh
+FPS_MOBILE_KEYCLOAK_URL=http://<host-or-ip>:8180 FPS_MOBILE_API_BASE_URL=http://<host-or-ip>:10000 sh ./tools/start-smoke-mobile.sh
+```
+
+For repeatable local overrides, copy `code/mobile/fps-mobile/mobile-env.sample` to `code/mobile/fps-mobile/.env.local`. The smoke script loads `.env.local` automatically. Treat these as public runtime settings only; never put secrets in mobile Expo config.
+
+If mobile login reaches Keycloak but fails with `invalid parameter: redirect_uri`, re-run `./tools/dev-setup-auth.sh` so the local `fps-mobile-dev` client receives the current Expo/native redirect allow-list.
+
 ## Seeding Local Demo Data (OPS006D)
 
 After starting services (Identity + `dapr run -f dapr.yaml`), run the seed script once:
@@ -408,7 +429,7 @@ All three should return `200`.
 
 ## Local Harness
 
-`tools/start-local-harness.sh` is the one-command entry point for local full-stack smoke testing. It starts Docker Compose infrastructure, configures Keycloak, launches Identity and the six Dapr-paired services in the background, waits for each service port to bind, then seeds demo data.
+`tools/start-local-harness.sh` is the one-command entry point for local full-stack smoke testing. It starts Docker Compose infrastructure, configures Keycloak, launches Identity and the seven Dapr-paired services in the background, waits for each service port to bind, then seeds demo data.
 
 Prerequisites (install once):
 

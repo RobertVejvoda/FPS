@@ -65,3 +65,10 @@ apps:
     daprHTTPPort: 3631
     daprGRPCPort: 50031
     command: ["dotnet", "run"]
+
+  - appID: fps-customer
+    appDirPath: code/server/Customer/FPS.Customer
+    appPort: 5181
+    daprHTTPPort: 3641
+    daprGRPCPort: 50041
+    command: ["dotnet", "run"]

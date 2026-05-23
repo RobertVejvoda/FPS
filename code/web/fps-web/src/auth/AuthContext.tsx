@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { UserManager } from 'oidc-client-ts';
 import { fetchMe } from '../api/client';
-import { loadRuntimeConfig, type RuntimeConfig } from './runtimeConfig';
+import { loadRuntimeConfig, type BrandingConfig, type RuntimeConfig } from './runtimeConfig';
 import { clearCredentials, loadBaseUrl, loadToken, saveCredentials } from './authStorage';
 
 export type AuthPhase =
@@ -32,6 +32,7 @@ type AuthState = {
   roles: string[];
   isConfigured: boolean;
   devFallbackEnabled: boolean;
+  branding: BrandingConfig;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   save: (apiBaseUrl: string, token: string) => Promise<void>;
@@ -39,6 +40,22 @@ type AuthState = {
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
+
+const DEFAULT_BRANDING: BrandingConfig = {
+  productName: 'FairSpot',
+  tenantName: '',
+  logoUrl: '',
+  primaryColor: '#2563eb',
+  accentColor: '#16a34a',
+};
+
+function applyBranding(branding: BrandingConfig) {
+  document.documentElement.style.setProperty('--brand-primary', branding.primaryColor);
+  document.documentElement.style.setProperty('--brand-accent', branding.accentColor);
+  document.title = branding.tenantName
+    ? `${branding.productName} | ${branding.tenantName}`
+    : branding.productName;
+}
 
 function createUserManager(config: RuntimeConfig): UserManager {
   return new UserManager({
@@ -61,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [bearerToken, setBearerToken] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
   const [devFallbackEnabled, setDevFallbackEnabled] = useState(false);
+  const [branding, setBranding] = useState<BrandingConfig>(DEFAULT_BRANDING);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userManagerRef.current = um;
         setApiBaseUrl(config.apiBaseUrl);
         setDevFallbackEnabled(config.devTokenFallbackEnabled);
+        setBranding(config.branding);
+        applyBranding(config.branding);
 
         // On the callback page, handle the OIDC redirect inline.
         if (window.location.pathname === '/auth/callback') {
@@ -226,12 +246,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       roles,
       isConfigured: phase === 'authenticated',
       devFallbackEnabled,
+      branding,
       login,
       logout,
       save,
       clear,
     }),
-    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, login, logout, save, clear],
+    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, branding, login, logout, save, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

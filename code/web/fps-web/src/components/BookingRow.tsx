@@ -36,7 +36,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
   const meaning = STATUS_MEANING[booking.status];
 
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontWeight: 600, fontSize: 15 }}>{formatDate(booking.requestedDate)}</span>
@@ -60,7 +60,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
         {meaning ? (
           <button
             onClick={() => setExpanded((e) => !e)}
-            style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: '#1d4ed8', cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' }}
           >
             {expanded ? 'Hide detail' : 'What does this mean?'}
           </button>

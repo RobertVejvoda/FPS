@@ -1,4 +1,5 @@
 using FPS.Customer.Application;
+using FPS.Customer.Domain;
 using FPS.Customer.Identity;
 using FPS.Customer.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
@@ -86,6 +87,85 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapFpsHealthChecks();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    await SeedLocalDemoTenantAsync(scope.ServiceProvider);
+}
+
 app.Run();
+
+static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
+{
+    const string tenantId = "tenant-1";
+
+    var tenantRepository = services.GetRequiredService<ITenantRepository>();
+    if (await tenantRepository.GetAsync(tenantId, CancellationToken.None) is not null)
+    {
+        return;
+    }
+
+    var now = DateTimeOffset.UtcNow;
+    var tenant = new TenantWorkspace
+    {
+        TenantId = tenantId,
+        Slug = "demo-company",
+        DisplayName = "Demo Company",
+        Region = "CZ",
+        TimeZone = "Europe/Prague",
+        SupportContacts =
+        [
+            new TenantSupportContact("Demo Facilities", "facilities@example.local", "Facilities"),
+            new TenantSupportContact("Demo IT", "it@example.local", "Identity")
+        ],
+        Provisioning = TenantProvisioningMetadata.Generate(tenantId, "demo-company"),
+        CreatedAt = now,
+    };
+    tenant.TryTransition(TenantLifecycleState.Configured, "local-seed", "Local demo tenant setup", "Development seed");
+    tenant.TryTransition(TenantLifecycleState.Seeded, "local-seed", "Local demo seed data available", "Development seed");
+    await tenantRepository.SaveAsync(tenant, CancellationToken.None);
+
+    var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
+    await identityRepository.SaveConfigAsync(new TenantIdentityConfig
+    {
+        TenantId = tenantId,
+        TrustedIssuer = "http://localhost:8180/realms/fps-local",
+        Audience = "fps-api",
+        TenantClaimName = "tenant_id",
+        SubjectClaimName = "sub",
+        RoleClaimNames = ["roles"],
+        RoleMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["employee"] = "employee",
+            ["hr_manager"] = "hr_manager",
+            ["admin"] = "admin",
+            ["report_viewer"] = "report_viewer",
+        },
+        LocalAccountPolicyEnabled = true,
+        ConfiguredByHash = "local-seed",
+        ConfiguredAt = now,
+    }, CancellationToken.None);
+    await identityRepository.SaveAdminAsync(new TenantAdminRecord(
+        tenantId,
+        "local-seed-tenant-admin",
+        TenantAdminType.Local,
+        "local-seed",
+        now,
+        "Local development tenant administrator.",
+        IsActive: true), CancellationToken.None);
+
+    var parkingRepository = services.GetRequiredService<ITenantParkingBootstrapRepository>();
+    var bootstrap = await parkingRepository.GetOrCreateAsync(tenantId, CancellationToken.None);
+    bootstrap.RecordDefaultPolicy(new BootstrapPolicySnapshot(
+        "Europe/Prague",
+        "18:00",
+        100,
+        30,
+        "local-seed",
+        now));
+    bootstrap.RecordLocation("LOC-MAIN", activeSlotCount: 10, hasLocationPolicy: false, "local-seed");
+    await parkingRepository.SaveAsync(bootstrap, CancellationToken.None);
+}
 
 public partial class Program { }

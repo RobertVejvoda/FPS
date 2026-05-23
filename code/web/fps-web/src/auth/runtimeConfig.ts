@@ -9,7 +9,16 @@ export type OidcConfig = {
 export type RuntimeConfig = {
   apiBaseUrl: string;
   oidc: OidcConfig;
+  branding: BrandingConfig;
   devTokenFallbackEnabled: boolean;
+};
+
+export type BrandingConfig = {
+  productName: string;
+  tenantName: string;
+  logoUrl: string;
+  primaryColor: string;
+  accentColor: string;
 };
 
 export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
@@ -47,5 +56,30 @@ function validateConfig(raw: unknown): RuntimeConfig {
   };
   const devTokenFallbackEnabled =
     typeof r['devTokenFallbackEnabled'] === 'boolean' ? r['devTokenFallbackEnabled'] : false;
-  return { apiBaseUrl, oidc, devTokenFallbackEnabled };
+  const branding = validateBranding(r['branding']);
+  return { apiBaseUrl, oidc, branding, devTokenFallbackEnabled };
+}
+
+function optionalString(obj: Record<string, unknown>, key: string, fallback: string): string {
+  const val = obj[key];
+  return typeof val === 'string' ? val.trim() : fallback;
+}
+
+function validateBranding(raw: unknown): BrandingConfig {
+  const defaults: BrandingConfig = {
+    productName: 'FairSpot',
+    tenantName: '',
+    logoUrl: '',
+    primaryColor: '#2563eb',
+    accentColor: '#16a34a',
+  };
+  if (typeof raw !== 'object' || raw === null) return defaults;
+  const b = raw as Record<string, unknown>;
+  return {
+    productName: optionalString(b, 'productName', defaults.productName) || defaults.productName,
+    tenantName: optionalString(b, 'tenantName', defaults.tenantName),
+    logoUrl: optionalString(b, 'logoUrl', defaults.logoUrl),
+    primaryColor: optionalString(b, 'primaryColor', defaults.primaryColor) || defaults.primaryColor,
+    accentColor: optionalString(b, 'accentColor', defaults.accentColor) || defaults.accentColor,
+  };
 }

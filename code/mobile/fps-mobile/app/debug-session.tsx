@@ -35,8 +35,8 @@ export default function DebugTokenRoute() {
         <Text style={styles.heading}>Developer Session</Text>
         <Text style={styles.lead}>
           Paste an API base URL and bearer token from a development backend run. These values
-          stay on this device and are not committed anywhere. Real login is implemented in a
-          later slice.
+          stay on this device and are not committed anywhere. Use this when local OIDC is not
+          reachable from the device.
         </Text>
 
         <View style={styles.field}>

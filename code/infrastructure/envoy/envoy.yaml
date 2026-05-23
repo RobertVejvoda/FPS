@@ -15,6 +15,13 @@ static_resources:
                   virtual_hosts:
                     - name: backend
                       domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - exact: "http://localhost:5200"
+                        allow_methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                        allow_headers: "authorization,content-type,accept"
+                        expose_headers: "content-disposition"
+                        max_age: "86400"
                       routes:
                         # Employee mobile API surface — routes to host-run services.
                         # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
@@ -33,6 +40,22 @@ static_resources:
                           route:
                             cluster: fps-booking
                         - match:
+                            prefix: "/reports"
+                          route:
+                            cluster: fps-reporting
+                        - match:
+                            prefix: "/audit"
+                          route:
+                            cluster: fps-audit
+                        - match:
+                            prefix: "/configuration"
+                          route:
+                            cluster: fps-configuration
+                        - match:
+                            prefix: "/tenants"
+                          route:
+                            cluster: fps-customer
+                        - match:
                             path: "/me"
                           route:
                             cluster: fps-identity
@@ -43,6 +66,9 @@ static_resources:
                             cluster: dapr
                             prefix_rewrite: "/v1.0/invoke/whoami/method/"
                 http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -95,6 +121,54 @@ static_resources:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5197 }
+
+    - name: fps-reporting
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-reporting
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5171 }
+
+    - name: fps-audit
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-audit
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5161 }
+
+    - name: fps-configuration
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-configuration
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5141 }
+
+    - name: fps-customer
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-customer
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5181 }
 
     - name: dapr
       connect_timeout: 0.25s

@@ -44,7 +44,7 @@ export async function fetchTenant(
     if (res.status === 401) return { kind: 'unauthenticated' };
     if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (res.status === 404) return { kind: 'error', status: 404, message: 'Tenant not found.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants returned ${res.status}` };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants/{tenantId} returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as TenantResponse };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
@@ -63,7 +63,7 @@ export async function fetchTenantReadiness(
     if (res.status === 401) return { kind: 'unauthenticated' };
     if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (res.status === 404) return { kind: 'error', status: 404, message: 'Tenant not found.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants/readiness returned ${res.status}` };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants/{tenantId}/readiness returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as ReadinessReportResponse };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };

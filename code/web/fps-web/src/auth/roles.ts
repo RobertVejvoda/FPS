@@ -12,22 +12,44 @@ export function hasRole(roles: string[], ...required: FpsRole[]): boolean {
   return required.some(r => roles.some(ur => ur.toLowerCase() === r));
 }
 
+// Employee self-service surfaces — require the employee role explicitly.
 export function canAccessBookings(roles: string[]): boolean {
-  return roles.length > 0;
+  return hasRole(roles, FpsRole.Employee);
 }
 
+export function canAccessProfile(roles: string[]): boolean {
+  return hasRole(roles, FpsRole.Employee);
+}
+
+export function canAccessNotifications(roles: string[]): boolean {
+  return hasRole(roles, FpsRole.Employee);
+}
+
+// Reporting surfaces.
 export function canAccessReporting(roles: string[]): boolean {
   return hasRole(roles, FpsRole.HrManager, FpsRole.Admin, FpsRole.ReportViewer);
 }
 
+// Configuration surfaces.
 export function canAccessConfiguration(roles: string[]): boolean {
   return hasRole(roles, FpsRole.HrManager, FpsRole.Admin);
 }
 
+// Audit surfaces.
 export function canAccessAudit(roles: string[]): boolean {
   return hasRole(roles, FpsRole.Auditor, FpsRole.Admin);
 }
 
+// Tenant admin surfaces.
 export function canAccessTenantAdmin(roles: string[]): boolean {
   return hasRole(roles, FpsRole.Admin);
+}
+
+// Returns the first route this user can access, for default redirects.
+export function defaultRoute(roles: string[]): string {
+  if (canAccessBookings(roles)) return '/bookings';
+  if (canAccessReporting(roles)) return '/reporting';
+  if (canAccessAudit(roles)) return '/audit';
+  if (canAccessTenantAdmin(roles)) return '/tenant-admin';
+  return '/profile';
 }
