@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { submitBooking } from '../api/bookings';
+import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 
 type Form = {
   facilityId: string;
   locationId: string;
+  selectedVehicleId: string;
   licensePlate: string;
   vehicleType: string;
   isElectric: boolean;
@@ -28,8 +30,10 @@ function toIso(input: string): string | null {
 export function NewBookingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [form, setForm] = useState<Form>({
-    facilityId: '', locationId: '', licensePlate: '', vehicleType: 'Sedan',
+    facilityId: '', locationId: '', selectedVehicleId: '', licensePlate: '', vehicleType: 'Sedan',
     isElectric: false, requiresAccessibleSpot: false, isCompanyCar: false,
     plannedArrival: '', plannedDeparture: '',
   });
@@ -37,16 +41,38 @@ export function NewBookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
+  useEffect(() => {
+    fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
+      if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (res.kind === 'ok') setProfile(res.data);
+      setProfileLoading(false);
+    });
+  }, [apiBaseUrl, bearerToken, clear, navigate]);
+
   function set<K extends keyof Form>(k: K, v: Form[K]) {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
+  }
+
+  function selectVehicle(vehicleId: string) {
+    const vehicle = profile?.vehicles.find((v) => v.vehicleId === vehicleId);
+    if (vehicle) {
+      setForm((f) => ({
+        ...f,
+        selectedVehicleId: vehicleId,
+        licensePlate: vehicle.licensePlate,
+        vehicleType: vehicle.vehicleType,
+        isElectric: vehicle.isElectric,
+      }));
+      setErrors((e) => ({ ...e, licensePlate: undefined, vehicleType: undefined }));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: typeof errors = {};
     if (!form.facilityId.trim()) errs.facilityId = 'Required';
-    if (!form.licensePlate.trim()) errs.licensePlate = 'Required';
+    if (!form.licensePlate.trim()) errs.licensePlate = 'Select a vehicle or enter license plate';
     const arrival = toIso(form.plannedArrival);
     const departure = toIso(form.plannedDeparture);
     if (!arrival) errs.plannedArrival = 'Use YYYY-MM-DDTHH:MM';
@@ -85,53 +111,113 @@ export function NewBookingPage() {
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>New Parking Request</h2>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <Field label="Facility ID *" error={errors.facilityId}>
-          <input value={form.facilityId} onChange={(e) => set('facilityId', e.target.value)} placeholder="e.g. FAC-001" style={inputStyle} />
-        </Field>
-        <Field label="Location ID (optional)" error={errors.locationId}>
-          <input value={form.locationId} onChange={(e) => set('locationId', e.target.value)} placeholder="Optional" style={inputStyle} />
-        </Field>
-        <Field label="License plate *" error={errors.licensePlate}>
-          <input value={form.licensePlate} onChange={(e) => set('licensePlate', e.target.value)} placeholder="e.g. ABC-123" style={inputStyle} />
-        </Field>
-        <Field label="Vehicle type *" error={errors.vehicleType}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {VEHICLE_TYPES.map((vt) => (
-              <button
-                key={vt} type="button" onClick={() => set('vehicleType', vt)}
-                style={{ padding: '6px 14px', borderRadius: 6, border: `2px solid ${form.vehicleType === vt ? '#1d4ed8' : '#e5e7eb'}`, background: form.vehicleType === vt ? '#1d4ed8' : '#fff', color: form.vehicleType === vt ? '#fff' : '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 13 }}
-              >
-                {vt}
-              </button>
-            ))}
-          </div>
-        </Field>
-        <Field label="Planned arrival *" error={errors.plannedArrival}>
-          <input type="datetime-local" value={form.plannedArrival} onChange={(e) => set('plannedArrival', e.target.value)} style={inputStyle} />
-        </Field>
-        <Field label="Planned departure *" error={errors.plannedDeparture}>
-          <input type="datetime-local" value={form.plannedDeparture} onChange={(e) => set('plannedDeparture', e.target.value)} style={inputStyle} />
-        </Field>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {([['isElectric', 'Electric vehicle'], ['requiresAccessibleSpot', 'Requires accessible spot'], ['isCompanyCar', 'Company car']] as [keyof Form, string][]).map(([k, label]) => (
-            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
-              <input type="checkbox" checked={form[k] as boolean} onChange={(e) => set(k, e.target.checked)} />
-              {label}
+      {profileLoading ? (
+        <p style={{ color: '#6b7280', fontSize: 14 }}>Loading vehicles…</p>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Field label="Facility *" error={errors.facilityId}>
+            <select
+              value={form.facilityId}
+              onChange={(e) => set('facilityId', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">Select a facility…</option>
+              <option value="00000000-0000-0000-0000-000000000001">Main Building</option>
+            </select>
+          </Field>
+          <Field label="Location (optional)" error={errors.locationId}>
+            <select
+              value={form.locationId}
+              onChange={(e) => set('locationId', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">Any location</option>
+              <option value="LOC-MAIN">LOC-MAIN — Main office</option>
+            </select>
+          </Field>
+
+          {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
+            <Field label="Vehicle *" error={errors.licensePlate}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {profile.vehicles.filter(v => v.isActive).map((v) => (
+                  <button
+                    key={v.vehicleId}
+                    type="button"
+                    onClick={() => selectVehicle(v.vehicleId)}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 6,
+                      border: `2px solid ${form.selectedVehicleId === v.vehicleId ? '#1d4ed8' : '#e5e7eb'}`,
+                      background: form.selectedVehicleId === v.vehicleId ? '#eff6ff' : '#fff',
+                      color: '#111827',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: 14,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{v.licensePlate}</div>
+                    <div style={{ fontSize: 13, color: '#6b7280' }}>
+                      {v.vehicleType} · {v.isElectric ? 'Electric' : 'Standard'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </Field>
+          ) : (
+            <>
+              <Field label="License plate *" error={errors.licensePlate}>
+                <input value={form.licensePlate} onChange={(e) => set('licensePlate', e.target.value)} placeholder="e.g. ABC-123" style={inputStyle} />
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>No vehicles in profile. Add vehicles in Profile page for faster booking.</p>
+              </Field>
+              <Field label="Vehicle type *" error={errors.vehicleType}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {VEHICLE_TYPES.map((vt) => (
+                    <button
+                      key={vt} type="button" onClick={() => set('vehicleType', vt)}
+                      style={{ padding: '6px 14px', borderRadius: 6, border: `2px solid ${form.vehicleType === vt ? '#1d4ed8' : '#e5e7eb'}`, background: form.vehicleType === vt ? '#1d4ed8' : '#fff', color: form.vehicleType === vt ? '#fff' : '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 13 }}
+                    >
+                      {vt}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </>
+          )}
+
+          <Field label="Planned arrival *" error={errors.plannedArrival}>
+            <input type="datetime-local" value={form.plannedArrival} onChange={(e) => set('plannedArrival', e.target.value)} style={inputStyle} />
+          </Field>
+          <Field label="Planned departure *" error={errors.plannedDeparture}>
+            <input type="datetime-local" value={form.plannedDeparture} onChange={(e) => set('plannedDeparture', e.target.value)} style={inputStyle} />
+          </Field>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {form.selectedVehicleId ? null : (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.isElectric} onChange={(e) => set('isElectric', e.target.checked)} />
+                Electric vehicle
+              </label>
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.requiresAccessibleSpot} onChange={(e) => set('requiresAccessibleSpot', e.target.checked)} />
+              Requires accessible spot
             </label>
-          ))}
-        </div>
-
-        {feedback ? (
-          <div style={{ padding: '10px 14px', borderRadius: 8, background: feedback.ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${feedback.ok ? '#bbf7d0' : '#fecaca'}`, color: feedback.ok ? '#166534' : '#b91c1c', fontSize: 13 }}>
-            {feedback.text}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.isCompanyCar} onChange={(e) => set('isCompanyCar', e.target.checked)} />
+              Company car
+            </label>
           </div>
-        ) : null}
 
-        <button type="submit" disabled={submitting} style={{ ...primaryBtn, opacity: submitting ? 0.6 : 1 }}>
-          {submitting ? 'Submitting…' : 'Submit request'}
-        </button>
-      </form>
+          {feedback ? (
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: feedback.ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${feedback.ok ? '#bbf7d0' : '#fecaca'}`, color: feedback.ok ? '#166534' : '#b91c1c', fontSize: 13 }}>
+              {feedback.text}
+            </div>
+          ) : null}
+
+          <button type="submit" disabled={submitting} style={{ ...primaryBtn, opacity: submitting ? 0.6 : 1 }}>
+            {submitting ? 'Submitting…' : 'Submit request'}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
