@@ -163,8 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!um) return;
     try {
       await um.signinRedirect();
-    } catch (e: unknown) {
-      setPhaseError(e instanceof Error ? e.message : 'Login failed');
+    } catch {
       setPhase('login-failed');
     }
   }, []);
@@ -174,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBearerToken('');
     const um = userManagerRef.current;
     if (um) {
+      try { await um.removeUser(); } catch { /* best effort */ }
       try {
         await um.signoutRedirect();
       } catch {
@@ -205,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => {
     clearCredentials();
     setBearerToken('');
+    setApiBaseUrl(configRef.current?.apiBaseUrl ?? '');
     setPhase('unauthenticated');
   }, []);
 
