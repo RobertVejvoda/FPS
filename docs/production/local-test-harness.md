@@ -83,7 +83,19 @@ Get a bearer token for a demo user when the mobile app or API smoke test needs o
 ./tools/dev-auth.sh employee1
 ```
 
-Available local users are `employee1`, `employee2`, `employee3`, and `hr-admin`. Treat generated bearer tokens as secrets: do not commit them, paste them into issues, or include them in screenshots.
+Available local users:
+
+| Username | FPS roles | Main demo interest |
+| --- | --- | --- |
+| `employee1` | `employee` | Normal employee booking, notifications, profile, mobile/web self-service. |
+| `employee2` | `employee` | Company-car style seeded profile path. |
+| `employee3` | `employee` | Missing/no-vehicle profile edge cases. |
+| `hr-admin` | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
+| `tenant-admin` | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
+| `report-viewer` | `report_viewer` | Read-only reporting review. |
+| `auditor` | `auditor` | Audit query/evidence review. |
+
+Treat generated bearer tokens as secrets: do not commit them, paste them into issues, or include them in screenshots.
 
 Before starting backend services, confirm the repository-local .NET 10 SDK is first on `PATH`:
 
@@ -134,6 +146,60 @@ Use these URLs for local service smoke checks:
 | Reporting | `http://localhost:5171/reports/parking/summary` | `401` |
 
 Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. Use the protected endpoint `401` check for those services until an approved API-documentation approach is adopted for them.
+
+## Admin Reports And Operator Views
+
+After running `sh ./tools/start-smoke-web.sh`, the web app starts at `http://localhost:5200` and the API gateway is `http://localhost:10000`.
+
+For business reports:
+
+1. Sign in with `hr-admin` or `report-viewer` after WEB009 lands, or use the current development session handoff with:
+
+   ```sh
+   ./tools/dev-auth.sh hr-admin
+   ```
+
+2. In the web app, use API base URL `http://localhost:10000`.
+3. Open **Reports**. The page shows total demand, allocations, allocation rate, rejections, cancellations, no-shows, daily trend, utilization by location, reason-code counts, fairness rows using pseudonymised requestor hashes, and CSV downloads.
+
+Direct API checks use an `hr-admin` or `report-viewer` token:
+
+```sh
+TOKEN=$(./tools/dev-auth.sh hr-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/dashboard
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/summary
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/fairness
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/utilization
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/reason-codes
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/summary.csv
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/allocation-outcomes.csv
+```
+
+Reporting data is populated from Booking events consumed by the Reporting service. Empty reports usually mean no seeded or smoke booking events have reached Reporting yet, not that the report surface is broken.
+
+For operational traces and infrastructure stats:
+
+| Tool | URL | What it shows locally |
+| --- | --- | --- |
+| Grafana | `http://localhost:3000` | Local dashboard shell. Login with the local Docker Compose defaults from `code/infrastructure/readme.md`. Dashboard provisioning is still a follow-up gap. |
+| Prometheus | `http://localhost:9090` | Local scrape targets from `code/infrastructure/prometheus/prometheus.yaml`. Current coverage is infrastructure-oriented, not full application metrics. |
+| Zipkin | `http://localhost:19411` | Traces only when Dapr tracing config is enabled. The default smoke `dapr.yaml` intentionally omits tracing config to avoid the Docker-network-only Zipkin endpoint. |
+| Jaeger | `http://localhost:16686` | Local tracing UI container. FPS services do not yet export OpenTelemetry traces to it by default. |
+| RabbitMQ | `http://localhost:15672` | Pub/sub broker health when using durable local Dapr components. |
+| Vault | `http://localhost:8200` | Local dev-mode secret store status. |
+
+Current observability limit: FPS services expose `GET /health` and structured stdout logs. Full application OpenTelemetry metrics/traces and prebuilt admin dashboards are tracked as follow-up production-readiness work; see [Monitoring](./monitoring).
+
+Role interests are intentionally separated:
+
+| Actor | Uses app auth? | Primary views |
+| --- | --- | --- |
+| Employee | Yes | Own bookings, new request, notifications, profile. |
+| HR/facilities | Yes | Operational reports, configuration, employee/profile bootstrap. |
+| Tenant admin | Yes | Tenant lifecycle, identity setup, policy/slot readiness, privileged setup checks. |
+| Report viewer | Yes | Parking reports and CSV exports only. |
+| Auditor | Yes | Audit query, evidence, erasure/integrity support where implemented. |
+| Operator/SRE | Usually no app role | Grafana, Prometheus, Zipkin/Jaeger, logs, Dapr/RabbitMQ/Vault/container health. |
 
 Current smoke result from `2026-05-20`: Docker infrastructure is healthy, including Vault, RabbitMQ, and `whoami-dapr`. The service port collision has been narrowed to missing launch profiles on Configuration, Audit, and Reporting; those services now have stable local HTTP ports.
 
