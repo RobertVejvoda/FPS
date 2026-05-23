@@ -122,6 +122,23 @@ Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. 
 
 ## Authentication
 
+## One-Shot Smoke Startup
+
+After Docker infrastructure is running:
+
+```sh
+docker compose -f code/infrastructure/docker-compose.yaml up -d
+sh ./tools/start-smoke-mobile.sh
+```
+
+The script starts the backend services, runs local auth setup and demo seed, prints a bearer token for `employee1`, and starts Expo in LAN mode. It leaves Docker infrastructure running when stopped with Ctrl-C.
+
+If the phone cannot read or open the LAN QR code, use tunnel mode:
+
+```sh
+EXPO_MODE=tunnel sh ./tools/start-smoke-mobile.sh
+```
+
 Use real OIDC login when the environment has a configured issuer, client ID, scopes, redirect URI, and seeded users. This is the preferred path for demo and pilot evidence.
 
 For developer smoke, use the Developer Session screen to paste:

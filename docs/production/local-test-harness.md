@@ -14,6 +14,21 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d
 
 `docker-compose.yaml` creates the required Docker network when it starts. If a local Docker network already exists from an older setup, Compose can reuse it.
 
+If Docker infrastructure is already running and you want a one-shot smoke run for an app surface, use:
+
+```sh
+# Web smoke: starts backend services, seeds data, then starts Vite on :5200.
+sh ./tools/start-smoke-web.sh
+
+# Mobile smoke: starts backend services, seeds data, then starts Expo.
+sh ./tools/start-smoke-mobile.sh
+
+# If LAN QR scanning fails for a physical phone:
+EXPO_MODE=tunnel sh ./tools/start-smoke-mobile.sh
+```
+
+Both scripts leave Docker infrastructure running when stopped with Ctrl-C. They stop only the app services and Dapr sidecars they started.
+
 Set up local identity once after Keycloak is running:
 
 ```sh

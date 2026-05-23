@@ -12,6 +12,7 @@
 #
 # Usage (from repo root):
 #   ./tools/start-local-harness.sh
+#   ./tools/start-local-harness.sh --skip-infra
 #
 # Stop:
 #   ./tools/stop-local-harness.sh
@@ -24,12 +25,30 @@ set -eu
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_DIR="$REPO_ROOT/logs/local-harness"
 PID_FILE="$LOG_DIR/pids"
-
-mkdir -p "$LOG_DIR"
-: > "$PID_FILE"
+SKIP_INFRA=false
 
 log()  { printf '[harness] %s\n' "$*"; }
 fail() { printf '[harness] ERROR: %s\n' "$*" >&2; exit 1; }
+
+for arg in "$@"; do
+  case "$arg" in
+    --skip-infra) SKIP_INFRA=true ;;
+    -h|--help)
+      cat <<EOF
+Usage:
+  ./tools/start-local-harness.sh [--skip-infra]
+
+Options:
+  --skip-infra   Do not run docker compose up -d. Use when infrastructure is already running.
+EOF
+      exit 0
+      ;;
+    *) fail "Unknown argument: $arg" ;;
+  esac
+done
+
+mkdir -p "$LOG_DIR"
+: > "$PID_FILE"
 
 wait_port() {
   port="$1"
@@ -74,8 +93,12 @@ esac
 
 # ── Docker Compose infrastructure ─────────────────────────────────────────────
 
-log "Starting Docker Compose infrastructure..."
-docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" up -d
+if [ "$SKIP_INFRA" = true ]; then
+  log "Skipping Docker Compose startup; expecting infrastructure to be running."
+else
+  log "Starting Docker Compose infrastructure..."
+  docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" up -d
+fi
 
 # ── Keycloak health ───────────────────────────────────────────────────────────
 

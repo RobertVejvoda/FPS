@@ -4,15 +4,33 @@
 # Kills services started by start-local-harness.sh and stops Docker Compose.
 #
 # Usage:
-#   ./tools/stop-local-harness.sh              # stop services, keep Docker volumes
-#   ./tools/stop-local-harness.sh --reset      # stop and remove Docker volumes (full reset)
+#   ./tools/stop-local-harness.sh                  # stop services and infrastructure, keep Docker volumes
+#   ./tools/stop-local-harness.sh --services-only  # stop app services only, leave infrastructure running
+#   ./tools/stop-local-harness.sh --reset          # stop and remove Docker volumes (full reset)
 
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PID_FILE="$REPO_ROOT/logs/local-harness/pids"
+MODE="${1:-}"
 
 log()  { printf '[harness] %s\n' "$*"; }
+
+case "$MODE" in
+  ""|--services-only|--reset) ;;
+  -h|--help)
+    cat <<EOF
+Usage:
+  ./tools/stop-local-harness.sh [--services-only|--reset]
+
+Options:
+  --services-only  Stop FPS app services and Dapr sidecars only.
+  --reset          Stop infrastructure and remove Docker volumes.
+EOF
+    exit 0
+    ;;
+  *) printf '[harness] ERROR: Unknown argument: %s\n' "$MODE" >&2; exit 1 ;;
+esac
 
 # Kill tracked PIDs
 if [ -f "$PID_FILE" ]; then
@@ -40,8 +58,9 @@ for pattern in \
   pkill -f "$pattern" 2>/dev/null && log "Stopped $pattern processes" || true
 done
 
-# Stop Docker Compose
-if [ "${1:-}" = "--reset" ]; then
+if [ "$MODE" = "--services-only" ]; then
+  log "Stopped app services. Docker infrastructure left running."
+elif [ "$MODE" = "--reset" ]; then
   log "Stopping infrastructure and removing volumes (full reset)..."
   docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" down -v
   log "Full reset complete. Run ./tools/start-local-harness.sh to restart."
