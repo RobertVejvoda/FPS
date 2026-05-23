@@ -60,18 +60,21 @@ builder.Services.AddOpenApi("v1", options =>
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-notification", builder.Configuration);
+builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Notification API"));
+app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
 app.UseFpsRequestTraceLogging();
+app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 app.Run();
 

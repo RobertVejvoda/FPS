@@ -56,16 +56,19 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-profile", builder.Configuration);
+builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Profile API"));
+app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseFpsRequestTraceLogging();
+app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 app.Run();
 

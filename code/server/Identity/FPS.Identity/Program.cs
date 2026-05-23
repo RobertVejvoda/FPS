@@ -14,6 +14,7 @@ builder.Services.AddLogging();
 builder.Services.AddHttpClient();
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-identity", builder.Configuration);
+builder.Services.AddFpsMetrics();
 builder.Services.AddOpenApi("v1", options =>
 {
     options.AddDocumentTransformer((doc, _, _) =>
@@ -61,10 +62,12 @@ var app = builder.Build();
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Identity API"));
 
+app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseFpsRequestTraceLogging();
+app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 app.Run();
 

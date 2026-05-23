@@ -67,6 +67,7 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-customer", builder.Configuration);
+builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 // Override the default ITenantIdentityConfigStore with the concrete singleton so
 // TenantIdentityService can call Register() and TenantClaimsTransformation can enforce it.
@@ -85,10 +86,12 @@ var app = builder.Build();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Customer API"));
+app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseFpsRequestTraceLogging();
+app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 
 if (app.Environment.IsDevelopment())

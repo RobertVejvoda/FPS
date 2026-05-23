@@ -10,3 +10,60 @@ scrape_configs:
   - job_name: 'dapr'
     static_configs:
       - targets: ['envoy-proxy:10000', 'whoami-dapr:9090']
+
+  # FPS .NET services — each exposes GET /metrics via prometheus-net
+  - job_name: 'fps-identity'
+    static_configs:
+      - targets: ['host.docker.internal:5192']
+    metrics_path: /metrics
+
+  - job_name: 'fps-booking'
+    static_configs:
+      - targets: ['host.docker.internal:5131']
+    metrics_path: /metrics
+
+  - job_name: 'fps-notification'
+    static_configs:
+      - targets: ['host.docker.internal:5157']
+    metrics_path: /metrics
+
+  - job_name: 'fps-profile'
+    static_configs:
+      - targets: ['host.docker.internal:5197']
+    metrics_path: /metrics
+
+  - job_name: 'fps-audit'
+    static_configs:
+      - targets: ['host.docker.internal:5161']
+    metrics_path: /metrics
+
+  - job_name: 'fps-reporting'
+    static_configs:
+      - targets: ['host.docker.internal:5171']
+    metrics_path: /metrics
+
+  - job_name: 'fps-configuration'
+    static_configs:
+      - targets: ['host.docker.internal:5141']
+    metrics_path: /metrics
+
+  - job_name: 'fps-customer'
+    static_configs:
+      - targets: ['host.docker.internal:5181']
+    metrics_path: /metrics
+
+  # Infrastructure dependencies
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: /metrics
+
+  - job_name: 'keycloak'
+    static_configs:
+      - targets: ['keycloak:9000']
+    metrics_path: /metrics
+
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+    metrics_path: /metrics
