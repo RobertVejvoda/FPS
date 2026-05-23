@@ -37,16 +37,19 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-audit", builder.Configuration);
+builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
 
+app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCloudEvents();
 app.MapControllers();
 app.MapSubscribeHandler();
 app.UseFpsRequestTraceLogging();
+app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 app.Run();
 

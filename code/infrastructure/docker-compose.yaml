@@ -95,9 +95,13 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin
+    # Enable prometheus plugin so GET :15692/metrics is available for scraping
+    command: >
+      bash -c "rabbitmq-plugins enable --offline rabbitmq_prometheus && rabbitmq-server"
     networks:
       - web
     healthcheck:
@@ -147,6 +151,9 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+    # host-gateway mapping makes host.docker.internal resolve on Linux (macOS/Windows do it automatically)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - web
     
@@ -183,6 +190,8 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
     networks:
       - web
     
