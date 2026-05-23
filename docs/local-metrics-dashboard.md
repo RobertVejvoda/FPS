@@ -12,10 +12,14 @@ The **FPS Local Operations** dashboard auto-provisions on first Grafana start.
 
 ---
 
+## Platform note
+
+`host.docker.internal` is used by Prometheus to reach FPS services running on the host. On Linux Docker, `extra_hosts: host-gateway` is set in `docker-compose.yaml` for the Prometheus container — no extra steps needed. On macOS and Windows Docker Desktop, this resolves automatically.
+
 ## Starting the stack
 
 ```bash
-docker compose -f code/infrastructure/docker-compose.yaml up -d prometheus grafana
+docker compose -f code/infrastructure/docker-compose.yaml up -d prometheus grafana rabbitmq
 ./tools/start-local-harness.sh
 ```
 
@@ -52,7 +56,7 @@ Each FPS service exposes `GET /metrics` (prometheus-net). Prometheus scrapes eve
 | Configuration | 5141 | http://localhost:5141/metrics |
 | Customer | 5181 | http://localhost:5181/metrics |
 
-Infrastructure targets (RabbitMQ 15692, Keycloak 9000, Jaeger 14269) are scraped from within the Docker network.
+RabbitMQ (port 15692) is scraped from within the Docker network — the prometheus plugin is enabled via the compose command. Keycloak `start-dev` mode does not expose a `/metrics` endpoint and is not scraped.
 
 ---
 
