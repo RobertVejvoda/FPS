@@ -6,8 +6,13 @@
 #   - ./tools/dev-setup-auth.sh completed (Keycloak clients configured)
 #
 # Usage:
-#   ./tools/dev-seed.sh           — seed all demo data
-#   ./tools/dev-seed.sh --reset   — idempotent re-seed (safe to run multiple times)
+#   ./tools/dev-seed.sh   — seed all demo data
+#
+# Idempotency:
+#   Profile seeding is idempotent (overwrites existing snapshot).
+#   Booking seeding is NOT idempotent — repeated runs create duplicate requests.
+#   To reset bookings, restart the local harness (in-memory store is cleared on restart):
+#     ./tools/stop-local-harness.sh && ./tools/start-local-harness.sh && ./tools/dev-seed.sh
 #
 # What is seeded:
 #   Profiles:  all 7 Keycloak demo users with parking eligibility, roles, and vehicles
@@ -128,7 +133,7 @@ seed_booking() {
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
     -d "{
-      \"facilityId\": \"FAC-MAIN\",
+      \"facilityId\": \"00000000-0000-0000-0000-000000000001\",
       \"locationId\": \"LOC-MAIN\",
       \"licensePlate\": \"$license_plate\",
       \"vehicleType\": \"$vehicle_type\",
@@ -143,6 +148,7 @@ seed_booking() {
     ok "Booking $username $booking_date (HTTP $http_code)"
   else
     err "Booking $username $booking_date HTTP $http_code"
+    return 1
   fi
 }
 

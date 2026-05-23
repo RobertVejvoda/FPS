@@ -84,7 +84,9 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 
 ## Resetting seed data
 
-The in-memory services lose all seeded data on restart. To reset:
+Profile snapshots are overwritten on each run of `dev-seed.sh` (idempotent).
+
+Booking requests are **not** idempotent — repeated `dev-seed.sh` runs create duplicate future requests because the booking service has no admin-delete endpoint. To reset booking data, restart the services (the in-memory store is cleared on shutdown):
 
 ```bash
 ./tools/stop-local-harness.sh
@@ -92,7 +94,7 @@ The in-memory services lose all seeded data on restart. To reset:
 ./tools/dev-seed.sh
 ```
 
-Configuration (policy + slots at `LOC-MAIN`) is re-seeded automatically by the Configuration service on startup and does not need to be re-run.
+Configuration (policy + slots at `LOC-MAIN`) is re-seeded automatically by the Configuration service on startup.
 
 ---
 
