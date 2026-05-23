@@ -20,10 +20,21 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "redirectUris": ["*"],
+      "redirectUris": [
+        "exp://*",
+        "fpsmobile://*",
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "http://192.168.*",
+        "http://10.*",
+        "http://172.*",
+        "http://100.*",
+        "https://auth.expo.io/*"
+      ],
       "webOrigins": ["*"],
       "attributes": {
-        "access.token.lifespan": "3600"
+        "access.token.lifespan": "3600",
+        "pkce.code.challenge.method": "S256"
       },
       "protocolMappers": [
         {
@@ -80,7 +91,8 @@
       "webOrigins": ["http://localhost:5200"],
       "attributes": {
         "access.token.lifespan": "3600",
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5200/"
       },
       "protocolMappers": [
         {

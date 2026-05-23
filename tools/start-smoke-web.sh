@@ -50,6 +50,6 @@ printf '\n'
 cd "$WEB_DIR"
 sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\")"'
 
-npm run dev -- --host 0.0.0.0 &
+"$WEB_DIR/node_modules/.bin/vite" --host 0.0.0.0 &
 WEB_PID="$!"
 wait "$WEB_PID"

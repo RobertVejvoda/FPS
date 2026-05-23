@@ -54,6 +54,7 @@ for pattern in \
   "FPS.Audit" \
   "FPS.Reporting" \
   "FPS.Configuration" \
+  "FPS.Customer" \
   "daprd"; do
   pkill -f "$pattern" 2>/dev/null && log "Stopped $pattern processes" || true
 done

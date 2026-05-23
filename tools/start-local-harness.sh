@@ -2,7 +2,7 @@
 # start-local-harness.sh — Start the FPS full-stack local test harness.
 #
 # Starts Docker Compose infrastructure, sets up Keycloak auth, launches Identity
-# and six Dapr-paired services in the background, then seeds demo data.
+# and seven Dapr-paired services in the background, then seeds demo data.
 # Service logs go to logs/local-harness/. PIDs are saved for stop-local-harness.sh.
 #
 # Prerequisites:
@@ -125,9 +125,9 @@ dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj \
 echo "$!" >> "$PID_FILE"
 require_port 5192 "Identity" 60 "$LOG_DIR/identity.log"
 
-# ── Six services with Dapr sidecars ───────────────────────────────────────────
+# ── Services with Dapr sidecars ───────────────────────────────────────────────
 
-log "Starting Booking, Notification, Profile, Audit, Reporting, Configuration"
+log "Starting Booking, Notification, Profile, Audit, Reporting, Configuration, Customer"
 log "  with Dapr sidecars (logs -> $LOG_DIR/dapr-run.log)..."
 cd "$REPO_ROOT"
 dapr run -f dapr.yaml > "$LOG_DIR/dapr-run.log" 2>&1 &
@@ -139,6 +139,7 @@ require_port 5197 "Profile"       90 "$LOG_DIR/dapr-run.log"
 require_port 5161 "Audit"         90 "$LOG_DIR/dapr-run.log"
 require_port 5171 "Reporting"     90 "$LOG_DIR/dapr-run.log"
 require_port 5141 "Configuration" 90 "$LOG_DIR/dapr-run.log"
+require_port 5181 "Customer"      90 "$LOG_DIR/dapr-run.log"
 
 # ── Seed demo data ────────────────────────────────────────────────────────────
 
@@ -164,6 +165,7 @@ printf ' Profile:         http://localhost:5197\n'
 printf ' Audit:           http://localhost:5161\n'
 printf ' Reporting:       http://localhost:5171\n'
 printf ' Configuration:   http://localhost:5141\n'
+printf ' Customer:        http://localhost:5181\n'
 printf ' Logs:            %s/\n' "$LOG_DIR"
 printf '\n'
 printf ' Smoke (run in a new shell):\n'

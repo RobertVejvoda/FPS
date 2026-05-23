@@ -1,0 +1,14 @@
+# Mobile local smoke configuration. Copy to `.env.local` for local overrides.
+# These values are public runtime configuration, not secrets.
+#
+# For a physical phone, use a device-reachable host:
+# - Tailscale: run `tailscale ip -4` on the development machine.
+# - LAN: use the development machine's LAN IP.
+
+FPS_MOBILE_AUTH_ISSUER_URL=http://100.x.y.z:8180/realms/fps-local
+FPS_MOBILE_AUTH_CLIENT_ID=fps-mobile-dev
+FPS_MOBILE_AUTH_SCOPES=openid profile email
+FPS_MOBILE_API_BASE_URL=http://100.x.y.z:10000
+
+# Optional single-host override used by `tools/start-smoke-mobile.sh`.
+# FPS_MOBILE_HOST=100.x.y.z

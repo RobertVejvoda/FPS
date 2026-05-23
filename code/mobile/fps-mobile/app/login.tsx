@@ -17,6 +17,37 @@ type LoginStatus =
   | { kind: 'cancelled' }
   | { kind: 'error'; message: string };
 
+type DiscoveryState = {
+  discovery: AuthSession.DiscoveryDocument | null;
+  error: string | null;
+};
+
+function useOptionalDiscovery(configured: boolean, issuerUrl: string): DiscoveryState {
+  const [state, setState] = useState<DiscoveryState>({ discovery: null, error: null });
+
+  useEffect(() => {
+    let isMounted = true;
+    setState({ discovery: null, error: null });
+
+    if (!configured) return () => { isMounted = false; };
+
+    AuthSession.resolveDiscoveryAsync(issuerUrl)
+      .then(result => {
+        if (isMounted) setState({ discovery: result, error: null });
+      })
+      .catch(() => {
+        if (isMounted) setState({
+          discovery: null,
+          error: 'Identity provider is not reachable from this device.',
+        });
+      });
+
+    return () => { isMounted = false; };
+  }, [configured, issuerUrl]);
+
+  return state;
+}
+
 export default function LoginRoute() {
   const router = useRouter();
   const { setSession, clearSession } = useAuth();
@@ -26,8 +57,7 @@ export default function LoginRoute() {
 
   const redirectUri = AuthSession.makeRedirectUri({ path: 'login-callback' });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const discovery = AuthSession.useAutoDiscovery((configured ? oidcConfig.issuerUrl : null) as any);
+  const { discovery, error: discoveryError } = useOptionalDiscovery(configured, oidcConfig.issuerUrl);
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -117,6 +147,8 @@ export default function LoginRoute() {
           <Text style={styles.hint}>Sign in was cancelled.</Text>
         ) : status.kind === 'error' ? (
           <Text style={styles.error}>{status.message}</Text>
+        ) : discoveryError ? (
+          <Text style={styles.error}>{discoveryError}</Text>
         ) : null}
 
         {configured ? (

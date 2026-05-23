@@ -54,6 +54,17 @@ Use `--lan` when the phone and development machine are on the same reachable net
 
 A phone cannot use the developer machine's `localhost`; use a LAN address such as `http://<dev-machine-ip>:<gateway-port>`, a tunnel, or a hosted demo URL for backend API access.
 
+If the development machine and phone both use Tailscale, prefer the development machine's Tailscale IPv4 address for physical-device smoke testing. It gives one stable host for the API gateway and local Keycloak:
+
+```sh
+tailscale ip -4
+```
+
+Then the mobile URLs are:
+
+- API base URL: `http://<tailscale-ip>:10000`;
+- OIDC issuer: `http://<tailscale-ip>:8180/realms/fps-local`.
+
 ## API Run Profile
 
 The mobile app expects one API base URL for employee endpoints such as:
@@ -131,7 +142,18 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d
 sh ./tools/start-smoke-mobile.sh
 ```
 
-The script starts the backend services, runs local auth setup and demo seed, prints a bearer token for `employee1`, and starts Expo in LAN mode. It leaves Docker infrastructure running when stopped with Ctrl-C.
+The script starts the backend services, runs local auth setup and demo seed, configures Expo with the local OIDC issuer/client/API base URL, prints a bearer token for `employee1`, and starts Expo in LAN mode. It prefers the development machine's Tailscale IPv4 address when available; otherwise it falls back to the LAN address. It leaves Docker infrastructure running when stopped with Ctrl-C.
+
+For stable local overrides, copy `code/mobile/fps-mobile/mobile-env.sample` to `code/mobile/fps-mobile/.env.local`. The smoke script loads that file before deriving defaults. Use it for public runtime settings only:
+
+```env
+FPS_MOBILE_AUTH_ISSUER_URL=http://<tailscale-ip>:8180/realms/fps-local
+FPS_MOBILE_AUTH_CLIENT_ID=fps-mobile-dev
+FPS_MOBILE_AUTH_SCOPES=openid profile email
+FPS_MOBILE_API_BASE_URL=http://<tailscale-ip>:10000
+```
+
+Do not put secrets in mobile Expo config; issuer, client ID, scopes, and API base URL are public app configuration.
 
 If the phone cannot read or open the LAN QR code, use tunnel mode:
 
@@ -139,7 +161,20 @@ If the phone cannot read or open the LAN QR code, use tunnel mode:
 EXPO_MODE=tunnel sh ./tools/start-smoke-mobile.sh
 ```
 
-Use real OIDC login when the environment has a configured issuer, client ID, scopes, redirect URI, and seeded users. This is the preferred path for demo and pilot evidence.
+Use real OIDC login from the Sign in screen. For the local smoke profile:
+
+- issuer and token endpoint come from the device-reachable Keycloak URL printed by the script;
+- client ID is `fps-mobile-dev`;
+- redirect URIs are accepted by the local Keycloak mobile client for Expo Go, native-scheme, localhost, LAN, Tailscale, and Expo AuthSession proxy redirects;
+- demo password defaults to `Dev1234!`.
+
+If Keycloak shows `invalid parameter: redirect_uri`, re-run the local realm import after pulling the latest repository changes:
+
+```sh
+./tools/dev-setup-auth.sh
+```
+
+That reapplies the `fps-mobile-dev` redirect allow-list.
 
 For developer smoke, use the Developer Session screen to paste:
 
