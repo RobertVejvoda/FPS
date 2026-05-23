@@ -19,7 +19,7 @@ This is an architecture and product control document. It does not certify GDPR c
 | Encryption at rest | Delegated to infrastructure | Gap — see [Gap Register](./gap-register) |
 | Observability / logging | Structured stdout + OTel traces | [Logging and Monitoring](./logging-monitoring) |
 | Incident response | Runbook exists | [Incident Handling](../production/incident-handling) |
-| BYOC responsibility split | Explicit | [Client Production Handoff](../production/client-production-handoff) |
+| BYOC responsibility split | Explicit | [Data Ownership and BYOC Boundaries](#data-ownership-and-byoc-boundaries) |
 | Known gaps | Documented | [Gap Register](./gap-register) |
 
 ---
@@ -95,23 +95,7 @@ FPS supports GDPR-aligned operation through these mechanisms:
 
 ---
 
-## BYOC / Customer Responsibility Boundaries
-
-The following are always customer responsibility in a client-owned deployment:
-
-| Area | Customer owns |
-|------|--------------|
-| Infrastructure | Container hosting, networking, TLS certificates, storage provisioning |
-| Identity provider | IdP operation, user lifecycle, MFA policy, group/role mapping configuration |
-| Secret management | Secret store provisioning, rotation schedules, break-glass procedures |
-| Encryption at rest | Storage-level encryption for all service data stores |
-| Data backup and restore | Backup schedules, restore testing, RTO/RPO targets |
-| DPA and legal | Controller/processor agreements, privacy notices, subprocessor list, breach notification |
-| Log forwarding | Shipping container stdout to the client SIEM or log platform |
-| Alerting | Threshold definition, on-call routing, escalation procedures |
-| Production access | Privileged access policy, break-glass approval, time-bound access tracking |
-
-Full split: [Client Production Handoff](../production/client-production-handoff).
+<!-- BYOC responsibility boundaries are covered in the detailed section below -->
 
 ---
 
