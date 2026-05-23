@@ -17,6 +17,29 @@ type LoginStatus =
   | { kind: 'cancelled' }
   | { kind: 'error'; message: string };
 
+function useOptionalDiscovery(configured: boolean, issuerUrl: string) {
+  const [discovery, setDiscovery] = useState<AuthSession.DiscoveryDocument | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setDiscovery(null);
+
+    if (!configured) return () => { isMounted = false; };
+
+    AuthSession.resolveDiscoveryAsync(issuerUrl)
+      .then(result => {
+        if (isMounted) setDiscovery(result);
+      })
+      .catch(() => {
+        if (isMounted) setDiscovery(null);
+      });
+
+    return () => { isMounted = false; };
+  }, [configured, issuerUrl]);
+
+  return discovery;
+}
+
 export default function LoginRoute() {
   const router = useRouter();
   const { setSession, clearSession } = useAuth();
@@ -26,8 +49,7 @@ export default function LoginRoute() {
 
   const redirectUri = AuthSession.makeRedirectUri({ path: 'login-callback' });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const discovery = AuthSession.useAutoDiscovery((configured ? oidcConfig.issuerUrl : null) as any);
+  const discovery = useOptionalDiscovery(configured, oidcConfig.issuerUrl);
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
