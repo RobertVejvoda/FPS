@@ -3,3 +3,4 @@
 export type * from "./identity";
 export type * from "./booking";
 export type * from "./profile";
+export type * from "./notification";
