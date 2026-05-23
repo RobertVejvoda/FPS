@@ -285,7 +285,7 @@ The mobile app expects one API base URL. The Envoy gateway added in OPS006B prov
 
 ## Local Mobile API Gateway (OPS006B)
 
-The Envoy proxy in Docker Compose now routes the employee API endpoints under one origin for mobile and browser web smoke testing. The local gateway allows browser CORS from `http://localhost:5200`, matching the web OIDC redirect origin.
+The Envoy proxy in Docker Compose now routes employee and operator API endpoints under one origin for mobile and browser web smoke testing. The local gateway allows browser CORS from `http://localhost:5200`, matching the web OIDC redirect origin.
 **Gateway URL (simulator/browser):** `http://localhost:10000`
 **Gateway URL (physical phone on same LAN):** `http://<dev-machine-ip>:10000`
 
@@ -303,6 +303,9 @@ Gateway route table:
 | `/bookings` and booking actions | Booking `localhost:5131` |
 | `/notifications` and notification actions | Notification `localhost:5157` |
 | `/profile/snapshot` | Profile `localhost:5197` |
+| `/reports` | Reporting `localhost:5171` |
+| `/audit` | Audit `localhost:5161` |
+| `/configuration` | Configuration `localhost:5141` |
 
 Authorization headers pass through unchanged. The gateway does not mint or verify tokens.
 
