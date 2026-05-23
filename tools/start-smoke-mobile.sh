@@ -58,9 +58,7 @@ printf '================================================\n'
 printf '\n'
 
 cd "$MOBILE_DIR"
-if [ ! -d node_modules ]; then
-  npm install
-fi
+sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$MOBILE_DIR" 'node -e "require(\"expo/package.json\")"'
 
 case "$EXPO_MODE" in
   lan) npm run start -- --lan --clear & ;;

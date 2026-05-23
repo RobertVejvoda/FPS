@@ -42,9 +42,7 @@ printf '================================================\n'
 printf '\n'
 
 cd "$WEB_DIR"
-if [ ! -d node_modules ]; then
-  npm install
-fi
+sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\")"'
 
 npm run dev -- --host 0.0.0.0 &
 WEB_PID="$!"
