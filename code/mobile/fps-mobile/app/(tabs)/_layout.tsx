@@ -1,9 +1,13 @@
 import { Tabs } from 'expo-router';
 import { colors } from '@/theme';
 import { useUnreadCount } from '@/api/useUnreadCount';
+import { useAuth } from '@/auth/AuthContext';
+import { isMobileEmployeeRole } from '@/auth/roles';
 
 export default function TabsLayout() {
   const unreadCount = useUnreadCount();
+  const { roles } = useAuth();
+  const isEmployee = isMobileEmployeeRole(roles);
 
   return (
     <Tabs
@@ -12,17 +16,49 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.textMuted,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="bookings" options={{ title: 'My Bookings' }} />
-      <Tabs.Screen name="new" options={{ title: 'New' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          href: isEmployee ? undefined : null,
+        }}
+      />
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          title: 'My Bookings',
+          href: isEmployee ? undefined : null,
+        }}
+      />
+      <Tabs.Screen
+        name="new"
+        options={{
+          title: 'New',
+          href: isEmployee ? undefined : null,
+        }}
+      />
       <Tabs.Screen
         name="notifications"
         options={{
           title: 'Alerts',
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadge: isEmployee && unreadCount > 0 ? unreadCount : undefined,
+          href: isEmployee ? undefined : null,
         }}
       />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          href: isEmployee ? undefined : null,
+        }}
+      />
+      <Tabs.Screen
+        name="unsupported-role"
+        options={{
+          title: 'Access',
+          href: isEmployee ? null : undefined,
+        }}
+      />
     </Tabs>
   );
 }

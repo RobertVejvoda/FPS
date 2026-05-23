@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { fetchMe } from '@/api/client';
 import { getOidcConfig } from './oidcConfig';
 import { clearAccessToken, loadAccessToken, saveAccessToken } from './authStorage';
 
@@ -10,6 +11,7 @@ export type AuthState = {
   ready: boolean;
   apiBaseUrl: string;
   bearerToken: string;
+  roles: string[];
   isConfigured: boolean;
   setSession: (accessToken: string) => Promise<void>;
   clearSession: () => Promise<void>;
@@ -20,10 +22,17 @@ export type AuthState = {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+async function loadRoles(apiBaseUrl: string, bearerToken: string): Promise<string[]> {
+  if (!apiBaseUrl || !bearerToken) return [];
+  const result = await fetchMe({ apiBaseUrl, bearerToken });
+  return result.kind === 'ok' ? (result.me.roles as string[]) : [];
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [apiBaseUrl, setApiBaseUrl] = useState('');
   const [bearerToken, setBearerToken] = useState('');
+  const [roles, setRoles] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,9 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const oidcToken = await loadAccessToken();
         if (oidcToken) {
           const { apiBaseUrl: configUrl } = getOidcConfig();
+          const fetchedRoles = await loadRoles(configUrl, oidcToken);
           if (!cancelled) {
             setApiBaseUrl(configUrl);
             setBearerToken(oidcToken);
+            setRoles(fetchedRoles);
           }
           return;
         }
@@ -42,7 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem(DEV_BASE_URL_KEY),
           AsyncStorage.getItem(DEV_TOKEN_KEY),
         ]);
-        if (!cancelled) {
+        if (storedBaseUrl && storedToken) {
+          const fetchedRoles = await loadRoles(storedBaseUrl, storedToken);
+          if (!cancelled) {
+            setApiBaseUrl(storedBaseUrl);
+            setBearerToken(storedToken);
+            setRoles(fetchedRoles);
+          }
+        } else if (!cancelled) {
           if (storedBaseUrl) setApiBaseUrl(storedBaseUrl);
           if (storedToken) setBearerToken(storedToken);
         }
@@ -62,8 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       AsyncStorage.removeItem(DEV_TOKEN_KEY),
     ]);
     const { apiBaseUrl: configUrl } = getOidcConfig();
+    const fetchedRoles = await loadRoles(configUrl, accessToken);
     setApiBaseUrl(configUrl);
     setBearerToken(accessToken);
+    setRoles(fetchedRoles);
   }, []);
 
   const clearSession = useCallback(async () => {
@@ -74,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
     setApiBaseUrl('');
     setBearerToken('');
+    setRoles([]);
   }, []);
 
   const saveCredentials = useCallback(async (nextBaseUrl: string, nextToken: string) => {
@@ -84,8 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       AsyncStorage.setItem(DEV_BASE_URL_KEY, trimmedBaseUrl),
       AsyncStorage.setItem(DEV_TOKEN_KEY, trimmedToken),
     ]);
+    const fetchedRoles = await loadRoles(trimmedBaseUrl, trimmedToken);
     setApiBaseUrl(trimmedBaseUrl);
     setBearerToken(trimmedToken);
+    setRoles(fetchedRoles);
   }, []);
 
   const clearCredentials = useCallback(async () => {
@@ -95,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
     setApiBaseUrl('');
     setBearerToken('');
+    setRoles([]);
   }, []);
 
   const value = useMemo<AuthState>(
@@ -102,13 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       apiBaseUrl,
       bearerToken,
+      roles,
       isConfigured: ready && apiBaseUrl.length > 0 && bearerToken.length > 0,
       setSession,
       clearSession,
       saveCredentials,
       clearCredentials,
     }),
-    [ready, apiBaseUrl, bearerToken, setSession, clearSession, saveCredentials, clearCredentials],
+    [ready, apiBaseUrl, bearerToken, roles, setSession, clearSession, saveCredentials, clearCredentials],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
