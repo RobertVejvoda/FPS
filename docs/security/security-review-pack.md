@@ -87,7 +87,7 @@ FPS supports GDPR-aligned operation through these mechanisms:
 | Purpose limitation | Confidential data is scoped per service contract; cross-service access uses defined APIs, not shared stores |
 | Access rights | Employees see only their own bookings, profiles, and notifications |
 | Rectification | Profile update via PUT /profile; booking cancellation via existing booking API |
-| Erasure | `DELETE /audit/erasure/{userId}` pseudonymises audit actor; profile and booking data deletion documented (see gaps) |
+| Erasure | `DELETE /audit/pii-mappings/{userId}` pseudonymises audit actor; profile and booking data deletion documented (see gaps) |
 | Audit accountability | Append-only audit log with actor, tenant, timestamp, reason for every sensitive action |
 | Pseudonymisation | Audit records store `userId` (a token subject), not employee names; PII mapping resides separately in Profile service |
 | Data portability | Reporting exports available to authorised roles; structured JSON/CSV format |
@@ -105,7 +105,7 @@ All sensitive actions — booking submission, allocation, cancellation, no-show,
 
 Audit access is restricted to `auditor` and `admin` roles. Raw PII mapping (connecting userId to a real name) requires a separate approved access path.
 
-Audit retention and integrity evidence: gap — see [Gap Register](./gap-register).
+Audit retention job (`DELETE /audit/retention`), integrity verification (`GET /audit/integrity`), and export (`GET /audit/export`) are implemented (A004/A005). Production retention schedules and periodic job scheduling remain client configuration responsibilities.
 
 ---
 
@@ -113,7 +113,7 @@ Audit retention and integrity evidence: gap — see [Gap Register](./gap-registe
 
 Services emit structured logs to stdout. Log output excludes: bearer tokens, passwords, raw PII (names, emails, license plates), Secret classification values, or hidden allocation internals.
 
-OpenTelemetry trace export (OTLP) is implemented in the OBS001 baseline. Metrics and a local Grafana dashboard are planned in OBS002.
+OpenTelemetry trace export (OTLP) is implemented (OBS001). Prometheus metrics and a local Grafana operations dashboard are implemented (OBS002). Alert rules for service down, high error rate, latency, and RabbitMQ are implemented (OBS003). See `docs/local-metrics-dashboard.md` and `docs/local-alerts-runbook.md`.
 
 ---
 
@@ -173,8 +173,8 @@ FairSpot requires explicit retention periods before production use. Current impl
 | **Booking requests (allocated)** | 1 year after booking date | Automated job deletes old booking aggregates | Gap — see [Gap Register](./gap-register) § GDPR |
 | **Booking requests (rejected/cancelled)** | 90 days after final status | Automated job | Gap |
 | **In-app notifications** | 90 days after creation | Automated job deletes old notification records | Gap |
-| **Audit records (business actions)** | 7 years (or per jurisdiction) | Automated job deletes old records OR archive to cold storage | Gap — A004 planned |
-| **Audit PII mapping** | Same as audit records, or shorter where erasure is requested | `DELETE /audit/erasure/{userId}` (implemented) | Implemented for manual erasure; bulk retention job not yet implemented |
+| **Audit records (business actions)** | 7 years (or per jurisdiction) | `DELETE /audit/retention` (implemented, A004) | Implemented; client must configure retention period and schedule invocation |
+| **Audit PII mapping** | Same as audit records, or shorter where erasure is requested | `DELETE /audit/pii-mappings/{userId}` (implemented) | Implemented for manual erasure; bulk retention job not yet implemented |
 | **Security logs** | 1 year (or per incident retention policy) | Infrastructure log retention (client responsibility) | Client responsibility |
 | **Reporting projections** | 2 years | Automated job or manual export + delete | Gap |
 | **Backups** | 30 days rolling for operational backups; 7 years for compliance archives where required | Backup lifecycle policy in client infrastructure | Client responsibility |
@@ -315,8 +315,8 @@ The following gaps are documented in the [Gap Register](./gap-register) and must
 
 | Gap | Severity | Blocker? | Planned Resolution |
 |-----|----------|----------|-------------------|
-| Prometheus metrics not yet emitted | Medium | **No** (OBS002 in progress) | OBS002 adds metrics export. Non-blocking; monitoring is still possible via logs and traces. |
-| Alerting rules not configured | Medium | **Yes** | OBS003 to define critical alert rules (service down, Draw failure, audit ingestion failure). |
+| Prometheus metrics emitted but production wiring is client responsibility | Low | **No** | OBS002 implemented — GET /metrics on all services, Grafana dashboard provisioned. Client must configure log/metric forwarding to their platform. |
+| Basic alert rules defined; production thresholds need tuning | Low | **No** | OBS003 implemented — FpsServiceDown, FpsHighErrorRate, FpsHighLatency, RabbitMQDown rules in place. Client must set production-appropriate thresholds and alerting destinations. |
 | Log shipping to SIEM not configured | Medium | **No** (client responsibility) | Client configures log shipper (Fluent Bit, Fluentd, Splunk forwarder) to ship container stdout to SIEM. |
 
 ### Backup and Restore
@@ -341,7 +341,7 @@ The following gaps are documented in the [Gap Register](./gap-register) and must
 | Tenant isolation | Verify no cross-tenant paths exist (spot-check customer service, profile, booking endpoints) |
 | Audit | Verify audit records appear for admin actions and booking lifecycle events |
 | Log inspection | Confirm no PII, tokens, or passwords appear in container stdout |
-| Erasure | Test `DELETE /audit/erasure/{userId}` and verify profile/booking data handling |
+| Erasure | Test `DELETE /audit/pii-mappings/{userId}` and verify profile/booking data handling |
 | Backup/restore | Run restore drill per [Backup And Restore](../production/backup-restore) |
 | Incident response | Review [Incident Response](./incident-response) and confirm contacts are populated |
 | Data ownership | Review "What FairSpot Stores" vs "What Remains in Customer IdP" table above |

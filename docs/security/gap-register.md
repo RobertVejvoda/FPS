@@ -56,7 +56,7 @@ Last updated: 2026-05-23.
 | Gap | Severity | Notes |
 |-----|----------|-------|
 | Full employee data erasure path not implemented | High — production-blocking | Audit erasure (pseudonymisation) is implemented. Erasure of profile facts, booking history, and notification records is documented but not fully wired end-to-end. Needs a coordinated erasure flow across Profile, Booking, Notification, and Audit services. |
-| Retention schedules not implemented | High — production-blocking | Retention periods for bookings, notifications, audit records, backups, and PII mappings are not enforced by any scheduled job. Documented as a follow-up gap (A004 Audit Retention Job exists; booking/notification retention not yet sliced). |
+| Audit retention schedule not enforced by default | Medium | `DELETE /audit/retention` is implemented (A004). Client must configure the retention period and invoke/schedule the endpoint. Booking and notification retention jobs are not yet implemented. |
 | No consent or privacy notice flow in the product | Medium | Privacy notice delivery is a legal/UX responsibility outside the product. FPS does not display or record consent. Client must implement at the IdP or application layer as required by their legal basis. |
 | DPIA not completed | Medium | A Data Protection Impact Assessment is required before production processing of personal data in most GDPR jurisdictions. This is a client/legal responsibility. |
 
@@ -66,8 +66,8 @@ Last updated: 2026-05-23.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Audit integrity verification not implemented | Medium | Audit records are append-only in the current store but are not cryptographically chained or externally verified. Planned in A005. |
-| Audit retention job not implemented | Medium | Old audit records are never deleted. Planned in A004. |
+| Audit integrity verification: no cryptographic chaining | Low | `GET /audit/integrity` and `GET /audit/export` are implemented (A005). Records are append-only but not cryptographically chained. Sufficient for audit evidence; production hardening may require external signing. |
+| Audit retention: client must schedule invocation | Low | `DELETE /audit/retention` is implemented (A004). Client configures retention period and schedules periodic invocation. |
 | Reporting data projection lag not measured | Low | Reporting read models are updated on event consumption. No lag monitoring or alerting is wired. |
 
 ---
@@ -76,9 +76,8 @@ Last updated: 2026-05-23.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Prometheus metrics not yet emitted by .NET services | Medium | OBS001 adds OTel traces. OBS002 (this sprint) adds metrics. Until OBS002 merges, there are no application-level Prometheus scrape targets. |
-| Log shipping to SIEM not configured | Medium | Services emit structured stdout. Shipping to a client SIEM is a client deployment responsibility. No Fluent Bit or log shipper config is provided. |
-| Alerting rules not configured | Medium | Alertmanager and Prometheus are in docker-compose but no alert rules are defined. Planned in OBS003. |
+| Production log/metric forwarding is client responsibility | Medium | OBS001 (OTel traces), OBS002 (Prometheus metrics + Grafana), OBS003 (alert rules) are all implemented locally. Client must configure log shipping to SIEM and connect their monitoring platform via OTLP or Prometheus remote-write. |
+| Production alert thresholds need client tuning | Low | Basic alert rules (service down, high error rate, latency, RabbitMQ) are in place (OBS003). Production thresholds and notification destinations (PagerDuty, Slack, email) are client configuration. |
 
 ---
 
