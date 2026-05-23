@@ -31,9 +31,14 @@ type FormState = {
   plannedDeparture: string;
 };
 
+// Demo facility GUID — the same value used by dev-seed.sh and web booking form.
+// A facility picker would require a /facilities API that does not yet exist.
+const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
+const DEMO_LOCATION_ID = 'LOC-MAIN';
+
 const INITIAL_FORM: FormState = {
-  facilityId: '',
-  locationId: '',
+  facilityId: DEMO_FACILITY_ID,
+  locationId: DEMO_LOCATION_ID,
   selectedVehicleId: '',
   licensePlate: '',
   vehicleType: 'Sedan',
@@ -201,28 +206,17 @@ export default function NewBookingRoute() {
           <Text style={styles.mutedText}>Loading vehicles…</Text>
         ) : (
           <>
-            <FieldRow label="Facility *" error={fieldErrors.facilityId}>
-              <TextInput
-                style={[styles.input, fieldErrors.facilityId ? styles.inputError : null]}
-                value={form.facilityId}
-                onChangeText={v => set('facilityId', v)}
-                placeholder="e.g. FAC-001"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-              />
-              <Text style={styles.hint}>Facility identifier (e.g. FAC-001, Building-A)</Text>
+            {/* Facility and location are pre-set to demo values; a picker requires a /facilities API */}
+            <FieldRow label="Facility">
+              <View style={styles.readOnlyRow}>
+                <Text style={styles.readOnlyValue}>Main Building</Text>
+              </View>
             </FieldRow>
 
-            <FieldRow label="Location" error={fieldErrors.locationId}>
-              <TextInput
-                style={styles.input}
-                value={form.locationId}
-                onChangeText={v => set('locationId', v)}
-                placeholder="Optional location"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-              />
-              <Text style={styles.hint}>Location within facility (e.g. LOC-001, Parking-North)</Text>
+            <FieldRow label="Location">
+              <View style={styles.readOnlyRow}>
+                <Text style={styles.readOnlyValue}>LOC-MAIN — Main office</Text>
+              </View>
             </FieldRow>
 
             {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
@@ -413,6 +407,8 @@ const styles = StyleSheet.create({
   field: { gap: spacing.xs },
   label: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
   hint: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
+  readOnlyRow: { backgroundColor: colors.cardBackground, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm },
+  readOnlyValue: { fontSize: 14, color: colors.text },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
