@@ -2,13 +2,28 @@ global:
   resolve_timeout: 5m
 
 route:
-  group_by: ['alertname']
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 12h
-  receiver: 'web.hook'
+  group_by: ['alertname', 'job']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 30m
+  receiver: 'local-only'
+
+  routes:
+    - match:
+        severity: critical
+      group_wait: 5s
+      repeat_interval: 5m
+      receiver: 'local-only'
 
 receivers:
-  - name: 'web.hook'
-    webhook_configs:
-      - url: 'http://localhost:8080/'
+  # Local dev: alerts are visible in Alertmanager UI (http://localhost:9093)
+  # and Prometheus Alerts tab (http://localhost:9090/alerts).
+  # Add a webhook or email receiver here for production notification routing.
+  - name: 'local-only'
+
+inhibit_rules:
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['job']
