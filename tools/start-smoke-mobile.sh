@@ -54,10 +54,28 @@ load_env_file() {
   log_name="$(printf '%s' "$file" | sed "s|^$REPO_ROOT/||")"
   printf '[mobile-smoke] Loading %s\n' "$log_name"
 
-  set -a
-  # shellcheck disable=SC1090
-  . "$file"
-  set +a
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%}"
+    case "$line" in
+      ""|\#*) continue ;;
+      *=*) ;;
+      *) continue ;;
+    esac
+
+    key="${line%%=*}"
+    value="${line#*=}"
+    case "$key" in
+      FPS_MOBILE_*|EXPO_PUBLIC_*) ;;
+      *) continue ;;
+    esac
+
+    case "$value" in
+      \"*\") value="${value#\"}"; value="${value%\"}" ;;
+      \'*\') value="${value#\'}"; value="${value%\'}" ;;
+    esac
+
+    export "$key=$value"
+  done < "$file"
 }
 
 trap cleanup INT TERM EXIT
