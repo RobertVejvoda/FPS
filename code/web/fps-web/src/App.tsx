@@ -1,6 +1,7 @@
-import { BrowserRouter, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import { SessionPage } from './pages/SessionPage';
+import { OidcCallbackPage } from './pages/OidcCallbackPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { NewBookingPage } from './pages/NewBookingPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -21,8 +22,7 @@ const navItems = [
 ];
 
 function Shell() {
-  const { isConfigured, clear } = useAuth();
-  const navigate = useNavigate();
+  const { isConfigured, logout } = useAuth();
 
   if (!isConfigured) return <Navigate to="/session" replace />;
 
@@ -51,7 +51,7 @@ function Shell() {
           ))}
         </nav>
         <button
-          onClick={() => { clear(); navigate('/session'); }}
+          onClick={() => { void logout(); }}
           style={{ background: 'none', border: 'none', color: '#b91c1c', fontSize: 13, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
         >
           Sign out
@@ -79,6 +79,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/session" element={<SessionPage />} />
+        <Route path="/auth/callback" element={<OidcCallbackPage />} />
         <Route path="/*" element={<Shell />} />
       </Routes>
     </BrowserRouter>
