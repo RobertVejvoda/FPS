@@ -9,6 +9,9 @@
 # infrastructure running.
 set -eu
 
+# Prefer user-installed Node/npm over embedded tool runtimes.
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH"
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/code/web/fps-web"
 WEB_PID=""

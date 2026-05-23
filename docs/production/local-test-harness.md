@@ -36,7 +36,7 @@ EXPO_MODE=tunnel sh ./tools/start-smoke-mobile.sh
 
 Both scripts leave Docker infrastructure running when stopped with Ctrl-C. They stop only the app services and Dapr sidecars they started.
 
-The scripts also check frontend dependencies before starting Vite or Expo. If `node_modules` is missing or a native optional package probe fails, they run `npm ci` from the app lockfile to repair the local dependency tree.
+The scripts also check frontend dependencies before starting Vite or Expo. They prefer user-installed Node/npm from Homebrew or `/usr/local/bin` over embedded tool runtimes. If `node_modules` is missing or a native optional package probe fails, they run `npm ci` from the app lockfile to repair the local dependency tree. On macOS they also ad-hoc sign local `.node` binaries after install to avoid native optional dependency code-signature failures from packages such as Rollup.
 
 Set up local identity once after Keycloak is running:
 
