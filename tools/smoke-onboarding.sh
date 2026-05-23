@@ -54,14 +54,20 @@ TOKEN=$(get_token tenant-admin)
 if [[ -z "$TOKEN" ]]; then
   fail "Could not obtain tenant-admin token"
 else
-  STATUS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/customer/tenant/readiness" \
+  STATUS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/tenant-1/readiness" \
     | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$STATUS" != "UNREACHABLE" ]]; then
     pass "Tenant readiness endpoint reachable (status: $STATUS)"
   else
     fail "Tenant readiness endpoint unreachable"
   fi
-  skip "POST /customer/tenants not yet implemented — using seeded tenant-1"
+  TENANT=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/tenant-1" \
+    | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "UNREACHABLE")
+  if [[ "$TENANT" == "tenant-1" ]]; then
+    pass "GET /tenants/tenant-1 returns tenant record"
+  else
+    fail "GET /tenants/tenant-1 unreachable or missing"
+  fi
 fi
 
 # ── step 2: identity and role mapping ───────────────────────────────────────
@@ -104,7 +110,7 @@ skip "First-admin provisioning API (CUST004) — using Keycloak-pre-configured u
 header "Step 4 — Parking bootstrap (location, policy, slots)"
 TOKEN=$(get_token tenant-admin)
 if [[ -n "$TOKEN" ]]; then
-  POLICY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/configuration/policy" 2>/dev/null || echo "UNREACHABLE")
+  POLICY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/configuration/parking-policy" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$POLICY" != "UNREACHABLE" && "$POLICY" != "" ]]; then
     SLOTS=$(echo "$POLICY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('slotCount','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
     pass "Configuration policy reachable (slotCount: $SLOTS)"
@@ -145,7 +151,7 @@ skip "Web HR import upload (DATA002) — using dev-seed.sh and validate-hr-impor
 header "Step 6 — Readiness check"
 TOKEN=$(get_token tenant-admin)
 if [[ -n "$TOKEN" ]]; then
-  READY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/customer/tenant/readiness" 2>/dev/null || echo "UNREACHABLE")
+  READY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/tenant-1/readiness" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$READY" != "UNREACHABLE" && "$READY" != "" ]]; then
     STATUS=$(echo "$READY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
     pass "Readiness check endpoint reachable (status: $STATUS)"

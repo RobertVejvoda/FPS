@@ -29,21 +29,17 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 
 ## Step 1 — Create Tenant Workspace
 
-**Status:** 🟡 Evaluation-grade
+**Status:** ✅ Implemented
 
-The `tenant-1` workspace is seeded automatically by the Customer service on startup (see `Program.cs` seed block). For a clean onboarding smoke, this seed represents step 1.
+Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds `tenant-1` on startup so the API is exercisable without a UI.
 
-**What the production path needs:** A `POST /customer/tenants` API that accepts tenant slug, display name, region, timezone, and contacts, and returns the new tenant ID. This API does not yet exist. The seed replaces it for demo purposes.
-
-**Verify:**
+**Verify tenant exists:**
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/customer/tenant/readiness | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1 | python3 -m json.tool
 ```
 
-**Expected:** JSON with a `status` field (may be `NotReady` until later steps complete).
-
-**Blocker for production:** Formal `POST /customer/tenants` API — follow-up issue needed.
+**Expected:** Tenant record with `tenantId=tenant-1`, `slug=demo-company`, lifecycle state `Seeded`.
 
 ---
 
@@ -94,7 +90,7 @@ The Configuration service seed creates `LOC-MAIN` with 10 parking slots and a de
 **Verify:**
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/policy | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/parking-policy | python3 -m json.tool
 ```
 
 **Expected:** Policy document with slot count, time zone, and effective date.
@@ -107,7 +103,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/p
 
 **Status:** 🟡 Evaluation-grade (seed) / ✅ Implemented (API)
 
-Profile service provides `POST /profile/admin/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for `employee1`, `employee2`, `employee3`.
+Profile service provides `POST /profile/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for `employee1`, `employee2`, `employee3`.
 
 **Run the employee seed:**
 ```bash
@@ -135,11 +131,11 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapsho
 
 **Status:** ✅ Implemented
 
-The Customer service exposes `GET /customer/tenant/readiness` which checks identity, policy, profile, booking, notification, audit, and reporting readiness probes.
+The Customer service exposes `GET /tenants/{tenantId}/readiness` which checks identity, policy, profile, booking, notification, audit, and reporting readiness probes.
 
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/customer/tenant/readiness | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1/readiness | python3 -m json.tool
 ```
 
 **Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
@@ -196,7 +192,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 
 | Step | Description | Status | Blocker |
 |------|-------------|--------|---------|
-| 1 | Create tenant workspace | 🟡 Evaluation-grade | `POST /customer/tenants` API missing |
+| 1 | Create tenant workspace | ✅ Implemented | `POST /tenants` implemented; local demo pre-seeds |
 | 2 | Configure identity and role mapping | 🔧 Manual + 🟡 Eval | IdP config UI, per-tenant mapping API |
 | 3 | Create first administrator | 🟡 Evaluation-grade | First-admin provisioning API |
 | 4 | Parking bootstrap (location, policy, slots) | 🟡 Evaluation-grade | Tenant admin web UI |
@@ -211,7 +207,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 
 The following gaps must be resolved before this scenario can run without manual or evaluation-grade shortcuts in a real pilot:
 
-- `POST /customer/tenants` formal API for tenant creation
+- Tenant admin web UI for tenant creation via `POST /tenants` (API implemented, no web form yet)
 - Tenant admin web UI for location/slot/policy setup (UX001 track)
 - First-admin provisioning API (CUST004)
 - Web-based HR import upload (DATA002)
