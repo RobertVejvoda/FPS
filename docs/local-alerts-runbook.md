@@ -26,7 +26,7 @@ Alerts go through three states:
 | `FpsHighLatency` | p95 latency >2s on any `fps-*` job | warning | 2m |
 | `RabbitMQDown` | `up == 0` for rabbitmq job | critical | 30s |
 | `RabbitMQHighQueueDepth` | Any queue >100 messages | warning | 2m |
-| `EnvoyGatewayDown` | `up == 0` for envoy-proxy | critical | 30s |
+| EnvoyGatewayDown | — | — | Not implemented — Envoy admin metrics endpoint not yet configured (follow-up) |
 
 ---
 
@@ -48,15 +48,24 @@ Alerts go through three states:
 
 ## Triggering a test alert (FpsHighErrorRate)
 
-Send repeated requests to a protected endpoint without a token:
+`FpsHighErrorRate` counts **5xx responses only**. Unauthenticated requests return 401 (4xx) and do not contribute to this alert.
 
-```bash
-for i in $(seq 1 30); do
-  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:10000/bookings
-done
-```
+To produce 5xx responses in the local harness, send malformed or oversized JSON to a write endpoint while the service is under stress, or temporarily misconfigure the service so its downstream dependency (e.g. MongoDB) is unavailable. A practical local trigger:
 
-Wait ~2 minutes. `FpsHighErrorRate` will move to **Pending** if the unauthenticated (401) share exceeds 5%. Note: 401s count as `4xx` not `5xx` — to trigger 5xx, send malformed JSON to a write endpoint or check gateway logs for upstream errors.
+1. Stop the MongoDB container: `docker compose -f code/infrastructure/docker-compose.yaml stop mongodb`
+2. Send a booking submission that will fail at the persistence layer:
+   ```bash
+   TOKEN=$(./tools/dev-auth.sh employee1)
+   for i in $(seq 1 20); do
+     curl -sf -X POST http://localhost:10000/bookings \
+       -H "Authorization: Bearer $TOKEN" \
+       -H "Content-Type: application/json" \
+       -d '{"facilityId":"FAC-MAIN","locationId":"LOC-MAIN","licensePlate":"TEST001","vehicleType":"Sedan","isElectric":false,"requiresAccessibleSpot":false,"isCompanyCar":false,"plannedArrivalTime":"2099-01-01T08:00:00","plannedDepartureTime":"2099-01-01T18:00:00"}' \
+       -o /dev/null -w "%{http_code}\n"
+   done
+   ```
+3. Wait ~2 minutes. If the Booking service returns 5xx due to the DB outage, `FpsHighErrorRate` moves to **Pending** then **Firing**.
+4. Restore MongoDB: `docker compose -f code/infrastructure/docker-compose.yaml start mongodb`
 
 ---
 

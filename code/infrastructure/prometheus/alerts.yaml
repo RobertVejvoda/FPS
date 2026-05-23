@@ -63,15 +63,8 @@ groups:
           description: "Queue depth suggests a consumer is not keeping up. Check that Dapr sidecars are running."
           runbook: "Run: ./tools/start-local-harness.sh to restart Dapr sidecars."
 
-  - name: fps_gateway
-    interval: 15s
-    rules:
-      - alert: EnvoyGatewayDown
-        expr: up{job="dapr", instance="envoy-proxy:10000"} == 0
-        for: 30s
-        labels:
-          severity: critical
-        annotations:
-          summary: "Envoy gateway is unreachable"
-          description: "The local API gateway at envoy-proxy:10000 is not responding. All web and mobile traffic is blocked."
-          runbook: "Run: docker compose -f code/infrastructure/docker-compose.yaml up -d envoy-proxy"
+  # Gap: EnvoyGatewayDown is not implemented here.
+  # The envoy-proxy:10000 target is the public API listener, not an Envoy admin/metrics
+  # endpoint, so scraping /metrics on that port is unreliable. A proper gateway health
+  # alert requires enabling the Envoy admin interface (default :9901) as a separate
+  # scrape target. This is deferred to a follow-up infra slice.
