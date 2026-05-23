@@ -162,8 +162,9 @@ seed_profile "employee1" "false" "false" \
   '[{"vehicleId":"VEH-EMP1-A","licensePlate":"EMP1001","vehicleType":"Sedan","isElectric":false,"isActive":true},
     {"vehicleId":"VEH-EMP1-B","licensePlate":"EMP1002","vehicleType":"Sedan","isElectric":true,"isActive":true}]'
 
-# employee2: company car, no personal vehicle
-seed_profile "employee2" "true" "false" '[]'
+# employee2: company car registered as vehicle so booking plate validation passes
+seed_profile "employee2" "true" "false" \
+  '[{"vehicleId":"VEH-EMP2-COMPANY","licensePlate":"COMPANY001","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
 # employee3: accessibility-eligible, accessible vehicle
 seed_profile "employee3" "false" "true" \

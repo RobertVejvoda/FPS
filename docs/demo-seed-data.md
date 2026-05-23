@@ -18,7 +18,7 @@ Re-seeding is safe — the script is idempotent.
 | Username | Roles | Parking | Vehicles | Demo purpose |
 |----------|-------|---------|----------|-------------|
 | `employee1` | employee | ✅ eligible | Sedan (EMP1001), EV (EMP1002) | Standard employee — booking, vehicle selection, notifications |
-| `employee2` | employee | ✅ eligible | Company car | Company-car priority policy demonstration |
+| `employee2` | employee | ✅ eligible | COMPANY001 (company Sedan) | Company-car priority policy demonstration |
 | `employee3` | employee | ✅ eligible + accessible | Sedan (EMP3001) | Accessibility-eligible booking path |
 | `hr-admin` | employee, hr_manager | ❌ | — | Reports, configuration, HR import |
 | `tenant-admin` | admin | ❌ | — | Tenant admin console, readiness, guided setup |
