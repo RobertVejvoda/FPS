@@ -377,6 +377,8 @@ FPS_MOBILE_HOST=<host-or-ip> sh ./tools/start-smoke-mobile.sh
 FPS_MOBILE_KEYCLOAK_URL=http://<host-or-ip>:8180 FPS_MOBILE_API_BASE_URL=http://<host-or-ip>:10000 sh ./tools/start-smoke-mobile.sh
 ```
 
+For repeatable local overrides, copy `code/mobile/fps-mobile/mobile-env.sample` to `code/mobile/fps-mobile/.env.local`. The smoke script loads `.env.local` automatically. Treat these as public runtime settings only; never put secrets in mobile Expo config.
+
 ## Seeding Local Demo Data (OPS006D)
 
 After starting services (Identity + `dapr run -f dapr.yaml`), run the seed script once:

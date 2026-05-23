@@ -144,6 +144,17 @@ sh ./tools/start-smoke-mobile.sh
 
 The script starts the backend services, runs local auth setup and demo seed, configures Expo with the local OIDC issuer/client/API base URL, prints a bearer token for `employee1`, and starts Expo in LAN mode. It prefers the development machine's Tailscale IPv4 address when available; otherwise it falls back to the LAN address. It leaves Docker infrastructure running when stopped with Ctrl-C.
 
+For stable local overrides, copy `code/mobile/fps-mobile/mobile-env.sample` to `code/mobile/fps-mobile/.env.local`. The smoke script loads that file before deriving defaults. Use it for public runtime settings only:
+
+```env
+FPS_MOBILE_AUTH_ISSUER_URL=http://<tailscale-ip>:8180/realms/fps-local
+FPS_MOBILE_AUTH_CLIENT_ID=fps-mobile-dev
+FPS_MOBILE_AUTH_SCOPES=openid profile email
+FPS_MOBILE_API_BASE_URL=http://<tailscale-ip>:10000
+```
+
+Do not put secrets in mobile Expo config; issuer, client ID, scopes, and API base URL are public app configuration.
+
 If the phone cannot read or open the LAN QR code, use tunnel mode:
 
 ```sh

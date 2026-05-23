@@ -18,6 +18,7 @@ EXPO_PID=""
 EXPO_MODE="${EXPO_MODE:-lan}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
 CLIENT_ID="${FPS_LOCAL_CLIENT:-fps-mobile-dev}"
+ENV_FILE="${FPS_MOBILE_ENV_FILE:-$MOBILE_DIR/.env.local}"
 
 cleanup() {
   if [ -n "$EXPO_PID" ] && kill -0 "$EXPO_PID" 2>/dev/null; then
@@ -44,7 +45,24 @@ detect_tailscale_ip() {
   return 1
 }
 
+load_env_file() {
+  file="$1"
+  if [ ! -f "$file" ]; then
+    return 0
+  fi
+
+  log_name="$(printf '%s' "$file" | sed "s|^$REPO_ROOT/||")"
+  printf '[mobile-smoke] Loading %s\n' "$log_name"
+
+  set -a
+  # shellcheck disable=SC1090
+  . "$file"
+  set +a
+}
+
 trap cleanup INT TERM EXIT
+
+load_env_file "$ENV_FILE"
 
 LAN_IP="$(detect_lan_ip || true)"
 TAILSCALE_IP="$(detect_tailscale_ip || true)"

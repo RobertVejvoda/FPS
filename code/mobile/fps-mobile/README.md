@@ -66,6 +66,12 @@ Tailscale is installed, it prefers the development machine's Tailscale IPv4
 address. Override with `FPS_MOBILE_HOST`, `FPS_MOBILE_KEYCLOAK_URL`, or
 `FPS_MOBILE_API_BASE_URL` when needed.
 
+For repeatable local overrides, copy `mobile-env.sample` to `.env.local` in
+this directory. `.env.local` is ignored by Git and loaded by
+`start-smoke-mobile.sh`. Issuer URL, client ID, scopes, and API base URL are
+public runtime settings; do not put secrets in Expo config or local mobile env
+files.
+
 The mobile app expects one API base URL that exposes the employee endpoints for
 Identity, Booking, Notification, and Profile. A physical device cannot use the
 developer machine's `localhost`; use a LAN-reachable gateway, tunnel, or hosted
