@@ -124,12 +124,12 @@ Use these URLs for local service smoke checks:
 | Identity | `http://localhost:5192/openapi/v1.json` | `200` |
 | Booking | `http://localhost:5131/openapi/v1.json` | `200` |
 | Profile | `http://localhost:5197/openapi/v1.json` | `200` |
-| Notification | `http://localhost:5157/openapi/v1.json` | `200` |
+| Notification | `http://localhost:5157/notifications/unread-count` | `401` |
 | Configuration | `http://localhost:5141/configuration/parking-policy` | `401` |
 | Audit | `http://localhost:5161/audit` | `401` |
 | Reporting | `http://localhost:5171/reports/parking/summary` | `401` |
 
-Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. Use the protected endpoint `401` check for those services until an approved API-documentation approach is adopted for them.
+Notification, Configuration, Audit, and Reporting do not currently expose `/openapi/v1.json`. Use the protected endpoint `401` check for those services until an approved API-documentation approach is adopted for them.
 
 ## Authentication
 
