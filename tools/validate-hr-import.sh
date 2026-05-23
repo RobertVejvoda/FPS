@@ -14,11 +14,17 @@ NC='\033[0m'
 error() { echo -e "${RED}ERROR: $1${NC}" >&2; ERRORS=$((ERRORS + 1)); }
 ok()    { echo -e "${GREEN}OK:${NC} $1"; }
 
+# Exact allowed column sets — any column not in this list is rejected.
 EMPLOYEE_COLS="external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active"
 VEHICLE_COLS="external_subject,vehicle_alias,vehicle_license_plate,vehicle_type,vehicle_is_electric,active"
+
 VALID_ROLES="employee hr_manager admin report_viewer auditor"
-FORBIDDEN_COLS="password passwd secret token credential ssn national_id salary"
+FORBIDDEN_COLS="password passwd secret token credential ssn national_id salary employee_id manager_notes department internal_role"
 VALID_VEHICLE_TYPES="car motorcycle van"
+
+# Local demo allowed values. Production tenants extend these via tenant config.
+ALLOWED_LOCATIONS="LOC-MAIN"
+ALLOWED_ZONES="A B COVERED"
 
 validate_employees() {
   local file="$1"
@@ -32,53 +38,82 @@ validate_employees() {
   local header
   header=$(grep -v '^#' "$file" | head -1)
 
-  # Check forbidden columns
+  # Check forbidden columns.
   for col in $FORBIDDEN_COLS; do
     if echo "$header" | grep -qi "$col"; then
-      error "Forbidden column '$col' found in $file — do not include secrets or personal data"
+      error "Forbidden column '$col' found — do not include secrets or personal data"
     fi
   done
 
-  # Check required columns
-  IFS=',' read -ra required <<< "$EMPLOYEE_COLS"
-  for col in "${required[@]}"; do
+  # Reject unknown columns: every header column must be in the allowed set.
+  IFS=',' read -ra header_cols <<< "$header"
+  IFS=',' read -ra allowed_cols <<< "$EMPLOYEE_COLS"
+  for col in "${header_cols[@]}"; do
+    col=$(echo "$col" | tr -d '[:space:]')
+    found=false
+    for allowed in "${allowed_cols[@]}"; do
+      [[ "$col" == "$allowed" ]] && found=true && break
+    done
+    if [[ "$found" == false ]]; then
+      error "Unknown column '$col' — only these columns are allowed: $EMPLOYEE_COLS"
+    fi
+  done
+
+  # Check required columns are present.
+  for col in external_subject roles home_location parking_eligible has_company_car accessibility_eligible reserved_space_eligible active; do
     if ! echo "$header" | grep -q "$col"; then
-      error "Missing required column '$col' in $file"
+      error "Missing required column '$col'"
     fi
   done
 
   local subjects=()
   local line_no=1
-  while IFS=',' read -r subject _display _email roles _home _zone parking company_car access reserved active; do
+  while IFS=',' read -r subject _display _email roles home_location preferred_zone parking company_car access reserved active; do
     line_no=$((line_no + 1))
     [[ "$subject" == external_subject ]] && continue
     [[ "$subject" =~ ^# ]] && continue
     [[ -z "$subject" ]] && continue
 
-    # Duplicate check
+    # Duplicate check.
     if [[ ${#subjects[@]} -gt 0 ]] && printf '%s\n' "${subjects[@]}" | grep -qx "$subject"; then
       error "Line $line_no: duplicate external_subject '$subject'"
     fi
     subjects+=("$subject")
 
-    # Required field
-    [[ -z "$subject" ]] && error "Line $line_no: external_subject is required"
-
-    # Roles validation
+    # Roles: semicolon-separated, each must be in the valid set.
     if [[ -n "$roles" ]]; then
       IFS=';' read -ra role_list <<< "$roles"
       for role in "${role_list[@]}"; do
         role=$(echo "$role" | tr -d ' ')
         if ! echo "$VALID_ROLES" | grep -qw "$role"; then
-          error "Line $line_no: unknown role '$role' for subject '$subject' — valid: $VALID_ROLES"
+          error "Line $line_no: unknown role '$role' for '$subject' — valid: $VALID_ROLES"
         fi
       done
+    else
+      error "Line $line_no: roles is required for '$subject'"
     fi
 
-    # Boolean fields
+    # Location: must be in the allowed set.
+    home_location=$(echo "$home_location" | tr -d ' \r')
+    if [[ -n "$home_location" ]]; then
+      if ! echo "$ALLOWED_LOCATIONS" | grep -qw "$home_location"; then
+        error "Line $line_no: unknown home_location '$home_location' for '$subject' — allowed: $ALLOWED_LOCATIONS"
+      fi
+    else
+      error "Line $line_no: home_location is required for '$subject'"
+    fi
+
+    # Zone: optional, but if provided must be in the allowed set.
+    preferred_zone=$(echo "$preferred_zone" | tr -d ' \r')
+    if [[ -n "$preferred_zone" ]] && ! echo "$ALLOWED_ZONES" | grep -qw "$preferred_zone"; then
+      error "Line $line_no: unknown preferred_zone '$preferred_zone' for '$subject' — allowed: $ALLOWED_ZONES"
+    fi
+
+    # Boolean fields.
     for field_val in "$parking" "$company_car" "$access" "$reserved" "$active"; do
+      field_val=$(echo "$field_val" | tr -d ' \r')
       if [[ -n "$field_val" && ! "$field_val" =~ ^(true|false)$ ]]; then
-        error "Line $line_no: boolean field has non-boolean value '$field_val' for subject '$subject'"
+        error "Line $line_no: boolean field has non-boolean value '$field_val' for '$subject'"
       fi
     done
 
@@ -100,16 +135,31 @@ validate_vehicles() {
   local header
   header=$(grep -v '^#' "$file" | head -1)
 
+  # Check forbidden columns.
   for col in $FORBIDDEN_COLS; do
     if echo "$header" | grep -qi "$col"; then
-      error "Forbidden column '$col' found in $file"
+      error "Forbidden column '$col' found"
     fi
   done
 
-  IFS=',' read -ra required <<< "$VEHICLE_COLS"
-  for col in "${required[@]}"; do
+  # Reject unknown columns.
+  IFS=',' read -ra header_cols <<< "$header"
+  IFS=',' read -ra allowed_cols <<< "$VEHICLE_COLS"
+  for col in "${header_cols[@]}"; do
+    col=$(echo "$col" | tr -d '[:space:]')
+    found=false
+    for allowed in "${allowed_cols[@]}"; do
+      [[ "$col" == "$allowed" ]] && found=true && break
+    done
+    if [[ "$found" == false ]]; then
+      error "Unknown column '$col' — only these columns are allowed: $VEHICLE_COLS"
+    fi
+  done
+
+  # Check required columns.
+  for col in external_subject vehicle_license_plate vehicle_type vehicle_is_electric active; do
     if ! echo "$header" | grep -q "$col"; then
-      error "Missing required column '$col' in $file"
+      error "Missing required column '$col'"
     fi
   done
 
@@ -129,29 +179,32 @@ validate_vehicles() {
     [[ "$subject" =~ ^# ]] && continue
     [[ -z "$subject" ]] && continue
 
-    # Subject must exist in employees file (if provided)
+    # Subject must exist in employees file.
     if [[ ${#known_subjects[@]} -gt 0 ]]; then
       if ! printf '%s\n' "${known_subjects[@]}" | grep -qx "$subject"; then
         error "Line $line_no: vehicle references unknown external_subject '$subject'"
       fi
     fi
 
-    # Required plate
-    [[ -z "$plate" ]] && error "Line $line_no: vehicle_license_plate is required for subject '$subject'"
+    # Required plate.
+    plate=$(echo "$plate" | tr -d ' \r')
+    [[ -z "$plate" ]] && error "Line $line_no: vehicle_license_plate is required for '$subject'"
 
-    # Duplicate plate
+    # Duplicate plate.
     if [[ ${#plates[@]} -gt 0 ]] && printf '%s\n' "${plates[@]}" | grep -qx "$plate"; then
       error "Line $line_no: duplicate vehicle_license_plate '$plate'"
     fi
     [[ -n "$plate" ]] && plates+=("$plate")
 
-    # Vehicle type
+    # Vehicle type.
+    vtype=$(echo "$vtype" | tr -d ' \r')
     if [[ -n "$vtype" ]] && ! echo "$VALID_VEHICLE_TYPES" | grep -qw "$vtype"; then
       error "Line $line_no: unknown vehicle_type '$vtype' — valid: $VALID_VEHICLE_TYPES"
     fi
 
-    # Boolean fields
+    # Boolean fields.
     for field_val in "$electric" "$active"; do
+      field_val=$(echo "$field_val" | tr -d ' \r')
       if [[ -n "$field_val" && ! "$field_val" =~ ^(true|false)$ ]]; then
         error "Line $line_no: boolean field has non-boolean value '$field_val'"
       fi

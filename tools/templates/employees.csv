@@ -2,8 +2,8 @@ external_subject,display_name,email,roles,home_location,preferred_zone,parking_e
 # external_subject: stable identifier from company IdP (e.g. username or sub claim) — required
 # display_name: optional, used in UI only, not stored as HR record
 # email: optional, used for notifications only
-# roles: comma-separated list from: employee, hr_manager, admin, report_viewer, auditor
-# home_location: location code matching a configured FPS location (e.g. HQ, BRANCH_A)
+# roles: semicolon-separated list from: employee, hr_manager, admin, report_viewer, auditor (e.g. employee;hr_manager)
+# home_location: location code matching a configured FPS location (e.g. LOC-MAIN)
 # preferred_zone: parking zone preference (e.g. A, B, COVERED) — leave blank for none
 # parking_eligible: true/false
 # has_company_car: true/false

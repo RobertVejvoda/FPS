@@ -59,14 +59,17 @@ One user may have zero, one, or multiple vehicle rows.
 | `report_viewer` | Reports only |
 | `auditor` | Audit log only |
 
-Multiple roles can be assigned by separating with a semicolon: `employee;hr_manager`.
+Multiple roles must be separated with a semicolon: `employee;hr_manager`. Commas are not supported as role separators (they are the CSV field delimiter).
 
 ## Validation rules
 
 The `tools/validate-hr-import.sh` script enforces:
 
-- No forbidden columns (`password`, `passwd`, `secret`, `token`, `credential`, `ssn`, `national_id`, `salary`)
+- No forbidden columns (`password`, `passwd`, `secret`, `token`, `credential`, `ssn`, `national_id`, `salary`, `employee_id`, `manager_notes`, `department`, `internal_role`)
+- No unknown columns — only the documented column set is accepted; any additional column is an error
 - All required columns present
+- `home_location` must match a configured FPS location (local demo: `LOC-MAIN`)
+- `preferred_zone` must be one of the allowed zones when provided (local demo: `A`, `B`, `COVERED`)
 - No duplicate `external_subject` values in employees.csv
 - No duplicate `vehicle_license_plate` values in vehicles.csv
 - Roles must be from the valid set above
