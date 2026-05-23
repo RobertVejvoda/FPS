@@ -80,7 +80,8 @@ Demo component templates in `code/infrastructure/dapr/components/demo/` are **pa
 
 | Endpoint | Expected |
 |---|---|
-| `GET /openapi/v1.json` on Identity, Booking, Profile, Notification | 200 |
+| `GET /openapi/v1.json` on Identity, Booking, Profile | 200 |
+| `GET /notifications/unread-count` on Notification | 401 |
 | `GET /configuration/parking-policy` | 401 (authenticated endpoint alive) |
 | `GET /audit` | 401 |
 | `GET /reports/parking/summary` | 401 |
