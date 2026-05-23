@@ -1,0 +1,8 @@
+external_subject,vehicle_alias,vehicle_license_plate,vehicle_type,vehicle_is_electric,active
+# external_subject: must match a subject in employees.csv — links vehicle to user
+# vehicle_alias: optional friendly name (e.g. "Blue Golf", "Work Car")
+# vehicle_license_plate: required — used for gate integration and space matching
+# vehicle_type: car / motorcycle / van
+# vehicle_is_electric: true/false — used for EV space allocation
+# active: true/false — false = vehicle no longer registered, excluded from allocation
+# One user may have zero, one, or multiple rows (multiple vehicles)
