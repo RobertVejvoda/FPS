@@ -15,6 +15,13 @@ static_resources:
                   virtual_hosts:
                     - name: backend
                       domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - exact: "http://localhost:5200"
+                        allow_methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                        allow_headers: "authorization,content-type,accept"
+                        expose_headers: "content-disposition"
+                        max_age: "86400"
                       routes:
                         # Employee mobile API surface — routes to host-run services.
                         # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
@@ -43,6 +50,9 @@ static_resources:
                             cluster: dapr
                             prefix_rewrite: "/v1.0/invoke/whoami/method/"
                 http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

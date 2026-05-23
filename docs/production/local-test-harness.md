@@ -38,7 +38,7 @@ Both scripts leave Docker infrastructure running when stopped with Ctrl-C. They 
 
 The scripts also check frontend dependencies before starting Vite or Expo. They prefer user-installed Node/npm from Homebrew or `/usr/local/bin` over embedded tool runtimes. If `node_modules` is missing or a native optional package probe fails, they run `npm ci` from the app lockfile to repair the local dependency tree. On macOS they also ad-hoc sign local `.node` binaries after install to avoid native optional dependency code-signature failures from packages such as Rollup.
 
-Web OIDC login is bound to `http://localhost:5200/auth/callback` in the local Keycloak `fps-web-dev` client and in `code/web/fps-web/public/config.json`. If port `5200` is already occupied, stop the other web process first; do not use a Vite fallback port such as `5201` unless you also update the runtime config and Keycloak redirect URI.
+Web OIDC login is bound to `http://localhost:5200/auth/callback` in the local Keycloak `fps-web-dev` client and in `code/web/fps-web/public/config.json`. If port `5200` is already occupied, stop the other web process first; do not use a Vite fallback port such as `5201` unless you also update the runtime config and Keycloak redirect URI. The local Envoy gateway also allows browser CORS preflight only from `http://localhost:5200`.
 
 ## Devcontainer
 
@@ -285,7 +285,7 @@ The mobile app expects one API base URL. The Envoy gateway added in OPS006B prov
 
 ## Local Mobile API Gateway (OPS006B)
 
-The Envoy proxy in Docker Compose now routes all mobile employee endpoints under one origin.
+The Envoy proxy in Docker Compose now routes the employee API endpoints under one origin for mobile and browser web smoke testing. The local gateway allows browser CORS from `http://localhost:5200`, matching the web OIDC redirect origin.
 **Gateway URL (simulator/browser):** `http://localhost:10000`
 **Gateway URL (physical phone on same LAN):** `http://<dev-machine-ip>:10000`
 
