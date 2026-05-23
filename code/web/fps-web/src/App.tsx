@@ -20,6 +20,7 @@ import { ReportingPage } from './pages/ReportingPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { AuditPage } from './pages/AuditPage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
+import { HrImportPage } from './pages/HrImportPage';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
@@ -37,6 +38,7 @@ function Shell() {
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
     canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
+    canAccessConfiguration(roles) && { to: '/hr-import', label: 'HR Import' },
     canAccessAudit(roles) && { to: '/audit', label: 'Audit' },
     canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: 'Admin' },
   ].filter(Boolean) as { to: string; label: string }[];
@@ -79,6 +81,7 @@ function Shell() {
           <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
           <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
           <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
+          <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
           <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
           <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
           <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />
