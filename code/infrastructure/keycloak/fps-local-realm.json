@@ -120,6 +120,17 @@
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
+        },
+        {
+          "name": "fps-mobile-dev-compat-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "fps-mobile-dev",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
         }
       ]
     }
