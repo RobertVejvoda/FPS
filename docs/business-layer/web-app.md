@@ -27,6 +27,22 @@
 - **Login History**: View session history
 - **Session Management**: Log out from all devices
 
+## WEB009 Boundary
+
+WEB009 replaces the development bearer-token handoff in the React web app with a real browser login experience. The app should authenticate through the configured OIDC provider using Authorization Code + PKCE, obtain an access token for FPS APIs, call `GET /me`, and enter the existing authenticated web shell only when the session is valid.
+
+WEB009 must preserve the existing security boundary: the web app never supplies tenant ID, requestor ID, user ID, or roles for API scoping. Backend services continue to resolve tenant, user, and roles from authenticated token claims.
+
+WEB009 includes:
+
+- login start, callback handling, authenticated session restoration, and logout;
+- session validation through `GET /me`;
+- runtime configuration for API base URL, issuer/discovery endpoint, client ID, scopes, redirect URI, and post-logout redirect URI;
+- clear states for unauthenticated, login cancelled, login failed, invalid/expired token, and unreachable backend;
+- a development-only manual token fallback only when explicitly enabled for local smoke testing.
+
+WEB009 does not implement identity-provider provisioning, tenant onboarding, MFA policy design, role administration, booking behavior changes, backend business behavior changes, or mobile login.
+
 ## Notifications
 - **Email Settings**: Configure email notifications
 - **Notification Center**: View and manage notifications

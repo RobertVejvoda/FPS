@@ -2,6 +2,24 @@
 
 The web application follows a modular frontend architecture that separates functionality into distinct UI components while ensuring consistent deployment through Docker containerization.
 
+## Authentication Baseline
+
+The web app should use browser-based OIDC Authorization Code + PKCE for real employee and operator login. The selected identity provider is deployment-profile or customer specific; the app depends on standard OIDC discovery/authorization/token/logout behavior rather than a provider-specific SDK.
+
+Runtime configuration must provide:
+
+- API base URL;
+- OIDC issuer or discovery endpoint;
+- public client ID;
+- scopes;
+- redirect URI;
+- post-logout redirect URI;
+- whether the development manual-token fallback is enabled.
+
+The browser client must not contain a client secret. Access tokens are attached only to FPS API calls. The app must validate the session with `GET /me` after login or restoration, and services must continue to resolve tenant/user/role context from token claims rather than web-supplied identifiers.
+
+Manual bearer-token entry is a local smoke-testing fallback, not the default user experience for demo or production.
+
 ## Key Components
 
 - [Identity](./identity)

@@ -1001,6 +1001,7 @@ Current slice mapping:
 - `WEB002` HR/Admin Dashboard: operational overview, manual corrections, booking status, configuration visibility, and reporting summaries.
 - `WEB003` Tenant Admin Console: tenant users, roles, locations, policies, and slot administration.
 - `WEB004` Reporting Views: parking summary, fairness metrics, utilization views, and exports.
+- `WEB009` Web Real Login: replace manual bearer-token handoff with browser OIDC Authorization Code + PKCE while preserving the local development fallback.
 
 ---
 
