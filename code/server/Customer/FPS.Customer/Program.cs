@@ -104,7 +104,9 @@ app.Run();
 
 static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
 {
-    const string tenantId = "tenant-1";
+    // FPS_DEMO_TENANT_ID overrides the default demo tenant for local experiments.
+    var config = services.GetRequiredService<IConfiguration>();
+    var tenantId = config["FPS_DEMO_TENANT_ID"] ?? "demo";
 
     var tenantRepository = services.GetRequiredService<ITenantRepository>();
     if (await tenantRepository.GetAsync(tenantId, CancellationToken.None) is not null)

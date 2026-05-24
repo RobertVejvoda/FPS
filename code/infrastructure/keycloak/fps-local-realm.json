@@ -179,7 +179,7 @@
       "firstName": "Alice",
       "lastName": "Employee",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["employee"],
       "credentials": []
@@ -191,7 +191,7 @@
       "firstName": "Bob",
       "lastName": "CompanyCar",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["employee"],
       "credentials": []
@@ -203,7 +203,7 @@
       "firstName": "Carol",
       "lastName": "NoVehicle",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["employee"],
       "credentials": []
@@ -215,7 +215,7 @@
       "firstName": "Demo",
       "lastName": "HRAdmin",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["employee", "hr_manager"],
       "credentials": []
@@ -227,7 +227,7 @@
       "firstName": "Demo",
       "lastName": "TenantAdmin",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["admin"],
       "credentials": []
@@ -239,7 +239,7 @@
       "firstName": "Demo",
       "lastName": "ReportViewer",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["report_viewer"],
       "credentials": []
@@ -251,7 +251,7 @@
       "firstName": "Demo",
       "lastName": "Auditor",
       "attributes": {
-        "tenant_id": ["tenant-1"]
+        "tenant_id": ["demo"]
       },
       "realmRoles": ["auditor"],
       "credentials": []

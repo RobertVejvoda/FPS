@@ -8,7 +8,9 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 - 🟡 **Evaluation-grade** — exists but uses demo shortcuts not suitable for production
 - ❌ **Missing** — not yet implemented; blocker issue noted
 
-**Synthetic tenant:** `acme-corp`, a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
+**Supported local demo tenant:** `demo` (default). This is the only tenant that works end-to-end in the local harness because the Keycloak realm fixture hardcodes `tenant_id=demo` for all seeded users. The `FPS_DEMO_TENANT_ID` environment variable controls where Customer, Configuration, and profile seed scripts land their data, but Keycloak tokens always carry `demo` from a static realm import — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) will only pass when `FPS_DEMO_TENANT_ID=demo`. Full per-tenant Keycloak attribute patching is a follow-up in OPS008B.
+
+**Synthetic tenant for smoke steps:** `acme-corp` (documentation only), a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
 
 ---
 
@@ -31,15 +33,15 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 
 **Status:** ✅ Implemented
 
-Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds `tenant-1` on startup so the API is exercisable without a UI.
+Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds `demo` on startup so the API is exercisable without a UI.
 
 **Verify tenant exists:**
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1 | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo | python3 -m json.tool
 ```
 
-**Expected:** Tenant record with `tenantId=tenant-1`, `slug=demo-company`, lifecycle state `Seeded`.
+**Expected:** Tenant record with `tenantId=demo`, `slug=demo-company`, lifecycle state `Seeded`.
 
 ---
 
@@ -49,7 +51,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1
 
 The local Keycloak realm (`fps-local`) is imported from `code/infrastructure/keycloak/fps-local-realm.json` which pre-configures the OIDC client, roles, and demo users. This represents step 2 for evaluation.
 
-**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `tenant-1` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
+**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `demo` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
 
 **Verify identity is wired:**
 ```bash
@@ -57,7 +59,7 @@ TOKEN=$(./tools/dev-auth.sh employee1)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
 ```
 
-**Expected:** `{"userId": "employee1", "tenantId": "tenant-1", "roles": ["employee"]}`
+**Expected:** `{"userId": "employee1", "tenantId": "demo", "roles": ["employee"]}`
 
 **Blocker for production:** IdP configuration UI and documented per-tenant group-to-role mapping workflow.
 
@@ -67,7 +69,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-`tenant-admin` is pre-configured in Keycloak with the `admin` role for `tenant-1`. This represents the first administrator for evaluation.
+`tenant-admin` is pre-configured in Keycloak with the `admin` role for `demo`. This represents the first administrator for evaluation.
 
 **Verify:**
 ```bash
@@ -75,7 +77,7 @@ TOKEN=$(./tools/dev-auth.sh tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
 ```
 
-**Expected:** `{"userId": "tenant-admin", "tenantId": "tenant-1", "roles": ["admin"]}`
+**Expected:** `{"userId": "tenant-admin", "tenantId": "demo", "roles": ["admin"]}`
 
 **Blocker for production:** Formal first-admin provisioning path (mapped SSO user or FairSpot-local break-glass account creation via API). Follow-up: CUST004 evidence.
 
@@ -135,7 +137,7 @@ The Customer service exposes `GET /tenants/{tenantId}/readiness` which checks id
 
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1/readiness | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
 ```
 
 **Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
