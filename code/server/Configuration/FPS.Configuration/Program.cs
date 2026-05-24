@@ -48,11 +48,14 @@ if (app.Environment.IsDevelopment())
     var slotRepo = app.Services.GetRequiredService<IParkingSlotRepository>();
     var slotChangeRepo = app.Services.GetRequiredService<ISlotChangeRepository>();
 
-    if (await policyRepo.GetTenantDefaultAsync("tenant-1") is null)
+    // FPS_DEMO_TENANT_ID overrides the default demo tenant for local experiments.
+    var demoTenantId = app.Configuration["FPS_DEMO_TENANT_ID"] ?? "demo";
+
+    if (await policyRepo.GetTenantDefaultAsync(demoTenantId) is null)
     {
         await policyRepo.SaveAsync(new ParkingPolicy
         {
-            TenantId = "tenant-1",
+            TenantId = demoTenantId,
             TimeZone = "Europe/Prague",
             DrawCutOffTime = new TimeOnly(18, 0),
             DailyRequestCap = 100,
@@ -73,7 +76,7 @@ if (app.Environment.IsDevelopment())
         var slots = Enumerable.Range(1, 10).Select(i => new ParkingSlot
         {
             SlotId = $"SLOT-{i:D2}",
-            TenantId = "tenant-1",
+            TenantId = demoTenantId,
             LocationId = "LOC-MAIN",
             IsActive = true,
             HasCharger = i <= 2,
@@ -82,10 +85,10 @@ if (app.Environment.IsDevelopment())
             IsMotorcycleCapacity = false,
         }).ToList();
 
-        await slotRepo.ReplaceLocationSlotsAsync("tenant-1", "LOC-MAIN", slots);
+        await slotRepo.ReplaceLocationSlotsAsync(demoTenantId, "LOC-MAIN", slots);
         await slotChangeRepo.RecordAsync(new SlotChangeRecord
         {
-            TenantId = "tenant-1",
+            TenantId = demoTenantId,
             LocationId = "LOC-MAIN",
             ChangedByUserId = "seed",
             ChangedAt = DateTimeOffset.UtcNow,
