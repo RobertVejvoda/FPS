@@ -22,8 +22,9 @@ FairSpot replaces manual parking coordination with a transparent, automated allo
    - Track actual usage so the customer can identify underused capacity.
 
 4. **Support company policies**
-   - Respect reserved spaces, company-car rules, accessibility needs, motorcycle parking, EV charging, and other local constraints.
+   - Respect company-car rules, accessibility needs, EV charging, and other configured local constraints.
    - Allow each customer tenant to configure rules without changing the product.
+   - Treat motorcycle-specific capacity and recurring reserved-space release as future optional extensions, not v1 commitments.
 
 5. **Improve employee experience**
    - Let employees request, cancel, and track parking without contacting HR.
@@ -46,7 +47,7 @@ FairSpot must allocate limited parking capacity using transparent and configurab
 
 ### BR003: Configurable Parking Policies
 
-Customers must be able to configure parking rules for their organization, including locations, spaces, time slots, eligibility, reserved-space policies, company-car handling, motorcycles, EV charging, accessibility needs, and penalties.
+Customers must be able to configure parking rules for their organization, including locations, spaces, time slots, eligibility, company-car handling, EV charging, accessibility needs, and penalties. Motorcycle-specific capacity and recurring reserved-space release are not v1 requirements; they may be added later if a customer need justifies the added policy and capacity complexity.
 
 ### BR003A: Resource Map and Zone Preferences
 
@@ -118,7 +119,7 @@ The full allocation description is documented in [Slot Allocation Process](./pro
 - Fair allocation of limited parking capacity.
 - Time-slot, location, zone, space, and vehicle constraints.
 - Resource maps for spaces, zones, capacity pools, and resource capabilities.
-- Reserved-space and company-car policy support.
+- Company-car, accessibility, EV, and configured slot-capability policy support.
 - Notifications, cancellations, reallocations, and usage confirmation.
 - Reporting, audit trail, and role-based access.
 - Customer tenant configuration.
@@ -126,6 +127,8 @@ The full allocation description is documented in [Slot Allocation Process](./pro
 ### Future Opportunities
 
 - Sustainability incentives for carpooling, cycling, EVs, or public transport.
+- Motorcycle-specific capacity and shared motorcycle-space rules.
+- Recurring reserved-space release automation.
 - Advanced demand prediction and allocation optimization.
 - Paid parking, subscription models, or internal cost recovery.
 - Integration with building access systems, license plate recognition, or workplace calendars.

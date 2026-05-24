@@ -19,9 +19,9 @@ Bob sometimes comes to the office by motorcycle. Standard car spaces are ineffic
 
 ### Customer Value
 
-FairSpot helps customers use parking space more efficiently by supporting vehicle-specific rules. Dedicated motorcycle handling can increase total usable capacity and improve employee experience without adding new parking spaces.
+FairSpot helps customers use parking space more efficiently by supporting vehicle-specific rules. Dedicated motorcycle handling could increase total usable capacity and improve employee experience without adding new parking spaces, but it is a future optional extension rather than a v1 requirement.
 
-### Key Needs
+### Future / Optional Needs
 
 - Register a motorcycle as a vehicle.
 - Request motorcycle-appropriate parking.
@@ -34,14 +34,17 @@ Cecil has a company car and may have access to a reserved space. When Cecil does
 
 ### Customer Value
 
-FairSpot turns reserved-space absence into reusable capacity. The customer gets better utilization while still protecting company-car entitlements and other business rules.
+FairSpot protects company-car entitlements and lets company-car users participate in the governed booking flow. Reserved-space release automation could turn unused entitlement into reusable capacity, but recurring release workflows are a future optional extension.
 
 ### Key Needs
 
-- Maintain reserved-space eligibility where policy requires it.
+- Maintain company-car eligibility where policy requires it.
+- Avoid unnecessary HR coordination through standard company-car booking.
+
+### Future / Optional Needs
+
 - Declare when a reserved space is not needed.
 - Automate recurring requests or releases.
-- Avoid unnecessary HR coordination.
 
 ## David - Employee Using Informal Arrangements
 
