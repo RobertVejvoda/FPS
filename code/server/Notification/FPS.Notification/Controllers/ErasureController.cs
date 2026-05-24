@@ -1,9 +1,11 @@
 using FPS.Notification.Application;
+using FPS.SharedKernel.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Notification.Controllers;
 
 [ApiController]
+[DaprInternalOnly]
 public sealed class ErasureController(INotificationRepository repository) : ControllerBase
 {
     [HttpPost("/erasure")]

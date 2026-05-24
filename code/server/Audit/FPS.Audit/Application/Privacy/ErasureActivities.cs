@@ -141,3 +141,57 @@ public sealed class ErasePiiMappingActivity(
         }
     }
 }
+
+public sealed class RecordErasureStepActivity(
+    IAuditRepository auditRepository,
+    ILogger<RecordErasureStepActivity> logger)
+    : WorkflowActivity<ErasureStepAuditInput, bool>
+{
+    public override async Task<bool> RunAsync(WorkflowActivityContext context, ErasureStepAuditInput input)
+    {
+        var w = input.WorkflowInput;
+        var step = input.StepResult;
+        var sourceEventId = $"privacy.erasureStepRecorded:{w.ErasureRequestId}:{step.Service}";
+
+        if (await auditRepository.ExistsAsync(sourceEventId))
+            return true;
+
+        var record = new AuditRecord
+        {
+            AuditRecordId = Guid.NewGuid(),
+            SourceEventId = sourceEventId,
+            EventType = "privacy.erasureStepRecorded",
+            EventVersion = 1,
+            OccurredAt = DateTime.UtcNow,
+            RecordedAt = DateTime.UtcNow,
+            TenantId = w.TenantId,
+            CorrelationId = w.ErasureRequestId,
+            ActorType = "system",
+            ActorHash = w.RequestedByActorHash,
+            Source = "privacy",
+            EntityType = "erasureRequest",
+            EntityId = w.ErasureRequestId,
+            Payload = new System.Text.Json.Nodes.JsonObject
+            {
+                ["erasureRequestId"] = w.ErasureRequestId,
+                ["targetActorHash"] = w.TargetActorHash,
+                ["service"] = step.Service,
+                ["treatment"] = step.Treatment,
+                ["affectedCount"] = step.AffectedCount,
+            },
+            Action = "privacy.erasureStepRecorded",
+            Result = step.Treatment,
+            ReasonCode = step.Note,
+            Summary = BusinessActivityMapper.ToSummary(
+                "privacy.erasureStepRecorded", step.Service, step.Treatment, step.Note),
+        };
+
+        await auditRepository.AppendAsync(record);
+
+        logger.LogInformation(
+            "Erasure step recorded. ErasureRequestId={ErasureRequestId} Service={Service} Treatment={Treatment}",
+            w.ErasureRequestId, step.Service, step.Treatment);
+
+        return true;
+    }
+}

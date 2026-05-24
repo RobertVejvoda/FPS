@@ -35,7 +35,24 @@ public sealed record ErasureStatusResponse(
 
 public sealed record CreateErasureRequest(
     string TargetUserId,
-    string LegalBasis);
+    string LegalBasis)
+{
+    public static readonly IReadOnlySet<string> AllowedLegalBases = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "gdpr-article-17",
+        "gdpr-article-17-1-a",
+        "gdpr-article-17-1-b",
+        "gdpr-article-17-1-c",
+        "gdpr-article-17-1-d",
+        "ccpa-deletion-request",
+        "contract-termination",
+        "consent-withdrawn",
+        "legal-obligation",
+        "client-request",
+    };
+
+    public bool IsValidLegalBasis => AllowedLegalBases.Contains(LegalBasis);
+};
 
 // Input/output types for the Dapr Workflow
 public sealed record ErasureWorkflowInput(
@@ -59,6 +76,10 @@ public sealed record ServiceErasureInput(
     // Internal only: used by services that store raw user IDs for lookup.
     // Must never be logged or returned in API responses.
     string? TargetUserId = null);
+
+public sealed record ErasureStepAuditInput(
+    ErasureWorkflowInput WorkflowInput,
+    ErasureServiceResult StepResult);
 
 public static class ErasureStatus
 {

@@ -152,6 +152,28 @@ public sealed class PrivacyServiceTests
         Assert.Null(status);
     }
 
+    // ── LegalBasis validation ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateErasureRequest_ValidLegalBasis_Succeeds()
+    {
+        var request = await service.CreateErasureRequestAsync(
+            "tenant-1", "user-1", "admin-1", "gdpr-article-17");
+        Assert.Equal("gdpr-article-17", request.LegalBasis);
+    }
+
+    [Fact]
+    public async Task CreateErasureRequest_LegalBasisStoredInAuditReasonCode()
+    {
+        await service.CreateErasureRequestAsync(
+            "tenant-1", "user-1", "admin-1", "consent-withdrawn");
+
+        var (records, _) = await auditRepo.QueryAsync(
+            new AuditQueryRequest { Action = "privacy.erasureRequested" }, "tenant-1");
+
+        Assert.Equal("consent-withdrawn", records[0].ReasonCode);
+    }
+
     [Fact]
     public async Task GetStatus_DoesNotExposeRawUserId()
     {

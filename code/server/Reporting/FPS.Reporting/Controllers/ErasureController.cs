@@ -1,10 +1,12 @@
 using FPS.Reporting.Application;
 using FPS.Reporting.Domain;
+using FPS.SharedKernel.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Reporting.Controllers;
 
 [ApiController]
+[DaprInternalOnly]
 public sealed class ErasureController(IReportingRepository repository) : ControllerBase
 {
     [HttpPost("/erasure")]

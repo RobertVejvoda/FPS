@@ -1,8 +1,10 @@
+using FPS.SharedKernel.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Profile.Controllers;
 
 [ApiController]
+[DaprInternalOnly]
 public sealed class ErasureController : ControllerBase
 {
     // Stub — Profile erasure requires durable store cross-partition delete.

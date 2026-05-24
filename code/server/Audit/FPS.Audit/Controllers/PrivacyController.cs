@@ -24,6 +24,8 @@ public sealed class PrivacyController(PrivacyService privacyService, ICurrentUse
             return BadRequest("TargetUserId is required.");
         if (string.IsNullOrWhiteSpace(body.LegalBasis))
             return BadRequest("LegalBasis is required.");
+        if (!body.IsValidLegalBasis)
+            return BadRequest($"LegalBasis must be one of: {string.Join(", ", FPS.Audit.Application.Privacy.CreateErasureRequest.AllowedLegalBases.Order())}.");
 
         var request = await privacyService.CreateErasureRequestAsync(
             currentUser.TenantId, body.TargetUserId, currentUser.UserId ?? string.Empty,

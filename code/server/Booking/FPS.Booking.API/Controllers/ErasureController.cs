@@ -1,13 +1,16 @@
 using FPS.Booking.Application.Repositories;
+using FPS.SharedKernel.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Booking.API.Controllers;
 
 /// <summary>
-/// Service-owned erasure endpoint called by the privacy workflow via Dapr service invocation.
-/// Internal only — not exposed publicly.
+/// Service-owned erasure endpoints called by the privacy workflow via Dapr service invocation.
+/// Protected by DaprInternalOnly: requires dapr-api-token header matching APP_API_TOKEN config.
+/// External callers without a Dapr sidecar cannot pass this check in production.
 /// </summary>
 [ApiController]
+[DaprInternalOnly]
 public sealed class ErasureController(IBookingRepository bookingRepository) : ControllerBase
 {
     [HttpPost("/erasure/check-active")]
@@ -39,7 +42,6 @@ public sealed class ErasureController(IBookingRepository bookingRepository) : Co
     }
 }
 
-// Shared input/result types for service erasure endpoints (mirrors ErasureModels in FPS.Audit)
 public sealed record ServiceErasureInput(
     string ErasureRequestId,
     string TenantId,

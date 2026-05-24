@@ -40,6 +40,7 @@ builder.Services.AddDaprWorkflow(options =>
     options.RegisterActivity<EraseNotificationActivity>();
     options.RegisterActivity<AnonymiseReportingActivity>();
     options.RegisterActivity<ErasePiiMappingActivity>();
+    options.RegisterActivity<RecordErasureStepActivity>();
 });
 
 builder.Services.AddAuthentication("Bearer")

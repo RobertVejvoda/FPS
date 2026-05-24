@@ -13,6 +13,9 @@ public sealed class ErasureWorkflow : Workflow<ErasureWorkflowInput, ErasureWork
         var bookingCheck = await context.CallActivityAsync<ErasureServiceResult>(
             nameof(CheckActiveBookingsActivity), svcInput);
 
+        await context.CallActivityAsync(nameof(RecordErasureStepActivity),
+            new ErasureStepAuditInput(input, bookingCheck));
+
         if (bookingCheck.Treatment == ErasureTreatment.Blocked)
         {
             return new ErasureWorkflowOutput(
@@ -21,24 +24,23 @@ public sealed class ErasureWorkflow : Workflow<ErasureWorkflowInput, ErasureWork
                 bookingCheck.Note);
         }
 
-        // Steps 2–6: Service-owned erasure activities (run in order; each is idempotent)
+        // Steps 2–6: Service-owned erasure activities (idempotent, ordered)
         var results = new List<ErasureServiceResult> { bookingCheck };
 
-        results.Add(await context.CallActivityAsync<ErasureServiceResult>(
-            nameof(EraseProfileActivity), svcInput));
-
-        results.Add(await context.CallActivityAsync<ErasureServiceResult>(
-            nameof(EraseBookingDataActivity), svcInput));
-
-        results.Add(await context.CallActivityAsync<ErasureServiceResult>(
-            nameof(EraseNotificationActivity), svcInput));
-
-        results.Add(await context.CallActivityAsync<ErasureServiceResult>(
-            nameof(AnonymiseReportingActivity), svcInput));
-
-        // Step 7: Delete PII mapping so audit records no longer resolve to a person
-        results.Add(await context.CallActivityAsync<ErasureServiceResult>(
-            nameof(ErasePiiMappingActivity), svcInput));
+        foreach (var (activityName, step) in new[]
+        {
+            (nameof(EraseProfileActivity),       "profile"),
+            (nameof(EraseBookingDataActivity),   "booking"),
+            (nameof(EraseNotificationActivity),  "notification"),
+            (nameof(AnonymiseReportingActivity), "reporting"),
+            (nameof(ErasePiiMappingActivity),    "audit-pii"),
+        })
+        {
+            var result = await context.CallActivityAsync<ErasureServiceResult>(activityName, svcInput);
+            results.Add(result);
+            await context.CallActivityAsync(nameof(RecordErasureStepActivity),
+                new ErasureStepAuditInput(input, result));
+        }
 
         var anyFailed = results.Any(r => r.Treatment == ErasureTreatment.Failed);
         var status = anyFailed ? ErasureStatus.PartiallyCompleted : ErasureStatus.Completed;
