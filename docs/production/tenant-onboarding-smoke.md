@@ -8,7 +8,9 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 - 🟡 **Evaluation-grade** — exists but uses demo shortcuts not suitable for production
 - ❌ **Missing** — not yet implemented; blocker issue noted
 
-**Synthetic tenant:** `acme-corp`, a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
+**Supported local demo tenant:** `demo` (default). This is the only tenant that works end-to-end in the local harness because the Keycloak realm fixture hardcodes `tenant_id=demo` for all seeded users. The `FPS_DEMO_TENANT_ID` environment variable controls where Customer, Configuration, and profile seed scripts land their data, but Keycloak tokens always carry `demo` from a static realm import — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) will only pass when `FPS_DEMO_TENANT_ID=demo`. Full per-tenant Keycloak attribute patching is a follow-up in OPS008B.
+
+**Synthetic tenant for smoke steps:** `acme-corp` (documentation only), a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
 
 ---
 
