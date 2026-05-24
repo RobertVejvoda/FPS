@@ -31,7 +31,9 @@
         "http://100.*",
         "https://auth.expo.io/*"
       ],
-      "webOrigins": ["*"],
+      "webOrigins": [
+        "*"
+      ],
       "attributes": {
         "access.token.lifespan": "3600",
         "pkce.code.challenge.method": "S256"
@@ -87,8 +89,12 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "redirectUris": ["http://localhost:5200/auth/callback"],
-      "webOrigins": ["http://localhost:5200"],
+      "redirectUris": [
+        "http://localhost:5200/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:5200"
+      ],
       "attributes": {
         "access.token.lifespan": "3600",
         "pkce.code.challenge.method": "S256",
@@ -175,85 +181,114 @@
     {
       "username": "employee1",
       "enabled": true,
-      "email": "employee1@fps-local",
+      "email": "alice.novak@demo-company.local",
       "firstName": "Alice",
-      "lastName": "Employee",
+      "lastName": "Novak",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["employee"],
+      "realmRoles": [
+        "employee"
+      ],
       "credentials": []
     },
     {
       "username": "employee2",
       "enabled": true,
-      "email": "employee2@fps-local",
-      "firstName": "Bob",
-      "lastName": "CompanyCar",
+      "email": "ben.turner@demo-company.local",
+      "firstName": "Ben",
+      "lastName": "Turner",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["employee"],
+      "realmRoles": [
+        "employee"
+      ],
       "credentials": []
     },
     {
       "username": "employee3",
       "enabled": true,
-      "email": "employee3@fps-local",
-      "firstName": "Carol",
-      "lastName": "NoVehicle",
+      "email": "clara.lindqvist@demo-company.local",
+      "firstName": "Clara",
+      "lastName": "Lindqvist",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["employee"],
+      "realmRoles": [
+        "employee"
+      ],
       "credentials": []
     },
     {
       "username": "hr-admin",
       "enabled": true,
-      "email": "hr-admin@fps-local",
-      "firstName": "Demo",
-      "lastName": "HRAdmin",
+      "email": "maria.okafor@demo-company.local",
+      "firstName": "Maria",
+      "lastName": "Okafor",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["employee", "hr_manager"],
+      "realmRoles": [
+        "employee",
+        "hr_manager"
+      ],
       "credentials": []
     },
     {
       "username": "tenant-admin",
       "enabled": true,
-      "email": "tenant-admin@fps-local",
-      "firstName": "Demo",
-      "lastName": "TenantAdmin",
+      "email": "david.wei@demo-company.local",
+      "firstName": "David",
+      "lastName": "Wei",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["admin"],
+      "realmRoles": [
+        "admin"
+      ],
       "credentials": []
     },
     {
       "username": "report-viewer",
       "enabled": true,
-      "email": "report-viewer@fps-local",
-      "firstName": "Demo",
-      "lastName": "ReportViewer",
+      "email": "emma.clark@demo-company.local",
+      "firstName": "Emma",
+      "lastName": "Clark",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["report_viewer"],
+      "realmRoles": [
+        "report_viewer"
+      ],
       "credentials": []
     },
     {
       "username": "auditor",
       "enabled": true,
-      "email": "auditor@fps-local",
-      "firstName": "Demo",
-      "lastName": "Auditor",
+      "email": "frank.horvath@demo-company.local",
+      "firstName": "Frank",
+      "lastName": "Horvath",
       "attributes": {
-        "tenant_id": ["demo"]
+        "tenant_id": [
+          "demo"
+        ]
       },
-      "realmRoles": ["auditor"],
+      "realmRoles": [
+        "auditor"
+      ],
       "credentials": []
     }
   ]

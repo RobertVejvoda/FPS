@@ -85,17 +85,19 @@ Get a bearer token for a demo user when the mobile app or API smoke test needs o
 ./tools/dev-auth.sh employee1
 ```
 
-Available local users:
+Available local users — login username and fictional display name:
 
-| Username | FairSpot roles | Main demo interest |
-| --- | --- | --- |
-| `employee1` | `employee` | Normal employee booking, notifications, profile, mobile/web self-service. |
-| `employee2` | `employee` | Company-car style seeded profile path. |
-| `employee3` | `employee` | Missing/no-vehicle profile edge cases. |
-| `hr-admin` | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
-| `tenant-admin` | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
-| `report-viewer` | `report_viewer` | Read-only reporting review. |
-| `auditor` | `auditor` | Audit query/evidence review. |
+| Username | Display name | FairSpot roles | Main demo interest |
+| --- | --- | --- | --- |
+| `employee1` | Alice Novak | `employee` | Normal employee booking, EV and sedan vehicle selection, notifications, profile, mobile/web self-service. |
+| `employee2` | Ben Turner | `employee` | Company-car booking path; fleet vehicle (BT-001C). |
+| `employee3` | Clara Lindqvist | `employee` | Accessibility-eligible booking; accessible spot priority. |
+| `hr-admin` | Maria Okafor | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
+| `tenant-admin` | David Wei | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
+| `report-viewer` | Emma Clark | `report_viewer` | Read-only reporting review. |
+| `auditor` | Frank Horvath | `auditor` | Audit query/evidence review. |
+
+All display names are synthetic and fictional — no real employees, emails, or identifiers. Script usernames (`employee1`, `hr-admin`, …) are stable and safe to use in smoke commands.
 
 Treat generated bearer tokens as secrets: do not commit them, paste them into issues, or include them in screenshots.
 
@@ -402,19 +404,32 @@ This seeds Profile snapshots for `employee1`, `employee2`, and `employee3` by:
 
 ### Seed demo data table
 
-| User | ParkingEligible | CompanyCar | Vehicle | Accessibility |
-| --- | --- | --- | --- | --- |
-| `employee1` | ✓ | — | Sedan ABC001 | — |
-| `employee2` | ✓ | ✓ | — | — |
-| `employee3` | ✓ | — | — | ✓ |
+| Username | Display name | ParkingEligible | CompanyCar | Vehicles | Accessibility |
+| --- | --- | --- | --- | --- | --- |
+| `employee1` | Alice Novak | ✓ | — | AN-001S (sedan), AN-002E (EV) | — |
+| `employee2` | Ben Turner | ✓ | ✓ | BT-001C (fleet) | — |
+| `employee3` | Clara Lindqvist | ✓ | — | CL-001A | ✓ |
+| `hr-admin` | Maria Okafor | — | — | — | — |
+| `tenant-admin` | David Wei | — | — | — | — |
+| `report-viewer` | Emma Clark | — | — | — | — |
+| `auditor` | Frank Horvath | — | — | — | — |
 
 ### Reset / re-seed
 
-The seed script is idempotent — run it again after a service restart:
+Profile seeding is idempotent — re-run after a service restart:
 
 ```sh
 ./tools/dev-seed.sh
 ```
+
+For a full reset (clears all in-memory state including bookings):
+
+```sh
+./tools/stop-local-harness.sh --reset
+./tools/start-local-harness.sh
+```
+
+`stop-local-harness.sh --reset` removes Docker volumes and returns the environment to a clean state. After restart, `start-local-harness.sh` re-imports the Keycloak realm and re-seeds demo data automatically.
 
 ### Post-seed smoke
 
@@ -423,6 +438,12 @@ TOKEN=$(./tools/dev-auth.sh employee1)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
+```
+
+All three should return `200`. For a full scenario walkthrough including audit and reporting evidence, run:
+
+```sh
+./tools/smoke-onboarding.sh
 ```
 
 All three should return `200`.
