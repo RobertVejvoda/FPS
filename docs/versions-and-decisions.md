@@ -73,7 +73,6 @@ The repository, service namespaces, and some internal tooling may continue to us
 | ASP.NET Core, .NET 9 | Modern powerful language with great community support, cross platform | Architect | 1.10.2024
 | React | Web UI for both web and mobile progressive apps | Architect | 1.11.2024
 | Dapr | Dapr helps with consistency, bindings and abstractions, important software component build block. | Architect | 1.10.2024
-| .NET Aspire | Use .NET Aspire to orchestrate microservices with improved view on logs and traces | Architect | 1.10.2024
 | ~~.NET MAUI~~ *(reversed 9.5.2026)* | Replaced by React Native + Expo. | Architect | 13.10.2024
 | Development tools | Use Visual Studio Code for development. It does not require any licences and is effective with full language support | Architect | 13.10.2024
 | ~~Xcode~~ *(reversed 9.5.2026)* | No longer required — Expo managed workflow removes need for native build tooling. | Architect | 13.10.2024

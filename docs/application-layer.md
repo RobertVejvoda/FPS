@@ -18,12 +18,8 @@
 | [Notification](./application-layer/notification) | Manage and send notifications | Internal | Standard | High | Simple |
 | [Profile](./application-layer/profile) | Manage customer users and profiles | Confidential | High | High | Simple |
 | [Reporting](./application-layer/reporting) | Generate and retrieve reports | Internal | Standard | High | Simple |
-| [Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard)[^1]| Development-time dashboard for monitoring local distributed app metrics, logs and traces | Internal | Standard | High | Simple |
 
 
 ![Application Architecture 2](./images/fps-application-arch-2.png)
 
 
----
-
-[^1] Aspire Dashboard is a software component providing another view on logs, traces and metrics, but it's deployed independently.

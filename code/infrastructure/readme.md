@@ -175,14 +175,14 @@ docker compose -f code/infrastructure/docker-compose.yaml down
 
 ## Local Full-Stack Testing
 
-This Docker Compose setup starts shared dependencies, not the whole FPS application stack. Run the .NET services from source for service-level checks, or use the planned AppHost/local harness when it exists.
+This Docker Compose setup starts shared dependencies, not the whole FPS application stack. Run the .NET services from source for service-level checks, or use the local harness when it exists.
 
 See `../../docs/production/local-test-harness.md` for:
 
 - current service run commands;
 - local service URLs;
 - mobile gateway requirements;
-- preferred Aspire/AppHost direction for one-command full-stack smoke testing.
+- local harness direction for one-command full-stack smoke testing.
 
 ---
 

@@ -110,7 +110,7 @@ AKS gives full Kubernetes control: custom networking, Helm releases, full observ
 
 ### 2.6 Hybrid / Minimal-Cost Stepping Stone
 
-Keep local Docker Compose or .NET Aspire-style orchestration for development. Deploy only the externally useful API surface first. Defer non-essential services until the demo needs them.
+Keep local Docker Compose and repository-owned harness scripts for development. Deploy only the externally useful API surface first. Defer non-essential services until the demo needs them.
 
 This is the lowest-risk path to a first live endpoint. The main downside is deferred integration testing between services in a real cloud environment.
 
