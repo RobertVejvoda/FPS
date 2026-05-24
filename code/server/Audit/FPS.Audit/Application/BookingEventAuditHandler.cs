@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using FPS.Audit.Domain;
 using Microsoft.Extensions.Logging;
 
@@ -39,6 +40,10 @@ public sealed class BookingEventAuditHandler(IAuditRepository repository, ILogge
             ? mapping
             : ("unknown", _ => null);
 
+        var result = BusinessActivityMapper.ToResult(envelope.EventType);
+        var reasonCode = envelope.Payload.ReasonCode;
+        var processingActivity = Activity.Current;
+
         var record = new AuditRecord
         {
             AuditRecordId = Guid.NewGuid(),
@@ -55,7 +60,13 @@ public sealed class BookingEventAuditHandler(IAuditRepository repository, ILogge
             Source = envelope.Source,
             EntityType = entityType,
             EntityId = resolveEntityId(envelope.Payload),
-            Payload = Pseudonymiser.SanitisePayload(envelope.Payload)
+            Payload = Pseudonymiser.SanitisePayload(envelope.Payload),
+            Action = envelope.EventType,
+            Result = result,
+            ReasonCode = reasonCode,
+            Summary = BusinessActivityMapper.ToSummary(envelope.EventType, entityType, result, reasonCode),
+            ProcessingTraceId = processingActivity?.TraceId.ToString(),
+            SpanId = processingActivity?.SpanId.ToString(),
         };
 
         await repository.AppendAsync(record, cancellationToken);

@@ -162,6 +162,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/erasure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ServiceErasureInput"];
+                    "text/json": components["schemas"]["ServiceErasureInput"];
+                    "application/*+json": components["schemas"]["ServiceErasureInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile/admin/hr-import/preview": {
         parameters: {
             query?: never;
@@ -298,6 +337,12 @@ export interface components {
             reservedSpaceEligible: boolean;
             vehicles: components["schemas"]["VehicleSnapshot"][];
             snapshotVersion: string;
+        };
+        ServiceErasureInput: {
+            erasureRequestId: string;
+            tenantId: string;
+            targetActorHash: string;
+            targetUserId?: null | string;
         };
         UpdateRequest: {
             isActive: boolean;

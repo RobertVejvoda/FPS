@@ -623,6 +623,80 @@
         ]
       }
     },
+    "/erasure/check-active": {
+      "post": {
+        "tags": [
+          "Erasure"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/erasure": {
+      "post": {
+        "tags": [
+          "Erasure"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/bookings/no-show-evaluation": {
       "post": {
         "tags": [
@@ -1080,6 +1154,31 @@
           }
         }
       },
+      "ServiceErasureInput": {
+        "required": [
+          "erasureRequestId",
+          "tenantId",
+          "targetActorHash"
+        ],
+        "type": "object",
+        "properties": {
+          "erasureRequestId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "targetActorHash": {
+            "type": "string"
+          },
+          "targetUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SubmitBookingRequest": {
         "required": [
           "facilityId",
@@ -1246,6 +1345,9 @@
     },
     {
       "name": "Draws"
+    },
+    {
+      "name": "Erasure"
     },
     {
       "name": "Evaluations"

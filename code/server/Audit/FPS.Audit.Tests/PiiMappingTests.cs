@@ -105,4 +105,65 @@ public sealed class PiiMappingTests
         Assert.DoesNotContain(auditMethods, m => m.Contains("delete") || m.Contains("remove"));
         Assert.Contains(piiMethods, m => m.Contains("delete"));
     }
+
+    // ── DeleteByActorHashAsync (PRIV001 erasure workflow) ────────────────────
+
+    [Fact]
+    public async Task DeleteByActorHash_RemovesMatchingMapping()
+    {
+        var hash = Pseudonymiser.Hash("user-1")!;
+        await mappingRepo.SaveAsync(new PiiMapping
+        {
+            TenantId = "tenant-1", UserId = "user-1", ActorHash = hash
+        });
+
+        await mappingRepo.DeleteByActorHashAsync(hash, "tenant-1");
+
+        Assert.False(await mappingRepo.ExistsAsync("user-1", "tenant-1"));
+    }
+
+    [Fact]
+    public async Task DeleteByActorHash_IdempotentWhenNotPresent()
+    {
+        var ex = await Record.ExceptionAsync(() =>
+            mappingRepo.DeleteByActorHashAsync("nonexistent-hash", "tenant-1"));
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task DeleteByActorHash_TenantIsolation_DoesNotRemoveOtherTenant()
+    {
+        var hash = Pseudonymiser.Hash("user-1")!;
+        await mappingRepo.SaveAsync(new PiiMapping
+        {
+            TenantId = "tenant-2", UserId = "user-1", ActorHash = hash
+        });
+
+        await mappingRepo.DeleteByActorHashAsync(hash, "tenant-1");
+
+        Assert.True(await mappingRepo.ExistsAsync("user-1", "tenant-2"));
+    }
+
+    [Fact]
+    public async Task DeleteByActorHash_LeavesAuditRecordsIntact()
+    {
+        var hash = Pseudonymiser.Hash("user-1")!;
+        await auditRepo.AppendAsync(new AuditRecord
+        {
+            AuditRecordId = Guid.NewGuid(), SourceEventId = "evt-pii", EventType = "booking.requestSubmitted",
+            EventVersion = 1, OccurredAt = DateTime.UtcNow, RecordedAt = DateTime.UtcNow,
+            TenantId = "tenant-1", CorrelationId = "c", ActorType = "employee",
+            ActorHash = hash, Source = "booking", EntityType = "bookingRequest",
+            Payload = new System.Text.Json.Nodes.JsonObject()
+        });
+        await mappingRepo.SaveAsync(new PiiMapping
+        {
+            TenantId = "tenant-1", UserId = "user-1", ActorHash = hash
+        });
+
+        await mappingRepo.DeleteByActorHashAsync(hash, "tenant-1");
+
+        Assert.True(await auditRepo.ExistsAsync("evt-pii"));
+    }
 }

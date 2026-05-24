@@ -19,6 +19,17 @@ public sealed class InMemoryPiiMappingRepository : IPiiMappingRepository
         return Task.CompletedTask;
     }
 
+    public Task DeleteByActorHashAsync(string actorHash, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var keys = store
+            .Where(kv => kv.Key.tenantId == tenantId && kv.Value.ActorHash == actorHash)
+            .Select(kv => kv.Key)
+            .ToList();
+        foreach (var key in keys)
+            store.TryRemove(key, out _);
+        return Task.CompletedTask;
+    }
+
     public Task<bool> ExistsAsync(string userId, string tenantId, CancellationToken cancellationToken = default) =>
         Task.FromResult(store.ContainsKey((tenantId, userId)));
 }

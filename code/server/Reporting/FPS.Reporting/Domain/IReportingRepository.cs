@@ -8,6 +8,7 @@ public interface IReportingRepository
         Action<ParkingMetrics> apply, CancellationToken cancellationToken = default);
     Task ApplyFairnessAsync(string tenantId, string requestorHash, string date, string locationId,
         Action<FairnessRecord> apply, CancellationToken cancellationToken = default);
+    Task<int> AnonymiseFairnessByActorHashAsync(string tenantId, string actorHash, CancellationToken cancellationToken = default);
 }
 
 public interface IReportingQueryRepository

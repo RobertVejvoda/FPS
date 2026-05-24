@@ -175,4 +175,38 @@ public sealed class NotificationRepositoryTests
         Assert.True(found);
         Assert.True(record.IsRead);
     }
+
+    // ── DeleteByRecipientIdAsync (PRIV001 erasure) ───────────────────────────
+
+    [Fact]
+    public async Task DeleteByRecipientId_RemovesMatchingRecords()
+    {
+        await repo.SaveAsync(MakeRecord("t1", "u1"));
+        await repo.SaveAsync(MakeRecord("t1", "u1"));
+        await repo.SaveAsync(MakeRecord("t1", "u2")); // different recipient
+
+        var count = await repo.DeleteByRecipientIdAsync("t1", "u1");
+
+        Assert.Equal(2, count);
+        var remaining = await repo.GetByRecipientAsync("t1", "u1");
+        Assert.Empty(remaining);
+    }
+
+    [Fact]
+    public async Task DeleteByRecipientId_IdempotentWhenNoneFound()
+    {
+        var count = await repo.DeleteByRecipientIdAsync("t1", "nonexistent");
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public async Task DeleteByRecipientId_TenantIsolation_DoesNotRemoveOtherTenant()
+    {
+        await repo.SaveAsync(MakeRecord("t2", "u1"));
+
+        await repo.DeleteByRecipientIdAsync("t1", "u1");
+
+        var remaining = await repo.GetByRecipientAsync("t2", "u1");
+        Assert.Single(remaining);
+    }
 }

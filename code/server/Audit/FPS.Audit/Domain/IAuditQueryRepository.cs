@@ -8,6 +8,11 @@ public sealed record AuditQueryRequest
     public string? ActorHash { get; init; }
     public DateTime? OccurredAfter { get; init; }
     public DateTime? OccurredBefore { get; init; }
+    // Business activity filters (AUD006)
+    public string? Action { get; init; }
+    public string? Result { get; init; }
+    public string? ReasonCode { get; init; }
+    public string? TraceId { get; init; }
     public int PageSize { get; init; } = 50;
     public int Page { get; init; } = 1;
 

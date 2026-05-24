@@ -78,4 +78,15 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
 
         return Task.FromResult<IReadOnlyList<FairnessRecord>>(results);
     }
+
+    public Task<int> AnonymiseFairnessByActorHashAsync(string tenantId, string actorHash, CancellationToken cancellationToken = default)
+    {
+        var keys = _fairness
+            .Where(kv => kv.Value.TenantId == tenantId && kv.Value.RequestorHash == actorHash)
+            .Select(kv => kv.Key)
+            .ToList();
+        foreach (var key in keys)
+            _fairness.TryRemove(key, out _);
+        return Task.FromResult(keys.Count);
+    }
 }

@@ -28,6 +28,10 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
             .Where(r => query.ActorHash is null || r.ActorHash == query.ActorHash)
             .Where(r => query.OccurredAfter is null || r.OccurredAt >= query.OccurredAfter)
             .Where(r => query.OccurredBefore is null || r.OccurredAt <= query.OccurredBefore)
+            .Where(r => query.Action is null || r.Action == query.Action)
+            .Where(r => query.Result is null || r.Result == query.Result)
+            .Where(r => query.ReasonCode is null || r.ReasonCode == query.ReasonCode)
+            .Where(r => query.TraceId is null || r.TraceId == query.TraceId || r.ProcessingTraceId == query.TraceId)
             .OrderByDescending(r => r.OccurredAt)
             .ToList();
 

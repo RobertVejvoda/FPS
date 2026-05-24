@@ -129,6 +129,41 @@ public sealed class BookingEventReportingHandlerTests
         Assert.Empty(metrics);
     }
 
+    // ── AnonymiseFairnessByActorHashAsync (PRIV001 erasure) ──────────────────
+
+    [Fact]
+    public async Task AnonymiseFairness_RemovesMatchingRecords()
+    {
+        var hash = BookingEventReportingHandler.Hash("u1");
+        await handler.HandleAsync(Envelope("e1", "booking.requestSubmitted", "t1", "u1", "loc-1", "2026-06-01", "09:00-17:00"));
+        await handler.HandleAsync(Envelope("e2", "booking.requestSubmitted", "t1", "u2", "loc-1", "2026-06-01", "09:00-17:00")); // different user
+
+        var removed = await repository.AnonymiseFairnessByActorHashAsync("t1", hash);
+
+        Assert.Equal(1, removed);
+        var remaining = await repository.QueryFairnessAsync(new(), "t1");
+        Assert.DoesNotContain(remaining, f => f.RequestorHash == hash);
+    }
+
+    [Fact]
+    public async Task AnonymiseFairness_TenantIsolation_DoesNotRemoveOtherTenant()
+    {
+        var hash = BookingEventReportingHandler.Hash("u1");
+        await handler.HandleAsync(Envelope("e1", "booking.requestSubmitted", "t2", "u1", "loc-1", "2026-06-01", "09:00-17:00"));
+
+        await repository.AnonymiseFairnessByActorHashAsync("t1", hash);
+
+        var t2Records = await repository.QueryFairnessAsync(new(), "t2");
+        Assert.Single(t2Records);
+    }
+
+    [Fact]
+    public async Task AnonymiseFairness_Idempotent_WhenHashNotFound()
+    {
+        var count = await repository.AnonymiseFairnessByActorHashAsync("t1", "nonexistent-hash");
+        Assert.Equal(0, count);
+    }
+
     private static BookingEventEnvelope Envelope(
         string eventId, string eventType, string tenantId, string requestorId,
         string locationId, string date, string timeSlot,
