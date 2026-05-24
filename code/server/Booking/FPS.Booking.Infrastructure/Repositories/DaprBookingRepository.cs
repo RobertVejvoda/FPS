@@ -72,6 +72,13 @@ public sealed class DaprBookingRepository : IBookingRepository
         return false;
     }
 
+    // Erasure support — requires durable store cross-partition scan; stubs for local harness.
+    public Task<bool> HasActiveRequestsForRequestorAsync(string tenantId, string requestorId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
+    public Task<int> AnonymiseByRequestorIdAsync(string tenantId, string requestorId, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
+
     private sealed class RequestDateCounter
     {
         public int Count { get; set; }

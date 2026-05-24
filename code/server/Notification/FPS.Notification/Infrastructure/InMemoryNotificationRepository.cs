@@ -61,4 +61,15 @@ public sealed class InMemoryNotificationRepository : INotificationRepository
         record.MarkRead();
         return Task.FromResult(true);
     }
+
+    public Task<int> DeleteByRecipientIdAsync(string tenantId, string recipientId, CancellationToken cancellationToken = default)
+    {
+        var keys = store.Values
+            .Where(r => r.TenantId == tenantId && r.RecipientId == recipientId)
+            .Select(r => r.DeduplicationKey)
+            .ToList();
+        foreach (var key in keys)
+            store.TryRemove(key, out _);
+        return Task.FromResult(keys.Count);
+    }
 }

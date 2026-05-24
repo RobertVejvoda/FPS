@@ -1,4 +1,6 @@
+using Dapr.Workflow;
 using FPS.Audit.Application;
+using FPS.Audit.Application.Privacy;
 using FPS.Audit.Domain;
 using FPS.Audit.Identity;
 using FPS.Audit.Infrastructure;
@@ -17,13 +19,28 @@ builder.Services.AddSingleton<IAuditRepository>(inMemoryAuditRepo);
 builder.Services.AddSingleton<IAuditQueryRepository>(inMemoryAuditRepo);
 builder.Services.AddSingleton<IAuditRetentionRepository>(inMemoryAuditRepo);
 builder.Services.AddSingleton<IPiiMappingRepository, InMemoryPiiMappingRepository>();
+builder.Services.AddSingleton<IErasureRequestRepository, InMemoryErasureRequestRepository>();
 
 builder.Services.AddScoped<BookingEventAuditHandler>();
 builder.Services.AddScoped<AuditQueryService>();
 builder.Services.AddScoped<PiiErasureService>();
 builder.Services.AddScoped<AuditRetentionService>();
 builder.Services.AddScoped<AuditIntegrityService>();
+builder.Services.AddScoped<IErasureWorkflowClient, DaprErasureWorkflowClient>();
+builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
+// Dapr Workflow: erasure orchestration and service-owned activities
+builder.Services.AddDaprWorkflow(options =>
+{
+    options.RegisterWorkflow<ErasureWorkflow>();
+    options.RegisterActivity<CheckActiveBookingsActivity>();
+    options.RegisterActivity<EraseProfileActivity>();
+    options.RegisterActivity<EraseBookingDataActivity>();
+    options.RegisterActivity<EraseNotificationActivity>();
+    options.RegisterActivity<AnonymiseReportingActivity>();
+    options.RegisterActivity<ErasePiiMappingActivity>();
+});
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>

@@ -12,4 +12,5 @@ public interface INotificationRepository
         CancellationToken cancellationToken = default);
     Task<int> GetUnreadCountAsync(string tenantId, string recipientId, CancellationToken cancellationToken = default);
     Task<bool> MarkReadAsync(Guid notificationId, string tenantId, string recipientId, CancellationToken cancellationToken = default);
+    Task<int> DeleteByRecipientIdAsync(string tenantId, string recipientId, CancellationToken cancellationToken = default);
 }

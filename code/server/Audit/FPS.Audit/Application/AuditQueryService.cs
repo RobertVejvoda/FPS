@@ -18,7 +18,15 @@ public sealed record AuditRecordResponse(
     string Source,
     string EntityType,
     string? EntityId,
-    JsonElement Payload)
+    JsonElement Payload,
+    // Business activity timeline fields (AUD006)
+    string Action,
+    string? Result,
+    string? ReasonCode,
+    string? Summary,
+    string? TraceId,
+    string? SpanId,
+    string? ProcessingTraceId)
 {
     public static AuditRecordResponse From(AuditRecord record) => new(
         AuditRecordId: record.AuditRecordId,
@@ -34,7 +42,14 @@ public sealed record AuditRecordResponse(
         Source: record.Source,
         EntityType: record.EntityType,
         EntityId: record.EntityId,
-        Payload: JsonSerializer.SerializeToElement(record.Payload));
+        Payload: JsonSerializer.SerializeToElement(record.Payload),
+        Action: record.Action,
+        Result: record.Result,
+        ReasonCode: record.ReasonCode,
+        Summary: record.Summary,
+        TraceId: record.TraceId,
+        SpanId: record.SpanId,
+        ProcessingTraceId: record.ProcessingTraceId);
 }
 
 public sealed record PagedAuditResponse(
