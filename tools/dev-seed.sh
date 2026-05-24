@@ -29,6 +29,7 @@ set -euo pipefail
 
 PROFILE_URL="${PROFILE_URL:-http://localhost:5197}"
 BOOKING_URL="${BOOKING_URL:-http://localhost:5131}"
+DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
 IDENTITY_URL="${IDENTITY_URL:-http://localhost:5192}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
@@ -98,7 +99,7 @@ seed_profile() {
     -X PUT "$PROFILE_URL/profile/admin/snapshot" \
     -H "Content-Type: application/json" \
     -d "{
-      \"tenantId\": \"tenant-1\",
+      \"tenantId\": \"$DEMO_TENANT\",
       \"userId\": \"$user_id\",
       \"parkingEligible\": $parking_eligible,
       \"hasCompanyCar\": $has_company_car,
@@ -212,7 +213,7 @@ echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/me"
 echo ""
 echo "Admin/reporting:"
 echo "  TOKEN=\$(./tools/dev-auth.sh tenant-admin)"
-echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/tenants/tenant-1/readiness"
+echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/tenants/$DEMO_TENANT/readiness"
 echo "  TOKEN=\$(./tools/dev-auth.sh report-viewer)"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/reports/parking/summary"
 echo "  TOKEN=\$(./tools/dev-auth.sh auditor)"

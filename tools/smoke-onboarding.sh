@@ -8,6 +8,7 @@ set -euo pipefail
 
 GATEWAY="${GATEWAY_URL:-http://localhost:10000}"
 CUSTOMER_SVC="${CUSTOMER_URL:-http://localhost:5181}"
+DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
@@ -54,19 +55,19 @@ TOKEN=$(get_token tenant-admin)
 if [[ -z "$TOKEN" ]]; then
   fail "Could not obtain tenant-admin token"
 else
-  STATUS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/tenant-1/readiness" \
+  STATUS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT/readiness" \
     | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$STATUS" != "UNREACHABLE" ]]; then
     pass "Tenant readiness endpoint reachable (status: $STATUS)"
   else
     fail "Tenant readiness endpoint unreachable"
   fi
-  TENANT=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/tenant-1" \
+  TENANT=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT" \
     | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "UNREACHABLE")
-  if [[ "$TENANT" == "tenant-1" ]]; then
-    pass "GET /tenants/tenant-1 returns tenant record"
+  if [[ "$TENANT" == "$DEMO_TENANT" ]]; then
+    pass "GET /tenants/$DEMO_TENANT returns tenant record"
   else
-    fail "GET /tenants/tenant-1 unreachable or missing"
+    fail "GET /tenants/$DEMO_TENANT unreachable or missing"
   fi
 fi
 
@@ -78,7 +79,7 @@ if [[ -n "$TOKEN" ]]; then
   ME=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/me" 2>/dev/null || echo "UNREACHABLE")
   TENANT=$(echo "$ME" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "PARSE_FAIL")
   ROLES=$(echo "$ME" | python3 -c "import sys,json; print(','.join(json.load(sys.stdin).get('roles',[])))" 2>/dev/null || echo "PARSE_FAIL")
-  if [[ "$TENANT" == "tenant-1" && "$ROLES" == *"employee"* ]]; then
+  if [[ "$TENANT" == "$DEMO_TENANT" && "$ROLES" == *"employee"* ]]; then
     pass "GET /me for employee1: tenantId=$TENANT roles=$ROLES"
   else
     fail "GET /me for employee1: unexpected tenantId=$TENANT or roles=$ROLES"
@@ -151,7 +152,7 @@ skip "Web HR import upload (DATA002) — using dev-seed.sh and validate-hr-impor
 header "Step 6 — Readiness check"
 TOKEN=$(get_token tenant-admin)
 if [[ -n "$TOKEN" ]]; then
-  READY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/tenant-1/readiness" 2>/dev/null || echo "UNREACHABLE")
+  READY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT/readiness" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$READY" != "UNREACHABLE" && "$READY" != "" ]]; then
     STATUS=$(echo "$READY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
     pass "Readiness check endpoint reachable (status: $STATUS)"
