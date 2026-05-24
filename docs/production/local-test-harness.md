@@ -499,8 +499,10 @@ All four should return `200`.
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Script exits with "Wrong .NET SDK" | System dotnet resolves before `$HOME/.dotnet` | Prepend `$HOME/.dotnet` to `PATH` and retry |
+| Script exits with "port ... is already in use" | Stale FairSpot service or Dapr sidecar process is still bound from a previous run | Run `./tools/stop-local-harness.sh --services-only`, then retry |
 | Script exits non-zero with service port error | Dapr sidecar or service startup slow or crashed | Check `logs/local-harness/dapr-run.log`; run `./tools/stop-local-harness.sh` then retry |
-| Seed step fails (script exits non-zero) | Profile service not yet ready, or Keycloak realm missing | Services are still running — fix the cause and re-run `./tools/dev-seed.sh`, or run `./tools/stop-local-harness.sh` and restart |
+| Seed step fails with Booking `401` | Booking rejected the token; most often a stale service process was running with the wrong auth environment | Run `./tools/stop-local-harness.sh --services-only`, then start the harness again |
+| Seed step fails (script exits non-zero) | Profile service not yet ready, Keycloak realm missing, or service validation rejected the seed payload | Services are still running — fix the cause and re-run `./tools/dev-seed.sh`, or run `./tools/stop-local-harness.sh` and restart |
 | `/bookings` returns 500 | Dapr sidecar not connected | Check `logs/local-harness/dapr-run.log` for sidecar startup errors |
 | Keycloak timeout | Keycloak container slow to initialise | Wait 30 s and retry; check `docker compose logs keycloak` |
 

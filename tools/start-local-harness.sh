@@ -69,6 +69,18 @@ wait_port() {
   return 1
 }
 
+ensure_port_free() {
+  port="$1"
+  label="$2"
+  host="${3:-localhost}"
+  if nc -z "$host" "$port" 2>/dev/null; then
+    printf '[harness] ERROR: %s port %s is already in use on %s\n' "$label" "$port" "$host" >&2
+    printf '[harness]   Run: ./tools/stop-local-harness.sh --services-only\n' >&2
+    printf '[harness]   Then retry: ./tools/start-local-harness.sh\n' >&2
+    exit 1
+  fi
+}
+
 require_port() {
   port="$1"
   label="$2"
@@ -83,6 +95,18 @@ require_port() {
   }
 }
 
+require_process_running() {
+  pid="$1"
+  label="$2"
+  logfile="$3"
+  if ! kill -0 "$pid" 2>/dev/null; then
+    printf '[harness] ERROR: %s process exited during startup\n' "$label" >&2
+    printf '[harness]   Check log: %s\n' "$logfile" >&2
+    tail -n 40 "$logfile" >&2 2>/dev/null || true
+    exit 1
+  fi
+}
+
 # ── Prerequisites ─────────────────────────────────────────────────────────────
 
 command -v docker > /dev/null || fail "Docker not found. Start Docker Desktop first."
@@ -93,6 +117,34 @@ DOTNET_PATH="$(command -v dotnet)"
 case "$DOTNET_PATH" in
   */usr/local/share/dotnet*) fail "Resolving system dotnet at $DOTNET_PATH; need \$HOME/.dotnet/dotnet (SDK 10.0.203). Prepend \$HOME/.dotnet to PATH." ;;
 esac
+
+# Refuse to start over stale app or Dapr sidecar processes. Otherwise the harness
+# can seed against an old service process after `dapr run` fails validation.
+for port_label in \
+  "5192 Identity" \
+  "5131 Booking" \
+  "5157 Notification" \
+  "5197 Profile" \
+  "5161 Audit" \
+  "5171 Reporting" \
+  "5141 Configuration" \
+  "5181 Customer" \
+  "3601 Booking-Dapr-HTTP" \
+  "3607 Notification-Dapr-HTTP" \
+  "3617 Profile-Dapr-HTTP" \
+  "3611 Audit-Dapr-HTTP" \
+  "3621 Reporting-Dapr-HTTP" \
+  "3631 Configuration-Dapr-HTTP" \
+  "3641 Customer-Dapr-HTTP" \
+  "50001 Booking-Dapr-GRPC" \
+  "50007 Notification-Dapr-GRPC" \
+  "50017 Profile-Dapr-GRPC" \
+  "50011 Audit-Dapr-GRPC" \
+  "50021 Reporting-Dapr-GRPC" \
+  "50031 Configuration-Dapr-GRPC" \
+  "50041 Customer-Dapr-GRPC"; do
+  ensure_port_free "${port_label%% *}" "${port_label#* }"
+done
 
 # ── Docker Compose infrastructure ─────────────────────────────────────────────
 
@@ -131,15 +183,26 @@ log "Starting Booking, Notification, Profile, Audit, Reporting, Configuration, C
 log "  with Dapr sidecars (logs -> $LOG_DIR/dapr-run.log)..."
 cd "$REPO_ROOT"
 dapr run -f dapr.yaml > "$LOG_DIR/dapr-run.log" 2>&1 &
-echo "$!" >> "$PID_FILE"
+DAPR_RUN_PID="$!"
+echo "$DAPR_RUN_PID" >> "$PID_FILE"
+
+sleep 2
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 
 require_port 5131 "Booking"       90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5157 "Notification"  90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5197 "Profile"       90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5161 "Audit"         90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5171 "Reporting"     90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5141 "Configuration" 90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5181 "Customer"      90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 
 # ── Seed demo data ────────────────────────────────────────────────────────────
 

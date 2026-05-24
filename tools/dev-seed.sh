@@ -95,7 +95,7 @@ seed_profile() {
   [[ "$username" == "tenant-admin" || "$username" == "report-viewer" || "$username" == "auditor" ]] && parking_eligible="false"
 
   local http_code
-  http_code=$(curl -sf -o /dev/null -w "%{http_code}" \
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
     -X PUT "$PROFILE_URL/profile/admin/snapshot" \
     -H "Content-Type: application/json" \
     -d "{
@@ -106,7 +106,8 @@ seed_profile() {
       \"accessibilityEligible\": $accessibility,
       \"reservedSpaceEligible\": false,
       \"vehicles\": $vehicles
-    }")
+    }" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
 
   if [ "$http_code" = "204" ]; then
     ok "Profile $username (userId=${user_id:0:8}...)"
@@ -129,7 +130,7 @@ seed_booking() {
   departure="${booking_date}T18:00:00"
 
   local http_code
-  http_code=$(curl -sf -o /dev/null -w "%{http_code}" \
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
     -X POST "$BOOKING_URL/bookings" \
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
@@ -143,7 +144,8 @@ seed_booking() {
       \"isCompanyCar\": $is_company_car,
       \"plannedArrivalTime\": \"$arrival\",
       \"plannedDepartureTime\": \"$departure\"
-    }" 2>/dev/null || echo "000")
+    }" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
 
   if [[ "$http_code" = "202" ]]; then
     ok "Booking $username $booking_date (202 Accepted → pending)"
