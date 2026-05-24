@@ -33,7 +33,11 @@
     "sameDayBookingEnabled": true,
     "companyCarTier1Enabled": true,
     "companyCarOverflowBehavior": "reject",
-    "automaticReallocationEnabled": true
+    "automaticReallocationEnabled": true,
+    "usageConfirmationRequired": false,
+    "usageConfirmationWindowMinutes": 60,
+    "usageConfirmationMethods": ["manual"],
+    "noShowDetectionEnabled": true
   },
   "locations": [
     {

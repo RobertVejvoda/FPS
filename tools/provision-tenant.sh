@@ -155,6 +155,7 @@ else
   CREATE_BODY=$(python3 -c "
 import json
 print(json.dumps({
+  'tenantId': '$TENANT_ID',
   'slug': '$TENANT_SLUG',
   'displayName': '$TENANT_DISPLAY',
   'region': '$TENANT_REGION',
@@ -235,11 +236,15 @@ print(json.dumps({
   'lateCancellationPenalty': $POLICY_LATE_PENALTY,
   'noShowPenalty': $POLICY_NOSHOW_PENALTY,
   'sameDayBookingEnabled': $POLICY_SAMEDAY == 'true',
+  'sameDayUsesRequestCap': True,
   'companyCarTier1Enabled': $POLICY_COMPANY_CAR == 'true',
   'companyCarOverflowBehavior': '$POLICY_OVERFLOW',
   'automaticReallocationEnabled': $POLICY_REALLOC == 'true',
   'manualAdjustmentEnabled': True,
-  'sameDayUsesRequestCap': True,
+  'usageConfirmationRequired': False,
+  'usageConfirmationWindowMinutes': 60,
+  'usageConfirmationMethods': ['manual'],
+  'noShowDetectionEnabled': True,
   'publicationReason': 'Provisioned via provision-tenant.sh'
 }))
 ")
@@ -279,7 +284,7 @@ for loc in locations:
   result = subprocess.run([
     'curl', '-sf', '-o', '/dev/null', '-w', '%{http_code}',
     '-X', 'PUT',
-    f'{config_url}/configuration/parking-slots/{loc_id}',
+    f'{config_url}/configuration/locations/{loc_id}/slots',
     '-H', f'Authorization: Bearer {token}',
     '-H', 'Content-Type: application/json',
     '-d', body

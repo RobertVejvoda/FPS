@@ -18,7 +18,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         var (tenant, error) = await service.CreateAsync(
             request.Slug, request.DisplayName, request.Region, request.TimeZone,
             request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct);
+            ct, request.TenantId);
 
         if (error is not null) return BadRequest(new { error });
         return CreatedAtAction(nameof(Get), new { tenantId = tenant!.TenantId }, ToResponse(tenant));
@@ -104,7 +104,9 @@ public sealed record CreateTenantRequest(
     string DisplayName,
     string Region,
     string TimeZone,
-    IReadOnlyList<ContactDto> SupportContacts);
+    IReadOnlyList<ContactDto> SupportContacts,
+    // Optional deterministic tenant ID for provisioning tools. If omitted, a GUID is generated.
+    string? TenantId = null);
 
 public sealed record UpdateTenantRequest(
     string DisplayName,

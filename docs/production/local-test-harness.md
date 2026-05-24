@@ -527,12 +527,12 @@ The same definition format drives the provisioning contract defined in [Tenant S
 | Tenant workspace | `POST /tenants` via Customer service | Same API call, client-managed credentials |
 | Identity config | `PUT /tenants/{id}/identity-config` | Same, pointing to client IdP |
 | Parking policy | `PUT /configuration/parking-policy` | Same, tenant-scoped admin token |
-| Slots | `PUT /configuration/parking-slots/{locationId}` | Same |
+| Slots | `PUT /configuration/locations/{locationId}/slots` | Same |
 | Readiness | `GET /tenants/{id}/readiness` | Same |
 
 ### Known limitations
 
-- **Configuration for non-default tenants**: `PUT /configuration/parking-policy` and `/parking-slots/{id}` use the tenant from the JWT claim. The provisioning script can only apply Configuration for the tenant that the `ADMIN_USER` token belongs to. For the `demo` tenant with `tenant-admin`, this works end-to-end. For `acme-corp` (no Keycloak users in local realm), Configuration is provisioned on the next step when an `acme-corp` admin token is available.
+- **Configuration for non-default tenants**: `PUT /configuration/parking-policy` and `/locations/{id}/slots` use the tenant from the JWT claim. The provisioning script can only apply Configuration for the tenant that the `ADMIN_USER` token belongs to. For the `demo` tenant with `tenant-admin`, this works end-to-end. For `acme-corp` (no Keycloak users in local realm), Configuration is provisioned on the next step when an `acme-corp` admin token is available.
 - **Keycloak user creation**: `provision-tenant.sh` does not create Keycloak users. Use `./tools/dev-setup-auth.sh` for the local realm import; cross-tenant user provisioning via Keycloak Admin API requires a separate step.
 
 ## Testing Split
