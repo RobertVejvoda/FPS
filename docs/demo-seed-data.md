@@ -17,9 +17,9 @@ Re-seeding is safe — the script is idempotent.
 
 | Username | Roles | Parking | Vehicles | Demo purpose |
 |----------|-------|---------|----------|-------------|
-| `employee1` | employee | ✅ eligible | Sedan (EMP1001), EV (EMP1002) | Standard employee — booking, vehicle selection, notifications |
-| `employee2` | employee | ✅ eligible | COMPANY001 (company Sedan) | Company-car priority policy demonstration |
-| `employee3` | employee | ✅ eligible + accessible | Sedan (EMP3001) | Accessibility-eligible booking path |
+| `employee1` | employee | ✅ eligible | Daily Driver (`AN-001S`), EV Commuter (`AN-002E`) | Standard employee — booking, vehicle selection, notifications |
+| `employee2` | employee | ✅ eligible | Company Fleet (`BT-001C`) | Company-car priority policy demonstration |
+| `employee3` | employee | ✅ eligible + accessible | Accessible (`CL-001A`) | Accessibility-eligible booking path |
 | `hr-admin` | employee, hr_manager | ❌ | — | Reports, configuration, HR import |
 | `tenant-admin` | admin | ❌ | — | Tenant admin console, readiness, guided setup |
 | `report-viewer` | report_viewer | ❌ | — | Read-only reports access |
@@ -35,13 +35,13 @@ After running `dev-seed.sh`, 7 pending booking requests exist:
 
 | Employee | Vehicle | Days ahead | Notes |
 |----------|---------|-----------|-------|
-| employee1 | EMP1001 (Sedan) | +2 | Standard booking |
-| employee1 | EMP1002 (EV) | +4 | EV space preference |
-| employee1 | EMP1001 (Sedan) | +6 | Additional booking |
-| employee2 | COMPANY001 | +3 | Company car priority |
-| employee2 | COMPANY001 | +5 | Company car priority |
-| employee3 | EMP3001 | +2 | Accessible spot request |
-| employee3 | EMP3001 | +4 | Accessible spot request |
+| employee1 | AN-001S (Daily Driver) | +2 | Standard booking |
+| employee1 | AN-002E (EV Commuter) | +4 | EV space preference |
+| employee1 | AN-001S (Daily Driver) | +6 | Additional booking |
+| employee2 | BT-001C (Company Fleet) | +3 | Company car priority |
+| employee2 | BT-001C (Company Fleet) | +5 | Company car priority |
+| employee3 | CL-001A (Accessible) | +2 | Accessible spot request |
+| employee3 | CL-001A (Accessible) | +4 | Accessible spot request |
 
 All bookings use dates ≥+2 days to stay clear of the draw cutoff that applies to same-day/+1 requests, ensuring they land as `Pending` regardless of time of day.
 
@@ -55,8 +55,8 @@ These bookings trigger Dapr pub/sub events (when sidecars are running), which po
 ## Vehicle selection
 
 `employee1` has two registered vehicles. In the booking flow, clients can pick between:
-- `EMP1001` — standard sedan, non-electric
-- `EMP1002` — electric sedan (eligible for EV space allocation)
+- `AN-001S` — Daily Driver, standard car, non-electric
+- `AN-002E` — EV Commuter, electric car eligible for EV space allocation
 
 The vehicle list is available via `GET /profile/snapshot` → `vehicles[]`.
 
