@@ -20,7 +20,7 @@ Last updated: 2026-05-24.
 | Gap | Severity | Notes |
 |-----|----------|-------|
 | No rate limiting on authentication endpoints | Medium | Envoy can enforce rate limits but no policy is configured. Brute-force risk on local-account and OIDC callback paths. |
-| Service-to-service calls use no explicit auth (Dapr invocation only) | Low | Internal service mesh via Dapr. mTLS disabled in local mode; must be enabled for production. See BYOC responsibility. |
+| Service-to-service hardening is not complete across all internal APIs | Low | Privacy erasure service endpoints are protected with Dapr app API token validation (`APP_API_TOKEN` / `dapr-api-token`). Other internal calls still rely on Dapr invocation and network boundary. Dapr mTLS is disabled in local mode and must be enabled for production. See BYOC responsibility. |
 
 ---
 
@@ -55,8 +55,8 @@ Last updated: 2026-05-24.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Full employee data erasure path not implemented | High — production-blocking | Audit erasure (pseudonymisation) is implemented. Erasure of profile facts, booking history, notifications, reporting projections, and PII mapping needs a coordinated Dapr Workflow across service-owned activities. Planned as PRIV001 / issue #277. |
-| Audit retention schedule not enforced by default | Medium | `DELETE /audit/retention` is implemented (A004). Client must configure the retention period and invoke/schedule the endpoint. Booking and notification retention jobs are not yet implemented. |
+| Employee data erasure workflow needs durable store completion | High — production-blocking | PRIV001 is implemented: authorised privacy/admin users can create an erasure request; Dapr Workflow coordinates service-owned steps; notification deletion, reporting anonymisation, Audit PII mapping deletion, per-step audit records, and APP_API_TOKEN-protected internal erasure endpoints are in place. Production remains blocked until Profile erasure and Booking active-check/anonymisation move beyond local/durable-store stubs and have smoke evidence against the selected production store. |
+| Booking and notification retention jobs not implemented | High — production-blocking | `DELETE /audit/retention` is implemented (A004), but automated retention enforcement for booking history and notification records is not yet implemented. Client-approved retention periods and scheduled jobs are required before production processing of personal data. |
 | No consent or privacy notice flow in the product | Medium | Privacy notice delivery is a legal/UX responsibility outside the product. FairSpot does not display or record consent. Client must implement at the IdP or application layer as required by their legal basis. |
 | DPIA not completed | Medium | A Data Protection Impact Assessment is required before production processing of personal data in most GDPR jurisdictions. This is a client/legal responsibility. |
 
@@ -76,7 +76,7 @@ Last updated: 2026-05-24.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Production log/metric forwarding is client responsibility | Medium | OBS001 (OTel traces), OBS002 (Prometheus metrics + Grafana), OBS003 (alert rules) are all implemented locally. Client must configure log shipping to SIEM and connect their monitoring platform via OTLP or Prometheus remote-write. |
+| Production log/metric forwarding is client responsibility | Medium | OBS001 (OTel traces), OBS002 (Prometheus metrics + Grafana), OBS003 (alert rules), OBS004 (local Loki ingestion), and OBS005 (safe application log coverage) are implemented locally. Client must configure log shipping to SIEM and connect their monitoring platform via OTLP or Prometheus remote-write. |
 | Production alert thresholds need client tuning | Low | Basic alert rules (service down, high error rate, latency, RabbitMQ) are in place (OBS003). Production thresholds and notification destinations (PagerDuty, Slack, email) are client configuration. |
 
 ---

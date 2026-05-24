@@ -87,7 +87,7 @@ FairSpot supports GDPR-aligned operation through these mechanisms:
 | Purpose limitation | Confidential data is scoped per service contract; cross-service access uses defined APIs, not shared stores |
 | Access rights | Employees see only their own bookings, profiles, and notifications |
 | Rectification | Profile update via PUT /profile; booking cancellation via existing booking API |
-| Erasure | `DELETE /audit/pii-mappings/{userId}` pseudonymises audit actor; profile and booking data deletion documented (see gaps) |
+| Erasure | `POST /privacy/erasure-requests` starts the governed erasure workflow; `DELETE /audit/pii-mappings/{userId}` pseudonymises audit actor; Profile and Booking durable-store erasure still require production-store completion (see gaps) |
 | Audit accountability | Append-only audit log with actor, tenant, timestamp, reason for every sensitive action |
 | Pseudonymisation | Audit records store `actor_hash` (SHA-256 of the token subject), not names; PII mapping (hash → identity) resides separately and is deletable via `DELETE /audit/pii-mappings/{userId}` |
 | Data portability | Reporting exports available to authorised roles; structured JSON/CSV format |
@@ -117,7 +117,7 @@ Audit retention job (`DELETE /audit/retention`), integrity verification (`GET /a
 
 Services emit structured logs to stdout. Log output excludes: bearer tokens, passwords, raw PII (names, emails, license plates), raw user/recipient/actor IDs, Secret classification values, or hidden allocation internals.
 
-OpenTelemetry trace export (OTLP) is implemented (OBS001). Prometheus metrics and a local Grafana operations dashboard are implemented (OBS002). Alert rules for service down, high error rate, latency, and RabbitMQ are implemented (OBS003). See `docs/local-metrics-dashboard.md` and `docs/local-alerts-runbook.md`.
+OpenTelemetry trace export (OTLP) is implemented (OBS001). Prometheus metrics and a local Grafana operations dashboard are implemented (OBS002). Alert rules for service down, high error rate, latency, and RabbitMQ are implemented (OBS003). Local Loki ingestion and safe application log coverage are implemented (OBS004/OBS005). See `docs/local-metrics-dashboard.md`, `docs/local-alerts-runbook.md`, and `docs/local-observability.md`.
 
 Technical logs and traces are operator-facing evidence. Business activity is Audit-service evidence. The two may be linked by `traceId`, `sourceEventId`, or `businessEventId`, but they have different access models and retention rules.
 
@@ -307,7 +307,7 @@ The following gaps are documented in the [Gap Register](./gap-register) and must
 
 | Gap | Severity | Blocker? | Planned Resolution |
 |-----|----------|----------|-------------------|
-| Full employee data erasure path not implemented | High | **Yes** | Coordinated erasure flow across Profile, Booking, Notification, Audit services. Issue to be created. |
+| Employee data erasure workflow needs durable store completion | High | **Yes** | PRIV001 workflow/API/audit plumbing is implemented. Complete Profile erasure and Booking active-check/anonymisation against the selected durable production store, then capture smoke evidence. |
 | Retention schedules not enforced | High | **Yes** | Automated retention jobs for bookings (1 year), notifications (90 days), audit (7 years or client policy). A004 exists for audit; booking/notification jobs to be sliced. |
 | No consent or privacy notice flow | Medium | **No** (client UX/legal responsibility) | Client must implement at IdP or application layer. FairSpot does not display or record consent. |
 | DPIA not completed | Medium | **Yes** (legal/client responsibility) | Client legal team completes DPIA using inputs from this document. |

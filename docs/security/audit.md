@@ -52,7 +52,7 @@ Audit summaries must use safe business language and reason codes. They must not 
 
 An erasure request must leave evidence that the request happened and what treatment was applied, while avoiding retention of the erased identity.
 
-The preferred implementation is a Dapr Workflow that coordinates service-owned erasure activities. Audit does not orchestrate deletion, but it records the durable business evidence for the workflow and each material step.
+The implemented privacy path uses a Dapr Workflow that coordinates service-owned erasure activities. Audit records the durable business evidence for the workflow and each material step.
 
 Minimum erasure audit fields:
 
@@ -61,7 +61,7 @@ Minimum erasure audit fields:
 | `erasureRequestId` | Stable erasure workflow ID. |
 | `targetActorHash` | Pseudonymised target user. |
 | `requestedByActorHash` | Pseudonymised requester or operator. |
-| `action` | `privacy.erasureRequested`, `privacy.erasureCompleted`, `privacy.erasurePartiallyCompleted`, or `privacy.erasureRejected`. |
+| `action` | `privacy.erasureRequested`, `privacy.erasureStepRecorded`, `privacy.erasureCompleted`, `privacy.erasurePartiallyCompleted`, or `privacy.erasureRejected`. |
 | `result` | Outcome classification. |
 | `reasonCode` | Safe reason or legal basis category. |
 | `serviceResults` | Summary by service, without raw PII. |
@@ -74,9 +74,7 @@ Recommended erasure audit actions:
 | Action | Emitted when |
 | --- | --- |
 | `privacy.erasureRequested` | A user/admin/privacy contact creates the request. |
-| `privacy.erasureBlocked` | Active bookings, legal hold, open incident, or another dependency prevents completion. |
-| `privacy.erasureServiceStepCompleted` | A service finishes its delete/anonymise/pseudonymise/retain activity. |
-| `privacy.erasureServiceStepFailed` | A service activity fails after retry policy or needs manual intervention. |
+| `privacy.erasureStepRecorded` | A service finishes, blocks, retains, skips, or fails its delete/anonymise/pseudonymise activity. |
 | `privacy.erasureCompleted` | All required services complete successfully. |
 | `privacy.erasurePartiallyCompleted` | Some data was retained or a non-critical service could not complete under policy. |
 | `privacy.erasureRejected` | The request is rejected with a safe reason code. |
