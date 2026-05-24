@@ -494,6 +494,19 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
 
 All four should return `200`.
 
+### Tenant readiness
+
+The Customer service readiness endpoint combines tenant-local configuration checks with connected service probes:
+
+```sh
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/tenants/demo/readiness
+```
+
+The local harness wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. If those services are running and healthy, `ProfileFacts`, `BookingSmokeTest`, `NotificationReachable`, `AuditEvidence`, and `ReportingEvidence` pass. If a service is stopped or unhealthy, the readiness report fails that check with the service health URL and status.
+
+These checks prove service connectivity for local/demo readiness. They do not yet prove deeper tenant-specific evidence such as exact profile fact counts, booking write/read smoke data, audit row content, or reporting aggregate correctness.
+
 ### Demo Draw
 
 Seeded bookings are usually `Pending` because they target future dates and wait for the scheduled Draw. For a demo walkthrough, an administrator can run one Draw on demand.

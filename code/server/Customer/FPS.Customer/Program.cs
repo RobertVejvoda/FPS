@@ -19,11 +19,11 @@ builder.Services.AddScoped<TenantService>();
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
 builder.Services.AddScoped<TenantReadinessService>();
-builder.Services.AddSingleton<IProfileReadinessProbe, NoOpProfileReadinessProbe>();
-builder.Services.AddSingleton<IBookingReadinessProbe, NoOpBookingReadinessProbe>();
-builder.Services.AddSingleton<INotificationReadinessProbe, NoOpNotificationReadinessProbe>();
-builder.Services.AddSingleton<IAuditReadinessProbe, NoOpAuditReadinessProbe>();
-builder.Services.AddSingleton<IReportingReadinessProbe, NoOpReportingReadinessProbe>();
+builder.Services.AddHttpClient<IProfileReadinessProbe, HttpProfileReadinessProbe>();
+builder.Services.AddHttpClient<IBookingReadinessProbe, HttpBookingReadinessProbe>();
+builder.Services.AddHttpClient<INotificationReadinessProbe, HttpNotificationReadinessProbe>();
+builder.Services.AddHttpClient<IAuditReadinessProbe, HttpAuditReadinessProbe>();
+builder.Services.AddHttpClient<IReportingReadinessProbe, HttpReportingReadinessProbe>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddOpenApi("v1", options =>
 {

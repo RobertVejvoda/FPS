@@ -154,7 +154,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/rea
 
 **Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
 
-Note: The readiness check probes use no-op implementations in the local demo. Full probe wiring is evaluation-grade.
+Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Deeper tenant-specific evidence checks, such as verifying exact seeded profile counts or audit rows, remain future hardening.
 
 ---
 
@@ -211,7 +211,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 | 3 | Create first administrator | 🟡 Evaluation-grade | First-admin provisioning API |
 | 4 | Parking bootstrap (location, policy, slots) | 🟡 Evaluation-grade | Tenant admin web UI |
 | 5 | Employee and profile bootstrap | 🟡 Eval (seed) / ✅ API | Web HR import upload (DATA002) |
-| 6 | Readiness check | ✅ Implemented | Probe implementations are no-op |
+| 6 | Readiness check | ✅ Implemented | Local demo uses connected HTTP health probes; deeper tenant-specific evidence is future hardening |
 | 7 | First booking smoke | ✅ Implemented | — |
 | 8 | Audit evidence | ✅ Implemented | — |
 
