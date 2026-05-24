@@ -6,6 +6,7 @@ using FPS.Booking.Domain.ValueObjects;
 using FPS.SharedKernel.DomainEvents;
 using FPS.SharedKernel.Profile;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace FPS.Booking.Application.Commands;
 
@@ -18,6 +19,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     private readonly ITenantPolicyService policyService;
     private readonly IProfileSnapshotService profileSnapshotService;
     private readonly IBookingEventPublisher eventPublisher;
+    private readonly ILogger<SubmitBookingRequestHandler> logger;
 
     public SubmitBookingRequestHandler(
         IBookingRepository repository,
@@ -26,7 +28,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         IEmployeeMetricsService metricsService,
         ITenantPolicyService policyService,
         IProfileSnapshotService profileSnapshotService,
-        IBookingEventPublisher eventPublisher)
+        IBookingEventPublisher eventPublisher,
+        ILogger<SubmitBookingRequestHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(queryRepository);
@@ -35,6 +38,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         ArgumentNullException.ThrowIfNull(policyService);
         ArgumentNullException.ThrowIfNull(profileSnapshotService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
+        ArgumentNullException.ThrowIfNull(logger);
         this.repository = repository;
         this.queryRepository = queryRepository;
         this.slotService = slotService;
@@ -42,6 +46,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         this.policyService = policyService;
         this.profileSnapshotService = profileSnapshotService;
         this.eventPublisher = eventPublisher;
+        this.logger = logger;
     }
 
     public async Task<SubmitBookingRequestResult> Handle(
@@ -50,21 +55,36 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     {
         var snapshot = await profileSnapshotService.GetSnapshotAsync(cmd.TenantId, cmd.RequestorId, cancellationToken);
         if (snapshot is null)
+        {
+            logger.LogWarning(
+                "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode}",
+                cmd.TenantId, BookingRejectionCode.ProfileUnavailable);
             return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
                 BookingRejectionCode.ProfileUnavailable.ToString(),
                 "Profile data is unavailable. Please try again later.");
+        }
 
         if (snapshot.ProfileStatus != "Active" || !snapshot.ParkingEligible)
+        {
+            logger.LogInformation(
+                "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode}",
+                cmd.TenantId, BookingRejectionCode.RequestorIneligible);
             return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
                 BookingRejectionCode.RequestorIneligible.ToString(),
                 "You are not eligible for parking under current policy.");
+        }
 
         var profileVehicle = snapshot.Vehicles.FirstOrDefault(v =>
             v.LicensePlate.Equals(cmd.LicensePlate, StringComparison.OrdinalIgnoreCase) && v.IsActive);
         if (profileVehicle is null)
+        {
+            logger.LogInformation(
+                "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode}",
+                cmd.TenantId, BookingRejectionCode.VehicleConstraintUnmatched);
             return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
                 BookingRejectionCode.VehicleConstraintUnmatched.ToString(),
                 "The requested vehicle is not registered or is inactive in your profile.");
+        }
 
         var policy = await policyService.GetEffectivePolicyAsync(cmd.TenantId, cmd.LocationId, cancellationToken);
         var requestedPeriod = TimeSlot.Create(cmd.PlannedArrivalTime, cmd.PlannedDepartureTime);
@@ -132,6 +152,10 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         await repository.CreateBookingRequestAsync(
             ToDto(request, cmd.TenantId, cmd.FacilityId, snapshot.SnapshotVersion, sameDaySlot));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
+
+        logger.LogInformation(
+            "Booking request submitted. TenantId={TenantId} BookingRequestId={BookingRequestId} Status={Status} RejectionCode={RejectionCode}",
+            cmd.TenantId, request.Id.Value, request.Status, request.RejectionCode);
 
         return new SubmitBookingRequestResult(
             request.Id.Value,

@@ -1,17 +1,27 @@
 using FPS.Reporting.Domain;
+using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace FPS.Reporting.Application;
 
-public sealed class BookingEventReportingHandler(IReportingRepository repository)
+public sealed class BookingEventReportingHandler(IReportingRepository repository, ILogger<BookingEventReportingHandler> logger)
 {
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
         if (await repository.EventExistsAsync(envelope.EventId, cancellationToken))
+        {
+            logger.LogDebug(
+                "Reporting projection duplicate skipped. EventType={EventType} SourceEventId={SourceEventId}",
+                envelope.EventType, envelope.EventId);
             return;
+        }
 
         await repository.RecordEventIdAsync(envelope.EventId, cancellationToken);
+
+        logger.LogInformation(
+            "Reporting projection event consumed. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",
+            envelope.TenantId, envelope.EventType, envelope.EventId);
 
         var payload = envelope.Payload;
         var tenantId = envelope.TenantId;

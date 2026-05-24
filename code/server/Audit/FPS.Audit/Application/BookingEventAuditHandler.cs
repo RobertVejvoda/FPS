@@ -1,8 +1,9 @@
 using FPS.Audit.Domain;
+using Microsoft.Extensions.Logging;
 
 namespace FPS.Audit.Application;
 
-public sealed class BookingEventAuditHandler(IAuditRepository repository)
+public sealed class BookingEventAuditHandler(IAuditRepository repository, ILogger<BookingEventAuditHandler> logger)
 {
     private static readonly IReadOnlyDictionary<string, (string entityType, Func<BookingEventPayload, string?> entityId)> EntityMap =
         new Dictionary<string, (string, Func<BookingEventPayload, string?>)>
@@ -27,7 +28,12 @@ public sealed class BookingEventAuditHandler(IAuditRepository repository)
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
         if (await repository.ExistsAsync(envelope.EventId, cancellationToken))
+        {
+            logger.LogDebug(
+                "Audit event duplicate skipped. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",
+                envelope.TenantId, envelope.EventType, envelope.EventId);
             return;
+        }
 
         var (entityType, resolveEntityId) = EntityMap.TryGetValue(envelope.EventType, out var mapping)
             ? mapping
@@ -53,5 +59,9 @@ public sealed class BookingEventAuditHandler(IAuditRepository repository)
         };
 
         await repository.AppendAsync(record, cancellationToken);
+
+        logger.LogInformation(
+            "Audit event ingested. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId} EntityType={EntityType}",
+            record.TenantId, record.EventType, record.SourceEventId, record.EntityType);
     }
 }

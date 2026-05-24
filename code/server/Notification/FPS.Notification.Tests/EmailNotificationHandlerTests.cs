@@ -154,12 +154,13 @@ public sealed class EmailNotificationHandlerTests
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
 
+        // RecipientId is Confidential — must not appear in logs
         logger.Verify(x => x.Log(
             LogLevel.Warning,
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, _) =>
                 v.ToString()!.Contains("tenant-1") &&
-                v.ToString()!.Contains("user-1") &&
+                !v.ToString()!.Contains("user-1") &&
                 v.ToString()!.Contains("booking.requestSubmitted") &&
                 v.ToString()!.Contains("event-1") &&
                 v.ToString()!.Contains(NotificationChannel.Email)),

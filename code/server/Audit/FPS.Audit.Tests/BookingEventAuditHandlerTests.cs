@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using FPS.Audit.Application;
 using FPS.Audit.Domain;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace FPS.Audit.Tests;
@@ -13,7 +14,7 @@ public sealed class BookingEventAuditHandlerTests
 
     public BookingEventAuditHandlerTests()
     {
-        handler = new BookingEventAuditHandler(repository.Object);
+        handler = new BookingEventAuditHandler(repository.Object, NullLogger<BookingEventAuditHandler>.Instance);
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.AppendAsync(It.IsAny<AuditRecord>(), It.IsAny<CancellationToken>()))

@@ -144,6 +144,28 @@
           "legendFormat": "{{queue}}"
         }
       ]
+    },
+    {
+      "id": 10,
+      "title": "FPS Service Logs (Loki) — copy TraceId to search in Jaeger at :16686",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 36 },
+      "datasource": { "type": "loki", "uid": "fps-loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "fps-loki" },
+          "expr": "{source=\"local-harness\"}",
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      }
     }
   ]
 }
