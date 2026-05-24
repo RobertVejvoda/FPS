@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { BookingListItem } from '../api/bookings';
+import { displayLocation, displaySlot } from '../displayLabels';
 import { StatusBadge } from './StatusBadge';
 
 const STATUS_MEANING: Record<string, string> = {
@@ -34,6 +35,8 @@ type Props = {
 export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
   const [expanded, setExpanded] = useState(false);
   const meaning = STATUS_MEANING[booking.status];
+  const locationLabel = displayLocation(booking.locationId);
+  const slotLabel = displaySlot(booking.allocatedSlotId);
 
   return (
     <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -42,7 +45,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
           <span style={{ fontWeight: 600, fontSize: 15 }}>{formatDate(booking.requestedDate)}</span>
           <span style={{ color: '#6b7280', fontSize: 13 }}>
             {formatTime(booking.timeSlotStart)} – {formatTime(booking.timeSlotEnd)}
-            {booking.locationId ? ` · ${booking.locationId}` : ''}
+            {locationLabel ? ` · ${locationLabel}` : ''}
           </span>
         </div>
         <StatusBadge status={booking.status} />
@@ -52,8 +55,8 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
         <p style={{ margin: 0, fontSize: 13, color: '#374151' }}>{booking.reason}</p>
       ) : null}
 
-      {booking.allocatedSlotId ? (
-        <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Slot: {booking.allocatedSlotId}</p>
+      {slotLabel ? (
+        <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Slot: {slotLabel}</p>
       ) : null}
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

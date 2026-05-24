@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NotificationItem } from '@/api/notifications';
+import { displayLocation } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -49,6 +50,7 @@ type NotificationCardProps = {
 export function NotificationCard({ notification, onMarkRead, testID }: NotificationCardProps) {
   const label = TYPE_LABEL[notification.notificationType] ?? notification.notificationType;
   const badgeColor = TYPE_BADGE_COLOR[notification.notificationType] ?? colors.textMuted;
+  const locationLabel = displayLocation(notification.locationId);
 
   return (
     <View
@@ -68,7 +70,7 @@ export function NotificationCard({ notification, onMarkRead, testID }: Notificat
         <Text style={styles.detail}>
           {notification.relatedDate}
           {notification.relatedTimeSlot ? `  ·  ${notification.relatedTimeSlot}` : ''}
-          {notification.locationId ? `  ·  ${notification.locationId}` : ''}
+          {locationLabel ? `  ·  ${locationLabel}` : ''}
         </Text>
       ) : null}
 

@@ -5,6 +5,8 @@ import { submitBooking } from '../api/bookings';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
+const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
+const DEMO_LOCATION_ID = 'LOC-MAIN';
 
 type Form = {
   facilityId: string;
@@ -27,16 +29,32 @@ function toIso(input: string): string | null {
   return isNaN(dt.getTime()) ? null : dt.toISOString();
 }
 
+function datetimeLocalValue(offsetDays: number, hour: number, minute = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  d.setHours(hour, minute, 0, 0);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+const initialForm = (): Form => ({
+  facilityId: DEMO_FACILITY_ID,
+  locationId: DEMO_LOCATION_ID,
+  selectedVehicleId: '',
+  licensePlate: '',
+  vehicleType: 'Sedan',
+  isElectric: false,
+  requiresAccessibleSpot: false,
+  isCompanyCar: false,
+  plannedArrival: datetimeLocalValue(1, 8),
+  plannedDeparture: datetimeLocalValue(1, 18),
+});
+
 export function NewBookingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [form, setForm] = useState<Form>({
-    facilityId: '', locationId: '', selectedVehicleId: '', licensePlate: '', vehicleType: 'Sedan',
-    isElectric: false, requiresAccessibleSpot: false, isCompanyCar: false,
-    plannedArrival: '', plannedDeparture: '',
-  });
+  const [form, setForm] = useState<Form>(() => initialForm());
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
@@ -122,7 +140,7 @@ export function NewBookingPage() {
               style={inputStyle}
             >
               <option value="">Select a facility…</option>
-              <option value="00000000-0000-0000-0000-000000000001">Main Building</option>
+              <option value={DEMO_FACILITY_ID}>Main building</option>
             </select>
           </Field>
           <Field label="Location (optional)" error={errors.locationId}>
@@ -132,7 +150,7 @@ export function NewBookingPage() {
               style={inputStyle}
             >
               <option value="">Any location</option>
-              <option value="LOC-MAIN">LOC-MAIN — Main office</option>
+              <option value={DEMO_LOCATION_ID}>Main office</option>
             </select>
           </Field>
 

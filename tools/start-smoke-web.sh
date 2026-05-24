@@ -26,6 +26,7 @@ cleanup() {
 trap cleanup INT TERM EXIT
 
 cd "$REPO_ROOT"
+"$REPO_ROOT/tools/stop-local-harness.sh" --services-only
 "$REPO_ROOT/tools/start-local-harness.sh" --skip-infra
 
 printf '\n'

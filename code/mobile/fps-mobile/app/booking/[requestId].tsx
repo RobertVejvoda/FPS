@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { displayLocation, displaySlot } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -75,6 +76,8 @@ export default function BookingDetailRoute() {
 
   const statusLabel = STATUS_LABEL[params.status] ?? params.status;
   const statusColor = STATUS_COLOR[params.status] ?? colors.textMuted;
+  const locationLabel = displayLocation(params.locationId);
+  const slotLabel = displaySlot(params.allocatedSlotId);
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -104,8 +107,8 @@ export default function BookingDetailRoute() {
           <View style={styles.card}>
             <Row label="Date" value={formatDate(params.requestedDate)} />
             <Row label="Time" value={`${formatTime(params.timeSlotStart)} – ${formatTime(params.timeSlotEnd)}`} />
-            {params.locationId ? <Row label="Location" value={params.locationId} /> : null}
-            {params.allocatedSlotId ? <Row label="Allocated slot" value={params.allocatedSlotId} /> : null}
+            {locationLabel ? <Row label="Location" value={locationLabel} /> : null}
+            {slotLabel ? <Row label="Allocated slot" value={slotLabel} /> : null}
           </View>
         </View>
 

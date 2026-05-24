@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
+import { displayLocation, displaySlot } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
@@ -50,6 +51,8 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
     booking.nextAction && booking.nextAction.toLowerCase() !== 'none'
       ? booking.nextAction
       : null;
+  const locationLabel = displayLocation(booking.locationId);
+  const slotLabel = displaySlot(booking.allocatedSlotId);
 
   return (
     <Pressable
@@ -70,12 +73,12 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
         {formatTime(booking.timeSlotStart)} – {formatTime(booking.timeSlotEnd)}
       </Text>
 
-      {booking.locationId ? (
-        <Text style={styles.detail}>Location: {booking.locationId}</Text>
+      {locationLabel ? (
+        <Text style={styles.detail}>Location: {locationLabel}</Text>
       ) : null}
 
-      {booking.allocatedSlotId ? (
-        <Text style={styles.detail}>Slot: {booking.allocatedSlotId}</Text>
+      {slotLabel ? (
+        <Text style={styles.detail}>Slot: {slotLabel}</Text>
       ) : null}
 
       {booking.reason ? (

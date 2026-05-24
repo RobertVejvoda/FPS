@@ -36,19 +36,6 @@ type FormState = {
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
 const DEMO_LOCATION_ID = 'LOC-MAIN';
 
-const INITIAL_FORM: FormState = {
-  facilityId: DEMO_FACILITY_ID,
-  locationId: DEMO_LOCATION_ID,
-  selectedVehicleId: '',
-  licensePlate: '',
-  vehicleType: 'Sedan',
-  isElectric: false,
-  requiresAccessibleSpot: false,
-  isCompanyCar: false,
-  plannedArrival: '',
-  plannedDeparture: '',
-};
-
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
 type SubmitStatus =
@@ -83,6 +70,28 @@ function parseDatetime(input: string): string | null {
   return date.toISOString();
 }
 
+function datetimeTextValue(offsetDays: number, hour: number, minute = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  d.setHours(hour, minute, 0, 0);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function initialForm(): FormState {
+  return {
+    facilityId: DEMO_FACILITY_ID,
+    locationId: DEMO_LOCATION_ID,
+    selectedVehicleId: '',
+    licensePlate: '',
+    vehicleType: 'Sedan',
+    isElectric: false,
+    requiresAccessibleSpot: false,
+    isCompanyCar: false,
+    plannedArrival: datetimeTextValue(1, 8),
+    plannedDeparture: datetimeTextValue(1, 18),
+  };
+}
+
 function validate(form: FormState): FieldErrors {
   const errors: FieldErrors = {};
   if (!form.facilityId.trim()) errors.facilityId = 'Required';
@@ -102,7 +111,7 @@ export default function NewBookingRoute() {
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [form, setForm] = useState<FormState>(() => initialForm());
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
 
@@ -175,7 +184,7 @@ export default function NewBookingRoute() {
           <Pressable
             style={({ pressed }) => [styles.primary, pressed && styles.primaryDimmed]}
             onPress={() => {
-              setForm(INITIAL_FORM);
+              setForm(initialForm());
               setFieldErrors({});
               setSubmitStatus({ kind: 'idle' });
             }}
@@ -215,7 +224,7 @@ export default function NewBookingRoute() {
 
             <FieldRow label="Location">
               <View style={styles.readOnlyRow}>
-                <Text style={styles.readOnlyValue}>LOC-MAIN — Main office</Text>
+                <Text style={styles.readOnlyValue}>Main office</Text>
               </View>
             </FieldRow>
 
@@ -278,13 +287,13 @@ export default function NewBookingRoute() {
               </>
             )}
 
-            {/* v1 text fallback — a native DateTimePicker is a follow-up UX003 improvement */}
+            {/* v1 text fallback — defaults to tomorrow and remains directly editable. */}
             <FieldRow label="Planned Arrival * (YYYY-MM-DD HH:MM)" error={fieldErrors.plannedArrival}>
               <TextInput
                 style={[styles.input, fieldErrors.plannedArrival ? styles.inputError : null]}
                 value={form.plannedArrival}
                 onChangeText={v => set('plannedArrival', v)}
-                placeholder="2026-06-01 08:00"
+                placeholder={datetimeTextValue(1, 8)}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numbers-and-punctuation"
               />
@@ -295,7 +304,7 @@ export default function NewBookingRoute() {
                 style={[styles.input, fieldErrors.plannedDeparture ? styles.inputError : null]}
                 value={form.plannedDeparture}
                 onChangeText={v => set('plannedDeparture', v)}
-                placeholder="2026-06-01 18:00"
+                placeholder={datetimeTextValue(1, 18)}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numbers-and-punctuation"
               />
