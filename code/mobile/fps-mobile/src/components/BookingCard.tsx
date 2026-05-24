@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
-import { displayLocation, displaySlot } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
@@ -14,6 +14,7 @@ type BookingCardProps = {
 
 const STATUS_BADGE_COLOR: Record<string, string> = {
   Submitted: colors.primary,
+  Pending: colors.primary,
   Allocated: '#15803d',
   Rejected: colors.danger,
   Cancelled: colors.textMuted,
@@ -53,6 +54,7 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
       : null;
   const locationLabel = displayLocation(booking.locationId);
   const slotLabel = displaySlot(booking.allocatedSlotId);
+  const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
 
   return (
     <Pressable
@@ -79,6 +81,10 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
 
       {slotLabel ? (
         <Text style={styles.detail}>Slot: {slotLabel}</Text>
+      ) : null}
+
+      {nextDrawLabel ? (
+        <Text style={styles.nextDraw}>Next Draw: {nextDrawLabel}</Text>
       ) : null}
 
       {booking.reason ? (
@@ -164,6 +170,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.primary,
     fontWeight: '500',
+  },
+  nextDraw: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
   },
   actionButton: {
     marginTop: spacing.xs,

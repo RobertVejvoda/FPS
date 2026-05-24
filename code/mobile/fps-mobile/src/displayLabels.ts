@@ -21,3 +21,27 @@ export function displaySlot(value?: string | null): string | null {
   if (!value) return null;
   return isGuid(value) ? 'Assigned space' : value.replace(/^LOC-MAIN-/, 'Space ');
 }
+
+function formatDisplayTime(hour: number, minute: number): string {
+  return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+}
+
+export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '18:00'): string | null {
+  if (!requestedDate) return null;
+  const [year, month, day] = requestedDate.split('-').map(Number);
+  const [hour, minute] = cutOffTime.split(':').map(Number);
+  if (!year || !month || !day || Number.isNaN(hour) || Number.isNaN(minute)) return null;
+
+  const drawDate = new Date(year, month - 1, day);
+  drawDate.setDate(drawDate.getDate() - 1);
+  const dateLabel = drawDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  return `${dateLabel}, ${formatDisplayTime(hour, minute)}`;
+}
+
+export function shouldShowNextDraw(status?: string | null): boolean {
+  return status === 'Pending' || status === 'Submitted';
+}

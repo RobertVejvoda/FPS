@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { BookingListItem } from '../api/bookings';
-import { displayLocation, displaySlot } from '../displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from './StatusBadge';
 
 const STATUS_MEANING: Record<string, string> = {
   Submitted: 'Waiting for allocation',
+  Pending: 'Waiting for the scheduled Draw',
   Allocated: 'Parking slot allocated',
   Rejected: 'Request not fulfilled',
   Cancelled: 'Cancelled',
@@ -37,6 +38,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
   const meaning = STATUS_MEANING[booking.status];
   const locationLabel = displayLocation(booking.locationId);
   const slotLabel = displaySlot(booking.allocatedSlotId);
+  const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
 
   return (
     <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -57,6 +59,12 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
 
       {slotLabel ? (
         <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Slot: {slotLabel}</p>
+      ) : null}
+
+      {nextDrawLabel ? (
+        <p style={{ margin: 0, fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>
+          Next Draw: {nextDrawLabel}
+        </p>
       ) : null}
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

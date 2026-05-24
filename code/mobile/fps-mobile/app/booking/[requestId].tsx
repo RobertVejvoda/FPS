@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { displayLocation, displaySlot } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -78,6 +78,7 @@ export default function BookingDetailRoute() {
   const statusColor = STATUS_COLOR[params.status] ?? colors.textMuted;
   const locationLabel = displayLocation(params.locationId);
   const slotLabel = displaySlot(params.allocatedSlotId);
+  const nextDrawLabel = shouldShowNextDraw(params.status) ? displayNextDrawRun(params.requestedDate) : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -117,6 +118,7 @@ export default function BookingDetailRoute() {
           <Text style={styles.sectionTitle}>Timeline</Text>
           <View style={styles.card}>
             <Row label="Submitted" value={formatDateTime(params.createdAt)} />
+            {nextDrawLabel ? <Row label="Next Draw" value={nextDrawLabel} /> : null}
             <Row label="Last updated" value={formatDateTime(params.lastStatusChangedAt)} />
           </View>
         </View>
