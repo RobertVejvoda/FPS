@@ -21,20 +21,35 @@ Local-only infrastructure defaults:
 
 These values are disposable development defaults for the local Docker Compose profile only. Do not reuse them for demo, pilot, or client-owned environments.
 
+The local run path is split into four lifecycles:
+
+- infrastructure: Docker Compose dependencies such as Keycloak, Envoy, RabbitMQ, Vault, observability, and data stores;
+- backend: FairSpot .NET services plus Dapr sidecars, started by the local harness;
+- web client: Vite on `http://localhost:5200`;
+- mobile client: Expo in LAN, tunnel, or localhost mode.
+
 If Docker infrastructure is already running and you want a one-shot smoke run for an app surface, use:
 
 ```sh
-# Web smoke: starts backend services, seeds data, then starts Vite on :5200.
+# Web smoke: starts or reuses backend services, seeds data if it started them,
+# then starts Vite on :5200.
 sh ./tools/start-smoke-web.sh
 
-# Mobile smoke: starts backend services, seeds data, then starts Expo.
+# Mobile smoke: starts or reuses backend services, seeds data if it started them,
+# then starts Expo.
 sh ./tools/start-smoke-mobile.sh
 
 # If LAN QR scanning fails for a physical phone:
 EXPO_MODE=tunnel sh ./tools/start-smoke-mobile.sh
 ```
 
-Both scripts leave Docker infrastructure running when stopped with Ctrl-C. They stop only the app services and Dapr sidecars they started.
+Both smoke scripts can run at the same time. If the backend harness is already reachable, the second script reuses it instead of starting another copy. Stopping either frontend with Ctrl-C stops only that frontend by default; the backend harness and Docker infrastructure stay running so the other client is not broken. Stop the shared backend explicitly when finished:
+
+```sh
+./tools/stop-local-harness.sh --services-only
+```
+
+Set `SMOKE_STOP_HARNESS_ON_EXIT=true` only for isolated one-client smoke runs where the script should stop backend app services on exit.
 
 The scripts also check frontend dependencies before starting Vite or Expo. They prefer user-installed Node/npm from Homebrew or `/usr/local/bin` over embedded tool runtimes. If `node_modules` is missing or a native optional package probe fails, they run `npm ci` from the app lockfile to repair the local dependency tree. On macOS they also ad-hoc sign local `.node` binaries after install to avoid native optional dependency code-signature failures from packages such as Rollup.
 
@@ -553,7 +568,7 @@ Employee tokens must receive `403` for this endpoint. Employees see the next Dra
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Script exits with "Wrong .NET SDK" | System dotnet resolves before `$HOME/.dotnet` | Prepend `$HOME/.dotnet` to `PATH` and retry |
-| Script exits with "port ... is already in use" | Stale FairSpot service or Dapr sidecar process is still bound from a previous run | Run `./tools/stop-local-harness.sh --services-only`, then retry |
+| Script exits with "port ... is already in use" | Stale FairSpot service or Dapr sidecar process is still bound from a previous run, or a partial backend harness is running | Run `./tools/stop-local-harness.sh --services-only`, then retry |
 | Script exits non-zero with service port error | Dapr sidecar or service startup slow or crashed | Check `logs/local-harness/dapr-run.log`; run `./tools/stop-local-harness.sh` then retry |
 | Seed step fails with Booking `401` | Booking rejected the token; most often a stale service process was running with the wrong auth environment | Run `./tools/stop-local-harness.sh --services-only`, then start the harness again |
 | Seed step fails (script exits non-zero) | Profile service not yet ready, Keycloak realm missing, or service validation rejected the seed payload | Services are still running — fix the cause and re-run `./tools/dev-seed.sh`, or run `./tools/stop-local-harness.sh` and restart |

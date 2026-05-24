@@ -5,8 +5,8 @@
 #   docker compose -f code/infrastructure/docker-compose.yaml up -d
 #   ./tools/start-smoke-web.sh
 #
-# Stop with Ctrl-C. The script stops app services but leaves Docker
-# infrastructure running.
+# Stop with Ctrl-C. The script stops Vite and leaves the shared backend
+# harness running unless SMOKE_STOP_HARNESS_ON_EXIT=true is set.
 set -eu
 
 # Prefer user-installed Node/npm over embedded tool runtimes.
@@ -16,18 +16,19 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/code/web/fps-web"
 WEB_PID=""
 
+. "$REPO_ROOT/tools/smoke-harness-lib.sh"
+
 cleanup() {
   if [ -n "$WEB_PID" ] && kill -0 "$WEB_PID" 2>/dev/null; then
     kill "$WEB_PID" 2>/dev/null || true
   fi
-  "$REPO_ROOT/tools/stop-local-harness.sh" --services-only
+  cleanup_smoke_harness
 }
 
 trap cleanup INT TERM EXIT
 
 cd "$REPO_ROOT"
-"$REPO_ROOT/tools/stop-local-harness.sh" --services-only
-"$REPO_ROOT/tools/start-local-harness.sh" --skip-infra
+ensure_smoke_harness
 
 printf '\n'
 printf '================================================\n'
@@ -44,7 +45,8 @@ printf ' Fallback: to use a manual bearer token instead, set\n'
 printf '           devTokenFallbackEnabled=true in public/config.json\n'
 printf '           and paste the output of: ./tools/dev-auth.sh employee1\n'
 printf '\n'
-printf ' Stop with Ctrl-C. Docker infrastructure will stay running.\n'
+printf ' Stop with Ctrl-C. Backend harness and Docker infrastructure will stay running.\n'
+printf ' Set SMOKE_STOP_HARNESS_ON_EXIT=true to restore stop-on-exit behavior.\n'
 printf '================================================\n'
 printf '\n'
 

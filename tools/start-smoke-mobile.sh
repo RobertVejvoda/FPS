@@ -5,8 +5,8 @@
 #   docker compose -f code/infrastructure/docker-compose.yaml up -d
 #   ./tools/start-smoke-mobile.sh
 #
-# Stop with Ctrl-C. The script stops app services but leaves Docker
-# infrastructure running.
+# Stop with Ctrl-C. The script stops Expo and leaves the shared backend
+# harness running unless SMOKE_STOP_HARNESS_ON_EXIT=true is set.
 set -eu
 
 # Prefer user-installed Node/npm over embedded tool runtimes.
@@ -20,11 +20,13 @@ REALM="${FPS_LOCAL_REALM:-fps-local}"
 CLIENT_ID="${FPS_LOCAL_CLIENT:-fps-mobile-dev}"
 ENV_FILE="${FPS_MOBILE_ENV_FILE:-$MOBILE_DIR/.env.local}"
 
+. "$REPO_ROOT/tools/smoke-harness-lib.sh"
+
 cleanup() {
   if [ -n "$EXPO_PID" ] && kill -0 "$EXPO_PID" 2>/dev/null; then
     kill "$EXPO_PID" 2>/dev/null || true
   fi
-  "$REPO_ROOT/tools/stop-local-harness.sh" --services-only
+  cleanup_smoke_harness
 }
 
 detect_lan_ip() {
@@ -95,7 +97,7 @@ export FPS_MOBILE_AUTH_SCOPES="${FPS_MOBILE_AUTH_SCOPES:-openid profile email}"
 export FPS_MOBILE_API_BASE_URL="$MOBILE_API_BASE_URL"
 
 cd "$REPO_ROOT"
-"$REPO_ROOT/tools/start-local-harness.sh" --skip-infra
+ensure_smoke_harness
 
 TOKEN="$("$REPO_ROOT/tools/dev-auth.sh" employee1)"
 
@@ -118,7 +120,8 @@ printf ' Bearer token: %s\n' "$TOKEN"
 printf '\n'
 printf 'Use Sign in for OIDC login, or Developer Session for manual token smoke testing.\n'
 printf 'Set EXPO_MODE=tunnel before running this script if LAN QR scanning fails.\n'
-printf 'Stop with Ctrl-C. Docker infrastructure will stay running.\n'
+printf 'Stop with Ctrl-C. Backend harness and Docker infrastructure will stay running.\n'
+printf 'Set SMOKE_STOP_HARNESS_ON_EXIT=true to restore stop-on-exit behavior.\n'
 printf '================================================\n'
 printf '\n'
 
