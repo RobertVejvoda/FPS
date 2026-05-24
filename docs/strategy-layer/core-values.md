@@ -1,9 +1,51 @@
-## There are 4 core values 
+# Core Values
 
-1. **Fair** - The system ensures transparency, reliability, and fairness for all employees. It uses equitable algorithms to allocate parking slots and provides clear communication about the allocation process.
+FairSpot is guided by four product values. They are meant to be practical decision filters: when scope, design, architecture, or operations conflict, choose the option that best preserves these values.
 
-2. **Simple** - Designed to be user-friendly and intuitive, the system automates most processes, minimizing the need for manual intervention. Employees can easily submit, track, and manage their parking requests through the web or mobile app.
+## Fair
 
-3. **Secure** - Security is a top priority. The system ensures that user data is stored securely and that all communications are encrypted. Regular security audits are conducted to maintain the integrity of the system.
+FairSpot exists to make access to scarce workplace resources more equitable and explainable. Parking allocation must not depend on who emailed first, who knows HR best, or who understands hidden process details.
 
-4. **Sustainable** - The system is designed to be cost-effective, with reasonable licensing and operational costs. It also promotes environmental sustainability by encouraging carpooling and the use of eco-friendly vehicles through incentives.
+Fair means:
+
+- allocation rules are documented and visible enough to be trusted;
+- company-car, accessibility, reservation, and policy constraints are handled explicitly;
+- weighted Draw behavior improves access over time instead of rewarding speed alone;
+- outcomes have employee-visible reasons where possible;
+- sensitive allocation evidence is auditable without exposing other employees private data.
+
+## Simple
+
+FairSpot should reduce coordination work, not move spreadsheet complexity into software screens. Employees, HR, admins, and auditors should be guided by business-readable flows rather than internal IDs, hidden policy fields, or technical terminology.
+
+Simple means:
+
+- employees can request, view, cancel, and confirm bookings without understanding implementation details;
+- HR and tenant admins can manage policy, locations, vehicles, and exceptions through guided controls;
+- demo and pilot users see realistic data and clear next actions;
+- common workflows are repeatable through local harnesses, seed data, and smoke scripts;
+- product documentation explains the story before implementation mechanics.
+
+## Trustworthy
+
+FairSpot handles employee, tenant, policy, allocation, and audit data. Trust requires more than encryption: the product must preserve privacy, tenant boundaries, auditability, and operational evidence.
+
+Trustworthy means:
+
+- identity, tenant, and role context come from authenticated claims or trusted service context;
+- confidential and secret data are not exposed in logs, traces, issue comments, demos, or employee-facing messages;
+- technical telemetry stays in observability tools, while business activity is represented by Audit service records;
+- audit actors are pseudonymised and resolved only through an approved PII mapping path;
+- privacy workflows, including erasure, are governed, tracked, and auditable.
+
+## Practical
+
+FairSpot should be useful to evaluate, operate, and adapt before it becomes a large platform. The architecture should stay provider-neutral and cost-aware while still leaving a path to client-owned production.
+
+Practical means:
+
+- parking remains the v1 focus until the demo and hosted baseline are stable;
+- local setup, smoke testing, and observability should make the system easy to prove;
+- Dapr and OpenTelemetry are used as portability boundaries rather than vendor commitments;
+- client-owned deployment, support, and production handoff are part of the product story;
+- future resources such as desks, lockers, chargers, or seats reuse the model only after the parking product is credible.
