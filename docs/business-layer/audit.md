@@ -205,7 +205,8 @@ Rules:
 | `configuration.policyPublished` | Admin | Policy version | `updated` | Stores policy version and safe scope, not the full policy blob unless approved. |
 | `profile.vehicleUpdated` | Employee, HR, or admin | Vehicle/profile | `updated` | Must not store raw license plate in audit summary. |
 | `audit.piiMappingErased` | Admin, auditor, or privacy contact | PII mapping | `erased` | Stores target actor hash and reason, not the erased identity. |
-| `privacy.erasureRequested` | Employee, admin, or privacy contact | Erasure request | `accepted` | Starts the Dapr Workflow and stores target actor hash, not raw identity. |
+| `privacy.erasureRequested` | Admin, auditor, or privacy contact | Erasure request | `accepted` | Starts the Dapr Workflow and stores target actor hash, not raw identity. |
+| `privacy.erasureStepRecorded` | System | Erasure service step | service treatment | Records each service-owned erasure result without raw identity. |
 | `privacy.erasureCompleted` | System | Erasure request | `completed` | Stores per-service outcome summary and trace ID when present. |
 
 ### Product Usage
@@ -220,7 +221,7 @@ Audit APIs and UI should support:
 
 ## Erasure Workflow Audit
 
-Employee data erasure should be implemented as a Dapr Workflow coordinated by a privacy/GDPR API. The workflow calls service-owned activities for Profile, Booking, Notification, Reporting, and Audit. Each service decides whether matching records are deleted, anonymised, pseudonymised, retained, blocked, or failed according to its own invariants and retention rules.
+Employee data erasure is implemented as a Dapr Workflow coordinated by a privacy/GDPR API. The workflow calls service-owned activities for Profile, Booking, Notification, Reporting, and Audit. Each service decides whether matching records are deleted, anonymised, pseudonymised, retained, blocked, or failed according to its own invariants and retention rules. The production gap is durable-store completion for Profile erasure and Booking active-check/anonymisation.
 
 Audit records for the workflow must show:
 
