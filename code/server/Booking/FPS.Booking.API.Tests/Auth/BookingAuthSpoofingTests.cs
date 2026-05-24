@@ -40,6 +40,9 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
                 mediatorMock
                     .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new BookingListResult(new List<BookingListItem>(), null));
+                mediatorMock
+                    .Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new TriggerDrawResult("draw:tenant-1:LOC-MAIN:2026-05-25:0800", "Completed", 1, 0, 0, false));
                 services.AddSingleton(mediatorMock.Object);
 
                 services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
@@ -161,6 +164,32 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task TriggerDraw_EmployeeRole_Returns403()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "tenant-1", "employee"));
+
+        var response = await client.PostAsync("/draws/trigger",
+            new StringContent(JsonSerializer.Serialize(ValidDrawBody()), Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TriggerDraw_AdminRole_Returns202()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("admin-1", "tenant-1", "admin"));
+
+        var response = await client.PostAsync("/draws/trigger",
+            new StringContent(JsonSerializer.Serialize(ValidDrawBody()), Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    }
+
     private static string CreateToken(string userId, string tenantId, string role = "employee")
     {
         var claims = new List<Claim>
@@ -178,4 +207,13 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    private static object ValidDrawBody() => new
+    {
+        locationId = "LOC-MAIN",
+        date = "2026-05-25",
+        timeSlotStart = "2026-05-25T08:00:00",
+        timeSlotEnd = "2026-05-25T18:00:00",
+        reason = "Demo draw"
+    };
 }

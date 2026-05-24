@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { triggerDraw } from '../api/bookings';
 import {
   fetchParkingPolicy, saveParkingPolicy,
   fetchLocationPolicy, saveLocationPolicy,
@@ -8,6 +9,7 @@ import {
   fetchSlots, saveSlots, fetchSlotHistory,
   type ParkingPolicy, type PolicyHistoryItem, type SlotDto, type SlotHistoryItem,
 } from '../api/configuration';
+import { FpsRole, hasRole } from '../auth/roles';
 
 type TenantState =
   | { kind: 'loading' }
@@ -30,10 +32,35 @@ type SlotsState =
   | { kind: 'ok'; slots: SlotDto[]; dirty: Record<string, Partial<SlotDto>>; history: SlotHistoryItem[] }
   | { kind: 'error'; message: string };
 
+type DemoDrawForm = {
+  locationId: string;
+  date: string;
+  timeSlotStart: string;
+  timeSlotEnd: string;
+  reason: string;
+};
+
+function localDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function initialDemoDrawForm(): DemoDrawForm {
+  return {
+    locationId: 'LOC-MAIN',
+    date: localDate(1),
+    timeSlotStart: '08:00',
+    timeSlotEnd: '18:00',
+    reason: 'Demo on-demand Draw',
+  };
+}
+
 export function ConfigurationPage() {
-  const { apiBaseUrl, bearerToken, clear } = useAuth();
+  const { apiBaseUrl, bearerToken, clear, roles } = useAuth();
   const navigate = useNavigate();
   const cfg = { apiBaseUrl, bearerToken };
+  const isTenantAdmin = hasRole(roles, FpsRole.Admin);
 
   const [tenant, setTenant] = useState<TenantState>({ kind: 'loading' });
   const [saving, setSaving] = useState(false);
@@ -50,6 +77,9 @@ export function ConfigurationPage() {
   const [slotsSaving, setSlotsSaving] = useState(false);
   const [slotsSaveMsg, setSlotsSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [slotsChangeReason, setSlotsChangeReason] = useState('');
+  const [demoDraw, setDemoDraw] = useState<DemoDrawForm>(() => initialDemoDrawForm());
+  const [demoDrawBusy, setDemoDrawBusy] = useState(false);
+  const [demoDrawMsg, setDemoDrawMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const loadTenant = useCallback(() => {
     setTenant({ kind: 'loading' });
@@ -173,6 +203,29 @@ export function ConfigurationPage() {
     });
   }
 
+  async function runDemoDraw() {
+    setDemoDrawBusy(true);
+    setDemoDrawMsg(null);
+    const r = await triggerDraw(cfg, {
+      locationId: demoDraw.locationId,
+      date: demoDraw.date,
+      timeSlotStart: `${demoDraw.date}T${demoDraw.timeSlotStart}:00`,
+      timeSlotEnd: `${demoDraw.date}T${demoDraw.timeSlotEnd}:00`,
+      reason: demoDraw.reason.trim() || 'Demo on-demand Draw',
+    });
+    setDemoDrawBusy(false);
+    if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+    if (r.kind === 'accepted') {
+      const status = r.wasAlreadyCompleted ? 'already completed' : 'completed';
+      setDemoDrawMsg({
+        ok: true,
+        text: `Draw ${status}: ${r.data.allocatedCount} allocated, ${r.data.rejectedCount} rejected, ${r.data.waitlistedCount} waitlisted.`,
+      });
+    } else {
+      setDemoDrawMsg({ ok: false, text: 'message' in r ? r.message : 'Draw failed.' });
+    }
+  }
+
   if (tenant.kind === 'loading') return <p style={muted}>Loading policy…</p>;
   if (tenant.kind === 'forbidden') return <p style={{ color: '#b91c1c' }}>You do not have permission to view or edit configuration.</p>;
   if (tenant.kind === 'error') return (
@@ -203,6 +256,48 @@ export function ConfigurationPage() {
           <span style={muted}>Version: {tenant.policy.version}</span>
         </div>
       </section>
+
+      {isTenantAdmin ? (
+        <section style={card}>
+          <h3 style={cardTitle}>Demo Draw</h3>
+          {demoDrawMsg && <SaveBanner ok={demoDrawMsg.ok} text={demoDrawMsg.text} />}
+          <div style={fieldGrid}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={muted}>Location</label>
+              <select
+                value={demoDraw.locationId}
+                onChange={e => setDemoDraw(prev => ({ ...prev, locationId: e.target.value }))}
+                style={input}
+              >
+                <option value="LOC-MAIN">Main office</option>
+              </select>
+            </div>
+            <Field label="Parking date" value={demoDraw.date} type="date" onChange={v => setDemoDraw(prev => ({ ...prev, date: v }))} />
+            <Field label="Arrival time" value={demoDraw.timeSlotStart} type="time" onChange={v => setDemoDraw(prev => ({ ...prev, timeSlotStart: v }))} />
+            <Field label="Departure time" value={demoDraw.timeSlotEnd} type="time" onChange={v => setDemoDraw(prev => ({ ...prev, timeSlotEnd: v }))} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 280px' }}>
+              <label style={muted}>Reason</label>
+              <input
+                value={demoDraw.reason}
+                onChange={e => setDemoDraw(prev => ({ ...prev, reason: e.target.value }))}
+                style={input}
+              />
+            </div>
+            <button
+              onClick={runDemoDraw}
+              disabled={demoDrawBusy || !demoDraw.date || !demoDraw.locationId || !demoDraw.timeSlotStart || !demoDraw.timeSlotEnd}
+              style={{ ...btn, opacity: demoDrawBusy ? 0.5 : 1 }}
+            >
+              {demoDrawBusy ? 'Running Draw…' : 'Run Draw now'}
+            </button>
+          </div>
+          <p style={{ ...muted, margin: '10px 0 0' }}>
+            Runs one explicit Draw key. Re-running the same location, date, and time slot returns the completed result without reallocating.
+          </p>
+        </section>
+      ) : null}
 
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -415,12 +510,11 @@ function SaveBanner({ ok, text }: { ok: boolean; text: string }) {
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Field({ label, value, type = 'text', onChange }: { label: string; value: string; type?: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <label style={muted}>{label}</label>
-      <input value={value} onChange={e => onChange(e.target.value)}
-        style={{ border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none' }} />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
     </div>
   );
 }
@@ -449,6 +543,7 @@ const card: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7
 const cardTitle: React.CSSProperties = { margin: '0 0 12px', fontSize: 15, fontWeight: 700 };
 const fieldGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 };
 const muted: React.CSSProperties = { color: '#6b7280', fontSize: 13 };
+const input: React.CSSProperties = { border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none', background: '#fff', color: '#111827' };
 const btn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
 const btnSm: React.CSSProperties = { ...btn, padding: '6px 12px', fontSize: 13 };
 const tbl: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13 };

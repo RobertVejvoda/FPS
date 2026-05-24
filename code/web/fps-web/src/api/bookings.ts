@@ -5,6 +5,8 @@ export type BookingListItem = components['schemas']['BookingListItem'];
 export type GetMyBookingsResponse = components['schemas']['GetMyBookingsResponse'];
 export type SubmitBookingRequest = components['schemas']['SubmitBookingRequest'];
 export type SubmitBookingResponse = components['schemas']['SubmitBookingResponse'];
+export type TriggerDrawRequest = components['schemas']['TriggerDrawRequest'];
+export type TriggerDrawResponse = components['schemas']['TriggerDrawResponse'];
 
 export type BookingsResult =
   | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null }
@@ -23,6 +25,13 @@ export type ActionResult =
   | { kind: 'ok' }
   | { kind: 'unauthenticated' }
   | { kind: 'notFound'; message: string }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export type TriggerDrawResult =
+  | { kind: 'accepted'; data: TriggerDrawResponse; wasAlreadyCompleted: boolean }
+  | { kind: 'unauthenticated' }
+  | { kind: 'forbidden'; message: string }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
 
@@ -115,6 +124,28 @@ export async function confirmUsage(
     if (res.status === 200) return { kind: 'ok', data: (await res.json()) as { wasAlreadyConfirmed: boolean } };
     if (res.status === 404) return { kind: 'error', status: 404, message: await readError(res, 'Booking not found.') };
     return { kind: 'error', status: res.status, message: `POST /confirm-usage returned ${res.status}` };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function triggerDraw(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  body: TriggerDrawRequest,
+): Promise<TriggerDrawResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/draws/trigger`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'forbidden', message: await readError(res, 'Only tenant admins can run a Draw.') };
+    if (res.status === 200 || res.status === 202) {
+      return { kind: 'accepted', data: (await res.json()) as TriggerDrawResponse, wasAlreadyCompleted: res.status === 200 };
+    }
+    return { kind: 'error', status: res.status, message: await readError(res, `POST /draws/trigger returned ${res.status}`) };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
