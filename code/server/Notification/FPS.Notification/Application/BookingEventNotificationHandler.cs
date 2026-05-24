@@ -39,8 +39,8 @@ public sealed class BookingEventNotificationHandler(
             if (!prefs.AllowsDelivery(notificationClass))
             {
                 logger.LogDebug(
-                    "Notification suppressed by user preference. TenantId={TenantId} RecipientId={RecipientId} NotificationType={NotificationType} Class={Class}",
-                    envelope.TenantId, recipientId, envelope.EventType, notificationClass);
+                    "Notification suppressed by user preference. TenantId={TenantId} NotificationType={NotificationType} Class={Class}",
+                    envelope.TenantId, envelope.EventType, notificationClass);
                 continue;
             }
 
@@ -86,8 +86,8 @@ public sealed class BookingEventNotificationHandler(
         {
             record.MarkFailed(result.FailureReason ?? "Unknown error");
             logger.LogWarning(
-                "Email delivery failed. TenantId={TenantId} RecipientId={RecipientId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel} FailureCategory={FailureCategory}",
-                record.TenantId, record.RecipientId, record.NotificationType, record.SourceEventId, record.Channel,
+                "Email delivery failed. TenantId={TenantId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel} FailureCategory={FailureCategory}",
+                record.TenantId, record.NotificationType, record.SourceEventId, record.Channel,
                 result.FailureCategory ?? EmailFailureCategory.DeliveryRejected);
         }
 
