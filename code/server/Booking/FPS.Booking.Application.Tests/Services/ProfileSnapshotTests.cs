@@ -34,7 +34,8 @@ public sealed class ProfileSnapshotTests
     {
         handler = new SubmitBookingRequestHandler(
             repository.Object, queryRepository.Object, slotService.Object,
-            metricsService.Object, policyService.Object, profileService.Object, publisher.Object);
+            metricsService.Object, policyService.Object, profileService.Object, publisher.Object,
+            NullLogger<SubmitBookingRequestHandler>.Instance);
 
         policyService.Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultPolicy);

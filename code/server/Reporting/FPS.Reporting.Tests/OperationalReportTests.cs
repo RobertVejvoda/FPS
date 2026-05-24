@@ -1,6 +1,7 @@
 using FPS.Reporting.Application;
 using FPS.Reporting.Domain;
 using FPS.Reporting.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FPS.Reporting.Tests;
 
@@ -12,7 +13,7 @@ public sealed class OperationalReportTests
 
     public OperationalReportTests()
     {
-        handler = new BookingEventReportingHandler(repository);
+        handler = new BookingEventReportingHandler(repository, NullLogger<BookingEventReportingHandler>.Instance);
         service = new ReportingQueryService(repository);
     }
 

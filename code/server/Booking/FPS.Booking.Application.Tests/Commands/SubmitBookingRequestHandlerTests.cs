@@ -37,7 +37,8 @@ public sealed class SubmitBookingRequestHandlerTests
     {
         handler = new SubmitBookingRequestHandler(
             repository.Object, queryRepository.Object, slotService.Object,
-            metricsService.Object, policyService.Object, profileService.Object, publisher.Object);
+            metricsService.Object, policyService.Object, profileService.Object, publisher.Object,
+            NullLogger<SubmitBookingRequestHandler>.Instance);
 
         profileService
             .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

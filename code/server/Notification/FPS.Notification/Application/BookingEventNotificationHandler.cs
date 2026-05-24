@@ -26,8 +26,13 @@ public sealed class BookingEventNotificationHandler(
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation(
+            "Notification event received. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",
+            envelope.TenantId, envelope.EventType, envelope.EventId);
+
         var notificationClass = NotificationClassifier.Classify(envelope.EventType);
 
+        var recipientCount = 0;
         foreach (var recipientId in ResolveRecipients(envelope))
         {
             var prefs = await preferencesRepository.GetOrDefaultAsync(envelope.TenantId, recipientId, cancellationToken);
@@ -41,7 +46,12 @@ public sealed class BookingEventNotificationHandler(
 
             await HandleInAppAsync(envelope, recipientId, cancellationToken);
             await HandleEmailAsync(envelope, recipientId, cancellationToken);
+            recipientCount++;
         }
+
+        logger.LogInformation(
+            "Notification event processed. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId} RecipientCount={RecipientCount}",
+            envelope.TenantId, envelope.EventType, envelope.EventId, recipientCount);
     }
 
     private async Task HandleInAppAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
