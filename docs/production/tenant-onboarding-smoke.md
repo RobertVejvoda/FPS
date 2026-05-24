@@ -8,9 +8,21 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 - 🟡 **Evaluation-grade** — exists but uses demo shortcuts not suitable for production
 - ❌ **Missing** — not yet implemented; blocker issue noted
 
-**Supported local demo tenant:** `demo` (default). This is the only tenant that works end-to-end in the local harness because the Keycloak realm fixture hardcodes `tenant_id=demo` for all seeded users. The `FPS_DEMO_TENANT_ID` environment variable controls where Customer, Configuration, and profile seed scripts land their data, but Keycloak tokens always carry `demo` from a static realm import — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) will only pass when `FPS_DEMO_TENANT_ID=demo`. Full per-tenant Keycloak attribute patching is a follow-up in OPS008B.
+**Supported local demo tenant:** `demo` (default). This is the only tenant that works end-to-end in the local harness because the Keycloak realm fixture hardcodes `tenant_id=demo` for all seeded users. The `FPS_DEMO_TENANT_ID` environment variable controls where Customer, Configuration, and profile seed scripts land their data, but Keycloak tokens always carry `demo` from a static realm import — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) will only pass when `FPS_DEMO_TENANT_ID=demo`. A second tenant (`acme-corp`) can be provisioned via `tools/provision-tenant.sh tools/templates/tenants/acme-corp.json` but its users must be added to Keycloak manually for JWT-bearing smoke steps.
 
 **Synthetic tenant for smoke steps:** `acme-corp` (documentation only), a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
+
+**Demo personas (fictional — all data is synthetic):**
+
+| Username | Display name | Role | Demo focus |
+| --- | --- | --- | --- |
+| `employee1` | Alice Novak | Employee | Standard booking path; two vehicles (sedan + EV) |
+| `employee2` | Ben Turner | Employee | Company-car booking; fleet vehicle |
+| `employee3` | Clara Lindqvist | Employee | Accessibility-eligible booking |
+| `hr-admin` | Maria Okafor | HR Manager | Policy, slot management, employee bootstrap |
+| `tenant-admin` | David Wei | Admin | Tenant setup, readiness, configuration |
+| `report-viewer` | Emma Clark | Report Viewer | Reporting and CSV export |
+| `auditor` | Frank Horvath | Auditor | Audit record query and evidence review |
 
 ---
 

@@ -158,20 +158,21 @@ seed_booking() {
 echo ""
 echo "-- Profiles --"
 
-# employee1: normal employee, sedan + EV (two vehicles for guided selection)
+# Alice Novak (employee1): sedan + EV (two vehicles for guided vehicle selection demo)
 seed_profile "employee1" "false" "false" \
-  '[{"vehicleId":"VEH-EMP1-A","licensePlate":"EMP1001","vehicleType":"Sedan","isElectric":false,"isActive":true},
-    {"vehicleId":"VEH-EMP1-B","licensePlate":"EMP1002","vehicleType":"Sedan","isElectric":true,"isActive":true}]'
+  '[{"vehicleId":"VEH-AN-SEDAN","licensePlate":"AN-001S","vehicleType":"Sedan","isElectric":false,"isActive":true},
+    {"vehicleId":"VEH-AN-EV","licensePlate":"AN-002E","vehicleType":"Sedan","isElectric":true,"isActive":true}]'
 
-# employee2: company car registered as vehicle so booking plate validation passes
+# Ben Turner (employee2): company car registered as vehicle so booking plate validation passes
 seed_profile "employee2" "true" "false" \
-  '[{"vehicleId":"VEH-EMP2-COMPANY","licensePlate":"COMPANY001","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
+  '[{"vehicleId":"VEH-BT-FLEET","licensePlate":"BT-001C","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
-# employee3: accessibility-eligible, accessible vehicle
+# Clara Lindqvist (employee3): accessibility-eligible
 seed_profile "employee3" "false" "true" \
-  '[{"vehicleId":"VEH-EMP3","licensePlate":"EMP3001","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
+  '[{"vehicleId":"VEH-CL-ACCESS","licensePlate":"CL-001A","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
-# admin/role users — parking not eligible, no vehicles
+# Role users — parking not eligible, no vehicles
+# Maria Okafor (hr-admin), David Wei (tenant-admin), Emma Clark (report-viewer), Frank Horvath (auditor)
 seed_profile "hr-admin"      "false" "false" '[]'
 seed_profile "tenant-admin"  "false" "false" '[]'
 seed_profile "report-viewer" "false" "false" '[]'
@@ -183,25 +184,25 @@ echo ""
 echo "-- Bookings (generates notifications, audit records, and reporting data) --"
 
 # Dates start at +2 to stay clear of the draw cutoff that applies to +1/same-day requests.
-# employee1: two regular bookings + one EV booking
-seed_booking "employee1" "EMP1001" "Sedan" "false" "false" "false" "2"
-seed_booking "employee1" "EMP1002" "Sedan" "true"  "false" "false" "4"
-seed_booking "employee1" "EMP1001" "Sedan" "false" "false" "false" "6"
+# Alice Novak: two regular bookings + one EV booking
+seed_booking "employee1" "AN-001S" "Sedan" "false" "false" "false" "2"
+seed_booking "employee1" "AN-002E" "Sedan" "true"  "false" "false" "4"
+seed_booking "employee1" "AN-001S" "Sedan" "false" "false" "false" "6"
 
-# employee2: company car bookings
-seed_booking "employee2" "COMPANY001" "Sedan" "false" "true" "false" "3"
-seed_booking "employee2" "COMPANY001" "Sedan" "false" "true" "false" "5"
+# Ben Turner: company car bookings
+seed_booking "employee2" "BT-001C" "Sedan" "false" "true" "false" "3"
+seed_booking "employee2" "BT-001C" "Sedan" "false" "true" "false" "5"
 
-# employee3: accessible spot requests
-seed_booking "employee3" "EMP3001" "Sedan" "false" "false" "true" "2"
-seed_booking "employee3" "EMP3001" "Sedan" "false" "false" "true" "4"
+# Clara Lindqvist: accessible spot requests
+seed_booking "employee3" "CL-001A" "Sedan" "false" "false" "true" "2"
+seed_booking "employee3" "CL-001A" "Sedan" "false" "false" "true" "4"
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
 echo ""
 echo "== Seed complete =="
-echo "Profiles: 7 users (employee1-3, hr-admin, tenant-admin, report-viewer, auditor)"
-echo "Vehicles: employee1 has 2 options (sedan + EV), employee2 company car, employee3 accessible"
+echo "Profiles: 7 users — Alice Novak, Ben Turner, Clara Lindqvist (employees); Maria Okafor, David Wei, Emma Clark, Frank Horvath (roles)"
+echo "Vehicles: Alice has sedan + EV (AN-001S/AN-002E), Ben company fleet (BT-001C), Clara accessible (CL-001A)"
 echo "Bookings: 7 pending requests across 3 employees (triggers Dapr events if sidecars running)"
 echo ""
 echo "Verify:"
