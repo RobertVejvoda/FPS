@@ -176,9 +176,21 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
     networks:
       - web
-    
+
+  promtail:
+    image: grafana/promtail:latest
+    command: -config.file=/etc/promtail/promtail.yaml
+    volumes:
+      - ./promtail/promtail.yaml:/etc/promtail/promtail.yaml:ro
+      - ../../logs/local-harness:/logs/local-harness:ro
+    depends_on:
+      - loki
+    networks:
+      - web
 
   grafana:
     image: grafana/grafana:latest
@@ -211,6 +223,7 @@ volumes:
   prometheus_data:
   grafana_data:
   vault_data:
+  loki_data:
 
 networks:
   web:

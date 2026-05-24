@@ -1,6 +1,7 @@
 using FPS.Reporting.Application;
 using FPS.Reporting.Domain;
 using FPS.Reporting.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FPS.Reporting.Tests;
 
@@ -11,7 +12,7 @@ public sealed class DashboardAndExportTests
     private static async Task<ReportingQueryService> ServiceWithEvents(
         InMemoryReportingRepository repo, params (string type, string date, string location, string? reason)[] events)
     {
-        var handler = new BookingEventReportingHandler(repo);
+        var handler = new BookingEventReportingHandler(repo, NullLogger<BookingEventReportingHandler>.Instance);
         foreach (var (type, date, location, reason) in events)
         {
             await handler.HandleAsync(new BookingEventEnvelope(
@@ -116,7 +117,7 @@ public sealed class DashboardAndExportTests
     public async Task Dashboard_TenantIsolated()
     {
         var repo = MakeRepo();
-        var handler = new BookingEventReportingHandler(repo);
+        var handler = new BookingEventReportingHandler(repo, NullLogger<BookingEventReportingHandler>.Instance);
         await handler.HandleAsync(new BookingEventEnvelope(
             EventId: Guid.NewGuid().ToString(), EventType: "booking.requestSubmitted", EventVersion: 1,
             OccurredAt: DateTime.UtcNow, TenantId: "tenant-X", CorrelationId: "c",
@@ -189,7 +190,7 @@ public sealed class DashboardAndExportTests
     public async Task Csv_TenantIsolated()
     {
         var repo = MakeRepo();
-        var handler = new BookingEventReportingHandler(repo);
+        var handler = new BookingEventReportingHandler(repo, NullLogger<BookingEventReportingHandler>.Instance);
         await handler.HandleAsync(new BookingEventEnvelope(
             EventId: Guid.NewGuid().ToString(), EventType: "booking.requestSubmitted", EventVersion: 1,
             OccurredAt: DateTime.UtcNow, TenantId: "tenant-A", CorrelationId: "c",

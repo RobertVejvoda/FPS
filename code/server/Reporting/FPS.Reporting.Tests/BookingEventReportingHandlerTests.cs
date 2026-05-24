@@ -1,5 +1,6 @@
 using FPS.Reporting.Application;
 using FPS.Reporting.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FPS.Reporting.Tests;
 
@@ -10,7 +11,7 @@ public sealed class BookingEventReportingHandlerTests
 
     public BookingEventReportingHandlerTests()
     {
-        handler = new BookingEventReportingHandler(repository);
+        handler = new BookingEventReportingHandler(repository, NullLogger<BookingEventReportingHandler>.Instance);
     }
 
     [Fact]

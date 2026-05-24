@@ -163,6 +163,43 @@
         ]
       }
     },
+    "/erasure": {
+      "post": {
+        "tags": [
+          "Erasure"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceErasureInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/profile/admin/hr-import/preview": {
       "post": {
         "tags": [
@@ -469,6 +506,31 @@
           }
         }
       },
+      "ServiceErasureInput": {
+        "required": [
+          "erasureRequestId",
+          "tenantId",
+          "targetActorHash"
+        ],
+        "type": "object",
+        "properties": {
+          "erasureRequestId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "targetActorHash": {
+            "type": "string"
+          },
+          "targetUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UpdateRequest": {
         "required": [
           "isActive",
@@ -560,6 +622,9 @@
   "tags": [
     {
       "name": "EmployeeBootstrap"
+    },
+    {
+      "name": "Erasure"
     },
     {
       "name": "HrImport"

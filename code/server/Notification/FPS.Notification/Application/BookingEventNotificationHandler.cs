@@ -26,22 +26,32 @@ public sealed class BookingEventNotificationHandler(
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation(
+            "Notification event received. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",
+            envelope.TenantId, envelope.EventType, envelope.EventId);
+
         var notificationClass = NotificationClassifier.Classify(envelope.EventType);
 
+        var recipientCount = 0;
         foreach (var recipientId in ResolveRecipients(envelope))
         {
             var prefs = await preferencesRepository.GetOrDefaultAsync(envelope.TenantId, recipientId, cancellationToken);
             if (!prefs.AllowsDelivery(notificationClass))
             {
                 logger.LogDebug(
-                    "Notification suppressed by user preference. TenantId={TenantId} RecipientId={RecipientId} NotificationType={NotificationType} Class={Class}",
-                    envelope.TenantId, recipientId, envelope.EventType, notificationClass);
+                    "Notification suppressed by user preference. TenantId={TenantId} NotificationType={NotificationType} Class={Class}",
+                    envelope.TenantId, envelope.EventType, notificationClass);
                 continue;
             }
 
             await HandleInAppAsync(envelope, recipientId, cancellationToken);
             await HandleEmailAsync(envelope, recipientId, cancellationToken);
+            recipientCount++;
         }
+
+        logger.LogInformation(
+            "Notification event processed. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId} RecipientCount={RecipientCount}",
+            envelope.TenantId, envelope.EventType, envelope.EventId, recipientCount);
     }
 
     private async Task HandleInAppAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
@@ -76,8 +86,8 @@ public sealed class BookingEventNotificationHandler(
         {
             record.MarkFailed(result.FailureReason ?? "Unknown error");
             logger.LogWarning(
-                "Email delivery failed. TenantId={TenantId} RecipientId={RecipientId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel} FailureCategory={FailureCategory}",
-                record.TenantId, record.RecipientId, record.NotificationType, record.SourceEventId, record.Channel,
+                "Email delivery failed. TenantId={TenantId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel} FailureCategory={FailureCategory}",
+                record.TenantId, record.NotificationType, record.SourceEventId, record.Channel,
                 result.FailureCategory ?? EmailFailureCategory.DeliveryRejected);
         }
 
