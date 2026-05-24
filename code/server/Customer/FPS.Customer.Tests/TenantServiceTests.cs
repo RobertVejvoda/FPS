@@ -247,4 +247,70 @@ public sealed class TenantServiceTests
         foreach (var svc in new[] { "customer", "booking", "notification", "profile", "audit", "configuration", "reporting" })
             Assert.Contains(svc, keys);
     }
+
+    // ── Deterministic tenant ID (OPS008B) ────────────────────────────────────
+
+    [Fact]
+    public async Task Create_WithRequestedTenantId_UsesThatId()
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "acme", "ACME Corp", "eu", "UTC", [], CancellationToken.None,
+            requestedTenantId: "acme-corp");
+
+        Assert.Null(error);
+        Assert.Equal("acme-corp", tenant!.TenantId);
+    }
+
+    [Fact]
+    public async Task Create_WithRequestedTenantId_GeneratesGuidWhenOmitted()
+    {
+        var (tenant, _) = await service.CreateAsync("acme2", "ACME 2", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.True(Guid.TryParse(tenant!.TenantId, out _), "Expected a GUID when no tenantId requested.");
+    }
+
+    [Fact]
+    public async Task Create_DuplicateTenantId_ReturnsError()
+    {
+        await service.CreateAsync("slug1", "Corp 1", "eu", "UTC", [], CancellationToken.None, "shared-id");
+
+        var (tenant, error) = await service.CreateAsync("slug2", "Corp 2", "eu", "UTC", [], CancellationToken.None, "shared-id");
+
+        Assert.Null(tenant);
+        Assert.Contains("already in use", error);
+    }
+
+    [Fact]
+    public async Task Create_RequestedTenantId_IsSanitised()
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "slug3", "Corp 3", "eu", "UTC", [], CancellationToken.None,
+            requestedTenantId: "My Tenant ID!");
+
+        // Sanitisation strips spaces and special chars; resulting safe slug used or an error returned.
+        // Either is acceptable — what matters is no raw-unsanitised value is stored.
+        if (error is null)
+            Assert.DoesNotContain(" ", tenant!.TenantId);
+    }
+
+    [Fact]
+    public async Task Create_RequestedTenantId_AllSpecialChars_ReturnsError()
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "slug4", "Corp 4", "eu", "UTC", [], CancellationToken.None,
+            requestedTenantId: "!!!");
+
+        Assert.Null(tenant);
+        Assert.NotNull(error);
+        Assert.Contains("invalid", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_RequestedTenantId_AllSpecialChars_DoesNotStoreEmptyId()
+    {
+        await service.CreateAsync("slug5", "Corp 5", "eu", "UTC", [], CancellationToken.None, "!!!");
+
+        var retrieved = await service.GetAsync("", CancellationToken.None);
+        Assert.Null(retrieved);
+    }
 }

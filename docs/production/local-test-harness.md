@@ -483,6 +483,58 @@ All four should return `200`.
 | `/bookings` returns 500 | Dapr sidecar not connected | Check `logs/local-harness/dapr-run.log` for sidecar startup errors |
 | Keycloak timeout | Keycloak container slow to initialise | Wait 30 s and retry; check `docker compose logs keycloak` |
 
+## Tenant Provisioning (OPS008B)
+
+Tenant workspaces, identity config, and parking policy/slots can be provisioned from a declarative definition file using `./tools/provision-tenant.sh`.
+
+### Tenant definition files
+
+Definitions live in `tools/templates/tenants/`. Two synthetic definitions are included:
+
+| File | Tenant | Purpose |
+| --- | --- | --- |
+| `demo.json` | `demo` | Default local demo tenant (seeded automatically on service startup). |
+| `acme-corp.json` | `acme-corp` | Second synthetic tenant proving provisioning is not hardcoded. |
+
+### Running provisioning
+
+```sh
+# Provision (or re-provision) the demo tenant
+./tools/provision-tenant.sh tools/templates/tenants/demo.json
+
+# Provision the second synthetic tenant
+./tools/provision-tenant.sh tools/templates/tenants/acme-corp.json
+
+# Override tenant ID for local experiments
+FPS_DEMO_TENANT_ID=my-test ./tools/provision-tenant.sh tools/templates/tenants/demo.json
+```
+
+Provisioning is idempotent: re-running it creates the tenant workspace if absent, updates identity config, and checks readiness. Profile and booking seed data are created by `./tools/dev-seed.sh` after provisioning.
+
+### Adding a new tenant locally
+
+1. Copy `tools/templates/tenants/demo.json` to `tools/templates/tenants/{tenantId}.json`.
+2. Edit `tenantId`, `displayName`, `region`, `timezone`, `parkingPolicy`, and `locations`.
+3. Run `./tools/provision-tenant.sh tools/templates/tenants/{tenantId}.json`.
+4. Verify the readiness summary at the end.
+
+### Mapping to client-owned production
+
+The same definition format drives the provisioning contract defined in [Tenant Storage Contract](./tenant-storage-contract.md). In a client-owned environment, the provisioning steps map to:
+
+| Step | Local (provision-tenant.sh) | Client-owned production |
+| --- | --- | --- |
+| Tenant workspace | `POST /tenants` via Customer service | Same API call, client-managed credentials |
+| Identity config | `PUT /tenants/{id}/identity-config` | Same, pointing to client IdP |
+| Parking policy | `PUT /configuration/parking-policy` | Same, tenant-scoped admin token |
+| Slots | `PUT /configuration/locations/{locationId}/slots` | Same |
+| Readiness | `GET /tenants/{id}/readiness` | Same |
+
+### Known limitations
+
+- **Configuration for non-default tenants**: `PUT /configuration/parking-policy` and `/locations/{id}/slots` use the tenant from the JWT claim. The provisioning script can only apply Configuration for the tenant that the `ADMIN_USER` token belongs to. For the `demo` tenant with `tenant-admin`, this works end-to-end. For `acme-corp` (no Keycloak users in local realm), Configuration is provisioned on the next step when an `acme-corp` admin token is available.
+- **Keycloak user creation**: `provision-tenant.sh` does not create Keycloak users. Use `./tools/dev-setup-auth.sh` for the local realm import; cross-tenant user provisioning via Keycloak Admin API requires a separate step.
+
 ## Testing Split
 
 Use the right tool for each test level:

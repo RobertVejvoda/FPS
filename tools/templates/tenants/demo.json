@@ -1,0 +1,53 @@
+{
+  "_comment": "Local demo tenant definition. Synthetic data only — no real PII.",
+  "tenantId": "demo",
+  "slug": "demo-company",
+  "displayName": "Demo Company",
+  "region": "CZ",
+  "timezone": "Europe/Prague",
+  "supportContacts": [
+    { "name": "Demo Facilities", "email": "facilities@example.local", "role": "Facilities" },
+    { "name": "Demo IT",         "email": "it@example.local",         "role": "Identity"  }
+  ],
+  "identity": {
+    "trustedIssuer": "http://localhost:8180/realms/fps-local",
+    "audience": "fps-api",
+    "tenantClaimName": "tenant_id",
+    "subjectClaimName": "sub",
+    "roleClaimNames": ["roles"],
+    "roleMapping": {
+      "employee":      "employee",
+      "hr_manager":    "hr_manager",
+      "admin":         "admin",
+      "report_viewer": "report_viewer",
+      "auditor":       "auditor"
+    }
+  },
+  "parkingPolicy": {
+    "dailyRequestCap": 100,
+    "drawCutOffHour": 18,
+    "drawCutOffMinute": 0,
+    "allocationLookbackDays": 10,
+    "lateCancellationPenalty": 1,
+    "noShowPenalty": 2,
+    "sameDayBookingEnabled": true,
+    "companyCarTier1Enabled": true,
+    "companyCarOverflowBehavior": "reject",
+    "automaticReallocationEnabled": true,
+    "usageConfirmationRequired": false,
+    "usageConfirmationWindowMinutes": 60,
+    "usageConfirmationMethods": ["manual"],
+    "noShowDetectionEnabled": false
+  },
+  "locations": [
+    {
+      "locationId": "LOC-MAIN",
+      "displayName": "Main Office",
+      "slotCount": 10,
+      "chargerSlots": 2,
+      "accessibleSlots": 1
+    }
+  ],
+  "smokeUsers": ["employee1", "tenant-admin"],
+  "notes": "Default local demo tenant. Seeded automatically by Customer and Configuration services on startup. Run ./tools/dev-seed.sh to add profile and booking data."
+}

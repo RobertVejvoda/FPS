@@ -10,7 +10,8 @@ public sealed class TenantService(
     public async Task<(TenantWorkspace? tenant, string? error)> CreateAsync(
         string? slug, string displayName, string region, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? requestedTenantId = null)
     {
         if (string.IsNullOrWhiteSpace(displayName)) return (null, "Display name is required.");
         if (string.IsNullOrWhiteSpace(region)) return (null, "Region is required.");
@@ -20,7 +21,17 @@ public sealed class TenantService(
         if (string.IsNullOrEmpty(safeSlug)) return (null, "Slug is required and must contain at least one alphanumeric character.");
         if (await repository.SlugExistsAsync(safeSlug, ct)) return (null, $"Slug '{safeSlug}' is already in use.");
 
-        var tenantId = Guid.NewGuid().ToString();
+        // Allow a deterministic tenant ID for provisioning tools; fall back to a generated GUID.
+        string? safeTenantId = null;
+        if (!string.IsNullOrWhiteSpace(requestedTenantId))
+        {
+            safeTenantId = TenantProvisioningMetadata.Sanitize(requestedTenantId);
+            if (string.IsNullOrEmpty(safeTenantId))
+                return (null, $"Requested tenant ID '{requestedTenantId}' is invalid after sanitisation (must contain at least one alphanumeric character).");
+            if (await repository.GetAsync(safeTenantId, ct) is not null)
+                return (null, $"Tenant ID '{safeTenantId}' is already in use.");
+        }
+        var tenantId = safeTenantId ?? Guid.NewGuid().ToString();
         var tenant = new TenantWorkspace
         {
             TenantId = tenantId,
