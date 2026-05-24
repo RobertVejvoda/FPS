@@ -494,6 +494,47 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
 
 All four should return `200`.
 
+### Demo Draw
+
+Seeded bookings are usually `Pending` because they target future dates and wait for the scheduled Draw. For a demo walkthrough, an administrator can run one Draw on demand.
+
+Web path:
+
+1. Start the local web smoke path:
+
+   ```sh
+   sh ./tools/start-smoke-web.sh
+   ```
+
+2. Sign in as `tenant-admin`.
+3. Open **Configuration**.
+4. In **Demo Draw**, choose:
+   - Location: `Main office`;
+   - Parking date matching the pending seeded booking date;
+   - Arrival/departure time, normally `08:00` to `18:00`;
+   - Reason, for example `Demo on-demand Draw`.
+5. Click **Run Draw now**.
+
+The result shows allocated, rejected, and waitlisted counts. Running the same location, date, and time slot again returns the completed Draw result instead of reallocating.
+
+Direct API smoke:
+
+```sh
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -X POST http://localhost:10000/draws/trigger \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "locationId": "LOC-MAIN",
+    "date": "2026-05-26",
+    "timeSlotStart": "2026-05-26T08:00:00",
+    "timeSlotEnd": "2026-05-26T18:00:00",
+    "reason": "Demo on-demand Draw"
+  }'
+```
+
+Employee tokens must receive `403` for this endpoint. Employees see the next Draw time and final result through booking and notification surfaces; they must not be able to trigger allocation directly.
+
 ### Troubleshooting
 
 | Symptom | Likely cause | Fix |

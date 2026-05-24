@@ -127,6 +127,20 @@ Rules:
 - Retrying Draw trigger for an already running/completed Draw key returns the existing attempt reference unless a documented manual correction flow starts a new audited attempt.
 - Idempotency keys or source event IDs should be reflected in events and audit records where applicable.
 
+## Draw Trigger Contract
+
+`POST /draws/trigger` is a privileged command. It exists so scheduled jobs, controlled operations, and local/demo admin walkthroughs can execute one Draw key explicitly.
+
+Rules:
+
+- caller tenant comes from authenticated context, never from request body;
+- caller must have a privileged role such as `admin`;
+- request body supplies `locationId`, parking `date`, `timeSlotStart`, `timeSlotEnd`, and `reason`;
+- `reason` should identify whether this was a scheduled job, local demo action, operational recovery, or support/admin action;
+- the command is idempotent for the same tenant/location/date/time slot Draw key;
+- employees must observe Draw status/results through booking and notification surfaces, not by triggering Draw themselves;
+- employee-facing clients must not expose lottery seed, candidate sequence, hidden weights, or other employees' outcomes.
+
 ## Validation Details
 
 Validation errors may include `error.details` when they are safe and useful:

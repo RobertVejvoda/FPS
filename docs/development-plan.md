@@ -268,7 +268,9 @@ BookingWorkflow
 
 Each activity is idempotent. The workflow is durable — if it crashes mid-run, Dapr replays from the last completed activity.
 
-> **Trigger**: the Draw workflow is started by a Dapr cron binding at the tenant's configured cut-off time (default **18:00** local time, stored in Configuration service per tenant). `LockTimeSlotsActivity` fires immediately on workflow start — no new requests accepted after this point. Requests submitted before cut-off are also subject to the 500-request cap.
+> **Trigger**: the Draw workflow is normally started by a Dapr cron binding at the tenant's configured cut-off time (default **18:00** local time, stored in Configuration service per tenant). `LockTimeSlotsActivity` fires immediately on workflow start — no new requests accepted after this point. Requests submitted before cut-off are also subject to the 500-request cap.
+>
+> **On-demand trigger**: `POST /draws/trigger` may execute one explicit Draw key for local demo, controlled operations, recovery, or support/admin action. It is admin-only, uses tenant identity from the token, requires explicit location/date/time slot plus a reason, and returns an existing completed attempt for the same Draw key instead of reallocating.
 >
 > **Volume cap**: maximum 500 requests per tenant per Draw. The Booking service rejects submissions once this limit is reached for a given date. At 500 items the allocation algorithm completes in under a millisecond — no fan-out or child workflows needed.
 >
@@ -296,7 +298,7 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 - [x] `POST /bookings` — submit request (future date → queued for Draw; today → immediate allocation if slot available); same 500-cap applies to both paths
 - [x] `DELETE /bookings/{id}` — cancel
 - [x] `GET /bookings` — my bookings
-- [x] `POST /draws/trigger` — admin-only, trigger draw manually
+- [x] `POST /draws/trigger` — admin-only, trigger one explicit Draw key manually or from scheduled automation
 - [x] `GET /draws/{date}/status` — draw status
 - [x] `POST /bookings/{id}/confirm-usage` — confirm usage
 - [x] `POST /bookings/no-show-evaluation` — evaluate no-shows

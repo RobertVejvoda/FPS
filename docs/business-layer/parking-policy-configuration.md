@@ -32,6 +32,8 @@ A parking policy applies to:
 
 For a future parking request, `drawCutOffTime` is evaluated against the requested parking date. The default rule is: parking date `D` closes at the configured cut-off time on calendar date `D - 1` in the policy timezone. Location timezone overrides tenant timezone when a location override exists.
 
+Scheduled Draw execution remains the normal operating model. An on-demand Draw trigger may exist for local demo, controlled operations, recovery, or support scenarios, but it does not change the policy schedule. Manual/on-demand execution must be role-restricted, explicit about location/date/time slot, reasoned, audited, and idempotent for the same Draw key.
+
 ## Tenant Default Policy
 
 Each tenant policy must define these fields.
@@ -40,7 +42,7 @@ Each tenant policy must define these fields.
 | --- | --- | --- |
 | `timeZone` | Tenant business timezone | Used for cut-off, Draw schedule, and date boundaries. |
 | `drawCutOffTime` | `18:00` local time | Requests after this time are late for the scheduled Draw. |
-| `drawSchedule` | At cut-off time | Draw starts when cut-off is reached unless manually triggered. |
+| `drawSchedule` | At cut-off time | Draw starts when cut-off is reached. On-demand/manual trigger is a privileged operational action, not a replacement for the configured schedule. |
 | `dailyRequestCap` | `500` | Maximum requests per tenant/date. |
 | `allocationLookbackDays` | `10` | Used by `RecentAllocationCount` and default penalty expiry. |
 | `lateCancellationPenalty` | `1` | Applies after a slot has been allocated. |

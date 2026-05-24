@@ -63,6 +63,8 @@ FairSpot accepts a booking request only when:
 
 For future scheduled Draw requests, the cut-off is anchored to the requested parking date. By default, the Draw for parking date `D` closes at the configured `drawCutOffTime` on calendar date `D - 1` in the tenant or location policy timezone. Requests submitted after that instant are rejected as late for that Draw. Same-day requests are handled by the same-day booking slice, not by the future-request slice.
 
+The scheduled Draw is the normal production path. FairSpot may also expose an authorized on-demand Draw trigger for demo, operations, recovery, or admin-controlled manual execution. That trigger must use an explicit tenant from authenticated context plus an explicit location, parking date, and time slot. It must be restricted to privileged roles, must record a reason, and must be idempotent for an already completed Draw key. Employees must not be able to trigger a Draw directly.
+
 At submission time, slot matching checks configured slot type or capacity-pool compatibility only. FairSpot must verify that at least one configured slot type at the requested location could satisfy the request's vehicle and declared constraints. It must not reserve live capacity or run Draw allocation during future-request submission.
 
 The duplicate definition is owned by [Executable Allocation Rules](./allocation-rules): same tenant, same requestor, same date, and overlapping time slot.

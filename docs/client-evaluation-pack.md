@@ -35,7 +35,7 @@ Use synthetic demo data only unless a customer-approved pilot explicitly changes
 | 2 | Employee | Submit a parking request for a constrained date/location. | Booking request appears with safe status and employee-visible reason where applicable. |
 | 3 | Company-car employee | Submit a request that demonstrates priority policy. | Company-car priority is explainable through policy, not manual favoritism. |
 | 4 | HR / facilities | Show tenant policy, location override, slots, and capacity. | The allocation behavior maps to configured policy and capacity. |
-| 5 | System / operator | Run or show the Draw/allocation result for seeded requests. | Scarce spaces are allocated by documented rules; hidden lottery internals stay out of employee views. |
+| 5 | Tenant admin / operator | Run the admin-only Demo Draw for seeded requests, or show an already completed Draw result. | Scarce spaces are allocated by documented rules; the same Draw key is idempotent; hidden lottery internals stay out of employee views. |
 | 6 | Employee | View booking result and notification state. | Notification history/unread behavior reflects the booking event. |
 | 7 | Auditor | Query audit records for booking and policy-sensitive actions. | Audit uses stable/pseudonymised identifiers and avoids unnecessary PII. |
 | 8 | Operator | Show logs/traces/metrics for the demo request path. | OpenTelemetry-compatible evidence exists without exposing Secret data. |
