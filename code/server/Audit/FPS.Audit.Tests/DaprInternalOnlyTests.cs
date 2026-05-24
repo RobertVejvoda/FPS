@@ -12,7 +12,7 @@ namespace FPS.Audit.Tests;
 public sealed class DaprInternalOnlyTests
 {
     private const string TokenHeader = "dapr-api-token";
-    private const string ConfigKey = "DAPR_API_TOKEN";
+    private const string ConfigKey = "APP_API_TOKEN";
 
     private static ResourceExecutingContext MakeContext(string? configuredToken, string? incomingHeader)
     {

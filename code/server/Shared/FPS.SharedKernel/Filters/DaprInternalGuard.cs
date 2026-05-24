@@ -6,10 +6,10 @@ namespace FPS.SharedKernel.Filters;
 
 /// <summary>
 /// Validates the Dapr app API token on inbound service-invocation calls.
-/// In production, set DAPR_API_TOKEN on each app; the Dapr sidecar injects the
+/// In production, set APP_API_TOKEN on each app; the Dapr sidecar injects the
 /// dapr-api-token header on all calls it forwards to the app. External callers
 /// without a Dapr sidecar cannot pass this check.
-/// If DAPR_API_TOKEN is not configured (local harness without token), the filter
+/// If APP_API_TOKEN is not configured (local harness without token), the filter
 /// allows through — configure the token in all non-dev environments.
 /// See: https://docs.dapr.io/operations/security/app-api-token/
 /// </summary>
@@ -17,7 +17,7 @@ namespace FPS.SharedKernel.Filters;
 public sealed class DaprInternalOnlyAttribute : Attribute, IResourceFilter
 {
     private const string DaprTokenHeader = "dapr-api-token";
-    private const string ConfigKey = "DAPR_API_TOKEN";
+    private const string ConfigKey = "APP_API_TOKEN";
 
     public void OnResourceExecuting(ResourceExecutingContext context)
     {
