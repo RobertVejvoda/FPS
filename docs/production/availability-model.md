@@ -1,6 +1,6 @@
 # Availability Model
 
-FPS availability is based on graceful degradation. Booking state changes are authoritative; observer services such as Notification, Audit, and Reporting should catch up from events or retry paths without rolling back Booking outcomes.
+FairSpot availability is based on graceful degradation. Booking state changes are authoritative; observer services such as Notification, Audit, and Reporting should catch up from events or retry paths without rolling back Booking outcomes.
 
 ## Availability Goals
 

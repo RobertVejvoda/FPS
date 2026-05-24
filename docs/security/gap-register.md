@@ -37,7 +37,7 @@ Last updated: 2026-05-24.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Encryption at rest not configured | High — production-blocking | Services rely on infrastructure storage defaults. Client must enable encryption at rest on all stores (MongoDB, object storage). FPS does not configure this; it is a client deployment responsibility. |
+| Encryption at rest not configured | High — production-blocking | Services rely on infrastructure storage defaults. Client must enable encryption at rest on all stores (MongoDB, object storage). FairSpot does not configure this; it is a client deployment responsibility. |
 | TLS for internal service-to-service traffic only via Dapr mTLS | Medium — production-blocking | Dapr mTLS is disabled in local config (`fps-config.yaml`). Must be enabled in production. Client is responsible for Dapr trust anchor and mTLS configuration. |
 
 ---
@@ -47,7 +47,7 @@ Last updated: 2026-05-24.
 | Gap | Severity | Notes |
 |-----|----------|-------|
 | Vault is unsealed with a dev root token in local config | Low | Local/demo only. Production must use a hardened Vault or equivalent secret store with proper unseal and access-control policies. |
-| Secret rotation is not automated | Medium | Documented as customer responsibility. No tooling or rotation schedule is provided by FPS. |
+| Secret rotation is not automated | Medium | Documented as customer responsibility. No tooling or rotation schedule is provided by FairSpot. |
 
 ---
 
@@ -57,7 +57,7 @@ Last updated: 2026-05-24.
 |-----|----------|-------|
 | Full employee data erasure path not implemented | High — production-blocking | Audit erasure (pseudonymisation) is implemented. Erasure of profile facts, booking history, notifications, reporting projections, and PII mapping needs a coordinated Dapr Workflow across service-owned activities. Planned as PRIV001 / issue #277. |
 | Audit retention schedule not enforced by default | Medium | `DELETE /audit/retention` is implemented (A004). Client must configure the retention period and invoke/schedule the endpoint. Booking and notification retention jobs are not yet implemented. |
-| No consent or privacy notice flow in the product | Medium | Privacy notice delivery is a legal/UX responsibility outside the product. FPS does not display or record consent. Client must implement at the IdP or application layer as required by their legal basis. |
+| No consent or privacy notice flow in the product | Medium | Privacy notice delivery is a legal/UX responsibility outside the product. FairSpot does not display or record consent. Client must implement at the IdP or application layer as required by their legal basis. |
 | DPIA not completed | Medium | A Data Protection Impact Assessment is required before production processing of personal data in most GDPR jurisdictions. This is a client/legal responsibility. |
 
 ---

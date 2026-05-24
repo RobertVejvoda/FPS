@@ -69,9 +69,9 @@ function validateBranding(raw: unknown): BrandingConfig {
   const defaults: BrandingConfig = {
     productName: 'FairSpot',
     tenantName: '',
-    logoUrl: '',
-    primaryColor: '#2563eb',
-    accentColor: '#16a34a',
+    logoUrl: '/brand/fairspot-app-icon.svg',
+    primaryColor: '#2f7d3f',
+    accentColor: '#43b75a',
   };
   if (typeof raw !== 'object' || raw === null) return defaults;
   const b = raw as Record<string, unknown>;

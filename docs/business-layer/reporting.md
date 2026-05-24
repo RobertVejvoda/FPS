@@ -1,6 +1,6 @@
 # Reporting Business
 
-Reporting helps HR, facilities, tenant administrators, and client sponsors understand whether FPS is operating fairly and efficiently. Reporting must stay manager-safe: it explains parking operations and outcomes without exposing hidden lottery internals, raw audit payloads, secrets, or unnecessary employee-private data.
+Reporting helps HR, facilities, tenant administrators, and client sponsors understand whether FairSpot is operating fairly and efficiently. Reporting must stay manager-safe: it explains parking operations and outcomes without exposing hidden lottery internals, raw audit payloads, secrets, or unnecessary employee-private data.
 
 Reporting is split into three product layers.
 
@@ -12,7 +12,7 @@ Reporting is split into three product layers.
 
 ## Operational Report Catalog
 
-The first reporting catalog should be small and fixed. FPS should not build a custom report designer until client feedback proves it is needed.
+The first reporting catalog should be small and fixed. FairSpot should not build a custom report designer until client feedback proves it is needed.
 
 | Report | Questions Answered | Safe Contents |
 | --- | --- | --- |

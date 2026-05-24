@@ -1,6 +1,6 @@
 # Backup And Restore
 
-Backups are only useful when restore has been tested. FPS production readiness requires both backup automation and documented restore evidence.
+Backups are only useful when restore has been tested. FairSpot production readiness requires both backup automation and documented restore evidence.
 
 ## Backup Scope
 
@@ -31,7 +31,7 @@ Backups are only useful when restore has been tested. FPS production readiness r
 
 ## Tenant-Scoped Restore
 
-Because FPS uses tenant-scoped storage boundaries inside service-owned stores, tenant-scoped restore must be planned explicitly. A targeted restore should restore only the affected tenant collections, partitions, keys, and indexes where possible. If the selected managed store cannot restore an individual tenant scope safely, the runbook must restore to a temporary store first, validate the data, then copy only the approved tenant scope back.
+Because FairSpot uses tenant-scoped storage boundaries inside service-owned stores, tenant-scoped restore must be planned explicitly. A targeted restore should restore only the affected tenant collections, partitions, keys, and indexes where possible. If the selected managed store cannot restore an individual tenant scope safely, the runbook must restore to a temporary store first, validate the data, then copy only the approved tenant scope back.
 
 Tenant-scoped restore must preserve:
 

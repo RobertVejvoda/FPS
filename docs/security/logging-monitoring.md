@@ -102,7 +102,7 @@ Trace correlation links the two streams without making either stream the source 
 
 For synchronous commands:
 
-1. The API request enters FPS and OpenTelemetry creates or continues the current `Activity`.
+1. The API request enters FairSpot and OpenTelemetry creates or continues the current `Activity`.
 2. The command handler performs the business action.
 3. The domain event or audit command includes `TraceId = Activity.Current?.TraceId.ToString()` and, where useful, `SpanId = Activity.Current?.SpanId.ToString()`.
 4. The Audit service stores those values as optional metadata.

@@ -3,11 +3,11 @@
 Ensures that sensitive data is handled in compliance with privacy regulations and best practices, such as data minimization and anonymization.
 ## Purpose
 
-Data privacy defines how FPS limits, protects, retains, and exposes personal and tenant data. It complements the [Security Model](./security-model) by translating the data classification and GDPR alignment into implementation and operational rules.
+Data privacy defines how FairSpot limits, protects, retains, and exposes personal and tenant data. It complements the [Security Model](./security-model) by translating the data classification and GDPR alignment into implementation and operational rules.
 
 ## Personal and Tenant Data
 
-FPS commonly processes these Confidential data categories:
+FairSpot commonly processes these Confidential data categories:
 
 - employee profile identifiers, vehicle facts, accessibility or company-car eligibility, and parking preferences;
 - booking requests, allocation outcomes, cancellations, no-show signals, penalties, and employee-visible reasons;
@@ -30,7 +30,7 @@ Secret data, such as credentials, signing keys, tokens, certificates, connection
 
 ## GDPR Alignment
 
-FPS supports GDPR-aligned operation through tenant scoping, least privilege, data minimisation, audit evidence, encryption in transit and at rest, and rights-request slices for access, rectification, erasure, and restriction. Product documentation does not certify GDPR compliance by itself; production use still requires controller/processor roles, privacy notices, subprocessors, data-processing agreements, retention schedules, and legal review.
+FairSpot supports GDPR-aligned operation through tenant scoping, least privilege, data minimisation, audit evidence, encryption in transit and at rest, and rights-request slices for access, rectification, erasure, and restriction. Product documentation does not certify GDPR compliance by itself; production use still requires controller/processor roles, privacy notices, subprocessors, data-processing agreements, retention schedules, and legal review.
 
 ## Rights Requests
 
@@ -65,7 +65,7 @@ Workflow activities should be idempotent. A retry must not recreate deleted reco
 
 Catch points:
 
-- Deleting a user in the customer IdP does not automatically erase FPS data. FPS needs a rights-request workflow or integration event.
+- Deleting a user in the customer IdP does not automatically erase FairSpot data. FairSpot needs a rights-request workflow or integration event.
 - Audit records should not be physically rewritten to remove `actorHash`; the privacy boundary is the separate PII mapping.
 - Backups cannot usually be rewritten safely. The retention policy must define backup expiry and restore-time re-erasure controls.
 - If the user has an active allocation or pending booking, the product needs a business decision: cancel first, transfer responsibility, or block erasure until final status.

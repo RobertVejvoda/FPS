@@ -129,7 +129,7 @@ Run the existing Docker Compose stack on a small cloud VM with a public IP, TLS 
 
 ### Profile B — Azure Container Apps (ACA) with Azure-managed components
 
-Deploy FPS services as ACA apps using ACA's native Dapr sidecar, Azure Service Bus for pub/sub, MongoDB Atlas for state, Azure Key Vault for secrets, and Microsoft Entra External ID or a small Keycloak ACA app for identity.
+Deploy FairSpot services as ACA apps using ACA's native Dapr sidecar, Azure Service Bus for pub/sub, MongoDB Atlas for state, Azure Key Vault for secrets, and Microsoft Entra External ID or a small Keycloak ACA app for identity.
 
 | Criterion | Assessment |
 |---|---|
@@ -144,7 +144,7 @@ Deploy FPS services as ACA apps using ACA's native Dapr sidecar, Azure Service B
 
 ### Profile C — Fly.io with self-hosted components
 
-Deploy FPS services and supporting infrastructure as Fly.io apps. No managed Dapr; Dapr CLI installed in containers.
+Deploy FairSpot services and supporting infrastructure as Fly.io apps. No managed Dapr; Dapr CLI installed in containers.
 
 | Criterion | Assessment |
 |---|---|

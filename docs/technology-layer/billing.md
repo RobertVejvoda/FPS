@@ -2,7 +2,7 @@
 
 This page is a documentation-only guardrail. It does not approve product Billing implementation.
 
-Billing technology is deferred. FPS currently has no active Billing service, financial collection API, invoice engine, or Billing data store. The commercialisation decision is documented in [Commercialisation Impact Review](../strategy-layer/commercialisation).
+Billing technology is deferred. FairSpot currently has no active Billing service, financial collection API, invoice engine, or Billing data store. The commercialisation decision is documented in [Commercialisation Impact Review](../strategy-layer/commercialisation).
 
 ![Software Architecture - Customer](../images/fps-software-arch-customer.png)
 
@@ -15,7 +15,7 @@ Billing technology is deferred. FPS currently has no active Billing service, fin
 | Commercial data store | Not created. |
 | Invoice workflow | Deferred. |
 | Subscription enforcement | Deferred. |
-| Financial collection scope | Avoided by not processing financial collection data in FPS. |
+| Financial collection scope | Avoided by not processing financial collection data in FairSpot. |
 
 ## Future Technical Direction
 
@@ -24,7 +24,7 @@ If a future approved commercial model requires in-product Billing, start with te
 | Component candidate | Purpose | Notes |
 | --- | --- | --- |
 | Commercial account API | Read/update tenant commercial account summary and support/service package status. | Restrict to commercial/admin roles and audit every change. |
-| External invoice reference store | Store references to invoices managed outside FPS. | Prefer external accounting workflow before building invoice generation. |
+| External invoice reference store | Store references to invoices managed outside FairSpot. | Prefer external accounting workflow before building invoice generation. |
 | Commercial audit publisher | Publish commercial-record changes to Audit. | Must not include employee booking details unless separately approved. |
 | Provider adapter | Optional later adapter for external commercial-system events. | Requires explicit tax, webhook, secret, security, privacy, and operational review. |
 

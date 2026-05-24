@@ -84,11 +84,11 @@ Customer employee onboarding and internal company-system integration are planned
 **Description**: As a tenant administrator, I want future commercial settings to be limited to contract and support information, not financial collection details.
 **Acceptance Criteria**:
 - Commercial settings are tenant-scoped and role-protected.
-- Financial collection details are not stored in FPS unless later approved.
+- Financial collection details are not stored in FairSpot unless later approved.
 **Priority**: High
 
 ### US510: Support Or Service Subscription
-**Description**: As a customer sponsor, I want support or service subscription information to be clear if FPS is adopted commercially.
+**Description**: As a customer sponsor, I want support or service subscription information to be clear if FairSpot is adopted commercially.
 **Acceptance Criteria**:
 - Support or service subscription terms can be represented after approval.
 - Core fairness, audit, privacy, and tenant operation features are not made unusable without a paid unlock.

@@ -180,7 +180,7 @@ Actor identity can be resolved only through the separate PII mapping store:
 | Mapping field | Purpose |
 | --- | --- |
 | `actor_hash` | Hash stored in audit records. |
-| `user_id` | Original FPS/IdP subject or local account ID. |
+| `user_id` | Original FairSpot/IdP subject or local account ID. |
 | `display_name` | Optional display value for approved audit views. |
 | `email` | Optional contact value when the client policy allows it. |
 | `tenant_id` | Tenant boundary for the mapping. |

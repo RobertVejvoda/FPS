@@ -15,7 +15,7 @@ The demo should prove that FairSpot is more than a booking form. It should show 
 | HR / facilities | Tenant policy, location override, slots/capacity, Draw outcome, operational reporting. | HR can manage parking rules without code changes and can explain outcomes. |
 | Tenant admin | User roles, tenant/location setup, policy configuration, slot setup. | Admin can see which setup is required before go-live. |
 | Auditor / compliance | Audit query, pseudonymised actor references, GDPR PII mapping erasure behavior. | Audit evidence exists without exposing unnecessary personal data. |
-| Client IT / operator | Local stack, demo deployment option, Dapr components, metrics/logs/traces, backup/restore and incident notes. | IT can see how FPS plugs into their environment and observability stack. |
+| Client IT / operator | Local stack, demo deployment option, Dapr components, metrics/logs/traces, backup/restore and incident notes. | IT can see how FairSpot plugs into their environment and observability stack. |
 | Sponsor / procurement | Product value, deployment ownership model, cost path, license posture, implementation roadmap. | Sponsor can decide whether FairSpot is worth a pilot. |
 
 ## Demo Data Set

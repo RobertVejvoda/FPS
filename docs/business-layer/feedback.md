@@ -1,6 +1,6 @@
 # Feedback Business
 
-Feedback is a deferred business capability. It is not part of the current FPS implementation baseline and should not be presented as an available product feature.
+Feedback is a deferred business capability. It is not part of the current FairSpot implementation baseline and should not be presented as an available product feature.
 
 If approved later, Feedback should support customer-success and support workflows without distracting from the current parking-first value proposition.
 

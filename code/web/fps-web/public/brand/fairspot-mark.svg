@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">FairSpot mark</title>
+  <desc id="desc">A green abstract FairSpot allocation mark on a transparent background.</desc>
+  <g transform="translate(50 60) scale(0.75)">
+  <path
+    d="M170 386c9-61 42-100 99-117 19-6 42-9 70-9h44c27 0 49-19 54-45h-88c-84 0-145 31-183 94-15 25-25 51-30 77h34Z"
+    fill="#2F7D3F"/>
+  <path
+    d="M179 302c20-40 53-67 99-80 21-6 45-9 73-9h69c23 0 42-14 50-36l9-26H333c-70 0-122 21-157 63-23 28-35 61-36 100l39-12Z"
+    fill="#43B75A"/>
+  <path
+    d="M197 219c28-49 76-74 143-74h92c23 0 42-14 50-35l10-27H344c-66 0-116 20-151 60-24 27-37 58-41 93l45-17Z"
+    fill="#51C567"/>
+  <path
+    d="M169 386c29-32 67-48 114-48h56c31 0 58-18 70-46h-94c-56 0-100 15-132 45-17 16-29 32-36 49h22Z"
+    fill="#FFFFFF"/>
+  </g>
+</svg>

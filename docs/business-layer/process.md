@@ -1,6 +1,6 @@
 ## Purpose
 
-FPS must allocate limited parking capacity in a way that employees and managers can understand and trust. Because demand can exceed supply, the system cannot rely only on first-come, first-served booking. The allocation process must balance fairness, policy, and practical use of available spaces.
+FairSpot must allocate limited parking capacity in a way that employees and managers can understand and trust. Because demand can exceed supply, the system cannot rely only on first-come, first-served booking. The allocation process must balance fairness, policy, and practical use of available spaces.
 
 The business goal is simple: employees should have a fair opportunity to park, HR should not manually arbitrate every request, and the company should use its parking assets efficiently.
 
@@ -28,7 +28,7 @@ Spaces released by cancellations, unused reservations, or company-car absences s
 
 ## Allocation Model
 
-FPS uses a weighted allocation model. Each eligible request receives a priority weight based on configurable business factors. A higher weight gives the request a better chance of receiving an available space.
+FairSpot uses a weighted allocation model. Each eligible request receives a priority weight based on configurable business factors. A higher weight gives the request a better chance of receiving an available space.
 
 The implementation contract for Draw behavior is documented in [Executable Allocation Rules](./allocation-rules).
 
@@ -73,30 +73,30 @@ This process covers requests submitted before the allocation draw for a future t
 The request status model is defined in [Booking Request Lifecycle](./booking-request-lifecycle).
 
 1. The employee submits a parking request.
-2. FPS validates the request against tenant policy.
-3. FPS rejects duplicates or ineligible requests with a clear reason.
+2. FairSpot validates the request against tenant policy.
+3. FairSpot rejects duplicates or ineligible requests with a clear reason.
 4. Valid requests wait in the allocation queue.
-5. At the configured time, FPS locks the target time slot for allocation.
-6. FPS applies reserved-space, vehicle, capacity, and fairness rules.
-7. FPS allocates available spaces.
-8. FPS notifies employees of the result.
-9. FPS records the decision for reporting and audit.
+5. At the configured time, FairSpot locks the target time slot for allocation.
+6. FairSpot applies reserved-space, vehicle, capacity, and fairness rules.
+7. FairSpot allocates available spaces.
+8. FairSpot notifies employees of the result.
+9. FairSpot records the decision for reporting and audit.
 
 ## Same-Day Request Process
 
 This process covers requests made after the scheduled allocation has already run.
 
 1. The employee submits a same-day request.
-2. FPS checks whether the request is eligible and whether capacity remains.
-3. If a suitable space is available, FPS allocates it immediately according to tenant policy.
-4. If no suitable space is available, FPS rejects the request or adds it to a waitlist.
-5. FPS notifies the employee of the result.
+2. FairSpot checks whether the request is eligible and whether capacity remains.
+3. If a suitable space is available, FairSpot allocates it immediately according to tenant policy.
+4. If no suitable space is available, FairSpot rejects the request or adds it to a waitlist.
+5. FairSpot notifies the employee of the result.
 
 Same-day allocation should be fast, but it must not bypass core policy. It should only use capacity that is genuinely available.
 
 ## Reserved and Company-Car Spaces
 
-Some customers reserve spaces for company cars, executives, accessibility needs, or operational roles. FPS should support these rules without hiding unused capacity.
+Some customers reserve spaces for company cars, executives, accessibility needs, or operational roles. FairSpot should support these rules without hiding unused capacity.
 
 Business rules:
 
@@ -104,7 +104,7 @@ Business rules:
 - Reserved users should still declare when they need or do not need the space.
 - Released reserved spaces can be offered to other eligible employees.
 - Company-car requests may be exempt from penalties where customer policy requires it.
-- If company-car requests exceed available matching capacity, FPS rejects the overflow requests for now. This is expected to be rare and keeps the first implementation simple.
+- If company-car requests exceed available matching capacity, FairSpot rejects the overflow requests for now. This is expected to be rare and keeps the first implementation simple.
 - All reserved-space decisions should be visible in reports and audit history.
 
 ## Cancellations and Reallocation
@@ -121,10 +121,10 @@ Before allocation:
 After allocation:
 
 - the reservation is cancelled;
-- FPS may apply a late-cancellation penalty;
+- FairSpot may apply a late-cancellation penalty;
 - the released space is automatically allocated to the next eligible requestor when one exists.
 
-If the employee does not use an allocated space and usage confirmation is available, FPS may mark the reservation as a no-show and apply the configured policy.
+If the employee does not use an allocated space and usage confirmation is available, FairSpot may mark the reservation as a no-show and apply the configured policy.
 
 ## Penalties and Manual Adjustments
 
@@ -141,7 +141,7 @@ Authorized roles may apply manual adjustments, but every adjustment must include
 
 ## Usage Confirmation
 
-Usage confirmation improves fairness and reporting. FPS should support one or more confirmation methods depending on customer infrastructure.
+Usage confirmation improves fairness and reporting. FairSpot should support one or more confirmation methods depending on customer infrastructure.
 
 Possible methods:
 
@@ -155,7 +155,7 @@ Confirmed usage helps the customer identify unused allocations, improve fairness
 
 ## Example Allocation
 
-Assume five employees request parking and three spaces are available. Employees with fewer recent allocations receive higher priority. FPS applies configured constraints first, such as vehicle type and reserved-space rules, then runs the fairness allocation across the remaining eligible requests.
+Assume five employees request parking and three spaces are available. Employees with fewer recent allocations receive higher priority. FairSpot applies configured constraints first, such as vehicle type and reserved-space rules, then runs the fairness allocation across the remaining eligible requests.
 
 The result is not meant to guarantee everyone a space every week. It is meant to prevent persistent unfairness over time and to give HR a defensible process.
 

@@ -1,6 +1,6 @@
 # Feedback Technology
 
-Feedback technology is deferred. FPS has no Feedback service, API, persistence adapter, package, or deployment target in the current implementation baseline.
+Feedback technology is deferred. FairSpot has no Feedback service, API, persistence adapter, package, or deployment target in the current implementation baseline.
 
 The endpoint and component shapes below are placeholders for a future approved slice. They are not implemented.
 

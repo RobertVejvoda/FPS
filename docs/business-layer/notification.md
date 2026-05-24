@@ -1,6 +1,6 @@
 ## Purpose
 
-FPS notifications keep employees, HR, and administrators informed about allocation outcomes and policy-sensitive events. For v1, notification delivery is part of the core parking workflow, not an optional enhancement.
+FairSpot notifications keep employees, HR, and administrators informed about allocation outcomes and policy-sensitive events. For v1, notification delivery is part of the core parking workflow, not an optional enhancement.
 
 ## Channel Decision
 
@@ -25,7 +25,7 @@ Critical operational notifications are mandatory and must be sent through both i
 
 ## Mandatory V1 Events
 
-FPS must notify affected employees for these events:
+FairSpot must notify affected employees for these events:
 
 | Event | Recipient | Required channels |
 | --- | --- | --- |
@@ -44,7 +44,7 @@ FPS must notify affected employees for these events:
 
 When a request remains `Pending` after the Draw because it was eligible but no matching capacity was available, the Draw completed notification must explain that the request is still waiting for a released slot until the requested time slot expires.
 
-FPS must notify HR or configured administrators for these events:
+FairSpot must notify HR or configured administrators for these events:
 
 | Event | Recipient |
 | --- | --- |
@@ -121,18 +121,18 @@ Rules:
 
 If in-app notification creation fails:
 
-- FPS must log the failure;
-- FPS must retry according to infrastructure policy;
+- FairSpot must log the failure;
+- FairSpot must retry according to infrastructure policy;
 - email delivery should still be attempted.
 
 If email delivery fails:
 
-- FPS must log the failure;
-- FPS must retain the in-app notification;
-- FPS should retry according to infrastructure policy;
+- FairSpot must log the failure;
+- FairSpot must retain the in-app notification;
+- FairSpot should retry according to infrastructure policy;
 - persistent email failure should be visible to support or administrators.
 
-FPS must not roll back a completed booking or allocation solely because email delivery failed.
+FairSpot must not roll back a completed booking or allocation solely because email delivery failed.
 
 ## Slice N001: In-App Booking Event Records
 
@@ -191,13 +191,13 @@ Notification service must record:
 
 ## Acceptance Criteria For Implementation
 
-- Given a request is submitted, when FPS accepts it into the queue, then the requestor receives both in-app and email notifications.
+- Given a request is submitted, when FairSpot accepts it into the queue, then the requestor receives both in-app and email notifications.
 - Given a request is allocated, when the allocation is persisted, then the requestor receives both in-app and email notifications.
 - Given a request is rejected, when the rejection is persisted, then the requestor receives both in-app and email notifications with a clear reason.
 - Given an allocated reservation is cancelled, when the cancellation is persisted, then the original requestor receives both in-app and email notifications.
 - Given a released slot is reallocated, when the new allocation is persisted, then both original and new affected requestors receive both in-app and email notifications.
 - Given a penalty is applied, when the penalty is persisted, then the affected requestor receives both in-app and email notifications.
 - Given a no-show is recorded, when the no-show status is persisted, then the affected requestor receives both in-app and email notifications.
-- Given the same source event is processed twice, when notifications are generated, then FPS does not create duplicate in-app notifications or duplicate emails.
+- Given the same source event is processed twice, when notifications are generated, then FairSpot does not create duplicate in-app notifications or duplicate emails.
 - Given email delivery fails, when the in-app notification succeeds, then booking state remains unchanged and email retry/failure is recorded.
-- Given a user disables reminders, when a critical operational event occurs, then FPS still sends both in-app and email notifications.
+- Given a user disables reminders, when a critical operational event occurs, then FairSpot still sends both in-app and email notifications.

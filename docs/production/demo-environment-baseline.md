@@ -1,6 +1,6 @@
 # Demo Environment Baseline
 
-OPS002 defines the first hosted demo baseline for FPS. The demo environment is not client production. Its job is to prove the product story, exercise the pluggable runtime boundaries from OPS001, and collect enough operational evidence for Demo v0 and later client evaluation.
+OPS002 defines the first hosted demo baseline for FairSpot. The demo environment is not client production. Its job is to prove the product story, exercise the pluggable runtime boundaries from OPS001, and collect enough operational evidence for Demo v0 and later client evaluation.
 
 ## Goals
 

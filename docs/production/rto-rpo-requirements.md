@@ -32,7 +32,7 @@ RTO defines how quickly a capability should be restored. RPO defines how much da
 
 Revisit these targets when:
 
-- FPS moves from pilot to paid tenant use;
+- FairSpot moves from pilot to paid tenant use;
 - billing or payment data becomes production scope;
 - customers require contractual SLA/SLO commitments;
 - multi-region deployment becomes a real requirement;

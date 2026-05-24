@@ -52,7 +52,7 @@ Invalid transitions must be rejected with a clear domain error. Terminal statuse
 
 ## Submission Rules
 
-FPS accepts a booking request only when:
+FairSpot accepts a booking request only when:
 
 - the requestor is active and eligible under tenant policy;
 - the tenant, location, date, and time slot are open for requests;
@@ -63,7 +63,7 @@ FPS accepts a booking request only when:
 
 For future scheduled Draw requests, the cut-off is anchored to the requested parking date. By default, the Draw for parking date `D` closes at the configured `drawCutOffTime` on calendar date `D - 1` in the tenant or location policy timezone. Requests submitted after that instant are rejected as late for that Draw. Same-day requests are handled by the same-day booking slice, not by the future-request slice.
 
-At submission time, slot matching checks configured slot type or capacity-pool compatibility only. FPS must verify that at least one configured slot type at the requested location could satisfy the request's vehicle and declared constraints. It must not reserve live capacity or run Draw allocation during future-request submission.
+At submission time, slot matching checks configured slot type or capacity-pool compatibility only. FairSpot must verify that at least one configured slot type at the requested location could satisfy the request's vehicle and declared constraints. It must not reserve live capacity or run Draw allocation during future-request submission.
 
 The duplicate definition is owned by [Executable Allocation Rules](./allocation-rules): same tenant, same requestor, same date, and overlapping time slot.
 
@@ -81,7 +81,7 @@ After allocation:
 
 - cancellation moves the request from `Allocated` to `Cancelled`;
 - the slot is released;
-- FPS automatically attempts reallocation to the next eligible requestor;
+- FairSpot automatically attempts reallocation to the next eligible requestor;
 - the cancellation and any reallocation must be audited;
 - affected requestors receive notifications.
 
@@ -119,7 +119,7 @@ A request becomes `NoShow` when:
 - no valid usage confirmation exists within the tenant's configured confirmation window;
 - tenant policy enables no-show detection for that confirmation method.
 
-The default no-show penalty is `+2`. If usage confirmation is not available for a tenant, FPS must not automatically mark no-shows; it may only report unconfirmed usage as unknown.
+The default no-show penalty is `+2`. If usage confirmation is not available for a tenant, FairSpot must not automatically mark no-shows; it may only report unconfirmed usage as unknown.
 
 No-show evaluation runs only after the requested time slot plus the configured confirmation window has passed in the resolved policy timezone. Re-running no-show evaluation must be idempotent.
 
@@ -139,7 +139,7 @@ Expiry must be auditable and must not create penalties by default.
 
 ## Employee-Visible Reasons
 
-FPS must provide clear outcome reasons for employee-facing statuses.
+FairSpot must provide clear outcome reasons for employee-facing statuses.
 
 Reason codes are defined in [Booking Reason Codes](./booking-reason-codes). Implementations must use stable `reasonCode` values for API responses, audit records, events, notifications, and reporting.
 
@@ -185,4 +185,4 @@ Audit records must be append-only. Manual correction creates a new audit event r
 - Given a released slot and an eligible pending request, when reallocation runs, then the pending request becomes `Allocated` and notifications are sent.
 - Given an `Allocated` request, when valid usage confirmation is received, then it becomes `Used`.
 - Given an `Allocated` request with no valid usage confirmation and no-show policy enabled, when the confirmation window closes, then it becomes `NoShow` and receives the default no-show penalty.
-- Given a terminal request, when another normal lifecycle transition is attempted, then FPS rejects the transition with a clear domain error.
+- Given a terminal request, when another normal lifecycle transition is attempted, then FairSpot rejects the transition with a clear domain error.

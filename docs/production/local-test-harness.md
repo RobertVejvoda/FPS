@@ -1,6 +1,6 @@
 # Local Test Harness
 
-This page defines the local run path for FPS testing. The immediate goal is to make backend, mobile, and demo smoke testing repeatable. The longer-term goal is a one-command local harness, preferably through .NET Aspire or an equivalent AppHost, without replacing the production deployment model.
+This page defines the local run path for FairSpot testing. The immediate goal is to make backend, mobile, and demo smoke testing repeatable. The longer-term goal is a one-command local harness, preferably through .NET Aspire or an equivalent AppHost, without replacing the production deployment model.
 
 ## Current Baseline
 
@@ -87,7 +87,7 @@ Get a bearer token for a demo user when the mobile app or API smoke test needs o
 
 Available local users:
 
-| Username | FPS roles | Main demo interest |
+| Username | FairSpot roles | Main demo interest |
 | --- | --- | --- |
 | `employee1` | `employee` | Normal employee booking, notifications, profile, mobile/web self-service. |
 | `employee2` | `employee` | Company-car style seeded profile path. |
@@ -185,11 +185,11 @@ For operational traces and infrastructure stats:
 | Grafana | `http://localhost:3000` | Local dashboard shell. Login with the local Docker Compose defaults from `code/infrastructure/readme.md`. Dashboard provisioning is still a follow-up gap. |
 | Prometheus | `http://localhost:9090` | Local scrape targets from `code/infrastructure/prometheus/prometheus.yaml`. Current coverage is infrastructure-oriented, not full application metrics. |
 | Zipkin | `http://localhost:19411` | Traces only when Dapr tracing config is enabled. The default smoke `dapr.yaml` intentionally omits tracing config to avoid the Docker-network-only Zipkin endpoint. |
-| Jaeger | `http://localhost:16686` | Local tracing UI container. FPS services do not yet export OpenTelemetry traces to it by default. |
+| Jaeger | `http://localhost:16686` | Local tracing UI container. FairSpot services do not yet export OpenTelemetry traces to it by default. |
 | RabbitMQ | `http://localhost:15672` | Pub/sub broker health when using durable local Dapr components. |
 | Vault | `http://localhost:8200` | Local dev-mode secret store status. |
 
-Current observability limit: FPS services expose `GET /health` and structured stdout logs. Full application OpenTelemetry metrics/traces and prebuilt admin dashboards are tracked as follow-up production-readiness work; see [Monitoring](./monitoring).
+Current observability limit: FairSpot services expose `GET /health` and structured stdout logs. Full application OpenTelemetry metrics/traces and prebuilt admin dashboards are tracked as follow-up production-readiness work; see [Monitoring](./monitoring).
 
 Role interests are intentionally separated:
 
@@ -214,7 +214,7 @@ docker compose -f code/infrastructure/docker-compose.yaml down
 
 Plain `dotnet run` starts a service without a Dapr sidecar. Endpoints that use `DaprClient` — such as Booking's state and pub/sub calls — return `500` because the sidecar gRPC port is not listening.
 
-Use the Dapr CLI multi-app run to start seven FPS services each paired with a sidecar:
+Use the Dapr CLI multi-app run to start seven FairSpot services each paired with a sidecar:
 
 ```sh
 # 1. Infrastructure and auth (once per session)

@@ -29,7 +29,7 @@
 
 ## WEB009 Boundary
 
-WEB009 replaces the development bearer-token handoff in the React web app with a real browser login experience. The app should authenticate through the configured OIDC provider using Authorization Code + PKCE, obtain an access token for FPS APIs, call `GET /me`, and enter the existing authenticated web shell only when the session is valid.
+WEB009 replaces the development bearer-token handoff in the React web app with a real browser login experience. The app should authenticate through the configured OIDC provider using Authorization Code + PKCE, obtain an access token for FairSpot APIs, call `GET /me`, and enter the existing authenticated web shell only when the session is valid.
 
 WEB009 must preserve the existing security boundary: the web app never supplies tenant ID, requestor ID, user ID, or roles for API scoping. Backend services continue to resolve tenant, user, and roles from authenticated token claims.
 

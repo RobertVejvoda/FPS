@@ -1,6 +1,6 @@
 # OPS005 Integration Evidence And Safe Credential Boundaries
 
-This page defines the safe credential handling and operational evidence boundaries for customer-system integration actors in FPS.
+This page defines the safe credential handling and operational evidence boundaries for customer-system integration actors in FairSpot.
 
 ## Credential Classification
 
@@ -12,14 +12,14 @@ This page defines the safe credential handling and operational evidence boundari
 
 See `docs/security/security-model.md` for the full data classification model.
 
-## What FPS Services Log
+## What FairSpot Services Log
 
 ASP.NET Core's default request logging does **not** log:
 - `Authorization` request headers (JWT access tokens)
 - Request bodies (which might contain credentials or PII)
 - Response bodies
 
-Application code in FPS services logs only:
+Application code in FairSpot services logs only:
 - Structured events with identifiers (tenant ID, user ID, booking ID) at `Information` level
 - Error context with exception type and message; no raw stack traces or upstream system responses that could expose internal URLs or credential material
 - Dapr component operation results (success/failure, not credential material)
@@ -31,7 +31,7 @@ Application code in FPS services logs only:
 
 ## Integration Actor Credential Handling
 
-An integration actor is a non-human FPS caller: a scheduled job, a customer HR import process, a SCIM client, or an API gateway.
+An integration actor is a non-human FairSpot caller: a scheduled job, a customer HR import process, a SCIM client, or an API gateway.
 
 | Boundary | Rule |
 | --- | --- |

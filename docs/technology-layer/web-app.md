@@ -16,7 +16,7 @@ Runtime configuration must provide:
 - post-logout redirect URI;
 - whether the development manual-token fallback is enabled.
 
-The browser client must not contain a client secret. Access tokens are attached only to FPS API calls. The app must validate the session with `GET /me` after login or restoration, and services must continue to resolve tenant/user/role context from token claims rather than web-supplied identifiers.
+The browser client must not contain a client secret. Access tokens are attached only to FairSpot API calls. The app must validate the session with `GET /me` after login or restoration, and services must continue to resolve tenant/user/role context from token claims rather than web-supplied identifiers.
 
 Manual bearer-token entry is a local smoke-testing fallback, not the default user experience for demo or production.
 

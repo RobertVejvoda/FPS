@@ -5,7 +5,7 @@ Secures feedback mechanisms from abuse, such as spam or malicious input, by impl
 
 Feedback security covers user-submitted product feedback, support messages, diagnostics, and future attachments. Feedback is easy to underestimate because users may accidentally include personal data, operational details, screenshots, tokens, or other sensitive material.
 
-## FPS Controls
+## FairSpot Controls
 
 - Feedback records are tenant-scoped and visible only to authorized tenant administrators, support operators, product maintainers, or assigned service roles.
 - Feedback submission must authenticate the user unless an explicitly public channel is introduced and separately threat-modeled.

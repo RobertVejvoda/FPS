@@ -1,8 +1,8 @@
 # Production
 
-Production describes how FPS is hosted, operated, recovered, and validated once it runs outside local development. It is a top-level architecture section because production concerns cut across the technology stack, security model, implementation slices, and business continuity expectations.
+Production describes how FairSpot is hosted, operated, recovered, and validated once it runs outside local development. It is a top-level architecture section because production concerns cut across the technology stack, security model, implementation slices, and business continuity expectations.
 
-The goal for v1 is not to operate production for clients directly. FPS must prove that the platform can be run locally, demonstrated in a realistic hosted environment, and deployed into a client-owned production environment with clear operational evidence. Dapr is the component portability boundary; OpenTelemetry is the telemetry portability boundary.
+The goal for v1 is not to operate production for clients directly. FairSpot must prove that the platform can be run locally, demonstrated in a realistic hosted environment, and deployed into a client-owned production environment with clear operational evidence. Dapr is the component portability boundary; OpenTelemetry is the telemetry portability boundary.
 
 FairSpot is therefore a **bring-your-own-cloud** platform. The core architecture defines contracts for identity, ingress, service integration, persistence, messaging, secrets, object storage, observability, backup, restore, and operations. Local, Azure, AWS, Kubernetes, or client-owned infrastructure can satisfy those contracts with different concrete services as long as tenant isolation, security controls, and operational evidence remain intact.
 
@@ -13,7 +13,7 @@ Read this section from high level to detail:
 1. **Environment profiles**: separate local development, demo, and client-owned production responsibilities.
 2. **Target runtime**: understand what must run and which cloud services are replaceable behind Dapr.
 3. **Demo baseline**: prove a low-cost hosted environment before client production work.
-4. **Availability and recovery**: define what can fail, how FPS keeps operating, and how much data loss/downtime is acceptable.
+4. **Availability and recovery**: define what can fail, how FairSpot keeps operating, and how much data loss/downtime is acceptable.
 5. **Data protection**: define backups, restore drills, tenant-scoped recovery, and secret recovery.
 6. **Operations**: define monitoring, alerts, incidents, maintenance, and runbooks.
 7. **Cloud setup**: compare candidate deployment profiles and keep cost visible.
@@ -23,13 +23,13 @@ Read this section from high level to detail:
 
 | Profile | Owner | Purpose | Expected shape |
 | --- | --- | --- | --- |
-| Local | FPS delivery team | Develop and validate behavior cheaply. | Docker Compose or local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
-| Demo | FPS delivery team | Show a working system to evaluators and collect performance/usage evidence. | Low-cost hosted deployment using replaceable Dapr components; exact provider remains a planning decision. |
-| Client production | Client IT / operations | Run FPS with the client's identity, hosting, monitoring, backup, and security controls. | Client-owned cloud or on-premise environment, Dapr-compatible components, OpenTelemetry export to the client's observability platform, documented backup/restore and support boundaries. |
+| Local | FairSpot delivery team | Develop and validate behavior cheaply. | Docker Compose or local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
+| Demo | FairSpot delivery team | Show a working system to evaluators and collect performance/usage evidence. | Low-cost hosted deployment using replaceable Dapr components; exact provider remains a planning decision. |
+| Client production | Client IT / operations | Run FairSpot with the client's identity, hosting, monitoring, backup, and security controls. | Client-owned cloud or on-premise environment, Dapr-compatible components, OpenTelemetry export to the client's observability platform, documented backup/restore and support boundaries. |
 
 ## Target Runtime
 
-FPS production runtime is expected to contain:
+FairSpot production runtime is expected to contain:
 
 | Capability | Production role | Current direction |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ FPS production runtime is expected to contain:
 - [Integration Evidence](./production/integration-evidence): OPS005 safe credential handling and evidence boundaries for integration actors.
 - [Local Test Harness](./production/local-test-harness): current local run instructions and one-command harness for full-stack smoke testing.
 
-Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FPS.
+Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FairSpot.
 
 ## Testing And Readiness
 
