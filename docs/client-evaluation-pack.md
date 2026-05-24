@@ -67,8 +67,8 @@ Key architecture links:
 
 | Profile | Owner | Purpose | Current expectation |
 | --- | --- | --- | --- |
-| Local | FPS delivery team | Development and validation. | Local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
-| Demo | FPS delivery team | Evaluation environment and operational evidence. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
+| Local | FairSpot delivery team | Development and validation. | Local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
+| Demo | FairSpot delivery team | Evaluation environment and operational evidence. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
 | Client production | Client IT / operations | Real operation under client controls. | Client-owned platform, IdP, persistence, secrets, observability, backups, incident process, and release controls. |
 
 The demo environment baseline is documented in [Demo Environment Baseline](./production/demo-environment-baseline). Client production handoff remains a later slice; FairSpot should not promise managed production operation until that model is explicitly approved.

@@ -1,6 +1,6 @@
 # Mobile Device Testing Plan
 
-This plan defines when and how to test the FPS mobile app on a real device, simulator, or emulator. It separates the current developer smoke path from the pilot-grade test path needed after the remaining mobile polish slices.
+This plan defines when and how to test the FairSpot mobile app on a real device, simulator, or emulator. It separates the current developer smoke path from the pilot-grade test path needed after the remaining mobile polish slices.
 
 ## When To Test
 

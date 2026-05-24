@@ -75,7 +75,7 @@
 
 1. **NFR1400 - Deployment Portability**
     **Description:** Deploy the system into local, demo, and client-owned production environments using containerized services and Dapr-compatible components. Kubernetes is an allowed target, not the only target.
-    **Rationale:** Keeps FPS portable across client hosting environments while preserving service invocation, pub/sub, state, bindings, and secret-store boundaries.
+    **Rationale:** Keeps FairSpot portable across client hosting environments while preserving service invocation, pub/sub, state, bindings, and secret-store boundaries.
     **Acceptance Criteria:**
     - The system can run locally with local Dapr components.
     - Demo deployment uses replaceable Dapr components and documents cost assumptions.

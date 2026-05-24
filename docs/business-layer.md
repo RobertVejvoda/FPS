@@ -1,10 +1,10 @@
 # Business Layer
 
-The business layer explains why FPS exists, who it serves, and which customer outcomes the product must deliver. It should be read before the application and technology layers because it defines the business problem, policy model, and value proposition.
+The business layer explains why FairSpot exists, who it serves, and which customer outcomes the product must deliver. It should be read before the application and technology layers because it defines the business problem, policy model, and value proposition.
 
 ## Business Value
 
-FPS helps companies manage scarce parking capacity without turning HR into a manual dispatch team. The product creates value by:
+FairSpot helps companies manage scarce parking capacity without turning HR into a manual dispatch team. The product creates value by:
 
 - reducing email and spreadsheet-based administration;
 - making parking allocation transparent and auditable;

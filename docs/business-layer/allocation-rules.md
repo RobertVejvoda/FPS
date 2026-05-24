@@ -32,7 +32,7 @@ These rules cover:
 
 ## Request Validation
 
-FPS rejects a request before allocation when any of these conditions is true:
+FairSpot rejects a request before allocation when any of these conditions is true:
 
 - the requestor is not eligible under tenant policy;
 - the requested date or time slot is closed;
@@ -69,7 +69,7 @@ Rules:
 - Tier 1 requests do not participate in the weighted lottery.
 - Tier 1 allocations do not increment `RecentAllocationCount`.
 - Tier 1 requestors do not receive penalties for company-car allocations.
-- If matching capacity is insufficient, FPS rejects overflow requests for now.
+- If matching capacity is insufficient, FairSpot rejects overflow requests for now.
 - Company-car overflow means Tier 1 demand exceeds matching company-car-eligible capacity for the Draw key after tenant, location, time slot, slot capability, reserved-space, and active/inactive slot constraints are applied.
 - Company-car overflow is determined before Tier 2 starts.
 - Company-car overflow requests become `Rejected`, not `Pending`, because the overflow is treated as tenant configuration drift rather than normal scarce-capacity lottery loss.
@@ -173,15 +173,15 @@ Same-day allocation happens after the scheduled Draw has already run.
 Rules:
 
 - same-day requests still pass tenant policy, duplicate, vehicle, and slot matching checks;
-- if a suitable slot is available, FPS allocates it immediately;
-- if no suitable slot exists, FPS rejects the request for v1; same-day waitlist is a future feature;
+- if a suitable slot is available, FairSpot allocates it immediately;
+- if no suitable slot exists, FairSpot rejects the request for v1; same-day waitlist is a future feature;
 - successful same-day allocations count toward `RecentAllocationCount`;
 - same-day allocation does not bypass penalties or reserved-space constraints.
 - same-day allocation must not steal an already allocated slot and must not allocate a slot reserved for a pending scheduled-Draw waitlist candidate unless tenant policy marks that slot as currently available for same-day use.
 
 ## Cancellation Reallocation
 
-When an allocated reservation is cancelled, FPS releases the slot and automatically reallocates it to the next eligible requestor when one exists.
+When an allocated reservation is cancelled, FairSpot releases the slot and automatically reallocates it to the next eligible requestor when one exists.
 
 Rules:
 
@@ -195,7 +195,7 @@ Rules:
 
 If no eligible requestor exists, the slot remains available for same-day allocation or manual use under tenant policy.
 
-Reallocation should use the original Draw ordering when available. The original ordering is available when the Draw attempt for the same tenant, location, date, and time slot has a recorded algorithm version, seed, and ordered Tier 2 candidate sequence. FPS must skip candidates that are no longer `Pending`, are no longer eligible, or do not match the released slot. If the original ordering is missing or corrupt, FPS must run a new deterministic reallocation selection for the remaining eligible pending candidates, record the reallocation seed and decision, and audit why the fallback was used.
+Reallocation should use the original Draw ordering when available. The original ordering is available when the Draw attempt for the same tenant, location, date, and time slot has a recorded algorithm version, seed, and ordered Tier 2 candidate sequence. FairSpot must skip candidates that are no longer `Pending`, are no longer eligible, or do not match the released slot. If the original ordering is missing or corrupt, FairSpot must run a new deterministic reallocation selection for the remaining eligible pending candidates, record the reallocation seed and decision, and audit why the fallback was used.
 
 ## Penalties
 

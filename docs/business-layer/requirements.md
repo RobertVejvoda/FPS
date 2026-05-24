@@ -38,11 +38,11 @@ FairSpot replaces manual parking coordination with a transparent, automated allo
 
 ### BR001: Automated Parking Requests
 
-Employees must be able to submit parking requests through FPS instead of email. A request must identify the employee, vehicle where needed, preferred date, time slot, location, and relevant parking requirements.
+Employees must be able to submit parking requests through FairSpot instead of email. A request must identify the employee, vehicle where needed, preferred date, time slot, location, and relevant parking requirements.
 
 ### BR002: Fair Slot Allocation
 
-FPS must allocate limited parking capacity using transparent and configurable fairness rules. The process must avoid persistent favoritism and should improve the chance of allocation for employees who have received fewer recent spaces.
+FairSpot must allocate limited parking capacity using transparent and configurable fairness rules. The process must avoid persistent favoritism and should improve the chance of allocation for employees who have received fewer recent spaces.
 
 ### BR003: Configurable Parking Policies
 
@@ -76,32 +76,32 @@ FairSpot should support confirmation of actual parking usage, either by user act
 
 ### BR007: Penalties and Adjustments
 
-FPS must support configurable penalties for late cancellations, no-shows, and policy violations. Authorized roles must also be able to apply justified manual adjustments when business policy requires it.
+FairSpot must support configurable penalties for late cancellations, no-shows, and policy violations. Authorized roles must also be able to apply justified manual adjustments when business policy requires it.
 
 ### BR008: Reporting and Analytics
 
-FPS must provide reports for HR, facility managers, and leadership. Reports should cover demand, utilization, allocation rates, rejected requests, cancellations, no-shows, repeated exceptions, and fairness indicators.
+FairSpot must provide reports for HR, facility managers, and leadership. Reports should cover demand, utilization, allocation rates, rejected requests, cancellations, no-shows, repeated exceptions, and fairness indicators.
 
 ### BR009: Role-Based Access
 
-FPS must separate employee, manager, administrator, support, audit, and finance responsibilities. Users should only access the actions and data required for their role.
+FairSpot must separate employee, manager, administrator, support, audit, and finance responsibilities. Users should only access the actions and data required for their role.
 
 ### BR010: Auditability and Compliance
 
-FPS must keep an audit trail of important business actions, including request creation, allocation decisions, cancellations, manual overrides, penalty changes, and configuration changes.
+FairSpot must keep an audit trail of important business actions, including request creation, allocation decisions, cancellations, manual overrides, penalty changes, and configuration changes.
 
 ### BR011: Multi-Tenant Customer Model
 
-FPS must support multiple customer organizations. Each customer must have isolated data, configurable policies, independent users, and tenant-specific billing or subscription settings where applicable.
+FairSpot must support multiple customer organizations. Each customer must have isolated data, configurable policies, independent users, and tenant-specific billing or subscription settings where applicable.
 
 ### BR012: Scalability and Flexibility
 
-FPS must support customer growth in users, locations, parking spaces, and request volume. The product should adapt to different company parking policies without requiring custom development for every customer.
+FairSpot must support customer growth in users, locations, parking spaces, and request volume. The product should adapt to different company parking policies without requiring custom development for every customer.
 
 ## Business Process Summary
 
 1. Employees submit parking requests for future or current time slots.
-2. FPS validates eligibility, duplicate requests, time slot availability, vehicle constraints, and local policy.
+2. FairSpot validates eligibility, duplicate requests, time slot availability, vehicle constraints, and local policy.
 3. The allocation process assigns available spaces using the configured fairness rules, zone preferences, team defaults, and fallback policy.
 4. Employees receive allocation results and reminders.
 5. Employees cancel or confirm usage when needed.
@@ -130,4 +130,4 @@ The full allocation description is documented in [Slot Allocation Process](./pro
 - Paid parking, subscription models, or internal cost recovery.
 - Integration with building access systems, license plate recognition, or workplace calendars.
 
-These opportunities should be treated as product extensions, not prerequisites for the core FPS value proposition.
+These opportunities should be treated as product extensions, not prerequisites for the core FairSpot value proposition.

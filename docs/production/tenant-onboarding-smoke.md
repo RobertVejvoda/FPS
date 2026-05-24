@@ -1,6 +1,6 @@
 # Tenant Onboarding E2E Smoke Scenario
 
-This document defines the end-to-end smoke scenario for onboarding a synthetic company tenant in FPS. Each step is marked with its implementation status for the local demo environment.
+This document defines the end-to-end smoke scenario for onboarding a synthetic company tenant in FairSpot. Each step is marked with its implementation status for the local demo environment.
 
 **Status legend:**
 - ✅ **Implemented** — runnable today via API or script
@@ -49,7 +49,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/tenant-1
 
 The local Keycloak realm (`fps-local`) is imported from `code/infrastructure/keycloak/fps-local-realm.json` which pre-configures the OIDC client, roles, and demo users. This represents step 2 for evaluation.
 
-**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `tenant-1` that maps Keycloak realm roles directly to FPS roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
+**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `tenant-1` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
 
 **Verify identity is wired:**
 ```bash
@@ -77,7 +77,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Expected:** `{"userId": "tenant-admin", "tenantId": "tenant-1", "roles": ["admin"]}`
 
-**Blocker for production:** Formal first-admin provisioning path (mapped SSO user or FPS-local break-glass account creation via API). Follow-up: CUST004 evidence.
+**Blocker for production:** Formal first-admin provisioning path (mapped SSO user or FairSpot-local break-glass account creation via API). Follow-up: CUST004 evidence.
 
 ---
 

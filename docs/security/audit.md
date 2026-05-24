@@ -1,6 +1,6 @@
 # Security Audit
 
-Security audit defines how FPS preserves accountability for sensitive actions without exposing unnecessary personal or technical data.
+Security audit defines how FairSpot preserves accountability for sensitive actions without exposing unnecessary personal or technical data.
 
 ## Audit Evidence Types
 
@@ -43,7 +43,7 @@ The following actions require explicit audit records:
 - HR/import preview and commit actions;
 - report export, audit export, and sensitive read/download actions;
 - PII mapping lookup, erasure request creation, erasure completion, and erasure failure;
-- secret access, rotation, revocation, break-glass access, and incident response actions where FPS owns the control;
+- secret access, rotation, revocation, break-glass access, and incident response actions where FairSpot owns the control;
 - integration credential changes and customer-system import failures where they affect tenant data.
 
 Audit summaries must use safe business language and reason codes. They must not include secrets, raw user IDs, names, emails, license plates, complete request payloads, stack traces, or hidden allocation internals.

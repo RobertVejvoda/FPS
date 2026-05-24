@@ -2,6 +2,7 @@
 * [Strategy](./strategy)
   * [Approach](./strategy-layer/approach)
   * [Core Values](./strategy-layer/core-values)
+  * [Brand](./strategy-layer/brand)
   * [Licensing](./strategy-layer/licensing)
   * [Commercialisation](./strategy-layer/commercialisation)
 * [Business](./business-layer)

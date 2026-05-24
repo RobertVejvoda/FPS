@@ -4,7 +4,7 @@ Andrea normally uses public transport but needs to drive to the office a few tim
 
 ### Customer Value
 
-Andrea needs a simple way to request parking and understand the result. FPS creates value by making the process transparent, reducing manual follow-up, and giving occasional parkers a fair chance to receive a space.
+Andrea needs a simple way to request parking and understand the result. FairSpot creates value by making the process transparent, reducing manual follow-up, and giving occasional parkers a fair chance to receive a space.
 
 ### Key Needs
 
@@ -19,7 +19,7 @@ Bob sometimes comes to the office by motorcycle. Standard car spaces are ineffic
 
 ### Customer Value
 
-FPS helps customers use parking space more efficiently by supporting vehicle-specific rules. Dedicated motorcycle handling can increase total usable capacity and improve employee experience without adding new parking spaces.
+FairSpot helps customers use parking space more efficiently by supporting vehicle-specific rules. Dedicated motorcycle handling can increase total usable capacity and improve employee experience without adding new parking spaces.
 
 ### Key Needs
 
@@ -34,7 +34,7 @@ Cecil has a company car and may have access to a reserved space. When Cecil does
 
 ### Customer Value
 
-FPS turns reserved-space absence into reusable capacity. The customer gets better utilization while still protecting company-car entitlements and other business rules.
+FairSpot turns reserved-space absence into reusable capacity. The customer gets better utilization while still protecting company-car entitlements and other business rules.
 
 ### Key Needs
 
@@ -49,7 +49,7 @@ David sometimes asks colleagues to use their reserved spaces or parks without a 
 
 ### Customer Value
 
-FPS reduces informal parking behavior by making the official process easier, faster, and more transparent. The business benefit is fewer disputes, better traceability, and more reliable occupancy data.
+FairSpot reduces informal parking behavior by making the official process easier, faster, and more transparent. The business benefit is fewer disputes, better traceability, and more reliable occupancy data.
 
 ### Key Needs
 
@@ -64,7 +64,7 @@ Elvis manages parking requests for employees. Today this means reading emails, u
 
 ### Customer Value
 
-FPS removes HR from routine request processing. Elvis can focus on policy, exceptions, and employee support instead of manually matching people to spaces.
+FairSpot removes HR from routine request processing. Elvis can focus on policy, exceptions, and employee support instead of manually matching people to spaces.
 
 ### Key Needs
 
@@ -80,7 +80,7 @@ Fiona is accountable for employee experience and fair workplace policies. She ne
 
 ### Customer Value
 
-FPS gives Fiona management visibility. Reports and audit trails help her explain policy decisions, identify capacity problems, and improve employee trust.
+FairSpot gives Fiona management visibility. Reports and audit trails help her explain policy decisions, identify capacity problems, and improve employee trust.
 
 ### Key Needs
 
@@ -95,7 +95,7 @@ Godric cares about operational efficiency, employee satisfaction, and responsibl
 
 ### Customer Value
 
-FPS converts a recurring workplace frustration into a governed, measurable service. The executive value is lower administration cost, fewer employee complaints, better asset utilization, and optional support for sustainability goals.
+FairSpot converts a recurring workplace frustration into a governed, measurable service. The executive value is lower administration cost, fewer employee complaints, better asset utilization, and optional support for sustainability goals.
 
 ### Key Needs
 

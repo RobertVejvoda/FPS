@@ -1,10 +1,10 @@
 ## Strategic Position
 
-FPS is a workplace resource-management product focused on fair access to limited parking capacity. The product is valuable because parking is a visible daily employee pain point: when the process feels unfair, employees complain, HR loses time, and management lacks reliable data.
+FairSpot is a workplace resource-management product focused on fair access to limited parking capacity. The product is valuable because parking is a visible daily employee pain point: when the process feels unfair, employees complain, HR loses time, and management lacks reliable data.
 
-The strongest business position for FPS is not "parking booking software." The stronger position is:
+The strongest business position for FairSpot is not "parking booking software." The stronger position is:
 
-> FPS gives companies a transparent, automated, and auditable way to allocate scarce workplace parking capacity.
+> FairSpot gives companies a transparent, automated, and auditable way to allocate scarce workplace parking capacity.
 
 ## Target Customer
 
@@ -18,7 +18,7 @@ The primary customer is an organization with:
 
 ## Value Proposition
 
-FPS delivers value in five areas:
+FairSpot delivers value in five areas:
 
 1. **Operational efficiency**
    - Reduces HR coordination effort.
@@ -46,7 +46,7 @@ FPS delivers value in five areas:
 
 ## Stakeholder Outcomes
 
-| Stakeholder | Desired Outcome | FPS Value |
+| Stakeholder | Desired Outcome | FairSpot Value |
 |-------------|-----------------|-----------|
 | Employee | Request parking without friction | Self-service requests, clear status, notifications |
 | Occasional commuter | Fair chance against daily parkers | Fairness-based allocation |
@@ -71,7 +71,7 @@ The minimum valuable product must solve the daily operational pain:
 
 ### Make Fairness Configurable
 
-Different customers will define fairness differently. FPS should provide a strong default model while allowing tenant-specific configuration for reserved spaces, company cars, penalties, vehicle capabilities, and priority rules.
+Different customers will define fairness differently. FairSpot should provide a strong default model while allowing tenant-specific configuration for reserved spaces, company cars, penalties, vehicle capabilities, and priority rules.
 
 ### Treat Auditability as a Business Feature
 
@@ -83,7 +83,7 @@ AI optimization, sustainability incentives, paid parking, and deep access-contro
 
 ## Success Measures
 
-FPS should be evaluated using business outcomes:
+FairSpot should be evaluated using business outcomes:
 
 - reduction in HR time spent on parking coordination;
 - reduction in parking-related employee complaints;
@@ -96,7 +96,7 @@ FPS should be evaluated using business outcomes:
 
 ## Implementation Approach
 
-1. Pilot FPS with one location and a limited set of parking policies.
+1. Pilot FairSpot with one location and a limited set of parking policies.
 2. Measure request volume, allocation outcomes, cancellations, and HR workload.
 3. Collect employee and HR feedback after several allocation cycles.
 4. Refine fairness rules and reporting before expanding to more locations.

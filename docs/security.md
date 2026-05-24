@@ -1,18 +1,18 @@
 # Security
 
-Security is a top-level FPS concern because it cuts across product policy, tenant isolation, implementation, operations, and compliance. This section defines the controls that every layer must respect.
+Security is a top-level FairSpot concern because it cuts across product policy, tenant isolation, implementation, operations, and compliance. This section defines the controls that every layer must respect.
 
 Start with [Security Model](./security/security-model). It is the source of truth for actors, roles, data classification, data-in-transit and data-at-rest controls, protocols, encryption, secret access tracking, and GDPR alignment.
 
 ## Identity and Access
 
 - [Authentication](./security/authentication): how users, services, and integrations prove identity using OIDC/OAuth, JWTs, PKCE, service identities, and token-handling rules.
-- [Authorization](./security/authorization): how FPS decides which authenticated actor may perform an action, including tenant scope, role checks, fail-closed behavior, and service-level permissions.
+- [Authorization](./security/authorization): how FairSpot decides which authenticated actor may perform an action, including tenant scope, role checks, fail-closed behavior, and service-level permissions.
 - [Access Control](./security/access-control): operational least-privilege controls, privileged access, MFA expectations, access reviews, and break-glass constraints.
 
 ## Data Protection
 
-- [Security Model](./security/security-model): the complete FPS actor, role, data classification, data layer, protocol, encryption, secret tracking, and GDPR alignment baseline.
+- [Security Model](./security/security-model): the complete FairSpot actor, role, data classification, data layer, protocol, encryption, secret tracking, and GDPR alignment baseline.
 - [Confidentiality](./security/confidentiality): controls that prevent unauthorized disclosure of tenant, employee, booking, policy, audit, billing, and operational data.
 - [Data Privacy](./security/data-privacy): GDPR-aligned processing rules, data minimisation, rights handling, retention planning, and pseudonymisation expectations.
 - [Encryption](./security/encryption): encryption requirements for clients, services, pub/sub, databases, backups, object storage, telemetry, and secret stores.

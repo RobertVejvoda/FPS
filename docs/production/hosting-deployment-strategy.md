@@ -2,23 +2,23 @@
 
 **Status:** Baseline merged; provider-specific production choice remains client/environment dependent.
 
-**Prepared by:** Claude (FPS Implementer), 2026-05-14
-**Updated by:** Codex (FPS Product Owner), 2026-05-15
+**Prepared by:** Claude (FairSpot Implementer), 2026-05-14
+**Updated by:** Codex (FairSpot Product Owner), 2026-05-15
 **Supersedes:** `azure-setup.md` and `aws-setup.md` cost tables for planning purposes. Those files remain reference material, but their stack assumptions are stale.
 
 ---
 
 ## Executive Recommendation
 
-FPS should keep the runtime **pluggable by deployment profile** rather than choosing a single production provider owned by FPS.
+FairSpot should keep the runtime **pluggable by deployment profile** rather than choosing a single production provider owned by FairSpot.
 
 The product needs three practical targets:
 
 | Profile | Recommendation | Why |
 |---|---|---|
 | **Local** | Docker Compose or local containers with self-hosted Dapr components. | Lowest cost, fast feedback, and close enough to production contracts for development. |
-| **Demo** | A low-cost hosted environment with managed container runtime and replaceable Dapr components. Azure Container Apps remains a strong candidate because of native Dapr support, but the demo provider is not yet a durable architecture decision. | Lets business and technical evaluators try a real system and lets FPS collect usage/performance evidence. |
-| **Client-owned production** | Client-selected cloud or platform, constrained by FPS component contracts, Dapr building blocks, OpenTelemetry telemetry, and documented backup/restore/security requirements. | Production operation belongs to the client. FPS should deliver deployable artifacts, configuration guidance, runbooks, and evidence rather than operate the client's environment. |
+| **Demo** | A low-cost hosted environment with managed container runtime and replaceable Dapr components. Azure Container Apps remains a strong candidate because of native Dapr support, but the demo provider is not yet a durable architecture decision. | Lets business and technical evaluators try a real system and lets FairSpot collect usage/performance evidence. |
+| **Client-owned production** | Client-selected cloud or platform, constrained by FairSpot component contracts, Dapr building blocks, OpenTelemetry telemetry, and documented backup/restore/security requirements. | Production operation belongs to the client. FairSpot should deliver deployable artifacts, configuration guidance, runbooks, and evidence rather than operate the client's environment. |
 
 Dapr remains the boundary for pub/sub, state, bindings, service invocation, and secrets. OpenTelemetry remains the boundary for logs, metrics, and traces. Provider-specific services are allowed only behind those boundaries or in clearly isolated deployment scripts.
 
@@ -30,7 +30,7 @@ Dapr remains the boundary for pub/sub, state, bindings, service invocation, and 
 |---|---|---|---|---|
 | **Dapr support** | Self-hosted sidecars and local component YAML. | Prefer managed Dapr where available; otherwise self-hosted Dapr sidecars. | Must support Dapr components or a documented equivalent adapter path. | Strong fit when client requires Kubernetes control. |
 | **Identity integration** | Local or mocked OIDC. | Demo OIDC realm with seeded users and roles. | Client IdP through OIDC/OAuth 2.0, tenant and role claims mapped explicitly. | Enterprise OIDC, workload identity, private networking. |
-| **Cost role** | Minimal developer cost. | Low monthly spend; enough to run credible demos and measurements. | Client-owned cost model; FPS supplies sizing assumptions and measurement method. | Higher baseline cost, justified only by client controls or steady load. |
+| **Cost role** | Minimal developer cost. | Low monthly spend; enough to run credible demos and measurements. | Client-owned cost model; FairSpot supplies sizing assumptions and measurement method. | Higher baseline cost, justified only by client controls or steady load. |
 | **Operational complexity** | Low. | Medium; enough automation to redeploy repeatably. | Depends on client platform and controls. | High; useful when enterprise deployment standards require it. |
 | **Multi-tenancy** | Tenant-scoped storage boundaries inside service-owned stores. | Same, with seeded demo tenants and visible admin flows. | Same, with client-approved naming, backup, retention, and access controls. | Same. |
 | **CI/CD shape** | Local scripts and validation. | Build, deploy, seed, smoke test, collect evidence. | Deliverable pipeline template or client-integrated release process. | Profile-specific manifests or client platform equivalent. |
@@ -69,7 +69,7 @@ Azure Container Apps remains a good candidate because it has native Dapr support
 
 ### 2.3 Client-Owned Production
 
-Client production is operated by the client or the client's hosting partner. FPS should provide:
+Client production is operated by the client or the client's hosting partner. FairSpot should provide:
 
 - container images or build instructions;
 - Dapr component contracts for pub/sub, state, bindings, secrets, and service invocation;
@@ -79,7 +79,7 @@ Client production is operated by the client or the client's hosting partner. FPS
 - backup, restore, incident, retention, and access-control runbooks;
 - sizing assumptions and performance/usage evidence from demo or staging.
 
-The exact provider choice is a client architecture decision. FPS should remain compatible with Azure, AWS, Kubernetes, and equivalent platforms by keeping provider-specific code outside the application services.
+The exact provider choice is a client architecture decision. FairSpot should remain compatible with Azure, AWS, Kubernetes, and equivalent platforms by keeping provider-specific code outside the application services.
 
 ### 2.4 Azure Container Apps — Demo Candidate
 
@@ -116,7 +116,7 @@ This is the lowest-risk path to a first live endpoint. The main downside is defe
 
 ### 2.7 Non-Azure / Portable Dapr Baseline
 
-Dapr components define the portability boundary. If FPS ever needs to move off Azure:
+Dapr components define the portability boundary. If FairSpot ever needs to move off Azure:
 
 **Portable (Dapr component swap only):**
 - Pub/sub: local broker → Azure Service Bus → AWS SNS/SQS → GCP Pub/Sub or approved equivalent
@@ -137,7 +137,7 @@ The Dapr abstraction is real but not free — each component swap requires testi
 
 ## 3. Recommended Next Deployment Target
 
-**Next target: demo environment baseline, not FPS-operated production.**
+**Next target: demo environment baseline, not FairSpot-operated production.**
 
 The next operational slice should produce a working demo environment with enough evidence for client evaluation. It should deploy:
 
@@ -241,7 +241,7 @@ Component YAML files live in `code/infrastructure/dapr/components/`. Local files
 
 ## 6. Cost-Control Notes
 
-- **Separate demo cost from production cost.** FPS should estimate and control the demo bill. Client production cost belongs to the client's hosting and operations model.
+- **Separate demo cost from production cost.** FairSpot should estimate and control the demo bill. Client production cost belongs to the client's hosting and operations model.
 - **Scale-to-zero is useful for demo.** Internal services can scale down when idle if the selected runtime supports it. Identity may need an always-on instance.
 - **Persistence is usually the dominant variable.** OPS002 should validate cost against expected tenant count, data volume, backups, restore needs, and query/reporting load.
 - **Use managed services only where they reduce delivery risk.** A demo can use managed broker/secrets/monitoring to save time, but application code must stay behind Dapr and OpenTelemetry boundaries.
@@ -292,7 +292,7 @@ The following questions should be resolved as OPS002 turns the demo baseline int
 
 4. **Observability evidence target**: What dashboards and measurements must exist before a client demo: usage counts, latency, error rate, event backlog, notification delivery, draw duration, and audit query performance?
 
-5. **Client telemetry integrations**: Which client observability integration examples should FPS document first, and should the generic OpenTelemetry Collector be the default handoff pattern?
+5. **Client telemetry integrations**: Which client observability integration examples should FairSpot document first, and should the generic OpenTelemetry Collector be the default handoff pattern?
 
 6. **Secrets target**: Which low-cost secret-management service should demo use while keeping the Dapr secret-store boundary stable?
 

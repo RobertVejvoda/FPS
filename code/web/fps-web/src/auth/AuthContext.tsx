@@ -44,9 +44,9 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const DEFAULT_BRANDING: BrandingConfig = {
   productName: 'FairSpot',
   tenantName: '',
-  logoUrl: '',
-  primaryColor: '#2563eb',
-  accentColor: '#16a34a',
+  logoUrl: '/brand/fairspot-app-icon.svg',
+  primaryColor: '#2f7d3f',
+  accentColor: '#43b75a',
 };
 
 function applyBranding(branding: BrandingConfig) {

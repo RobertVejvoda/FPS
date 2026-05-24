@@ -1,10 +1,10 @@
 # Monitoring
 
-Monitoring describes how FPS proves that the system is healthy, fair, auditable, and ready for client operation. The monitoring model must work across local development, demo, and client-owned production.
+Monitoring describes how FairSpot proves that the system is healthy, fair, auditable, and ready for client operation. The monitoring model must work across local development, demo, and client-owned production.
 
 ## Telemetry Boundary
 
-FPS should instrument services with OpenTelemetry-compatible metrics, logs, and traces. Deployment profiles decide where telemetry is stored and visualized:
+FairSpot should instrument services with OpenTelemetry-compatible metrics, logs, and traces. Deployment profiles decide where telemetry is stored and visualized:
 
 | Profile | Default monitoring target | Purpose |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ FPS should instrument services with OpenTelemetry-compatible metrics, logs, and 
 | Demo | Low-cost dashboards and trace/log retention sufficient for evaluation. | Prove usage, performance, error rate, notification delivery, draw duration, and audit/reporting behavior. |
 | Client production | Client observability platform through OpenTelemetry Collector/exporters. | Integrate with existing client operations, alerting, SIEM, and incident processes. |
 
-Client production examples include Dynatrace, Azure Monitor/Application Insights, Grafana/Prometheus, Splunk, Datadog, New Relic, CloudWatch, or equivalent. FPS should not require one vendor-specific SDK in application code.
+Client production examples include Dynatrace, Azure Monitor/Application Insights, Grafana/Prometheus, Splunk, Datadog, New Relic, CloudWatch, or equivalent. FairSpot should not require one vendor-specific SDK in application code.
 
 ## Required Signals
 
@@ -50,7 +50,7 @@ These identifiers are support links only. They do not replace tenant scoping, ac
 
 ## Health Checks
 
-All FPS services expose `GET /health` returning a JSON body with overall status and per-check results:
+All FairSpot services expose `GET /health` returning a JSON body with overall status and per-check results:
 
 ```sh
 # Smoke all service health endpoints after starting the local harness
@@ -64,7 +64,7 @@ Expected result when all services are up: each port returns `Healthy`.
 
 ## OpenTelemetry Export (Follow-Up Gap)
 
-FPS services use ASP.NET Core's built-in request logging (`ILogger`) which produces structured log output to stdout. This is visible in container logs and can be forwarded by any log shipper. However, OTLP trace and metric export requires the OpenTelemetry SDK and exporter packages to be registered in each service — this has not been added in this slice.
+FairSpot services use ASP.NET Core's built-in request logging (`ILogger`) which produces structured log output to stdout. This is visible in container logs and can be forwarded by any log shipper. However, OTLP trace and metric export requires the OpenTelemetry SDK and exporter packages to be registered in each service — this has not been added in this slice.
 
 **What this slice delivers:** `GET /health` endpoints on all services (implemented). Structured logs to stdout (built-in).
 

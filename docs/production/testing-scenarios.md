@@ -1,6 +1,6 @@
 # Production Testing Scenarios
 
-These scenarios prove that the hosted environment can run FPS safely. They should be executed for the first cloud baseline and repeated after major infrastructure changes.
+These scenarios prove that the hosted environment can run FairSpot safely. They should be executed for the first cloud baseline and repeated after major infrastructure changes.
 
 ## Deployment Scenarios
 

@@ -1,6 +1,6 @@
 # Architecture Views
 
-This page prepares an ArchiMate-style hierarchy for FPS architecture documentation. It is a navigation and structure page: detailed diagrams and models can be added over time without changing the overall story.
+This page prepares an ArchiMate-style hierarchy for FairSpot architecture documentation. It is a navigation and structure page: detailed diagrams and models can be added over time without changing the overall story.
 
 Core architecture pages describe provider-neutral product, service, data, security, and integration contracts. Local, demo, Azure, AWS, Kubernetes, and client-owned deployment details belong under [Production](./production) as environment profiles or implementation examples. Do not make Azure, AWS, Kubernetes, Traefik, Envoy, or any other runtime product part of the core design unless the decision is recorded in [Versions and Decisions](./versions-and-decisions).
 
@@ -8,19 +8,19 @@ Core architecture pages describe provider-neutral product, service, data, securi
 
 | View | Audience | Question Answered | Current Source Pages |
 | --- | --- | --- | --- |
-| Motivation view | Sponsors, product owners, architects | Why does FPS exist and which outcomes matter? | [Strategy](./strategy), [Core Values](./strategy-layer/core-values), [Business Requirements](./business-layer/requirements) |
-| Capability view | Business evaluators, architects | Which business capabilities does FPS provide? | [Business Layer](./business-layer), [Functional Architecture](./business-layer/functional-architecture) |
+| Motivation view | Sponsors, product owners, architects | Why does FairSpot exist and which outcomes matter? | [Strategy](./strategy), [Core Values](./strategy-layer/core-values), [Business Requirements](./business-layer/requirements) |
+| Capability view | Business evaluators, architects | Which business capabilities does FairSpot provide? | [Business Layer](./business-layer), [Functional Architecture](./business-layer/functional-architecture) |
 | Business process view | HR, facilities, auditors | How do requests, Draw, allocation, cancellation, confirmation, and audit work? | [Process](./business-layer/process), [Booking Request Lifecycle](./business-layer/booking-request-lifecycle), [Allocation Rules](./business-layer/allocation-rules) |
-| Role and actor view | Business evaluators, security reviewers | Which actors use or operate FPS and what are they responsible for? | [Personas](./business-layer/personas), [Roles](./business-layer/roles), [Authorization](./security/authorization) |
+| Role and actor view | Business evaluators, security reviewers | Which actors use or operate FairSpot and what are they responsible for? | [Personas](./business-layer/personas), [Roles](./business-layer/roles), [Authorization](./security/authorization) |
 | Application cooperation view | Architects, technical evaluators | Which services collaborate and through which contracts/events? | [Software Architecture](./technology-layer/software-architecture), [Technology Direction](./technology-layer) |
 | Application component view | Architects, technical evaluators | What are the bounded contexts and service responsibilities? | [Software Architecture](./technology-layer/software-architecture) |
 | Data and security view | Security reviewers, architects | Which data exists, who can access it, and how is it protected? | [Security](./security), [Data Privacy](./security/data-privacy), [Traceability](./security/traceability) |
-| Technology deployment view | Client IT, operators | How does FPS run locally, in demo, and in client-owned production? | [Production](./production), [Hosting and Deployment Strategy](./production/hosting-deployment-strategy), [Monitoring](./production/monitoring) |
+| Technology deployment view | Client IT, operators | How does FairSpot run locally, in demo, and in client-owned production? | [Production](./production), [Hosting and Deployment Strategy](./production/hosting-deployment-strategy), [Monitoring](./production/monitoring) |
 | Roadmap view | Product owners, evaluators | Which capability areas come next? | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions) |
 
 ## Layer Hierarchy
 
-| ArchiMate-style layer | FPS documentation section | Content to maintain |
+| ArchiMate-style layer | FairSpot documentation section | Content to maintain |
 | --- | --- | --- |
 | Strategy / Motivation | [Strategy](./strategy) | Product goals, value, constraints, licensing, future extension notes. |
 | Business | [Business Layer](./business-layer) | Actors, roles, business requirements, processes, policies, reason codes, booking lifecycle. |
@@ -34,7 +34,7 @@ Core architecture pages describe provider-neutral product, service, data, securi
 
 | Priority | View | Goal | Notes |
 | --- | --- | --- | --- |
-| 1 | Capability view | Show FPS as a fair reservation capability set, with parking as the first product domain. | Add future desk/chair/seat booking only as a future capability option. |
+| 1 | Capability view | Show FairSpot as a fair reservation capability set, with parking as the first product domain. | Add future desk/chair/seat booking only as a future capability option. |
 | 2 | Application cooperation view | Show Booking publishing events to Notification, Audit, Reporting, and future consumers. | Use Dapr pub/sub as the integration boundary. |
 | 3 | Data and security view | Show tenant/user context, public/internal/confidential/secret data, and audit/erasure flows. | Link to security pages rather than duplicating controls. |
 | 4 | Technology deployment view | Show local, demo, and client-owned production deployment variants. | Keep Dapr components pluggable. |

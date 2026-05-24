@@ -19,5 +19,5 @@ Parking remains the v1 product focus. Future resource domains such as desks, cha
 - Keep the product understandable to business readers: problem, actors, policy, outcomes, and evidence first.
 - Keep implementation sliced vertically so each PR proves a visible capability or operational foundation.
 - Keep production pluggable: Dapr for component boundaries and OpenTelemetry for telemetry boundaries.
-- Keep client production client-owned: FPS supplies deployable artifacts, runbooks, operational evidence, and integration guidance.
+- Keep client production client-owned: FairSpot supplies deployable artifacts, runbooks, operational evidence, and integration guidance.
 - Keep future workplace-resource booking as a product extension, not a distraction from parking v1.

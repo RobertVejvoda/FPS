@@ -26,7 +26,7 @@ This is an architecture and product control document. It does not certify GDPR c
 
 ## Authentication
 
-FPS uses OIDC Authorization Code + PKCE for web and mobile clients. Services validate JWT bearer tokens using configurable `Auth:Authority` and `Auth:Audience` settings. Each service validates token signature, expiry, issuer, audience, tenant claim, and role claims independently — there is no internal auth proxy that can be bypassed by reaching a service directly.
+FairSpot uses OIDC Authorization Code + PKCE for web and mobile clients. Services validate JWT bearer tokens using configurable `Auth:Authority` and `Auth:Audience` settings. Each service validates token signature, expiry, issuer, audience, tenant claim, and role claims independently — there is no internal auth proxy that can be bypassed by reaching a service directly.
 
 **Local fallback**: A dev-token fallback path exists for local development and demo use. It is guarded by `devTokenFallbackEnabled` configuration, disabled by default in non-development environments, and excluded from production deployment profiles.
 
@@ -36,7 +36,7 @@ FPS uses OIDC Authorization Code + PKCE for web and mobile clients. Services val
 - Manage user lifecycle: creation, deactivation, MFA policy.
 - Issue short-lived access tokens (recommended: 15–60 minutes).
 
-FPS does not store company passwords, MFA state, or IdP credentials.
+FairSpot does not store company passwords, MFA state, or IdP credentials.
 
 ---
 
@@ -44,7 +44,7 @@ FPS does not store company passwords, MFA state, or IdP credentials.
 
 All endpoints require a valid bearer token. Role claims are extracted from the token and matched against declared `[Authorize(Roles = "...")]` attributes. Tenant context is extracted from a `tenant_id` token claim — never from the request body or query string.
 
-FPS roles: `employee`, `hr_manager`, `admin`, `report_viewer`, `auditor`. Roles are mapped from customer IdP groups via `TenantRoleMapping` configuration per tenant.
+FairSpot roles: `employee`, `hr_manager`, `admin`, `report_viewer`, `auditor`. Roles are mapped from customer IdP groups via `TenantRoleMapping` configuration per tenant.
 
 Privilege escalation paths are narrow: admin can create, modify, and disable tenant-scoped users, but admin credentials do not grant cross-tenant access or Secret data access.
 
@@ -79,9 +79,9 @@ Key controls for Secret data:
 
 ## GDPR Alignment
 
-FPS supports GDPR-aligned operation through these mechanisms:
+FairSpot supports GDPR-aligned operation through these mechanisms:
 
-| GDPR element | FPS implementation |
+| GDPR element | FairSpot implementation |
 |-------------|-------------------|
 | Data minimisation | Profile stores only fields needed for booking, allocation, notification, and reporting (no name/email unless provided by HR) |
 | Purpose limitation | Confidential data is scoped per service contract; cross-service access uses defined APIs, not shared stores |
@@ -91,7 +91,7 @@ FPS supports GDPR-aligned operation through these mechanisms:
 | Audit accountability | Append-only audit log with actor, tenant, timestamp, reason for every sensitive action |
 | Pseudonymisation | Audit records store `actor_hash` (SHA-256 of the token subject), not names; PII mapping (hash → identity) resides separately and is deletable via `DELETE /audit/pii-mappings/{userId}` |
 | Data portability | Reporting exports available to authorised roles; structured JSON/CSV format |
-| DPA and residency | **Customer responsibility** — FPS does not sign DPAs or choose data residency; client operates the infrastructure |
+| DPA and residency | **Customer responsibility** — FairSpot does not sign DPAs or choose data residency; client operates the infrastructure |
 
 ---
 

@@ -67,7 +67,7 @@ FairSpot's functional architecture is designed to ensure equitable allocation of
 
 ### [Billing and Payments](./billing)
 
-  - **Deferred Product Scope**: Billing is not an active FPS product capability until the commercial offer is approved.
+  - **Deferred Product Scope**: Billing is not an active FairSpot product capability until the commercial offer is approved.
   - **Commercial Account Direction**: A future Billing slice may record tenant-level support, implementation, hosted-demo, dual-license, or subscription status.
   - **External Invoice Preference**: Initial paid work can rely on external contract/accounting tools rather than in-product invoice generation.
   - **Employee Data Boundary**: Employee booking and allocation details should not become commercial inputs by default.

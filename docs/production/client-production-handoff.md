@@ -1,10 +1,10 @@
 # OPS003 Client-Owned Production Integration
 
-This page defines the responsibilities, boundaries, and checklist for handing FPS to a client-owned production environment. It is the companion to the deployment profile strategy in [Hosting And Deployment Strategy](./hosting-deployment-strategy).
+This page defines the responsibilities, boundaries, and checklist for handing FairSpot to a client-owned production environment. It is the companion to the deployment profile strategy in [Hosting And Deployment Strategy](./hosting-deployment-strategy).
 
 ## Operational Responsibility Split
 
-| Area | FPS Delivery Team | Client IT / Operations |
+| Area | FairSpot Delivery Team | Client IT / Operations |
 | --- | --- | --- |
 | Container images | Builds, tests, and publishes per release. | Pulls images from the agreed registry or builds from source. |
 | Application configuration | Supplies required env var names, Dapr component contracts, and appsettings schema. | Provides env var values, secrets, and component-specific configuration for the client environment. |
@@ -20,7 +20,7 @@ This page defines the responsibilities, boundaries, and checklist for handing FP
 
 ## Dapr Component Replacement Boundaries
 
-FPS uses Dapr building blocks as the portability boundary. No application service code changes when a component is swapped; only the component YAML changes.
+FairSpot uses Dapr building blocks as the portability boundary. No application service code changes when a component is swapped; only the component YAML changes.
 
 | Building block | Required contract | Local baseline | Client production examples |
 | --- | --- | --- | --- |
@@ -38,18 +38,18 @@ Component YAML templates are in `code/infrastructure/dapr/components/`. Local fi
 
 ## Identity Integration Requirements
 
-FPS validates JWT tokens using the OIDC standard. The client IdP must satisfy:
+FairSpot validates JWT tokens using the OIDC standard. The client IdP must satisfy:
 
 | Requirement | Detail |
 | --- | --- |
 | OIDC/OAuth 2.0 | Standard Authorization Code + PKCE flow for mobile/web; client credentials or ROPC only for internal tooling. |
-| Issuer | Token `iss` must match the configured `Auth:Authority` per service. FPS trusts one issuer per service instance. |
+| Issuer | Token `iss` must match the configured `Auth:Authority` per service. FairSpot trusts one issuer per service instance. |
 | Audience | Token `aud` must match the configured `Auth:Audience`. |
-| Subject | Token must contain a stable immutable subject (`sub` or equivalent). Used as `userId` in all FPS contexts. |
-| Tenant ID | Token must contain a `tenant_id` claim matching the client's configured FPS tenant. Never accept tenant from request bodies. |
-| Roles | IdP groups are mapped to FPS roles via the `TenantRoleMapping` configuration section in each service (`ConfiguredTenantRoleMapper`). Supported FPS roles: `admin`, `hr_manager`, `auditor`, `report_viewer`, `employee`. |
+| Subject | Token must contain a stable immutable subject (`sub` or equivalent). Used as `userId` in all FairSpot contexts. |
+| Tenant ID | Token must contain a `tenant_id` claim matching the client's configured FairSpot tenant. Never accept tenant from request bodies. |
+| Roles | IdP groups are mapped to FairSpot roles via the `TenantRoleMapping` configuration section in each service (`ConfiguredTenantRoleMapper`). Supported FairSpot roles: `admin`, `hr_manager`, `auditor`, `report_viewer`, `employee`. |
 | Token lifetime | Short-lived access tokens (15–60 minutes). Refresh tokens where the flow requires them. |
-| User deactivation | Deactivating a user in the IdP prevents new token issuance. FPS services also support a fast-path in-memory deactivation store (`IDeactivatedUserStore`) for same-session denial. |
+| User deactivation | Deactivating a user in the IdP prevents new token issuance. FairSpot services also support a fast-path in-memory deactivation store (`IDeactivatedUserStore`) for same-session denial. |
 
 See `docs/security/security-model.md` for the data classification and SSO-first integration contract.
 
@@ -67,7 +67,7 @@ See `docs/security/security-model.md` for the data classification and SSO-first 
 
 ## Backup And Restore Handoff
 
-FPS provides procedures; the client owns execution and scheduling.
+FairSpot provides procedures; the client owns execution and scheduling.
 
 | Scope | Procedure | Client responsibility |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ FPS provides procedures; the client owns execution and scheduling.
 
 | Step | Who | Notes |
 | --- | --- | --- |
-| Release published | FPS delivery team | Release notes, migration guide, and breaking-change summary published per release tag. |
+| Release published | FairSpot delivery team | Release notes, migration guide, and breaking-change summary published per release tag. |
 | Pre-release smoke | Client IT | Run `./tools/validate.sh` equivalent and service smoke checks in a staging environment before applying to production. |
 | Apply release | Client IT | Pull updated container images and apply configuration changes per the migration guide. |
 | Post-release verification | Client IT | Run smoke checks documented in `docs/production/local-test-harness.md` against the updated environment. |

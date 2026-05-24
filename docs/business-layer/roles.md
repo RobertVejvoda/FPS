@@ -6,7 +6,7 @@
 
 ### Employee
 
-An employee requests, views, cancels, or confirms parking reservations. Employees are the primary users of FPS and represent the largest source of daily business value.
+An employee requests, views, cancels, or confirms parking reservations. Employees are the primary users of FairSpot and represent the largest source of daily business value.
 
 ### HR or Facility Manager
 
@@ -26,7 +26,7 @@ A finance or accounting user manages billing, invoices, subscriptions, and finan
 
 ### Auditor
 
-An auditor reviews business events, policy changes, manual overrides, and access history to confirm that FPS is operated consistently and transparently.
+An auditor reviews business events, policy changes, manual overrides, and access history to confirm that FairSpot is operated consistently and transparently.
 
 ## Business Roles
 
@@ -76,7 +76,7 @@ Responsibilities:
 
 ### Profile User
 
-Manages personal profile information used by FPS.
+Manages personal profile information used by FairSpot.
 
 Responsibilities:
 
@@ -142,7 +142,7 @@ Responsibilities:
 
 ### Accounting User
 
-Manages financial information where FPS includes billing or cost recovery.
+Manages financial information where FairSpot includes billing or cost recovery.
 
 Responsibilities:
 

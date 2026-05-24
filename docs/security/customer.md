@@ -5,7 +5,7 @@ Protects customer data and interactions by implementing strong authentication, e
 
 Customer security defines how tenant-level administration, onboarding, support, and configuration changes are controlled. The customer boundary is security-sensitive because it establishes who owns a tenant, who can administer users and policies, and which operational staff may act on behalf of that tenant.
 
-## FPS Controls
+## FairSpot Controls
 
 - Tenant ownership must be created through an approved onboarding flow, not ad hoc database edits.
 - Customer administrators may manage tenant users, roles, locations, parking policies, and configuration only within their tenant scope.

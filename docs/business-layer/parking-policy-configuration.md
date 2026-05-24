@@ -4,14 +4,14 @@ This document defines which parking policy settings a customer tenant can config
 
 ## Configuration Model
 
-FPS uses tenant-level defaults with optional per-location overrides.
+FairSpot uses tenant-level defaults with optional per-location overrides.
 
 Rules:
 
 - each tenant has one default parking policy;
 - each location may override selected policy fields;
 - when a location override exists, it wins over the tenant default for that location;
-- when no location override exists, FPS uses the tenant default;
+- when no location override exists, FairSpot uses the tenant default;
 - policy changes must be audited;
 - policy changes affect future requests and future Draws only, unless an authorized role explicitly reprocesses an existing Draw attempt.
 
@@ -95,7 +95,7 @@ A slot or capacity pool may define:
 - reserved user or reserved group;
 - active/inactive status.
 
-FPS must not allocate a request to a slot that does not satisfy the request's configured constraints.
+FairSpot must not allocate a request to a slot that does not satisfy the request's configured constraints.
 
 ## Resource Map Upload
 
@@ -215,11 +215,11 @@ Rules:
 
 ## Acceptance Criteria For Implementation
 
-- Given a tenant with no location override, when FPS evaluates a request, then it uses tenant default policy values.
-- Given a location override, when FPS evaluates a request for that location, then overridden fields use the location value and all other fields fall back to tenant defaults.
-- Given a request after the configured cut-off, when scheduled Draw submission is evaluated, then FPS rejects it as late.
-- Given same-day booking is disabled, when an employee submits a same-day request, then FPS rejects it with a clear reason.
-- Given usage confirmation is disabled, when an allocation is not confirmed, then FPS must not automatically mark it as no-show.
-- Given no-show detection is enabled without a confirmation method, when the policy is published, then FPS rejects the policy as invalid.
-- Given a policy change, when it is published, then FPS records an audit event with changed fields.
+- Given a tenant with no location override, when FairSpot evaluates a request, then it uses tenant default policy values.
+- Given a location override, when FairSpot evaluates a request for that location, then overridden fields use the location value and all other fields fall back to tenant defaults.
+- Given a request after the configured cut-off, when scheduled Draw submission is evaluated, then FairSpot rejects it as late.
+- Given same-day booking is disabled, when an employee submits a same-day request, then FairSpot rejects it with a clear reason.
+- Given usage confirmation is disabled, when an allocation is not confirmed, then FairSpot must not automatically mark it as no-show.
+- Given no-show detection is enabled without a confirmation method, when the policy is published, then FairSpot rejects the policy as invalid.
+- Given a policy change, when it is published, then FairSpot records an audit event with changed fields.
 - Given a completed Draw, when policy changes later, then the completed Draw outcome remains unchanged.

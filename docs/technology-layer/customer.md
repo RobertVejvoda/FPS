@@ -30,7 +30,7 @@ The Customer component is responsible for managing customers in a multi-tenant a
 |----------|--------|---------|----------|---------|
 | `/api/customers/{id}/commercial-account` | GET | Future tenant commercial account summary if approved | Commercial account object | Deferred |
 | `/api/customers/{id}/commercial-account` | PUT | Future commercial account update if approved | Commercial account object | Deferred |
-| `/api/customers/{id}/external-invoices` | GET | Future references to invoices managed outside FPS if approved | Array of invoice references | Deferred |
+| `/api/customers/{id}/external-invoices` | GET | Future references to invoices managed outside FairSpot if approved | Array of invoice references | Deferred |
 
 ### Settings
 
