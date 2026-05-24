@@ -22,11 +22,15 @@ public sealed class TenantService(
         if (await repository.SlugExistsAsync(safeSlug, ct)) return (null, $"Slug '{safeSlug}' is already in use.");
 
         // Allow a deterministic tenant ID for provisioning tools; fall back to a generated GUID.
-        var safeTenantId = string.IsNullOrWhiteSpace(requestedTenantId)
-            ? null
-            : TenantProvisioningMetadata.Sanitize(requestedTenantId);
-        if (safeTenantId is not null && await repository.GetAsync(safeTenantId, ct) is not null)
-            return (null, $"Tenant ID '{safeTenantId}' is already in use.");
+        string? safeTenantId = null;
+        if (!string.IsNullOrWhiteSpace(requestedTenantId))
+        {
+            safeTenantId = TenantProvisioningMetadata.Sanitize(requestedTenantId);
+            if (string.IsNullOrEmpty(safeTenantId))
+                return (null, $"Requested tenant ID '{requestedTenantId}' is invalid after sanitisation (must contain at least one alphanumeric character).");
+            if (await repository.GetAsync(safeTenantId, ct) is not null)
+                return (null, $"Tenant ID '{safeTenantId}' is already in use.");
+        }
         var tenantId = safeTenantId ?? Guid.NewGuid().ToString();
         var tenant = new TenantWorkspace
         {

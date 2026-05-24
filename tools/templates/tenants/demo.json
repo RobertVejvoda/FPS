@@ -37,7 +37,7 @@
     "usageConfirmationRequired": false,
     "usageConfirmationWindowMinutes": 60,
     "usageConfirmationMethods": ["manual"],
-    "noShowDetectionEnabled": true
+    "noShowDetectionEnabled": false
   },
   "locations": [
     {

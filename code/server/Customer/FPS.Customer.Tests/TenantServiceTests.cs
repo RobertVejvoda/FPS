@@ -292,4 +292,25 @@ public sealed class TenantServiceTests
         if (error is null)
             Assert.DoesNotContain(" ", tenant!.TenantId);
     }
+
+    [Fact]
+    public async Task Create_RequestedTenantId_AllSpecialChars_ReturnsError()
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "slug4", "Corp 4", "eu", "UTC", [], CancellationToken.None,
+            requestedTenantId: "!!!");
+
+        Assert.Null(tenant);
+        Assert.NotNull(error);
+        Assert.Contains("invalid", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_RequestedTenantId_AllSpecialChars_DoesNotStoreEmptyId()
+    {
+        await service.CreateAsync("slug5", "Corp 5", "eu", "UTC", [], CancellationToken.None, "!!!");
+
+        var retrieved = await service.GetAsync("", CancellationToken.None);
+        Assert.Null(retrieved);
+    }
 }

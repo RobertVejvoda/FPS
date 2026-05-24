@@ -98,6 +98,11 @@ print(f"POLICY_SAMEDAY={sh(str(policy.get('sameDayBookingEnabled',True)).lower()
 print(f"POLICY_COMPANY_CAR={sh(str(policy.get('companyCarTier1Enabled',True)).lower())}")
 print(f"POLICY_OVERFLOW={sh(policy.get('companyCarOverflowBehavior','reject'))}")
 print(f"POLICY_REALLOC={sh(str(policy.get('automaticReallocationEnabled',True)).lower())}")
+print(f"POLICY_USAGE_CONFIRM={sh(str(policy.get('usageConfirmationRequired',False)).lower())}")
+print(f"POLICY_USAGE_WINDOW={sh(policy.get('usageConfirmationWindowMinutes',60))}")
+usage_methods_json = json.dumps(policy.get('usageConfirmationMethods', ['manual']))
+print(f"POLICY_USAGE_METHODS_JSON={sh(usage_methods_json)}")
+print(f"POLICY_NOSHOW_DETECT={sh(str(policy.get('noShowDetectionEnabled',False)).lower())}")
 
 locations_json = json.dumps(d.get('locations', []))
 print(f"LOCATIONS_JSON={sh(locations_json)}")
@@ -241,10 +246,10 @@ print(json.dumps({
   'companyCarOverflowBehavior': '$POLICY_OVERFLOW',
   'automaticReallocationEnabled': $POLICY_REALLOC == 'true',
   'manualAdjustmentEnabled': True,
-  'usageConfirmationRequired': False,
-  'usageConfirmationWindowMinutes': 60,
-  'usageConfirmationMethods': ['manual'],
-  'noShowDetectionEnabled': True,
+  'usageConfirmationRequired': $POLICY_USAGE_CONFIRM == 'true',
+  'usageConfirmationWindowMinutes': $POLICY_USAGE_WINDOW,
+  'usageConfirmationMethods': $POLICY_USAGE_METHODS_JSON,
+  'noShowDetectionEnabled': $POLICY_NOSHOW_DETECT == 'true',
   'publicationReason': 'Provisioned via provision-tenant.sh'
 }))
 ")
