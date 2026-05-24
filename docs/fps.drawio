@@ -1232,7 +1232,7 @@
             <mxPoint x="1" y="-9" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="rllydgCwWSIWQUYGilOJ-21" value="Aspire &lt;br&gt;dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" parent="zEhab7YCbpF3teOl1eN7-5" vertex="1">
+        <mxCell id="rllydgCwWSIWQUYGilOJ-21" value="Local&lt;br&gt;dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" parent="zEhab7YCbpF3teOl1eN7-5" vertex="1">
           <mxGeometry x="850.97" y="760" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="lib_eAr0xlWbaVYTsyfl-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="zEhab7YCbpF3teOl1eN7-5" edge="1">
@@ -4358,7 +4358,7 @@
           <mxGeometry x="-506.75" y="360" width="170" height="80" as="geometry" />
         </mxCell>
         <mxCell id="LYFnLKyj5NjHYenmJ472-19" value="Components" parent="LYFnLKyj5NjHYenmJ472-0" />
-        <mxCell id="RAnDcQ31k78NcYVtMezl-0" value="Aspire Dashboard" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;dashPattern=1 1;fontSize=10;" parent="LYFnLKyj5NjHYenmJ472-19" vertex="1">
+        <mxCell id="RAnDcQ31k78NcYVtMezl-0" value="Local Dashboard" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;dashPattern=1 1;fontSize=10;" parent="LYFnLKyj5NjHYenmJ472-19" vertex="1">
           <mxGeometry x="-496.39" y="384" width="150" height="50" as="geometry" />
         </mxCell>
         <mxCell id="LYFnLKyj5NjHYenmJ472-20" value="Mobile Phone" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#666666;strokeWidth=1;verticalAlign=top;fontSize=10;fillColor=#FAFAFA;fontColor=#333333;" parent="LYFnLKyj5NjHYenmJ472-19" vertex="1">
@@ -4868,7 +4868,7 @@
           <mxGeometry x="-510.75" y="380" width="170" height="80" as="geometry" />
         </mxCell>
         <mxCell id="CST2vTv1F4_gEjztnAMX-20" value="Components" parent="CST2vTv1F4_gEjztnAMX-0" />
-        <mxCell id="CST2vTv1F4_gEjztnAMX-21" value="Aspire Dashboard" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;dashPattern=1 1;fontSize=10;" vertex="1" parent="CST2vTv1F4_gEjztnAMX-20">
+        <mxCell id="CST2vTv1F4_gEjztnAMX-21" value="Local Dashboard" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;dashPattern=1 1;fontSize=10;" vertex="1" parent="CST2vTv1F4_gEjztnAMX-20">
           <mxGeometry x="-500.39" y="404" width="150" height="50" as="geometry" />
         </mxCell>
         <mxCell id="CST2vTv1F4_gEjztnAMX-22" value="Mobile Phone" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#666666;strokeWidth=1;verticalAlign=top;fontSize=10;fillColor=#FAFAFA;fontColor=#333333;" vertex="1" parent="CST2vTv1F4_gEjztnAMX-20">
@@ -5383,7 +5383,7 @@
           <mxGeometry x="-510.75" y="380" width="170" height="80" as="geometry" />
         </mxCell>
         <mxCell id="6RQLUTvXX74ngZngz2l0-20" value="Components" parent="6RQLUTvXX74ngZngz2l0-0" />
-        <mxCell id="6RQLUTvXX74ngZngz2l0-21" value="Aspire Dashboard" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;dashPattern=1 1;fontSize=10;" vertex="1" parent="6RQLUTvXX74ngZngz2l0-20">
+        <mxCell id="6RQLUTvXX74ngZngz2l0-21" value="Local Dashboard" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;dashPattern=1 1;fontSize=10;" vertex="1" parent="6RQLUTvXX74ngZngz2l0-20">
           <mxGeometry x="-500.39" y="404" width="150" height="50" as="geometry" />
         </mxCell>
         <mxCell id="6RQLUTvXX74ngZngz2l0-22" value="Mobile Phone" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#666666;strokeWidth=1;verticalAlign=top;fontSize=10;fillColor=#FAFAFA;fontColor=#333333;" vertex="1" parent="6RQLUTvXX74ngZngz2l0-20">
@@ -7749,7 +7749,7 @@
         <mxCell id="tG0jdZG6b7AUDHu8vW1b-3" value="Dapr" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0050ef;strokeColor=#001DBC;fontSize=11;fontColor=#ffffff;" parent="qp3FvxI81SKOKkJ8v1WZ-66" vertex="1">
           <mxGeometry x="1050" y="4370" width="120" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="tG0jdZG6b7AUDHu8vW1b-4" value=".NET Aspire&lt;br&gt;(GUI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6a00ff;strokeColor=#3700CC;fontSize=11;fontColor=#ffffff;" parent="qp3FvxI81SKOKkJ8v1WZ-66" vertex="1">
+        <mxCell id="tG0jdZG6b7AUDHu8vW1b-4" value="Local Harness&lt;br&gt;(CLI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6a00ff;strokeColor=#3700CC;fontSize=11;fontColor=#ffffff;" parent="qp3FvxI81SKOKkJ8v1WZ-66" vertex="1">
           <mxGeometry x="720" y="3796" width="120" height="50" as="geometry" />
         </mxCell>
         <mxCell id="tG0jdZG6b7AUDHu8vW1b-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" parent="qp3FvxI81SKOKkJ8v1WZ-66" source="tG0jdZG6b7AUDHu8vW1b-6" target="tG0jdZG6b7AUDHu8vW1b-4" edge="1">
@@ -8968,7 +8968,7 @@
         <mxCell id="yKXvFcimsu-qe-q14P8Y-312" value="Dapr" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0050ef;strokeColor=#001DBC;fontSize=11;fontColor=#ffffff;" vertex="1" parent="yKXvFcimsu-qe-q14P8Y-10">
           <mxGeometry x="1070" y="4370" width="120" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="yKXvFcimsu-qe-q14P8Y-313" value=".NET Aspire&lt;br&gt;(GUI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6a00ff;strokeColor=#3700CC;fontSize=11;fontColor=#ffffff;" vertex="1" parent="yKXvFcimsu-qe-q14P8Y-10">
+        <mxCell id="yKXvFcimsu-qe-q14P8Y-313" value="Local Harness&lt;br&gt;(CLI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6a00ff;strokeColor=#3700CC;fontSize=11;fontColor=#ffffff;" vertex="1" parent="yKXvFcimsu-qe-q14P8Y-10">
           <mxGeometry x="720" y="3796" width="120" height="50" as="geometry" />
         </mxCell>
         <mxCell id="yKXvFcimsu-qe-q14P8Y-314" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="yKXvFcimsu-qe-q14P8Y-10" source="yKXvFcimsu-qe-q14P8Y-315" target="yKXvFcimsu-qe-q14P8Y-313">

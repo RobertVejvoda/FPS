@@ -76,7 +76,7 @@ This package is referenced by all services — it must remain stable and have no
 | Message broker | **Dapr pub/sub** | All async domain events; concrete broker/provider selected by profile |
 | Auth | **OIDC/OAuth 2.0 provider** | JWT tokens, RBAC, MFA, tenant/user/role claims |
 | API gateway / ingress | Provider-neutral gateway | Routing, TLS, and rate limiting selected by deployment profile |
-| Dev orchestration | **.NET Aspire** | Local dev, service discovery, dashboard |
+| Dev orchestration | **Local harness scripts + Dapr CLI** | Local dev, service startup, sidecars, and smoke validation |
 | Observability | OpenTelemetry-compatible backend | Metrics, logs, traces, dashboards, and alerts selected by profile |
 | Secrets | Secret-management platform | All credentials, API keys, certificates, and recovery material |
 | Object storage | Object storage | Files, report exports, backup artifacts, and future attachments |
@@ -185,8 +185,8 @@ Notification history/SSE/email and audit query/PII erasure are implemented. Pref
 
 Goal: every developer can run the full stack locally with a single command.
 
-- [ ] Set up `.NET Aspire` app host (`FPS.AppHost`)
-- [ ] Configure Dapr sidecars per service in Aspire
+- [ ] Provide one-command local harness startup for services and dependencies.
+- [ ] Configure Dapr sidecars per service through the local harness.
 - [ ] Dapr components: pub/sub, state store, cache, and secret-store profiles
 - [x] Shared `docker-compose.yaml` for infrastructure exists under `code/infrastructure` (production-grade Dapr component and collection provisioning hardening remains)
 - [x] `FPS.SharedKernel` compiles and is referenced by services
@@ -194,7 +194,7 @@ Goal: every developer can run the full stack locally with a single command.
 - [x] CI: GitHub Actions workflow builds and tests on PRs and `master`
 - [ ] ~~Decision log: resolve multi-tenancy strategy, mobile platform, Dapr version~~ ✅ All resolved
 
-**Deliverable**: `docker compose up` starts all infra; `dotnet run` in AppHost starts all services.
+**Deliverable**: `docker compose up` starts shared infrastructure; the local harness starts all services and Dapr sidecars.
 
 ---
 

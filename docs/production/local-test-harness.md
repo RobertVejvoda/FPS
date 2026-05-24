@@ -1,6 +1,6 @@
 # Local Test Harness
 
-This page defines the local run path for FairSpot testing. The immediate goal is to make backend, mobile, and demo smoke testing repeatable. The longer-term goal is a one-command local harness, preferably through .NET Aspire or an equivalent AppHost, without replacing the production deployment model.
+This page defines the local run path for FairSpot testing. The immediate goal is to make backend, mobile, and demo smoke testing repeatable. The longer-term goal is a repository-owned one-command local harness without replacing the production deployment model.
 
 ## Current Baseline
 
@@ -345,7 +345,7 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 - OPS006C (this page) resolves the Booking sidecar gap. `GET /bookings` returns `200` when Booking is started through `dapr run -f dapr.yaml` instead of plain `dotnet run`.
 - OPS006D resolves the profile seed gap. `GET /profile/snapshot` returns `200` for `employee1`, `employee2`, and `employee3` after `./tools/dev-seed.sh`.
 
-Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap. The remaining OPS006 parent work is coordinated startup and health/log visibility through an AppHost or equivalent harness.
+Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap. The remaining OPS006 parent work is coordinated startup and health/log visibility through the local harness.
 
 ### Mobile session configuration
 
