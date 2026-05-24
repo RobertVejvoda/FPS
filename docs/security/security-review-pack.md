@@ -14,10 +14,10 @@ This is an architecture and product control document. It does not certify GDPR c
 | Data classification | 4 levels defined | [Security Model](./security-model) § Data Classification |
 | Data privacy / GDPR alignment | Documented, not certified | [Data Privacy](./data-privacy) |
 | Secret management | Dapr secretstore only | [Security Model](./security-model) § Secret data |
-| Audit | Append-only, pseudonymised | [Audit](./audit), business layer [Audit](../business-layer/audit) |
+| Audit | Append-only, pseudonymised business activity | [Audit](./audit), business layer [Audit](../business-layer/audit) |
 | Encryption in transit | TLS at ingress | [Network Security](./network-security) |
 | Encryption at rest | Delegated to infrastructure | Gap — see [Gap Register](./gap-register) |
-| Observability / logging | Structured stdout + OTel traces | [Logging and Monitoring](./logging-monitoring) |
+| Observability / logging | Technical logs/metrics/traces separate from business activity | [Logging and Monitoring](./logging-monitoring) |
 | Incident response | Runbook exists | [Incident Handling](../production/incident-handling) |
 | BYOC responsibility split | Explicit | [Data Ownership and BYOC Boundaries](#data-ownership-and-byoc-boundaries) |
 | Known gaps | Documented | [Gap Register](./gap-register) |
@@ -101,9 +101,13 @@ FPS supports GDPR-aligned operation through these mechanisms:
 
 ## Audit
 
-All sensitive actions — booking submission, allocation, cancellation, no-show, admin policy changes, audit erasure — produce append-only audit events via the Audit service. Audit records include: tenant ID, actor_hash (SHA-256 of the token subject — not the raw user ID), action, resource, timestamp, and reason where applicable.
+All sensitive actions — booking submission, allocation, cancellation, no-show, admin policy changes, audit erasure — produce append-only audit events via the Audit service. Audit records include: tenant ID, actor_hash (SHA-256 of the token subject — not the raw user ID), action, resource, timestamp, result, source event ID, and reason where applicable.
 
 Audit access is restricted to `auditor` and `admin` roles. Raw PII mapping (connecting userId to a real name) requires a separate approved access path.
+
+Audit records may store `traceId` and `spanId` from the originating OpenTelemetry activity. These values are correlation metadata only. They help an authorized support/operator path find matching technical logs or traces, but they are not identity, authorization, or retention controls.
+
+Business-facing audit timelines must be built from Audit service records. They must not expose raw Loki/Grafana technical logs to HR, tenant admins, or auditors.
 
 Audit retention job (`DELETE /audit/retention`), integrity verification (`GET /audit/integrity`), and export (`GET /audit/export`) are implemented (A004/A005). Production retention schedules and periodic job scheduling remain client configuration responsibilities.
 
@@ -111,9 +115,11 @@ Audit retention job (`DELETE /audit/retention`), integrity verification (`GET /a
 
 ## Observability and Logging
 
-Services emit structured logs to stdout. Log output excludes: bearer tokens, passwords, raw PII (names, emails, license plates), Secret classification values, or hidden allocation internals.
+Services emit structured logs to stdout. Log output excludes: bearer tokens, passwords, raw PII (names, emails, license plates), raw user/recipient/actor IDs, Secret classification values, or hidden allocation internals.
 
 OpenTelemetry trace export (OTLP) is implemented (OBS001). Prometheus metrics and a local Grafana operations dashboard are implemented (OBS002). Alert rules for service down, high error rate, latency, and RabbitMQ are implemented (OBS003). See `docs/local-metrics-dashboard.md` and `docs/local-alerts-runbook.md`.
+
+Technical logs and traces are operator-facing evidence. Business activity is Audit-service evidence. The two may be linked by `traceId`, `sourceEventId`, or `businessEventId`, but they have different access models and retention rules.
 
 ---
 
@@ -180,6 +186,7 @@ FairSpot requires explicit retention periods before production use. Implementati
 | **Audit records (business actions)** | 7 years (or per jurisdiction) | `DELETE /audit/retention` (implemented, A004) | Implemented; client must configure retention period and schedule invocation |
 | **Audit PII mapping** | Same as audit records, or shorter where erasure is requested | `DELETE /audit/pii-mappings/{userId}` (implemented) | Implemented; `DELETE /audit/retention` also covers PII mapping records when retention period is configured |
 | **Security logs** | 1 year (or per incident retention policy) | Infrastructure log retention (client responsibility) | Client responsibility |
+| **Technical logs and traces** | Short operational window, commonly 7-30 days unless incident policy requires longer | Observability backend retention (client responsibility) | Client responsibility |
 | **Reporting projections** | 2 years | Automated job or manual export + delete | Gap |
 | **Backups** | 30 days rolling for operational backups; 7 years for compliance archives where required | Backup lifecycle policy in client infrastructure | Client responsibility |
 | **Temporary import files** | Delete after processing or 7 days, whichever is shorter | Automated cleanup or manual admin action | Gap — not yet implemented |

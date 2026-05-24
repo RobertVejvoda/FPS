@@ -87,6 +87,8 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | A003 Audit Retention And Integrity | Done | [#145](https://github.com/RobertVejvoda/FPS/issues/145) | [#198](https://github.com/RobertVejvoda/FPS/pull/198) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Parent marker completed by `A004` and `A005`. |
 | A004 Audit Retention Job | Done | [#196](https://github.com/RobertVejvoda/FPS/issues/196) | [#198](https://github.com/RobertVejvoda/FPS/pull/198) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Retention job and retention evidence. |
 | A005 Audit Integrity Verification And Export Evidence | Done | [#197](https://github.com/RobertVejvoda/FPS/issues/197) | [#198](https://github.com/RobertVejvoda/FPS/pull/198) | `implemented-by: claude`; Codex reviewed | 2026-05-21 | Integrity verification and export evidence. |
+| AUD006 Business Activity Timeline And Trace Correlation | Assigned | [#276](https://github.com/RobertVejvoda/FPS/issues/276) | - | Routed to Claude | Client Evaluation | Business-facing audit timeline backed by Audit records, with optional trace correlation to technical telemetry. |
+| PRIV001 Employee Data Erasure Workflow | Assigned | [#277](https://github.com/RobertVejvoda/FPS/issues/277) | - | Routed to Claude | Production Handoff | Dapr Workflow for employee erasure across service-owned data, with delete/anonymise/pseudonymise/retain treatments and audit tracking. |
 
 ### Configuration, Customer, Reporting, And Billing
 

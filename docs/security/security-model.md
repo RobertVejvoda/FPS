@@ -67,7 +67,7 @@ Data in transit:
 | Service-to-service command query | Profile snapshots, configuration reads, booking state queries. | Dapr service invocation or HTTPS; Dapr mTLS/Sentry is the baseline for service identity. |
 | Domain events | Booking events for Notification, Audit, and Reporting. | Dapr pub/sub over the selected broker/provider; events omit secrets, stack traces, hidden lottery internals, and unrelated employee data. |
 | Notification delivery | In-app notifications, future email/push messages. | Authenticated service delivery; external channels must use TLS and provider-scoped credentials. |
-| Observability | Logs, metrics, traces, correlation IDs. | No secrets or raw confidential payloads in labels/log lines; access restricted to operators. |
+| Observability | Technical logs, metrics, traces, correlation IDs. | No secrets or raw confidential payloads in labels/log lines; access restricted to operators. Business-facing activity timelines must use Audit records, not raw observability logs. |
 
 Data at rest:
 
@@ -80,7 +80,9 @@ Data at rest:
 | Identity credential store | Password hashes or credential verifiers for FPS-local fallback accounts. | Hardened password hashing, no plaintext passwords, reset/rotation controls, restricted administrative access, and audit of privileged credential actions. |
 | Object storage/backups | Future exports, reports, backup archives. | Encryption at rest, tenant-scoped paths, retention policy, restricted download access. |
 | Secret store/GitHub secrets/CI | Deployment credentials, API keys, certificates, signing material. | Secret store or CI secret facility; masked logs; scoped tokens; rotation and audit. |
-| Logs/traces/metrics | Operational telemetry and security events. | Redaction, retention limits, restricted access, and correlation IDs instead of raw private payloads. |
+| Logs/traces/metrics | Operational telemetry and security events. | Redaction, retention limits, restricted operator access, and correlation IDs instead of raw private payloads. |
+| Audit business activity records | Append-only business actions, pseudonymised actors, entity references, outcomes, reason codes, source event IDs, and optional trace IDs. | Tenant-scoped RBAC, pseudonymised actor storage, PII mapping separation, retention policy, integrity verification, and export controls. |
+| Audit PII mapping | Mapping from `actor_hash` to user identity fields where resolution is still legally allowed. | Separate restricted access path, reason capture, lookup audit, erasure support, and no exposure in normal audit timelines. |
 
 ## Protocols and Encryption
 
@@ -117,6 +119,32 @@ Rules:
 - Secrets exposed to a human, CI log, third-party system, or untrusted environment must be rotated.
 - Production secret reads and rotations should feed security monitoring so unusual access patterns are visible.
 - Application audit should separately record sensitive administrative actions, PII-mapping access, report export/download, role assignment, OAuth/key rotation, and tenant configuration changes.
+
+## Observability And Business Activity
+
+FairSpot separates technical telemetry from business activity evidence:
+
+| Evidence type | Owner | Normal users | Examples |
+| --- | --- | --- | --- |
+| Technical logs | Observability backend such as Loki, Splunk, Datadog, or Azure Monitor. | Operators and developers with operational responsibility. | Request failures, dependency timeout, retry category, service startup, Dapr sidecar issue. |
+| Metrics | Observability backend such as Prometheus. | Operators and selected admins for non-sensitive service health. | Request rate, latency, 5xx rate, queue depth, notification failure count. |
+| Traces | Tracing backend such as Jaeger or the client APM. | Operators and developers with operational responsibility. | Cross-service request path for `/bookings`, pub/sub consumer flow, dependency spans. |
+| Business activity | Audit service. | Tenant-scoped auditors, admins, HR/facility roles, and security reviewers. | Booking submitted, request rejected, slot allocated, policy published, PII mapping erased. |
+
+Technical telemetry must not be used as the product-facing audit timeline. Grafana/Loki answers "why did the system behave this way technically?" The Audit service answers "who did what, when, to which business object, and what was the outcome?"
+
+Trace IDs may connect the two evidence streams:
+
+- a command handler or event producer may copy `Activity.Current?.TraceId.ToString()` and `Activity.Current?.SpanId.ToString()` into a domain event or audit command;
+- an async consumer should preserve the origin `traceId` from the event envelope and may also record its own `processingTraceId`;
+- `traceId` is optional correlation metadata and must never replace actor, tenant, action, entity, result, reason, timestamp, or idempotency fields.
+
+Actor identity remains pseudonymised in business activity records:
+
+- Audit stores `actorHash`, not raw actor ID, name, or email.
+- The separate PII mapping store is the only supported way to resolve an actor hash to identity.
+- Resolving an actor requires a dedicated authorization path, reason capture, and its own audit record.
+- GDPR erasure deletes or anonymises the PII mapping. Historical audit records remain immutable but no longer resolve to a person.
 
 ## GDPR Alignment
 

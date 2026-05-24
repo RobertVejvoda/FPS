@@ -1,127 +1,145 @@
-## Business Logs
+# Logging And Monitoring
 
-Business logs capture information about business processes and transactions. They are essential for understanding the flow of business operations and can help in auditing, compliance, and identifying business trends. Examples include user activities, transaction records, and order processing logs.
+FairSpot uses two different evidence streams that must not be mixed:
 
-- **User Activities**: Logs of user actions such as logins, logouts, and interactions with the system.
-- **Transaction Records**: Detailed logs of financial transactions, including payments, refunds, and adjustments.
-- **Order Processing Logs**: Records of order creation, updates, and fulfillment processes.
-- **Audit Trails**: Logs that track changes to critical data and configurations for compliance purposes.
-- **Access Logs**: Records of access to sensitive data and systems, ensuring security and accountability.
-- **System Events**: Logs of significant system events, such as backups, updates, and maintenance activities.
-- **Compliance Logs**: Records that ensure adherence to regulatory requirements and internal policies.
+| Stream | System of record | Audience | Purpose |
+| --- | --- | --- | --- |
+| Technical telemetry | Logs, metrics, and traces in the selected observability stack. Local default: Grafana, Loki, Prometheus, and Jaeger. | Developers, operators, support engineers. | Diagnose failures, latency, retries, integration errors, and service health. |
+| Business activity | Append-only Audit service records and product-facing audit APIs/UI. | Auditors, HR/facility managers, tenant admins, security reviewers. | Answer who did what, when, to which business object, why, and with what result. |
 
-### Tools for Business Logs
-
-- **Azure Monitor**: For collecting, analyzing, and acting on telemetry data from your cloud and on-premises environments.
-- **Azure Log Analytics**: For advanced log query and analysis.
-- **Azure Event Hubs**: For big data streaming and event ingestion.
+Technical telemetry is operational evidence. Business activity is product and compliance evidence. A business-facing screen must not be built by exposing raw Loki logs.
 
 ## Technical Logs
 
-Technical logs provide insights into the technical aspects of an application. They include information about system performance, errors, and warnings. These logs are crucial for troubleshooting issues, monitoring system health, and ensuring the application runs smoothly. Examples include server logs, application logs, and error logs.
+Technical logs are structured application and platform logs written to stdout and shipped to the deployment profile's log backend. In local development OBS004 uses Promtail and Loki so Grafana can query `logs/local-harness/*.log`.
 
-### Tools for Technical Logs
+Technical logs should include:
 
-- **Azure Monitor**: For comprehensive monitoring of applications and services.
-- **Azure Log Analytics**: For querying and analyzing log data.
-- **Azure Application Insights**: For application performance management and monitoring.
-- **OpenTelemetry (OTel)**: For standardized collection of telemetry data, including logs, metrics, and traces.
-- **Dapr**: For built-in observability features, including logging, metrics, and tracing for microservices.
+- stable message names suitable for filtering;
+- service name, environment, endpoint, action, dependency, result, status code, duration, and safe reason code where useful;
+- `TraceId` and `SpanId` from the current request or consumer span;
+- source event ID, business event ID, or command ID when that identifier is non-sensitive and useful for correlation;
+- exception category and safe failure classification, not raw provider payloads or stack traces unless the deployment's security policy permits them for operators.
 
-### OpenTelemetry (OTel) Integration
+Technical logs must not include:
 
-OpenTelemetry provides a standardized way to collect telemetry data across different services and platforms. It supports logs, metrics, and traces, making it a comprehensive solution for observability.
+- bearer tokens, refresh tokens, passwords, client secrets, connection strings, private keys, or secret-store values;
+- raw names, emails, license plates, phone numbers, local-account credential verifiers, or provider credential material;
+- raw user IDs, recipient IDs, actor IDs, requestor IDs, or employee IDs unless a documented deployment-specific policy explicitly allows them;
+- hidden Draw internals such as lottery weights, complete candidate order, fairness diagnostics, or other employees' allocation details;
+- full request or response payloads.
 
-- **Logs**: Use OpenTelemetry to collect and export logs to your preferred backend, such as Azure Monitor or Azure Log Analytics.
-- **Metrics**: Collect application and infrastructure metrics using OpenTelemetry and export them to Azure Monitor.
-- **Traces**: Instrument your application with OpenTelemetry to collect traces and export them to Azure Application Insights or other tracing backends.
-
-### Dapr Integration
-
-Dapr (Distributed Application Runtime) provides built-in observability features for microservices, including logging, metrics, and tracing.
-
-- **Logging**: Dapr sidecars collect logs from microservices and export them to various logging backends, such as Azure Monitor or Azure Log Analytics.
-- **Logstash Integration**: Dapr can be configured to send logs to Logstash for further processing and forwarding to Elasticsearch or other destinations.
-
-## Traces
-
-Traces are detailed records of the execution path of a program. They help in understanding the sequence of events and the flow of execution within an application. Traces are particularly useful for debugging complex issues and performance tuning. They often include timestamps, method calls, and execution durations.
-
-### Tools for Traces
-
-- **Azure Monitor**: For comprehensive monitoring of applications and services.
-- **Azure Log Analytics**: For querying and analyzing trace data.
-- **Azure Application Insights**: For application performance management and monitoring.
-- **OpenTelemetry (OTel)**: For standardized collection of trace data.
-- **Dapr**: For built-in tracing capabilities for microservices.
+When a user identifier is needed for operational diagnosis, prefer a one-way pseudonymised value such as `actorHash`, `requestorHash`, or a dedicated support-safe correlation key. Do not reuse unhashed IdP subjects in logs.
 
 ## Metrics
 
-Metrics are quantitative measurements that provide insights into the performance and behavior of a system. They are used to monitor and analyze various aspects of an application, such as response times, throughput, and resource utilization. Metrics help in identifying performance bottlenecks and ensuring the system meets its performance goals. Examples include CPU usage, memory consumption, and request latency.
+Metrics are quantitative operational signals. They are the source for dashboards and alerts, not for business accountability.
 
-### Tools for Metrics
+Required metric categories:
 
-- **Azure Monitor**: For collecting and analyzing metrics from various Azure resources and applications.
-- **Azure Metrics Explorer**: For visualizing and analyzing metric data in real-time.
-- **Azure Application Insights**: For monitoring application performance and usage, including custom metrics.
-- **OpenTelemetry (OTel)**: For standardized collection of metrics across different services and platforms.
-- **Dapr**: For collecting metrics related to microservices, such as request counts, latencies, and error rates, and exporting them to monitoring systems like Prometheus or Azure Monitor.
+- request count, latency percentiles, 4xx/5xx rate, and authentication/authorization failures;
+- service/container/Dapr sidecar health;
+- message publish/consume count, retries, dead letters, and consumer lag where available;
+- booking submission, rejection, draw, allocation, cancellation, no-show, and usage-confirmation counts as aggregate counters;
+- notification delivery attempts, failures, suppressions, and SSE reconnects;
+- audit write count, query latency, retention runs, integrity verification, and export count.
 
-## Proposed Open-Source Architecture for Tracing, Metrics, and Logs
+Metrics labels must be low-cardinality and safe. Use labels such as `service`, `environment`, `tenantKind`, `eventType`, `result`, and `reasonCode`. Avoid raw tenant IDs, raw user IDs, booking IDs, license plates, emails, or unique request IDs as metric labels.
 
-To achieve comprehensive observability with tracing, metrics, and logs using open-source tools, you can leverage the following stack:
+## Traces
 
-- **Prometheus**: For metrics collection and alerting.
-- **Grafana**: For visualization of metrics, logs, and traces.
-- **Loki**: For log aggregation and querying.
-- **Jaeger**: For distributed tracing.
+Traces show the technical execution path across services. The selected tracing backend is deployment-specific; local development uses Jaeger.
 
-### Architecture Overview
+Trace data should include:
 
-1. **Prometheus**:
-   - Collects metrics from various sources (e.g., application metrics, system metrics).
-   - Scrapes metrics from endpoints exposed by applications and services.
-   - Stores time-series data and provides a powerful query language (PromQL) for analysis.
-   - Integrates with Alertmanager for alerting based on metric thresholds.
+- service and operation names;
+- HTTP method, route template, status code, duration, and error flag;
+- Dapr invocation, pub/sub, state, and dependency spans where available;
+- safe correlation attributes such as `sourceEventId`, `businessEventId`, or `auditRecordId` where cardinality and retention are acceptable.
 
-2. **Grafana**:
-   - Visualizes metrics, logs, and traces in customizable dashboards.
-   - Integrates with Prometheus for metrics visualization.
-   - Integrates with Loki for log querying and visualization.
-   - Integrates with Jaeger for tracing visualization.
+Trace attributes must follow the same redaction rules as logs. Authorization headers and credential-bearing attributes must be dropped by application instrumentation or the OpenTelemetry collector.
 
-3. **Loki**:
-   - Collects and stores logs from various sources.
-   - Designed to work seamlessly with Grafana for log querying and visualization.
-   - Uses a similar label-based approach as Prometheus for log indexing.
+## Business Activity Records
 
-4. **Jaeger**:
-   - Collects and stores distributed traces.
-   - Provides tools for visualizing and analyzing traces to understand request flows and identify performance bottlenecks.
-   - Integrates with Grafana for tracing visualization.
+Business activity records are append-only Audit service records created from command outcomes or domain events. They are not textual log lines and should not be scraped from technical logs.
 
-### Integration with Dapr
+A business activity record answers:
 
-1. **Dapr**:
-   - Use Dapr sidecars to collect logs, metrics, and traces from your microservices.
-   - Configure Dapr to export metrics to Prometheus, logs to Loki, and traces to Jaeger.
+- who acted, represented as `actorHash` plus `actorType`;
+- what action occurred, represented by a stable action name such as `booking.requestSubmitted`, `booking.requestRejected`, `booking.slotAllocated`, `configuration.policyPublished`, `audit.piiMappingErased`, or `profile.vehicleUpdated`;
+- which tenant and business entity were affected;
+- when the business action occurred and when it was recorded;
+- what result was produced, such as `accepted`, `rejected`, `allocated`, `cancelled`, `updated`, `failed`, or `suppressed`;
+- why the result happened when a safe reason code exists;
+- which source event, command, or workflow caused the record;
+- which technical trace can help an operator diagnose the same flow.
 
-2. **Dapr Configuration Example**:
-   ```yaml
-   apiVersion: dapr.io/v1alpha1
-   kind: Configuration
-   metadata:
-     name: myconfig
-   spec:
-     tracing:
-       samplingRate: "1"
-       zipkin:
-         endpointAddress: "http://localhost:19411/api/v2/spans"
-     metrics:
-       enabled: true
-       prometheus:
-         endpoint: "http://localhost:9090"
-     logging:
-       enabled: true
-       loki:
-         endpoint: "http://localhost:3100/loki/api/v1/push"
+Minimum business activity metadata:
+
+| Field | Purpose |
+| --- | --- |
+| `auditRecordId` | Stable Audit service record ID. |
+| `tenantId` | Tenant boundary for authorization and filtering. |
+| `action` | Stable business action name. |
+| `entityType` / `entityId` | Business object affected by the action. |
+| `actorType` | `employee`, `hr`, `admin`, `auditor`, `system`, or `integration`. |
+| `actorHash` | SHA-256 hash of the authenticated actor ID when present. |
+| `occurredAt` | Business timestamp from the command/event. |
+| `recordedAt` | Audit ingestion timestamp. |
+| `result` | Safe outcome classification. |
+| `reasonCode` | Safe reason code when applicable. |
+| `sourceEventId` | Domain event ID or command ID used for idempotency. |
+| `correlationId` | Request/workflow correlation ID when present. |
+| `traceId` | Origin technical trace ID when present. |
+| `spanId` | Origin span ID when useful. |
+| `processingTraceId` | Optional consumer-side trace ID when an async consumer processes the event in a different trace. |
+
+The Audit service may expose role-specific business summaries to auditors, HR, and admins. Those summaries must be generated from audit records and authorization rules, not from Loki queries.
+
+## Trace Correlation
+
+Trace correlation links the two streams without making either stream the source of truth for the other.
+
+For synchronous commands:
+
+1. The API request enters FPS and OpenTelemetry creates or continues the current `Activity`.
+2. The command handler performs the business action.
+3. The domain event or audit command includes `TraceId = Activity.Current?.TraceId.ToString()` and, where useful, `SpanId = Activity.Current?.SpanId.ToString()`.
+4. The Audit service stores those values as optional metadata.
+
+For asynchronous consumers:
+
+1. The producing service includes the origin `traceId`, `spanId`, `correlationId`, and `sourceEventId` in the domain event envelope.
+2. The consuming service starts or continues its own processing span.
+3. The audit record stores the origin `traceId` and may also store `processingTraceId` for the consumer-side work.
+
+Rules:
+
+- `traceId` is correlation metadata only. It must never replace tenant, actor, action, entity, timestamp, result, reason, or idempotency fields.
+- Audit must still work when `traceId` is null.
+- A trace may be short-lived or deleted before audit retention expires.
+- Business audit retention is controlled by Audit retention policy; telemetry retention is controlled by the observability backend.
+
+## Access Model
+
+| Evidence | Normal access |
+| --- | --- |
+| Grafana/Loki technical logs | Operators and developers with operational responsibility. |
+| Grafana/Prometheus metrics and alerts | Operators, developers, and selected tenant admins for non-sensitive service health views. |
+| Jaeger traces | Operators and developers with operational responsibility. |
+| Audit business activity API/UI | Tenant-scoped `auditor`, `admin`, and selected HR/facility roles based on the action category. |
+| PII mapping for actor resolution | Separately approved privacy/security path only. |
+
+Auditor, HR, and admin product screens should show business-readable actions and outcomes. They should not expose raw exception text, stack traces, infrastructure topology, secrets, or unrelated employees' private data.
+
+## Local Open-Source Stack
+
+The local default stack is:
+
+- **Prometheus** for metrics;
+- **Grafana** for dashboards and Explore;
+- **Loki** for technical log aggregation;
+- **Promtail or Alloy** for local log shipping;
+- **Jaeger** for distributed traces.
+
+Local Grafana panels may link from logs to traces by `TraceId`. Product audit screens should link in the opposite direction only when the viewer is authorized: from business activity record to trace ID or support evidence, without exposing raw technical logs by default.

@@ -27,6 +27,27 @@ Client production examples include Dynatrace, Azure Monitor/Application Insights
 | Infrastructure | container restarts, CPU/memory, storage growth, cache health, broker health, Dapr sidecar health |
 | Security | privileged access, secret access, failed authorization, GDPR erasure requests, data export access |
 
+## Technical Telemetry And Business Activity
+
+Production monitoring must keep technical telemetry and business activity evidence separate:
+
+| Evidence | Storage | Primary consumer | Production use |
+| --- | --- | --- | --- |
+| Technical logs | Client observability platform or local Loki equivalent. | Operators and developers. | Diagnose service errors, dependencies, retries, and request failures. |
+| Metrics | Prometheus-compatible backend or client APM. | Operators, SRE, selected admins. | Dashboards, alerts, SLO evidence, trend analysis. |
+| Traces | OpenTelemetry-compatible tracing backend. | Operators and developers. | Cross-service diagnosis and latency analysis. |
+| Business activity | FairSpot Audit service. | Auditors, HR/facility managers, tenant admins, security reviewers. | Business accountability, compliance evidence, dispute resolution, and export. |
+
+Business-facing audit views must not expose raw technical logs. They should query the Audit service and show stable business actions, actor hash or approved actor display, affected entity, result, reason code, and timestamp.
+
+Technical telemetry and business activity may be linked by correlation metadata:
+
+- `traceId` and `spanId` from the origin OpenTelemetry activity;
+- `sourceEventId`, command ID, or business event ID;
+- `correlationId` or workflow ID where present.
+
+These identifiers are support links only. They do not replace tenant scoping, actor pseudonymisation, authorization, audit retention, or idempotency.
+
 ## Health Checks
 
 All FPS services expose `GET /health` returning a JSON body with overall status and per-check results:

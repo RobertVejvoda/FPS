@@ -127,3 +127,109 @@ Acceptance criteria:
 - Given a payload has requestor or affected recipient IDs, the stored payload contains hashed references and no raw user IDs.
 - Given the event has no actor ID, Audit still records the event with actor type/source and a null actor hash.
 - A001 tests prove the repository abstraction has no update or delete path for audit records.
+
+## Business Activity Timeline
+
+The Audit service is the system of record for business activity that HR, tenant admins, auditors, and security reviewers are allowed to see. This is different from technical logs in Grafana/Loki.
+
+Business activity records should be created from command outcomes or domain events, not by scraping application log text. The record is a structured product fact: who acted, what business action occurred, which entity was affected, what result was produced, and which technical trace can help an operator diagnose the same flow.
+
+### Business Activity Versus Technical Logs
+
+| Concern | Business activity record | Technical log |
+| --- | --- | --- |
+| Primary audience | Auditor, HR/facility manager, tenant admin, security reviewer. | Operator, developer, support engineer. |
+| System of record | Audit service. | Observability backend such as Loki. |
+| Retention | Audit retention policy, often years. | Operational telemetry retention, often days or weeks. |
+| Identity | Pseudonymised actor, optionally resolved through approved PII mapping access. | No raw user IDs; pseudonymised values only when needed. |
+| Content | Stable business action, entity, result, reason, timestamp. | Failure category, dependency, latency, status, trace/span metadata. |
+| Access path | Tenant-scoped Audit API and Audit UI. | Grafana/Jaeger with operator access. |
+
+Business-facing screens must read Audit records. They must not expose raw Loki logs as an HR/admin/auditor timeline.
+
+### Minimum Business Activity Fields
+
+| Field | Meaning |
+| --- | --- |
+| `auditRecordId` | Internal Audit record ID. |
+| `sourceEventId` | Source command/event ID and idempotency key. |
+| `tenantId` | Tenant that owns the activity. |
+| `action` | Stable business action name, for example `booking.requestSubmitted` or `configuration.policyPublished`. |
+| `entityType` | Business object category such as `bookingRequest`, `drawAttempt`, `policy`, `profile`, `notification`, or `auditMapping`. |
+| `entityId` | Primary entity ID when known. |
+| `actorType` | `employee`, `hr`, `admin`, `auditor`, `system`, or `integration`. |
+| `actorHash` | SHA-256 hash of the actor ID when present. |
+| `occurredAt` | Business timestamp from the source command/event. |
+| `recordedAt` | Audit ingestion timestamp. |
+| `result` | Outcome such as `accepted`, `rejected`, `allocated`, `cancelled`, `updated`, `failed`, or `suppressed`. |
+| `reasonCode` | Safe reason code when one exists. |
+| `correlationId` | Request/workflow correlation ID when present. |
+| `traceId` | Origin OpenTelemetry trace ID when present. |
+| `spanId` | Origin span ID when useful. |
+| `processingTraceId` | Optional consumer-side trace ID for async processing. |
+| `summary` | Short business-readable text derived from safe fields. |
+
+The `traceId` fields are correlation metadata only. They help an operator find matching technical logs/traces when there is an approved support or incident reason. They must not replace actor, tenant, action, entity, result, reason, or idempotency fields.
+
+### Actor Resolution
+
+`actorHash` is one-way. It cannot be mathematically reversed to the original actor ID.
+
+Actor identity can be resolved only through the separate PII mapping store:
+
+| Mapping field | Purpose |
+| --- | --- |
+| `actor_hash` | Hash stored in audit records. |
+| `user_id` | Original FPS/IdP subject or local account ID. |
+| `display_name` | Optional display value for approved audit views. |
+| `email` | Optional contact value when the client policy allows it. |
+| `tenant_id` | Tenant boundary for the mapping. |
+| `created_at` / `updated_at` | Mapping lifecycle evidence. |
+| `erased_at` | Present when GDPR erasure has anonymised the actor. |
+
+Rules:
+
+- Normal audit query responses should show `actorHash`, `actorType`, and a safe display label such as "employee actor" or "system actor".
+- Resolving `actorHash` to a person requires a separate permission path, reason, and audit record of the lookup.
+- GDPR erasure deletes or anonymises the PII mapping row. Historical audit records remain immutable but no longer resolve to a person.
+- The Audit service must still support correlation by `actorHash` after erasure without exposing identity.
+
+### Business Activity Examples
+
+| Action | Actor | Entity | Result | Notes |
+| --- | --- | --- | --- | --- |
+| `booking.requestSubmitted` | Employee | Booking request | `accepted` | Stores request ID, date, time slot, safe vehicle requirement flags, and trace ID. |
+| `booking.requestRejected` | Employee or system | Booking request | `rejected` | Stores safe rejection code, not hidden allocation diagnostics. |
+| `booking.slotAllocated` | System | Booking request | `allocated` | Stores slot/allocation reference and draw attempt ID where safe. |
+| `booking.requestCancelled` | Employee, HR, or system | Booking request | `cancelled` | Manual or HR cancellation requires a reason. |
+| `configuration.policyPublished` | Admin | Policy version | `updated` | Stores policy version and safe scope, not the full policy blob unless approved. |
+| `profile.vehicleUpdated` | Employee, HR, or admin | Vehicle/profile | `updated` | Must not store raw license plate in audit summary. |
+| `audit.piiMappingErased` | Admin, auditor, or privacy contact | PII mapping | `erased` | Stores target actor hash and reason, not the erased identity. |
+| `privacy.erasureRequested` | Employee, admin, or privacy contact | Erasure request | `accepted` | Starts the Dapr Workflow and stores target actor hash, not raw identity. |
+| `privacy.erasureCompleted` | System | Erasure request | `completed` | Stores per-service outcome summary and trace ID when present. |
+
+### Product Usage
+
+Audit APIs and UI should support:
+
+- tenant-scoped filtering by date range, actor hash, actor type, action, entity type, result, reason code, and trace ID;
+- role-specific views for auditor, HR/facility manager, and tenant admin;
+- safe CSV/JSON export for auditors;
+- optional "resolve actor" action for authorized users with reason capture;
+- optional "copy trace ID" action for support escalation, without embedding raw technical logs in the business UI.
+
+## Erasure Workflow Audit
+
+Employee data erasure should be implemented as a Dapr Workflow coordinated by a privacy/GDPR API. The workflow calls service-owned activities for Profile, Booking, Notification, Reporting, and Audit. Each service decides whether matching records are deleted, anonymised, pseudonymised, retained, blocked, or failed according to its own invariants and retention rules.
+
+Audit records for the workflow must show:
+
+- request creation and requester actor hash;
+- target actor hash;
+- reason/legal basis category;
+- blocking dependency checks;
+- each service step result;
+- completion, partial completion, rejection, or failure;
+- optional `traceId` / `processingTraceId` for support correlation.
+
+The erasure workflow must not store the erased user's raw identity in the business activity summary. After the Audit PII mapping is deleted, historical audit records remain queryable by actor hash but no longer resolve to a person.

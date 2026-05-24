@@ -2,7 +2,7 @@
 
 This register records known security and privacy gaps that are not yet implemented or fully evidenced. Each entry is factual, issue-ready, and ordered by area. Gaps labelled **production-blocking** must be resolved before any client-owned production deployment.
 
-Last updated: 2026-05-23.
+Last updated: 2026-05-24.
 
 ---
 
@@ -55,7 +55,7 @@ Last updated: 2026-05-23.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Full employee data erasure path not implemented | High — production-blocking | Audit erasure (pseudonymisation) is implemented. Erasure of profile facts, booking history, and notification records is documented but not fully wired end-to-end. Needs a coordinated erasure flow across Profile, Booking, Notification, and Audit services. |
+| Full employee data erasure path not implemented | High — production-blocking | Audit erasure (pseudonymisation) is implemented. Erasure of profile facts, booking history, notifications, reporting projections, and PII mapping needs a coordinated Dapr Workflow across service-owned activities. Planned as PRIV001 / issue #277. |
 | Audit retention schedule not enforced by default | Medium | `DELETE /audit/retention` is implemented (A004). Client must configure the retention period and invoke/schedule the endpoint. Booking and notification retention jobs are not yet implemented. |
 | No consent or privacy notice flow in the product | Medium | Privacy notice delivery is a legal/UX responsibility outside the product. FPS does not display or record consent. Client must implement at the IdP or application layer as required by their legal basis. |
 | DPIA not completed | Medium | A Data Protection Impact Assessment is required before production processing of personal data in most GDPR jurisdictions. This is a client/legal responsibility. |

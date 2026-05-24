@@ -35,6 +35,27 @@ info: FPS.Request[0]
 
 Use the `TraceId` value to find the corresponding trace in Jaeger UI.
 
+## Business activity correlation
+
+Technical log correlation is not the same as business audit.
+
+When a request creates a business-relevant action, the application should copy the current OpenTelemetry identifiers into the domain event or audit command:
+
+```csharp
+var traceId = Activity.Current?.TraceId.ToString();
+var spanId = Activity.Current?.SpanId.ToString();
+```
+
+The Audit service can then store those values on the business activity record. This lets an authorized operator move from an audit record to the matching technical trace during support or incident handling.
+
+Rules:
+
+- `traceId` and `spanId` are optional correlation metadata.
+- Business audit must still work when no trace is active.
+- Audit records still need tenant, actor hash, action, entity, result, reason, timestamp, and source event ID.
+- HR/admin/auditor business screens should read Audit records, not raw Grafana/Loki logs.
+- Technical logs must not contain raw user IDs, actor IDs, recipient IDs, names, emails, license plates, tokens, or full request payloads.
+
 ## OTLP endpoint configuration
 
 By default services export to `http://localhost:4318` (Jaeger OTLP HTTP port). Override with:
