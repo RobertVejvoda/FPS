@@ -1,0 +1,56 @@
+{
+  "_comment": "Synthetic second tenant for provisioning validation. No real PII.",
+  "tenantId": "acme-corp",
+  "slug": "acme-corp",
+  "displayName": "Acme Corporation (Synthetic)",
+  "region": "DE",
+  "timezone": "Europe/Berlin",
+  "supportContacts": [
+    { "name": "Acme Facilities", "email": "facilities@acme.example.local", "role": "Facilities" },
+    { "name": "Acme IT Support", "email": "it@acme.example.local",         "role": "Identity"  }
+  ],
+  "identity": {
+    "trustedIssuer": "http://localhost:8180/realms/fps-local",
+    "audience": "fps-api",
+    "tenantClaimName": "tenant_id",
+    "subjectClaimName": "sub",
+    "roleClaimNames": ["roles"],
+    "roleMapping": {
+      "employee":      "employee",
+      "hr_manager":    "hr_manager",
+      "admin":         "admin",
+      "report_viewer": "report_viewer",
+      "auditor":       "auditor"
+    }
+  },
+  "parkingPolicy": {
+    "dailyRequestCap": 50,
+    "drawCutOffHour": 17,
+    "drawCutOffMinute": 0,
+    "allocationLookbackDays": 14,
+    "lateCancellationPenalty": 2,
+    "noShowPenalty": 3,
+    "sameDayBookingEnabled": false,
+    "companyCarTier1Enabled": false,
+    "companyCarOverflowBehavior": "reject",
+    "automaticReallocationEnabled": false
+  },
+  "locations": [
+    {
+      "locationId": "LOC-HQ",
+      "displayName": "Acme HQ Garage",
+      "slotCount": 20,
+      "chargerSlots": 4,
+      "accessibleSlots": 2
+    },
+    {
+      "locationId": "LOC-ANNEX",
+      "displayName": "Acme Annex Lot",
+      "slotCount": 8,
+      "chargerSlots": 1,
+      "accessibleSlots": 1
+    }
+  ],
+  "smokeUsers": [],
+  "notes": "Synthetic second tenant proving provisioning is not hardcoded to demo. No Keycloak users exist for this tenant — identity config is provisioned but Configuration policy/slots require a tenant-scoped token (see provision-tenant.sh notes)."
+}
