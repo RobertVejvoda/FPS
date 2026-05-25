@@ -46,11 +46,7 @@ builder.Services.AddDaprWorkflow(options =>
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        options.Authority = builder.Configuration["Auth:Authority"];
-        options.Audience = builder.Configuration["Auth:Audience"];
-        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-        options.TokenValidationParameters.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
-        options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
+        options.ConfigureFpsJwtBearer(builder.Configuration, builder.Environment);
     });
 
 builder.Services.AddFpsHealthChecks();
