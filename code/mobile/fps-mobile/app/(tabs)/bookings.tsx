@@ -127,7 +127,7 @@ export default function BookingsRoute() {
         <StateView
           kind="error"
           title="Cannot load your bookings"
-          message={state.message}
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />

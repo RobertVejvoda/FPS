@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -88,7 +88,7 @@ export default function BookingDetailRoute() {
         <View style={[styles.statusBanner, { borderLeftColor: statusColor }]}>
           <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusBadgeText}>{params.status}</Text>
+            <Text style={styles.statusBadgeText}>{STATUS_BADGE_LABEL[params.status] ?? params.status}</Text>
           </View>
         </View>
 
