@@ -2,7 +2,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { getOidcConfig, isOidcConfigured } from '@/auth/oidcConfig';
@@ -132,6 +132,11 @@ export default function LoginRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
+        <Image
+          source={require('../assets/icon.png')}
+          style={styles.logo}
+          accessibilityIgnoresInvertColors
+        />
         <Text style={styles.title}>FairSpot</Text>
         <Text style={styles.subtitle}>Fair access to workplace parking</Text>
 
@@ -198,6 +203,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.xl,
     gap: spacing.md,
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    borderRadius: 22,
+    marginBottom: spacing.sm,
   },
   title: { fontSize: 28, fontWeight: '700', color: colors.text },
   subtitle: { fontSize: 15, color: colors.textMuted, textAlign: 'center' },

@@ -86,7 +86,7 @@ load_env_file "$ENV_FILE"
 
 LAN_IP="$(detect_lan_ip || true)"
 TAILSCALE_IP="$(detect_tailscale_ip || true)"
-MOBILE_HOST="${FPS_MOBILE_HOST:-${TAILSCALE_IP:-${LAN_IP:-localhost}}}"
+MOBILE_HOST="${FPS_MOBILE_HOST:-${LAN_IP:-${TAILSCALE_IP:-localhost}}}"
 MOBILE_KEYCLOAK_URL="${FPS_MOBILE_KEYCLOAK_URL:-http://$MOBILE_HOST:8180}"
 MOBILE_API_BASE_URL="${FPS_MOBILE_API_BASE_URL:-http://$MOBILE_HOST:10000}"
 
@@ -112,6 +112,7 @@ fi
 if [ -n "$TAILSCALE_IP" ]; then
   printf ' API base URL, Tailscale phone:   http://%s:10000\n' "$TAILSCALE_IP"
 fi
+printf ' Selected mobile host:            %s\n' "$MOBILE_HOST"
 printf ' Mobile OIDC issuer:              %s\n' "$FPS_MOBILE_AUTH_ISSUER_URL"
 printf ' Mobile OIDC client:              %s\n' "$FPS_MOBILE_AUTH_CLIENT_ID"
 printf ' Demo user: employee1\n'
