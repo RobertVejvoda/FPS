@@ -134,7 +134,7 @@ public sealed class BookingControllerTests
         {
             new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
                 new TimeOnly(9, 0), new TimeOnly(17, 0), null,
-                "Pending", null, null, "cancel", DateTime.UtcNow, DateTime.UtcNow)
+                "Pending", null, null, null, "cancel", DateTime.UtcNow, DateTime.UtcNow)
         };
         mediator
             .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))

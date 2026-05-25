@@ -795,6 +795,12 @@
           "status": {
             "type": "string"
           },
+          "reasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "reason": {
             "type": [
               "null",

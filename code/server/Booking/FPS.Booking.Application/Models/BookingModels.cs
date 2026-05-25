@@ -11,6 +11,7 @@ public class BookingRequestDto
     public string RequestedBy { get; set; } = string.Empty;
     public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
     public string Status { get; set; } = "Pending";
+    public string? RejectionCode { get; set; }
     public string? RejectionReason { get; set; }
     public string? CancellationReason { get; set; }
     public Guid? AllocatedSlotId { get; set; }

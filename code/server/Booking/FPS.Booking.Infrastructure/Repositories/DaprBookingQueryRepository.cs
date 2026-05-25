@@ -142,6 +142,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         TimeSlotEnd: TimeOnly.FromDateTime(dto.PlannedDepartureTime),
         LocationId: dto.LocationId,
         Status: dto.Status,
+        ReasonCode: dto.Status == "Rejected" ? dto.RejectionCode : null,
         Reason: ReasonFor(dto),
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
         NextAction: NextActionFor(dto.Status),

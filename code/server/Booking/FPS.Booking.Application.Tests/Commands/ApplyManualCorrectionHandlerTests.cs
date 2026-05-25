@@ -16,7 +16,7 @@ public sealed class ApplyManualCorrectionHandlerTests
             repository.Object, auditRepository.Object, eventPublisher.Object);
 
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         auditRepository.Setup(r => r.SaveAsync(
@@ -79,7 +79,7 @@ public sealed class ApplyManualCorrectionHandlerTests
         Assert.Equal("status", result.CorrectionType);
         Assert.Equal("Allocated", result.NewValue);
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ── Audit record ──────────────────────────────────────────────────────────
