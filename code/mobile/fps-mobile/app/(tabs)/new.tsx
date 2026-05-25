@@ -13,10 +13,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { submitBooking } from '@/api/bookings';
-import { fetchProfileSnapshot, type ProfileSnapshot, type VehicleSnapshot } from '@/api/profile';
+import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
+import { formatBookingRef, humanizeRejectionReason } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
+
+// Demo facility — a facility picker requires a /facilities API that does not yet exist.
+const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
+const DEMO_LOCATION_ID = 'LOC-MAIN';
 
 type FormState = {
   facilityId: string;
@@ -27,54 +32,70 @@ type FormState = {
   isElectric: boolean;
   requiresAccessibleSpot: boolean;
   isCompanyCar: boolean;
-  plannedArrival: string;
-  plannedDeparture: string;
+  dateOffset: number;
+  arrivalHour: number;
+  arrivalMinute: number;
+  departureHour: number;
+  departureMinute: number;
 };
 
-// Demo facility GUID — the same value used by dev-seed.sh and web booking form.
-// A facility picker would require a /facilities API that does not yet exist.
-const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_LOCATION_ID = 'LOC-MAIN';
-
-type FieldErrors = Partial<Record<keyof FormState, string>>;
+type FieldErrors = Partial<Record<'licensePlate' | 'vehicleType' | 'plannedDeparture', string>>;
 
 type SubmitStatus =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'accepted'; requestId: string; status: string }
+  | { kind: 'accepted'; requestId: string; requestedDate: string }
   | { kind: 'rejected'; rejectionCode: string | null; reason: string | null }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
 
-function parseDatetime(input: string): string | null {
-  const m = input.trim().match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
-  if (!m) return null;
-  const [, y, mo, d, h, mi] = m;
-  const year = Number(y);
-  const month = Number(mo);
-  const day = Number(d);
-  const hour = Number(h);
-  const minute = Number(mi);
-  if (month < 1 || month > 12 || hour > 23 || minute > 59) return null;
+const ARRIVAL_TIMES = [
+  { hour: 6, minute: 0 }, { hour: 6, minute: 30 },
+  { hour: 7, minute: 0 }, { hour: 7, minute: 30 },
+  { hour: 8, minute: 0 }, { hour: 8, minute: 30 },
+  { hour: 9, minute: 0 }, { hour: 9, minute: 30 },
+  { hour: 10, minute: 0 }, { hour: 11, minute: 0 },
+  { hour: 12, minute: 0 },
+];
 
-  const date = new Date(year, month - 1, day, hour, minute, 0);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day ||
-    date.getHours() !== hour ||
-    date.getMinutes() !== minute
-  ) {
-    return null;
-  }
-  return date.toISOString();
+const DEPARTURE_TIMES = [
+  { hour: 12, minute: 0 }, { hour: 13, minute: 0 },
+  { hour: 14, minute: 0 }, { hour: 15, minute: 0 },
+  { hour: 16, minute: 0 }, { hour: 17, minute: 0 },
+  { hour: 17, minute: 30 }, { hour: 18, minute: 0 },
+  { hour: 18, minute: 30 }, { hour: 19, minute: 0 },
+  { hour: 20, minute: 0 },
+];
+
+function availableDates(): Array<{ offset: number; label: string }> {
+  return Array.from({ length: 7 }, (_, i) => {
+    const offset = i + 1;
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return {
+      offset,
+      label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+    };
+  });
 }
 
-function datetimeTextValue(offsetDays: number, hour: number, minute = 0): string {
+function formatTimeLabel(hour: number, minute: number): string {
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h = hour % 12 || 12;
+  return `${h}:${String(minute).padStart(2, '0')} ${ampm}`;
+}
+
+function toISO(offsetDays: number, hour: number, minute: number): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
   d.setHours(hour, minute, 0, 0);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return d.toISOString();
+}
+
+function dateStrFromOffset(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function initialForm(): FormState {
@@ -87,21 +108,21 @@ function initialForm(): FormState {
     isElectric: false,
     requiresAccessibleSpot: false,
     isCompanyCar: false,
-    plannedArrival: datetimeTextValue(1, 8),
-    plannedDeparture: datetimeTextValue(1, 18),
+    dateOffset: 1,
+    arrivalHour: 8,
+    arrivalMinute: 0,
+    departureHour: 18,
+    departureMinute: 0,
   };
 }
 
 function validate(form: FormState): FieldErrors {
   const errors: FieldErrors = {};
-  if (!form.facilityId.trim()) errors.facilityId = 'Required';
   if (!form.licensePlate.trim()) errors.licensePlate = 'Select a vehicle or enter license plate';
-  const arrival = parseDatetime(form.plannedArrival);
-  const departure = parseDatetime(form.plannedDeparture);
-  if (!arrival) errors.plannedArrival = 'Use YYYY-MM-DD HH:MM';
-  if (!departure) errors.plannedDeparture = 'Use YYYY-MM-DD HH:MM';
-  if (arrival && departure && departure <= arrival) {
-    errors.plannedDeparture = 'Must be after arrival';
+  const arrivalMins = form.arrivalHour * 60 + form.arrivalMinute;
+  const departureMins = form.departureHour * 60 + form.departureMinute;
+  if (departureMins <= arrivalMins) {
+    errors.plannedDeparture = 'Departure must be after arrival';
   }
   return errors;
 }
@@ -114,6 +135,7 @@ export default function NewBookingRoute() {
   const [form, setForm] = useState<FormState>(() => initialForm());
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
+  const dates = availableDates();
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -152,18 +174,19 @@ export default function NewBookingRoute() {
       return;
     }
     setSubmitStatus({ kind: 'submitting' });
+    const requestedDate = dateStrFromOffset(form.dateOffset);
     const result = await submitBooking(
       { apiBaseUrl, bearerToken },
       {
-        facilityId: form.facilityId.trim(),
-        locationId: form.locationId.trim() || null,
+        facilityId: form.facilityId,
+        locationId: form.locationId || null,
         licensePlate: form.licensePlate.trim(),
         vehicleType: form.vehicleType,
         isElectric: form.isElectric,
         requiresAccessibleSpot: form.requiresAccessibleSpot,
         isCompanyCar: form.isCompanyCar,
-        plannedArrivalTime: parseDatetime(form.plannedArrival)!,
-        plannedDepartureTime: parseDatetime(form.plannedDeparture)!,
+        plannedArrivalTime: toISO(form.dateOffset, form.arrivalHour, form.arrivalMinute),
+        plannedDepartureTime: toISO(form.dateOffset, form.departureHour, form.departureMinute),
       },
     );
     if (result.kind === 'unauthenticated') {
@@ -171,16 +194,26 @@ export default function NewBookingRoute() {
       router.replace('/login');
       return;
     }
-    setSubmitStatus(result);
+    if (result.kind === 'accepted') {
+      setSubmitStatus({ kind: 'accepted', requestId: result.requestId, requestedDate });
+    } else {
+      setSubmitStatus(result);
+    }
   };
 
   if (submitStatus.kind === 'accepted') {
+    const ref = formatBookingRef(submitStatus.requestId, submitStatus.requestedDate);
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successContainer}>
-          <Text style={styles.successTitle}>Booking Submitted</Text>
-          <Text style={styles.successMeta}>Request ID: {submitStatus.requestId}</Text>
-          <Text style={styles.successMeta}>Status: {submitStatus.status}</Text>
+          <Text style={styles.successTitle}>Request submitted</Text>
+          <Text style={styles.successBody}>
+            Your parking request is waiting for the next allocation draw.
+          </Text>
+          <View style={styles.refCard}>
+            <Text style={styles.refLabel}>Reference</Text>
+            <Text style={styles.refValue}>{ref}</Text>
+          </View>
           <Pressable
             style={({ pressed }) => [styles.primary, pressed && styles.primaryDimmed]}
             onPress={() => {
@@ -190,14 +223,14 @@ export default function NewBookingRoute() {
             }}
             accessibilityRole="button"
           >
-            <Text style={styles.primaryLabel}>New Booking</Text>
+            <Text style={styles.primaryLabel}>New request</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.secondary, pressed && styles.secondaryDimmed]}
             onPress={() => router.push('/(tabs)/bookings')}
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryLabel}>My Bookings</Text>
+            <Text style={styles.secondaryLabel}>My bookings</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -209,27 +242,81 @@ export default function NewBookingRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>New Booking</Text>
+        <Text style={styles.heading}>Request parking</Text>
 
         {profileLoading ? (
           <Text style={styles.mutedText}>Loading vehicles…</Text>
         ) : (
           <>
-            {/* Facility and location are pre-set to demo values; a picker requires a /facilities API */}
-            <FieldRow label="Facility">
+            <FieldRow label="Location">
               <View style={styles.readOnlyRow}>
-                <Text style={styles.readOnlyValue}>Main Building</Text>
+                <Text style={styles.readOnlyValue}>Main office · Main building</Text>
               </View>
             </FieldRow>
 
-            <FieldRow label="Location">
-              <View style={styles.readOnlyRow}>
-                <Text style={styles.readOnlyValue}>Main office</Text>
-              </View>
+            <FieldRow label="Date">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                {dates.map(({ offset, label }) => (
+                  <Pressable
+                    key={offset}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      form.dateOffset === offset && styles.chipActive,
+                      pressed && styles.chipPressed,
+                    ]}
+                    onPress={() => set('dateOffset', offset)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.chipText, form.dateOffset === offset && styles.chipTextActive]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </FieldRow>
+
+            <FieldRow label="Arrival time">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                {ARRIVAL_TIMES.map(({ hour, minute }) => {
+                  const active = form.arrivalHour === hour && form.arrivalMinute === minute;
+                  return (
+                    <Pressable
+                      key={`${hour}-${minute}`}
+                      style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.chipPressed]}
+                      onPress={() => { set('arrivalHour', hour); set('arrivalMinute', minute); }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {formatTimeLabel(hour, minute)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </FieldRow>
+
+            <FieldRow label="Departure time" error={fieldErrors.plannedDeparture}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                {DEPARTURE_TIMES.map(({ hour, minute }) => {
+                  const active = form.departureHour === hour && form.departureMinute === minute;
+                  return (
+                    <Pressable
+                      key={`${hour}-${minute}`}
+                      style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.chipPressed]}
+                      onPress={() => { set('departureHour', hour); set('departureMinute', minute); }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {formatTimeLabel(hour, minute)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             </FieldRow>
 
             {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
-              <FieldRow label="Vehicle *" error={fieldErrors.licensePlate}>
+              <FieldRow label="Vehicle" error={fieldErrors.licensePlate}>
                 <View style={styles.vehicleList}>
                   {profile.vehicles.filter(v => v.isActive).map((v) => (
                     <Pressable
@@ -252,7 +339,7 @@ export default function NewBookingRoute() {
               </FieldRow>
             ) : (
               <>
-                <FieldRow label="License Plate *" error={fieldErrors.licensePlate}>
+                <FieldRow label="License plate" error={fieldErrors.licensePlate}>
                   <TextInput
                     style={[styles.input, fieldErrors.licensePlate ? styles.inputError : null]}
                     value={form.licensePlate}
@@ -261,10 +348,12 @@ export default function NewBookingRoute() {
                     placeholderTextColor={colors.textMuted}
                     autoCapitalize="characters"
                   />
-                  <Text style={styles.hint}>No vehicles in profile. Add vehicles in Profile for faster booking.</Text>
+                  <Text style={styles.hint}>
+                    No vehicles in profile. Add vehicles in More → Your Vehicles for faster booking.
+                  </Text>
                 </FieldRow>
 
-                <FieldRow label="Vehicle Type *" error={fieldErrors.vehicleType}>
+                <FieldRow label="Vehicle type" error={fieldErrors.vehicleType}>
                   <View style={styles.pills}>
                     {VEHICLE_TYPES.map(vt => (
                       <Pressable
@@ -287,43 +376,23 @@ export default function NewBookingRoute() {
               </>
             )}
 
-            {/* v1 text fallback — defaults to tomorrow and remains directly editable. */}
-            <FieldRow label="Planned Arrival * (YYYY-MM-DD HH:MM)" error={fieldErrors.plannedArrival}>
-              <TextInput
-                style={[styles.input, fieldErrors.plannedArrival ? styles.inputError : null]}
-                value={form.plannedArrival}
-                onChangeText={v => set('plannedArrival', v)}
-                placeholder={datetimeTextValue(1, 8)}
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-              />
-            </FieldRow>
-
-            <FieldRow label="Planned Departure * (YYYY-MM-DD HH:MM)" error={fieldErrors.plannedDeparture}>
-              <TextInput
-                style={[styles.input, fieldErrors.plannedDeparture ? styles.inputError : null]}
-                value={form.plannedDeparture}
-                onChangeText={v => set('plannedDeparture', v)}
-                placeholder={datetimeTextValue(1, 18)}
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-              />
-            </FieldRow>
-
             {form.selectedVehicleId ? null : (
               <ToggleRow
                 label="Electric vehicle"
+                hint="Enables EV charging spot allocation when available."
                 value={form.isElectric}
                 onValueChange={v => set('isElectric', v)}
               />
             )}
             <ToggleRow
-              label="Requires accessible spot"
+              label="Accessible spot required"
+              hint="Requests a space close to an entrance or lift."
               value={form.requiresAccessibleSpot}
               onValueChange={v => set('requiresAccessibleSpot', v)}
             />
             <ToggleRow
               label="Company car"
+              hint="Indicates this vehicle is owned or leased by your employer."
               value={form.isCompanyCar}
               onValueChange={v => set('isCompanyCar', v)}
             />
@@ -332,13 +401,10 @@ export default function NewBookingRoute() {
 
         {submitStatus.kind === 'rejected' && (
           <View style={styles.rejectionBox}>
-            <Text style={styles.rejectionTitle}>Booking rejected</Text>
-            {submitStatus.rejectionCode ? (
-              <Text style={styles.rejectionText}>Code: {submitStatus.rejectionCode}</Text>
-            ) : null}
-            {submitStatus.reason ? (
-              <Text style={styles.rejectionText}>{submitStatus.reason}</Text>
-            ) : null}
+            <Text style={styles.rejectionTitle}>Request not fulfilled</Text>
+            <Text style={styles.rejectionText}>
+              {humanizeRejectionReason(submitStatus.rejectionCode, submitStatus.reason)}
+            </Text>
           </View>
         )}
 
@@ -346,7 +412,7 @@ export default function NewBookingRoute() {
           <Text style={styles.errorText}>
             {submitStatus.kind === 'unreachable'
               ? submitStatus.message
-              : `Error ${submitStatus.status}: ${submitStatus.message}`}
+              : `Something went wrong. Please try again.`}
           </Text>
         ) : null}
 
@@ -360,7 +426,7 @@ export default function NewBookingRoute() {
           {isSubmitting ? (
             <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={styles.primaryLabel}>Submit Booking</Text>
+            <Text style={styles.primaryLabel}>Submit request</Text>
           )}
         </Pressable>
       </ScrollView>
@@ -388,16 +454,21 @@ function FieldRow({
 
 function ToggleRow({
   label,
+  hint,
   value,
   onValueChange,
 }: {
   label: string;
+  hint?: string;
   value: boolean;
   onValueChange: (v: boolean) => void;
 }) {
   return (
     <View style={styles.toggleRow}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.toggleLabelWrap}>
+        <Text style={styles.label}>{label}</Text>
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      </View>
       <Switch
         value={value}
         onValueChange={onValueChange}
@@ -415,9 +486,29 @@ const styles = StyleSheet.create({
   mutedText: { fontSize: 14, color: colors.textMuted },
   field: { gap: spacing.xs },
   label: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
-  hint: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
-  readOnlyRow: { backgroundColor: colors.cardBackground, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.sm },
+  hint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  fieldError: { fontSize: 12, color: colors.danger },
+  readOnlyRow: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+  },
   readOnlyValue: { fontSize: 14, color: colors.text },
+  chipRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.xs },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.cardBackground,
+  },
+  chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+  chipPressed: { opacity: 0.7 },
+  chipText: { fontSize: 13, color: colors.text, fontWeight: '500' },
+  chipTextActive: { color: colors.primaryText, fontWeight: '600' },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -428,7 +519,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBackground,
   },
   inputError: { borderColor: colors.danger },
-  fieldError: { fontSize: 12, color: colors.danger },
   vehicleList: { gap: spacing.sm },
   vehicleCard: {
     borderWidth: 2,
@@ -437,10 +527,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: colors.cardBackground,
   },
-  vehicleCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#eff6ff',
-  },
+  vehicleCardActive: { borderColor: colors.primary, backgroundColor: '#eff6ff' },
   vehicleCardPressed: { opacity: 0.7 },
   vehicleCardPlate: { fontSize: 16, fontWeight: '600', color: colors.text },
   vehicleCardMeta: { fontSize: 13, color: colors.textMuted, marginTop: spacing.xs },
@@ -462,7 +549,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.xs,
+    gap: spacing.md,
   },
+  toggleLabelWrap: { flex: 1, gap: 2 },
   primary: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
@@ -485,14 +574,20 @@ const styles = StyleSheet.create({
   },
   secondaryDimmed: { opacity: 0.5 },
   secondaryLabel: { color: colors.primary, fontWeight: '600', fontSize: 16 },
-  successContainer: {
-    flex: 1,
-    padding: spacing.lg,
-    gap: spacing.md,
-    justifyContent: 'center',
-  },
+  successContainer: { flex: 1, padding: spacing.lg, gap: spacing.md, justifyContent: 'center' },
   successTitle: { fontSize: 24, fontWeight: '700', color: colors.text, textAlign: 'center' },
-  successMeta: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+  successBody: { fontSize: 15, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  refCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  refLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  refValue: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: 1 },
   rejectionBox: {
     backgroundColor: '#fef2f2',
     borderRadius: radius.md,
@@ -502,6 +597,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   rejectionTitle: { fontSize: 14, fontWeight: '600', color: colors.danger },
-  rejectionText: { fontSize: 13, color: colors.danger },
+  rejectionText: { fontSize: 13, color: colors.danger, lineHeight: 18 },
   errorText: { fontSize: 13, color: colors.danger, textAlign: 'center' },
 });
