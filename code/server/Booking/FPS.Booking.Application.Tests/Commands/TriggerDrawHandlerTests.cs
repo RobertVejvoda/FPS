@@ -186,4 +186,84 @@ public sealed class TriggerDrawHandlerTests
         TimeSlotStart: SlotStart,
         TimeSlotEnd: SlotEnd,
         Reason: "Scheduled draw");
+
+    // ── AUD007: Draw Lifecycle Tracking ───────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_CompletedDraw_CapturesAllLifecycleSteps()
+    {
+        var pending = PendingDto();
+        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([pending]);
+
+        slotService.Setup(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("S1"))]);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        drawRepo.Verify(r => r.SaveAsync(
+            It.Is<DrawAttemptDto>(d =>
+                d.Steps.Count == 7 &&
+                d.Steps.Any(s => s.StepName == "PolicyResolved") &&
+                d.Steps.Any(s => s.StepName == "RequestsLoaded") &&
+                d.Steps.Any(s => s.StepName == "CapacityLoaded") &&
+                d.Steps.Any(s => s.StepName == "MetricsLoaded") &&
+                d.Steps.Any(s => s.StepName == "WeightedAllocationCompleted") &&
+                d.Steps.Any(s => s.StepName == "DecisionsPersisted") &&
+                d.Steps.Any(s => s.StepName == "EventsPublished")
+            ),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_AllStepsMarkedCompleted()
+    {
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        drawRepo.Verify(r => r.SaveAsync(
+            It.Is<DrawAttemptDto>(d =>
+                d.Steps.All(s => s.Status == "Completed") &&
+                d.Steps.All(s => s.StartedAt.HasValue) &&
+                d.Steps.All(s => s.CompletedAt.HasValue)
+            ),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_CorrelationIdPresentInAllSteps()
+    {
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        drawRepo.Verify(r => r.SaveAsync(
+            It.Is<DrawAttemptDto>(d =>
+                !string.IsNullOrEmpty(d.CorrelationId) &&
+                d.Steps.All(s => s.CorrelationId == d.CorrelationId)
+            ),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_StepsHaveBusinessReadableSummaries()
+    {
+        var pending = PendingDto();
+        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([pending]);
+
+        slotService.Setup(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("S1"))]);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        drawRepo.Verify(r => r.SaveAsync(
+            It.Is<DrawAttemptDto>(d =>
+                d.Steps.All(s => !string.IsNullOrEmpty(s.Summary))
+            ),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

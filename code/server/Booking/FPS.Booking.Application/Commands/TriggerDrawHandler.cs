@@ -65,11 +65,29 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
                 WasAlreadyCompleted: true);
         }
 
+        var steps = new List<DrawLifecycleStepDto>();
+        var correlationId = Guid.NewGuid().ToString();
+        var traceId = System.Diagnostics.Activity.Current?.TraceId.ToString();
+
+        // Step 1: Policy resolution
+        var stepStarted = DateTime.UtcNow;
         var policy = await policyService.GetEffectivePolicyAsync(cmd.TenantId, cancellationToken: cancellationToken);
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "PolicyResolved",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = "Retrieved and validated tenant allocation policy",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
 
         var pendingForKey = await bookingQueryRepository.GetPendingRequestsForDrawAsync(
             cmd.TenantId, cmd.LocationId, cmd.Date, cancellationToken);
 
+        // Step 2: Pending requests loaded
+        stepStarted = DateTime.UtcNow;
         var pendingRequests = pendingForKey
             .Select(d => BookingRequest.Restore(
                 BookingRequestId.FromGuid(d.RequestId),
@@ -79,29 +97,78 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
                 BookingRequestStatus.Pending,
                 d.RequestedAt))
             .ToList();
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "RequestsLoaded",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = $"Loaded {pendingRequests.Count} pending booking request(s)",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
 
+        // Step 3: Available capacity loaded
+        stepStarted = DateTime.UtcNow;
         var availableSlots = await slotService.GetAvailableSlotsAsync(
             cmd.TenantId, cmd.LocationId, cmd.Date, timeSlot, cancellationToken);
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "CapacityLoaded",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = $"Loaded {availableSlots.Count} available slot(s)",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
 
         var requestorIds = pendingRequests.Select(r => r.RequestorId.Value.ToString()).Distinct();
         var metrics = await metricsService.GetMetricsSnapshotAsync(
             cmd.TenantId, requestorIds, cmd.Date, policy.AllocationLookbackDays, cancellationToken);
 
+        // Step 4: Fairness metrics loaded
+        stepStarted = DateTime.UtcNow;
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "MetricsLoaded",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = $"Loaded fairness metrics for {requestorIds.Count()} unique requestor(s)",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
+
         var seed = GenerateSeed(drawKey);
         var publisher = eventPublisher.WithContext(new BookingPublishContext(
-            cmd.TenantId, Guid.NewGuid().ToString(), "system", null));
+            cmd.TenantId, correlationId, "system", null));
         _ = publisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptStartedEvent(drawKey, seed, DateTime.UtcNow));
 
+        // Step 5: Weighted allocation run
+        stepStarted = DateTime.UtcNow;
         var result = drawService.RunDraw(pendingRequests, availableSlots, metrics, seed);
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "WeightedAllocationCompleted",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = $"Allocation completed with algorithm {result.AlgorithmVersion}",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
 
         // Persist decisions and update metrics
+        // Step 6: Decisions persisted
+        stepStarted = DateTime.UtcNow;
         foreach (var decision in result.Decisions)
         {
             var dto = pendingForKey.FirstOrDefault(d => d.RequestId == decision.RequestId.Value);
             if (dto is null) continue;
 
             var decisionPublisher = eventPublisher.WithContext(new BookingPublishContext(
-                cmd.TenantId, Guid.NewGuid().ToString(), "system", null,
+                cmd.TenantId, correlationId, "system", null,
                 SubjectRequestorId: decision.RequestorId.Value.ToString(),
                 AllocationSource: "draw"));
 
@@ -132,6 +199,16 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
                     break;
             }
         }
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "DecisionsPersisted",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = $"Persisted {result.Decisions.Count} decision(s) and updated status",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
 
         var attempt = new DrawAttemptDto
         {
@@ -155,15 +232,30 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
                 SlotId = d.SlotId?.Value,
                 Reason = d.Reason
             }).ToList(),
-            Tier2CandidateSequence = result.Tier2CandidateSequence.Select(id => id.Value.ToString()).ToList()
+            Tier2CandidateSequence = result.Tier2CandidateSequence.Select(id => id.Value.ToString()).ToList(),
+            Steps = steps,
+            CorrelationId = correlationId,
+            TraceId = traceId
         };
 
         await drawRepository.SaveAsync(attempt, cancellationToken);
 
+        // Step 7: Events published
+        stepStarted = DateTime.UtcNow;
         _ = publisher.PublishAsync(new FPS.Booking.Domain.Events.DrawAttemptCompletedEvent(
             drawKey, seed,
             attempt.AllocatedCount, attempt.RejectedCount, attempt.WaitlistedCount,
             DateTime.UtcNow));
+        steps.Add(new DrawLifecycleStepDto
+        {
+            StepName = "EventsPublished",
+            Status = "Completed",
+            StartedAt = stepStarted,
+            CompletedAt = DateTime.UtcNow,
+            Summary = "Published draw completion and decision events",
+            CorrelationId = correlationId,
+            TraceId = traceId
+        });
 
         return new TriggerDrawResult(
             attempt.DrawKey,

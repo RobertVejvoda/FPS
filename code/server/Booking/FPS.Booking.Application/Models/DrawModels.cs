@@ -16,6 +16,11 @@ public class DrawAttemptDto
     public DateTime? CompletedAt { get; set; }
     public List<DrawDecisionDto> Decisions { get; set; } = [];
     public List<string> Tier2CandidateSequence { get; set; } = [];
+
+    // AUD007: Lifecycle step tracking for audit evidence
+    public List<DrawLifecycleStepDto> Steps { get; set; } = [];
+    public string? CorrelationId { get; set; }
+    public string? TraceId { get; set; }
 }
 
 public class DrawDecisionDto

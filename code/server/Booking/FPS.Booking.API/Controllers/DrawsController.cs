@@ -89,4 +89,62 @@ public sealed class DrawsController : ControllerBase
             result.StartedAt,
             result.CompletedAt));
     }
+
+    /// <summary>
+    /// Get the full Draw lifecycle with step-level tracking for auditors and authorized administrators.
+    /// Includes per-booking decisions, deterministic evidence, and correlation metadata.
+    /// </summary>
+    [HttpGet("{date}/lifecycle")]
+    [Authorize(Roles = "admin,auditor")]
+    [ProducesResponseType(typeof(DrawLifecycleResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDrawLifecycle(
+        DateOnly date,
+        [FromQuery] string locationId,
+        [FromQuery] DateTime timeSlotStart,
+        [FromQuery] DateTime timeSlotEnd,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await mediator.Send(
+            new GetDrawLifecycleQuery(currentUser.TenantId, locationId, date, timeSlotStart, timeSlotEnd),
+            cancellationToken);
+
+        if (result is null) return NotFound();
+
+        return Ok(new DrawLifecycleResponse(
+            result.DrawKey,
+            result.TenantId,
+            result.LocationId,
+            result.Date,
+            result.Status,
+            result.Seed,
+            result.AlgorithmVersion,
+            result.StartedAt,
+            result.CompletedAt,
+            result.Steps.Select(s => new DrawLifecycleStepResponse(
+                s.StepName,
+                s.Status,
+                s.StartedAt,
+                s.CompletedAt,
+                s.ReasonCode,
+                s.Summary
+            )).ToList(),
+            result.AllocatedCount,
+            result.RejectedCount,
+            result.WaitlistedCount,
+            result.Decisions.Select(d => new DrawDecisionResponse(
+                d.RequestId,
+                d.RequestorId,
+                d.Outcome,
+                d.SlotId,
+                d.Reason
+            )).ToList(),
+            result.Tier2CandidateSequence,
+            result.CorrelationId,
+            result.TraceId
+        ));
+    }
 }
