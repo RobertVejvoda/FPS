@@ -116,6 +116,28 @@ Responses must not expose:
 - audit-only diagnostics;
 - hidden slot metadata.
 
+## Demand Context Response Fields
+
+Booking detail responses for `Pending` requests may optionally include `demandContext` to provide allocation outlook transparency. See [Allocation Demand Transparency](./allocation-demand-transparency) for full specification.
+
+`demandContext` should include:
+
+- `demandLevel`: coarse demand signal (`Low`, `Medium`, `High`, or `Limited` when privacy threshold is triggered);
+- `nextDrawTime`: scheduled draw time for this request;
+- `updatedAt`: when this demand snapshot was calculated;
+- `explanation`: employee-safe explanation that allocation follows eligibility and fairness rules.
+
+Demand context must not expose:
+
+- exact pending request counts or available slot counts (use coarse levels instead);
+- slot counts by type (company-car, accessible, EV charging) unless explicitly approved for that surface;
+- other employees' identities, weights, or penalty scores;
+- draw seed, candidate order, or internal algorithm diagnostics.
+
+Privacy threshold rules must hide exact counts when cohort is too small (< 10 requests or < 5 slots). Use `demandLevel: "Limited"` with explanation when privacy threshold is triggered.
+
+Demand context is optional and detail-view only. List responses (`GET /bookings`) should not include demand context for performance and complexity reasons.
+
 ## Command Idempotency
 
 Commands that can be retried must be idempotent for the same business outcome.

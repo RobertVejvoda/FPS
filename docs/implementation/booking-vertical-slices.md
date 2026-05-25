@@ -649,6 +649,67 @@ Behavior:
 
 B010 must not introduce broad admin bypasses, delete audit history, or implement billing/payment behavior.
 
+## Slice UX006: Allocation Demand Transparency
+
+### User Story
+
+As an employee, I want to see demand context for my pending parking request so that I understand whether rejection is due to real scarcity and can plan alternative commutes.
+
+### Scope
+
+- Add coarse demand level (`Low`, `Medium`, `High`, `Limited`) to pending booking detail response.
+- Calculate demand level from pending request count vs available slot count.
+- Apply privacy threshold rules: hide exact counts when request count < 10 or slot count < 5.
+- Include next draw time, updated timestamp, and explanation text.
+- Display demand context on mobile pending booking cards and detail views.
+- Do not expose exact counts, internal weights, draw seed, or other employees' identities.
+
+### Vertical Cut
+
+- Application: `DemandContextService` with demand level calculation.
+- API: extend `GET /bookings/{requestId}` response with optional `demandContext` field.
+- Mobile UI: update `BookingCard` and booking detail to display demand context when status is `Pending`.
+- Tests: demand level calculation, privacy threshold rules, UI rendering.
+
+### Done Means
+
+- Pending booking detail includes `demandContext` when safe and available.
+- Demand level is `Low`/`Medium`/`High` based on pending request vs available slot ratio.
+- Demand level is `Limited` when privacy threshold (< 10 requests or < 5 slots) is triggered.
+- Explanation clarifies that allocation follows policy/fairness rules.
+- Mobile booking card shows demand level badge and next draw time.
+- Mobile booking detail shows full demand context section with timestamp.
+- Demand context is omitted for non-pending statuses.
+
+### UX006 API Contract
+
+`GET /bookings/{requestId}` response includes optional `demandContext` field when status is `Pending`:
+
+```json
+{
+  "data": {
+    "bookingRequestId": "...",
+    "status": "Pending",
+    "demandContext": {
+      "demandLevel": "High",
+      "nextDrawTime": "2026-05-26T18:00:00Z",
+      "updatedAt": "2026-05-25T12:34:56Z",
+      "explanation": "Final allocation depends on eligibility and fairness rules."
+    }
+  }
+}
+```
+
+### UX006 Implementation Rules
+
+- Demand level calculation: Low (≤50%), Medium (>50% and ≤100%), High (>100%).
+- Privacy threshold: request count < 10 or slot count < 5 → `demandLevel: "Limited"`.
+- Demand context only for `Pending` status; omit for `Allocated`, `Rejected`, etc.
+- Next draw time from tenant policy `DrawCutOffTime` applied to requested date minus one day.
+- Mobile UI uses color-coded badges: Low (green/muted), Medium (amber), High (orange), Limited (neutral).
+
+Full specification: [Allocation Demand Transparency](../business-layer/allocation-demand-transparency)
+
 ## Implementation Order
 
 Recommended order:
@@ -663,8 +724,9 @@ Recommended order:
 8. B007 Mark No-Show
 9. B009 View Draw Status
 10. B010 Manual Correction
+11. UX006 Allocation Demand Transparency
 
-This order gives Claude a small first slice, then adds read visibility, then tackles Draw complexity once request lifecycle basics are stable.
+This order gives Claude a small first slice, then adds read visibility, then tackles Draw complexity once request lifecycle basics are stable. UX006 is placed after the core lifecycle slices because it depends on pending request queries and draw scheduling.
 
 ## Cross-Cutting Done Criteria
 
