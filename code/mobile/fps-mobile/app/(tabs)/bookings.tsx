@@ -107,7 +107,7 @@ export default function BookingsRoute() {
         <StateView
           kind="unauthenticated"
           title="Not signed in"
-          message="Your developer token is missing or rejected. Paste a fresh one to continue."
+          message="Your session has expired. Please sign in again."
         />
       );
     }
@@ -115,8 +115,8 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Backend unreachable"
-          message={state.message}
+          title="Cannot load your bookings"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />
@@ -126,8 +126,8 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="error"
-          title="Something went wrong"
-          message={state.message}
+          title="Cannot load your bookings"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />

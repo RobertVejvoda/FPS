@@ -45,3 +45,68 @@ export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '
 export function shouldShowNextDraw(status?: string | null): boolean {
   return status === 'Pending' || status === 'Submitted';
 }
+
+const REJECTION_CODE_LABELS: Record<string, string> = {
+  PolicyCutoff: 'Booking deadline has passed for this date.',
+  IneligibleProfile: 'Your profile was not eligible for this allocation.',
+  MissingVehicleEligibility: 'Vehicle eligibility requirement was not met.',
+  NoMatchingCapacity: 'No available spaces matched this request.',
+  DrawOutcome: 'Your request was not selected in this allocation draw.',
+};
+
+export function humanizeRejectionReason(rejectionCode: string | null, reason: string | null): string {
+  if (reason) return reason;
+  if (rejectionCode) {
+    return REJECTION_CODE_LABELS[rejectionCode] ?? 'This request was not eligible for allocation. Details are not available yet.';
+  }
+  return 'This request was not eligible for allocation. Details are not available yet.';
+}
+
+export function formatBookingRef(requestId: string, requestedDate?: string): string {
+  const datePart = requestedDate
+    ? requestedDate.replace(/-/g, '')
+    : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const shortCode = requestId.replace(/-/g, '').slice(-4).toUpperCase();
+  return `BK-${datePart}-${shortCode}`;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  // PascalCase forms (identity token claims)
+  EmployeeMobile: 'Employee',
+  Employee: 'Employee',
+  Admin: 'Administrator',
+  Auditor: 'Auditor',
+  HrManager: 'HR Manager',
+  ReportViewer: 'Report Viewer',
+  // snake_case forms (backend role values)
+  employee: 'Employee',
+  admin: 'Administrator',
+  auditor: 'Auditor',
+  hr_manager: 'HR Manager',
+  report_viewer: 'Report Viewer',
+};
+
+export function formatRoles(roles: string[]): string {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const r of roles) {
+    const label = ROLE_LABELS[r] ?? r;
+    if (!seen.has(label)) {
+      seen.add(label);
+      labels.push(label);
+    }
+  }
+  return labels.join(', ') || 'Employee';
+}
+
+export const STATUS_BADGE_LABEL: Record<string, string> = {
+  Submitted: 'Submitted',
+  Pending: 'Pending',
+  Allocated: 'Allocated',
+  Rejected: 'Not Allocated',
+  Cancelled: 'Cancelled',
+  Expired: 'Expired',
+  Waitlisted: 'Waitlisted',
+  UsageConfirmed: 'Confirmed',
+  NoShow: 'No Show',
+};
