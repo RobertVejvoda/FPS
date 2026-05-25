@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import { useSession } from '@/api/useSession';
 import { useProfileSnapshot } from '@/api/useProfileSnapshot';
@@ -80,6 +80,7 @@ export default function ProfileRoute() {
         title="Notification preferences"
         description="Reminder and channel preferences land in a later mobile slice."
       />
+      <LegalNoticeCard />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Sign out"
@@ -94,6 +95,27 @@ export default function ProfileRoute() {
         <Text style={styles.signOutLabel}>Sign out</Text>
       </Pressable>
     </Screen>
+  );
+}
+
+function LegalNoticeCard() {
+  return (
+    <View style={styles.card} testID="legal-notice-card">
+      <Text style={styles.cardTitle}>Legal</Text>
+      <Text style={styles.legalText}>FairSpot is AGPL-3.0-or-later open-source software.</Text>
+      <Text style={styles.legalText}>Copyright (c) 2026 Robert Vejvoda.</Text>
+      <Text style={styles.legalText}>
+        The FairSpot name and logo identify Robert Vejvoda's project; modified or hosted forks must not imply endorsement.
+      </Text>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Open FairSpot source code"
+        onPress={() => { void Linking.openURL('https://github.com/RobertVejvoda/FPS'); }}
+        style={({ pressed }) => [styles.legalLink, pressed && styles.signOutPressed]}
+      >
+        <Text style={styles.legalLinkText}>Source and license</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -214,6 +236,19 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: colors.textMuted,
+  },
+  legalText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textMuted,
+  },
+  legalLink: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+  },
+  legalLinkText: {
+    color: colors.primary,
+    fontWeight: '700',
   },
   vehicleRow: {
     paddingVertical: spacing.sm,

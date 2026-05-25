@@ -122,6 +122,65 @@ select {
   padding: 28px 24px 48px;
 }
 
+.legal-page {
+  min-height: 100vh;
+  padding: 32px 16px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-muted);
+}
+
+.legal-panel {
+  width: min(760px, 100%);
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.legal-panel h1 {
+  margin: 24px 0 8px;
+  font-size: 26px;
+}
+
+.legal-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.legal-list {
+  margin: 24px 0;
+  display: grid;
+  gap: 16px;
+}
+
+.legal-list div {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.legal-list dt {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.legal-list dd {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.legal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .btn-primary,
 .btn-secondary,
 .btn-danger,
@@ -253,6 +312,13 @@ select {
   color: rgba(255, 255, 255, 0.82);
   font-size: 16px;
   line-height: 1.6;
+}
+
+.session-legal-link {
+  width: fit-content;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .session-panel-wrap {

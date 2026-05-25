@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 const phaseMessages: Record<string, string> = {
@@ -95,6 +95,7 @@ export function SessionPage() {
           <p>Employees see their own status. Operators see readiness, policy, reporting, and audit evidence.</p>
         </div>
         <DemoPills />
+        <Link className="session-legal-link" to="/legal">Legal notices</Link>
       </div>
 
       <div className="session-panel-wrap">

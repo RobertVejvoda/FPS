@@ -83,4 +83,6 @@ Stop or reset:
 
 FairSpot is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](./LICENSE).
 
+Copyright and attribution notices are recorded in [NOTICE](./NOTICE). The FairSpot name and logo are project brand assets; forks, hosted offers, and commercial services must not imply official FairSpot status or Robert Vejvoda endorsement unless separately agreed. See the [FairSpot Brand Policy](./docs/strategy-layer/brand-policy.md).
+
 Copyright (c) 2026 Robert Vejvoda.

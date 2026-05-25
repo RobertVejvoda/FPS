@@ -9,6 +9,7 @@ FairSpot is licensed as open-source software under **AGPL-3.0-or-later**. The du
 | Repository license | AGPL-3.0-or-later. |
 | Source availability | Modified network-service deployments must make corresponding source available under AGPL terms. |
 | Client production | Clients can run FairSpot in their own environment, subject to AGPL obligations and any separate written agreement. |
+| Brand identity | FairSpot name and logo are covered by the [FairSpot Brand Policy](./brand-policy). Forks and commercial offers must not imply official status or endorsement. |
 | Pricing | No product pricing is decided in the documentation. |
 | Commercial offer | First planning frame is documented in [Commercialisation Impact Review](./commercialisation). Do not publish subscription prices, discounts, referral credits, or sales commitments until there is an approved business model. |
 
@@ -18,6 +19,7 @@ FairSpot is licensed as open-source software under **AGPL-3.0-or-later**. The du
 - Fairness, auditability, and tenant trust benefit from source transparency.
 - The network-service clause reduces the risk of closed SaaS forks that modify FairSpot without sharing improvements.
 - The license still allows paid services such as implementation, hosting assistance, support, training, deployment packaging, and client-specific integration work, as long as those offers are documented separately and do not contradict AGPL.
+- The in-product Legal/About notices preserve source, license, copyright, and brand attribution for users of web and mobile deployments.
 
 ## Future Commercial Options
 
@@ -42,6 +44,12 @@ FairSpot should remain useful as a free/open product. The free core should be go
 | Support | Community documentation and public issue discussion. | Support subscription with response targets, upgrade help, release guidance, and security advisory handling. |
 | Integrations | Generic OIDC, Dapr component contracts, OpenTelemetry guidance, and standard APIs. | Client-specific integrations for Entra/Keycloak, Dynatrace, HR systems, access control, license plate recognition, workplace calendars, or BI tools. |
 | Licensing | AGPL source license. | Future dual-license option for clients that need commercial terms, subject to explicit legal/business approval. |
+
+## Attribution And Brand Boundaries
+
+AGPL requires copyright and license notices to be preserved when the software is conveyed, and the network-service clause requires modified server deployments to provide corresponding source to users. It does not force a reseller or hosted-service operator to market the product as Robert Vejvoda's work.
+
+FairSpot therefore also keeps a visible Legal/About surface in the web and mobile clients and maintains a separate [FairSpot Brand Policy](./brand-policy). The policy allows truthful "based on FairSpot" attribution while preventing modified forks, hosted offers, or commercial services from implying that they are official FairSpot or endorsed by Robert Vejvoda without separate written agreement.
 
 This is not a product promise. It is a planning frame for later commercialisation work so future Billing and licensing discussions do not accidentally weaken the open-source core.
 

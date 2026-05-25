@@ -22,6 +22,7 @@ import { AuditPage } from './pages/AuditPage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
 import { ForbiddenPage } from './pages/ForbiddenPage';
+import { LegalPage } from './pages/LegalPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
   return allowed ? <>{children}</> : <ForbiddenPage />;
@@ -41,6 +42,7 @@ function Shell() {
     canAccessConfiguration(roles) && { to: '/hr-import', label: 'HR Import' },
     canAccessAudit(roles) && { to: '/audit', label: 'Audit' },
     canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: 'Admin' },
+    { to: '/legal', label: 'Legal' },
   ].filter(Boolean) as { to: string; label: string }[];
 
   return (
@@ -97,6 +99,7 @@ export function App() {
       <Routes>
         <Route path="/session" element={<SessionPage />} />
         <Route path="/auth/callback" element={<OidcCallbackPage />} />
+        <Route path="/legal" element={<LegalPage />} />
         <Route path="/*" element={<Shell />} />
       </Routes>
     </BrowserRouter>

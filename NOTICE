@@ -1,9 +1,15 @@
-Fair Parking System (FPS)
+FairSpot
 
 Copyright (c) 2026 Robert Vejvoda.
 
-FPS is licensed under the GNU Affero General Public License version 3 or later
+FairSpot is licensed under the GNU Affero General Public License version 3 or later
 (AGPL-3.0-or-later). See LICENSE for the full license text.
+
+The FairSpot name, logo, and project identity are brand assets associated with
+Robert Vejvoda's FairSpot project. Forks, hosted services, commercial offers,
+and modified deployments must not imply official FairSpot status or Robert
+Vejvoda endorsement unless separately agreed in writing. See
+docs/strategy-layer/brand-policy.md.
 
 AI-assisted development notice:
 This repository may contain code, documentation, tests, and other materials
