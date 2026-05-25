@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -92,33 +92,12 @@ export default function BookingDetailRoute() {
           </View>
         </View>
 
-        {/* Reason — always shown for rejected bookings; shown when available for others */}
-        {params.status === 'Rejected' ? (
+        {/* Reason */}
+        {params.reason ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Why was this request not fulfilled?</Text>
-            <View style={styles.card}>
-              <Text style={styles.reasonText}>
-                {humanizeRejectionReason(null, params.reason || null)}
-              </Text>
-            </View>
-          </View>
-        ) : params.reason ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Note</Text>
+            <Text style={styles.sectionTitle}>Reason</Text>
             <View style={styles.card}>
               <Text style={styles.reasonText}>{params.reason}</Text>
-            </View>
-          </View>
-        ) : null}
-
-        {/* Pending — draw timing */}
-        {shouldShowNextDraw(params.status) && !nextDrawLabel ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Allocation</Text>
-            <View style={styles.card}>
-              <Text style={styles.reasonText}>
-                Waiting for allocation. Draw time is not available yet.
-              </Text>
             </View>
           </View>
         ) : null}
@@ -139,7 +118,7 @@ export default function BookingDetailRoute() {
           <Text style={styles.sectionTitle}>Timeline</Text>
           <View style={styles.card}>
             <Row label="Submitted" value={formatDateTime(params.createdAt)} />
-            {nextDrawLabel ? <Row label="Next draw" value={nextDrawLabel} /> : null}
+            {nextDrawLabel ? <Row label="Next Draw" value={nextDrawLabel} /> : null}
             <Row label="Last updated" value={formatDateTime(params.lastStatusChangedAt)} />
           </View>
         </View>

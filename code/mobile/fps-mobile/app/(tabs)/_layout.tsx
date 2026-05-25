@@ -46,16 +46,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="more"
-        options={{
-          title: 'More',
-          href: isEmployee ? undefined : null,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
-          href: null,
+          title: 'Profile',
+          href: isEmployee ? undefined : null,
         }}
       />
       <Tabs.Screen

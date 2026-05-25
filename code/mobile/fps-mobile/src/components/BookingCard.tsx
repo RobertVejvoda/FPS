@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
-import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
@@ -56,11 +56,6 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
   const slotLabel = displaySlot(booking.allocatedSlotId);
   const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
 
-  const badgeLabel = STATUS_BADGE_LABEL[booking.status] ?? booking.status;
-  const rejectionReason = booking.status === 'Rejected'
-    ? humanizeRejectionReason(null, booking.reason ?? null)
-    : null;
-
   return (
     <Pressable
       onPress={onPress}
@@ -72,7 +67,7 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
       <View style={styles.header}>
         <Text style={styles.date}>{formatDate(booking.requestedDate)}</Text>
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-          <Text style={styles.badgeText}>{badgeLabel}</Text>
+          <Text style={styles.badgeText}>{booking.status}</Text>
         </View>
       </View>
 
@@ -89,12 +84,10 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
       ) : null}
 
       {nextDrawLabel ? (
-        <Text style={styles.nextDraw}>Waiting for allocation. Next draw: {nextDrawLabel}</Text>
+        <Text style={styles.nextDraw}>Next Draw: {nextDrawLabel}</Text>
       ) : null}
 
-      {rejectionReason ? (
-        <Text style={styles.reason}>{rejectionReason}</Text>
-      ) : booking.status !== 'Rejected' && booking.reason ? (
+      {booking.reason ? (
         <Text style={styles.reason}>{booking.reason}</Text>
       ) : null}
 
