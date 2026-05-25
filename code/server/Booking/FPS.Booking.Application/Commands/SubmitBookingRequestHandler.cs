@@ -195,6 +195,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             RequestedBy = request.RequestorId.Value.ToString(),
             RequestedAt = request.SubmittedAt,
             Status = request.Status.ToString(),
+            RejectionCode = request.RejectionCode?.ToString(),
+            RejectionReason = request.RejectionReason,
             ProfileSnapshotVersion = snapshotVersion,
             AllocatedSlotId = slot?.SlotId.Value != null
                 ? (Guid.TryParse(slot.SlotId.Value, out var slotGuid) ? slotGuid : (Guid?)null)

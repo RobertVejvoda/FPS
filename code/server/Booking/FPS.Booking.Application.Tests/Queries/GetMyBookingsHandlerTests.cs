@@ -124,7 +124,7 @@ public sealed class GetMyBookingsHandlerTests
         {
             new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
                 new TimeOnly(9, 0), new TimeOnly(17, 0), null,
-                "Pending", null, null, "cancel",
+                "Pending", null, null, null, "cancel",
                 DateTime.UtcNow, DateTime.UtcNow)
         };
         var expected = new BookingListResult(items, "next-token");

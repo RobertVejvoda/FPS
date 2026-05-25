@@ -92,7 +92,7 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
         {
             case "status":
                 await repository.UpdateBookingRequestStatusAsync(
-                    command.RequestId, command.NewValue, command.Reason, cancellationToken);
+                    command.RequestId, command.NewValue, reason: command.Reason, cancellationToken: cancellationToken);
                 break;
             case "reason":
                 dto.RejectionReason = command.NewValue;

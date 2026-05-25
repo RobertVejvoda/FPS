@@ -72,7 +72,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
             request.MarkNoShow(publisher);
 
             await repository.UpdateBookingRequestStatusAsync(
-                dto.RequestId, "NoShow", command.Reason, cancellationToken);
+                dto.RequestId, "NoShow", reason: command.Reason, cancellationToken: cancellationToken);
 
             await ApplyNoShowPenaltyAsync(dto, policy, today, command.TenantId, cancellationToken);
 

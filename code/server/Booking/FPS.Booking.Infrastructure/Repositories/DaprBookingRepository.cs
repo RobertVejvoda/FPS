@@ -26,7 +26,7 @@ public sealed class DaprBookingRepository : IBookingRepository
         => await daprClient.GetStateAsync<BookingRequestDto>(BookingStore, $"request:{requestId}");
 
     public async Task UpdateBookingRequestStatusAsync(
-        Guid requestId, string status, string? reason = null, CancellationToken cancellationToken = default)
+        Guid requestId, string status, string? reasonCode = null, string? reason = null, CancellationToken cancellationToken = default)
     {
         var dto = await GetBookingRequestAsync(requestId);
         if (dto is null) return;
@@ -34,8 +34,13 @@ public sealed class DaprBookingRepository : IBookingRepository
         dto.Status = status;
         dto.LastStatusChangedAt = DateTime.UtcNow;
 
-        if (status == "Cancelled") dto.CancellationReason = reason;
-        else if (status == "Rejected") dto.RejectionReason = reason;
+        if (status == "Cancelled")
+            dto.CancellationReason = reason;
+        else if (status == "Rejected")
+        {
+            dto.RejectionCode = reasonCode;
+            dto.RejectionReason = reason;
+        }
 
         await daprClient.SaveStateAsync(BookingStore, $"request:{requestId}", dto, cancellationToken: cancellationToken);
     }

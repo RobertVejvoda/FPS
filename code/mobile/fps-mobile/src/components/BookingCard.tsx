@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
-import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displayRejectionReason, displaySlot, shouldShowNextDraw } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
@@ -55,6 +55,9 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
   const locationLabel = displayLocation(booking.locationId);
   const slotLabel = displaySlot(booking.allocatedSlotId);
   const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
+  const reasonLabel = booking.status === 'Rejected'
+    ? displayRejectionReason(booking.reasonCode, booking.reason)
+    : booking.reason;
 
   return (
     <Pressable
@@ -87,8 +90,8 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
         <Text style={styles.nextDraw}>Next Draw: {nextDrawLabel}</Text>
       ) : null}
 
-      {booking.reason ? (
-        <Text style={styles.reason}>{booking.reason}</Text>
+      {reasonLabel ? (
+        <Text style={styles.reason}>{reasonLabel}</Text>
       ) : null}
 
       {nextAction === 'cancel' && onCancel ? (
