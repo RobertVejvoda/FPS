@@ -49,8 +49,8 @@ export default function NotificationsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Backend unreachable"
-          message={state.message}
+          title="Cannot load alerts"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />

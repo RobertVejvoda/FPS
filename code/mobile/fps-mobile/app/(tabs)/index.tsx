@@ -61,8 +61,8 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind="unreachable"
-          title="Backend unreachable"
-          message={state.message}
+          title="Cannot load your bookings"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />
@@ -75,8 +75,8 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind="error"
-          title="Something went wrong"
-          message={state.message}
+          title="Cannot load your bookings"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />

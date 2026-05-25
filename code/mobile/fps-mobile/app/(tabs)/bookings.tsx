@@ -115,8 +115,8 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Backend unreachable"
-          message={state.message}
+          title="Cannot load your bookings"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
         />
@@ -126,7 +126,7 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="error"
-          title="Something went wrong"
+          title="Cannot load your bookings"
           message={state.message}
           actionLabel="Retry"
           onAction={refresh}
