@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { defaultRoute } from '../auth/roles';
 
 const phaseMessages: Record<string, string> = {
   'login-cancelled': 'Sign in was cancelled. Try again.',
@@ -10,7 +11,7 @@ const phaseMessages: Record<string, string> = {
 };
 
 export function SessionPage() {
-  const { phase, phaseError, apiBaseUrl, devFallbackEnabled, branding, login, save, clear } = useAuth();
+  const { phase, phaseError, apiBaseUrl, devFallbackEnabled, branding, roles, login, save, clear } = useAuth();
   const navigate = useNavigate();
 
   const [showDevForm, setShowDevForm] = useState(false);
@@ -22,9 +23,9 @@ export function SessionPage() {
   // Navigate away once login completes successfully.
   useEffect(() => {
     if (phase === 'authenticated') {
-      navigate('/bookings', { replace: true });
+      navigate(defaultRoute(roles), { replace: true });
     }
-  }, [phase, navigate]);
+  }, [phase, roles, navigate]);
 
   if (phase === 'loading' || phase === 'validating') {
     return (
