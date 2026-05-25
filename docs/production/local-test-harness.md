@@ -55,6 +55,14 @@ The scripts also check frontend dependencies before starting Vite or Expo. They 
 
 Web OIDC login is bound to `http://localhost:5200/auth/callback` in the local Keycloak `fps-web-dev` client and in `code/web/fps-web/public/config.json`. Web logout is bound to `http://localhost:5200/` through the same client. If port `5200` is already occupied, stop the other web process first; do not use a Vite fallback port such as `5201` unless you also update the runtime config and Keycloak redirect URI. The local Envoy gateway also allows browser CORS preflight only from `http://localhost:5200`.
 
+`start-smoke-web.sh` binds Vite to `127.0.0.1` by default so it does not advertise LAN or Tailscale URLs that cannot complete SSO with the default local realm. To test web from another device, set a deliberate host with `FPS_WEB_HOST=0.0.0.0`, then update all of these values together before starting the smoke path:
+
+- `fps-web-dev` Keycloak redirect URI and web origin for the chosen host;
+- `code/web/fps-web/public/config.json` `apiBaseUrl`, OIDC authority, redirect URI, and logout redirect URI;
+- Envoy CORS allowed origin for the chosen web origin.
+
+For phone testing, prefer `sh ./tools/start-smoke-mobile.sh`; it is the supported network-device path.
+
 ## Devcontainer
 
 Use the devcontainer for repeatable backend and web smoke development when local host tooling is noisy or missing. It provides:

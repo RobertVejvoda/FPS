@@ -15,6 +15,7 @@ export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$REPO_ROOT/code/web/fps-web"
 WEB_PID=""
+WEB_HOST="${FPS_WEB_HOST:-127.0.0.1}"
 
 . "$REPO_ROOT/tools/smoke-harness-lib.sh"
 
@@ -35,6 +36,9 @@ printf '================================================\n'
 printf ' FPS Web Smoke — Ready\n'
 printf '================================================\n'
 printf ' Web app:  http://localhost:5200\n'
+if [ "$WEB_HOST" != "127.0.0.1" ] && [ "$WEB_HOST" != "localhost" ]; then
+  printf ' Warning: web SSO is configured for localhost:5200. Network hosts need matching Keycloak, web config, and CORS settings.\n'
+fi
 printf '\n'
 printf ' Sign in:  open http://localhost:5200 and click Sign in.\n'
 printf '           Use a seeded fps-local user, e.g.:\n'
@@ -53,6 +57,6 @@ printf '\n'
 cd "$WEB_DIR"
 sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\")"'
 
-"$WEB_DIR/node_modules/.bin/vite" --host 0.0.0.0 &
+"$WEB_DIR/node_modules/.bin/vite" --host "$WEB_HOST" &
 WEB_PID="$!"
 wait "$WEB_PID"
