@@ -52,6 +52,7 @@ See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperat
 - Architectural decisions go to `docs/versions-and-decisions.md` and require human approval (neither agent decides alone).
 - Cost-management tips: keep agent-facing docs lean, scope tasks tightly to files expected to change, compact long sessions.
 - Cross-agent validation: Claude may be used as a second reviewer for high-impact Codex-authored architecture/security/spec work, but not for routine low-risk updates.
+- Reviewer independence: an implementer must not approve, merge, or mark done its own PR. Claude and Copilot may report validation results and request review, but Codex or a human reviewer must approve acceptance.
 
 ### Context And Cost Hygiene
 

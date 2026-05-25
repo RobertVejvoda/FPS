@@ -113,6 +113,19 @@ If any of these are missing, keep the issue in `Backlog` or `Blocked` rather tha
 | Copilot | Acts when `Owner = Copilot`, ideally with GitHub Copilot coding-agent assignment where available. Copilot candidates should be mechanical, file-bounded, and explicit about expected files and validation. |
 | Robert | Acts only when `Owner = Robert`, usually with `Status = Blocked` for a real product, architecture, or operational decision. |
 
+## Reviewer Independence
+
+Implementers must not approve, merge, or mark done their own PRs. This applies to Claude, Copilot, Codex, and human implementers.
+
+When Claude or Copilot finishes implementation, the correct handoff is:
+
+- leave a concise PR comment with scope summary, validation results, and any known gaps;
+- ensure the PR links its owning issue with `Closes #N`, `Fixes #N`, or equivalent;
+- set or request `Status = In review`, `Owner = Codex`;
+- wait for Codex or a human reviewer to approve, request changes, merge, or close the issue.
+
+Implementer validation is evidence, not acceptance. Acceptance requires an independent reviewer.
+
 ## Reverse Handoff
 
 When Claude, Copilot, or a human implementer needs Codex/Robert action, use the same durable GitHub state a human would use:
