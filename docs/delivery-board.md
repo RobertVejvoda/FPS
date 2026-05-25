@@ -13,6 +13,20 @@ The board should answer four questions without reading the whole repository:
 | Who owns the next action? | `Owner` field, then GitHub assignee or agent assignment where available. |
 | What evidence proves progress? | Linked issue, linked PR, tracker row, and validation notes. |
 
+## Requirement Intake
+
+Product decisions, UX expectations, and business rules discussed in chat must become trackable repository work before implementation starts. The durable record should be a GitHub issue body, an explicit issue comment, or a linked requirements document referenced by the issue.
+
+Use this rule for every new or changed requirement:
+
+- record the requirement on the owning issue before routing work to Claude, Copilot, or a human implementer;
+- make the requirement reviewable as acceptance criteria, a checklist item, or a clearly labeled issue comment;
+- keep later clarifications on the same issue when they refine the same slice;
+- create a new issue when the clarification changes scope, creates backend/API work, or belongs to a different product area;
+- require PRs to link the issue they satisfy with `Closes #N`, `Fixes #N`, or an equivalent GitHub closing keyword.
+
+Chat history is useful context, but it is not the source of truth for delivery. If a requirement matters for fairness, security, privacy, tenant isolation, auditability, usability, or demo readiness, it should be visible from the issue and traceable to the PR that implements it.
+
 ## Field Meaning
 
 | Field | Meaning | Rule |
