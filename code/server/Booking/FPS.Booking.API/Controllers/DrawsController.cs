@@ -87,6 +87,7 @@ public sealed class DrawsController : ControllerBase
             result.Seed,
             result.AuditReference,
             result.StartedAt,
-            result.CompletedAt));
+            result.CompletedAt,
+            result.DemandLevel));
     }
 }

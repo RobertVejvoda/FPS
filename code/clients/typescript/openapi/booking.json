@@ -889,7 +889,8 @@
           "seed",
           "auditReference",
           "startedAt",
-          "completedAt"
+          "completedAt",
+          "demandLevel"
         ],
         "type": "object",
         "properties": {
@@ -975,6 +976,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "demandLevel": {
+            "type": "string",
+            "enum": ["Low", "Medium", "High", "Unknown"]
           }
         }
       },

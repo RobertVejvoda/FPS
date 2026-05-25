@@ -78,7 +78,7 @@ public sealed class DrawsControllerTests
             .ReturnsAsync(new DrawStatusResult(
                 "draw-key", "tenant-1", "loc-1", DrawDate,
                 "Completed", 5, 3, 1, 1, 0, [], "1.0", 42, "draw-key",
-                DateTime.UtcNow, DateTime.UtcNow));
+                DateTime.UtcNow, DateTime.UtcNow, "Low"));
 
         var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
 
@@ -87,6 +87,7 @@ public sealed class DrawsControllerTests
         Assert.Equal("Completed", body.Status);
         Assert.Equal(3, body.AllocatedCount);
         Assert.Equal(42, body.Seed);
+        Assert.Equal("Low", body.DemandLevel);
     }
 
     [Fact]

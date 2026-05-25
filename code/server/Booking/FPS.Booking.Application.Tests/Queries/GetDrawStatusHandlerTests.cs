@@ -112,7 +112,56 @@ public sealed class GetDrawStatusHandlerTests
         Assert.Equal(completed, result.CompletedAt);
     }
 
-    private static GetDrawStatusQuery ValidQuery() => new(
+    [Fact]
+    public async Task Handle_AllAllocated_DemandLevelIsLow()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 10, rejected: 0, waitlisted: 0));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("Low", result!.DemandLevel);
+    }
+
+    [Fact]
+    public async Task Handle_MajorityAllocated_DemandLevelIsMedium()
+    {
+        // 7/10 = 70% satisfaction → Medium
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 7, rejected: 2, waitlisted: 1));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("Medium", result!.DemandLevel);
+    }
+
+    [Fact]
+    public async Task Handle_MajorityUnfulfilled_DemandLevelIsHigh()
+    {
+        // 3/10 = 30% satisfaction → High
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 3, rejected: 5, waitlisted: 2));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("High", result!.DemandLevel);
+    }
+
+    [Fact]
+    public async Task Handle_PendingDraw_DemandLevelIsUnknown()
+    {
+        var attempt = CompletedAttempt(0, 0, 0);
+        attempt.Status = "Pending";
+        attempt.CompletedAt = null;
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attempt);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("Unknown", result!.DemandLevel);
+    }
+
+        private static GetDrawStatusQuery ValidQuery() => new(
         TenantId: "tenant-1",
         LocationId: "loc-1",
         Date: DrawDate,

@@ -578,6 +578,7 @@ export interface components {
             startedAt: null | string;
             /** Format: date-time */
             completedAt: null | string;
+            demandLevel: "Low" | "Medium" | "High" | "Unknown";
         };
         EvaluateNoShowResult: {
             /** Format: int32 */

@@ -13,4 +13,5 @@ public record DrawStatusResponse(
     long Seed,
     string? AuditReference,
     DateTime? StartedAt,
-    DateTime? CompletedAt);
+    DateTime? CompletedAt,
+    string DemandLevel);
