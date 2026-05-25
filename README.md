@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="https://www.vejvoda.net/FPS/" aria-label="Open the FairSpot documentation site">
+    <img src="docs/images/brand/fairspot-logo.svg" alt="FairSpot" width="420">
+  </a>
+</p>
+
 # FairSpot
 
 [![CI](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml)
