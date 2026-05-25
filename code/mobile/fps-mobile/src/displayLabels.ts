@@ -45,3 +45,51 @@ export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '
 export function shouldShowNextDraw(status?: string | null): boolean {
   return status === 'Pending' || status === 'Submitted';
 }
+
+const REJECTION_CODE_LABELS: Record<string, string> = {
+  PolicyCutoff: 'Booking deadline has passed for this date.',
+  IneligibleProfile: 'Your profile was not eligible for this allocation.',
+  MissingVehicleEligibility: 'Vehicle eligibility requirement was not met.',
+  NoMatchingCapacity: 'No available spaces matched this request.',
+  DrawOutcome: 'Your request was not selected in this allocation draw.',
+};
+
+export function humanizeRejectionReason(rejectionCode: string | null, reason: string | null): string {
+  if (reason) return reason;
+  if (rejectionCode) {
+    return REJECTION_CODE_LABELS[rejectionCode] ?? 'This request was not eligible for allocation. Details are not available yet.';
+  }
+  return 'This request was not eligible for allocation. Details are not available yet.';
+}
+
+export function formatBookingRef(requestId: string, requestedDate?: string): string {
+  const datePart = requestedDate
+    ? requestedDate.replace(/-/g, '')
+    : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const shortCode = requestId.replace(/-/g, '').slice(-4).toUpperCase();
+  return `BK-${datePart}-${shortCode}`;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  EmployeeMobile: 'Employee',
+  Employee: 'Employee',
+  Admin: 'Administrator',
+  Auditor: 'Auditor',
+};
+
+export function formatRoles(roles: string[]): string {
+  const labels = roles.map((r) => ROLE_LABELS[r] ?? r);
+  return labels.join(', ') || 'Employee';
+}
+
+export const STATUS_BADGE_LABEL: Record<string, string> = {
+  Submitted: 'Submitted',
+  Pending: 'Pending',
+  Allocated: 'Allocated',
+  Rejected: 'Not Allocated',
+  Cancelled: 'Cancelled',
+  Expired: 'Expired',
+  Waitlisted: 'Waitlisted',
+  UsageConfirmed: 'Confirmed',
+  NoShow: 'No Show',
+};

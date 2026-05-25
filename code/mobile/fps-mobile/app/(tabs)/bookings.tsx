@@ -107,7 +107,7 @@ export default function BookingsRoute() {
         <StateView
           kind="unauthenticated"
           title="Not signed in"
-          message="Your developer token is missing or rejected. Paste a fresh one to continue."
+          message="Your session has expired. Please sign in again."
         />
       );
     }
