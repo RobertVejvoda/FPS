@@ -68,6 +68,11 @@ function createUserManager(config: RuntimeConfig): UserManager {
   });
 }
 
+async function clearOidcUser(um: UserManager | null): Promise<void> {
+  if (!um) return;
+  try { await um.removeUser(); } catch { /* best effort */ }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const userManagerRef = useRef<UserManager | null>(null);
   const configRef = useRef<RuntimeConfig | null>(null);
@@ -115,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setPhaseError(result.message);
               setPhase('unreachable');
             } else {
+              await clearOidcUser(um);
               setPhase('session-expired');
             }
           } catch (e: unknown) {
@@ -169,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setPhaseError(result.message);
           setPhase('unreachable');
         } else {
+          await clearOidcUser(um);
           setPhase('session-expired');
         }
       } catch (e: unknown) {
@@ -187,7 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const um = userManagerRef.current;
     if (!um) return;
     try {
-      await um.signinRedirect();
+      await um.removeUser();
+      await um.signinRedirect({ prompt: 'login' });
     } catch {
       setPhase('login-failed');
     }
@@ -199,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
     const um = userManagerRef.current;
     if (um) {
-      try { await um.removeUser(); } catch { /* best effort */ }
+      await clearOidcUser(um);
       try {
         await um.signoutRedirect();
       } catch {
