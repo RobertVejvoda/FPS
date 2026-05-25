@@ -50,8 +50,8 @@ export default function MoreRoute() {
       <Screen>
         <StateView
           kind={sessionState.kind}
-          title={sessionState.kind === 'unreachable' ? 'Backend unreachable' : 'Something went wrong'}
-          message={sessionState.message}
+          title="Cannot load your account"
+          message="Please check your connection and try again."
         />
       </Screen>
     );
@@ -146,8 +146,8 @@ function EligibilityPanel({
       <View style={styles.card}>
         <StateView
           kind={state.kind}
-          title={state.kind === 'unreachable' ? 'Profile service unreachable' : 'Profile details failed to load'}
-          message={state.message}
+          title="Parking profile unavailable"
+          message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={onRetry}
           testID="profile-snapshot-error"

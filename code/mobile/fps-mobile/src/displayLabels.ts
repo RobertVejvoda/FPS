@@ -71,14 +71,31 @@ export function formatBookingRef(requestId: string, requestedDate?: string): str
 }
 
 const ROLE_LABELS: Record<string, string> = {
+  // PascalCase forms (identity token claims)
   EmployeeMobile: 'Employee',
   Employee: 'Employee',
   Admin: 'Administrator',
   Auditor: 'Auditor',
+  HrManager: 'HR Manager',
+  ReportViewer: 'Report Viewer',
+  // snake_case forms (backend role values)
+  employee: 'Employee',
+  admin: 'Administrator',
+  auditor: 'Auditor',
+  hr_manager: 'HR Manager',
+  report_viewer: 'Report Viewer',
 };
 
 export function formatRoles(roles: string[]): string {
-  const labels = roles.map((r) => ROLE_LABELS[r] ?? r);
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const r of roles) {
+    const label = ROLE_LABELS[r] ?? r;
+    if (!seen.has(label)) {
+      seen.add(label);
+      labels.push(label);
+    }
+  }
   return labels.join(', ') || 'Employee';
 }
 
