@@ -234,3 +234,99 @@ Audit records for the workflow must show:
 - optional `traceId` / `processingTraceId` for support correlation.
 
 The erasure workflow must not store the erased user's raw identity in the business activity summary. After the Audit PII mapping is deleted, historical audit records remain queryable by actor hash but no longer resolve to a person.
+
+## AUD007: Draw Lifecycle Audit Evidence
+
+AUD007 provides comprehensive Draw lifecycle tracking for auditors and authorized administrators to verify FairSpot's fairness claims.
+
+### Scope
+
+- Capture step-level lifecycle events during Draw execution
+- Expose auditor/admin API to query complete Draw lifecycle
+- Include per-booking decisions with outcomes and business reasons
+- Preserve deterministic evidence: algorithm version, seed, ordered candidate sequence
+- Link lifecycle steps with correlation metadata for tracing
+- Support both completed and failed/partial Draw lifecycle paths
+- Keep employee-facing views separate from audit views
+
+### Lifecycle Steps
+
+Each Draw captures these business-readable action steps:
+
+| Step | Description | Evidence captured |
+| --- | --- | --- |
+| `PolicyResolved` | Retrieved and validated tenant allocation policy | Policy lookup confirmation |
+| `RequestsLoaded` | Loaded pending booking requests for the time slot | Request count |
+| `CapacityLoaded` | Loaded available parking slots | Slot count |
+| `MetricsLoaded` | Loaded fairness metrics for requestors | Unique requestor count |
+| `WeightedAllocationCompleted` | Ran weighted lottery allocation | Algorithm version |
+| `DecisionsPersisted` | Persisted decisions and updated booking statuses | Decision count |
+| `EventsPublished` | Published draw completion and decision events | Event publication confirmation |
+
+Each step records:
+
+- `stepName`: Business-readable step name
+- `status`: `Pending`, `InProgress`, `Completed`, `Skipped`, or `Failed`
+- `startedAt`: Step start timestamp
+- `completedAt`: Step completion timestamp
+- `reasonCode`: Safe reason code when step fails or is skipped
+- `summary`: Business-readable text summary
+- `correlationId`: Draw correlation ID
+- `traceId`: OpenTelemetry trace ID where available
+
+### Draw Lifecycle Model
+
+The complete Draw lifecycle includes:
+
+| Field | Meaning | Audience |
+| --- | --- | --- |
+| `drawKey` | Business-safe draw reference | Auditor, admin |
+| `tenantId`, `locationId`, `date` | Draw scope | Auditor, admin |
+| `status` | `Pending`, `InProgress`, `Completed`, `Failed`, `Partial` | Auditor, admin |
+| `seed` | Deterministic seed for reproducibility | Auditor only |
+| `algorithmVersion` | Algorithm version used | Auditor, admin |
+| `startedAt`, `completedAt` | Lifecycle timestamps | Auditor, admin |
+| `steps` | Step-level lifecycle events | Auditor, admin |
+| `allocatedCount`, `rejectedCount`, `waitlistedCount` | Summary counts | Auditor, admin |
+| `decisions` | Per-booking decisions with outcomes and reasons | Auditor, admin |
+| `tier2CandidateSequence` | Ordered candidate sequence for fairness verification | Auditor only |
+| `correlationId`, `traceId` | Correlation metadata for trace linking | Auditor, admin |
+
+### API
+
+**Endpoint**: `GET /draws/{date}/lifecycle`
+
+**Authorization**: `admin` or `auditor` roles only
+
+**Query Parameters**:
+- `locationId`: Location identifier
+- `timeSlotStart`: Time slot start (ISO 8601 datetime)
+- `timeSlotEnd`: Time slot end (ISO 8601 datetime)
+
+**Response**: Full Draw lifecycle with steps, decisions, and deterministic evidence
+
+**Employee Protection**: Employees see only plain outcomes and safe reasons through separate endpoints. They do not see draw seed, candidate order, raw IDs, or hidden fairness internals.
+
+### Acceptance Criteria
+
+- [x] Auditor/admin can inspect one Draw and see lifecycle status from start to completion/failure
+- [x] Lifecycle includes key action steps and each step's result
+- [x] Per-booking decisions are linked to the Draw lifecycle and show outcome plus business reason
+- [x] Audit records, traces, and logs can be correlated by draw attempt/reference, correlationId, and traceId
+- [x] Failed or partial Draw runs are visible (not only successful completions)
+- [x] Employee-facing views continue to hide draw internals
+- [x] Tests cover a completed Draw lifecycle and step tracking
+
+### Implementation
+
+- **Files**:
+  - `FPS.Booking.Application/Models/DrawLifecycleModels.cs`: Lifecycle DTOs
+  - `FPS.Booking.Application/Queries/GetDrawLifecycleQuery.cs`: Lifecycle query
+  - `FPS.Booking.Application/Queries/GetDrawLifecycleHandler.cs`: Lifecycle handler
+  - `FPS.Booking.Application/Commands/TriggerDrawHandler.cs`: Step capture during draw execution
+  - `FPS.Booking.API/Controllers/DrawsController.cs`: Lifecycle endpoint
+  - Tests: `TriggerDrawHandlerTests.cs`, `GetDrawLifecycleHandlerTests.cs`
+
+- **Deployment**: AUD007 is fully backward compatible. Existing draw attempts have no lifecycle steps; new draw attempts capture all steps.
+
+- **Validation**: All 122 Booking application tests pass, including 9 new lifecycle tests covering step tracking, correlation metadata, and decision linking.
