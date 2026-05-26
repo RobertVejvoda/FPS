@@ -48,7 +48,10 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             Seed: attempt.Seed,
             AuditReference: attempt.DrawKey,
             StartedAt: attempt.StartedAt,
-            CompletedAt: attempt.CompletedAt);
+            CompletedAt: attempt.CompletedAt,
+            DemandLevel: attempt.Status == "Completed"
+                ? DemandLevel.FromOutcomes(attempt.Decisions.Count, attempt.AllocatedCount)
+                : DemandLevel.Unknown);
     }
 
     // Company-car overflow rejections have a specific reason message set by the DrawService.

@@ -1143,90 +1143,15 @@
       },
       "DrawStatusResponse": {
         "required": [
-          "drawKey",
           "status",
-          "requestCount",
-          "allocatedCount",
-          "rejectedCount",
-          "waitlistedCount",
-          "companyCarOverflowCount",
-          "summaryRejectionReasons",
-          "algorithmVersion",
-          "seed",
-          "auditReference",
           "startedAt",
-          "completedAt"
+          "completedAt",
+          "demandLevel"
         ],
         "type": "object",
         "properties": {
-          "drawKey": {
-            "type": "string"
-          },
           "status": {
             "type": "string"
-          },
-          "requestCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "allocatedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "rejectedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "waitlistedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "companyCarOverflowCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "summaryRejectionReasons": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "algorithmVersion": {
-            "type": "string"
-          },
-          "seed": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "auditReference": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "startedAt": {
             "type": [
@@ -1241,6 +1166,9 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "demandLevel": {
+            "type": "string"
           }
         }
       },

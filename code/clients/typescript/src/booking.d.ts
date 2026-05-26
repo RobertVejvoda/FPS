@@ -650,27 +650,12 @@ export interface components {
             errorMessage?: null | string;
         };
         DrawStatusResponse: {
-            drawKey: string;
             status: string;
-            /** Format: int32 */
-            requestCount: number | string;
-            /** Format: int32 */
-            allocatedCount: number | string;
-            /** Format: int32 */
-            rejectedCount: number | string;
-            /** Format: int32 */
-            waitlistedCount: number | string;
-            /** Format: int32 */
-            companyCarOverflowCount: number | string;
-            summaryRejectionReasons: string[];
-            algorithmVersion: string;
-            /** Format: int64 */
-            seed: number | string;
-            auditReference: null | string;
             /** Format: date-time */
             startedAt: null | string;
             /** Format: date-time */
             completedAt: null | string;
+            demandLevel: string;
         };
         EvaluateNoShowResult: {
             /** Format: int32 */

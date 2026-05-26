@@ -16,4 +16,25 @@ public record DrawStatusResult(
     long Seed,
     string? AuditReference,
     DateTime? StartedAt,
-    DateTime? CompletedAt);
+    DateTime? CompletedAt,
+    string DemandLevel);
+
+public static class DemandLevel
+{
+    public const string Low = "Low";
+    public const string Medium = "Medium";
+    public const string High = "High";
+    public const string Unknown = "Unknown";
+
+    public static string FromOutcomes(int requestCount, int allocatedCount)
+    {
+        if (requestCount == 0) return Unknown;
+        var satisfactionRate = (double)allocatedCount / requestCount;
+        return satisfactionRate switch
+        {
+            >= 0.9 => Low,
+            >= 0.6 => Medium,
+            _ => High
+        };
+    }
+}

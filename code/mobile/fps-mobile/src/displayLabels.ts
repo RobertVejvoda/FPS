@@ -110,3 +110,18 @@ export const STATUS_BADGE_LABEL: Record<string, string> = {
   UsageConfirmed: 'Confirmed',
   NoShow: 'No Show',
 };
+
+const DEMAND_EXPLANATIONS: Record<string, string> = {
+  Low: 'Demand is low — most requests are typically fulfilled.',
+  Medium: 'Demand is moderate — some requests may not receive a space.',
+  High: 'Demand is high — spaces are limited. Final allocation follows eligibility and fairness rules.',
+  Unknown: 'Demand information is not yet available for this date.',
+};
+
+export function displayDemandLevel(level: string | null | undefined): { label: string; explanation: string } | null {
+  if (!level || level === 'Unknown') return null;
+  return {
+    label: `Demand: ${level}`,
+    explanation: DEMAND_EXPLANATIONS[level] ?? DEMAND_EXPLANATIONS['Unknown'],
+  };
+}

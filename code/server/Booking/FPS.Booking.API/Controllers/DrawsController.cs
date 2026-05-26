@@ -114,18 +114,9 @@ public sealed class DrawsController : ControllerBase
         if (result is null) return NotFound();
 
         return Ok(new DrawStatusResponse(
-            result.DrawKey,
             result.Status,
-            result.RequestCount,
-            result.AllocatedCount,
-            result.RejectedCount,
-            result.WaitlistedCount,
-            result.CompanyCarOverflowCount,
-            result.SummaryRejectionReasons,
-            result.AlgorithmVersion,
-            result.Seed,
-            result.AuditReference,
             result.StartedAt,
-            result.CompletedAt));
+            result.CompletedAt,
+            result.DemandLevel));
     }
 }
