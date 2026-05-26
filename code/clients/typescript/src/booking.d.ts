@@ -557,9 +557,7 @@ export interface components {
             wasAlreadyConfirmed: boolean;
         };
         DrawStatusResponse: {
-            drawKey: string;
             status: string;
-            auditReference: null | string;
             /** Format: date-time */
             startedAt: null | string;
             /** Format: date-time */

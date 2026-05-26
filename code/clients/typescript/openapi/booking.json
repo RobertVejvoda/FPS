@@ -877,26 +877,15 @@
       },
       "DrawStatusResponse": {
         "required": [
-          "drawKey",
           "status",
-          "auditReference",
           "startedAt",
           "completedAt",
           "demandLevel"
         ],
         "type": "object",
         "properties": {
-          "drawKey": {
-            "type": "string"
-          },
           "status": {
             "type": "string"
-          },
-          "auditReference": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "startedAt": {
             "type": [

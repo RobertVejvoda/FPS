@@ -86,12 +86,10 @@ public sealed class DrawsControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<DrawStatusResponse>(ok.Value);
-        Assert.Equal("draw-key", body.DrawKey);
         Assert.Equal("Completed", body.Status);
         Assert.Equal("Low", body.DemandLevel);
         Assert.Equal(started, body.StartedAt);
         Assert.Equal(completed, body.CompletedAt);
-        Assert.Equal("draw-key", body.AuditReference);
     }
 
     [Fact]

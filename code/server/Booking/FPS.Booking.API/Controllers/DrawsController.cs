@@ -75,9 +75,7 @@ public sealed class DrawsController : ControllerBase
         if (result is null) return NotFound();
 
         return Ok(new DrawStatusResponse(
-            result.DrawKey,
             result.Status,
-            result.AuditReference,
             result.StartedAt,
             result.CompletedAt,
             result.DemandLevel));
