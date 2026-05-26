@@ -762,6 +762,7 @@
           "timeSlotEnd",
           "locationId",
           "status",
+          "reasonCode",
           "reason",
           "allocatedSlotId",
           "nextAction",
