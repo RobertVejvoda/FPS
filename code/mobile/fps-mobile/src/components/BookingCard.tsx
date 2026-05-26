@@ -25,7 +25,7 @@ const STATUS_BADGE_COLOR: Record<string, string> = {
 };
 
 const NEXT_ACTION_LABEL: Record<string, string> = {
-  cancel: 'Cancel booking',
+  cancel: 'Cancel request',
   confirmUsage: 'Confirm usage',
 };
 

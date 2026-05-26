@@ -134,8 +134,8 @@ function EligibilityPanel({
   if (state.kind === 'notFound') {
     return (
       <PlaceholderCard
-        title="Parking eligibility unavailable"
-        description="No parking profile exists for this account yet."
+        title="Spot eligibility unavailable"
+        description="No spot profile exists for this account yet."
         testID="profile-snapshot-not-found"
       />
     );
@@ -146,7 +146,7 @@ function EligibilityPanel({
       <View style={styles.card}>
         <StateView
           kind={state.kind}
-          title="Parking profile unavailable"
+          title="Spot profile unavailable"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={onRetry}
@@ -160,8 +160,8 @@ function EligibilityPanel({
   return (
     <>
       <View style={styles.card} testID="profile-eligibility-card">
-        <Text style={styles.cardTitle}>Parking Eligibility</Text>
-        <FactRow label="Parking eligible" value={formatBoolean(profile.parkingEligible)} />
+        <Text style={styles.cardTitle}>Spot Eligibility</Text>
+        <FactRow label="Spot eligible" value={formatBoolean(profile.parkingEligible)} />
         <FactRow label="Accessible spot eligible" value={formatBoolean(profile.accessibilityEligible)} />
         <FactRow label="Reserved space eligible" value={formatBoolean(profile.reservedSpaceEligible)} />
         <FactRow label="Company car on file" value={formatBoolean(profile.hasCompanyCar)} />

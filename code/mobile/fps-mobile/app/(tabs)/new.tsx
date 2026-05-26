@@ -208,7 +208,7 @@ export default function NewBookingRoute() {
         <View style={styles.successContainer}>
           <Text style={styles.successTitle}>Request submitted</Text>
           <Text style={styles.successBody}>
-            Your parking request is waiting for the next allocation draw.
+            Your spot request is waiting for the next allocation draw.
           </Text>
           <View style={styles.refCard}>
             <Text style={styles.refLabel}>Reference</Text>
@@ -230,7 +230,7 @@ export default function NewBookingRoute() {
             onPress={() => router.push('/(tabs)/bookings')}
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryLabel}>My bookings</Text>
+            <Text style={styles.secondaryLabel}>My spots</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -242,7 +242,7 @@ export default function NewBookingRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Request parking</Text>
+        <Text style={styles.heading}>Request a spot</Text>
 
         {profileLoading ? (
           <Text style={styles.mutedText}>Loading vehicles…</Text>
@@ -349,7 +349,7 @@ export default function NewBookingRoute() {
                     autoCapitalize="characters"
                   />
                   <Text style={styles.hint}>
-                    No vehicles in profile. Add vehicles in More → Your Vehicles for faster booking.
+                    No vehicles in profile. Add vehicles in More → Your Vehicles to speed up spot requests.
                   </Text>
                 </FieldRow>
 

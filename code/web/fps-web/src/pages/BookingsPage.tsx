@@ -42,7 +42,7 @@ export function BookingsPage() {
     fetchBookings({ apiBaseUrl, bearerToken }, opts).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor });
-      else setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load bookings.' });
+      else setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load your spots.' });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
@@ -54,13 +54,13 @@ export function BookingsPage() {
   }
 
   async function handleCancel(requestId: string) {
-    if (!confirm('Cancel this parking request?')) return;
+    if (!confirm('Cancel this spot request?')) return;
     setBusyId(requestId);
     const result = await cancelBooking({ apiBaseUrl, bearerToken }, requestId);
     setBusyId(null);
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (result.kind === 'ok') { showToast(true, 'Booking cancelled.'); load(filter); }
-    else showToast(false, 'message' in result ? result.message : 'Could not cancel booking.');
+    if (result.kind === 'ok') { showToast(true, 'Request cancelled.'); load(filter); }
+    else showToast(false, 'message' in result ? result.message : 'Could not cancel this request.');
   }
 
   async function handleConfirm(requestId: string) {
@@ -83,10 +83,10 @@ export function BookingsPage() {
     <div className="page-stack">
       <section className="page-hero">
         <div>
-          <h2>My parking</h2>
-          <p>Today’s requests, allocation status, and next action in one place.</p>
+          <h2>My Spots</h2>
+          <p>Today's requests, allocation status, and next action in one place.</p>
         </div>
-        <button onClick={() => navigate('/bookings/new')} className="btn-secondary">New request</button>
+        <button onClick={() => navigate('/bookings/new')} className="btn-secondary">Request a spot</button>
       </section>
 
       {okState ? (
@@ -125,7 +125,7 @@ export function BookingsPage() {
         </div>
       ) : state.items.length === 0 ? (
         <section className="panel">
-          <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No {filter} bookings</h3>
+          <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No {filter === 'upcoming' ? 'upcoming' : 'recent'} spots</h3>
           <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>
             Create a request to see allocation status and fairness outcomes here.
           </p>

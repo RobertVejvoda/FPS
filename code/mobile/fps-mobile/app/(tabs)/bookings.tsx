@@ -24,12 +24,12 @@ export default function BookingsRoute() {
 
   const handleCancel = useCallback((requestId: string) => {
     Alert.alert(
-      'Cancel booking',
-      'Are you sure you want to cancel this parking request?',
+      'Cancel request',
+      'Are you sure you want to cancel this spot request?',
       [
         { text: 'Keep', style: 'cancel' },
         {
-          text: 'Cancel booking',
+          text: 'Cancel request',
           style: 'destructive',
           onPress: async () => {
             setActionMessage(null);
@@ -66,9 +66,9 @@ export default function BookingsRoute() {
       router.replace('/login');
     } else if (result.kind === 'confirmed') {
       if (result.wasAlreadyConfirmed) {
-        setActionMessage({ kind: 'success', text: 'Your parking usage was already recorded.' });
+        setActionMessage({ kind: 'success', text: 'Your spot usage was already recorded.' });
       } else {
-        setActionMessage({ kind: 'success', text: 'Parking usage confirmed.' });
+        setActionMessage({ kind: 'success', text: 'Spot usage confirmed.' });
       }
       refresh();
     } else if (result.kind === 'notFound') {
@@ -100,7 +100,7 @@ export default function BookingsRoute() {
 
   function renderContent() {
     if (state.kind === 'idle' || state.kind === 'loading') {
-      return <StateView kind="loading" title="Loading bookings…" />;
+      return <StateView kind="loading" title="Loading your spots…" />;
     }
     if (state.kind === 'unauthenticated') {
       return (
@@ -115,7 +115,7 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Cannot load your bookings"
+          title="Cannot load your spots"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -126,7 +126,7 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="error"
-          title="Cannot load your bookings"
+          title="Cannot load your spots"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -137,8 +137,8 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="empty"
-          title="No bookings yet"
-          message="Your parking requests will appear here."
+          title="No spots yet"
+          message="Your spot requests will appear here."
           actionLabel="Refresh"
           onAction={refresh}
         />

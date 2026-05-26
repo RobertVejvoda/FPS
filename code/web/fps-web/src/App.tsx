@@ -34,7 +34,7 @@ function Shell() {
   if (!isConfigured) return <Navigate to="/session" replace />;
 
   const navItems = [
-    canAccessBookings(roles) && { to: '/bookings', label: 'Bookings' },
+    canAccessBookings(roles) && { to: '/bookings', label: 'My Spots' },
     canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
