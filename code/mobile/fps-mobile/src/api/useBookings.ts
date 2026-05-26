@@ -10,19 +10,21 @@ export type BookingsState =
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
 
+export type BookingsFilter = 'upcoming' | 'recent' | 'all';
+
 function localDateStr(offsetDays = 0): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function filterQuery(filter: 'upcoming' | 'recent') {
-  return filter === 'upcoming'
-    ? { from: localDateStr(0) }
-    : { to: localDateStr(-1) };
+function filterQuery(filter: BookingsFilter) {
+  if (filter === 'upcoming') return { from: localDateStr(0) };
+  if (filter === 'recent') return { to: localDateStr(-1) };
+  return {};
 }
 
-export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
+export function useBookings(filter: BookingsFilter = 'upcoming'): {
   state: BookingsState;
   refresh: () => void;
   loadMore: () => void;

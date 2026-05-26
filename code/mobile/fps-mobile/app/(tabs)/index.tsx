@@ -16,6 +16,14 @@ function localDateStr(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function sortMixed(items: BookingListItem[]): BookingListItem[] {
+  const today = localDateStr(0);
+  const todayItems = items.filter(i => i.requestedDate === today);
+  const futureItems = items.filter(i => i.requestedDate > today).sort((a, b) => a.requestedDate.localeCompare(b.requestedDate));
+  const pastItems = items.filter(i => i.requestedDate < today).sort((a, b) => b.requestedDate.localeCompare(a.requestedDate));
+  return [...todayItems, ...futureItems, ...pastItems];
+}
+
 const CHIPS = [
   { label: 'Today', offset: 0 },
   { label: 'Tomorrow', offset: 1 },
@@ -45,7 +53,7 @@ function bookingParams(item: BookingListItem) {
 export default function HomeRoute() {
   const router = useRouter();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
-  const { state, refresh } = useBookings('upcoming');
+  const { state, refresh } = useBookings('all');
   const [selectedChip, setSelectedChip] = useState(0);
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
   const [drawLoading, setDrawLoading] = useState(false);
@@ -107,7 +115,7 @@ export default function HomeRoute() {
   const tomorrow = localDateStr(1);
   const todayBooking = state.items.find(i => i.requestedDate === today) ?? null;
   const tomorrowBooking = state.items.find(i => i.requestedDate === tomorrow) ?? null;
-  const alsoUpcoming = state.items.filter(i => i.requestedDate > tomorrow).slice(0, 2);
+  const allItems = sortMixed(state.items);
 
   const demandText = drawLoading ? 'Loading…'
     : drawStatus?.kind === 'ok' ? `Demand: ${drawStatus.demandLevel}`
@@ -155,7 +163,7 @@ export default function HomeRoute() {
           {demandText && !drawLoading && <Text style={styles.demandText}>{demandText}</Text>}
           {canRequestText && !drawLoading && <Text style={styles.canRequestText}>{canRequestText}</Text>}
           <Pressable
-            onPress={() => router.push('/(tabs)/new')}
+            onPress={() => router.push({ pathname: '/(tabs)/new', params: { offset: String(selectedChip) } })}
             style={({ pressed }) => [styles.requestBtn, pressed && { opacity: 0.7 }]}
             accessibilityRole="button"
           >
@@ -165,11 +173,16 @@ export default function HomeRoute() {
           </Pressable>
         </View>
 
-        {/* Also upcoming */}
-        {alsoUpcoming.length > 0 && (
+        {/* All requests */}
+        {allItems.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Also upcoming</Text>
-            {alsoUpcoming.map((item) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>My requests</Text>
+              <Text style={styles.sectionCount}>
+                {state.items.length}{state.totalCount > state.items.length ? ` of ${state.totalCount}` : ''}
+              </Text>
+            </View>
+            {allItems.map((item) => (
               <BookingCard
                 key={item.requestId}
                 booking={item}
@@ -177,11 +190,9 @@ export default function HomeRoute() {
               />
             ))}
           </View>
-        )}
-
-        {state.items.length === 0 && (
+        ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No upcoming spot requests</Text>
+            <Text style={styles.emptyTitle}>No spot requests yet</Text>
             <Text style={styles.emptyHint}>
               Use "Request a spot" above to request a spot for tomorrow or later.
             </Text>
@@ -274,6 +285,7 @@ const styles = StyleSheet.create({
   },
   requestBtnText: { color: colors.primaryText, fontWeight: '700', fontSize: 14 },
   section: { gap: spacing.sm },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -281,6 +293,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  sectionCount: { fontSize: 12, color: colors.textMuted },
   emptyCard: {
     padding: spacing.lg,
     borderRadius: radius.md,

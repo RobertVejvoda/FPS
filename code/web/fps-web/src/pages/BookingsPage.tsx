@@ -156,7 +156,7 @@ export function BookingsPage() {
           {demandLabel}{canRequestLabel ? ` · ${canRequestLabel}` : ''}
         </div>
         <button
-          onClick={() => navigate('/bookings/new')}
+          onClick={() => navigate(`/bookings/new?date=${localDate(selectedChip)}`)}
           style={requestBtn}
         >
           Request for {CHIPS[selectedChip]?.label ?? localDate(selectedChip)} →
@@ -196,6 +196,7 @@ export function BookingsPage() {
                 busy={busyId === b.requestId}
                 onCancel={b.nextAction === 'cancel' ? () => handleCancel(b.requestId) : undefined}
                 onConfirmUsage={b.nextAction === 'confirmUsage' ? () => handleConfirm(b.requestId) : undefined}
+                onNavigate={() => navigate(`/bookings/${b.requestId}`, { state: b })}
               />
             ))}
             {okState?.nextCursor && (

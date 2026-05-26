@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -129,10 +129,14 @@ function validate(form: FormState): FieldErrors {
 
 export default function NewBookingRoute() {
   const router = useRouter();
+  const { offset: offsetParam } = useLocalSearchParams<{ offset?: string }>();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [form, setForm] = useState<FormState>(() => initialForm());
+  const [form, setForm] = useState<FormState>(() => {
+    const offset = offsetParam !== undefined ? Math.max(0, parseInt(offsetParam, 10) || 0) : 1;
+    return { ...initialForm(), dateOffset: offset };
+  });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
   const dates = availableDates();

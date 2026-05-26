@@ -20,7 +20,11 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var timeSlot = TimeSlot.Create(query.TimeSlotStart, query.TimeSlotEnd);
         var drawKey = DrawKey.Create(query.TenantId, query.LocationId, query.Date, timeSlot);
 
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var attempt = await drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
+
+        var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
+
         if (attempt is null)
         {
             return new DrawStatusResult(
@@ -41,8 +45,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 StartedAt: null,
                 CompletedAt: null,
                 DemandLevel: DemandLevel.Unknown,
-                CanRequest: true,
-                CannotRequestReason: null);
+                CanRequest: canRequest,
+                CannotRequestReason: cannotRequestReason);
         }
 
         var companyCarOverflowCount = attempt.Decisions
@@ -74,8 +78,20 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             DemandLevel: attempt.Status == "Completed"
                 ? DemandLevel.FromOutcomes(attempt.Decisions.Count, attempt.AllocatedCount)
                 : DemandLevel.Unknown,
-            CanRequest: true,
-            CannotRequestReason: null);
+            CanRequest: canRequest,
+            CannotRequestReason: cannotRequestReason);
+    }
+
+    private static (bool CanRequest, string? CannotRequestReason) ResolveCanRequest(
+        DateOnly date, string? drawStatus, DateOnly today)
+    {
+        if (date < today)
+            return (false, "Date has passed");
+        if (drawStatus is "Completed")
+            return (false, "Spot allocation is complete for this date");
+        if (drawStatus is "InProgress")
+            return (false, "Draw in progress");
+        return (true, null);
     }
 
     // Company-car overflow rejections have a specific reason message set by the DrawService.

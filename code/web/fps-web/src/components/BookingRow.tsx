@@ -30,10 +30,11 @@ type Props = {
   booking: BookingListItem;
   onCancel?: () => void;
   onConfirmUsage?: () => void;
+  onNavigate?: () => void;
   busy?: boolean;
 };
 
-export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
+export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy }: Props) {
   const [expanded, setExpanded] = useState(false);
   const meaning = STATUS_MEANING[booking.status];
   const locationLabel = displayLocation(booking.locationId);
@@ -42,7 +43,10 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
 
   return (
     <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+      <div
+        onClick={onNavigate}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, cursor: onNavigate ? 'pointer' : undefined }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontWeight: 600, fontSize: 15 }}>{formatDate(booking.requestedDate)}</span>
           <span style={{ color: '#6b7280', fontSize: 13 }}>
