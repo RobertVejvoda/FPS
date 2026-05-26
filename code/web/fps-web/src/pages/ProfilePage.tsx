@@ -46,14 +46,12 @@ export function ProfilePage() {
       <h2 style={heading}>My Profile</h2>
 
       <section style={card}>
-        <h3 style={cardTitle}>Identity</h3>
-        <Row label="User ID" value={me.userId} />
-        <Row label="Tenant" value={me.tenantId} />
+        <h3 style={cardTitle}>Account</h3>
         <Row label="Roles" value={me.roles.length ? me.roles.join(', ') : 'Employee'} />
       </section>
 
       <section style={card}>
-        <h3 style={cardTitle}>Parking Eligibility</h3>
+        <h3 style={cardTitle}>Spot Eligibility</h3>
         <Row label="Profile status" value={profile.profileStatus} />
         <Row label="Parking eligible" value={profile.parkingEligible ? 'Yes' : 'No'} />
         <Row label="Company car" value={profile.hasCompanyCar ? 'Yes' : 'No'} />
@@ -69,7 +67,7 @@ export function ProfilePage() {
         ) : (
           profile.vehicles.filter(v => v.isActive).map(v => (
             <div key={v.vehicleId} style={{ borderTop: '1px solid #e5e7eb', paddingTop: 10, marginTop: 10 }}>
-              <div style={{ fontWeight: 600 }}>{v.licensePlate || v.vehicleId}</div>
+              <div style={{ fontWeight: 600 }}>{v.licensePlate || v.vehicleType}</div>
               <div style={muted}>{v.vehicleType} · {v.isElectric ? 'Electric' : 'Standard'}</div>
             </div>
           ))

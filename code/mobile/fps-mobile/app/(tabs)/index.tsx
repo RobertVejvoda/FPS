@@ -35,7 +35,7 @@ export default function HomeRoute() {
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <SafeAreaView style={styles.safe}>
-        <StateView kind="loading" title="Loading your bookings…" />
+        <StateView kind="loading" title="Loading your spots…" />
       </SafeAreaView>
     );
   }

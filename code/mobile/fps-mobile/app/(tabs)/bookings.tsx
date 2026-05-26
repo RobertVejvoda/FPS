@@ -68,7 +68,7 @@ export default function BookingsRoute() {
       if (result.wasAlreadyConfirmed) {
         setActionMessage({ kind: 'success', text: 'Your spot usage was already recorded.' });
       } else {
-        setActionMessage({ kind: 'success', text: 'Parking usage confirmed.' });
+        setActionMessage({ kind: 'success', text: 'Spot usage confirmed.' });
       }
       refresh();
     } else if (result.kind === 'notFound') {
