@@ -24,7 +24,7 @@ public sealed class GetDrawLifecycleHandler(IDrawRepository drawRepository)
         if (attempt is null) return null;
 
         var steps = attempt.LifecycleSteps.Count > 0
-            ? attempt.LifecycleSteps.Select(s => new DrawLifecycleStep(s.StepName, s.Status, s.Summary, s.StartedAt)).ToList()
+            ? attempt.LifecycleSteps.Select(s => new DrawLifecycleStep(s.StepName, s.Status, s.Summary, s.StartedAt, s.ErrorMessage)).ToList()
             : DeriveSteps(attempt);
         var decisions = MapDecisions(attempt, query.Date);
         var tier2Refs = attempt.Tier2CandidateSequence

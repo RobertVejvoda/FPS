@@ -89,7 +89,7 @@ public sealed class DrawsController : ControllerBase
             WaitlistedCount: result.WaitlistedCount,
             StartedAt: result.StartedAt,
             CompletedAt: result.CompletedAt,
-            Steps: result.Steps.Select(s => new DrawLifecycleStepResponse(s.Name, s.Status, s.Summary, s.OccurredAt)).ToList(),
+            Steps: result.Steps.Select(s => new DrawLifecycleStepResponse(s.Name, s.Status, s.Summary, s.OccurredAt, s.ErrorMessage)).ToList(),
             Decisions: result.Decisions.Select(d => new DrawLifecycleDecisionResponse(d.BookingReference, d.Outcome, d.SlotReference, d.Reason)).ToList(),
             Tier2CandidateSequence: result.Tier2CandidateSequence));
     }

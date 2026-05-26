@@ -22,7 +22,8 @@ public record DrawLifecycleStep(
     string Name,
     string Status,
     string? Summary,
-    DateTime? OccurredAt);
+    DateTime? OccurredAt,
+    string? ErrorMessage = null);
 
 public record DrawLifecycleDecision(
     string BookingReference,

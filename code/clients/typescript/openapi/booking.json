@@ -1132,6 +1132,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

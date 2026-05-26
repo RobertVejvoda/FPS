@@ -302,5 +302,6 @@ public sealed class GetDrawLifecycleHandlerFailedPersistedTests
         Assert.Equal(3, result.Steps.Count);
         Assert.Equal("DrawFailed", result.Steps[2].Name);
         Assert.Equal("Failed", result.Steps[2].Status);
+        Assert.Equal("Capacity service timeout", result.Steps[2].ErrorMessage);
     }
 }

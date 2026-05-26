@@ -647,6 +647,7 @@ export interface components {
             summary: null | string;
             /** Format: date-time */
             occurredAt: null | string;
+            errorMessage?: null | string;
         };
         DrawStatusResponse: {
             drawKey: string;
