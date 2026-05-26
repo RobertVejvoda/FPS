@@ -62,7 +62,7 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind="unreachable"
-          title="Cannot load your bookings"
+          title="Cannot load your spots"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -76,7 +76,7 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind="error"
-          title="Cannot load your bookings"
+          title="Cannot load your spots"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -90,14 +90,14 @@ export default function HomeRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>My Parking</Text>
+        <Text style={styles.heading}>My Spots</Text>
 
         <Pressable
           style={({ pressed }) => [styles.ctaButton, pressed && styles.ctaButtonPressed]}
           onPress={() => router.push('/(tabs)/new')}
           accessibilityRole="button"
         >
-          <Text style={styles.ctaLabel}>+ Request parking</Text>
+          <Text style={styles.ctaLabel}>+ Request a spot</Text>
         </Pressable>
 
         {primary ? (
@@ -110,9 +110,9 @@ export default function HomeRoute() {
           </View>
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No upcoming parking requests</Text>
+            <Text style={styles.emptyTitle}>No upcoming spot requests</Text>
             <Text style={styles.emptyHint}>
-              Use "Request parking" above to book a spot for tomorrow or later.
+              Use "Request a spot" above to request a spot for tomorrow or later.
             </Text>
           </View>
         )}

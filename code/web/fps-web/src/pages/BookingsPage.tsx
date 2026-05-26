@@ -54,7 +54,7 @@ export function BookingsPage() {
   }
 
   async function handleCancel(requestId: string) {
-    if (!confirm('Cancel this parking request?')) return;
+    if (!confirm('Cancel this spot request?')) return;
     setBusyId(requestId);
     const result = await cancelBooking({ apiBaseUrl, bearerToken }, requestId);
     setBusyId(null);
@@ -83,10 +83,10 @@ export function BookingsPage() {
     <div className="page-stack">
       <section className="page-hero">
         <div>
-          <h2>My parking</h2>
+          <h2>My Spots</h2>
           <p>Today’s requests, allocation status, and next action in one place.</p>
         </div>
-        <button onClick={() => navigate('/bookings/new')} className="btn-secondary">New request</button>
+        <button onClick={() => navigate(‘/bookings/new’)} className="btn-secondary">Request a spot</button>
       </section>
 
       {okState ? (
