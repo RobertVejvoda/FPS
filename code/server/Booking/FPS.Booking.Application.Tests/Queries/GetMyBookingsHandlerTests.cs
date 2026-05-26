@@ -124,7 +124,7 @@ public sealed class GetMyBookingsHandlerTests
         {
             new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
                 new TimeOnly(9, 0), new TimeOnly(17, 0), null,
-                "Pending", null, null, "cancel",
+                "Pending", null, null, null, "cancel",
                 DateTime.UtcNow, DateTime.UtcNow)
         };
         var expected = new BookingListResult(items, "next-token");
@@ -140,6 +140,29 @@ public sealed class GetMyBookingsHandlerTests
 
         Assert.Single(result.Items);
         Assert.Equal("next-token", result.NextCursor);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedItem_ReasonCodePassedThrough()
+    {
+        var items = new List<BookingListItem>
+        {
+            new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow),
+                new TimeOnly(9, 0), new TimeOnly(17, 0), null,
+                "Rejected", "DrawNotSelected", "Not selected in draw", null, "none",
+                DateTime.UtcNow, DateTime.UtcNow)
+        };
+        queryRepository
+            .Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("DrawNotSelected", result.Items[0].ReasonCode);
+        Assert.Equal("Not selected in draw", result.Items[0].Reason);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

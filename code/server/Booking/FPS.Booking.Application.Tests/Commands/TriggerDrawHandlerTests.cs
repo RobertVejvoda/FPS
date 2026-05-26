@@ -122,7 +122,7 @@ public sealed class TriggerDrawHandlerTests
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Per-decision outcome events ───────────────────────────────────────────
@@ -164,6 +164,11 @@ public sealed class TriggerDrawHandlerTests
         publisher.Verify(p => p.PublishAsync(
             It.IsAny<FPS.Booking.Domain.Events.SlotAllocationCreatedEvent>(),
             It.IsAny<CancellationToken>()), Times.Once);
+        publisher.Verify(p => p.WithContext(It.Is<BookingPublishContext>(c =>
+            c.TenantId == "tenant-1" &&
+            c.ActorType == "system" &&
+            c.SubjectRequestorId == pending.RequestedBy &&
+            c.AllocationSource == "draw")), Times.Once);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

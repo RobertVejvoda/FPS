@@ -850,6 +850,7 @@
           "timeSlotEnd",
           "locationId",
           "status",
+          "reasonCode",
           "reason",
           "allocatedSlotId",
           "nextAction",
@@ -882,6 +883,12 @@
           },
           "status": {
             "type": "string"
+          },
+          "reasonCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "reason": {
             "type": [

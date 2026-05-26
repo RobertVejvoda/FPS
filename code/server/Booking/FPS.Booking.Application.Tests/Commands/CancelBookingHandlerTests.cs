@@ -43,7 +43,7 @@ public sealed class CancelBookingHandlerTests
             .ReturnsAsync(new List<BookingRequestDto>());
 
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
@@ -135,7 +135,7 @@ public sealed class CancelBookingHandlerTests
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

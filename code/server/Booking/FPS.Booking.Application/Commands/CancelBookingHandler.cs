@@ -61,7 +61,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         request.Cancel(command.Reason, publisher);
 
         await repository.UpdateBookingRequestStatusAsync(
-            command.RequestId, request.Status.ToString(), command.Reason, cancellationToken);
+            command.RequestId, request.Status.ToString(), command.Reason, cancellationToken: cancellationToken);
 
         if (wasAllocated)
         {

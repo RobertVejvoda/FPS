@@ -58,7 +58,7 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
 
   const badgeLabel = STATUS_BADGE_LABEL[booking.status] ?? booking.status;
   const rejectionReason = booking.status === 'Rejected'
-    ? humanizeRejectionReason(null, booking.reason ?? null)
+    ? humanizeRejectionReason(booking.reasonCode ?? null, booking.reason ?? null)
     : null;
 
   return (

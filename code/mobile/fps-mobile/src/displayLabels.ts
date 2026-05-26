@@ -51,7 +51,7 @@ const REJECTION_CODE_LABELS: Record<string, string> = {
   IneligibleProfile: 'Your profile was not eligible for this allocation.',
   MissingVehicleEligibility: 'Vehicle eligibility requirement was not met.',
   NoMatchingCapacity: 'No available spaces matched this request.',
-  DrawOutcome: 'Your request was not selected in this allocation draw.',
+  DrawNotSelected: 'Your request was not selected in this allocation draw.',
 };
 
 export function humanizeRejectionReason(rejectionCode: string | null, reason: string | null): string {

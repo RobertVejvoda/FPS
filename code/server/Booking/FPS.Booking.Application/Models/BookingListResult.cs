@@ -7,6 +7,7 @@ public record BookingListItem(
     TimeOnly TimeSlotEnd,
     string? LocationId,
     string Status,
+    string? ReasonCode,
     string? Reason,
     string? AllocatedSlotId,
     string NextAction,

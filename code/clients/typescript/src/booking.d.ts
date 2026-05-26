@@ -587,6 +587,7 @@ export interface components {
             timeSlotEnd: string;
             locationId: null | string;
             status: string;
+            reasonCode: null | string;
             reason: null | string;
             allocatedSlotId: null | string;
             nextAction: string;

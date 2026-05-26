@@ -143,7 +143,8 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
 
                     case DrawOutcome.Rejected:
                         await bookingRepository.UpdateBookingRequestStatusAsync(
-                            decision.RequestId.Value, "Rejected", decision.Reason, cancellationToken);
+                            decision.RequestId.Value, "Rejected", decision.Reason,
+                            BookingRejectionCode.DrawNotSelected.ToString(), cancellationToken);
                         _ = decisionPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestRejectedEvent(
                             decision.RequestId,
                             BookingRejectionCode.DrawNotSelected,
