@@ -343,6 +343,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/draws/{date}/lifecycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    locationId?: string;
+                    timeSlotStart?: string;
+                    timeSlotEnd?: string;
+                };
+                header?: never;
+                path: {
+                    date: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DrawLifecycleResponse"];
+                        "application/json": components["schemas"]["DrawLifecycleResponse"];
+                        "text/json": components["schemas"]["DrawLifecycleResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/draws/{date}/status": {
         parameters: {
             query?: never;
@@ -555,6 +609,45 @@ export interface components {
             /** Format: date-time */
             confirmedAt: string;
             wasAlreadyConfirmed: boolean;
+        };
+        DrawLifecycleDecisionResponse: {
+            bookingReference: string;
+            outcome: string;
+            slotReference: null | string;
+            reason: null | string;
+        };
+        DrawLifecycleResponse: {
+            drawKey: string;
+            locationId: string;
+            date: string;
+            status: string;
+            algorithmVersion: string;
+            /** Format: int64 */
+            seed: number | string;
+            auditReference: string;
+            /** Format: int32 */
+            requestCount: number | string;
+            /** Format: int32 */
+            allocatedCount: number | string;
+            /** Format: int32 */
+            rejectedCount: number | string;
+            /** Format: int32 */
+            waitlistedCount: number | string;
+            /** Format: date-time */
+            startedAt: null | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            steps: components["schemas"]["DrawLifecycleStepResponse"][];
+            decisions: components["schemas"]["DrawLifecycleDecisionResponse"][];
+            tier2CandidateSequence: string[];
+        };
+        DrawLifecycleStepResponse: {
+            name: string;
+            status: string;
+            summary: null | string;
+            /** Format: date-time */
+            occurredAt: null | string;
+            errorMessage?: null | string;
         };
         DrawStatusResponse: {
             drawKey: string;

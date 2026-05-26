@@ -55,6 +55,45 @@ public sealed class DrawsController : ControllerBase
         return result.WasAlreadyCompleted ? Ok(response) : Accepted(response);
     }
 
+    [HttpGet("{date}/lifecycle")]
+    [Authorize(Roles = "auditor,admin")]
+    [ProducesResponseType(typeof(DrawLifecycleResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDrawLifecycle(
+        DateOnly date,
+        [FromQuery] string locationId,
+        [FromQuery] DateTime timeSlotStart,
+        [FromQuery] DateTime timeSlotEnd,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await mediator.Send(
+            new GetDrawLifecycleQuery(currentUser.TenantId, locationId, date, timeSlotStart, timeSlotEnd),
+            cancellationToken);
+
+        if (result is null) return NotFound();
+
+        return Ok(new DrawLifecycleResponse(
+            DrawKey: result.DrawKey,
+            LocationId: result.LocationId,
+            Date: result.Date.ToString("yyyy-MM-dd"),
+            Status: result.Status,
+            AlgorithmVersion: result.AlgorithmVersion,
+            Seed: result.Seed,
+            AuditReference: result.AuditReference,
+            RequestCount: result.RequestCount,
+            AllocatedCount: result.AllocatedCount,
+            RejectedCount: result.RejectedCount,
+            WaitlistedCount: result.WaitlistedCount,
+            StartedAt: result.StartedAt,
+            CompletedAt: result.CompletedAt,
+            Steps: result.Steps.Select(s => new DrawLifecycleStepResponse(s.Name, s.Status, s.Summary, s.OccurredAt, s.ErrorMessage)).ToList(),
+            Decisions: result.Decisions.Select(d => new DrawLifecycleDecisionResponse(d.BookingReference, d.Outcome, d.SlotReference, d.Reason)).ToList(),
+            Tier2CandidateSequence: result.Tier2CandidateSequence));
+    }
+
     [HttpGet("{date}/status")]
     [ProducesResponseType(typeof(DrawStatusResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
