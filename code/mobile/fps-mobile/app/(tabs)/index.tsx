@@ -19,6 +19,7 @@ function bookingParams(item: BookingListItem) {
       locationId: item.locationId ?? '',
       status: item.status,
       reason: item.reason ?? '',
+      reasonCode: item.reasonCode ?? '',
       allocatedSlotId: item.allocatedSlotId ?? '',
       createdAt: item.createdAt,
       lastStatusChangedAt: item.lastStatusChangedAt,

@@ -69,6 +69,7 @@ export default function BookingDetailRoute() {
     locationId?: string;
     status: string;
     reason?: string;
+    reasonCode?: string;
     allocatedSlotId?: string;
     createdAt: string;
     lastStatusChangedAt: string;
@@ -98,7 +99,7 @@ export default function BookingDetailRoute() {
             <Text style={styles.sectionTitle}>Why was this request not fulfilled?</Text>
             <View style={styles.card}>
               <Text style={styles.reasonText}>
-                {humanizeRejectionReason(null, params.reason || null)}
+                {humanizeRejectionReason(params.reasonCode || null, params.reason || null)}
               </Text>
             </View>
           </View>
