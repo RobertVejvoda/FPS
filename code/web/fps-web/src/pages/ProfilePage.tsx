@@ -53,7 +53,7 @@ export function ProfilePage() {
       <section style={card}>
         <h3 style={cardTitle}>Spot Eligibility</h3>
         <Row label="Profile status" value={profile.profileStatus} />
-        <Row label="Parking eligible" value={profile.parkingEligible ? 'Yes' : 'No'} />
+        <Row label="Spot eligible" value={profile.parkingEligible ? 'Yes' : 'No'} />
         <Row label="Company car" value={profile.hasCompanyCar ? 'Yes' : 'No'} />
         <Row label="Accessibility eligible" value={profile.accessibilityEligible ? 'Yes' : 'No'} />
         <Row label="Reserved space eligible" value={profile.reservedSpaceEligible ? 'Yes' : 'No'} />

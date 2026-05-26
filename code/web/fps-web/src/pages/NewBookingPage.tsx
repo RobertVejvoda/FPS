@@ -126,7 +126,7 @@ export function NewBookingPage() {
     <div style={{ maxWidth: 560 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <button onClick={() => navigate('/bookings')} style={backBtn}>← Back</button>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>New Parking Request</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Request a spot</h2>
       </div>
 
       {profileLoading ? (
@@ -185,7 +185,7 @@ export function NewBookingPage() {
             <>
               <Field label="License plate *" error={errors.licensePlate}>
                 <input value={form.licensePlate} onChange={(e) => set('licensePlate', e.target.value)} placeholder="e.g. ABC-123" style={inputStyle} />
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>No vehicles in profile. Add vehicles in Profile page for faster booking.</p>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>No vehicles in profile. Add vehicles in Profile page to speed up spot requests.</p>
               </Field>
               <Field label="Vehicle type *" error={errors.vehicleType}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

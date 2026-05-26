@@ -6,7 +6,7 @@ import { StatusBadge } from './StatusBadge';
 const STATUS_MEANING: Record<string, string> = {
   Submitted: 'Waiting for allocation',
   Pending: 'Waiting for the scheduled Draw',
-  Allocated: 'Parking slot allocated',
+  Allocated: 'Spot allocated',
   Rejected: 'Request not fulfilled',
   Cancelled: 'Cancelled',
   Expired: 'Time slot has passed',
@@ -77,7 +77,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, busy }: Props) {
           </button>
         ) : null}
         {booking.nextAction === 'cancel' && onCancel ? (
-          <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>Cancel booking</button>
+          <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>Cancel request</button>
         ) : null}
         {booking.nextAction === 'confirmUsage' && onConfirmUsage ? (
           <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('#15803d')}>Confirm usage</button>
