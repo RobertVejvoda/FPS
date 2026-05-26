@@ -123,6 +123,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | MOB007 Mobile Profile And Vehicle Details | Done | [#135](https://github.com/RobertVejvoda/FPS/issues/135) | direct implementation | Codex | 2026-05-17 | Mobile profile tab now consumes `GET /profile/snapshot` and shows employee-safe profile status, parking eligibility, company-car/accessibility/reserved-space facts, snapshot version, and active vehicles. Editing remains out of scope. |
 | MOB008 Mobile Draw Status And Allocation Detail | Done | [#136](https://github.com/RobertVejvoda/FPS/issues/136) | [#171](https://github.com/RobertVejvoda/FPS/pull/171) | `implemented-by: claude` | 2026-05-20 | Employee-safe draw/allocation visibility without exposing hidden lottery internals. |
 | MOB009 Mobile Production Polish | Done | [#138](https://github.com/RobertVejvoda/FPS/issues/138) | [#176](https://github.com/RobertVejvoda/FPS/pull/176) | `implemented-by: claude` | 2026-05-20 | Session expiry, refresh recovery, environment config, error/empty/loading states, accessibility, and production QA. |
+| UX007 My Spots Employee Experience | Ready | [#303](https://github.com/RobertVejvoda/FPS/issues/303) | - | Routed to Claude | Client Evaluation | Employee-facing web/mobile redesign around My Spots: today/tomorrow allocation focus, quick date request, request table, allocation explanation, no technical IDs, and My Vehicles navigation. Source: [My Spots Employee UX](./business-layer/my-spots-ux). |
 
 ### Web
 

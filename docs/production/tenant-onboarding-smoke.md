@@ -113,7 +113,47 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/p
 
 ---
 
-## Step 5 — Employee and Profile Bootstrap
+## Step 5 — Tenant Object Storage
+
+**Status:** ❌ Missing
+
+Tenant onboarding should provision tenant-scoped object storage before document upload, report export, audit evidence export, GDPR export, or organization branding upload is enabled.
+
+For local/demo, MinIO should be used through the same provisioning path as production-like profiles. The demo tenant should receive either a dedicated demo bucket/container or an enforced `demo/` prefix inside a shared bucket. Users and clients must not access MinIO directly.
+
+**Expected future verification:**
+```bash
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
+```
+
+**Expected:** Readiness includes an object-storage probe confirming the tenant storage boundary exists and can be reached by the responsible service identity.
+
+**Blocker for production:** Tenant object storage provisioning and readiness evidence. Follow-up: OPS008C.
+
+---
+
+## Step 6 — Organization Branding Assets
+
+**Status:** ❌ Missing
+
+Tenant administrators should be able to upload approved organization branding assets through FairSpot APIs. The web and mobile clients should load branding from FairSpot client configuration, not from hardcoded MinIO/S3 paths.
+
+V1 branding should be limited to organization display name, logo, favicon/app icon, color tokens, and optional legal footer reference. This is organization branding, not full white-labeling.
+
+**Expected future verification:**
+```bash
+TOKEN=$(./tools/dev-auth.sh tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/client-config | python3 -m json.tool
+```
+
+**Expected:** Client config returns FairSpot defaults or approved tenant branding references without exposing bucket names, raw object keys, GUIDs, or MinIO/S3 URLs.
+
+**Blocker for production:** Tenant branding asset upload/catalog and client-config exposure. Follow-up: CUST010.
+
+---
+
+## Step 7 — Employee and Profile Bootstrap
 
 **Status:** 🟡 Evaluation-grade (seed) / ✅ Implemented (API)
 
@@ -141,7 +181,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapsho
 
 ---
 
-## Step 6 — Readiness Check
+## Step 8 — Readiness Check
 
 **Status:** ✅ Implemented
 
@@ -154,11 +194,11 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/rea
 
 **Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
 
-Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Deeper tenant-specific evidence checks, such as verifying exact seeded profile counts or audit rows, remain future hardening.
+Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Object-storage and branding readiness probes are future additions. Deeper tenant-specific evidence checks, such as verifying exact seeded profile counts, storage namespaces, branding assets, or audit rows, remain future hardening.
 
 ---
 
-## Step 7 — First Booking Smoke
+## Step 9 — First Booking Smoke
 
 **Status:** ✅ Implemented
 
@@ -187,7 +227,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | pyth
 
 ---
 
-## Step 8 — Audit Evidence
+## Step 10 — Audit Evidence
 
 **Status:** ✅ Implemented
 
@@ -198,7 +238,7 @@ TOKEN=$(./tools/dev-auth.sh auditor)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3 -m json.tool
 ```
 
-**Expected:** Audit records covering tenant setup events and the booking submission from step 7.
+**Expected:** Audit records covering tenant setup events and the booking submission from step 9.
 
 ---
 
@@ -210,10 +250,12 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 | 2 | Configure identity and role mapping | 🔧 Manual + 🟡 Eval | IdP config UI, per-tenant mapping API |
 | 3 | Create first administrator | 🟡 Evaluation-grade | First-admin provisioning API |
 | 4 | Parking bootstrap (location, policy, slots) | 🟡 Evaluation-grade | Tenant admin web UI |
-| 5 | Employee and profile bootstrap | 🟡 Eval (seed) / ✅ API | Web HR import upload (DATA002) |
-| 6 | Readiness check | ✅ Implemented | Local demo uses connected HTTP health probes; deeper tenant-specific evidence is future hardening |
-| 7 | First booking smoke | ✅ Implemented | — |
-| 8 | Audit evidence | ✅ Implemented | — |
+| 5 | Tenant object storage | ❌ Missing | OPS008C tenant storage provisioning |
+| 6 | Organization branding assets | ❌ Missing | CUST010 branding asset catalog and client config |
+| 7 | Employee and profile bootstrap | 🟡 Eval (seed) / ✅ API | Web HR import upload (DATA002) |
+| 8 | Readiness check | ✅ Implemented | Local demo uses connected HTTP health probes; object-storage/branding probes and deeper tenant-specific evidence are future hardening |
+| 9 | First booking smoke | ✅ Implemented | — |
+| 10 | Audit evidence | ✅ Implemented | — |
 
 ---
 
@@ -226,4 +268,7 @@ The following gaps must be resolved before this scenario can run without manual 
 - First-admin provisioning API (CUST004)
 - Web-based HR import upload (DATA002)
 - Full readiness probe implementations (CUST007 track)
+- Tenant object storage provisioning, including demo MinIO bucket/prefix and readiness probe (OPS008C)
+- Controlled document upload catalog with role checks, metadata, retention category, checksum, and audit records (CUST009)
+- Organization branding asset upload and client-config loading (CUST010)
 - Tenant lifecycle state machine enforcement (`Draft` → `Configured` → `Seeded` → `Ready`)

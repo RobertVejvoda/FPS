@@ -12,6 +12,7 @@
   * [Process](./business-layer/process)
   * [Booking](./business-layer/booking)
   * [Allocation Rules](./business-layer/allocation-rules)
+  * [My Spots UX](./business-layer/my-spots-ux)
   * [Tenant Onboarding](./business-layer/tenant-onboarding)
   * [Customer Integration](./business-layer/customer-data-import)
   * [Mobile App](./business-layer/mobile-app)

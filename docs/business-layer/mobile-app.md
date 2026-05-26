@@ -2,19 +2,22 @@
 
 Device testing expectations and run steps are documented in the [Mobile Device Testing Plan](../production/mobile-device-testing).
 
+The employee-facing navigation and daily spot workflow are defined in [My Spots Employee UX](./my-spots-ux).
+
 - **Responsive Design**: Optimized for mobile devices
 - **Intuitive Navigation**: Simplified interface for booking flow
 - **Accessible Defaults**: Readable text, touch-friendly controls, and clear loading/error states
 
 ## Booking Features
 - **Current Status**: See whether the employee has an active or upcoming parking allocation
-- **My Bookings**: View upcoming and recent booking requests
+- **My Spots**: View today/tomorrow allocations, upcoming requests, recent history, and employee-visible allocation explanations
 - **New Booking Entry Point**: Start the request flow once the booking UI slice is implemented
 - **Notifications Entry Point**: Reach booking-related alerts once notification APIs are exposed to mobile
 
 ## User Profile
-- **Current User**: Show authenticated user and tenant context from `GET /me`
+- **Current User**: Use authenticated context from `GET /me` without exposing raw user ID, tenant ID, GUIDs, or technical claims on employee screens
 - **Vehicle Snapshot**: Read vehicle/company-car/accessibility information once Profile APIs are available
+- **My Vehicles**: Dedicated page for employee-maintained vehicle facts where tenant policy allows it
 - **Settings Entry Point**: Hold later preferences, token/session controls, and support links
 
 ## MOB001 Boundary

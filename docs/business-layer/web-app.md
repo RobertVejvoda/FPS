@@ -22,6 +22,7 @@
 ## System Features
 - **Parking Management**: View available parking slots
 - **Request Tracking**: Monitor request status
+- **My Spots**: Employee default page for today/tomorrow allocations, quick requests, request history, and allocation explanations. See [My Spots Employee UX](./my-spots-ux).
 
 ## Security
 - **Login History**: View session history

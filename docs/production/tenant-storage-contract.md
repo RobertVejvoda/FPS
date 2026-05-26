@@ -162,6 +162,35 @@ Each bounded context that persists data must satisfy the following provisioning 
 | Tenant registry | One record per tenant, keyed by sanitised tenant ID. |
 | Provisioning evidence | Tenant record exists and readiness check passes before activating tenant traffic. |
 
+### Object Storage
+
+FairSpot uses object storage for tenant-owned binary content and generated evidence. Local and demo profiles use MinIO; production profiles may use MinIO, S3, Azure Blob, or another S3-compatible/object-storage equivalent as defined by the deployment profile.
+
+| Requirement | Detail |
+| --- | --- |
+| Provisioning unit | Prefer one bucket/container per tenant where the provider supports it. A tenant-scoped prefix is acceptable for local/demo or constrained providers, but the deployment profile must document the isolation trade-off. |
+| Naming | Bucket/container names must be derived from environment plus sanitised tenant business identifier, not raw tenant GUIDs. Example shape: `fairspot-{env}-{tenantKey}`. |
+| Access boundary | V1 access is service-only. End users and clients access files through FairSpot APIs or signed URLs produced by FairSpot after authorization. |
+| Object keys | Keys must include a controlled namespace and must not expose raw GUIDs as user-facing identifiers. Internal object keys may include opaque IDs when hidden behind catalog metadata. |
+| Catalog | Every uploaded or generated object must have metadata in a FairSpot-owned catalog or owning bounded context. Object storage is not the permission or search layer. |
+| Audit | Provisioning, upload, version publication, archive, delete, export creation, and branding changes must emit business audit records where relevant. |
+| Traceability | Object metadata should record tenant ID, document/asset business ID, object key, content type, checksum, retention category, lifecycle status, uploaded/generated actor hash where relevant, trace/correlation ID, and timestamps. |
+| Readiness | Tenant readiness should confirm the tenant bucket/container or prefix exists and can be written/read by the responsible service identity. |
+
+Recommended namespaces:
+
+| Namespace | Purpose |
+| --- | --- |
+| `tenant-documents/` | Controlled tenant documents such as policy PDFs, legal notices, consent notices, onboarding evidence, and HR import evidence where retention permits. |
+| `reports/` | Scheduled reports and manually exported report files. |
+| `audit/` | Audit evidence packages and draw lifecycle evidence exports. |
+| `gdpr/` | Data export bundles and erasure workflow evidence. |
+| `branding/` | Organization logo, favicon/app icon, and approved tenant display assets. |
+
+Uploaded documents must enter object storage through FairSpot APIs, not direct MinIO/S3 user access. The upload API must validate caller role, tenant scope, document type, content type, file size, checksum, and retention category. Malware scanning is a production hardening hook and should be represented as a pending or configured validation step until a scanner is selected.
+
+Organization branding assets use the same storage and catalog model, with stricter content validation. SVG should only be allowed if sanitised; otherwise prefer PNG or WebP. Clients must load branding through FairSpot client configuration, not through hardcoded bucket paths.
+
 ---
 
 ## Demo Tenant Isolation
@@ -175,7 +204,7 @@ The demo environment uses the same local infrastructure (Docker Compose, shared 
 | In-memory stores are process-scoped | In-memory stores do not survive restart, so demo-mode data is ephemeral. Multiple concurrent tenants in-process share memory (known limitation; not for production with concurrent active tenants). |
 | Demo seed data loads only into the demo tenant | `dev-seed.sh` and related fixtures must target the demo tenant ID explicitly. Seed data must not omit the tenant parameter. |
 | Demo IdP realm is separate from developer local realm | Keycloak demo realm and developer local realm must be distinct so demo users cannot authenticate as local accounts and vice versa. |
-| Object storage paths are tenant-scoped | If MinIO or equivalent is used, demo artifacts must be stored under a `demo/` prefix or equivalent tenant path, not the root. |
+| Object storage paths are tenant-scoped | Demo must use a tenant bucket/container or a `demo/` prefix, not the object-store root. Demo document and branding flows must follow the same API/catalog model as real tenants. |
 
 ---
 
@@ -186,7 +215,7 @@ The following tenant storage contract requirements must be satisfied before back
 1. **Tenant-scoped keys and collections** must be in place so a targeted tenant restore can be performed without also restoring other tenants' data.
 2. **Restore must validate tenant boundary** before applying data. A restore procedure must confirm the target tenant identifier in the backup matches the intended restore target.
 3. **PII mapping store** is a separate restore scope. Restoring audit records without restoring the PII mapping state is valid for compliance purposes (pseudonymised records remain queryable by hash). Restoring the PII mapping state without the corresponding audit records is also valid.
-4. **Object storage paths** must include the tenant ID in the prefix (e.g., `exports/{tenantId}/...`) so that single-tenant restores are possible.
+4. **Object storage boundaries** must be tenant-specific. If per-tenant buckets/containers are used, restore operates on that bucket/container. If shared buckets are used, object paths must include the tenant ID in the prefix (e.g., `exports/{tenantId}/...`) so that single-tenant restores are possible.
 
 See [Backup and Restore](./backup-restore.md) for restore order and evidence requirements.
 
@@ -204,5 +233,7 @@ The following gaps exist between the current codebase and this contract. They ar
 | In-memory repositories for Notification, Audit, Reporting, Profile, Configuration | **Production-blocking** | These services use evaluation-grade in-memory stores with no persistent tenant storage. Each service requires a persistent, tenant-scoped store before production. |
 | No shared `TenantStorageKey` sanitisation helper | **Should fix before production** | Each repository currently constructs keys with inline string interpolation. A shared helper prevents inconsistency and ensures reserved prefixes and character rules are enforced. |
 | Demo seed data (`dev-seed.sh`) tenant parameterisation | Implemented (OPS007C) | `FPS_DEMO_TENANT_ID` env var (default `demo`) controls the tenant used by `dev-seed.sh`, `smoke-onboarding.sh`, Customer service startup seed, and Configuration service startup seed. Keycloak realm fixture emits `tenant_id=demo` by default. |
-| Object storage tenant path enforcement | **Should fix before production** | MinIO or equivalent paths must include tenant prefixes. No enforcement currently exists. |
+| Object storage tenant provisioning and path enforcement | **Should fix before production** | MinIO or equivalent storage must be provisioned during tenant onboarding. Prefer one tenant bucket/container; otherwise enforce tenant prefixes. No enforcement currently exists. |
+| Uploaded document catalog and authorization | **Should fix before production** | FairSpot has no document upload catalog yet. Uploaded documents must be stored through FairSpot APIs with metadata, role checks, retention category, checksum, and audit records. |
+| Organization branding asset loading | **Should fix before production** | Branding assets must be uploaded to tenant object storage and exposed through FairSpot client configuration. Clients must not hardcode MinIO/S3 paths. |
 | Dapr state store component is shared across all tenants | **Acceptable for local/demo** | The local component is shared. This is acceptable while services enforce key-level tenant scoping. For production, evaluate per-tenant components or tenant-namespace support in the chosen provider. |

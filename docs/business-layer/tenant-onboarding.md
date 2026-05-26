@@ -15,6 +15,8 @@ Onboarding must answer these questions for every company:
 | How are users authenticated? | A trusted issuer/audience/tenant mapping, or an explicit local-account fallback for demo/small-tenant use. |
 | Which roles are granted? | Tenant-scoped mapping from IdP groups or admin assignments to FairSpot roles. |
 | Where can employees park? | One or more locations with policy defaults, optional overrides, and slots/capacity pools. |
+| Where are tenant files stored? | Tenant-scoped object storage is provisioned for controlled documents, exports, reports, evidence, and branding assets. |
+| How does the tenant brand appear? | Organization branding config can reference approved tenant-owned assets, but the app loads them through FairSpot APIs, not direct storage paths. |
 | Which employees are eligible? | Minimal active profile facts needed for booking, notification, allocation, reporting, and support. |
 | Is the tenant ready for live use? | A readiness check proves identity, policy, slots, demo users, notifications, audit, and reporting work for that tenant. |
 
@@ -49,7 +51,7 @@ Required fields:
 - support and operational contacts;
 - lifecycle state initially `Draft`.
 
-Tenant creation must also prepare tenant-scoped persistence names or provisioning metadata for each service that stores tenant data. It must not require employee data yet.
+Tenant creation must also prepare tenant-scoped persistence names or provisioning metadata for each service that stores tenant data. This includes object storage provisioning metadata for controlled documents, exports, reports, evidence, and organization branding assets. It must not require employee data yet.
 
 ### 2. Configure Identity And Role Mapping
 
@@ -94,7 +96,52 @@ Minimum setup:
 
 Policy and slot changes must create version/history evidence and audit records. Existing [Parking Policy Configuration](./parking-policy-configuration) remains the source of truth for policy fields and validation.
 
-### 5. Load Minimal Employee And Profile Facts
+### 5. Provision Tenant Object Storage
+
+Tenant onboarding should provision object storage before document upload, report export, audit export, GDPR export, or branding-asset upload is enabled.
+
+Minimum setup:
+
+- a tenant-scoped bucket or equivalent isolated storage container;
+- deterministic bucket/container naming derived from environment and tenant business identifier, not raw GUIDs;
+- object key conventions for controlled documents, reports, audit evidence, GDPR bundles, and branding assets;
+- service-only storage access in v1; users never see bucket names, object keys, raw MinIO/S3 URLs, or GUID-based paths;
+- metadata cataloging in FairSpot persistence for every uploaded object;
+- audit records for storage provisioning, document upload, document publication, archival, deletion, and branding changes.
+
+Recommended object namespaces:
+
+| Namespace | Purpose | Typical owners |
+| --- | --- | --- |
+| `tenant-documents/` | Parking policies, legal notices, consent notices, customer-provided onboarding evidence. | Tenant admin, HR, auditor |
+| `reports/` | Scheduled report outputs and exported summaries. | HR, admin, report viewer |
+| `audit/` | Audit evidence packages and draw lifecycle evidence exports. | Auditor, admin |
+| `gdpr/` | Rights-request export bundles and erasure workflow evidence. | Admin, privacy operator |
+| `branding/` | Organization logo, favicon/app icon, and other approved display assets. | Tenant admin |
+
+The database remains the permission boundary and catalog. Object storage holds binary content only. Stored metadata should include document business ID, tenant ID, document type, object key, version, checksum, content type, uploaded-by actor hash where relevant, trace/correlation ID, retention category, lifecycle status, and timestamps.
+
+For local/demo, MinIO should follow the same tenant provisioning path as production-like profiles. The demo tenant must receive its own bucket/container or equivalent tenant prefix so demo files prove the same isolation model.
+
+### 6. Configure Organization Branding
+
+Organization branding is a tenant configuration capability, not full white-labeling.
+
+V1 branding may include:
+
+- organization display name;
+- logo;
+- favicon or app icon;
+- primary and accent color tokens;
+- optional legal footer link or customer notice reference.
+
+Branding assets are uploaded through FairSpot APIs, validated, stored in tenant object storage, and referenced by stable asset IDs in tenant configuration. Web and mobile clients load branding through a FairSpot client configuration endpoint such as `GET /client-config`. Clients must not hardcode MinIO/S3 paths or infer branding from storage keys.
+
+The configuration endpoint may return business-safe asset URLs or short-lived signed URLs, depending on deployment profile. The returned payload should avoid tenant GUIDs and technical terms in user-facing fields.
+
+Full white-label support is future scope. It would include custom domains, deeper product-name masking, tenant-specific legal ownership, and app-store metadata. Until that is explicitly approved, FairSpot remains visible in Legal/About notices and organization branding only adjusts tenant-facing presentation.
+
+### 7. Load Minimal Employee And Profile Facts
 
 Employees become usable through SSO-derived mapping, SCIM/provisioning, admin entry, or a tightly scoped bootstrap file.
 
@@ -108,9 +155,9 @@ Required minimum:
 - home location when policy or reporting needs it;
 - vehicle, company-car, accessibility, reserved-space, and capability facts only where policy requires them.
 
-FairSpot must not import customer passwords, broad HR records, medical details, or unrelated employee data. File/bootstrap import remains an exception path and must follow [Customer Integration](./customer-data-import).
+FairSpot must not import customer passwords, broad HR records, medical details, or unrelated employee data. File/bootstrap import remains an exception path and must follow [Customer Integration](./customer-data-import). If HR import files are stored for evidence or troubleshooting, they must be treated as controlled documents with retention, access control, and audit records.
 
-### 6. Readiness Check
+### 8. Readiness Check
 
 Before the tenant moves to `Ready`, FairSpot should produce a readiness result that can be shown to the customer or operator.
 
@@ -122,6 +169,8 @@ Readiness checks:
 - role mapping grants no unmapped privileged role;
 - tenant default policy is valid;
 - at least one active location has active slots or capacity;
+- tenant object storage is provisioned and reachable;
+- organization branding config is either valid or explicitly using the FairSpot default;
 - required profile facts exist for the pilot users;
 - Booking can submit a test request for a pilot user without caller-supplied tenant/user IDs;
 - Notification can create or route an operational notification for the tenant;
@@ -142,6 +191,9 @@ Readiness checks may run in dry-run mode for client evaluation. Dry-run output m
 | First administrator mapping | Identity/Profile | Confidential | Yes |
 | Parking policy and location overrides | Configuration service | Internal/Confidential | Yes |
 | Slots or capacity pools | Configuration service | Internal | Yes |
+| Object storage bucket/container and object namespaces | Customer/Operations | Internal | Yes |
+| Uploaded document catalog metadata | Customer or owning bounded context | Confidential/Internal by document type | Only when documents are part of launch evidence |
+| Organization branding config and asset references | Configuration/Customer | Internal/Public by asset type | No, default FairSpot branding is allowed |
 | Employee subject mapping and active status | Identity/Profile | Confidential | Yes for pilot/live users |
 | Vehicle/company-car/accessibility facts | Profile service | Confidential, sensitive where applicable | Policy-dependent |
 | Readiness evidence | Customer/Operations | Internal/Confidential | Yes |
@@ -156,6 +208,9 @@ Readiness checks may run in dry-run mode for client evaluation. Dry-run output m
 | `CUST005` Tenant Parking Bootstrap | Implement onboarding flow/API for default policy, first location, and initial slots/capacity using Configuration APIs. | Claude or Copilot if file-bounded |
 | `CUST006` Tenant Employee/Profile Bootstrap | Implement minimal employee/profile bootstrap path for pilot users, respecting SSO-first and file-import constraints. | Claude |
 | `CUST007` Tenant Readiness Check | Implement a tenant readiness endpoint/report that validates identity, admin, policy, slots, profile facts, booking smoke path, notification, audit, and reporting evidence. | Claude |
+| `OPS008C` Tenant Object Storage Provisioning | Provision tenant-scoped MinIO/S3-compatible storage during onboarding, including demo tenant storage, namespace conventions, readiness evidence, and audit records. | Claude |
+| `CUST009` Controlled Document Upload Catalog | Add API and metadata catalog for tenant-controlled document uploads; validate file type/size, store binaries in tenant object storage, and audit upload/version/archive actions. | Claude |
+| `CUST010` Organization Branding Assets | Add tenant branding config and asset upload/reference flow; clients load organization display assets through FairSpot client config, not raw storage URLs. | Claude |
 
 ## Out Of Scope For First Tenant Onboarding
 
@@ -164,7 +219,8 @@ Readiness checks may run in dry-run mode for client evaluation. Dry-run output m
 - SCIM lifecycle automation unless explicitly chosen for a customer;
 - migration of broad historical parking data;
 - client-specific identity-provider adapters that cannot be expressed through OIDC configuration;
-- production offboarding and data-retention automation beyond recording lifecycle state and evidence.
+- production offboarding and data-retention automation beyond recording lifecycle state and evidence;
+- full white-label/custom-domain support, including product-name masking, tenant-owned app metadata, or hiding FairSpot legal/about notices.
 
 ## Acceptance Criteria
 
@@ -172,6 +228,9 @@ Readiness checks may run in dry-run mode for client evaluation. Dry-run output m
 - Live employees cannot authenticate until trusted issuer/tenant mapping is configured or an explicit local-account fallback is enabled.
 - At least one tenant administrator exists before parking configuration is marked complete.
 - The tenant cannot become `Ready` without valid policy, at least one usable location/slot capacity, and required pilot user/profile facts.
+- Tenant object storage is provisioned before document, export, report, evidence, or branding upload paths are enabled.
+- Uploaded document binaries are accessed only through FairSpot authorization and catalog metadata; users never see raw object keys, bucket names, or MinIO/S3 URLs.
+- Organization branding is loaded through FairSpot client configuration and can fall back to default FairSpot branding.
 - Tenant setup changes are auditable and tenant-scoped.
 - Secrets and credentials are never stored in docs, issues, logs, import files, or non-secret persistence.
 - The setup sequence can be followed by an operator or tenant admin without reading implementation code.
