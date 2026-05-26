@@ -16,6 +16,18 @@ public class DrawAttemptDto
     public DateTime? CompletedAt { get; set; }
     public List<DrawDecisionDto> Decisions { get; set; } = [];
     public List<string> Tier2CandidateSequence { get; set; } = [];
+    public List<DrawLifecycleStepRecord> LifecycleSteps { get; set; } = [];
+}
+
+public class DrawLifecycleStepRecord
+{
+    public string StepName { get; set; } = string.Empty;
+    // Completed | Attempted | Failed
+    public string Status { get; set; } = "Completed";
+    public DateTime StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string? Summary { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 public class DrawDecisionDto

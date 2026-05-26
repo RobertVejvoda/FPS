@@ -23,7 +23,9 @@ public sealed class GetDrawLifecycleHandler(IDrawRepository drawRepository)
         var attempt = await drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
         if (attempt is null) return null;
 
-        var steps = DeriveSteps(attempt);
+        var steps = attempt.LifecycleSteps.Count > 0
+            ? attempt.LifecycleSteps.Select(s => new DrawLifecycleStep(s.StepName, s.Status, s.Summary, s.StartedAt)).ToList()
+            : DeriveSteps(attempt);
         var decisions = MapDecisions(attempt, query.Date);
         var tier2Refs = attempt.Tier2CandidateSequence
             .Select(id => FormatBookingRef(id, query.Date))
@@ -96,8 +98,8 @@ public sealed class GetDrawLifecycleHandler(IDrawRepository drawRepository)
                 completedAt),
 
             Step("EventsPublished",
-                isCompleted ? "Completed" : "NotReached",
-                null,
+                isCompleted ? "Attempted" : "NotReached",
+                isCompleted ? "Derived from legacy attempt; delivery not guaranteed (fire-and-forget)" : null,
                 completedAt),
 
             Step("DrawCompleted",

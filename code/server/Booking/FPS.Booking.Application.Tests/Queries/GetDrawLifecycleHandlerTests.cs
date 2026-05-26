@@ -40,7 +40,11 @@ public sealed class GetDrawLifecycleHandlerTests
 
         Assert.NotNull(result);
         Assert.Equal("Completed", result!.Status);
-        Assert.All(result.Steps, s => Assert.Equal("Completed", s.Status));
+        // All steps except EventsPublished should be Completed; EventsPublished is Attempted
+        // (fire-and-forget delivery is not guaranteed, even on a completed draw)
+        Assert.All(result.Steps.Where(s => s.Name != "EventsPublished"),
+            s => Assert.Equal("Completed", s.Status));
+        Assert.Equal("Attempted", result.Steps.Single(s => s.Name == "EventsPublished").Status);
     }
 
     [Fact]
@@ -58,6 +62,28 @@ public sealed class GetDrawLifecycleHandlerTests
         Assert.Contains("WeightedAllocationCompleted", stepNames);
         Assert.Contains("DecisionsPersisted", stepNames);
         Assert.Contains("DrawCompleted", stepNames);
+    }
+
+    [Fact]
+    public async Task Handle_PersistedSteps_UsedInsteadOfDerived()
+    {
+        var attempt = CompletedAttempt();
+        attempt.LifecycleSteps =
+        [
+            new DrawLifecycleStepRecord { StepName = "PolicyResolved", Status = "Completed", StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow },
+            new DrawLifecycleStepRecord { StepName = "RequestsLoaded", Status = "Completed", StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow, Summary = "3 pending request(s)" },
+            new DrawLifecycleStepRecord { StepName = "EventsPublished", Status = "Attempted", StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow }
+        ];
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attempt);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(3, result!.Steps.Count);
+        Assert.Equal("PolicyResolved", result.Steps[0].Name);
+        Assert.Equal("3 pending request(s)", result.Steps[1].Summary);
+        Assert.Equal("Attempted", result.Steps[2].Status);
     }
 
     [Fact]
@@ -225,4 +251,56 @@ public sealed class GetDrawLifecycleHandlerTests
         ],
         Tier2CandidateSequence = [],
     };
+}
+
+// Additional coverage: persisted steps on a failed draw
+public sealed class GetDrawLifecycleHandlerFailedPersistedTests
+{
+    private readonly Mock<IDrawRepository> drawRepository = new();
+    private readonly GetDrawLifecycleHandler handler;
+
+    private static readonly DateOnly DrawDate = new(2026, 6, 2);
+    private static readonly DateTime SlotStart = new(2026, 6, 2, 9, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime SlotEnd = new(2026, 6, 2, 17, 0, 0, DateTimeKind.Utc);
+
+    public GetDrawLifecycleHandlerFailedPersistedTests()
+    {
+        handler = new GetDrawLifecycleHandler(drawRepository.Object);
+    }
+
+    [Fact]
+    public async Task Handle_FailedDraw_WithPersistedSteps_ReturnsPersistedEvidenceNotDerived()
+    {
+        var attempt = new DrawAttemptDto
+        {
+            DrawKey = "draw:tenant-1:loc-1:2026-06-02:0900",
+            TenantId = "tenant-1",
+            LocationId = "loc-1",
+            Date = DrawDate,
+            Status = "Failed",
+            Seed = 99,
+            AlgorithmVersion = string.Empty,
+            StartedAt = new DateTime(2026, 6, 2, 8, 0, 0, DateTimeKind.Utc),
+            CompletedAt = new DateTime(2026, 6, 2, 8, 0, 1, DateTimeKind.Utc),
+            Decisions = [],
+            LifecycleSteps =
+            [
+                new DrawLifecycleStepRecord { StepName = "PolicyResolved", Status = "Completed", StartedAt = DateTime.UtcNow },
+                new DrawLifecycleStepRecord { StepName = "RequestsLoaded", Status = "Completed", StartedAt = DateTime.UtcNow },
+                new DrawLifecycleStepRecord { StepName = "DrawFailed", Status = "Failed", StartedAt = DateTime.UtcNow, ErrorMessage = "Capacity service timeout" },
+            ]
+        };
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attempt);
+
+        var result = await handler.Handle(
+            new GetDrawLifecycleQuery("tenant-1", "loc-1", DrawDate, SlotStart, SlotEnd),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Failed", result!.Status);
+        Assert.Equal(3, result.Steps.Count);
+        Assert.Equal("DrawFailed", result.Steps[2].Name);
+        Assert.Equal("Failed", result.Steps[2].Status);
+    }
 }
