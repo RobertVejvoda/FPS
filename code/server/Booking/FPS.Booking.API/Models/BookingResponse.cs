@@ -10,4 +10,5 @@ public record SubmitBookingResponse(
 
 public record GetMyBookingsResponse(
     IReadOnlyList<BookingListItem> Items,
-    string? NextCursor);
+    string? NextCursor,
+    int TotalCount = 0);

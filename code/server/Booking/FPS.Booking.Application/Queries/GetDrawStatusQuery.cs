@@ -8,4 +8,4 @@ public record GetDrawStatusQuery(
     string LocationId,
     DateOnly Date,
     DateTime TimeSlotStart,
-    DateTime TimeSlotEnd) : IRequest<DrawStatusResult?>;
+    DateTime TimeSlotEnd) : IRequest<DrawStatusResult>;

@@ -90,17 +90,28 @@ public sealed class DrawsControllerTests
         Assert.Equal("Low", body.DemandLevel);
         Assert.Equal(started, body.StartedAt);
         Assert.Equal(completed, body.CompletedAt);
+        Assert.Equal(5, body.RequestCount);
+        Assert.True(body.CanRequest);
+        Assert.Null(body.CannotRequestReason);
     }
 
     [Fact]
-    public async Task GetDrawStatus_NoDraw_Returns404()
+    public async Task GetDrawStatus_NoDraw_Returns200WithPreDrawDefault()
     {
         mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((DrawStatusResult?)null);
+            .ReturnsAsync(new DrawStatusResult(
+                "draw-key", "tenant-1", "loc-1", DrawDate,
+                "NotScheduled", 0, 0, 0, 0, 0, [], string.Empty, 0, null,
+                null, null, "Unknown", CanRequest: true));
 
         var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
 
-        Assert.IsType<NotFoundResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<DrawStatusResponse>(ok.Value);
+        Assert.Equal("NotScheduled", body.Status);
+        Assert.Equal("Unknown", body.DemandLevel);
+        Assert.Equal(0, body.RequestCount);
+        Assert.True(body.CanRequest);
     }
 
     private static TriggerDrawRequest ValidBody() => new(

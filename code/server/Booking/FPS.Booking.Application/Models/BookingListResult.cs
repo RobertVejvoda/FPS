@@ -16,4 +16,5 @@ public record BookingListItem(
 
 public record BookingListResult(
     IReadOnlyList<BookingListItem> Items,
-    string? NextCursor);
+    string? NextCursor,
+    int TotalCount = 0);

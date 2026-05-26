@@ -33,14 +33,44 @@ public sealed class GetDrawStatusHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NotFound_ReturnsNull()
+    public async Task Handle_NoDraw_ReturnsPreDrawDefault()
     {
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawAttemptDto?)null);
 
         var result = await handler.Handle(ValidQuery(), CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("NotScheduled", result.Status);
+        Assert.Equal("Unknown", result.DemandLevel);
+        Assert.Equal(0, result.RequestCount);
+        Assert.True(result.CanRequest);
+        Assert.Null(result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_NoDraw_PreservesQueryContext()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("loc-1", result!.LocationId);
+        Assert.Equal(DrawDate, result.Date);
+        Assert.Equal("tenant-1", result.TenantId);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_CanRequestIsTrue()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 3, rejected: 2, waitlisted: 1));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.True(result!.CanRequest);
+        Assert.Null(result.CannotRequestReason);
     }
 
     [Fact]

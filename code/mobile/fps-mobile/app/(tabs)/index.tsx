@@ -1,12 +1,27 @@
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { useBookings } from '@/api/useBookings';
-import type { BookingListItem } from '@/api/bookings';
+import { fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '@/api/bookings';
 import { BookingCard } from '@/components/BookingCard';
 import { StateView } from '@/components/StateView';
+import { displaySlot, displayNextDrawRun, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
+
+function localDateStr(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const CHIPS = [
+  { label: 'Today', offset: 0 },
+  { label: 'Tomorrow', offset: 1 },
+  { label: 'D+2', offset: 2 },
+  { label: 'D+3', offset: 3 },
+];
 
 function bookingParams(item: BookingListItem) {
   return {
@@ -29,8 +44,28 @@ function bookingParams(item: BookingListItem) {
 
 export default function HomeRoute() {
   const router = useRouter();
-  const { clearSession } = useAuth();
+  const { apiBaseUrl, bearerToken, clearSession } = useAuth();
   const { state, refresh } = useBookings('upcoming');
+  const [selectedChip, setSelectedChip] = useState(0);
+  const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
+  const [drawLoading, setDrawLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDrawLoading(true);
+    setDrawStatus(null);
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, localDateStr(selectedChip)).then((result) => {
+      if (cancelled) return;
+      setDrawLoading(false);
+      setDrawStatus(result);
+    });
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken, selectedChip]);
+
+  const handleUnauthenticated = useCallback(async () => {
+    await clearSession();
+    router.replace('/login');
+  }, [clearSession, router]);
 
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
@@ -48,20 +83,17 @@ export default function HomeRoute() {
           title="Not signed in"
           message="Your session has expired. Please sign in again."
           actionLabel="Sign in"
-          onAction={async () => {
-            await clearSession();
-            router.replace('/login');
-          }}
+          onAction={handleUnauthenticated}
         />
       </SafeAreaView>
     );
   }
 
-  if (state.kind === 'unreachable') {
+  if (state.kind === 'unreachable' || state.kind === 'error') {
     return (
       <SafeAreaView style={styles.safe}>
         <StateView
-          kind="unreachable"
+          kind={state.kind}
           title="Cannot load your spots"
           message="Please check your connection and try again."
           actionLabel="Retry"
@@ -71,56 +103,73 @@ export default function HomeRoute() {
     );
   }
 
-  if (state.kind === 'error') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <StateView
-          kind="error"
-          title="Cannot load your spots"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
-          onAction={refresh}
-        />
-      </SafeAreaView>
-    );
-  }
+  const today = localDateStr(0);
+  const tomorrow = localDateStr(1);
+  const todayBooking = state.items.find(i => i.requestedDate === today) ?? null;
+  const tomorrowBooking = state.items.find(i => i.requestedDate === tomorrow) ?? null;
+  const alsoUpcoming = state.items.filter(i => i.requestedDate > tomorrow).slice(0, 2);
 
-  const [primary, ...rest] = state.items;
+  const demandText = drawLoading ? 'Loading…'
+    : drawStatus?.kind === 'ok' ? `Demand: ${drawStatus.demandLevel}`
+    : null;
+  const canRequestText = drawStatus?.kind === 'ok'
+    ? (drawStatus.canRequest ? 'Can request: Yes' : `Can request: No${drawStatus.cannotRequestReason ? ` — ${drawStatus.cannotRequestReason}` : ''}`)
+    : null;
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.heading}>My Spots</Text>
 
-        <Pressable
-          style={({ pressed }) => [styles.ctaButton, pressed && styles.ctaButtonPressed]}
-          onPress={() => router.push('/(tabs)/new')}
-          accessibilityRole="button"
-        >
-          <Text style={styles.ctaLabel}>+ Request a spot</Text>
-        </Pressable>
+        {/* Today / Tomorrow focus cards */}
+        <View style={styles.focusRow}>
+          <FocusCard label="Today" booking={todayBooking} onPress={todayBooking ? () => router.push(bookingParams(todayBooking)) : undefined} />
+          <FocusCard label="Tomorrow" booking={tomorrowBooking} onPress={tomorrowBooking ? () => router.push(bookingParams(tomorrowBooking)) : undefined} />
+        </View>
 
-        {primary ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Upcoming</Text>
-            <BookingCard
-              booking={primary}
-              onPress={() => router.push(bookingParams(primary))}
-            />
+        {/* Quick request chips */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Request a spot</Text>
+          <View style={styles.chipRow}>
+            {CHIPS.map((chip) => (
+              <Pressable
+                key={chip.offset}
+                onPress={() => setSelectedChip(chip.offset)}
+                style={[styles.chip, selectedChip === chip.offset && styles.chipActive]}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.chipText, selectedChip === chip.offset && styles.chipTextActive]}>
+                  {chip.label}
+                </Text>
+              </Pressable>
+            ))}
+            <Pressable
+              onPress={() => router.push('/(tabs)/new')}
+              style={styles.chip}
+              accessibilityRole="button"
+            >
+              <Text style={styles.chipText}>More</Text>
+            </Pressable>
           </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No upcoming spot requests</Text>
-            <Text style={styles.emptyHint}>
-              Use "Request a spot" above to request a spot for tomorrow or later.
+          {drawLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.xs }} />}
+          {demandText && !drawLoading && <Text style={styles.demandText}>{demandText}</Text>}
+          {canRequestText && !drawLoading && <Text style={styles.canRequestText}>{canRequestText}</Text>}
+          <Pressable
+            onPress={() => router.push('/(tabs)/new')}
+            style={({ pressed }) => [styles.requestBtn, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.requestBtnText}>
+              Request for {CHIPS[selectedChip]?.label ?? 'selected date'}
             </Text>
-          </View>
-        )}
+          </Pressable>
+        </View>
 
-        {rest.length > 0 ? (
+        {/* Also upcoming */}
+        {alsoUpcoming.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Also upcoming</Text>
-            {rest.slice(0, 2).map((item) => (
+            {alsoUpcoming.map((item) => (
               <BookingCard
                 key={item.requestId}
                 booking={item}
@@ -128,9 +177,47 @@ export default function HomeRoute() {
               />
             ))}
           </View>
-        ) : null}
+        )}
+
+        {state.items.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No upcoming spot requests</Text>
+            <Text style={styles.emptyHint}>
+              Use "Request a spot" above to request a spot for tomorrow or later.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function FocusCard({ label, booking, onPress }: {
+  label: string;
+  booking: BookingListItem | null;
+  onPress?: () => void;
+}) {
+  const badgeLabel = booking ? (STATUS_BADGE_LABEL[booking.status] ?? booking.status) : null;
+  const slot = booking ? displaySlot(booking.allocatedSlotId) : null;
+  const nextDraw = booking && shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.focusCard, pressed && onPress ? { opacity: 0.85 } : undefined]}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : 'none'}
+    >
+      <Text style={styles.focusDay}>{label}</Text>
+      {booking ? (
+        <>
+          {badgeLabel && <Text style={styles.focusBadge}>{badgeLabel}</Text>}
+          {slot && <Text style={styles.focusDetail}>Spot: {slot}</Text>}
+          {nextDraw && <Text style={styles.focusNextDraw}>Next draw: {nextDraw}</Text>}
+        </>
+      ) : (
+        <Text style={styles.focusEmpty}>No request yet</Text>
+      )}
+    </Pressable>
   );
 }
 
@@ -138,16 +225,54 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   heading: { fontSize: 22, fontWeight: '700', color: colors.text },
-  ctaButton: {
+  focusRow: { flexDirection: 'row', gap: spacing.sm },
+  focusCard: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+    minHeight: 80,
+  },
+  focusDay: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  focusBadge: { fontSize: 14, fontWeight: '600', color: colors.text },
+  focusDetail: { fontSize: 13, color: colors.text, fontWeight: '500' },
+  focusNextDraw: { fontSize: 12, color: colors.primary },
+  focusEmpty: { fontSize: 13, color: colors.textMuted },
+  card: {
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background,
+  },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 13, fontWeight: '500', color: colors.textMuted },
+  chipTextActive: { color: colors.primaryText },
+  demandText: { fontSize: 13, color: colors.textMuted },
+  canRequestText: { fontSize: 13, color: colors.textMuted },
+  requestBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
-    minHeight: 48,
+    minHeight: 40,
     justifyContent: 'center',
   },
-  ctaButtonPressed: { opacity: 0.7 },
-  ctaLabel: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  requestBtnText: { color: colors.primaryText, fontWeight: '700', fontSize: 14 },
   section: { gap: spacing.sm },
   sectionLabel: {
     fontSize: 12,

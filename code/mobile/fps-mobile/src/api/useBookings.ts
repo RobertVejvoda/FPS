@@ -5,7 +5,7 @@ import { fetchBookings, type BookingListItem } from './bookings';
 export type BookingsState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null; loadingMore: boolean; isRefreshing: boolean }
+  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null; totalCount: number; loadingMore: boolean; isRefreshing: boolean }
   | { kind: 'unauthenticated' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
@@ -58,7 +58,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
     fetchBookings({ apiBaseUrl, bearerToken }, filterQuery(filter)).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
-        setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor, loadingMore: false, isRefreshing: false });
+        setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor, totalCount: result.totalCount, loadingMore: false, isRefreshing: false });
       } else {
         setState((prev) => (prev.kind === 'ok' ? { ...prev, isRefreshing: false } : result));
       }
@@ -86,6 +86,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
             kind: 'ok',
             items: [...prev.items, ...newItems],
             nextCursor: result.nextCursor,
+            totalCount: prev.totalCount,
             loadingMore: false,
             isRefreshing: false,
           };

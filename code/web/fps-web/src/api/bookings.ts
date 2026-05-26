@@ -9,7 +9,13 @@ export type TriggerDrawRequest = components['schemas']['TriggerDrawRequest'];
 export type TriggerDrawResponse = components['schemas']['TriggerDrawResponse'];
 
 export type BookingsResult =
-  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null }
+  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null; totalCount: number }
+  | { kind: 'unauthenticated' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export type DrawStatusResult =
+  | { kind: 'ok'; status: string; demandLevel: string; requestCount: number; canRequest: boolean; cannotRequestReason: string | null }
   | { kind: 'unauthenticated' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
@@ -61,7 +67,7 @@ export async function fetchBookings(
     if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /bookings returned ${res.status}` };
     const data = (await res.json()) as GetMyBookingsResponse;
-    return { kind: 'ok', items: data.items, nextCursor: data.nextCursor ?? null };
+    return { kind: 'ok', items: data.items, nextCursor: data.nextCursor ?? null, totalCount: Number(data.totalCount ?? 0) };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
@@ -124,6 +130,31 @@ export async function confirmUsage(
     if (res.status === 200) return { kind: 'ok', data: (await res.json()) as { wasAlreadyConfirmed: boolean } };
     if (res.status === 404) return { kind: 'error', status: 404, message: await readError(res, 'Booking not found.') };
     return { kind: 'error', status: res.status, message: `POST /confirm-usage returned ${res.status}` };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+const DRAW_STATUS_LOCATION = 'LOC-MAIN';
+
+export async function fetchDrawStatus(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  date: string,
+): Promise<DrawStatusResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const params = new URLSearchParams({
+      locationId: DRAW_STATUS_LOCATION,
+      timeSlotStart: `${date}T08:00:00`,
+      timeSlotEnd: `${date}T18:00:00`,
+    });
+    const res = await fetch(`${apiBaseUrl}/draws/${date}/status?${params}`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /draws/status returned ${res.status}` };
+    const data = (await res.json()) as { status: string; demandLevel: string; requestCount: number | string; canRequest: boolean; cannotRequestReason: string | null };
+    return { kind: 'ok', status: data.status, demandLevel: data.demandLevel, requestCount: Number(data.requestCount), canRequest: data.canRequest, cannotRequestReason: data.cannotRequestReason ?? null };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
