@@ -164,6 +164,11 @@ public sealed class TriggerDrawHandlerTests
         publisher.Verify(p => p.PublishAsync(
             It.IsAny<FPS.Booking.Domain.Events.SlotAllocationCreatedEvent>(),
             It.IsAny<CancellationToken>()), Times.Once);
+        publisher.Verify(p => p.WithContext(It.Is<BookingPublishContext>(c =>
+            c.TenantId == "tenant-1" &&
+            c.ActorType == "system" &&
+            c.SubjectRequestorId == pending.RequestedBy &&
+            c.AllocationSource == "draw")), Times.Once);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -178,6 +183,68 @@ public sealed class TriggerDrawHandlerTests
         Status = "Pending",
         LocationId = "loc-1",
     };
+
+    // ── Lifecycle steps ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_PersistsLifecycleSteps()
+    {
+        DrawAttemptDto? saved = null;
+        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
+            .Callback<DrawAttemptDto, CancellationToken>((a, _) => saved = a)
+            .Returns(Task.CompletedTask);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.NotEmpty(saved!.LifecycleSteps);
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "PolicyResolved" && s.Status == "Completed");
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "RequestsLoaded" && s.Status == "Completed");
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "CapacityLoaded" && s.Status == "Completed");
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "MetricsLoaded" && s.Status == "Completed");
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "WeightedAllocationCompleted" && s.Status == "Completed");
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "DecisionsPersisted" && s.Status == "Completed");
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "EventsPublished" && s.Status == "Attempted");
+    }
+
+    [Fact]
+    public async Task Handle_StartedAtCapturedBeforeExecution()
+    {
+        DrawAttemptDto? saved = null;
+        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
+            .Callback<DrawAttemptDto, CancellationToken>((a, _) => saved = a)
+            .Returns(Task.CompletedTask);
+
+        var before = DateTime.UtcNow;
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+        var after = DateTime.UtcNow;
+
+        Assert.NotNull(saved);
+        Assert.True(saved!.StartedAt >= before);
+        Assert.True(saved.StartedAt <= saved.CompletedAt);
+        Assert.True(saved.CompletedAt <= after);
+    }
+
+    [Fact]
+    public async Task Handle_ServiceFailure_SavesFailedAttemptWithPartialSteps()
+    {
+        policyService.Setup(s => s.GetEffectivePolicyAsync(
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Policy service unavailable"));
+
+        DrawAttemptDto? saved = null;
+        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
+            .Callback<DrawAttemptDto, CancellationToken>((a, _) => saved = a)
+            .Returns(Task.CompletedTask);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => handler.Handle(ValidCommand(), CancellationToken.None));
+
+        Assert.NotNull(saved);
+        Assert.Equal("Failed", saved!.Status);
+        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "DrawFailed" && s.Status == "Failed");
+        Assert.NotNull(saved.LifecycleSteps.First(s => s.StepName == "DrawFailed").ErrorMessage);
+    }
 
     private static TriggerDrawCommand ValidCommand() => new(
         TenantId: "tenant-1",
