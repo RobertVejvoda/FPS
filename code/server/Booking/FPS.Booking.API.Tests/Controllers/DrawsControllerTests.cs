@@ -72,22 +72,26 @@ public sealed class DrawsControllerTests
     // ── GET /draws/{date}/status ──────────────────────────────────────────────
 
     [Fact]
-    public async Task GetDrawStatus_CompletedDraw_Returns200()
+    public async Task GetDrawStatus_CompletedDraw_Returns200WithEmployeeSafeFields()
     {
+        var started = new DateTime(2026, 6, 2, 18, 0, 0, DateTimeKind.Utc);
+        var completed = new DateTime(2026, 6, 2, 18, 0, 5, DateTimeKind.Utc);
         mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DrawStatusResult(
                 "draw-key", "tenant-1", "loc-1", DrawDate,
                 "Completed", 5, 3, 1, 1, 0, [], "1.0", 42, "draw-key",
-                DateTime.UtcNow, DateTime.UtcNow, "Low"));
+                started, completed, "Low"));
 
         var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<DrawStatusResponse>(ok.Value);
+        Assert.Equal("draw-key", body.DrawKey);
         Assert.Equal("Completed", body.Status);
-        Assert.Equal(3, body.AllocatedCount);
-        Assert.Equal(42, body.Seed);
         Assert.Equal("Low", body.DemandLevel);
+        Assert.Equal(started, body.StartedAt);
+        Assert.Equal(completed, body.CompletedAt);
+        Assert.Equal("draw-key", body.AuditReference);
     }
 
     [Fact]

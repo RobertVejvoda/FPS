@@ -879,14 +879,6 @@
         "required": [
           "drawKey",
           "status",
-          "requestCount",
-          "allocatedCount",
-          "rejectedCount",
-          "waitlistedCount",
-          "companyCarOverflowCount",
-          "summaryRejectionReasons",
-          "algorithmVersion",
-          "seed",
           "auditReference",
           "startedAt",
           "completedAt",
@@ -899,63 +891,6 @@
           },
           "status": {
             "type": "string"
-          },
-          "requestCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "allocatedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "rejectedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "waitlistedCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "companyCarOverflowCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "summaryRejectionReasons": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "algorithmVersion": {
-            "type": "string"
-          },
-          "seed": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
           },
           "auditReference": {
             "type": [
@@ -978,8 +913,7 @@
             "format": "date-time"
           },
           "demandLevel": {
-            "type": "string",
-            "enum": ["Low", "Medium", "High", "Unknown"]
+            "type": "string"
           }
         }
       },

@@ -1,7 +1,10 @@
 import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { fetchDrawStatus, type DrawStatusResponse } from '@/api/draws';
+import { useAuth } from '@/auth/AuthContext';
+import { displayDemandLevel, displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -74,11 +77,27 @@ export default function BookingDetailRoute() {
     lastStatusChangedAt: string;
   }>();
 
+  const { apiBaseUrl, bearerToken } = useAuth();
+  const [drawStatus, setDrawStatus] = useState<DrawStatusResponse | null>(null);
+
+  useEffect(() => {
+    if (!shouldShowNextDraw(params.status) || !params.locationId) return;
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, {
+      date: params.requestedDate,
+      locationId: params.locationId,
+      timeSlotStart: params.timeSlotStart,
+      timeSlotEnd: params.timeSlotEnd,
+    }).then((res) => {
+      if (res.kind === 'ok') setDrawStatus(res.data);
+    });
+  }, [params.status, params.requestedDate, params.locationId, params.timeSlotStart, params.timeSlotEnd, apiBaseUrl, bearerToken]);
+
   const statusLabel = STATUS_LABEL[params.status] ?? params.status;
   const statusColor = STATUS_COLOR[params.status] ?? colors.textMuted;
   const locationLabel = displayLocation(params.locationId);
   const slotLabel = displaySlot(params.allocatedSlotId);
   const nextDrawLabel = shouldShowNextDraw(params.status) ? displayNextDrawRun(params.requestedDate) : null;
+  const demandInfo = displayDemandLevel(drawStatus?.demandLevel);
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -111,14 +130,23 @@ export default function BookingDetailRoute() {
           </View>
         ) : null}
 
-        {/* Pending — draw timing */}
-        {shouldShowNextDraw(params.status) && !nextDrawLabel ? (
+        {/* Pending — draw timing and demand level */}
+        {shouldShowNextDraw(params.status) ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Allocation</Text>
+            <Text style={styles.sectionTitle}>Allocation outlook</Text>
             <View style={styles.card}>
-              <Text style={styles.reasonText}>
-                Waiting for allocation. Draw time is not available yet.
-              </Text>
+              {!nextDrawLabel ? (
+                <Text style={styles.reasonText}>Draw time is not available yet.</Text>
+              ) : null}
+              {demandInfo ? (
+                <>
+                  <Text style={styles.demandLabel}>{demandInfo.label}</Text>
+                  <Text style={styles.reasonText}>{demandInfo.explanation}</Text>
+                </>
+              ) : null}
+              {!demandInfo ? (
+                <Text style={styles.reasonText}>Final allocation follows eligibility and fairness rules.</Text>
+              ) : null}
             </View>
           </View>
         ) : null}
@@ -185,6 +213,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   reasonText: { fontSize: 15, color: colors.text, lineHeight: 22 },
+  demandLabel: { fontSize: 15, fontWeight: '600', color: colors.primary },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   rowLabel: { fontSize: 14, color: colors.textMuted, flexShrink: 0 },
   rowValue: { fontSize: 14, color: colors.text, fontWeight: '500', textAlign: 'right', flex: 1 },
