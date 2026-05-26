@@ -15,6 +15,7 @@ FairSpot helps companies manage scarce parking capacity without turning HR into 
 ## Core Documents
 
 - [Stakeholders & Personas](./business-layer/personas)
+- [Role Intent Roadmap](./business-layer/role-intent-roadmap)
 - [Business & Technical Roles](./business-layer/roles)
 - [Business Requirements](./business-layer/requirements)
 - [Booking Event Contracts](./business-layer/booking-event-contracts)
