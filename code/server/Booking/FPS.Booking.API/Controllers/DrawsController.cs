@@ -117,6 +117,11 @@ public sealed class DrawsController : ControllerBase
             result.Status,
             result.StartedAt,
             result.CompletedAt,
-            result.DemandLevel));
+            result.DemandLevel,
+            result.RequestCount,
+            result.AvailableSpotCount,
+            result.NextDrawAt,
+            result.CanRequest,
+            result.CannotRequestReason));
     }
 }

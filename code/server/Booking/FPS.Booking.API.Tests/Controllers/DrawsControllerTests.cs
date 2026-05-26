@@ -76,11 +76,16 @@ public sealed class DrawsControllerTests
     {
         var started = new DateTime(2026, 6, 2, 18, 0, 0, DateTimeKind.Utc);
         var completed = new DateTime(2026, 6, 2, 18, 0, 5, DateTimeKind.Utc);
+        var nextDrawAt = new DateTime(2026, 6, 1, 18, 0, 0, DateTimeKind.Utc);
         mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DrawStatusResult(
                 "draw-key", "tenant-1", "loc-1", DrawDate,
                 "Completed", 5, 3, 1, 1, 0, [], "1.0", 42, "draw-key",
-                started, completed, "Low"));
+                started, completed, "Low",
+                AvailableSpotCount: 24,
+                NextDrawAt: nextDrawAt,
+                CanRequest: true,
+                CannotRequestReason: null));
 
         var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
 
@@ -90,6 +95,9 @@ public sealed class DrawsControllerTests
         Assert.Equal("Low", body.DemandLevel);
         Assert.Equal(started, body.StartedAt);
         Assert.Equal(completed, body.CompletedAt);
+        Assert.Equal(5, body.RequestCount);
+        Assert.Equal(24, body.AvailableSpotCount);
+        Assert.True(body.CanRequest);
     }
 
     [Fact]

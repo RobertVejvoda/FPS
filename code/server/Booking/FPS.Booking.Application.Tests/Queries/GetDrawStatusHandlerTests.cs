@@ -5,6 +5,9 @@ namespace FPS.Booking.Application.Tests.Queries;
 public sealed class GetDrawStatusHandlerTests
 {
     private readonly Mock<IDrawRepository> drawRepository = new();
+    private readonly Mock<IAvailableSlotService> availableSlotService = new();
+    private readonly Mock<ITenantPolicyService> tenantPolicyService = new();
+    private readonly Mock<IBookingRepository> bookingRepository = new();
     private readonly GetDrawStatusHandler handler;
 
     private static readonly DateOnly DrawDate = new(2026, 6, 2);
@@ -13,7 +16,26 @@ public sealed class GetDrawStatusHandlerTests
 
     public GetDrawStatusHandlerTests()
     {
-        handler = new GetDrawStatusHandler(drawRepository.Object);
+        handler = new GetDrawStatusHandler(
+            drawRepository.Object,
+            availableSlotService.Object,
+            tenantPolicyService.Object,
+            bookingRepository.Object);
+
+        // Setup default mocks
+        tenantPolicyService.Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(
+                DailyRequestCap: 3,
+                DrawCutOffTime: new TimeOnly(18, 0),
+                TimeZoneId: "UTC",
+                SameDayBookingEnabled: false));
+
+        availableSlotService.Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot>());
+
+        bookingRepository.Setup(r => r.CountRequestsForDateAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
     }
 
     [Fact]
@@ -33,14 +55,16 @@ public sealed class GetDrawStatusHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NotFound_ReturnsNull()
+    public async Task Handle_NoDrawYet_ReturnsScheduledState()
     {
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawAttemptDto?)null);
 
         var result = await handler.Handle(ValidQuery(), CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("Scheduled", result!.Status);
+        Assert.Equal(0, result.RequestCount);
     }
 
     [Fact]

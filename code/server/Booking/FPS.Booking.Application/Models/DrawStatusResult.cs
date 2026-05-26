@@ -17,7 +17,11 @@ public record DrawStatusResult(
     string? AuditReference,
     DateTime? StartedAt,
     DateTime? CompletedAt,
-    string DemandLevel);
+    string DemandLevel,
+    int AvailableSpotCount,
+    DateTime? NextDrawAt,
+    bool CanRequest,
+    string? CannotRequestReason);
 
 public static class DemandLevel
 {
