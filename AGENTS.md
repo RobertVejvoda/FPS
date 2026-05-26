@@ -96,6 +96,21 @@ There are two implementer agents available: **Claude** (Anthropic) and **GitHub 
 
 When Claude picks up a Codex-assigned slice, the first step is a routing self-check: if the slice looks Copilot-shaped, flag it back to Codex/Robert before starting rather than absorbing it silently. If a Copilot PR is already open on a slice, do not start a parallel implementation — review the Copilot PR or wait.
 
+### Implementer Ready-For-Review Gate
+
+Before Claude or Copilot moves a PR to `In review` / `Owner = Codex`, the implementer must complete and report the slice-specific validation checklist from the issue or source-of-truth doc.
+
+For UI and UX work, this includes:
+
+- run the relevant web build/typecheck for any web changes;
+- run the relevant mobile typecheck/build validation for any mobile changes;
+- run any terminology or safety grep specified by the issue/spec;
+- fix all employee-visible forbidden terms or technical identifiers, or explicitly classify remaining hits as internal route/API/type names or admin-only surfaces;
+- include screenshots or concise visual notes for changed web and mobile screens;
+- include validation command results in the PR body or final handoff comment.
+
+Do not treat copy-only UI changes as exempt from build/typecheck validation. If a checklist item cannot be run, say exactly why and keep the work out of `In review` unless Codex/Robert explicitly accepts the gap.
+
 ### State Machine
 
 Agents should use GitHub Project fields as the source of truth. Do not use labels for assignment. Labels are for slice type/classification, durable attribution, and temporary compatibility triggers only.

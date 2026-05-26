@@ -348,3 +348,21 @@ Expected implementation is likely split if the change is too large:
 4. My Vehicles/profile navigation cleanup.
 
 Preserve backend scoping rules: clients never send tenant, user, or role identifiers for employee API scoping. Use existing authenticated APIs where possible. If a field is missing from existing APIs, add an employee-safe backend field rather than leaking internal IDs or deriving values client-side.
+
+## Ready For Codex Review Checklist
+
+Before returning any `UX007` PR to Codex review, the implementer must complete and report this checklist in the PR description or final handoff comment:
+
+- run the relevant web build/typecheck for any web changes;
+- run the relevant mobile typecheck/build validation for any mobile changes;
+- run a targeted terminology grep over employee-facing web/mobile code;
+- fix all employee-visible hits for `Tenant`, `User ID`, raw IDs/GUID labels, `My Bookings`, `My parking`, `Request parking`, `parking request`, and similar legacy copy;
+- explicitly classify any remaining grep hits as internal route/API/type names or admin-only surfaces;
+- include screenshots or concise visual notes for changed web and mobile screens;
+- keep the board in `In progress` until the checklist is complete.
+
+Recommended grep:
+
+```bash
+rg -n "Tenant|User ID|tenantId|My Bookings|My parking|My Parking|Request parking|parking request|Parking usage|bookings" code/web/fps-web/src code/mobile/fps-mobile/app code/mobile/fps-mobile/src
+```
