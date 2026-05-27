@@ -57,7 +57,8 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
 
         return new BookingListResult(
             page.Select(ToListItem).ToList(),
-            nextCursor);
+            nextCursor,
+            filtered.Count);
     }
 
     public async Task<IReadOnlyList<BookingRequestDto>> GetAllocatedRequestsForDrawAsync(

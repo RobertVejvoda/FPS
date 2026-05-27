@@ -14,12 +14,18 @@
       "Bash(gh pr list *)",
       "Bash(gh pr diff *)",
       "Bash(gh pr checks *)",
+      "Bash(gh pr comment *)",
       "Bash(gh issue view *)",
       "Bash(gh issue list *)",
       "Bash(gh run view *)",
       "Bash(gh run list *)",
       "Bash(gh repo view *)",
-      "Bash(gh api repos/*)"
+      "Bash(gh api repos/*)",
+      "Bash(gh project item-list *)",
+      "Bash(cd code/mobile/fps-mobile && npm run typecheck *)",
+      "Bash(cd code/web/fps-web && npm run typecheck *)",
+      "Bash(npm run typecheck *)",
+      "Bash(dotnet --list-sdks)"
     ]
   },
   "hooks": {

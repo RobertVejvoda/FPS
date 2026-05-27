@@ -33,14 +33,78 @@ public sealed class GetDrawStatusHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NotFound_ReturnsNull()
+    public async Task Handle_NoDraw_ReturnsPreDrawDefault()
     {
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawAttemptDto?)null);
 
         var result = await handler.Handle(ValidQuery(), CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("NotScheduled", result.Status);
+        Assert.Equal("Unknown", result.DemandLevel);
+        Assert.Equal(0, result.RequestCount);
+        Assert.True(result.CanRequest);
+        Assert.Null(result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_NoDraw_PreservesQueryContext()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("loc-1", result!.LocationId);
+        Assert.Equal(DrawDate, result.Date);
+        Assert.Equal("tenant-1", result.TenantId);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_CanRequestIsFalse()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 3, rejected: 2, waitlisted: 1));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.False(result!.CanRequest);
+        Assert.NotNull(result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_PastDate_CanRequestIsFalse()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var pastQuery = new GetDrawStatusQuery(
+            TenantId: "tenant-1",
+            LocationId: "loc-1",
+            Date: new DateOnly(2025, 1, 1),
+            TimeSlotStart: new DateTime(2025, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+            TimeSlotEnd: new DateTime(2025, 1, 1, 17, 0, 0, DateTimeKind.Utc));
+
+        var result = await handler.Handle(pastQuery, CancellationToken.None);
+
+        Assert.False(result.CanRequest);
+        Assert.Equal("Date has passed", result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_InProgressDraw_CanRequestIsFalse()
+    {
+        var attempt = CompletedAttempt(0, 0, 0);
+        attempt.Status = "InProgress";
+        attempt.CompletedAt = null;
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attempt);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.False(result.CanRequest);
+        Assert.NotNull(result.CannotRequestReason);
     }
 
     [Fact]

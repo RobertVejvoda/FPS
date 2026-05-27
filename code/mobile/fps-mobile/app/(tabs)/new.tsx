@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -69,12 +69,13 @@ const DEPARTURE_TIMES = [
 
 function availableDates(): Array<{ offset: number; label: string }> {
   return Array.from({ length: 7 }, (_, i) => {
-    const offset = i + 1;
     const d = new Date();
-    d.setDate(d.getDate() + offset);
+    d.setDate(d.getDate() + i);
     return {
-      offset,
-      label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      offset: i,
+      label: i === 0
+        ? 'Today'
+        : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
     };
   });
 }
@@ -129,13 +130,23 @@ function validate(form: FormState): FieldErrors {
 
 export default function NewBookingRoute() {
   const router = useRouter();
+  const { offset: offsetParam } = useLocalSearchParams<{ offset?: string }>();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [form, setForm] = useState<FormState>(() => initialForm());
+  const [form, setForm] = useState<FormState>(() => {
+    const offset = offsetParam !== undefined ? Math.max(0, parseInt(offsetParam, 10) || 0) : 1;
+    return { ...initialForm(), dateOffset: offset };
+  });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
   const dates = availableDates();
+
+  useEffect(() => {
+    if (offsetParam === undefined) return;
+    const parsed = Math.max(0, parseInt(offsetParam, 10) || 0);
+    setForm(prev => ({ ...prev, dateOffset: parsed }));
+  }, [offsetParam]);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {

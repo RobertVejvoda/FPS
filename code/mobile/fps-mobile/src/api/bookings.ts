@@ -30,7 +30,13 @@ export type ConfirmUsageResult =
   | { kind: 'error'; status: number; message: string };
 
 export type BookingsResult =
-  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null }
+  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null; totalCount: number }
+  | { kind: 'unauthenticated' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export type DrawStatusResult =
+  | { kind: 'ok'; status: string; demandLevel: string; requestCount: number; canRequest: boolean; cannotRequestReason: string | null }
   | { kind: 'unauthenticated' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
@@ -78,7 +84,7 @@ export async function fetchBookings(
 
   try {
     const data = (await response.json()) as GetMyBookingsResponse;
-    return { kind: 'ok', items: data.items, nextCursor: data.nextCursor ?? null };
+    return { kind: 'ok', items: data.items, nextCursor: data.nextCursor ?? null, totalCount: Number(data.totalCount ?? 0) };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'invalid JSON';
     return { kind: 'error', status: response.status, message };
@@ -217,4 +223,30 @@ export async function confirmBookingUsage(
     status: response.status,
     message: await readErrorMessage(response, `POST /confirm-usage returned HTTP ${response.status}`),
   };
+}
+
+// Demo bridge — a /facilities API that returns the employee's home location does not yet exist.
+const DRAW_STATUS_LOCATION = 'LOC-MAIN';
+
+export async function fetchDrawStatus(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  date: string,
+): Promise<DrawStatusResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const params = new URLSearchParams({
+    locationId: DRAW_STATUS_LOCATION,
+    timeSlotStart: `${date}T08:00:00`,
+    timeSlotEnd: `${date}T18:00:00`,
+  });
+  try {
+    const response = await fetch(`${apiBaseUrl}/draws/${date}/status?${params}`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (response.status === 401 || response.status === 403) return { kind: 'unauthenticated' };
+    if (!response.ok) return { kind: 'error', status: response.status, message: `GET /draws/status returned HTTP ${response.status}` };
+    const data = (await response.json()) as { status: string; demandLevel: string; requestCount: number | string; canRequest: boolean; cannotRequestReason: string | null };
+    return { kind: 'ok', status: data.status, demandLevel: data.demandLevel, requestCount: Number(data.requestCount), canRequest: data.canRequest, cannotRequestReason: data.cannotRequestReason ?? null };
+  } catch (error) {
+    return { kind: 'unreachable', message: error instanceof Error ? error.message : 'network error' };
+  }
 }

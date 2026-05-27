@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { submitBooking } from '../api/bookings';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
@@ -36,7 +36,15 @@ function datetimeLocalValue(offsetDays: number, hour: number, minute = 0): strin
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-const initialForm = (): Form => ({
+function dateOffsetFromParam(dateStr: string | null): number {
+  if (!dateStr) return 1;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(`${dateStr}T00:00:00`);
+  if (isNaN(target.getTime())) return 1;
+  return Math.max(0, Math.round((target.getTime() - today.getTime()) / 86_400_000));
+}
+
+const initialForm = (offsetDays = 1): Form => ({
   facilityId: DEMO_FACILITY_ID,
   locationId: DEMO_LOCATION_ID,
   selectedVehicleId: '',
@@ -45,16 +53,17 @@ const initialForm = (): Form => ({
   isElectric: false,
   requiresAccessibleSpot: false,
   isCompanyCar: false,
-  plannedArrival: datetimeLocalValue(1, 8),
-  plannedDeparture: datetimeLocalValue(1, 18),
+  plannedArrival: datetimeLocalValue(offsetDays, 8),
+  plannedDeparture: datetimeLocalValue(offsetDays, 18),
 });
 
 export function NewBookingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [form, setForm] = useState<Form>(() => initialForm());
+  const [form, setForm] = useState<Form>(() => initialForm(dateOffsetFromParam(searchParams.get('date'))));
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);

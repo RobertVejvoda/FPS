@@ -5,7 +5,7 @@ using MediatR;
 
 namespace FPS.Booking.Application.Queries;
 
-public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, DrawStatusResult?>
+public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, DrawStatusResult>
 {
     private readonly IDrawRepository drawRepository;
 
@@ -15,13 +15,39 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         this.drawRepository = drawRepository;
     }
 
-    public async Task<DrawStatusResult?> Handle(GetDrawStatusQuery query, CancellationToken cancellationToken)
+    public async Task<DrawStatusResult> Handle(GetDrawStatusQuery query, CancellationToken cancellationToken)
     {
         var timeSlot = TimeSlot.Create(query.TimeSlotStart, query.TimeSlotEnd);
         var drawKey = DrawKey.Create(query.TenantId, query.LocationId, query.Date, timeSlot);
 
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var attempt = await drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
-        if (attempt is null) return null;
+
+        var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
+
+        if (attempt is null)
+        {
+            return new DrawStatusResult(
+                DrawKey: drawKey.ToStoreKey(),
+                TenantId: query.TenantId,
+                LocationId: query.LocationId,
+                Date: query.Date,
+                Status: "NotScheduled",
+                RequestCount: 0,
+                AllocatedCount: 0,
+                RejectedCount: 0,
+                WaitlistedCount: 0,
+                CompanyCarOverflowCount: 0,
+                SummaryRejectionReasons: [],
+                AlgorithmVersion: string.Empty,
+                Seed: 0,
+                AuditReference: null,
+                StartedAt: null,
+                CompletedAt: null,
+                DemandLevel: DemandLevel.Unknown,
+                CanRequest: canRequest,
+                CannotRequestReason: cannotRequestReason);
+        }
 
         var companyCarOverflowCount = attempt.Decisions
             .Count(d => d.Outcome == "Rejected" && IsCompanyCarRequest(d));
@@ -51,7 +77,21 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             CompletedAt: attempt.CompletedAt,
             DemandLevel: attempt.Status == "Completed"
                 ? DemandLevel.FromOutcomes(attempt.Decisions.Count, attempt.AllocatedCount)
-                : DemandLevel.Unknown);
+                : DemandLevel.Unknown,
+            CanRequest: canRequest,
+            CannotRequestReason: cannotRequestReason);
+    }
+
+    private static (bool CanRequest, string? CannotRequestReason) ResolveCanRequest(
+        DateOnly date, string? drawStatus, DateOnly today)
+    {
+        if (date < today)
+            return (false, "Date has passed");
+        if (drawStatus is "Completed")
+            return (false, "Spot allocation is complete for this date");
+        if (drawStatus is "InProgress")
+            return (false, "Draw in progress");
+        return (true, null);
     }
 
     // Company-car overflow rejections have a specific reason message set by the DrawService.

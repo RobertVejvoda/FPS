@@ -5,10 +5,12 @@ import { fetchBookings, type BookingListItem } from './bookings';
 export type BookingsState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null; loadingMore: boolean; isRefreshing: boolean }
+  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null; totalCount: number; loadingMore: boolean; isRefreshing: boolean }
   | { kind: 'unauthenticated' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
+
+export type BookingsFilter = 'upcoming' | 'recent' | 'all';
 
 function localDateStr(offsetDays = 0): string {
   const d = new Date();
@@ -16,13 +18,13 @@ function localDateStr(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function filterQuery(filter: 'upcoming' | 'recent') {
-  return filter === 'upcoming'
-    ? { from: localDateStr(0) }
-    : { to: localDateStr(-1) };
+function filterQuery(filter: BookingsFilter) {
+  if (filter === 'upcoming') return { from: localDateStr(0) };
+  if (filter === 'recent') return { to: localDateStr(-1) };
+  return {};
 }
 
-export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
+export function useBookings(filter: BookingsFilter = 'upcoming'): {
   state: BookingsState;
   refresh: () => void;
   loadMore: () => void;
@@ -58,7 +60,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
     fetchBookings({ apiBaseUrl, bearerToken }, filterQuery(filter)).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
-        setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor, loadingMore: false, isRefreshing: false });
+        setState({ kind: 'ok', items: result.items, nextCursor: result.nextCursor, totalCount: result.totalCount, loadingMore: false, isRefreshing: false });
       } else {
         setState((prev) => (prev.kind === 'ok' ? { ...prev, isRefreshing: false } : result));
       }
@@ -86,6 +88,7 @@ export function useBookings(filter: 'upcoming' | 'recent' = 'upcoming'): {
             kind: 'ok',
             items: [...prev.items, ...newItems],
             nextCursor: result.nextCursor,
+            totalCount: prev.totalCount,
             loadingMore: false,
             isRefreshing: false,
           };

@@ -107,7 +107,7 @@ public sealed class BookingController : ControllerBase
             new GetMyBookingsQuery(currentUser.TenantId, currentUser.UserId, from, to, status, pageSize, cursor),
             cancellationToken);
 
-        return Ok(new GetMyBookingsResponse(result.Items, result.NextCursor));
+        return Ok(new GetMyBookingsResponse(result.Items, result.NextCursor, result.TotalCount));
     }
 
     [HttpPost("{requestId:guid}/confirm-usage")]

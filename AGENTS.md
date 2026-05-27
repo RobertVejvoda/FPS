@@ -145,6 +145,24 @@ When Codex signals work to an implementer, include a short comment with:
 
 When an implementer finishes, it should set `Status = In review`, `Owner = Codex`, remove stale temporary routing labels when permitted, and leave a concise summary with validation results.
 
+### PR Monitoring Loops
+
+Claude PR monitoring loops must watch both formal PR reviews and PR conversation comments.
+GitHub blocks formal `CHANGES_REQUESTED` reviews when the reviewer and PR author share the
+same GitHub account, so Codex may leave authoritative review feedback as a PR comment with
+`/fps-state needs-changes ...`. A loop that only polls `reviews` is incomplete.
+
+For every monitored PR, poll:
+
+- CI/check state;
+- formal PR reviews;
+- PR conversation comments, including `/fps-state` and `/fps-route` commands;
+- new Codex/Product Owner comments that contain review findings.
+
+If a Codex comment requests changes or includes `/fps-state needs-changes`, treat it exactly
+like a blocking changes-request review: notify Robert when appropriate, address the findings,
+rerun the slice validation checklist, post a fix summary, and return the PR to Codex review.
+
 ### Attribution
 
 GitHub actions may technically run under Robert's account unless a separate agent token or GitHub App is configured. Use issue labels and PR text to make responsibility clear:

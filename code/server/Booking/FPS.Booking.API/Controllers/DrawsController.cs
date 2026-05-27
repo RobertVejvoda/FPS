@@ -96,7 +96,6 @@ public sealed class DrawsController : ControllerBase
 
     [HttpGet("{date}/status")]
     [ProducesResponseType(typeof(DrawStatusResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDrawStatus(
         DateOnly date,
         [FromQuery] string locationId,
@@ -111,12 +110,13 @@ public sealed class DrawsController : ControllerBase
             new GetDrawStatusQuery(currentUser.TenantId, locationId, date, timeSlotStart, timeSlotEnd),
             cancellationToken);
 
-        if (result is null) return NotFound();
-
         return Ok(new DrawStatusResponse(
             result.Status,
             result.StartedAt,
             result.CompletedAt,
-            result.DemandLevel));
+            result.DemandLevel,
+            result.RequestCount,
+            result.CanRequest,
+            result.CannotRequestReason));
     }
 }

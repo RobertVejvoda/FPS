@@ -430,17 +430,6 @@ export interface paths {
                         "text/json": components["schemas"]["DrawStatusResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
             };
         };
         put?: never;
@@ -657,6 +646,14 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
             demandLevel: string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            requestCount: number | string;
+            /** @default true */
+            canRequest: boolean;
+            cannotRequestReason?: null | string;
         };
         EvaluateNoShowResult: {
             /** Format: int32 */
@@ -668,6 +665,11 @@ export interface components {
         GetMyBookingsResponse: {
             items: components["schemas"]["BookingListItem"][];
             nextCursor: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            totalCount: number | string;
         };
         ManualCorrectionRequest: {
             correctionType: string;
