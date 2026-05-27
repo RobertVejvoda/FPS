@@ -69,12 +69,13 @@ const DEPARTURE_TIMES = [
 
 function availableDates(): Array<{ offset: number; label: string }> {
   return Array.from({ length: 7 }, (_, i) => {
-    const offset = i + 1;
     const d = new Date();
-    d.setDate(d.getDate() + offset);
+    d.setDate(d.getDate() + i);
     return {
-      offset,
-      label: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      offset: i,
+      label: i === 0
+        ? 'Today'
+        : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
     };
   });
 }
@@ -140,6 +141,12 @@ export default function NewBookingRoute() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
   const dates = availableDates();
+
+  useEffect(() => {
+    if (offsetParam === undefined) return;
+    const parsed = Math.max(0, parseInt(offsetParam, 10) || 0);
+    setForm(prev => ({ ...prev, dateOffset: parsed }));
+  }, [offsetParam]);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
