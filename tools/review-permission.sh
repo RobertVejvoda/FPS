@@ -45,7 +45,7 @@ case "$CMD" in
   "git status"*|"git diff"*|"git log"*|"git branch"*|"git show"*) allow ;;
   "dotnet test"*|"dotnet build"*|"dotnet restore"*) allow ;;
   ls*|find*|cat*|head*|tail*|echo*|pwd|whoami|which*|wc*) allow ;;
-  "gh run"*|"gh pr view"*|"gh repo view"*) allow ;;
+  "gh run"*|"gh pr view"*|"gh pr comment"*|"gh repo view"*) allow ;;
 esac
 
 # ── Hard block: destructive / rule-violating commands ─────────────────────────

@@ -23,6 +23,7 @@ packages/
 
 # Logs
 *.log
+logs/
 
 # Temp
 *.tmp

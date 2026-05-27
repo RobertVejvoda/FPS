@@ -63,6 +63,25 @@ When a formal PR review cannot be submitted (for example, because the reviewer a
 
 Restrictions: only comments from the repository owner (`RobertVejvoda`) on PRs with linked `Closes #N` issues are acted upon. All writes are best-effort and non-blocking.
 
+#### PR monitoring loops
+
+Claude PR monitoring loops must poll PR conversation comments as well as formal review objects.
+The same-account review limitation means Codex/Product Owner feedback can arrive as a PR
+comment with `/fps-state needs-changes ...`, not as a `CHANGES_REQUESTED` review.
+
+Use a polling shape equivalent to:
+
+```bash
+gh pr view PR_NUMBER --json statusCheckRollup,reviews,comments
+```
+
+or combine `gh pr view ... --json statusCheckRollup,reviews` with a comments API query. A loop
+that only watches `reviews` can miss authoritative Codex feedback.
+
+Treat any new Codex/Product Owner comment containing review findings or `/fps-state needs-changes`
+as a blocking changes request. After fixing, rerun the slice validation checklist, post a fix
+summary, and signal review readiness with `/fps-route codex-review`.
+
 #### `/fps-route` comment command
 
 When an implementer needs to hand work to another actor, post `/fps-route <command>` as the first line of an issue or PR comment. On an issue, the command updates that issue's FPS Delivery Kanban card. On a PR, it updates linked closing issues from the PR body.
