@@ -2,32 +2,32 @@
 
 This page prepares an ArchiMate-style hierarchy for FairSpot architecture documentation. It is a navigation and structure page: detailed diagrams and models can be added over time without changing the overall story.
 
-Core architecture pages describe provider-neutral product, service, data, security, and integration contracts. Local, demo, Azure, AWS, Kubernetes, and client-owned deployment details belong under [Production](./production) as environment profiles or implementation examples. Do not make Azure, AWS, Kubernetes, Traefik, Envoy, or any other runtime product part of the core design unless the decision is recorded in [Versions and Decisions](./versions-and-decisions).
+Core architecture pages describe provider-neutral product, service, data, security, and integration contracts. Local, demo, Azure, AWS, Kubernetes, and client-owned deployment details belong under [Production](./production.md) as environment profiles or implementation examples. Do not make Azure, AWS, Kubernetes, Traefik, Envoy, or any other runtime product part of the core design unless the decision is recorded in [Versions and Decisions](./versions-and-decisions.md).
 
 ## Viewpoint Map
 
 | View | Audience | Question Answered | Current Source Pages |
 | --- | --- | --- | --- |
-| Motivation view | Sponsors, product owners, architects | Why does FairSpot exist and which outcomes matter? | [Strategy](./strategy), [Core Values](./strategy-layer/core-values), [Business Requirements](./business-layer/requirements) |
-| Capability view | Business evaluators, architects | Which business capabilities does FairSpot provide? | [Business Layer](./business-layer), [Functional Architecture](./business-layer/functional-architecture) |
-| Business process view | HR, facilities, auditors | How do requests, Draw, allocation, cancellation, confirmation, and audit work? | [Process](./business-layer/process), [Booking Request Lifecycle](./business-layer/booking-request-lifecycle), [Allocation Rules](./business-layer/allocation-rules) |
-| Role and actor view | Business evaluators, security reviewers | Which actors use or operate FairSpot and what are they responsible for? | [Personas](./business-layer/personas), [Roles](./business-layer/roles), [Authorization](./security/authorization) |
-| Application cooperation view | Architects, technical evaluators | Which services collaborate and through which contracts/events? | [Software Architecture](./technology-layer/software-architecture), [Technology Direction](./technology-layer) |
-| Application component view | Architects, technical evaluators | What are the bounded contexts and service responsibilities? | [Software Architecture](./technology-layer/software-architecture) |
-| Data and security view | Security reviewers, architects | Which data exists, who can access it, and how is it protected? | [Security](./security), [Data Privacy](./security/data-privacy), [Traceability](./security/traceability) |
-| Technology deployment view | Client IT, operators | How does FairSpot run locally, in demo, and in client-owned production? | [Production](./production), [Hosting and Deployment Strategy](./production/hosting-deployment-strategy), [Monitoring](./production/monitoring) |
-| Roadmap view | Product owners, evaluators | Which capability areas come next? | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions) |
+| Motivation view | Sponsors, product owners, architects | Why does FairSpot exist and which outcomes matter? | [Strategy](./strategy.md), [Core Values](./strategy-layer/core-values.md), [Business Requirements](./business-layer/requirements.md) |
+| Capability view | Business evaluators, architects | Which business capabilities does FairSpot provide? | [Business Layer](./business-layer.md), [Functional Architecture](./business-layer/functional-architecture.md) |
+| Business process view | HR, facilities, auditors | How do requests, Draw, allocation, cancellation, confirmation, and audit work? | [Process](./business-layer/process.md), [Booking Request Lifecycle](./business-layer/booking-request-lifecycle.md), [Allocation Rules](./business-layer/allocation-rules.md) |
+| Role and actor view | Business evaluators, security reviewers | Which actors use or operate FairSpot and what are they responsible for? | [Personas](./business-layer/personas.md), [Roles](./business-layer/roles.md), [Authorization](./security/authorization.md) |
+| Application cooperation view | Architects, technical evaluators | Which services collaborate and through which contracts/events? | [Software Architecture](./technology-layer/software-architecture.md), [Technology Direction](./technology-layer.md) |
+| Application component view | Architects, technical evaluators | What are the bounded contexts and service responsibilities? | [Software Architecture](./technology-layer/software-architecture.md) |
+| Data and security view | Security reviewers, architects | Which data exists, who can access it, and how is it protected? | [Security](./security.md), [Data Privacy](./security/data-privacy.md), [Traceability](./security/traceability.md) |
+| Technology deployment view | Client IT, operators | How does FairSpot run locally, in demo, and in client-owned production? | [Production](./production.md), [Hosting and Deployment Strategy](./production/hosting-deployment-strategy.md), [Monitoring](./production/monitoring.md) |
+| Roadmap view | Product owners, evaluators | Which capability areas come next? | [Roadmap](./roadmap.md), [Versions and Decisions](./versions-and-decisions.md) |
 
 ## Layer Hierarchy
 
 | ArchiMate-style layer | FairSpot documentation section | Content to maintain |
 | --- | --- | --- |
-| Strategy / Motivation | [Strategy](./strategy) | Product goals, value, constraints, licensing, future extension notes. |
-| Business | [Business Layer](./business-layer) | Actors, roles, business requirements, processes, policies, reason codes, booking lifecycle. |
-| Application | [Software Architecture](./technology-layer/software-architecture) | Bounded contexts, service responsibilities, integration direction, and user-facing app surfaces. |
-| Technology | [Technology Layer](./technology-layer) | Provider-neutral runtime technologies, service packages, Dapr boundaries, data stores, and non-functional requirements. |
-| Security | [Security](./security) | Data classification, authentication, authorization, encryption, audit, compliance, security operations. |
-| Production / Operations | [Production](./production) | Local/demo/client deployment profiles, provider-specific options, observability, backup/restore, incidents, maintenance, readiness evidence. |
+| Strategy / Motivation | [Strategy](./strategy.md) | Product goals, value, constraints, licensing, future extension notes. |
+| Business | [Business Layer](./business-layer.md) | Actors, roles, business requirements, processes, policies, reason codes, booking lifecycle. |
+| Application | [Software Architecture](./technology-layer/software-architecture.md) | Bounded contexts, service responsibilities, integration direction, and user-facing app surfaces. |
+| Technology | [Technology Layer](./technology-layer.md) | Provider-neutral runtime technologies, service packages, Dapr boundaries, data stores, and non-functional requirements. |
+| Security | [Security](./security.md) | Data classification, authentication, authorization, encryption, audit, compliance, security operations. |
+| Production / Operations | [Production](./production.md) | Local/demo/client deployment profiles, provider-specific options, observability, backup/restore, incidents, maintenance, readiness evidence. |
 | Working delivery detail | [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki) | Slice order, PR evidence, validation, remaining gaps, GitHub links, and maintainer process. |
 
 ## Planned View Content
@@ -45,5 +45,5 @@ Core architecture pages describe provider-neutral product, service, data, securi
 - Prefer ArchiMate-style concepts and clear view names over framework-heavy process text.
 - Keep core architecture provider-neutral. Reference provider-specific setup only from production/deployment pages.
 - Keep views layered but connected: business capability should trace to application services, technology components, security controls, and implementation slices.
-- Use placeholders when the model is not mature yet; do not invent decisions that are not recorded in [Versions and Decisions](./versions-and-decisions).
+- Use placeholders when the model is not mature yet; do not invent decisions that are not recorded in [Versions and Decisions](./versions-and-decisions.md).
 - When a view becomes durable, link it from this page and update the corresponding layer index.
