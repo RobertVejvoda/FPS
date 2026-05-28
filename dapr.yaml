@@ -5,6 +5,7 @@
 #   docker compose -f code/infrastructure/docker-compose.yaml up -d
 #   ./tools/dev-setup-auth.sh
 #   source ./tools/dev-env.sh
+#   dotnet build code/server/FPS.sln --no-restore
 #
 # Uses in-memory state/pubsub so no Vault or MongoDB credentials are needed.
 # For durable local state use: --resources-path code/infrastructure/dapr/components/local
@@ -22,53 +23,61 @@ common:
   # configFilePath pointing to a local-host-compatible tracing endpoint.
   env:
     ASPNETCORE_ENVIRONMENT: Development
+    DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE: "false"
 
 apps:
+  - appID: fps-identity
+    appDirPath: code/server/Identity/FPS.Identity
+    appPort: 5192
+    daprHTTPPort: 3602
+    daprGRPCPort: 50002
+    command: ["dotnet", "run", "--no-build", "--no-launch-profile", "--", "--urls", "http://0.0.0.0:5192"]
+
   - appID: fps-booking
     appDirPath: code/server/Booking/FPS.Booking.API
     appPort: 5131
     daprHTTPPort: 3601
     daprGRPCPort: 50001
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]
 
   - appID: fps-notification
     appDirPath: code/server/Notification/FPS.Notification
     appPort: 5157
     daprHTTPPort: 3607
     daprGRPCPort: 50007
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]
 
   - appID: fps-profile
     appDirPath: code/server/Profile/FPS.Profile
     appPort: 5197
     daprHTTPPort: 3617
     daprGRPCPort: 50017
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]
 
   - appID: fps-audit
     appDirPath: code/server/Audit/FPS.Audit
     appPort: 5161
     daprHTTPPort: 3611
     daprGRPCPort: 50011
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]
 
   - appID: fps-reporting
     appDirPath: code/server/Reporting/FPS.Reporting
     appPort: 5171
     daprHTTPPort: 3621
     daprGRPCPort: 50021
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]
 
   - appID: fps-configuration
     appDirPath: code/server/Configuration/FPS.Configuration
     appPort: 5141
     daprHTTPPort: 3631
     daprGRPCPort: 50031
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]
 
   - appID: fps-customer
     appDirPath: code/server/Customer/FPS.Customer
     appPort: 5181
     daprHTTPPort: 3641
     daprGRPCPort: 50041
-    command: ["dotnet", "run"]
+    command: ["dotnet", "run", "--no-build"]

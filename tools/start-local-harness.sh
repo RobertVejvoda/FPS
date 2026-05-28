@@ -168,18 +168,15 @@ log "Running dev-setup-auth.sh (realm import + demo users)..."
 # shellcheck source=tools/dev-env.sh
 . "$REPO_ROOT/tools/dev-env.sh"
 
-# ── Identity (no Dapr sidecar needed) ────────────────────────────────────────
-
-log "Starting Identity service (logs -> $LOG_DIR/identity.log)..."
+# Build once before launching services. Running multiple `dotnet run` builds in
+# parallel through Dapr is slow and can stall local startup on constrained hosts.
+log "Building server solution..."
 cd "$REPO_ROOT"
-dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj \
-  > "$LOG_DIR/identity.log" 2>&1 &
-echo "$!" >> "$PID_FILE"
-require_port 5192 "Identity" 60 "$LOG_DIR/identity.log"
+dotnet build code/server/FPS.sln --no-restore
 
 # ── Services with Dapr sidecars ───────────────────────────────────────────────
 
-log "Starting Booking, Notification, Profile, Audit, Reporting, Configuration, Customer"
+log "Starting Identity, Booking, Notification, Profile, Audit, Reporting, Configuration, Customer"
 log "  with Dapr sidecars (logs -> $LOG_DIR/dapr-run.log)..."
 cd "$REPO_ROOT"
 dapr run -f dapr.yaml > "$LOG_DIR/dapr-run.log" 2>&1 &
@@ -189,6 +186,8 @@ echo "$DAPR_RUN_PID" >> "$PID_FILE"
 sleep 2
 require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 
+require_port 5192 "Identity"      90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5131 "Booking"       90 "$LOG_DIR/dapr-run.log"
 require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5157 "Notification"  90 "$LOG_DIR/dapr-run.log"

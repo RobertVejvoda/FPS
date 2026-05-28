@@ -3,6 +3,7 @@ set -eu
 
 # Ensure .NET 10 (user install) is on PATH
 export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+export DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 
 echo "== Git status =="
 git status --short

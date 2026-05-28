@@ -40,6 +40,10 @@ static_resources:
                           route:
                             cluster: fps-booking
                         - match:
+                            prefix: "/draws"
+                          route:
+                            cluster: fps-booking
+                        - match:
                             prefix: "/reports"
                           route:
                             cluster: fps-reporting
@@ -77,6 +81,7 @@ static_resources:
     - name: fps-identity
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-identity
@@ -89,6 +94,7 @@ static_resources:
     - name: fps-booking
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-booking
@@ -101,6 +107,7 @@ static_resources:
     - name: fps-notification
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-notification
@@ -113,6 +120,7 @@ static_resources:
     - name: fps-profile
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-profile
@@ -125,6 +133,7 @@ static_resources:
     - name: fps-reporting
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-reporting
@@ -137,6 +146,7 @@ static_resources:
     - name: fps-audit
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-audit
@@ -149,6 +159,7 @@ static_resources:
     - name: fps-configuration
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-configuration
@@ -161,6 +172,7 @@ static_resources:
     - name: fps-customer
       connect_timeout: 1s
       type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: fps-customer

@@ -47,6 +47,9 @@ fi
 # Killing the tracked dapr-run PID sends SIGTERM to the dapr process but the child dotnet
 # processes may survive. Kill them explicitly by assembly/project name.
 for pattern in \
+  "start-local-harness.sh --skip-infra" \
+  "dotnet run .*FPS.Identity" \
+  "dotnet .*FPS.Identity.dll" \
   "FPS.Identity" \
   "FPS.Booking.API" \
   "FPS.Notification" \
@@ -56,7 +59,26 @@ for pattern in \
   "FPS.Configuration" \
   "FPS.Customer" \
   "daprd"; do
-  pkill -f "$pattern" 2>/dev/null && log "Stopped $pattern processes" || true
+  pkill -TERM -f "$pattern" 2>/dev/null && log "Stopped $pattern processes" || true
+done
+
+# Some failed .NET launches can get stuck before binding a port. Give them a
+# moment to handle SIGTERM, then force only the known harness process patterns.
+sleep 1
+for pattern in \
+  "start-local-harness.sh --skip-infra" \
+  "dotnet run .*FPS.Identity" \
+  "dotnet .*FPS.Identity.dll" \
+  "FPS.Identity" \
+  "FPS.Booking.API" \
+  "FPS.Notification" \
+  "FPS.Profile" \
+  "FPS.Audit" \
+  "FPS.Reporting" \
+  "FPS.Configuration" \
+  "FPS.Customer" \
+  "daprd"; do
+  pkill -KILL -f "$pattern" 2>/dev/null && log "Force-stopped $pattern processes" || true
 done
 
 if [ "$MODE" = "--services-only" ]; then
