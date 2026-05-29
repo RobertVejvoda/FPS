@@ -191,6 +191,7 @@ public sealed class BookingController : ControllerBase
     [Authorize(Roles = "hr_manager,admin")]
     [ProducesResponseType(typeof(GetHrBookingsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHrBookings(
+        [FromQuery] string? locationId,
         [FromQuery] DateOnly? from,
         [FromQuery] DateOnly? to,
         [FromQuery] string? status,
@@ -202,7 +203,7 @@ public sealed class BookingController : ControllerBase
             return Unauthorized();
 
         var result = await mediator.Send(
-            new GetHrBookingListQuery(currentUser.TenantId, from, to, status, pageSize, cursor),
+            new GetHrBookingListQuery(currentUser.TenantId, locationId, from, to, status, pageSize, cursor),
             cancellationToken);
 
         return Ok(new GetHrBookingsResponse(result.Items, result.NextCursor, result.TotalCount));

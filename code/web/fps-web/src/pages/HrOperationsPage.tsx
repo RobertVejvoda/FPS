@@ -72,7 +72,7 @@ export function HrOperationsPage() {
   const loadBookings = useCallback(() => {
     setListState({ kind: 'loading' });
     const filter = statusFilter === 'All' ? undefined : statusFilter;
-    fetchHrBookings({ apiBaseUrl, bearerToken }, { from: selectedDate, to: selectedDate, status: filter }).then((result) => {
+    fetchHrBookings({ apiBaseUrl, bearerToken }, { locationId: LOCATION_ID, from: selectedDate, to: selectedDate, status: filter }).then((result) => {
       if (result.kind === 'unauthenticated' || result.kind === 'forbidden') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') setListState({ kind: 'ok', items: result.items, totalCount: result.totalCount, nextCursor: result.nextCursor });
       else setListState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load operations queue.' });

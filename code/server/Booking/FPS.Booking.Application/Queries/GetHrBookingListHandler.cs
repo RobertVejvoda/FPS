@@ -17,6 +17,7 @@ public sealed class GetHrBookingListHandler : IRequestHandler<GetHrBookingListQu
     public Task<HrBookingListResult> Handle(GetHrBookingListQuery query, CancellationToken cancellationToken)
         => queryRepository.GetByTenantAsync(
             query.TenantId,
+            query.LocationId,
             query.From,
             query.To,
             query.StatusFilter,

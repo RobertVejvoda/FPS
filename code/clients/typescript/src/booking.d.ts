@@ -299,6 +299,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    locationId?: string;
                     from?: string;
                     to?: string;
                     status?: string;

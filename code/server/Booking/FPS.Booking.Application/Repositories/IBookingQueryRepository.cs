@@ -27,6 +27,7 @@ public interface IBookingQueryRepository
 
     Task<HrBookingListResult> GetByTenantAsync(
         string tenantId,
+        string? locationId,
         DateOnly? from,
         DateOnly? to,
         string? statusFilter,

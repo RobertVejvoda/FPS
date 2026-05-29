@@ -191,6 +191,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         => new()
         {
             RequestId = request.Id.Value,
+            TenantId = tenantId,
             VehicleId = Guid.Empty,
             FacilityId = Guid.Parse(facilityId),
             LocationId = locationId ?? facilityId,

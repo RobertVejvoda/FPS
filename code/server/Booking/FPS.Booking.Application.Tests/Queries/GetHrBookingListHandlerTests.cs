@@ -13,7 +13,7 @@ public sealed class GetHrBookingListHandlerTests
 
         queryRepository
             .Setup(r => r.GetByTenantAsync(
-                It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
                 It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmptyResult);
     }
@@ -24,15 +24,32 @@ public sealed class GetHrBookingListHandlerTests
         string? capturedTenant = null;
         queryRepository
             .Setup(r => r.GetByTenantAsync(
-                It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
                 It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .Callback<string, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
-                (tenantId, _, _, _, _, _, _) => capturedTenant = tenantId)
+            .Callback<string, string?, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
+                (tenantId, _, _, _, _, _, _, _) => capturedTenant = tenantId)
             .ReturnsAsync(EmptyResult);
 
         await handler.Handle(QueryWith(tenantId: "tenant-hr"), CancellationToken.None);
 
         Assert.Equal("tenant-hr", capturedTenant);
+    }
+
+    [Fact]
+    public async Task Handle_PassesLocationIdToRepository()
+    {
+        string? capturedLocation = null;
+        queryRepository
+            .Setup(r => r.GetByTenantAsync(
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string?, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
+                (_, locationId, _, _, _, _, _, _) => capturedLocation = locationId)
+            .ReturnsAsync(EmptyResult);
+
+        await handler.Handle(QueryWith(locationId: "Prague"), CancellationToken.None);
+
+        Assert.Equal("Prague", capturedLocation);
     }
 
     [Fact]
@@ -44,10 +61,10 @@ public sealed class GetHrBookingListHandlerTests
 
         queryRepository
             .Setup(r => r.GetByTenantAsync(
-                It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
                 It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .Callback<string, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
-                (_, from, to, status, _, _, _) => { capturedFrom = from; capturedTo = to; capturedStatus = status; })
+            .Callback<string, string?, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
+                (_, _, from, to, status, _, _, _) => { capturedFrom = from; capturedTo = to; capturedStatus = status; })
             .ReturnsAsync(EmptyResult);
 
         var from = new DateOnly(2026, 6, 1);
@@ -74,7 +91,7 @@ public sealed class GetHrBookingListHandlerTests
 
         queryRepository
             .Setup(r => r.GetByTenantAsync(
-                It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
                 It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
@@ -100,10 +117,10 @@ public sealed class GetHrBookingListHandlerTests
         int? capturedPageSize = null;
         queryRepository
             .Setup(r => r.GetByTenantAsync(
-                It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
                 It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .Callback<string, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
-                (_, _, _, _, pageSize, _, _) => capturedPageSize = pageSize)
+            .Callback<string, string?, DateOnly?, DateOnly?, string?, int, string?, CancellationToken>(
+                (_, _, _, _, _, pageSize, _, _) => capturedPageSize = pageSize)
             .ReturnsAsync(EmptyResult);
 
         await handler.Handle(QueryWith(pageSize: 25), CancellationToken.None);
@@ -113,10 +130,11 @@ public sealed class GetHrBookingListHandlerTests
 
     private static GetHrBookingListQuery QueryWith(
         string tenantId = "tenant-1",
+        string? locationId = null,
         DateOnly? from = null,
         DateOnly? to = null,
         string? statusFilter = null,
         int pageSize = 50,
         string? cursor = null)
-        => new(tenantId, from, to, statusFilter, pageSize, cursor);
+        => new(tenantId, locationId, from, to, statusFilter, pageSize, cursor);
 }

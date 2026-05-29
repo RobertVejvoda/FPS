@@ -5,6 +5,7 @@ namespace FPS.Booking.Application.Queries;
 
 public record GetHrBookingListQuery(
     string TenantId,
+    string? LocationId,
     DateOnly? From,
     DateOnly? To,
     string? StatusFilter,

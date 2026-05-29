@@ -194,11 +194,12 @@ export type HrBookingsResult =
 
 export async function fetchHrBookings(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
-  opts?: { cursor?: string; from?: string; to?: string; status?: string },
+  opts?: { cursor?: string; locationId?: string; from?: string; to?: string; status?: string },
 ): Promise<HrBookingsResult> {
   if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
   const params = new URLSearchParams();
   if (opts?.cursor) params.set('cursor', opts.cursor);
+  if (opts?.locationId) params.set('locationId', opts.locationId);
   if (opts?.from) params.set('from', opts.from);
   if (opts?.to) params.set('to', opts.to);
   if (opts?.status) params.set('status', opts.status);

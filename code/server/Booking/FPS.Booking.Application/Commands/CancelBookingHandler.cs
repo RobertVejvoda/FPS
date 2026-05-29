@@ -51,6 +51,8 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
     {
         var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
+        if (!string.IsNullOrEmpty(dto.TenantId) && dto.TenantId != command.TenantId)
+            throw new BookingNotFoundException(command.RequestId);
 
         var wasAllocated = dto.Status == "Allocated";
         var request = RestoreRequest(dto);

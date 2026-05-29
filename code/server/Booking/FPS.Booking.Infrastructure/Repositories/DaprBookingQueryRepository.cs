@@ -117,6 +117,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
 
     public async Task<HrBookingListResult> GetByTenantAsync(
         string tenantId,
+        string? locationId,
         DateOnly? from,
         DateOnly? to,
         string? statusFilter,
@@ -125,7 +126,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         CancellationToken cancellationToken = default)
     {
         var index = await daprClient.GetStateAsync<TenantPendingIndex>(
-            BookingStore, $"pending:{tenantId}", cancellationToken: cancellationToken);
+            BookingStore, PendingIndexKey(tenantId), cancellationToken: cancellationToken);
 
         var requestIds = index?.RequestIds ?? [];
 
@@ -133,12 +134,13 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         foreach (var id in requestIds)
         {
             var dto = await daprClient.GetStateAsync<BookingRequestDto>(
-                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+                BookingStore, TenantStorageKey.For("request", tenantId, id), cancellationToken: cancellationToken);
             if (dto is not null)
                 dtos.Add(dto);
         }
 
         var filtered = dtos
+            .Where(d => locationId is null || d.LocationId == locationId)
             .Where(d => from is null || DateOnly.FromDateTime(d.PlannedArrivalTime) >= from.Value)
             .Where(d => to is null || DateOnly.FromDateTime(d.PlannedArrivalTime) <= to.Value)
             .Where(d => statusFilter is null || d.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase))
