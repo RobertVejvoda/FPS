@@ -56,11 +56,13 @@ MOB007 includes:
 
 - display of authenticated user, tenant, and roles from `GET /me`;
 - display of profile status, parking eligibility, company-car eligibility, accessibility eligibility, reserved-space eligibility, and snapshot version;
-- display of active vehicles returned by Profile, including license plate or vehicle identifier, vehicle type, electric flag, and active state;
+- display of active vehicles returned by Profile, including license plate or vehicle identifier, vehicle type, electric flag, active state, and default-vehicle indicator;
 - loading, missing-profile, unreachable, and error states for the Profile snapshot;
 - no caller-supplied tenant, user, role, or profile identifiers.
 
 MOB007 does not implement profile or vehicle editing, notification preferences, user provisioning, local-account management, backend Profile behavior changes, or broader SSO/customer integration behavior.
+
+Booking request forms should preselect the active vehicle marked as default by Profile. If no active default exists and exactly one active vehicle is available, the form may preselect that single vehicle. Users can still choose another active vehicle before submitting.
 
 ## Notifications
 - **Booking Alerts**: Receive booking confirmations

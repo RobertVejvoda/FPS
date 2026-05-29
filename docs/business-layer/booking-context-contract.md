@@ -76,6 +76,7 @@ Minimum vehicle snapshot fields for Booking:
 | `vehicleType` | Slot matching for car, motorcycle, or other configured vehicle types. |
 | `isElectric` | EV-capable slot matching when requested or required. |
 | `isActive` | Inactive vehicles cannot be used for new requests. |
+| `isDefault` | Employee preference used by clients to preselect the vehicle for new requests. Booking must still validate the submitted vehicle against active Profile facts. |
 
 Booking must record the snapshot version or timestamp for decisions affected by Profile facts, including eligibility rejection, vehicle mismatch rejection, company-car Tier 1 classification, accessibility/reserved-space matching, and allocation outcomes. Booking must not store Profile-only details that are unnecessary for explaining or auditing the Booking decision.
 
