@@ -112,7 +112,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             if (policy.SameDayBookingEnabled)
             {
                 var slots = await slotService.GetAvailableSlotsAsync(
-                    cmd.TenantId, cmd.FacilityId, DateOnly.FromDateTime(requestedPeriod.Start),
+                    cmd.TenantId, cmd.LocationId ?? cmd.FacilityId, DateOnly.FromDateTime(requestedPeriod.Start),
                     requestedPeriod, cancellationToken);
 
                 sameDaySlot = slots.FirstOrDefault(s => s.CanAccommodate(vehicle));
@@ -150,7 +150,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         }
 
         await repository.CreateBookingRequestAsync(
-            ToDto(request, cmd.TenantId, cmd.FacilityId, snapshot.SnapshotVersion, sameDaySlot));
+            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, sameDaySlot));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
 
         logger.LogInformation(
@@ -183,13 +183,13 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     }
 
     private static BookingRequestDto ToDto(BookingRequest request, string tenantId, string facilityId,
-        string snapshotVersion, AvailableSlot? slot = null)
+        string? locationId, string snapshotVersion, AvailableSlot? slot = null)
         => new()
         {
             RequestId = request.Id.Value,
             VehicleId = Guid.Empty,
             FacilityId = Guid.Parse(facilityId),
-            LocationId = facilityId,
+            LocationId = locationId ?? facilityId,
             PlannedArrivalTime = request.RequestedPeriod.Start,
             PlannedDepartureTime = request.RequestedPeriod.End,
             RequestedBy = request.RequestorId.Value.ToString(),
