@@ -289,6 +289,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                    status?: string;
+                    pageSize?: number | string;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GetHrBookingsResponse"];
+                        "application/json": components["schemas"]["GetHrBookingsResponse"];
+                        "text/json": components["schemas"]["GetHrBookingsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{requestId}/hr-cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HrCancelRequest"];
+                    "text/json": components["schemas"]["HrCancelRequest"];
+                    "application/*+json": components["schemas"]["HrCancelRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/draws/trigger": {
         parameters: {
             query?: never;
@@ -662,6 +779,15 @@ export interface components {
             skippedCount: number | string;
             skippedReason: null | string;
         };
+        GetHrBookingsResponse: {
+            items: components["schemas"]["HrBookingListItem"][];
+            nextCursor: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            totalCount: number | string;
+        };
         GetMyBookingsResponse: {
             items: components["schemas"]["BookingListItem"][];
             nextCursor: null | string;
@@ -690,15 +816,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             lastStatusChangedAt: string;
-        };
-        GetHrBookingsResponse: {
-            items: components["schemas"]["HrBookingListItem"][];
-            nextCursor: null | string;
-            /**
-             * Format: int32
-             * @default 0
-             */
-            totalCount: number | string;
         };
         HrCancelRequest: {
             reason: string;
