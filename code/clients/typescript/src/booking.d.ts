@@ -671,6 +671,38 @@ export interface components {
              */
             totalCount: number | string;
         };
+        HrBookingListItem: {
+            /** Format: uuid */
+            requestId: string;
+            requestorRef: string;
+            /** Format: date */
+            requestedDate: string;
+            /** Format: time */
+            timeSlotStart: string;
+            /** Format: time */
+            timeSlotEnd: string;
+            locationId: null | string;
+            status: string;
+            reasonCode: null | string;
+            reason: null | string;
+            allocatedSlotId: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastStatusChangedAt: string;
+        };
+        GetHrBookingsResponse: {
+            items: components["schemas"]["HrBookingListItem"][];
+            nextCursor: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            totalCount: number | string;
+        };
+        HrCancelRequest: {
+            reason: string;
+        };
         ManualCorrectionRequest: {
             correctionType: string;
             oldValue: string;

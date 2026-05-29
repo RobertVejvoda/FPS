@@ -56,7 +56,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         var request = RestoreRequest(dto);
 
         var publisher = eventPublisher.WithContext(new BookingPublishContext(
-            command.TenantId, Guid.NewGuid().ToString(), "employee", command.RequestorId,
+            command.TenantId, Guid.NewGuid().ToString(), command.ActorType, command.RequestorId,
             SubjectRequestorId: dto.RequestedBy));
         request.Cancel(command.Reason, publisher);
 

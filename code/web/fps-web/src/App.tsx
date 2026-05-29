@@ -4,6 +4,7 @@ import {
   canAccessAudit,
   canAccessBookings,
   canAccessConfiguration,
+  canAccessHrOperations,
   canAccessNotifications,
   canAccessProfile,
   canAccessReporting,
@@ -22,6 +23,7 @@ import { ConfigurationPage } from './pages/ConfigurationPage';
 import { AuditPage } from './pages/AuditPage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
+import { HrOperationsPage } from './pages/HrOperationsPage';
 import { ForbiddenPage } from './pages/ForbiddenPage';
 import { LegalPage } from './pages/LegalPage';
 
@@ -38,6 +40,7 @@ function Shell() {
     canAccessBookings(roles) && { to: '/bookings', label: 'My Spots' },
     canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
+    canAccessHrOperations(roles) && { to: '/hr-operations', label: 'HR Operations' },
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
     canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
     canAccessConfiguration(roles) && { to: '/hr-import', label: 'HR Import' },
@@ -86,6 +89,7 @@ function Shell() {
           <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
           <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
           <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
+          <Route path="/hr-operations" element={<Guard allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
           <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
           <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
           <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />

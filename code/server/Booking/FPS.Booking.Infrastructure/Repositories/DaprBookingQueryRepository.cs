@@ -115,6 +115,49 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         return results;
     }
 
+    public async Task<HrBookingListResult> GetByTenantAsync(
+        string tenantId,
+        DateOnly? from,
+        DateOnly? to,
+        string? statusFilter,
+        int pageSize,
+        string? cursor,
+        CancellationToken cancellationToken = default)
+    {
+        var index = await daprClient.GetStateAsync<TenantPendingIndex>(
+            BookingStore, $"pending:{tenantId}", cancellationToken: cancellationToken);
+
+        var requestIds = index?.RequestIds ?? [];
+
+        var dtos = new List<BookingRequestDto>(requestIds.Count);
+        foreach (var id in requestIds)
+        {
+            var dto = await daprClient.GetStateAsync<BookingRequestDto>(
+                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+            if (dto is not null)
+                dtos.Add(dto);
+        }
+
+        var filtered = dtos
+            .Where(d => from is null || DateOnly.FromDateTime(d.PlannedArrivalTime) >= from.Value)
+            .Where(d => to is null || DateOnly.FromDateTime(d.PlannedArrivalTime) <= to.Value)
+            .Where(d => statusFilter is null || d.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(d => d.PlannedArrivalTime.Date)
+            .ThenByDescending(d => d.RequestedAt)
+            .ToList();
+
+        var offset = DecodeCursor(cursor);
+        var page = filtered.Skip(offset).Take(pageSize).ToList();
+        var nextCursor = offset + page.Count < filtered.Count
+            ? EncodeCursor(offset + page.Count)
+            : null;
+
+        return new HrBookingListResult(
+            page.Select(ToHrListItem).ToList(),
+            nextCursor,
+            filtered.Count);
+    }
+
     public async Task AddToUserIndexAsync(
         string tenantId,
         string requestorId,
@@ -166,6 +209,29 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         NextAction: NextActionFor(dto.Status),
         CreatedAt: dto.RequestedAt,
         LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+
+    private static HrBookingListItem ToHrListItem(BookingRequestDto dto) => new(
+        RequestId: dto.RequestId,
+        RequestorRef: dto.RequestedBy.Length >= 8 ? dto.RequestedBy[..8] : dto.RequestedBy,
+        RequestedDate: DateOnly.FromDateTime(dto.PlannedArrivalTime),
+        TimeSlotStart: TimeOnly.FromDateTime(dto.PlannedArrivalTime),
+        TimeSlotEnd: TimeOnly.FromDateTime(dto.PlannedDepartureTime),
+        LocationId: dto.LocationId,
+        Status: dto.Status,
+        ReasonCode: dto.Status == "Rejected" ? dto.RejectionCode : null,
+        Reason: HrReasonFor(dto),
+        AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
+        CreatedAt: dto.RequestedAt,
+        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+
+    private static string? HrReasonFor(BookingRequestDto dto) =>
+        dto.Status switch
+        {
+            "Rejected" => dto.RejectionCode,
+            "Cancelled" => "Cancelled",
+            "NoShow" or "Expired" => dto.Status,
+            _ => null
+        };
 
     private static string? ReasonFor(BookingRequestDto dto) =>
         dto.Status switch

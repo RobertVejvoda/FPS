@@ -186,4 +186,60 @@ public sealed class BookingController : ControllerBase
             return UnprocessableEntity(new { ex.Message });
         }
     }
+
+    [HttpGet("operations")]
+    [Authorize(Roles = "hr_manager,admin")]
+    [ProducesResponseType(typeof(GetHrBookingsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHrBookings(
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? status,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await mediator.Send(
+            new GetHrBookingListQuery(currentUser.TenantId, from, to, status, pageSize, cursor),
+            cancellationToken);
+
+        return Ok(new GetHrBookingsResponse(result.Items, result.NextCursor, result.TotalCount));
+    }
+
+    [HttpDelete("{requestId:guid}/hr-cancel")]
+    [Authorize(Roles = "hr_manager,admin")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> HrCancelBooking(
+        Guid requestId,
+        [FromBody] HrCancelRequest body,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(body.Reason))
+            return BadRequest(new { Message = "Reason is required for HR cancellation." });
+
+        try
+        {
+            var result = await mediator.Send(
+                new CancelBookingCommand(requestId, currentUser.TenantId, currentUser.UserId, body.Reason, ActorType: "hr_manager"),
+                cancellationToken);
+
+            return Ok(new { result.RequestId, result.Status });
+        }
+        catch (BookingNotFoundException ex)
+        {
+            return NotFound(new { ex.Message });
+        }
+        catch (BookingException ex)
+        {
+            return UnprocessableEntity(new { ex.Message });
+        }
+    }
 }

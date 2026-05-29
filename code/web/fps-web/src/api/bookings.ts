@@ -3,6 +3,8 @@ import type { ApiClientConfig, FetchResult } from './client';
 
 export type BookingListItem = components['schemas']['BookingListItem'];
 export type GetMyBookingsResponse = components['schemas']['GetMyBookingsResponse'];
+export type HrBookingListItem = components['schemas']['HrBookingListItem'];
+export type GetHrBookingsResponse = components['schemas']['GetHrBookingsResponse'];
 export type SubmitBookingRequest = components['schemas']['SubmitBookingRequest'];
 export type SubmitBookingResponse = components['schemas']['SubmitBookingResponse'];
 export type TriggerDrawRequest = components['schemas']['TriggerDrawRequest'];
@@ -178,6 +180,59 @@ export async function triggerDraw(
       return { kind: 'accepted', data: (await res.json()) as TriggerDrawResponse, wasAlreadyCompleted: res.status === 200 };
     }
     return { kind: 'error', status: res.status, message: await readError(res, `POST /draws/trigger returned ${res.status}`) };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export type HrBookingsResult =
+  | { kind: 'ok'; items: HrBookingListItem[]; nextCursor: string | null; totalCount: number }
+  | { kind: 'unauthenticated' }
+  | { kind: 'forbidden' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function fetchHrBookings(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  opts?: { cursor?: string; from?: string; to?: string; status?: string },
+): Promise<HrBookingsResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const params = new URLSearchParams();
+  if (opts?.cursor) params.set('cursor', opts.cursor);
+  if (opts?.from) params.set('from', opts.from);
+  if (opts?.to) params.set('to', opts.to);
+  if (opts?.status) params.set('status', opts.status);
+  const query = params.toString();
+  try {
+    const res = await fetch(`${apiBaseUrl}/bookings/operations${query ? `?${query}` : ''}`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'forbidden' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /bookings/operations returned ${res.status}` };
+    const data = (await res.json()) as GetHrBookingsResponse;
+    return { kind: 'ok', items: data.items, nextCursor: data.nextCursor ?? null, totalCount: Number(data.totalCount ?? 0) };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function hrCancelBooking(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  requestId: string,
+  reason: string,
+): Promise<ActionResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/bookings/${encodeURIComponent(requestId)}/hr-cancel`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 200) return { kind: 'ok' };
+    if (res.status === 404) return { kind: 'notFound', message: await readError(res, 'Booking not found.') };
+    return { kind: 'error', status: res.status, message: await readError(res, `DELETE /bookings/hr-cancel returned ${res.status}`) };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }

@@ -25,6 +25,15 @@ public interface IBookingQueryRepository
         Guid requestId,
         CancellationToken cancellationToken = default);
 
+    Task<HrBookingListResult> GetByTenantAsync(
+        string tenantId,
+        DateOnly? from,
+        DateOnly? to,
+        string? statusFilter,
+        int pageSize,
+        string? cursor,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<BookingRequestDto>> GetAllocatedRequestsForDrawAsync(
         string tenantId,
         string locationId,

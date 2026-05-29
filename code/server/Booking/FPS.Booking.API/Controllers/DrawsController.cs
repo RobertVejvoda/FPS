@@ -26,7 +26,7 @@ public sealed class DrawsController : ControllerBase
     }
 
     [HttpPost("trigger")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,hr_manager")]
     [ProducesResponseType(typeof(TriggerDrawResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(TriggerDrawResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> TriggerDraw(
