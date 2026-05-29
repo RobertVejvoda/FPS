@@ -15,16 +15,16 @@ public sealed class DaprPenaltyRepository : IPenaltyRepository
         this.daprClient = daprClient;
     }
 
-    public async Task<bool> ExistsAsync(Guid requestId, string penaltyType, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(string tenantId, Guid requestId, string penaltyType, CancellationToken cancellationToken = default)
     {
         var existing = await daprClient.GetStateAsync<PenaltyDto>(
-            BookingStore, Key(requestId, penaltyType), cancellationToken: cancellationToken);
+            BookingStore, Key(tenantId, requestId, penaltyType), cancellationToken: cancellationToken);
         return existing is not null;
     }
 
     public async Task SaveAsync(PenaltyDto penalty, CancellationToken cancellationToken = default)
         => await daprClient.SaveStateAsync(
-            BookingStore, Key(penalty.RequestId, penalty.Type), penalty, cancellationToken: cancellationToken);
+            BookingStore, Key(penalty.TenantId, penalty.RequestId, penalty.Type), penalty, cancellationToken: cancellationToken);
 
     public async Task<IReadOnlyList<PenaltyDto>> GetActiveByRequestorAsync(
         string tenantId, string requestorId, DateOnly asOfDate, CancellationToken cancellationToken = default)
@@ -35,5 +35,6 @@ public sealed class DaprPenaltyRepository : IPenaltyRepository
         return [];
     }
 
-    private static string Key(Guid requestId, string penaltyType) => $"penalty:{requestId}:{penaltyType}";
+    private static string Key(string tenantId, Guid requestId, string penaltyType)
+        => TenantStorageKey.For("penalty", tenantId, $"{requestId}:{penaltyType}");
 }

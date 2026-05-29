@@ -36,9 +36,9 @@ public sealed class ProfileAdminController(
             HasCompanyCar = request.HasCompanyCar,
             AccessibilityEligible = request.AccessibilityEligible,
             ReservedSpaceEligible = request.ReservedSpaceEligible,
-            Vehicles = request.Vehicles
-                .Select(v => new Vehicle(v.VehicleId, v.LicensePlate, v.VehicleType, v.IsElectric, v.IsActive))
-                .ToList(),
+            Vehicles = NormalizeDefaults(request.Vehicles
+                .Select(v => new Vehicle(v.VehicleId, v.LicensePlate, v.VehicleType, v.IsElectric, v.IsActive, v.IsDefault))
+                .ToList()),
             SnapshotVersion = "seed-v1",
             FactSource = "admin-seed",
             UpdatedAt = DateTimeOffset.UtcNow,
@@ -46,6 +46,17 @@ public sealed class ProfileAdminController(
 
         await repository.SaveAsync(profile, cancellationToken);
         return NoContent();
+    }
+
+    // Enforces the single-active-default invariant: only the first active vehicle
+    // with IsDefault=true keeps the flag; all others are cleared.
+    private static IReadOnlyList<Vehicle> NormalizeDefaults(IReadOnlyList<Vehicle> vehicles)
+    {
+        var activeDefault = vehicles.FirstOrDefault(v => v.IsActive && v.IsDefault);
+        if (activeDefault is null) return vehicles;
+        return vehicles
+            .Select(v => v with { IsDefault = v.IsActive && v.VehicleId == activeDefault.VehicleId })
+            .ToList();
     }
 }
 
@@ -63,4 +74,5 @@ public sealed record SeedVehicleRequest(
     string LicensePlate,
     string VehicleType,
     bool IsElectric,
-    bool IsActive);
+    bool IsActive,
+    bool IsDefault = false);

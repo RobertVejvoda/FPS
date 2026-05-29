@@ -193,7 +193,10 @@ function VehicleRow({ vehicle }: { vehicle: VehicleSnapshot }) {
     <View style={styles.vehicleRow}>
       <View style={styles.vehicleHeader}>
         <Text style={styles.vehiclePlate}>{vehicle.licensePlate || 'Unknown plate'}</Text>
-        <Text style={styles.vehicleType}>{vehicle.vehicleType}</Text>
+        <View style={styles.vehicleTypeRow}>
+          {vehicle.isDefault && <Text style={styles.defaultBadge}>Default</Text>}
+          <Text style={styles.vehicleType}>{vehicle.vehicleType}</Text>
+        </View>
       </View>
       <Text style={styles.vehicleMeta}>
         {vehicle.isElectric ? 'Electric' : 'Standard'} · {vehicle.isActive ? 'Active' : 'Inactive'}
@@ -231,6 +234,8 @@ const styles = StyleSheet.create({
   },
   vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   vehiclePlate: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  vehicleTypeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  defaultBadge: { fontSize: 11, fontWeight: '700', color: colors.primary, textTransform: 'uppercase' },
   vehicleType: { fontSize: 13, color: colors.textMuted },
   vehicleMeta: { fontSize: 13, color: colors.textMuted },
   signOut: {

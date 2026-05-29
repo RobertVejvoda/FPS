@@ -60,6 +60,6 @@ public sealed class ProfileSnapshotController(
         AccessibilityEligible: p.AccessibilityEligible,
         ReservedSpaceEligible: p.ReservedSpaceEligible,
         Vehicles: p.ActiveVehicles.Select(v => new VehicleSnapshot(
-            v.VehicleId, v.LicensePlate, v.VehicleType, v.IsElectric, v.IsActive)).ToList(),
+            v.VehicleId, v.LicensePlate, v.VehicleType, v.IsElectric, v.IsActive, v.IsDefault)).ToList(),
         SnapshotVersion: p.SnapshotVersion);
 }

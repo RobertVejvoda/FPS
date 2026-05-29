@@ -49,7 +49,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
 
     public async Task<CancelBookingResult> Handle(CancelBookingCommand command, CancellationToken cancellationToken)
     {
-        var dto = await repository.GetBookingRequestAsync(command.RequestId);
+        var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
 
         var wasAllocated = dto.Status == "Allocated";
@@ -61,7 +61,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         request.Cancel(command.Reason, publisher);
 
         await repository.UpdateBookingRequestStatusAsync(
-            command.RequestId, request.Status.ToString(), command.Reason, cancellationToken: cancellationToken);
+            command.TenantId, command.RequestId, request.Status.ToString(), command.Reason, cancellationToken: cancellationToken);
 
         if (wasAllocated)
         {
@@ -77,7 +77,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         var policy = await policyService.GetEffectivePolicyAsync(command.TenantId, cancellationToken: cancellationToken);
         var sourceEventId = $"cancel:{command.RequestId}:LateCancellation";
 
-        if (await penaltyRepository.ExistsAsync(command.RequestId, "LateCancellation", cancellationToken))
+        if (await penaltyRepository.ExistsAsync(command.TenantId, command.RequestId, "LateCancellation", cancellationToken))
             return; // idempotent
 
         var penalty = Penalty.Create(
@@ -93,6 +93,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         {
             Id = penalty.Id,
             RequestId = dto.RequestId,
+            TenantId = command.TenantId,
             RequestorId = dto.RequestedBy,
             Type = "LateCancellation",
             Score = penalty.Score,
@@ -155,7 +156,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             AllocationSource: "reallocation"));
         winnerRequest.Allocate(reallocationPublisher);
 
-        await repository.UpdateBookingRequestStatusAsync(winner.RequestId, "Allocated", cancellationToken: cancellationToken);
+        await repository.UpdateBookingRequestStatusAsync(command.TenantId, winner.RequestId, "Allocated", cancellationToken: cancellationToken);
 
         _ = reallocationPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestReallocatedEvent(
             BookingRequestId.FromGuid(winner.RequestId),

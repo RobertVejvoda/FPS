@@ -132,7 +132,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
                 {
                     case DrawOutcome.Allocated:
                         await bookingRepository.UpdateBookingRequestStatusAsync(
-                            decision.RequestId.Value, "Allocated", cancellationToken: cancellationToken);
+                            cmd.TenantId, decision.RequestId.Value, "Allocated", cancellationToken: cancellationToken);
                         await metricsService.IncrementRecentAllocationAsync(
                             cmd.TenantId, decision.RequestorId.Value.ToString(), cmd.Date, cancellationToken);
                         if (decision.SlotId is not null)
@@ -143,7 +143,7 @@ public sealed class TriggerDrawHandler : IRequestHandler<TriggerDrawCommand, Tri
 
                     case DrawOutcome.Rejected:
                         await bookingRepository.UpdateBookingRequestStatusAsync(
-                            decision.RequestId.Value, "Rejected", decision.Reason,
+                            cmd.TenantId, decision.RequestId.Value, "Rejected", decision.Reason,
                             BookingRejectionCode.DrawNotSelected.ToString(), cancellationToken);
                         _ = decisionPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestRejectedEvent(
                             decision.RequestId,

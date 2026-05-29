@@ -1,0 +1,31 @@
+# Cloudflare Tunnel connector for FairSpot NAS deployment
+#
+# Usage:
+#   docker compose -f cloudflared/docker-compose.cloudflared.yml \
+#     --env-file cloudflared/.env.nas up -d
+#
+# Prerequisites:
+#   1. Create a tunnel in Cloudflare Zero Trust dashboard and copy the token.
+#   2. Copy nas-env.template to .env.nas and fill in CLOUDFLARED_TUNNEL_TOKEN.
+#      NEVER commit .env.nas — it contains the tunnel token.
+#   3. Configure public hostnames in the Cloudflare dashboard (see runbook).
+#
+# This Compose file is an overlay. The main docker-compose.yaml in the parent
+# directory starts the FairSpot application stack. This file only adds the
+# cloudflared connector and must be run after the application stack is up.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TUNNEL_TOKEN}
+    networks:
+      - web
+    depends_on: []
+
+networks:
+  web:
+    external: true
+    name: fps_network

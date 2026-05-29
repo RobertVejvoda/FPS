@@ -33,7 +33,7 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
         if (string.IsNullOrWhiteSpace(command.Reason))
             throw new BookingException("A reason is required for manual corrections.");
 
-        var dto = await repository.GetBookingRequestAsync(command.RequestId);
+        var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
 
         var currentValue = GetCurrentValue(dto, command.CorrectionType);
@@ -92,7 +92,7 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
         {
             case "status":
                 await repository.UpdateBookingRequestStatusAsync(
-                    command.RequestId, command.NewValue, command.Reason, cancellationToken: cancellationToken);
+                    command.TenantId, command.RequestId, command.NewValue, command.Reason, cancellationToken: cancellationToken);
                 break;
             case "reason":
                 dto.RejectionReason = command.NewValue;
@@ -101,7 +101,7 @@ public sealed class ApplyManualCorrectionHandler : IRequestHandler<ApplyManualCo
                 break;
             case "usage":
                 await repository.UpdateBookingRequestUsageAsync(
-                    command.RequestId, command.NewValue, appliedAt, null, cancellationToken);
+                    command.TenantId, command.RequestId, command.NewValue, appliedAt, null, cancellationToken);
                 break;
         }
     }

@@ -51,11 +51,13 @@ export function canAccessTenantAdmin(roles: string[]): boolean {
 }
 
 // Returns the first route this user can access, for default redirects.
+// Priority: employee → admin → hr_manager → reporting → audit → profile.
+// Admin is checked before hr-operations because canAccessHrOperations also matches admin.
 export function defaultRoute(roles: string[]): string {
   if (canAccessBookings(roles)) return '/bookings';
+  if (canAccessTenantAdmin(roles)) return '/tenant-admin';
   if (canAccessHrOperations(roles)) return '/hr-operations';
   if (canAccessReporting(roles)) return '/reporting';
   if (canAccessAudit(roles)) return '/audit';
-  if (canAccessTenantAdmin(roles)) return '/tenant-admin';
   return '/profile';
 }

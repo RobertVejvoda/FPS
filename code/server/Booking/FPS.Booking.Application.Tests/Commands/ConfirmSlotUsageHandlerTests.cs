@@ -14,7 +14,7 @@ public sealed class ConfirmSlotUsageHandlerTests
         handler = new ConfirmSlotUsageHandler(repository.Object, eventPublisher.Object);
 
         repository.Setup(r => r.UpdateBookingRequestUsageAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
             It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -27,7 +27,7 @@ public sealed class ConfirmSlotUsageHandlerTests
     [Fact]
     public async Task Handle_AllocatedRequest_ReturnsUsed()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(AllocatedDto());
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
@@ -39,20 +39,20 @@ public sealed class ConfirmSlotUsageHandlerTests
     [Fact]
     public async Task Handle_AllocatedRequest_PersistsUsageConfirmation()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(AllocatedDto());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         repository.Verify(r => r.UpdateBookingRequestUsageAsync(
-            It.IsAny<Guid>(), "EmployeeSelf", It.IsAny<DateTime>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), "EmployeeSelf", It.IsAny<DateTime>(),
             It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_AllocatedRequest_PublishesUsedEvent()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(AllocatedDto());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
@@ -66,7 +66,7 @@ public sealed class ConfirmSlotUsageHandlerTests
     public async Task Handle_CustomConfirmedAt_UsesProvidedTimestamp()
     {
         var customTime = new DateTime(2026, 6, 2, 10, 30, 0, DateTimeKind.Utc);
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(AllocatedDto());
 
         var result = await handler.Handle(ValidCommand(confirmedAt: customTime), CancellationToken.None);
@@ -80,7 +80,7 @@ public sealed class ConfirmSlotUsageHandlerTests
     public async Task Handle_AlreadyUsed_ReturnsExistingStateWithoutDuplicatingEvents()
     {
         var usedAt = new DateTime(2026, 6, 2, 9, 0, 0, DateTimeKind.Utc);
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(UsedDto(usedAt));
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
@@ -91,7 +91,7 @@ public sealed class ConfirmSlotUsageHandlerTests
             It.IsAny<FPS.Booking.Domain.Events.BookingRequestUsedEvent>(),
             It.IsAny<CancellationToken>()), Times.Never);
         repository.Verify(r => r.UpdateBookingRequestUsageAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
             It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -100,7 +100,7 @@ public sealed class ConfirmSlotUsageHandlerTests
     [Fact]
     public async Task Handle_NotFound_ThrowsBookingNotFoundException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync((BookingRequestDto?)null);
 
         await Assert.ThrowsAsync<BookingNotFoundException>(() =>
@@ -110,7 +110,7 @@ public sealed class ConfirmSlotUsageHandlerTests
     [Fact]
     public async Task Handle_PendingRequest_ThrowsBookingException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(DtoWithStatus("Pending"));
 
         await Assert.ThrowsAsync<BookingException>(() =>
@@ -120,7 +120,7 @@ public sealed class ConfirmSlotUsageHandlerTests
     [Fact]
     public async Task Handle_CancelledRequest_ThrowsBookingException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(DtoWithStatus("Cancelled"));
 
         await Assert.ThrowsAsync<BookingException>(() =>

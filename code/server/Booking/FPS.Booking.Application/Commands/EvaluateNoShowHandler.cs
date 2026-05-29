@@ -72,7 +72,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
             request.MarkNoShow(publisher);
 
             await repository.UpdateBookingRequestStatusAsync(
-                dto.RequestId, "NoShow", command.Reason, cancellationToken: cancellationToken);
+                command.TenantId, dto.RequestId, "NoShow", command.Reason, cancellationToken: cancellationToken);
 
             await ApplyNoShowPenaltyAsync(dto, policy, today, command.TenantId, cancellationToken);
 
@@ -87,7 +87,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
     {
         var sourceEventId = $"noshow:{dto.RequestId}:NoShow";
 
-        if (await penaltyRepository.ExistsAsync(dto.RequestId, "NoShow", cancellationToken))
+        if (await penaltyRepository.ExistsAsync(tenantId, dto.RequestId, "NoShow", cancellationToken))
             return; // idempotent
 
         var penalty = Penalty.Create(
@@ -103,6 +103,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
         {
             Id = penalty.Id,
             RequestId = dto.RequestId,
+            TenantId = tenantId,
             RequestorId = dto.RequestedBy,
             Type = "NoShow",
             Score = penalty.Score,

@@ -16,7 +16,7 @@ public sealed class ApplyManualCorrectionHandlerTests
             repository.Object, auditRepository.Object, eventPublisher.Object);
 
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         auditRepository.Setup(r => r.SaveAsync(
@@ -32,7 +32,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     [Fact]
     public async Task Handle_EmptyReason_ThrowsBookingException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(PendingDto());
 
         await Assert.ThrowsAsync<BookingException>(() =>
@@ -44,7 +44,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     [Fact]
     public async Task Handle_OldValueMismatch_ThrowsCorrectionConflictException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(PendingDto()); // current = Pending
 
         await Assert.ThrowsAsync<CorrectionConflictException>(() =>
@@ -57,7 +57,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     [Fact]
     public async Task Handle_RequestNotFound_ThrowsBookingNotFoundException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync((BookingRequestDto?)null);
 
         await Assert.ThrowsAsync<BookingNotFoundException>(() =>
@@ -69,7 +69,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     [Fact]
     public async Task Handle_StatusCorrection_UpdatesStatus()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(PendingDto());
 
         var result = await handler.Handle(
@@ -79,7 +79,7 @@ public sealed class ApplyManualCorrectionHandlerTests
         Assert.Equal("status", result.CorrectionType);
         Assert.Equal("Allocated", result.NewValue);
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ── Audit record ──────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     [Fact]
     public async Task Handle_ValidCorrection_SavesAuditRecord()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(PendingDto());
 
         await handler.Handle(
@@ -106,7 +106,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     [Fact]
     public async Task Handle_ValidCorrection_PublishesManualCorrectionEvent()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(PendingDto());
 
         await handler.Handle(
@@ -125,7 +125,7 @@ public sealed class ApplyManualCorrectionHandlerTests
     {
         var dto = PendingDto();
         dto.RejectionReason = "Old reason";
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync(dto);
         repository.Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
             .Returns(Task.CompletedTask);

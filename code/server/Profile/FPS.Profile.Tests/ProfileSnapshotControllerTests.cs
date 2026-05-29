@@ -133,6 +133,45 @@ public sealed class ProfileSnapshotControllerTests
     }
 
     [Fact]
+    public async Task GetSnapshot_IsDefault_SurfacedInSnapshot()
+    {
+        var profile = BuildProfile(ProfileStatus.Active, parkingEligible: true, defaultVehicle: true);
+        repository.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        var result = await controller.GetSnapshot(CancellationToken.None);
+
+        var snapshot = Assert.IsType<ProfileSnapshot>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Single(snapshot.Vehicles);
+        Assert.True(snapshot.Vehicles[0].IsDefault);
+    }
+
+    [Fact]
+    public async Task GetSnapshot_InactiveDefaultVehicle_NotIncludedInSnapshot()
+    {
+        var vehicles = new List<Vehicle>
+        {
+            new("v-1", "ABC-123", "Sedan", false, IsActive: true, IsDefault: false),
+            new("v-2", "DEF-999", "Sedan", false, IsActive: false, IsDefault: true),
+        };
+        var profile = new UserProfile
+        {
+            TenantId = "tenant-1", UserId = "user-1", Status = ProfileStatus.Active,
+            ParkingEligible = true, HasCompanyCar = false, AccessibilityEligible = false,
+            ReservedSpaceEligible = false, Vehicles = vehicles, SnapshotVersion = "v1",
+            FactSource = "admin-seed", UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        repository.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        var result = await controller.GetSnapshot(CancellationToken.None);
+
+        var snapshot = Assert.IsType<ProfileSnapshot>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Single(snapshot.Vehicles);
+        Assert.False(snapshot.Vehicles[0].IsDefault);
+    }
+
+    [Fact]
     public async Task GetSnapshot_OnlyActiveVehiclesReturned()
     {
         var profile = BuildProfile(ProfileStatus.Active, parkingEligible: true, includeInactiveVehicle: true);
@@ -159,14 +198,14 @@ public sealed class ProfileSnapshotControllerTests
 
     private static UserProfile BuildProfile(
         ProfileStatus status, bool parkingEligible,
-        bool hasCompanyCar = false, bool includeInactiveVehicle = false)
+        bool hasCompanyCar = false, bool includeInactiveVehicle = false, bool defaultVehicle = false)
     {
         var vehicles = new List<Vehicle>
         {
-            new("v-1", "ABC-123", "Sedan", false, true)
+            new("v-1", "ABC-123", "Sedan", false, IsActive: true, IsDefault: defaultVehicle)
         };
         if (includeInactiveVehicle)
-            vehicles.Add(new Vehicle("v-2", "OLD-111", "Sedan", false, false));
+            vehicles.Add(new Vehicle("v-2", "OLD-111", "Sedan", false, IsActive: false));
 
         return new UserProfile
         {

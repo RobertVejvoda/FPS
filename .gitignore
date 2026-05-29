@@ -48,6 +48,7 @@ package-lock.json
 # Secrets
 .env
 *.env.local
+*.env.nas
 
 # Old separate repos (superseded by monorepo)
 FPS.code/

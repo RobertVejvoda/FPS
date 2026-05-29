@@ -73,6 +73,56 @@ public sealed class ProfileAdminSeedTests
     }
 
     [Fact]
+    public async Task SeedSnapshot_IsDefault_PersistedOnActiveVehicle()
+    {
+        var repo = new InMemoryProfileRepository();
+        var controller = new ProfileAdminController(repo, DevEnv().Object);
+
+        var request = new SeedProfileRequest("tenant-1", "user-def", true, false, false, false,
+            [new("VEH-01", "ABC123", "Sedan", false, IsActive: true, IsDefault: true)]);
+        await controller.SeedSnapshot(request);
+
+        var profile = await repo.GetAsync("tenant-1", "user-def");
+        Assert.True(profile!.Vehicles[0].IsDefault);
+    }
+
+    [Fact]
+    public async Task SeedSnapshot_MultipleActiveDefaults_OnlyFirstKept()
+    {
+        var repo = new InMemoryProfileRepository();
+        var controller = new ProfileAdminController(repo, DevEnv().Object);
+
+        var request = new SeedProfileRequest("tenant-1", "user-multi", true, false, false, false,
+        [
+            new("VEH-01", "AAA111", "Sedan", false, IsActive: true, IsDefault: true),
+            new("VEH-02", "BBB222", "Sedan", false, IsActive: true, IsDefault: true),
+        ]);
+        await controller.SeedSnapshot(request);
+
+        var profile = await repo.GetAsync("tenant-1", "user-multi");
+        var defaults = profile!.Vehicles.Where(v => v.IsDefault).ToList();
+        Assert.Single(defaults);
+        Assert.Equal("VEH-01", defaults[0].VehicleId);
+    }
+
+    [Fact]
+    public async Task SeedSnapshot_InactiveDefault_NotNormalized()
+    {
+        var repo = new InMemoryProfileRepository();
+        var controller = new ProfileAdminController(repo, DevEnv().Object);
+
+        var request = new SeedProfileRequest("tenant-1", "user-inactive", true, false, false, false,
+        [
+            new("VEH-01", "AAA111", "Sedan", false, IsActive: false, IsDefault: true),
+            new("VEH-02", "BBB222", "Sedan", false, IsActive: true, IsDefault: false),
+        ]);
+        await controller.SeedSnapshot(request);
+
+        var profile = await repo.GetAsync("tenant-1", "user-inactive");
+        Assert.DoesNotContain(profile!.Vehicles, v => v.IsDefault && v.IsActive);
+    }
+
+    [Fact]
     public async Task SeedSnapshot_IsIdempotent()
     {
         var repo = new InMemoryProfileRepository();

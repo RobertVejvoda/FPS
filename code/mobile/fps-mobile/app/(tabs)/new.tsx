@@ -159,6 +159,23 @@ export default function NewBookingRoute() {
     });
   }, [apiBaseUrl, bearerToken, clearSession, router]);
 
+  useEffect(() => {
+    if (!profile) return;
+    const active = profile.vehicles.filter(v => v.isActive);
+    const preselect = active.find(v => v.isDefault) ?? (active.length === 1 ? active[0] : undefined);
+    if (!preselect) return;
+    setForm(prev => {
+      if (prev.selectedVehicleId) return prev;
+      return {
+        ...prev,
+        selectedVehicleId: preselect.vehicleId,
+        licensePlate: preselect.licensePlate,
+        vehicleType: preselect.vehicleType,
+        isElectric: preselect.isElectric,
+      };
+    });
+  }, [profile]);
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
     setFieldErrors(prev => ({ ...prev, [key]: undefined }));
