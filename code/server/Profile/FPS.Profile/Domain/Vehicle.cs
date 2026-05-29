@@ -5,4 +5,5 @@ public sealed record Vehicle(
     string LicensePlate,
     string VehicleType,
     bool IsElectric,
-    bool IsActive);
+    bool IsActive,
+    bool IsDefault = false);

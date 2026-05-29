@@ -16,7 +16,8 @@ public sealed record VehicleSnapshot(
     string LicensePlate,
     string VehicleType,
     bool IsElectric,
-    bool IsActive);
+    bool IsActive,
+    bool IsDefault = false);
 
 public interface IProfileSnapshotService
 {
