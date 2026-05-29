@@ -224,6 +224,59 @@ public sealed class SubmitBookingRequestHandlerTests
         Assert.Equal("Allocated", result.Status);
     }
 
+    // ── B307: location-id capacity lookup ────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_SameDay_WithLocationId_UsesLocationIdForCapacityLookup()
+    {
+        const string locationId = "LOC-MAIN";
+        var facilityId = Guid.NewGuid().ToString();
+        BookingRequestDto? saved = null;
+
+        var slot = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), locationId, It.IsAny<DateOnly>(),
+                It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { slot });
+        repository
+            .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(dto => saved = dto)
+            .Returns(Task.CompletedTask);
+
+        var cmd = SameDayCommand() with { FacilityId = facilityId, LocationId = locationId };
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        Assert.Equal(locationId, saved?.LocationId);
+        slotService.Verify(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), locationId, It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Once);
+        slotService.Verify(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), facilityId, It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_SameDay_WithoutLocationId_FallsBackToFacilityId()
+    {
+        var facilityId = Guid.NewGuid().ToString();
+        var slot = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), facilityId, It.IsAny<DateOnly>(),
+                It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { slot });
+
+        var cmd = SameDayCommand() with { FacilityId = facilityId, LocationId = null };
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        slotService.Verify(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), facilityId, It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequestCommand FutureCommand() => new(

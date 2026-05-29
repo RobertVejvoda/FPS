@@ -127,7 +127,7 @@ export default function HomeRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>My Spots</Text>
+        <Text style={styles.heading}>Home</Text>
 
         {/* Today / Tomorrow focus cards */}
         <View style={styles.focusRow}>
