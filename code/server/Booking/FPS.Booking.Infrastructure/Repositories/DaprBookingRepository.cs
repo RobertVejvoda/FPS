@@ -60,7 +60,7 @@ public sealed class DaprBookingRepository : IBookingRepository
         string tenantId, DateTime date, CancellationToken cancellationToken = default)
     {
         var counter = await daprClient.GetStateAsync<RequestDateCounter>(
-            BookingStore, $"count:{tenantId}:{date:yyyy-MM-dd}", cancellationToken: cancellationToken);
+            BookingStore, $"count:{TenantStorageKey.Sanitise(tenantId)}:{date:yyyy-MM-dd}", cancellationToken: cancellationToken);
         return counter?.Count ?? 0;
     }
 

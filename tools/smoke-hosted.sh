@@ -25,6 +25,11 @@ SMOKE_EMPLOYEE="${SMOKE_EMPLOYEE:-employee1}"
 SMOKE_ADMIN="${SMOKE_ADMIN:-tenant-admin}"
 SMOKE_HR_ADMIN="${SMOKE_HR_ADMIN:-hr-admin}"
 SMOKE_TENANT="${SMOKE_TENANT:-demo}"
+# Vehicle and facility defaults match dev-seed.sh demo data; override if your pilot seed differs
+SMOKE_FACILITY_ID="${SMOKE_FACILITY_ID:-00000000-0000-0000-0000-000000000001}"
+SMOKE_LOCATION_ID="${SMOKE_LOCATION_ID:-Prague}"
+SMOKE_LICENSE_PLATE="${SMOKE_LICENSE_PLATE:-1AA 2345}"
+SMOKE_VEHICLE_TYPE="${SMOKE_VEHICLE_TYPE:-Sedan}"
 
 RUN_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EVIDENCE_FILE="smoke-evidence-$(date -u +%Y%m%dT%H%M%SZ).txt"
@@ -144,7 +149,7 @@ http_status() {
 # ── service health ─────────────────────────────────────────────────────────────
 
 header "Service health"
-ALL_HEALTHY=true
+ALL_SERVICES_HEALTHY=true
 for spec in "5192:Identity" "5131:Booking" "5157:Notification" "5197:Profile" \
             "5161:Audit" "5171:Reporting" "5141:Configuration" "5181:Customer"; do
   IFS=: read -r port svc <<< "$spec"
@@ -156,12 +161,19 @@ for spec in "5192:Identity" "5131:Booking" "5157:Notification" "5197:Profile" \
       pass "$svc :$port → $status"
     else
       fail "$svc :$port → $status"
-      ALL_HEALTHY=false
+      ALL_SERVICES_HEALTHY=false
     fi
   else
     skip "$svc health (direct port check — verify via Grafana or service logs)"
   fi
 done
+
+if [[ "$ALL_SERVICES_HEALTHY" == "false" ]]; then
+  echo
+  echo "One or more services are not healthy. Resolve service health before running the smoke."
+  echo "Check logs: docker compose -f code/infrastructure/docker-compose.yaml logs"
+  exit 1
+fi
 
 # ── OIDC discovery ─────────────────────────────────────────────────────────────
 
@@ -262,12 +274,14 @@ BOOKING_ID=""
 if [[ -n "$EMP_TOKEN" ]]; then
   TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d 2>/dev/null || echo "2099-01-01")
   BOOKING_RESP=$(http_post "$EMP_TOKEN" "$APP_URL/bookings" \
-    "{\"locationId\":\"Prague\",\"date\":\"$TOMORROW\",\"plannedArrivalTime\":\"${TOMORROW}T09:00:00Z\",\"plannedDepartureTime\":\"${TOMORROW}T17:00:00Z\"}")
+    "{\"facilityId\":\"$SMOKE_FACILITY_ID\",\"locationId\":\"$SMOKE_LOCATION_ID\",\"licensePlate\":\"$SMOKE_LICENSE_PLATE\",\"vehicleType\":\"$SMOKE_VEHICLE_TYPE\",\"isElectric\":false,\"requiresAccessibleSpot\":false,\"isCompanyCar\":false,\"plannedArrivalTime\":\"${TOMORROW}T09:00:00Z\",\"plannedDepartureTime\":\"${TOMORROW}T17:00:00Z\"}")
   if [[ -n "$BOOKING_RESP" ]]; then
     BOOKING_STATUS=$(json_field "$BOOKING_RESP" "status")
     BOOKING_ID=$(json_field "$BOOKING_RESP" "requestId")
-    if [[ -n "$BOOKING_STATUS" ]]; then
+    if [[ -n "$BOOKING_STATUS" && "$BOOKING_STATUS" != "Rejected" ]]; then
       pass "POST /bookings → status=$BOOKING_STATUS requestId=${BOOKING_ID:0:8}…  [mandatory #4]"
+    elif [[ "$BOOKING_STATUS" == "Rejected" ]]; then
+      fail "POST /bookings → status=Rejected (check SMOKE_LICENSE_PLATE='$SMOKE_LICENSE_PLATE' matches $SMOKE_EMPLOYEE profile; run dev-seed.sh first)" "true"
     else
       fail "POST /bookings → unexpected response (no status field)" "true"
     fi
