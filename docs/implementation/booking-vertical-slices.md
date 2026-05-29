@@ -531,7 +531,7 @@ As HR, I want to view Draw status and results so that I can explain allocation o
 ### Scope
 
 - Return Draw status by tenant, location, date, and time slot.
-- Include request counts, allocation counts, rejection counts, failure state, completion time, and summary reasons.
+- Include configured cut-off, next scheduled Draw run time when known, request counts, allocation counts, rejection counts, failure state, completion time, and summary reasons.
 - HR/auditor view may include weights, seed, and audit references.
 - Employee view must not expose other employees or audit-only diagnostics.
 
@@ -569,6 +569,7 @@ Response must include for HR/admin/auditor roles:
 - rejected count;
 - pending waitlist count;
 - company-car overflow count;
+- configured cut-off time and next scheduled Draw run time when known;
 - failure reason when failed;
 - summary rejection reasons;
 - audit reference or Draw attempt ID;
@@ -649,6 +650,46 @@ Behavior:
 
 B010 must not introduce broad admin bypasses, delete audit history, or implement billing/payment behavior.
 
+## Slice B011: HR Operations Workbench
+
+### User Story
+
+As HR, I want an operations workspace that shows employee requests, Draw timing, and support actions so that I can run parking operations without using the employee My Spots view.
+
+### Scope
+
+- Add a role-specific HR operations web surface for `hr_manager` and authorized admin users.
+- Show a tenant/location request queue with status, requested date/time, location, employee-safe reference, and employee-visible reason.
+- Show next scheduled Draw timing and current Draw status for the selected location/date/time slot.
+- Provide a **Run Draw now** action for authorized HR/admin users, requiring a reason.
+- Allow HR to cancel any pending or allocated request within scope, requiring a reason.
+- Notify affected employees and record audit evidence for HR cancellations.
+
+### Vertical Cut
+
+- Query/read model: tenant/location-scoped operational booking list.
+- API: HR/admin request list endpoint or authorized query mode distinct from employee `GET /bookings`.
+- API: cancellation path that accepts HR reason and actor role, preserving employee ownership rules.
+- API/UI: Draw status schedule metadata and manual Draw trigger from HR operations.
+- Web: HR operations route, navigation, queue, Draw panel, and cancellation flow.
+- Tests: role authorization, tenant isolation, employee denial, reason required, notification/audit behavior, and UI type/build validation.
+
+### Done Means
+
+- Employee users still land on My Spots and cannot see other employees' requests.
+- HR users land on or can clearly access HR Operations instead of being forced through employee My Spots.
+- HR can see when the next Draw will run for a selected location/date/time slot.
+- HR can run a Draw on demand when authorized and must supply a reason.
+- HR can cancel a pending or allocated request within tenant/location scope, and the employee receives a notification.
+- Audit records identify the HR actor, affected request, old/new status, and reason.
+
+### Scope Rules
+
+- B011 must not expose lottery seed, candidate sequence, hidden weights, raw penalties, or audit-only diagnostics to general HR queue views.
+- B011 must not make `GET /bookings` tenant-wide for employees.
+- B011 must not bypass B005 cancellation/reallocation rules for allocated reservations.
+- B011 may link to deeper audit/lifecycle views only when the actor has the required audit permission.
+
 ## Implementation Order
 
 Recommended order:
@@ -663,8 +704,9 @@ Recommended order:
 8. B007 Mark No-Show
 9. B009 View Draw Status
 10. B010 Manual Correction
+11. B011 HR Operations Workbench
 
-This order gives Claude a small first slice, then adds read visibility, then tackles Draw complexity once request lifecycle basics are stable.
+This order gives Claude a small first slice, then adds read visibility, then tackles Draw complexity once request lifecycle basics are stable. B011 may move earlier than B010 when HR operations is needed for demos, but it must not bypass B005 cancellation/reallocation or B009 Draw status contracts.
 
 ## Cross-Cutting Done Criteria
 

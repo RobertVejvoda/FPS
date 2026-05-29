@@ -129,17 +129,31 @@ Rules:
 
 ## Draw Trigger Contract
 
-`POST /draws/trigger` is a privileged command. It exists so scheduled jobs, controlled operations, and local/demo admin walkthroughs can execute one Draw key explicitly.
+`POST /draws/trigger` is a privileged command. It exists so scheduled jobs, HR/facility operations, controlled recovery, and local/demo walkthroughs can execute one Draw key explicitly.
 
 Rules:
 
 - caller tenant comes from authenticated context, never from request body;
-- caller must have a privileged role such as `admin`;
+- caller must have a privileged role such as `hr_manager` or `admin`;
 - request body supplies `locationId`, parking `date`, `timeSlotStart`, `timeSlotEnd`, and `reason`;
 - `reason` should identify whether this was a scheduled job, local demo action, operational recovery, or support/admin action;
 - the command is idempotent for the same tenant/location/date/time slot Draw key;
 - employees must observe Draw status/results through booking and notification surfaces, not by triggering Draw themselves;
 - employee-facing clients must not expose lottery seed, candidate sequence, hidden weights, or other employees' outcomes.
+
+## HR Operations Read Contract
+
+HR/facility managers need a tenant/location-scoped operational view that is broader than `GET /bookings`, which remains employee self-service and own-bookings only.
+
+Rules:
+
+- operational request lists must be restricted to authorized HR/admin scopes;
+- employees must not access tenant-wide request lists by changing filters or route paths;
+- list items may include employee-safe identity/reference, requested date, time slot, location, current status, employee-visible reason, and next HR action;
+- list items must not expose lottery seed, candidate sequence, hidden weights, raw penalties, stack traces, or audit-only diagnostics;
+- cancellation from the HR view requires a human-readable reason and must produce employee notification and audit evidence.
+
+Draw status responses used by HR operations should include enough schedule information to make timing clear: configured cut-off, next scheduled Draw run time when known, status, counts, and last updated/completed timestamps. Employee-facing status may show only safe timing and own-outcome information.
 
 ## Validation Details
 

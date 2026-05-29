@@ -24,6 +24,23 @@
 - **Request Tracking**: Monitor request status
 - **My Spots**: Employee default page for today/tomorrow allocations, quick requests, request history, and allocation explanations. See [My Spots Employee UX](./my-spots-ux).
 
+## Role-Specific Workspaces
+
+FairSpot must not show every role the same operational page. The web shell should route users to the workspace that matches their current responsibility:
+
+- employees start from **My Spots**, focused on their own requests, outcomes, next action, and notifications;
+- HR/facility managers start from an **Operations** or **HR Operations** workspace, focused on tenant/location request queues, Draw status, exceptions, cancellations, and employee support;
+- tenant administrators start from setup/configuration readiness rather than employee booking workflows;
+- auditors start from read-only evidence and audit timelines.
+
+The HR operations workspace must show information that employees should not see, while still avoiding hidden lottery internals unless the role is explicitly authorized. Minimum HR needs:
+
+- request queue for the tenant or assigned locations, with employee-safe identity/reference, date, time slot, status, and support reason;
+- clear next scheduled Draw time for the selected location/date/time slot, including whether the Draw has not started, is running, completed, failed, or needs manual intervention;
+- a privileged **Run Draw now** action for authorized HR/admin users, requiring location, date, time slot, and reason;
+- cancellation of any pending or allocated request within HR scope, requiring a reason and notifying the affected employee;
+- links from queue items to audit/evidence details when the actor is authorized.
+
 ## Security
 - **Login History**: View session history
 - **Session Management**: Log out from all devices
