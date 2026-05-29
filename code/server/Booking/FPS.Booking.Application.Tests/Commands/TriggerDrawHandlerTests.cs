@@ -122,7 +122,7 @@ public sealed class TriggerDrawHandlerTests
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Per-decision outcome events ───────────────────────────────────────────

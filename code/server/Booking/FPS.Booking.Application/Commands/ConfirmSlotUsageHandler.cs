@@ -24,7 +24,7 @@ public sealed class ConfirmSlotUsageHandler : IRequestHandler<ConfirmSlotUsageCo
 
     public async Task<ConfirmSlotUsageResult> Handle(ConfirmSlotUsageCommand command, CancellationToken cancellationToken)
     {
-        var dto = await repository.GetBookingRequestAsync(command.RequestId);
+        var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
 
         var confirmedAt = command.ConfirmedAt ?? DateTime.UtcNow;
@@ -54,6 +54,7 @@ public sealed class ConfirmSlotUsageHandler : IRequestHandler<ConfirmSlotUsageCo
         request.ConfirmUsage(source, confirmedAt, publisher);
 
         await repository.UpdateBookingRequestUsageAsync(
+            command.TenantId,
             command.RequestId,
             command.ConfirmationSource,
             confirmedAt,

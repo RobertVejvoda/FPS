@@ -19,16 +19,16 @@ public sealed class DaprBookingRepository : IBookingRepository
     public async Task CreateBookingRequestAsync(BookingRequestDto request)
     {
         request.LastStatusChangedAt = DateTime.UtcNow;
-        await daprClient.SaveStateAsync(BookingStore, $"request:{request.RequestId}", request);
+        await daprClient.SaveStateAsync(BookingStore, RequestKey(request.TenantId, request.RequestId), request);
     }
 
-    public async Task<BookingRequestDto?> GetBookingRequestAsync(Guid requestId)
-        => await daprClient.GetStateAsync<BookingRequestDto>(BookingStore, $"request:{requestId}");
+    public async Task<BookingRequestDto?> GetBookingRequestAsync(string tenantId, Guid requestId)
+        => await daprClient.GetStateAsync<BookingRequestDto>(BookingStore, RequestKey(tenantId, requestId));
 
     public async Task UpdateBookingRequestStatusAsync(
-        Guid requestId, string status, string? reason = null, string? rejectionCode = null, CancellationToken cancellationToken = default)
+        string tenantId, Guid requestId, string status, string? reason = null, string? rejectionCode = null, CancellationToken cancellationToken = default)
     {
-        var dto = await GetBookingRequestAsync(requestId);
+        var dto = await GetBookingRequestAsync(tenantId, requestId);
         if (dto is null) return;
 
         dto.Status = status;
@@ -37,14 +37,14 @@ public sealed class DaprBookingRepository : IBookingRepository
         if (status == "Cancelled") dto.CancellationReason = reason;
         else if (status == "Rejected") { dto.RejectionReason = reason; dto.RejectionCode = rejectionCode; }
 
-        await daprClient.SaveStateAsync(BookingStore, $"request:{requestId}", dto, cancellationToken: cancellationToken);
+        await daprClient.SaveStateAsync(BookingStore, RequestKey(tenantId, requestId), dto, cancellationToken: cancellationToken);
     }
 
     public async Task UpdateBookingRequestUsageAsync(
-        Guid requestId, string confirmationSource, DateTime confirmedAt,
+        string tenantId, Guid requestId, string confirmationSource, DateTime confirmedAt,
         string? sourceEventId = null, CancellationToken cancellationToken = default)
     {
-        var dto = await GetBookingRequestAsync(requestId);
+        var dto = await GetBookingRequestAsync(tenantId, requestId);
         if (dto is null) return;
 
         dto.Status = "Used";
@@ -53,7 +53,7 @@ public sealed class DaprBookingRepository : IBookingRepository
         dto.ConfirmationSourceEventId = sourceEventId;
         dto.LastStatusChangedAt = DateTime.UtcNow;
 
-        await daprClient.SaveStateAsync(BookingStore, $"request:{requestId}", dto, cancellationToken: cancellationToken);
+        await daprClient.SaveStateAsync(BookingStore, RequestKey(tenantId, requestId), dto, cancellationToken: cancellationToken);
     }
 
     public async Task<int> CountRequestsForDateAsync(
@@ -78,6 +78,9 @@ public sealed class DaprBookingRepository : IBookingRepository
 
     public Task<int> AnonymiseByRequestorIdAsync(string tenantId, string requestorId, CancellationToken cancellationToken = default)
         => Task.FromResult(0);
+
+    private static string RequestKey(string tenantId, Guid requestId)
+        => TenantStorageKey.For("request", tenantId, requestId);
 
     private sealed class RequestDateCounter
     {

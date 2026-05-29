@@ -36,7 +36,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         foreach (var id in requestIds)
         {
             var dto = await daprClient.GetStateAsync<BookingRequestDto>(
-                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+                BookingStore, TenantStorageKey.For("request", tenantId, id), cancellationToken: cancellationToken);
             if (dto is not null)
                 dtos.Add(dto);
         }
@@ -73,7 +73,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         foreach (var id in index.RequestIds)
         {
             var dto = await daprClient.GetStateAsync<BookingRequestDto>(
-                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+                BookingStore, TenantStorageKey.For("request", tenantId, id), cancellationToken: cancellationToken);
 
             if (dto is null || dto.Status != "Allocated") continue;
             if (dto.LocationId != locationId) continue;
@@ -103,7 +103,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         foreach (var id in index.RequestIds)
         {
             var dto = await daprClient.GetStateAsync<BookingRequestDto>(
-                BookingStore, $"request:{id}", cancellationToken: cancellationToken);
+                BookingStore, TenantStorageKey.For("request", tenantId, id), cancellationToken: cancellationToken);
 
             if (dto is null || dto.Status != "Pending") continue;
             if (dto.LocationId != locationId) continue;

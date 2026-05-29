@@ -18,7 +18,9 @@ public sealed class DaprCorrectionAuditRepository : ICorrectionAuditRepository
     public async Task SaveAsync(CorrectionAuditDto audit, CancellationToken cancellationToken = default)
     {
         // Each correction is stored with a unique key to preserve append-only semantics.
-        var key = $"correction:{audit.RequestId}:{audit.AppliedAt:yyyyMMddHHmmssfff}:{audit.Id}";
+        var key = TenantStorageKey.For(
+            "correction", audit.TenantId,
+            $"{audit.RequestId}:{audit.AppliedAt:yyyyMMddHHmmssfff}:{audit.Id}");
         await daprClient.SaveStateAsync(BookingStore, key, audit, cancellationToken: cancellationToken);
     }
 }

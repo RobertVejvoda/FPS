@@ -31,7 +31,7 @@ public sealed class EvaluateNoShowHandlerTests
             .ReturnsAsync(new List<BookingRequestDto>());
 
         penaltyRepository.Setup(r => r.ExistsAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         penaltyRepository.Setup(r => r.SaveAsync(
@@ -39,7 +39,7 @@ public sealed class EvaluateNoShowHandlerTests
             .Returns(Task.CompletedTask);
 
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
@@ -84,7 +84,7 @@ public sealed class EvaluateNoShowHandlerTests
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Happy path ────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ public sealed class EvaluateNoShowHandlerTests
 
         Assert.Equal(1, result.MarkedCount);
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), "NoShow", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<Guid>(), "NoShow", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public sealed class EvaluateNoShowHandlerTests
     public async Task Handle_PenaltyIdempotent_NotCreatedTwice()
     {
         penaltyRepository.Setup(r => r.ExistsAsync(
-            It.IsAny<Guid>(), "NoShow", It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), "NoShow", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         queryRepository.Setup(r => r.GetAllocatedRequestsForDrawAsync(

@@ -27,7 +27,7 @@ public sealed class CancelBookingHandlerTests
             .ReturnsAsync(DefaultPolicy);
 
         penaltyRepository.Setup(r => r.ExistsAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         penaltyRepository.Setup(r => r.SaveAsync(
@@ -43,7 +43,7 @@ public sealed class CancelBookingHandlerTests
             .ReturnsAsync(new List<BookingRequestDto>());
 
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
@@ -102,7 +102,7 @@ public sealed class CancelBookingHandlerTests
     {
         SetupRequest(AllocatedDto());
         penaltyRepository.Setup(r => r.ExistsAsync(
-            It.IsAny<Guid>(), "LateCancellation", It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), "LateCancellation", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
@@ -135,7 +135,7 @@ public sealed class CancelBookingHandlerTests
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public sealed class CancelBookingHandlerTests
     [Fact]
     public async Task Handle_NotFound_ThrowsBookingNotFoundException()
     {
-        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>()))
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
             .ReturnsAsync((BookingRequestDto?)null);
         await Assert.ThrowsAsync<BookingNotFoundException>(() => handler.Handle(ValidCommand(), CancellationToken.None));
     }
@@ -217,7 +217,7 @@ public sealed class CancelBookingHandlerTests
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void SetupRequest(BookingRequestDto dto)
-        => repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<Guid>())).ReturnsAsync(dto);
+        => repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(dto);
 
     private static CancelBookingCommand ValidCommand() => new(
         RequestId: Guid.NewGuid(),
