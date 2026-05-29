@@ -29,9 +29,9 @@ Last updated: 2026-05-24.
 | Gap | Severity | Notes |
 |-----|----------|-------|
 | No infrastructure-layer tenant isolation (shared stores) | Medium — production-blocking | Current design uses application-layer tenant keys in shared MongoDB and in-memory stores. Production should use per-tenant collections, schemas, or separate stores depending on contract. Contract defined in [Tenant Storage Contract](../production/tenant-storage-contract.md). |
-| Booking Dapr state keys missing tenant prefix (`request:`, `penalty:`, `correction:`) | High — production-blocking | Three key patterns in `DaprBookingRepository`, `DaprPenaltyRepository`, and `DaprCorrectionAuditRepository` do not include a tenant ID segment. In a shared state store these records are globally addressable across tenants. See [Tenant Storage Contract](../production/tenant-storage-contract.md) § Implementation Gaps. |
+| Booking Dapr state keys missing tenant prefix (`request:`, `penalty:`, `correction:`) | **Implemented (DATA010)** | Migrated to `request:{tenantId}:{id}`, `penalty:{tenantId}:{id}`, `correction:{tenantId}:{...}` via `TenantStorageKey.For()`. All Booking/Penalty/Correction repositories updated. See [Tenant Storage Contract](../production/tenant-storage-contract.md) § Implementation Gaps. |
 | In-memory repositories share process memory across tenants | Low | Affects local/demo mode only. No persistence, data is lost on restart. Not a production concern but should not be used in a pilot with multiple active tenants. |
-| No shared TenantStorageKey sanitisation helper | Low — should fix before production | State keys are constructed via inline string interpolation in each repository. No central enforcement of allowed characters, reserved prefixes, or length limits. |
+| No shared TenantStorageKey sanitisation helper | **Implemented (DATA010)** | `FPS.Booking.Infrastructure.TenantStorageKey` validates character set, length, reserved prefixes, and normalises to lowercase. All Booking key-type repositories use it. Unit tests in `TenantStorageKeyTests`. |
 
 ---
 

@@ -305,12 +305,13 @@ fi
 header "Draw status"
 if [[ -n "$ADMIN_TOKEN" ]]; then
   TODAY=$(date -u +%Y-%m-%d)
-  DRAW=$(http_get "$ADMIN_TOKEN" "$APP_URL/booking/draw/status?locationId=Prague&date=$TODAY")
+  DRAW=$(http_get "$ADMIN_TOKEN" \
+    "$APP_URL/draws/$TODAY/status?locationId=$SMOKE_LOCATION_ID&timeSlotStart=${TODAY}T08:00:00Z&timeSlotEnd=${TODAY}T18:00:00Z")
   if [[ -n "$DRAW" ]]; then
     DRAW_STATUS=$(json_field "$DRAW" "status")
-    pass "GET /booking/draw/status → status=${DRAW_STATUS:-present}"
+    pass "GET /draws/$TODAY/status → status=${DRAW_STATUS:-present}"
   else
-    skip "GET /booking/draw/status → no response (draw may not exist for today — acceptable)"
+    skip "GET /draws/$TODAY/status → no response (draw may not exist for today — acceptable)"
   fi
 else
   skip "Draw status — no admin token"
@@ -354,11 +355,11 @@ fi
 
 header "Reporting"
 if [[ -n "$ADMIN_TOKEN" ]]; then
-  REPORT=$(http_get "$ADMIN_TOKEN" "$APP_URL/reporting/summary")
+  REPORT=$(http_get "$ADMIN_TOKEN" "$APP_URL/reports/parking/summary")
   if [[ -n "$REPORT" ]]; then
-    pass "GET /reporting/summary → accessible to admin"
+    pass "GET /reports/parking/summary → accessible to admin"
   else
-    fail "GET /reporting/summary → unreachable"
+    fail "GET /reports/parking/summary → unreachable"
   fi
 else
   skip "Reporting — no admin token"
@@ -368,11 +369,12 @@ fi
 
 header "HR operations"
 if [[ -n "$HR_TOKEN" ]]; then
-  HR_RESP=$(http_get "$HR_TOKEN" "$APP_URL/bookings/hr")
+  # HR-scoped booking list: uses the same /bookings endpoint; hr-admin role grants cross-employee visibility
+  HR_RESP=$(http_get "$HR_TOKEN" "$APP_URL/bookings")
   if [[ -n "$HR_RESP" ]]; then
-    pass "GET /bookings/hr → accessible to hr-admin"
+    pass "GET /bookings (hr-admin) → accessible"
   else
-    fail "GET /bookings/hr → unreachable"
+    fail "GET /bookings (hr-admin) → unreachable"
   fi
 else
   skip "HR operations — no hr-admin token"
@@ -382,10 +384,10 @@ fi
 
 header "Tenant readiness  [mandatory #8]"
 if [[ -n "$ADMIN_TOKEN" ]]; then
-  READINESS=$(http_get "$ADMIN_TOKEN" "$APP_URL/customer/tenants/$SMOKE_TENANT/readiness")
+  READINESS=$(http_get "$ADMIN_TOKEN" "$APP_URL/tenants/$SMOKE_TENANT/readiness")
   if [[ -n "$READINESS" ]]; then
     R_STATUS=$(json_field "$READINESS" "status")
-    pass "GET /customer/tenants/$SMOKE_TENANT/readiness → status=$R_STATUS  [mandatory #8]"
+    pass "GET /tenants/$SMOKE_TENANT/readiness → status=$R_STATUS  [mandatory #8]"
   else
     fail "Tenant readiness check unreachable" "true"
   fi

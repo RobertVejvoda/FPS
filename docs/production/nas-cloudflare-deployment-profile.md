@@ -80,7 +80,7 @@ Cloudflare Tunnel replaces the need for any inbound firewall hole or public IP. 
 
 - A domain managed through Cloudflare DNS (nameservers pointed to Cloudflare).
 - A Cloudflare account with the domain active in it.
-- Tunnel and WAF features require at minimum the Cloudflare Free plan. Rate limiting rules require Pro or above — see [SEC010](./docs/security) (issue #315) for plan-dependent guidance.
+- Tunnel and WAF features require at minimum the Cloudflare Free plan. Rate limiting rules require Pro or above — see [SEC010](../security/cloudflare-waf-profile.md) (issue #315) for plan-dependent guidance.
 
 ### Local access
 
@@ -156,7 +156,7 @@ The cloudflared service requires the tunnel token at runtime. Create a `.env.nas
 
 ```bash
 cd /path/to/fps-repo/code/infrastructure
-cp cloudflared/.env.nas.template cloudflared/.env.nas
+cp cloudflared/nas-env.template cloudflared/.env.nas
 ```
 
 Edit `cloudflared/.env.nas` and set:

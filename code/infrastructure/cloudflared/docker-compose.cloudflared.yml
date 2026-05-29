@@ -6,7 +6,7 @@
 #
 # Prerequisites:
 #   1. Create a tunnel in Cloudflare Zero Trust dashboard and copy the token.
-#   2. Copy .env.nas.template to .env.nas and fill in CLOUDFLARED_TUNNEL_TOKEN.
+#   2. Copy nas-env.template to .env.nas and fill in CLOUDFLARED_TUNNEL_TOKEN.
 #      NEVER commit .env.nas — it contains the tunnel token.
 #   3. Configure public hostnames in the Cloudflare dashboard (see runbook).
 #
@@ -28,4 +28,4 @@ services:
 networks:
   web:
     external: true
-    name: infrastructure_web
+    name: fps_network
