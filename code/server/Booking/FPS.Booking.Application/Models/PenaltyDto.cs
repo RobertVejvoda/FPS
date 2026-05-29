@@ -4,6 +4,7 @@ public class PenaltyDto
 {
     public Guid Id { get; set; }
     public Guid RequestId { get; set; }
+    public string TenantId { get; set; } = string.Empty;
     public string RequestorId { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public int Score { get; set; }

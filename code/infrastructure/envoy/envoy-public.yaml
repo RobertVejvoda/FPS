@@ -1,0 +1,215 @@
+# Public-domain Envoy config for NAS pilot. Replace <domain> with your actual domain.
+#
+# This file is a copy of envoy.yaml with one change:
+#   allow_origin_string_match changed from "http://localhost:5200" to "https://app.<domain>"
+#
+# Usage: mount this file instead of envoy.yaml in docker-compose.yaml for the NAS pilot:
+#   volumes:
+#     - ./envoy/envoy-public.yaml:/etc/envoy/envoy.yaml:ro
+#
+# If .NET services run as Docker containers (not on the host), also update each cluster's
+# socket_address from "host.docker.internal" to the Docker service name.
+# See docs/production/nas-cloudflare-auth-profile.md Section 2 for details.
+
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 10000 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                codec_type: AUTO
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - exact: "https://app.<domain>"
+                        allow_methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                        allow_headers: "authorization,content-type,accept"
+                        expose_headers: "content-disposition"
+                        max_age: "86400"
+                      routes:
+                        # Employee mobile API surface — routes to host-run services.
+                        # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
+                        # On Linux: add --add-host=host.docker.internal:host-gateway to the envoy
+                        # service in docker-compose.yaml, or replace with 172.17.0.1.
+                        - match:
+                            prefix: "/profile"
+                          route:
+                            cluster: fps-profile
+                        - match:
+                            prefix: "/notifications"
+                          route:
+                            cluster: fps-notification
+                        - match:
+                            prefix: "/bookings"
+                          route:
+                            cluster: fps-booking
+                        - match:
+                            prefix: "/draws"
+                          route:
+                            cluster: fps-booking
+                        - match:
+                            prefix: "/reports"
+                          route:
+                            cluster: fps-reporting
+                        - match:
+                            prefix: "/audit"
+                          route:
+                            cluster: fps-audit
+                        - match:
+                            prefix: "/configuration"
+                          route:
+                            cluster: fps-configuration
+                        - match:
+                            prefix: "/tenants"
+                          route:
+                            cluster: fps-customer
+                        - match:
+                            path: "/me"
+                          route:
+                            cluster: fps-identity
+                        # Existing whoami/Dapr sample route — preserved unchanged.
+                        - match:
+                            prefix: "/api/whoami/"
+                          route:
+                            cluster: dapr
+                            prefix_rewrite: "/v1.0/invoke/whoami/method/"
+                http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    - name: fps-identity
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-identity
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5192 }
+
+    - name: fps-booking
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-booking
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5131 }
+
+    - name: fps-notification
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-notification
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5157 }
+
+    - name: fps-profile
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-profile
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5197 }
+
+    - name: fps-reporting
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-reporting
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5171 }
+
+    - name: fps-audit
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-audit
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5161 }
+
+    - name: fps-configuration
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-configuration
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5141 }
+
+    - name: fps-customer
+      connect_timeout: 1s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: fps-customer
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: host.docker.internal, port_value: 5181 }
+
+    - name: dapr
+      connect_timeout: 0.25s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: dapr
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: whoami, port_value: 3500 }
+      health_checks:
+        - timeout: 1s
+          interval: 5s
+          unhealthy_threshold: 2
+          healthy_threshold: 1
+          http_health_check:
+            path: "/v1.0/healthz"
