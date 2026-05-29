@@ -360,6 +360,7 @@ export interface components {
             vehicleType: string;
             isElectric: boolean;
             isActive: boolean;
+            /** @default false */
             isDefault: boolean;
         };
     };

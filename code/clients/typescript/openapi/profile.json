@@ -606,6 +606,10 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "default": false
           }
         }
       }
