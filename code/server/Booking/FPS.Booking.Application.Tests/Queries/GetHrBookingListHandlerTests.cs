@@ -112,6 +112,33 @@ public sealed class GetHrBookingListHandlerTests
     }
 
     [Fact]
+    public async Task Handle_NonPendingStatuses_ReturnedFromOpsIndex()
+    {
+        var items = new List<HrBookingListItem>
+        {
+            new(Guid.NewGuid(), "ref-a", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                new TimeOnly(8, 0), new TimeOnly(18, 0), "Prague",
+                "Allocated", null, null, "slot-1", DateTime.UtcNow, DateTime.UtcNow),
+            new(Guid.NewGuid(), "ref-b", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                new TimeOnly(8, 0), new TimeOnly(18, 0), "Prague",
+                "Rejected", "DailyCapExceeded", null, null, DateTime.UtcNow, DateTime.UtcNow),
+        };
+        var expected = new HrBookingListResult(items, null, 2);
+
+        queryRepository
+            .Setup(r => r.GetByTenantAsync(
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.Contains(result.Items, i => i.Status == "Allocated");
+        Assert.Contains(result.Items, i => i.Status == "Rejected");
+    }
+
+    [Fact]
     public async Task Handle_PageSizePassedToRepository()
     {
         int? capturedPageSize = null;

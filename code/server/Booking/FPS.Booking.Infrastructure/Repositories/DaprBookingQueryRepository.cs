@@ -125,8 +125,8 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         string? cursor,
         CancellationToken cancellationToken = default)
     {
-        var index = await daprClient.GetStateAsync<TenantPendingIndex>(
-            BookingStore, PendingIndexKey(tenantId), cancellationToken: cancellationToken);
+        var index = await daprClient.GetStateAsync<TenantOpsIndex>(
+            BookingStore, OpsIndexKey(tenantId), cancellationToken: cancellationToken);
 
         var requestIds = index?.RequestIds ?? [];
 
@@ -194,6 +194,26 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             await daprClient.SaveStateAsync(BookingStore, key, index, cancellationToken: cancellationToken);
         }
     }
+
+    public async Task AddToTenantOpsIndexAsync(
+        string tenantId,
+        Guid requestId,
+        CancellationToken cancellationToken = default)
+    {
+        var key = OpsIndexKey(tenantId);
+        var index = await daprClient.GetStateAsync<TenantOpsIndex>(
+            BookingStore, key, cancellationToken: cancellationToken)
+            ?? new TenantOpsIndex();
+
+        if (!index.RequestIds.Contains(requestId))
+        {
+            index.RequestIds.Add(requestId);
+            await daprClient.SaveStateAsync(BookingStore, key, index, cancellationToken: cancellationToken);
+        }
+    }
+
+    private static string OpsIndexKey(string tenantId)
+        => $"ops:{TenantStorageKey.Sanitise(tenantId)}";
 
     private static string PendingIndexKey(string tenantId)
         => $"pending:{TenantStorageKey.Sanitise(tenantId)}";
@@ -271,6 +291,11 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
     }
 
     private sealed class TenantPendingIndex
+    {
+        public List<Guid> RequestIds { get; set; } = [];
+    }
+
+    private sealed class TenantOpsIndex
     {
         public List<Guid> RequestIds { get; set; } = [];
     }

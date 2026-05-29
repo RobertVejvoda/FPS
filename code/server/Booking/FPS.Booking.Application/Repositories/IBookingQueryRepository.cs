@@ -25,6 +25,11 @@ public interface IBookingQueryRepository
         Guid requestId,
         CancellationToken cancellationToken = default);
 
+    Task AddToTenantOpsIndexAsync(
+        string tenantId,
+        Guid requestId,
+        CancellationToken cancellationToken = default);
+
     Task<HrBookingListResult> GetByTenantAsync(
         string tenantId,
         string? locationId,
