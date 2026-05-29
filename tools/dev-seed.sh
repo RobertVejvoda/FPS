@@ -205,8 +205,8 @@ echo "-- Profiles --"
 
 # Jan Novak (employee1): sedan + EV (two vehicles for guided vehicle selection demo)
 seed_profile "employee1" "false" "false" \
-  '[{"vehicleId":"VEH-JN-SEDAN","licensePlate":"1AA 2345","vehicleType":"Sedan","isElectric":false,"isActive":true},
-    {"vehicleId":"VEH-JN-EV","licensePlate":"2AB 3456","vehicleType":"Sedan","isElectric":true,"isActive":true}]'
+  '[{"vehicleId":"VEH-JN-SEDAN","licensePlate":"1AA 2345","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":true},
+    {"vehicleId":"VEH-JN-EV","licensePlate":"2AB 3456","vehicleType":"Sedan","isElectric":true,"isActive":true,"isDefault":false}]'
 
 # Petra Svobodova (employee2): company car registered as vehicle so booking plate validation passes
 seed_profile "employee2" "true" "false" \
