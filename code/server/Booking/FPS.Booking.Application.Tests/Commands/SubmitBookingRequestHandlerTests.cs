@@ -63,6 +63,9 @@ public sealed class SubmitBookingRequestHandlerTests
         queryRepository
             .Setup(r => r.AddToUserIndexAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        queryRepository
+            .Setup(r => r.AddToTenantPendingIndexAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         slotService
             .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
@@ -92,6 +95,15 @@ public sealed class SubmitBookingRequestHandlerTests
         await handler.Handle(cmd, CancellationToken.None);
         queryRepository.Verify(r => r.AddToUserIndexAsync(
             cmd.TenantId, cmd.RequestorId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ValidFutureRequest_AddsToTenantPendingIndex()
+    {
+        var cmd = FutureCommand();
+        await handler.Handle(cmd, CancellationToken.None);
+        queryRepository.Verify(r => r.AddToTenantPendingIndexAsync(
+            cmd.TenantId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

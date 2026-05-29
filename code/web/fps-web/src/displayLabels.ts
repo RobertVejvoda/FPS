@@ -1,11 +1,11 @@
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
 
 const LOCATION_LABELS: Record<string, string> = {
-  'LOC-MAIN': 'Main office',
+  Prague: 'Prague',
 };
 
 const FACILITY_LABELS: Record<string, string> = {
-  [DEMO_FACILITY_ID]: 'Main building',
+  [DEMO_FACILITY_ID]: 'Headquarters',
 };
 
 function isGuid(value: string): boolean {
@@ -19,7 +19,7 @@ export function displayLocation(value?: string | null): string | null {
 
 export function displaySlot(value?: string | null): string | null {
   if (!value) return null;
-  return isGuid(value) ? 'Assigned space' : value.replace(/^LOC-MAIN-/, 'Space ');
+  return isGuid(value) ? 'Assigned space' : value.replace(/^Prague-/, 'Space ');
 }
 
 function formatDisplayTime(hour: number, minute: number): string {

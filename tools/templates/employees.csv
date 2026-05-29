@@ -3,7 +3,7 @@ external_subject,display_name,email,roles,home_location,preferred_zone,parking_e
 # display_name: optional, used in UI only, not stored as HR record
 # email: optional, used for notifications only
 # roles: semicolon-separated list from: employee, hr_manager, admin, report_viewer, auditor (e.g. employee;hr_manager)
-# home_location: location code matching a configured FPS location (e.g. LOC-MAIN)
+# home_location: location name/id matching a configured FPS location (e.g. Prague)
 # preferred_zone: parking zone preference (e.g. A, B, COVERED) — leave blank for none
 # parking_eligible: true/false
 # has_company_car: true/false

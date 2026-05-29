@@ -17,7 +17,8 @@
 # What is seeded:
 #   Profiles:  all 7 Keycloak demo users with parking eligibility, roles, and vehicles
 #   Vehicles:  employee1 (sedan + EV), employee2 (company car), employee3 (accessible)
-#   Bookings:  3 pending requests per employee for upcoming dates
+#   Bookings:  7 requests across upcoming dates, including a +2 demo Draw with all employees
+#   Draw:      runs the +2 demo Draw so the demo immediately shows allocated/waitlisted outcomes
 #   Admin profiles: hr-admin, tenant-admin, report-viewer, auditor (no parking)
 #
 #   Configuration (policy + slots) — seeded automatically by Configuration service on startup
@@ -30,6 +31,9 @@ set -euo pipefail
 PROFILE_URL="${PROFILE_URL:-http://localhost:5197}"
 BOOKING_URL="${BOOKING_URL:-http://localhost:5131}"
 DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
+DEMO_FACILITY_ID="${FPS_DEMO_FACILITY_ID:-00000000-0000-0000-0000-000000000001}"
+DEMO_FACILITY_LABEL="${FPS_DEMO_FACILITY_LABEL:-Headquarters}"
+DEMO_LOCATION_ID="${FPS_DEMO_LOCATION_ID:-Prague}"
 IDENTITY_URL="${IDENTITY_URL:-http://localhost:5192}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
@@ -135,8 +139,8 @@ seed_booking() {
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
     -d "{
-      \"facilityId\": \"00000000-0000-0000-0000-000000000001\",
-      \"locationId\": \"LOC-MAIN\",
+      \"facilityId\": \"$DEMO_FACILITY_ID\",
+      \"locationId\": \"$DEMO_LOCATION_ID\",
       \"licensePlate\": \"$license_plate\",
       \"vehicleType\": \"$vehicle_type\",
       \"isElectric\": $is_electric,
@@ -155,26 +159,65 @@ seed_booking() {
   fi
 }
 
+trigger_demo_draw() {
+  local date_offset="$1"
+
+  local token draw_date start end response http_code body allocated rejected waitlisted status
+  token=$(get_token "tenant-admin")
+  [ -z "$token" ] && { err "No token for tenant-admin"; return 1; }
+
+  draw_date=$(future_date "$date_offset")
+  start="${draw_date}T08:00:00"
+  end="${draw_date}T18:00:00"
+
+  response=$(curl -s -w "\n%{http_code}" \
+    -X POST "$BOOKING_URL/draws/trigger" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"locationId\": \"$DEMO_LOCATION_ID\",
+      \"date\": \"$draw_date\",
+      \"timeSlotStart\": \"$start\",
+      \"timeSlotEnd\": \"$end\",
+      \"reason\": \"Local demo seed Draw\"
+    }" 2>/dev/null || true)
+
+  http_code=$(printf '%s' "$response" | tail -n 1)
+  body=$(printf '%s' "$response" | sed '$d')
+
+  if [[ "$http_code" = "200" || "$http_code" = "202" ]]; then
+    status=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status',''))")
+    allocated=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('allocatedCount',0))")
+    rejected=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('rejectedCount',0))")
+    waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('waitlistedCount',0))")
+    ok "Demo Draw $draw_date ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted"
+  else
+    err "Demo Draw $draw_date HTTP ${http_code:-000}"
+    [ -n "$body" ] && echo "$body"
+    return 1
+  fi
+}
+
 # ── profiles ─────────────────────────────────────────────────────────────────
 
 echo ""
 echo "-- Profiles --"
 
-# Alice Novak (employee1): sedan + EV (two vehicles for guided vehicle selection demo)
+# Jan Novak (employee1): sedan + EV (two vehicles for guided vehicle selection demo)
 seed_profile "employee1" "false" "false" \
-  '[{"vehicleId":"VEH-AN-SEDAN","licensePlate":"AN-001S","vehicleType":"Sedan","isElectric":false,"isActive":true},
-    {"vehicleId":"VEH-AN-EV","licensePlate":"AN-002E","vehicleType":"Sedan","isElectric":true,"isActive":true}]'
+  '[{"vehicleId":"VEH-JN-SEDAN","licensePlate":"1AA 2345","vehicleType":"Sedan","isElectric":false,"isActive":true},
+    {"vehicleId":"VEH-JN-EV","licensePlate":"2AB 3456","vehicleType":"Sedan","isElectric":true,"isActive":true}]'
 
-# Ben Turner (employee2): company car registered as vehicle so booking plate validation passes
+# Petra Svobodova (employee2): company car registered as vehicle so booking plate validation passes
 seed_profile "employee2" "true" "false" \
-  '[{"vehicleId":"VEH-BT-FLEET","licensePlate":"BT-001C","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
+  '[{"vehicleId":"VEH-PS-FLEET","licensePlate":"3AC 4567","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
-# Clara Lindqvist (employee3): accessibility-eligible
+# Tomas Dvorak (employee3): accessibility-eligible
 seed_profile "employee3" "false" "true" \
-  '[{"vehicleId":"VEH-CL-ACCESS","licensePlate":"CL-001A","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
+  '[{"vehicleId":"VEH-TD-ACCESS","licensePlate":"4AD 5678","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
 # Role users — parking not eligible, no vehicles
-# Maria Okafor (hr-admin), David Wei (tenant-admin), Emma Clark (report-viewer), Frank Horvath (auditor)
+# Lucie Prochazkova (hr-admin), Karel Urban (tenant-admin), Eva Kralova (report-viewer), Martin Cerny (auditor)
 seed_profile "hr-admin"      "false" "false" '[]'
 seed_profile "tenant-admin"  "false" "false" '[]'
 seed_profile "report-viewer" "false" "false" '[]'
@@ -186,26 +229,36 @@ echo ""
 echo "-- Bookings (generates notifications, audit records, and reporting data) --"
 
 # Dates start at +2 to stay clear of the draw cutoff that applies to +1/same-day requests.
-# Alice Novak: two regular bookings + one EV booking
-seed_booking "employee1" "AN-001S" "Sedan" "false" "false" "false" "2"
-seed_booking "employee1" "AN-002E" "Sedan" "true"  "false" "false" "4"
-seed_booking "employee1" "AN-001S" "Sedan" "false" "false" "false" "6"
+# The +2 date intentionally has all three employees competing for the demo Draw.
+# Booking's local development AvailableSlots config exposes two Prague slots, so this
+# Draw produces visible allocated/waitlisted outcomes immediately after seeding.
+# Jan Novak: two regular bookings + one EV booking
+seed_booking "employee1" "1AA 2345" "Sedan" "false" "false" "false" "2"
+seed_booking "employee1" "2AB 3456" "Sedan" "true"  "false" "false" "4"
+seed_booking "employee1" "1AA 2345" "Sedan" "false" "false" "false" "6"
 
-# Ben Turner: company car bookings
-seed_booking "employee2" "BT-001C" "Sedan" "false" "true" "false" "3"
-seed_booking "employee2" "BT-001C" "Sedan" "false" "true" "false" "5"
+# Petra Svobodova: company car bookings
+seed_booking "employee2" "3AC 4567" "Sedan" "false" "true" "false" "2"
+seed_booking "employee2" "3AC 4567" "Sedan" "false" "true" "false" "5"
 
-# Clara Lindqvist: accessible spot requests
-seed_booking "employee3" "CL-001A" "Sedan" "false" "false" "true" "2"
-seed_booking "employee3" "CL-001A" "Sedan" "false" "false" "true" "4"
+# Tomas Dvorak: accessible spot requests
+seed_booking "employee3" "4AD 5678" "Sedan" "false" "false" "true" "2"
+seed_booking "employee3" "4AD 5678" "Sedan" "false" "false" "true" "4"
+
+# ── demo Draw ────────────────────────────────────────────────────────────────
+
+echo ""
+echo "-- Demo Draw (+2 days, $DEMO_LOCATION_ID 08:00-18:00) --"
+trigger_demo_draw "2"
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
 echo ""
 echo "== Seed complete =="
-echo "Profiles: 7 users — Alice Novak, Ben Turner, Clara Lindqvist (employees); Maria Okafor, David Wei, Emma Clark, Frank Horvath (roles)"
-echo "Vehicles: Alice has sedan + EV (AN-001S/AN-002E), Ben company fleet (BT-001C), Clara accessible (CL-001A)"
-echo "Bookings: 7 pending requests across 3 employees (triggers Dapr events if sidecars running)"
+echo "Profiles: 7 users — Jan Novak, Petra Svobodova, Tomas Dvorak (employees); Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
+echo "Facility/location: $DEMO_FACILITY_LABEL / $DEMO_LOCATION_ID"
+echo "Vehicles: Jan has sedan + EV (1AA 2345 / 2AB 3456), Petra company fleet (3AC 4567), Tomas accessible (4AD 5678)"
+echo "Bookings: 7 requests across 3 employees; +2 demo Draw has already run and should show allocated/waitlisted results"
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh employee1)"
@@ -213,6 +266,9 @@ echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/profile
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/bookings"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/notifications/unread-count"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/me"
+echo "  TOKEN=\$(./tools/dev-auth.sh tenant-admin)"
+echo "  DATE=\$(date -v+2d +%Y-%m-%d 2>/dev/null || date -d '+2 days' +%Y-%m-%d)"
+echo "  curl -H \"Authorization: Bearer \$TOKEN\" \"http://localhost:10000/draws/\$DATE/status?locationId=$DEMO_LOCATION_ID&timeSlotStart=\${DATE}T08:00:00&timeSlotEnd=\${DATE}T18:00:00\""
 echo ""
 echo "Admin/reporting:"
 echo "  TOKEN=\$(./tools/dev-auth.sh tenant-admin)"

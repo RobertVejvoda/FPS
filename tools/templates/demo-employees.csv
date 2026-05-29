@@ -1,8 +1,8 @@
 external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active
-employee1,Alice Novak,alice.novak@demo-company.local,employee,LOC-MAIN,A,true,false,false,false,true
-employee2,Ben Turner,ben.turner@demo-company.local,employee,LOC-MAIN,,true,true,false,false,true
-employee3,Clara Lindqvist,clara.lindqvist@demo-company.local,employee,LOC-MAIN,,true,false,true,false,true
-hr-admin,Maria Okafor,maria.okafor@demo-company.local,employee;hr_manager,LOC-MAIN,,false,false,false,false,true
-tenant-admin,David Wei,david.wei@demo-company.local,admin,LOC-MAIN,,false,false,false,false,true
-report-viewer,Emma Clark,emma.clark@demo-company.local,report_viewer,LOC-MAIN,,false,false,false,false,true
-auditor,Frank Horvath,frank.horvath@demo-company.local,auditor,LOC-MAIN,,false,false,false,false,true
+employee1,Jan Novak,jan.novak@demo-company.local,employee,Prague,A,true,false,false,false,true
+employee2,Petra Svobodova,petra.svobodova@demo-company.local,employee,Prague,,true,true,false,false,true
+employee3,Tomas Dvorak,tomas.dvorak@demo-company.local,employee,Prague,,true,false,true,false,true
+hr-admin,Lucie Prochazkova,lucie.prochazkova@demo-company.local,employee;hr_manager,Prague,,false,false,false,false,true
+tenant-admin,Karel Urban,karel.urban@demo-company.local,admin,Prague,,false,false,false,false,true
+report-viewer,Eva Kralova,eva.kralova@demo-company.local,report_viewer,Prague,,false,false,false,false,true
+auditor,Martin Cerny,martin.cerny@demo-company.local,auditor,Prague,,false,false,false,false,true

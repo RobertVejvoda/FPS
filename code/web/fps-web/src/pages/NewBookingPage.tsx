@@ -6,7 +6,7 @@ import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_LOCATION_ID = 'LOC-MAIN';
+const DEMO_LOCATION_ID = 'Prague';
 
 type Form = {
   facilityId: string;
@@ -149,7 +149,7 @@ export function NewBookingPage() {
               style={inputStyle}
             >
               <option value="">Select a facility…</option>
-              <option value={DEMO_FACILITY_ID}>Main building</option>
+              <option value={DEMO_FACILITY_ID}>Headquarters</option>
             </select>
           </Field>
           <Field label="Location (optional)" error={errors.locationId}>
@@ -159,7 +159,7 @@ export function NewBookingPage() {
               style={inputStyle}
             >
               <option value="">Any location</option>
-              <option value={DEMO_LOCATION_ID}>Main office</option>
+              <option value={DEMO_LOCATION_ID}>Prague</option>
             </select>
           </Field>
 

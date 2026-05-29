@@ -172,7 +172,7 @@ if [[ -n "$TOKEN" ]]; then
   BOOKING=$(curl -sf -X POST "$GATEWAY/bookings" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"locationId\":\"LOC-MAIN\",\"date\":\"$TOMORROW\",\"reason\":\"onboarding smoke\"}" \
+    -d "{\"locationId\":\"Prague\",\"date\":\"$TOMORROW\",\"reason\":\"onboarding smoke\"}" \
     2>/dev/null || echo "UNREACHABLE")
   if [[ "$BOOKING" != "UNREACHABLE" && "$BOOKING" != "" ]]; then
     STATUS=$(echo "$BOOKING" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")

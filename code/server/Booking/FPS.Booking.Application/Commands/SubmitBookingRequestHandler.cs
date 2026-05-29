@@ -152,6 +152,10 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         await repository.CreateBookingRequestAsync(
             ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, sameDaySlot));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
+        if (request.Status == BookingRequestStatus.Pending)
+        {
+            await queryRepository.AddToTenantPendingIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
+        }
 
         logger.LogInformation(
             "Booking request submitted. TenantId={TenantId} BookingRequestId={BookingRequestId} Status={Status} RejectionCode={RejectionCode}",

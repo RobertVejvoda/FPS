@@ -23,7 +23,7 @@ FORBIDDEN_COLS="password passwd secret token credential ssn national_id salary e
 VALID_VEHICLE_TYPES="car motorcycle van"
 
 # Local demo allowed values. Production tenants extend these via tenant config.
-ALLOWED_LOCATIONS="LOC-MAIN"
+ALLOWED_LOCATIONS="Prague"
 ALLOWED_ZONES="A B COVERED"
 
 validate_employees() {

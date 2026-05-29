@@ -10,19 +10,19 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 
 **Supported local demo tenant:** `demo` (default). This is the only tenant that works end-to-end in the local harness because the Keycloak realm fixture hardcodes `tenant_id=demo` for all seeded users. The `FPS_DEMO_TENANT_ID` environment variable controls where Customer, Configuration, and profile seed scripts land their data, but Keycloak tokens always carry `demo` from a static realm import — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) will only pass when `FPS_DEMO_TENANT_ID=demo`. A second tenant (`acme-corp`) can be provisioned via `tools/provision-tenant.sh tools/templates/tenants/acme-corp.json` but its users must be added to Keycloak manually for JWT-bearing smoke steps.
 
-**Synthetic tenant for smoke steps:** `acme-corp` (documentation only), a company with 7 employees, 1 office location (`LOC-MAIN`), and a limited-capacity parking setup.
+**Synthetic tenant for smoke steps:** `acme-corp` (documentation only), a company with 7 employees, 1 office location (`Prague`), and a limited-capacity parking setup.
 
 **Demo personas (fictional — all data is synthetic):**
 
 | Username | Display name | Role | Demo focus |
 | --- | --- | --- | --- |
-| `employee1` | Alice Novak | Employee | Standard booking path; two vehicles (sedan + EV) |
-| `employee2` | Ben Turner | Employee | Company-car booking; fleet vehicle |
-| `employee3` | Clara Lindqvist | Employee | Accessibility-eligible booking |
-| `hr-admin` | Maria Okafor | HR Manager | Policy, slot management, employee bootstrap |
-| `tenant-admin` | David Wei | Admin | Tenant setup, readiness, configuration |
-| `report-viewer` | Emma Clark | Report Viewer | Reporting and CSV export |
-| `auditor` | Frank Horvath | Auditor | Audit record query and evidence review |
+| `employee1` | Jan Novak | Employee | Standard booking path; two vehicles (sedan + EV) |
+| `employee2` | Petra Svobodova | Employee | Company-car booking; fleet vehicle |
+| `employee3` | Tomas Dvorak | Employee | Accessibility-eligible booking |
+| `hr-admin` | Lucie Prochazkova | HR Manager | Policy, slot management, employee bootstrap |
+| `tenant-admin` | Karel Urban | Admin | Tenant setup, readiness, configuration |
+| `report-viewer` | Eva Kralova | Report Viewer | Reporting and CSV export |
+| `auditor` | Martin Cerny | Auditor | Audit record query and evidence review |
 
 ---
 
@@ -99,7 +99,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-The Configuration service seed creates `LOC-MAIN` with 10 parking slots and a default policy. This represents steps 4 for evaluation.
+The Configuration service seed creates `Prague` with 10 parking slots and a default policy. This represents steps 4 for evaluation.
 
 **Verify:**
 ```bash
@@ -207,14 +207,14 @@ After the tenant is configured and employees are seeded, submit a booking reques
 ```bash
 TOKEN=$(./tools/dev-auth.sh employee1)
 
-# Submit a booking request for tomorrow at LOC-MAIN
+# Submit a booking request for tomorrow at Prague
 TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d)
 
 curl -s -X POST http://localhost:10000/bookings \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"locationId\": \"LOC-MAIN\",
+    \"locationId\": \"Prague\",
     \"date\": \"$TOMORROW\",
     \"reason\": \"onboarding smoke test\"
   }" | python3 -m json.tool

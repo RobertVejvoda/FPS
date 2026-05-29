@@ -21,7 +21,7 @@ const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] 
 
 // Demo facility — a facility picker requires a /facilities API that does not yet exist.
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_LOCATION_ID = 'LOC-MAIN';
+const DEMO_LOCATION_ID = 'Prague';
 
 type FormState = {
   facilityId: string;
@@ -261,7 +261,7 @@ export default function NewBookingRoute() {
           <>
             <FieldRow label="Location">
               <View style={styles.readOnlyRow}>
-                <Text style={styles.readOnlyValue}>Main office · Main building</Text>
+                <Text style={styles.readOnlyValue}>Prague · Headquarters</Text>
               </View>
             </FieldRow>
 

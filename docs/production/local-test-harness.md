@@ -112,13 +112,13 @@ Available local users — login username and fictional display name:
 
 | Username | Display name | FairSpot roles | Main demo interest |
 | --- | --- | --- | --- |
-| `employee1` | Alice Novak | `employee` | Normal employee booking, EV and sedan vehicle selection, notifications, profile, mobile/web self-service. |
-| `employee2` | Ben Turner | `employee` | Company-car booking path; fleet vehicle (BT-001C). |
-| `employee3` | Clara Lindqvist | `employee` | Accessibility-eligible booking; accessible spot priority. |
-| `hr-admin` | Maria Okafor | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
-| `tenant-admin` | David Wei | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
-| `report-viewer` | Emma Clark | `report_viewer` | Read-only reporting review. |
-| `auditor` | Frank Horvath | `auditor` | Audit query/evidence review. |
+| `employee1` | Jan Novak | `employee` | Normal employee booking, EV and sedan vehicle selection, notifications, profile, mobile/web self-service. |
+| `employee2` | Petra Svobodova | `employee` | Company-car booking path; fleet vehicle (3AC 4567). |
+| `employee3` | Tomas Dvorak | `employee` | Accessibility-eligible booking; accessible spot priority. |
+| `hr-admin` | Lucie Prochazkova | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
+| `tenant-admin` | Karel Urban | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
+| `report-viewer` | Eva Kralova | `report_viewer` | Read-only reporting review. |
+| `auditor` | Martin Cerny | `auditor` | Audit query/evidence review. |
 
 All display names are synthetic and fictional — no real employees, emails, or identifiers. Script usernames (`employee1`, `hr-admin`, …) are stable and safe to use in smoke commands.
 
@@ -419,7 +419,7 @@ This seeds Profile snapshots for `employee1`, `employee2`, and `employee3` by:
 2. Decoding the JWT `sub` claim to get the Dapr/service user ID.
 3. Calling `PUT /profile/admin/snapshot` (Development-only endpoint) with synthetic profile facts.
 
-**Configuration** (tenant policy + 10 parking slots at `LOC-MAIN`) is seeded automatically by the Configuration service when it starts in `Development` mode.
+**Configuration** (tenant policy + 10 parking slots at `Prague`) is seeded automatically by the Configuration service when it starts in `Development` mode.
 
 **Bookings** — empty list (`GET /bookings` → `200 []`) is the documented local baseline. Submit a booking via the mobile app or Booking API to create entries.
 
@@ -429,13 +429,13 @@ This seeds Profile snapshots for `employee1`, `employee2`, and `employee3` by:
 
 | Username | Display name | ParkingEligible | CompanyCar | Vehicles | Accessibility |
 | --- | --- | --- | --- | --- | --- |
-| `employee1` | Alice Novak | ✓ | — | AN-001S (sedan), AN-002E (EV) | — |
-| `employee2` | Ben Turner | ✓ | ✓ | BT-001C (fleet) | — |
-| `employee3` | Clara Lindqvist | ✓ | — | CL-001A | ✓ |
-| `hr-admin` | Maria Okafor | — | — | — | — |
-| `tenant-admin` | David Wei | — | — | — | — |
-| `report-viewer` | Emma Clark | — | — | — | — |
-| `auditor` | Frank Horvath | — | — | — | — |
+| `employee1` | Jan Novak | ✓ | — | 1AA 2345 (sedan), 2AB 3456 (EV) | — |
+| `employee2` | Petra Svobodova | ✓ | ✓ | 3AC 4567 (fleet) | — |
+| `employee3` | Tomas Dvorak | ✓ | — | 4AD 5678 | ✓ |
+| `hr-admin` | Lucie Prochazkova | — | — | — | — |
+| `tenant-admin` | Karel Urban | — | — | — | — |
+| `report-viewer` | Eva Kralova | — | — | — | — |
+| `auditor` | Martin Cerny | — | — | — | — |
 
 ### Reset / re-seed
 
@@ -545,7 +545,7 @@ Web path:
 2. Sign in as `tenant-admin`.
 3. Open **Configuration**.
 4. In **Demo Draw**, choose:
-   - Location: `Main office`;
+   - Location: `Prague`;
    - Parking date matching the pending seeded booking date;
    - Arrival/departure time, normally `08:00` to `18:00`;
    - Reason, for example `Demo on-demand Draw`.
@@ -561,7 +561,7 @@ curl -s -X POST http://localhost:10000/draws/trigger \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "locationId": "LOC-MAIN",
+    "locationId": "Prague",
     "date": "2026-05-26",
     "timeSlotStart": "2026-05-26T08:00:00",
     "timeSlotEnd": "2026-05-26T18:00:00",

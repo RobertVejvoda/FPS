@@ -20,6 +20,11 @@ public interface IBookingQueryRepository
         Guid requestId,
         CancellationToken cancellationToken = default);
 
+    Task AddToTenantPendingIndexAsync(
+        string tenantId,
+        Guid requestId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<BookingRequestDto>> GetAllocatedRequestsForDrawAsync(
         string tenantId,
         string locationId,

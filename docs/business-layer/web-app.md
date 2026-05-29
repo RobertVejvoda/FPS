@@ -30,7 +30,7 @@ FairSpot must not show every role the same operational page. The web shell shoul
 
 - employees start from **My Spots**, focused on their own requests, outcomes, next action, and notifications;
 - HR/facility managers start from an **Operations** or **HR Operations** workspace, focused on tenant/location request queues, Draw status, exceptions, cancellations, and employee support;
-- tenant administrators start from setup/configuration readiness rather than employee booking workflows;
+- tenant administrators start from **Tenant Administration**, focused on setup readiness, identity/role mapping, tenant configuration, locations, policy, integrations, and operational health rather than employee booking workflows or HR exception queues;
 - auditors start from read-only evidence and audit timelines.
 
 The HR operations workspace must show information that employees should not see, while still avoiding hidden lottery internals unless the role is explicitly authorized. Minimum HR needs:
@@ -40,6 +40,16 @@ The HR operations workspace must show information that employees should not see,
 - a privileged **Run Draw now** action for authorized HR/admin users, requiring location, date, time slot, and reason;
 - cancellation of any pending or allocated request within HR scope, requiring a reason and notifying the affected employee;
 - links from queue items to audit/evidence details when the actor is authorized.
+
+The tenant administrator workspace must be different from both employee and HR defaults. Minimum administrator needs:
+
+- tenant readiness and setup progress;
+- identity provider and role-mapping status;
+- location, policy, slot, notification, audit, reporting, and storage readiness checks;
+- links to configuration and import tools;
+- clear warnings when required services or integrations are not configured.
+
+Administrators may have access to HR Operations when they also hold the required operational role, but their default landing page should be tenant administration/readiness, not My Spots or the HR request queue.
 
 ## Security
 - **Login History**: View session history

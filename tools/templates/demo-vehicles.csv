@@ -1,5 +1,5 @@
 external_subject,vehicle_alias,vehicle_license_plate,vehicle_type,vehicle_is_electric,active
-employee1,Daily Driver,AN-001S,car,false,true
-employee1,EV Commuter,AN-002E,car,true,true
-employee2,Company Fleet,BT-001C,car,false,true
-employee3,Accessible,CL-001A,car,false,true
+employee1,Daily Driver,1AA 2345,car,false,true
+employee1,EV Commuter,2AB 3456,car,true,true
+employee2,Company Fleet,3AC 4567,car,false,true
+employee3,Accessible,4AD 5678,car,false,true

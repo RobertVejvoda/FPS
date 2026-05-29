@@ -133,6 +133,23 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         }
     }
 
+    public async Task AddToTenantPendingIndexAsync(
+        string tenantId,
+        Guid requestId,
+        CancellationToken cancellationToken = default)
+    {
+        var key = $"pending:{tenantId}";
+        var index = await daprClient.GetStateAsync<TenantPendingIndex>(
+            BookingStore, key, cancellationToken: cancellationToken)
+            ?? new TenantPendingIndex();
+
+        if (!index.RequestIds.Contains(requestId))
+        {
+            index.RequestIds.Add(requestId);
+            await daprClient.SaveStateAsync(BookingStore, key, index, cancellationToken: cancellationToken);
+        }
+    }
+
     private static string UserIndexKey(string tenantId, string requestorId)
         => $"user-requests:{tenantId}:{requestorId}";
 

@@ -63,7 +63,7 @@ The default page is one practical view with three parts:
 [My Spots]
 +----------------------------------------+
 | My Spots                               |
-| Alice Novak                            |
+| Jan Novak                            |
 | Demo Company                           |
 +----------------------------------------+
 | Today                                  |
@@ -184,7 +184,7 @@ Source of truth:
 Recommended API shape:
 
 ```text
-GET /draws/status?locationId=LOC-MAIN&date=2026-05-27&timeSlot=workday
+GET /draws/status?locationId=Prague&date=2026-05-27&timeSlot=workday
 ```
 
 Employee-safe response shape:

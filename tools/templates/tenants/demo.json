@@ -41,7 +41,7 @@
   },
   "locations": [
     {
-      "locationId": "LOC-MAIN",
+      "locationId": "Prague",
       "displayName": "Main Office",
       "slotCount": 10,
       "chargerSlots": 2,

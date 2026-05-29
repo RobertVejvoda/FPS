@@ -136,7 +136,7 @@ export async function confirmUsage(
 }
 
 // Demo bridge — a /facilities API that returns the employee's home location does not yet exist.
-const DRAW_STATUS_LOCATION = 'LOC-MAIN';
+const DRAW_STATUS_LOCATION = 'Prague';
 
 export async function fetchDrawStatus(
   { apiBaseUrl, bearerToken }: ApiClientConfig,

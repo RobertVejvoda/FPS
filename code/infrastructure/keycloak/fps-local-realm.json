@@ -181,8 +181,8 @@
     {
       "username": "employee1",
       "enabled": true,
-      "email": "alice.novak@demo-company.local",
-      "firstName": "Alice",
+      "email": "jan.novak@demo-company.local",
+      "firstName": "Jan",
       "lastName": "Novak",
       "attributes": {
         "tenant_id": [
@@ -197,9 +197,9 @@
     {
       "username": "employee2",
       "enabled": true,
-      "email": "ben.turner@demo-company.local",
-      "firstName": "Ben",
-      "lastName": "Turner",
+      "email": "petra.svobodova@demo-company.local",
+      "firstName": "Petra",
+      "lastName": "Svobodova",
       "attributes": {
         "tenant_id": [
           "demo"
@@ -213,9 +213,9 @@
     {
       "username": "employee3",
       "enabled": true,
-      "email": "clara.lindqvist@demo-company.local",
-      "firstName": "Clara",
-      "lastName": "Lindqvist",
+      "email": "tomas.dvorak@demo-company.local",
+      "firstName": "Tomas",
+      "lastName": "Dvorak",
       "attributes": {
         "tenant_id": [
           "demo"
@@ -229,9 +229,9 @@
     {
       "username": "hr-admin",
       "enabled": true,
-      "email": "maria.okafor@demo-company.local",
-      "firstName": "Maria",
-      "lastName": "Okafor",
+      "email": "lucie.prochazkova@demo-company.local",
+      "firstName": "Lucie",
+      "lastName": "Prochazkova",
       "attributes": {
         "tenant_id": [
           "demo"
@@ -246,9 +246,9 @@
     {
       "username": "tenant-admin",
       "enabled": true,
-      "email": "david.wei@demo-company.local",
-      "firstName": "David",
-      "lastName": "Wei",
+      "email": "karel.urban@demo-company.local",
+      "firstName": "Karel",
+      "lastName": "Urban",
       "attributes": {
         "tenant_id": [
           "demo"
@@ -262,9 +262,9 @@
     {
       "username": "report-viewer",
       "enabled": true,
-      "email": "emma.clark@demo-company.local",
-      "firstName": "Emma",
-      "lastName": "Clark",
+      "email": "eva.kralova@demo-company.local",
+      "firstName": "Eva",
+      "lastName": "Kralova",
       "attributes": {
         "tenant_id": [
           "demo"
@@ -278,9 +278,9 @@
     {
       "username": "auditor",
       "enabled": true,
-      "email": "frank.horvath@demo-company.local",
-      "firstName": "Frank",
-      "lastName": "Horvath",
+      "email": "martin.cerny@demo-company.local",
+      "firstName": "Martin",
+      "lastName": "Cerny",
       "attributes": {
         "tenant_id": [
           "demo"

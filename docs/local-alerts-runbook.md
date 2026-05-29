@@ -60,7 +60,7 @@ To produce 5xx responses in the local harness, send malformed or oversized JSON 
      curl -sf -X POST http://localhost:10000/bookings \
        -H "Authorization: Bearer $TOKEN" \
        -H "Content-Type: application/json" \
-       -d '{"facilityId":"00000000-0000-0000-0000-000000000001","locationId":"LOC-MAIN","licensePlate":"EMP1001","vehicleType":"Sedan","isElectric":false,"requiresAccessibleSpot":false,"isCompanyCar":false,"plannedArrivalTime":"2099-01-01T08:00:00","plannedDepartureTime":"2099-01-01T18:00:00"}' \
+       -d '{"facilityId":"00000000-0000-0000-0000-000000000001","locationId":"Prague","licensePlate":"EMP1001","vehicleType":"Sedan","isElectric":false,"requiresAccessibleSpot":false,"isCompanyCar":false,"plannedArrivalTime":"2099-01-01T08:00:00","plannedDepartureTime":"2099-01-01T18:00:00"}' \
        -o /dev/null -w "%{http_code}\n"
    done
    ```

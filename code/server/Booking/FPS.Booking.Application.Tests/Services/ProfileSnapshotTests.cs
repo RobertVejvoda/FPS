@@ -43,6 +43,7 @@ public sealed class ProfileSnapshotTests
         repository.Setup(r => r.HasOverlappingRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         repository.Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>())).Returns(Task.CompletedTask);
         queryRepository.Setup(r => r.AddToUserIndexAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        queryRepository.Setup(r => r.AddToTenantPendingIndexAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>())).ReturnsAsync(new List<AvailableSlot>());
         metricsService.Setup(m => m.IncrementRecentAllocationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         publisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(publisher.Object);

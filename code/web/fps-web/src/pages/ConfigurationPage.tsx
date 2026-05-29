@@ -48,7 +48,7 @@ function localDate(offsetDays: number): string {
 
 function initialDemoDrawForm(): DemoDrawForm {
   return {
-    locationId: 'LOC-MAIN',
+    locationId: 'Prague',
     date: localDate(1),
     timeSlotStart: '08:00',
     timeSlotEnd: '18:00',
@@ -269,7 +269,7 @@ export function ConfigurationPage() {
                 onChange={e => setDemoDraw(prev => ({ ...prev, locationId: e.target.value }))}
                 style={input}
               >
-                <option value="LOC-MAIN">Main office</option>
+                <option value="Prague">Prague</option>
               </select>
             </div>
             <Field label="Parking date" value={demoDraw.date} type="date" onChange={v => setDemoDraw(prev => ({ ...prev, date: v }))} />
@@ -320,7 +320,7 @@ export function ConfigurationPage() {
           <input
             value={locationId}
             onChange={e => setLocationId(e.target.value)}
-            placeholder="Location identifier (e.g. LOC-001)"
+            placeholder="Location identifier (e.g. Prague)"
             style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none' }}
           />
           <button onClick={loadLocation} disabled={!locationId.trim()} style={{ ...btn, opacity: !locationId.trim() ? 0.5 : 1 }}>

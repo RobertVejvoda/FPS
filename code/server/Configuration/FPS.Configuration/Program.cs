@@ -73,7 +73,7 @@ if (app.Environment.IsDevelopment())
         {
             SlotId = $"SLOT-{i:D2}",
             TenantId = demoTenantId,
-            LocationId = "LOC-MAIN",
+            LocationId = "Prague",
             IsActive = true,
             HasCharger = i <= 2,
             IsAccessible = i == 1,
@@ -81,11 +81,11 @@ if (app.Environment.IsDevelopment())
             IsMotorcycleCapacity = false,
         }).ToList();
 
-        await slotRepo.ReplaceLocationSlotsAsync(demoTenantId, "LOC-MAIN", slots);
+        await slotRepo.ReplaceLocationSlotsAsync(demoTenantId, "Prague", slots);
         await slotChangeRepo.RecordAsync(new SlotChangeRecord
         {
             TenantId = demoTenantId,
-            LocationId = "LOC-MAIN",
+            LocationId = "Prague",
             ChangedByUserId = "seed",
             ChangedAt = DateTimeOffset.UtcNow,
             ChangeReason = "Local demo seed",
