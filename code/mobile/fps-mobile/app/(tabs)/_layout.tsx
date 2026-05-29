@@ -19,7 +19,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'My Spots',
+          title: 'Home',
           href: isEmployee ? undefined : null,
         }}
       />

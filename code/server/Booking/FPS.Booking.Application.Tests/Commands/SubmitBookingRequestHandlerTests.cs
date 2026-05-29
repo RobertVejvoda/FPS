@@ -231,6 +231,7 @@ public sealed class SubmitBookingRequestHandlerTests
     {
         const string locationId = "LOC-MAIN";
         var facilityId = Guid.NewGuid().ToString();
+        BookingRequestDto? saved = null;
 
         var slot = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
         slotService
@@ -238,11 +239,16 @@ public sealed class SubmitBookingRequestHandlerTests
                 It.IsAny<string>(), locationId, It.IsAny<DateOnly>(),
                 It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<AvailableSlot> { slot });
+        repository
+            .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(dto => saved = dto)
+            .Returns(Task.CompletedTask);
 
         var cmd = SameDayCommand() with { FacilityId = facilityId, LocationId = locationId };
         var result = await handler.Handle(cmd, CancellationToken.None);
 
         Assert.Equal("Allocated", result.Status);
+        Assert.Equal(locationId, saved?.LocationId);
         slotService.Verify(s => s.GetAvailableSlotsAsync(
             It.IsAny<string>(), locationId, It.IsAny<DateOnly>(),
             It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Once);

@@ -110,9 +110,9 @@ function initialForm(): FormState {
     requiresAccessibleSpot: false,
     isCompanyCar: false,
     dateOffset: 1,
-    arrivalHour: 8,
+    arrivalHour: 6,
     arrivalMinute: 0,
-    departureHour: 18,
+    departureHour: 20,
     departureMinute: 0,
   };
 }
