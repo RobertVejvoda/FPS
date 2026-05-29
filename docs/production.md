@@ -58,6 +58,7 @@ FairSpot production runtime is expected to contain:
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
 - [Demo Environment Baseline](./production/demo-environment-baseline): OPS002 baseline for low-cost hosted demo scope, components, seed data, smoke tests, cost evidence, reset, and teardown.
 - [Client Production Handoff](./production/client-production-handoff): OPS003 responsibility split, Dapr component replacement boundaries, identity integration requirements, backup/restore handoff, release process, and client IT checklist.
+- [Customer-First Deployment Gap Analysis](./production/customer-first-deployment-gap-analysis): gap analysis and prioritized slices for the NAS-hosted, Cloudflare-protected public-domain pilot path.
 - [Integration Evidence](./production/integration-evidence): OPS005 safe credential handling and evidence boundaries for integration actors.
 - [Local Test Harness](./production/local-test-harness): current local run instructions and one-command harness for full-stack smoke testing.
 
