@@ -9,7 +9,7 @@ import {
   type HrBookingListItem,
   type DrawStatusResult,
 } from '../api/bookings';
-import { displaySlot } from '../displayLabels';
+import { displaySlot, formatCutOffAt } from '../displayLabels';
 
 function localDate(offsetDays = 0): string {
   const d = new Date();
@@ -131,11 +131,7 @@ export function HrOperationsPage() {
     }
   }
 
-  const drawStatusText = drawLoading
-    ? 'Loading…'
-    : drawStatus?.kind === 'ok'
-      ? `${drawStatus.status} · ${drawStatus.requestCount} request${drawStatus.requestCount !== 1 ? 's' : ''} · demand: ${drawStatus.demandLevel}`
-      : '—';
+  const drawOk = drawStatus?.kind === 'ok' ? drawStatus : null;
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -166,13 +162,44 @@ export function HrOperationsPage() {
         <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#6b7280' }}>{selectedDate}</span>
       </div>
 
-      {/* Draw panel */}
+      {/* Draw panel (DRAW005) */}
       <section style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div>
-            <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>Draw status: </span>
-            <span style={{ fontSize: '0.875rem', color: '#374151' }}>{drawStatusText}</span>
+        {drawLoading && <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Loading schedule…</p>}
+        {drawOk && (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Draw status</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1e293b', marginTop: 2 }}>
+                  {drawOk.status} · {drawOk.requestCount} request{drawOk.requestCount !== 1 ? 's' : ''} · demand: {drawOk.demandLevel}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Request window</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: 2,
+                  color: drawOk.requestWindowStatus === 'open' ? '#166534' : drawOk.requestWindowStatus === 'closed' ? '#dc2626' : '#92400e' }}>
+                  {drawOk.requestWindowStatus === 'open' ? 'Open' : drawOk.requestWindowStatus === 'closed' ? 'Closed' : 'Unknown'}
+                </div>
+              </div>
+              {drawOk.cutOffAt && (
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cut-off</div>
+                  <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatCutOffAt(drawOk.cutOffAt, drawOk.timeZone)}</div>
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Schedule</div>
+                <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{drawOk.scheduleStatus} · {drawOk.scheduleSource}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#6b7280' }}>{drawOk.safeMessage}</div>
           </div>
+        )}
+        {!drawLoading && !drawOk && (
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.75rem' }}>Schedule unavailable.</p>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div />
         </div>
         <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input

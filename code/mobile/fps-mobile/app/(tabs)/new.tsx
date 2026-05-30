@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { submitBooking } from '@/api/bookings';
+import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
 import { formatBookingRef, humanizeRejectionReason } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
@@ -140,6 +141,7 @@ export default function NewBookingRoute() {
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
+  const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
   const dates = availableDates();
 
   useEffect(() => {
@@ -147,6 +149,16 @@ export default function NewBookingRoute() {
     const parsed = Math.max(0, parseInt(offsetParam, 10) || 0);
     setForm(prev => ({ ...prev, dateOffset: parsed }));
   }, [offsetParam]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDrawStatus(null);
+    const date = dateStrFromOffset(form.dateOffset);
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date, locationId: DEMO_LOCATION_ID, timeSlotStart: '08:00:00', timeSlotEnd: '18:00:00' }).then((res) => {
+      if (!cancelled) setDrawStatus(res);
+    });
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken, form.dateOffset]);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -302,6 +314,14 @@ export default function NewBookingRoute() {
                 ))}
               </ScrollView>
             </FieldRow>
+
+            {/* Schedule banner (DRAW005) */}
+            {drawStatus?.kind === 'ok' && (
+              <View style={[styles.scheduleBanner,
+                drawStatus.data.requestWindowStatus === 'open' ? styles.scheduleBannerOpen : styles.scheduleBannerClosed]}>
+                <Text style={styles.scheduleText}>{drawStatus.data.safeMessage}</Text>
+              </View>
+            )}
 
             <FieldRow label="Arrival time">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -627,4 +647,8 @@ const styles = StyleSheet.create({
   rejectionTitle: { fontSize: 14, fontWeight: '600', color: colors.danger },
   rejectionText: { fontSize: 13, color: colors.danger, lineHeight: 18 },
   errorText: { fontSize: 13, color: colors.danger, textAlign: 'center' },
+  scheduleBanner: { borderRadius: radius.md, padding: spacing.sm, borderWidth: 1 },
+  scheduleBannerOpen: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' },
+  scheduleBannerClosed: { backgroundColor: '#f8fafc', borderColor: colors.border },
+  scheduleText: { fontSize: 13, color: colors.text, lineHeight: 18 },
 });

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
 import { BookingRow } from '../components/BookingRow';
-import { displaySlot, displayNextDrawRun, shouldShowNextDraw } from '../displayLabels';
+import { displaySlot, displayNextDrawRun, shouldShowNextDraw, formatCutOffAt } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
 
 function localDate(offsetDays = 0): string {
@@ -124,11 +124,12 @@ export function BookingsPage() {
   const todayBooking = okState?.items.find(i => i.requestedDate === today) ?? null;
   const tomorrowBooking = okState?.items.find(i => i.requestedDate === tomorrow) ?? null;
 
+  const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
   const demandLabel = drawLoading ? 'Loading…'
-    : drawStatus?.kind === 'ok' ? `Demand: ${drawStatus.demandLevel}`
+    : scheduleOk ? `Demand: ${scheduleOk.demandLevel}`
     : '–';
-  const canRequestLabel = drawStatus?.kind === 'ok'
-    ? (drawStatus.canRequest ? 'Can request: Yes' : `Can request: No${drawStatus.cannotRequestReason ? ` — ${drawStatus.cannotRequestReason}` : ''}`)
+  const canRequestLabel = scheduleOk
+    ? (scheduleOk.canRequest ? 'Can request: Yes' : `Can request: No${scheduleOk.cannotRequestReason ? ` — ${scheduleOk.cannotRequestReason}` : ''}`)
     : null;
 
   return (
@@ -160,9 +161,25 @@ export function BookingsPage() {
           ))}
           <button onClick={() => navigate('/bookings/new')} style={chipBtn}>More</button>
         </div>
-        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
-          {demandLabel}{canRequestLabel ? ` · ${canRequestLabel}` : ''}
-        </div>
+        {/* Schedule info (DRAW005) */}
+        {drawLoading && <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Loading schedule…</div>}
+        {scheduleOk && (
+          <div style={{ fontSize: 13, marginBottom: 8, padding: '8px 10px', borderRadius: 6,
+            background: scheduleOk.requestWindowStatus === 'open' ? '#f0fdf4' : '#fafafa',
+            border: `1px solid ${scheduleOk.requestWindowStatus === 'open' ? '#bbf7d0' : '#e5e7eb'}` }}>
+            <div style={{ color: '#374151' }}>{scheduleOk.safeMessage}</div>
+            {scheduleOk.cutOffAt && (
+              <div style={{ color: '#6b7280', marginTop: 2 }}>
+                Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}
+              </div>
+            )}
+          </div>
+        )}
+        {!drawLoading && !scheduleOk && (
+          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+            {demandLabel}{canRequestLabel ? ` · ${canRequestLabel}` : ''}
+          </div>
+        )}
         <button
           onClick={() => navigate(`/bookings/new?date=${localDate(selectedChip)}`)}
           style={requestBtn}
