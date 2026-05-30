@@ -9,4 +9,6 @@ public record TriggerDrawCommand(
     DateOnly Date,
     DateTime TimeSlotStart,
     DateTime TimeSlotEnd,
-    string Reason) : IRequest<TriggerDrawResult>;
+    string Reason,
+    string TriggerSource = "manual",
+    string TriggeredBy = "hr-admin") : IRequest<TriggerDrawResult>;

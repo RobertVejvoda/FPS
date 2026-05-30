@@ -23,8 +23,8 @@ public sealed class DaprDrawWorkflowStarter(DaprWorkflowClient workflowClient) :
             command.TimeSlotStart.ToString("O"),
             command.TimeSlotEnd.ToString("O"),
             command.Reason,
-            TriggerSource: "manual",
-            TriggeredBy: "hr-admin");
+            command.TriggerSource,
+            command.TriggeredBy);
 
         try
         {

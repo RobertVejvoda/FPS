@@ -1,0 +1,14 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: draw-scheduler
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  # Smoke profile fires every 5 minutes so scheduled-draw behavior can be exercised
+  # in CI without waiting for a daily tick. Change to "0 18 * * *" for integration env.
+  - name: schedule
+    value: "*/5 * * * *"
+scopes:
+- fps-booking

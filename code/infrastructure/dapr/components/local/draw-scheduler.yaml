@@ -1,0 +1,14 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: draw-scheduler
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  # Fires daily at 18:00 UTC (default DrawCutOffTime). Adjust to match tenant policy.
+  # Set to "@disabled" or remove this component file to disable scheduling locally.
+  - name: schedule
+    value: "0 18 * * *"
+scopes:
+- fps-booking

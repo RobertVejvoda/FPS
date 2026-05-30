@@ -60,6 +60,11 @@ builder.Services.AddSingleton(_ => new DaprClientBuilder().Build());
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+var schedulerOptions = builder.Configuration
+    .GetSection(FPS.Booking.Application.Services.DrawSchedulerOptions.SectionName)
+    .Get<FPS.Booking.Application.Services.DrawSchedulerOptions>() ?? new();
+builder.Services.AddSingleton(schedulerOptions);
+
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {

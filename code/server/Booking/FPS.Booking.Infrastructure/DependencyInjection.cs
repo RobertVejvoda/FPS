@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IEventPublisher>(sp => sp.GetRequiredService<BookingDaprEventPublisher>());
         services.AddScoped<ITenantPolicyService, DefaultTenantPolicyService>();
         services.AddScoped<IDrawWorkflowStarter, DaprDrawWorkflowStarter>();
+        services.AddScoped<IDrawSchedulerService, DrawSchedulerService>();
 
         return services;
     }

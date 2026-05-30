@@ -655,6 +655,23 @@
         ]
       }
     },
+    "/draw-scheduler": {
+      "post": {
+        "tags": [
+          "DrawScheduler"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/draws/trigger": {
       "post": {
         "tags": [
@@ -1907,6 +1924,9 @@
   "tags": [
     {
       "name": "Booking"
+    },
+    {
+      "name": "DrawScheduler"
     },
     {
       "name": "Draws"
