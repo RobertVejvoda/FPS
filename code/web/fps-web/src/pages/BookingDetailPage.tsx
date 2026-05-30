@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { cancelBooking, confirmUsage, type BookingListItem } from '../api/bookings';
+import { cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
 import { displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -15,6 +15,12 @@ const STATUS_MEANING: Record<string, string> = {
   Waitlisted: 'Waiting for a released slot',
   UsageConfirmed: 'Usage confirmed',
   NoShow: 'No-show recorded',
+};
+
+const DEMAND_LABEL: Record<string, string> = {
+  Low: 'Low',
+  Medium: 'Medium',
+  High: 'High',
 };
 
 function formatDate(s: string): string {
@@ -46,6 +52,93 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+function AllocationExplanation({ booking, draw, nextDrawLabel }: {
+  booking: BookingListItem;
+  draw: DrawStatusResult | null;
+  nextDrawLabel: string | null;
+}) {
+  const isPreDraw = shouldShowNextDraw(booking.status);
+  const isCompleted = draw?.kind === 'ok' && draw.status === 'Completed';
+
+  if (!isPreDraw && booking.status !== 'Allocated' && booking.status !== 'Rejected') return null;
+
+  return (
+    <section className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Allocation explanation</span>
+
+      {isPreDraw && (
+        <>
+          {nextDrawLabel && <Row label="Next draw" value={nextDrawLabel} />}
+          {draw?.kind === 'ok' && (
+            <>
+              <Row label="Demand so far" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
+              <Row label="Requests so far" value={String(draw.requestCount)} />
+              {draw.availableSpotCount > 0 && (
+                <Row label="Available spots" value={String(draw.availableSpotCount)} />
+              )}
+            </>
+          )}
+          <div style={{ padding: '6px 0', fontSize: 13, color: '#374151' }}>
+            You are eligible. Final allocation follows eligibility and fairness rules.
+          </div>
+        </>
+      )}
+
+      {isCompleted && booking.status === 'Allocated' && (
+        <>
+          {draw.kind === 'ok' && draw.completedAt && (
+            <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
+          )}
+          {draw.kind === 'ok' && (
+            <>
+              <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
+              <Row label="Requests" value={String(draw.requestCount)} />
+              {draw.availableSpotCount > 0 && (
+                <Row label="Available spots" value={String(draw.availableSpotCount)} />
+              )}
+            </>
+          )}
+          <div style={{ padding: '6px 0', fontSize: 13, color: '#15803d', fontWeight: 500 }}>
+            Result: Allocated
+          </div>
+          <div style={{ fontSize: 13, color: '#374151' }}>
+            Your request matched an available parking spot.
+          </div>
+        </>
+      )}
+
+      {booking.status === 'Allocated' && !isCompleted && (
+        <div style={{ fontSize: 13, color: '#374151' }}>
+          Your request matched an available parking spot.
+        </div>
+      )}
+
+      {booking.status === 'Rejected' && (
+        <>
+          {draw?.kind === 'ok' && draw.completedAt && (
+            <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
+          )}
+          {draw?.kind === 'ok' && (
+            <>
+              <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
+              <Row label="Requests" value={String(draw.requestCount)} />
+              {draw.availableSpotCount > 0 && (
+                <Row label="Available spots" value={String(draw.availableSpotCount)} />
+              )}
+            </>
+          )}
+          <div style={{ padding: '6px 0', fontSize: 13, color: '#b91c1c', fontWeight: 500 }}>
+            Result: Not allocated
+          </div>
+          <div style={{ fontSize: 13, color: '#374151' }}>
+            More eligible requests than available spots. The draw followed company policy.
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function BookingDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -55,6 +148,16 @@ export function BookingDetailPage() {
   );
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
+  const [draw, setDraw] = useState<DrawStatusResult | null>(null);
+
+  useEffect(() => {
+    if (!booking) return;
+    const needsDraw = shouldShowNextDraw(booking.status)
+      || booking.status === 'Allocated'
+      || booking.status === 'Rejected';
+    if (!needsDraw) return;
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, booking.requestedDate).then(setDraw);
+  }, [booking?.status, booking?.requestedDate, apiBaseUrl, bearerToken]);
 
   if (!booking) {
     return (
@@ -128,14 +231,11 @@ export function BookingDetailPage() {
         <Row label="Time" value={`${formatTime(booking.timeSlotStart)} – ${formatTime(booking.timeSlotEnd)}`} />
         {slotLabel && <Row label="Spot" value={slotLabel} />}
         {booking.reason && <Row label="Note" value={booking.reason} />}
-        {nextDrawLabel && (
-          <div style={{ padding: '6px 0', fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>
-            Next draw: {nextDrawLabel}
-          </div>
-        )}
         <Row label="Submitted" value={formatDateTime(booking.createdAt)} />
         <Row label="Last updated" value={formatDateTime(booking.lastStatusChangedAt)} />
       </section>
+
+      <AllocationExplanation booking={booking} draw={draw} nextDrawLabel={nextDrawLabel} />
 
       {toast && (
         <div style={{ padding: '10px 16px', borderRadius: 8, background: toast.ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${toast.ok ? '#bbf7d0' : '#fecaca'}`, color: toast.ok ? '#166534' : '#b91c1c', fontSize: 13, fontWeight: 500 }}>
