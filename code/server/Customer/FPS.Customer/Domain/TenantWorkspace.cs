@@ -30,6 +30,26 @@ public sealed class TenantWorkspace
 
     public void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 
+    internal static TenantWorkspace Restore(
+        string tenantId, string slug, string displayName, string region, string timeZone,
+        IReadOnlyList<TenantSupportContact> supportContacts,
+        TenantLifecycleState lifecycleState,
+        IReadOnlyList<TenantStateTransition> storedTransitions,
+        TenantProvisioningMetadata provisioning,
+        DateTimeOffset createdAt, DateTimeOffset updatedAt)
+    {
+        var ws = new TenantWorkspace
+        {
+            TenantId = tenantId, Slug = slug, DisplayName = displayName,
+            Region = region, TimeZone = timeZone, SupportContacts = supportContacts,
+            Provisioning = provisioning, CreatedAt = createdAt,
+        };
+        ws.transitions.AddRange(storedTransitions);
+        ws.LifecycleState = lifecycleState;
+        ws.UpdatedAt = updatedAt;
+        return ws;
+    }
+
     private static bool IsValidTransition(TenantLifecycleState from, TenantLifecycleState to) =>
         (from, to) switch
         {

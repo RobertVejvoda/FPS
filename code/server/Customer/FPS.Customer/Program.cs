@@ -12,9 +12,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
-builder.Services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
-builder.Services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
+builder.Services.AddDaprClient();
+builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>();
+builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
+builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
