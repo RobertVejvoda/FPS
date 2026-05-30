@@ -2,9 +2,11 @@ using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Queries;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
+using FPS.Booking.Application.Workflows;
 using FPS.Booking.Domain.Services;
 using FPS.Booking.Infrastructure.Repositories;
 using FPS.Booking.Infrastructure.Services;
+using FPS.Booking.Infrastructure.Workflows;
 using FPS.SharedKernel.DomainEvents;
 using FPS.SharedKernel.Profile;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IBookingEventPublisher>(sp => sp.GetRequiredService<BookingDaprEventPublisher>());
         services.AddScoped<IEventPublisher>(sp => sp.GetRequiredService<BookingDaprEventPublisher>());
         services.AddScoped<ITenantPolicyService, DefaultTenantPolicyService>();
+        services.AddScoped<IDrawWorkflowStarter, DaprDrawWorkflowStarter>();
 
         return services;
     }
