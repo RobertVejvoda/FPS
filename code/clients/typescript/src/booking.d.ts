@@ -764,21 +764,14 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
             demandLevel: string;
-            /** ISO 8601 local timestamp when requests close for this Draw key. */
             cutOffAt: null | string;
-            /** ISO 8601 timestamp when automated Draw is expected to run; null when not scheduled. */
             nextDrawAt: null | string;
-            /** IANA timezone used to calculate cut-off and Draw time. */
             timeZone: string;
-            /** "open" | "closed" | "unknown" */
             requestWindowStatus: string;
-            /** "known" | "notConfigured" | "disabled" | "unknown" */
             scheduleStatus: string;
-            /** "tenantPolicy" | "locationOverride" | "manualOnly" */
             scheduleSource: string;
-            /** Format: date-time — when schedule metadata was last calculated. */
+            /** Format: date-time */
             lastCalculatedAt: string;
-            /** Employee/customer-safe explanation for the current schedule state. */
             safeMessage: string;
             /**
              * Format: int32

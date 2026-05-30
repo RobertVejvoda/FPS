@@ -1327,7 +1327,15 @@
           "status",
           "startedAt",
           "completedAt",
-          "demandLevel"
+          "demandLevel",
+          "cutOffAt",
+          "nextDrawAt",
+          "timeZone",
+          "requestWindowStatus",
+          "scheduleStatus",
+          "scheduleSource",
+          "lastCalculatedAt",
+          "safeMessage"
         ],
         "type": "object",
         "properties": {
@@ -1349,6 +1357,37 @@
             "format": "date-time"
           },
           "demandLevel": {
+            "type": "string"
+          },
+          "cutOffAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nextDrawAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "requestWindowStatus": {
+            "type": "string"
+          },
+          "scheduleStatus": {
+            "type": "string"
+          },
+          "scheduleSource": {
+            "type": "string"
+          },
+          "lastCalculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "safeMessage": {
             "type": "string"
           },
           "requestCount": {
