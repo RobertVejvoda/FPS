@@ -6,6 +6,8 @@ FairSpot's functional architecture is designed to ensure equitable allocation of
 
 ![Function Map](../images/fps-function-map.png)
 
+Validation note: [Function Map Validation](../function-map-validation)
+
 ### [Identity](./identity)
 
   - **User Authentication**: Provides secure login mechanisms including username/password and multi-factor authentication.
