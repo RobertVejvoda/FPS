@@ -16,10 +16,11 @@ Validation note: [Application Architecture 1 Validation](./application-arch-1-va
 | [Booking](./application-layer/booking) | Manage booking requests and allocations | Internal | High | High | Simple |
 | [Configuration](./application-layer/configuration) | Manage configuration options | Internal | Standard | High | Simple |
 | [Customer](./application-layer/customer) | Manage customer and tenant information | Confidential | High | High | Simple |
+| [DataHub](./application-layer/datahub) | Own cross-service read models and projection storage | Confidential | High | High | Detailed |
 | [Feedback](./application-layer/feedback) | Deferred feedback capability | Internal | Standard | Standard | Simple |
 | [Notification](./application-layer/notification) | Manage and send notifications | Internal | Standard | High | Simple |
 | [Profile](./application-layer/profile) | Manage customer users and profiles | Confidential | High | High | Simple |
-| [Reporting](./application-layer/reporting) | Generate and retrieve reports | Internal | Standard | High | Simple |
+| [Reporting](./application-layer/reporting) | Legacy transitional report surface; DataHub is target for new read models | Internal | Standard | Standard | Simple |
 
 
 ![Application Architecture 2](./images/fps-application-arch-2.png)

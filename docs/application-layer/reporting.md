@@ -1,6 +1,10 @@
 # Reporting Application
 
-Reporting provides a predefined set of parking operations reports. It is not a custom report builder. Application behavior is centered on tenant-scoped read models, manager-safe query endpoints, and deterministic exports that can be consumed by the web app or downloaded for client review.
+> Status: legacy transitional component. New durable cross-service read models should be designed under [DataHub](./datahub.md), not added to Reporting by default.
+
+Reporting provides a predefined set of parking operations reports. It is not a custom report builder and should not own the durable projection database. Application behavior is centered on named report definitions, safe filter/configuration rules, manager-safe query endpoints, and deterministic exports that can be consumed by the web app or downloaded for client review.
+
+Long-term, Reporting should be thin: it may define report names, allowed filters, export formats, column policies, and role-specific presentation rules. The underlying read data should come from DataHub projections.
 
 ## Application Functions
 
@@ -36,10 +40,12 @@ Reporting provides a predefined set of parking operations reports. It is not a c
 
 ## Boundaries
 
-Reporting does not decide Booking state and must not replace Audit.
+Reporting does not decide Booking state and must not replace Audit. It should also not become the owner of CQRS read-model storage, event inbox processing, projection rebuilds, or PostgreSQL persistence. DataHub is the target component for cross-service read models and PostgreSQL-backed projections.
 
 Out of scope for the reporting application:
 
+- durable projection database ownership;
+- event inbox, projection handlers, and rebuild/backfill processing;
 - raw audit payloads, retention, integrity, and GDPR erasure evidence;
 - billing, invoice, payment, or revenue reports;
 - infrastructure health, backup, incident, and telemetry reports;
