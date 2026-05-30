@@ -111,6 +111,24 @@ services:
       retries: 20
     
 
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=fps
+      - POSTGRES_PASSWORD=fps
+      - POSTGRES_DB=fps_datahub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fps -d fps_datahub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   mongodb:
     image: mongo:latest
     ports:
@@ -220,6 +238,7 @@ services:
 volumes:
   minio_data:
   mongodb_data:
+  postgres_data:
   prometheus_data:
   grafana_data:
   vault_data:
