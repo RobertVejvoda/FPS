@@ -12,6 +12,11 @@ function localDate(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// No employee-profile API yet; derive location from any loaded booking, fall back to placeholder.
+const FALLBACK_LOCATION_ID = 'Prague';
+const WORKDAY_START = '08:00:00';
+const WORKDAY_END = '18:00:00';
+
 const CHIPS = [
   { label: 'Today', offset: 0 },
   { label: 'Tomorrow', offset: 1 },
@@ -43,6 +48,9 @@ export function BookingsPage() {
   const [drawLoading, setDrawLoading] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const drawLocationId = state.kind === 'ok'
+    ? state.items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID
+    : FALLBACK_LOCATION_ID;
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -59,13 +67,13 @@ export function BookingsPage() {
     let cancelled = false;
     setDrawLoading(true);
     setDrawStatus(null);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: localDate(selectedChip), locationId: 'Prague', timeSlotStart: '08:00:00', timeSlotEnd: '18:00:00' }).then((result) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: localDate(selectedChip), locationId: drawLocationId, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
       if (cancelled) return;
       setDrawLoading(false);
       setDrawStatus(result);
     });
     return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken, selectedChip]);
+  }, [apiBaseUrl, bearerToken, selectedChip, drawLocationId]);
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });

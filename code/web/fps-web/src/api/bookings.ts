@@ -143,12 +143,13 @@ export async function fetchDrawStatus(
 ): Promise<DrawStatusResult> {
   if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
   try {
+    const { date, locationId, timeSlotStart, timeSlotEnd } = opts;
     const params = new URLSearchParams({
-      locationId: opts.locationId,
-      timeSlotStart: `${opts.date}T${opts.timeSlotStart}`,
-      timeSlotEnd: `${opts.date}T${opts.timeSlotEnd}`,
+      locationId,
+      timeSlotStart: `${date}T${timeSlotStart}`,
+      timeSlotEnd: `${date}T${timeSlotEnd}`,
     });
-    const res = await fetch(`${apiBaseUrl}/draws/${opts.date}/status?${params}`, {
+    const res = await fetch(`${apiBaseUrl}/draws/${date}/status?${params}`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
     if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };

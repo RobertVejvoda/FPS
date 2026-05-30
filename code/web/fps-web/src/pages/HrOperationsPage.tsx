@@ -18,6 +18,9 @@ function localDate(offsetDays = 0): string {
 }
 
 const LOCATION_ID = 'Prague';
+// No facilities API yet; workday slot boundaries are a known gap (UX008).
+const WORKDAY_START = '08:00:00';
+const WORKDAY_END = '18:00:00';
 
 const DATE_CHIPS = [
   { label: 'Today', offset: 0 },
@@ -85,7 +88,7 @@ export function HrOperationsPage() {
     let cancelled = false;
     setDrawLoading(true);
     setDrawStatus(null);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: selectedDate, locationId: 'Prague', timeSlotStart: '08:00:00', timeSlotEnd: '18:00:00' }).then((result) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: selectedDate, locationId: LOCATION_ID, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
       if (cancelled) return;
       setDrawLoading(false);
       setDrawStatus(result);
