@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
-import { displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
+import { displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
 
 const STATUS_MEANING: Record<string, string> = {
@@ -59,6 +59,7 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
 }) {
   const isPreDraw = shouldShowNextDraw(booking.status);
   const isCompleted = draw?.kind === 'ok' && draw.status === 'Completed';
+  const isDrawCapacityRejection = booking.reasonCode === 'DrawNotSelected' || (!booking.reasonCode && isCompleted);
 
   if (!isPreDraw && booking.status !== 'Allocated' && booking.status !== 'Rejected') return null;
 
@@ -84,12 +85,12 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
         </>
       )}
 
-      {isCompleted && booking.status === 'Allocated' && (
+      {booking.status === 'Allocated' && (
         <>
-          {draw.kind === 'ok' && draw.completedAt && (
+          {isCompleted && draw.kind === 'ok' && draw.completedAt && (
             <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
           )}
-          {draw.kind === 'ok' && (
+          {draw?.kind === 'ok' && (
             <>
               <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
               <Row label="Requests" value={String(draw.requestCount)} />
@@ -107,18 +108,12 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
         </>
       )}
 
-      {booking.status === 'Allocated' && !isCompleted && (
-        <div style={{ fontSize: 13, color: '#374151' }}>
-          Your request matched an available parking spot.
-        </div>
-      )}
-
       {booking.status === 'Rejected' && (
         <>
-          {draw?.kind === 'ok' && draw.completedAt && (
+          {isDrawCapacityRejection && draw?.kind === 'ok' && draw.completedAt && (
             <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
           )}
-          {draw?.kind === 'ok' && (
+          {isDrawCapacityRejection && draw?.kind === 'ok' && (
             <>
               <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
               <Row label="Requests" value={String(draw.requestCount)} />
@@ -131,7 +126,9 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
             Result: Not allocated
           </div>
           <div style={{ fontSize: 13, color: '#374151' }}>
-            More eligible requests than available spots. The draw followed company policy.
+            {isDrawCapacityRejection
+              ? 'More eligible requests than available spots. The draw followed company policy.'
+              : humanizeRejectionReason(booking.reasonCode ?? null, booking.reason ?? null)}
           </div>
         </>
       )}
@@ -155,9 +152,14 @@ export function BookingDetailPage() {
     const needsDraw = shouldShowNextDraw(booking.status)
       || booking.status === 'Allocated'
       || booking.status === 'Rejected';
-    if (!needsDraw) return;
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, booking.requestedDate).then(setDraw);
-  }, [booking?.status, booking?.requestedDate, apiBaseUrl, bearerToken]);
+    if (!needsDraw || !booking.locationId) return;
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, {
+      date: booking.requestedDate,
+      locationId: booking.locationId,
+      timeSlotStart: booking.timeSlotStart,
+      timeSlotEnd: booking.timeSlotEnd,
+    }).then(setDraw);
+  }, [booking?.status, booking?.requestedDate, booking?.locationId, booking?.timeSlotStart, booking?.timeSlotEnd, apiBaseUrl, bearerToken]);
 
   if (!booking) {
     return (

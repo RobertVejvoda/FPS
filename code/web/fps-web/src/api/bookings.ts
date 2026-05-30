@@ -137,21 +137,18 @@ export async function confirmUsage(
   }
 }
 
-// Demo bridge — a /facilities API that returns the employee's home location does not yet exist.
-const DRAW_STATUS_LOCATION = 'Prague';
-
 export async function fetchDrawStatus(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
-  date: string,
+  opts: { date: string; locationId: string; timeSlotStart: string; timeSlotEnd: string },
 ): Promise<DrawStatusResult> {
   if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
   try {
     const params = new URLSearchParams({
-      locationId: DRAW_STATUS_LOCATION,
-      timeSlotStart: `${date}T08:00:00`,
-      timeSlotEnd: `${date}T18:00:00`,
+      locationId: opts.locationId,
+      timeSlotStart: `${opts.date}T${opts.timeSlotStart}`,
+      timeSlotEnd: `${opts.date}T${opts.timeSlotEnd}`,
     });
-    const res = await fetch(`${apiBaseUrl}/draws/${date}/status?${params}`, {
+    const res = await fetch(`${apiBaseUrl}/draws/${opts.date}/status?${params}`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
     if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };

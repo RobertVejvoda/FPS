@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchDrawStatus, type DrawStatusResponse } from '@/api/draws';
 import { useAuth } from '@/auth/AuthContext';
-import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -71,15 +71,20 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function AllocationExplanation({
   status,
+  reasonCode,
+  reason,
   draw,
   nextDrawLabel,
 }: {
   status: string;
+  reasonCode: string | undefined;
+  reason: string | undefined;
   draw: DrawStatusResponse | null;
   nextDrawLabel: string | null;
 }) {
   const isPreDraw = shouldShowNextDraw(status);
   const isCompleted = draw?.status === 'Completed';
+  const isDrawCapacityRejection = reasonCode === 'DrawNotSelected' || (!reasonCode && isCompleted);
 
   if (!isPreDraw && status !== 'Allocated' && status !== 'Rejected') return null;
 
@@ -128,10 +133,10 @@ function AllocationExplanation({
 
         {status === 'Rejected' && (
           <>
-            {draw?.completedAt ? (
+            {isDrawCapacityRejection && draw?.completedAt ? (
               <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
             ) : null}
-            {draw ? (
+            {isDrawCapacityRejection && draw ? (
               <>
                 <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
                 <Row label="Requests" value={String(draw.requestCount)} />
@@ -142,7 +147,9 @@ function AllocationExplanation({
             ) : null}
             <Text style={[styles.resultLabel, { color: colors.danger }]}>Result: Not allocated</Text>
             <Text style={styles.explanationText}>
-              More eligible requests than available spots. The draw followed company policy.
+              {isDrawCapacityRejection
+                ? 'More eligible requests than available spots. The draw followed company policy.'
+                : humanizeRejectionReason(reasonCode ?? null, reason ?? null)}
             </Text>
           </>
         )}
@@ -216,6 +223,8 @@ export default function BookingDetailRoute() {
         {/* Allocation explanation — pre-draw and post-draw */}
         <AllocationExplanation
           status={params.status}
+          reasonCode={params.reasonCode}
+          reason={params.reason}
           draw={drawStatus}
           nextDrawLabel={nextDrawLabel}
         />
