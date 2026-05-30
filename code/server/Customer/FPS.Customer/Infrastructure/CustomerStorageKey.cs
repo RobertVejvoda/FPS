@@ -28,4 +28,5 @@ internal static class CustomerStorageKey
     internal static string IdentityConfig(string tenantId) => $"identity:config:{Sanitise(tenantId)}";
     internal static string IdentityAdmins(string tenantId) => $"identity:admins:{Sanitise(tenantId)}";
     internal static string Bootstrap(string tenantId) => $"bootstrap:{Sanitise(tenantId)}";
+    internal static string IdentityIndex() => "identity:index";
 }

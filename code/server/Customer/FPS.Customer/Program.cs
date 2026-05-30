@@ -91,6 +91,11 @@ app.UseFpsRequestTraceLogging();
 app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 
+using (var scope = app.Services.CreateScope())
+{
+    await HydrateIdentityStoresAsync(scope.ServiceProvider);
+}
+
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -98,6 +103,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+static async Task HydrateIdentityStoresAsync(IServiceProvider services)
+{
+    var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
+    var configStore = services.GetRequiredService<InMemoryTenantIdentityConfigStore>();
+    var roleMappingStore = services.GetRequiredService<InMemoryTenantRoleMappingStore>();
+
+    var tenantIds = await identityRepository.GetConfiguredTenantIdsAsync(CancellationToken.None);
+    foreach (var tenantId in tenantIds)
+    {
+        var config = await identityRepository.GetConfigAsync(tenantId, CancellationToken.None);
+        if (config is null) continue;
+        configStore.Register(config.TenantId);
+        roleMappingStore.SetMapping(config.TenantId, config.RoleMapping);
+        configStore.SetClaimConfig(config.TenantId, new TenantClaimConfig(
+            config.TenantClaimName, config.SubjectClaimName, config.RoleClaimNames));
+    }
+}
 
 static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
 {
