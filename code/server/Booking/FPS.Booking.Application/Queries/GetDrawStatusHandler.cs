@@ -154,7 +154,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         try { tz = TimeZoneInfo.FindSystemTimeZoneById(policy.TimeZoneId); }
         catch { tz = TimeZoneInfo.Utc; }
 
-        var localCutOff = date.ToDateTime(policy.DrawCutOffTime);
+        var cutOffDay = date.AddDays(-1);
+        var localCutOff = cutOffDay.ToDateTime(policy.DrawCutOffTime);
         var offset = tz.GetUtcOffset(localCutOff);
         var cutOffDto = new DateTimeOffset(localCutOff, offset);
         var cutOffAt = cutOffDto.ToString("O");
@@ -176,7 +177,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
 
         return new ScheduleMeta(
             CutOffAt: cutOffAt,
-            NextDrawAt: null,
+            NextDrawAt: cutOffAt,
             TimeZone: policy.TimeZoneId,
             RequestWindowStatus: windowStatus,
             ScheduleStatus: Models.ScheduleStatus.Known,

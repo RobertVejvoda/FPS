@@ -15,7 +15,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { submitBooking } from '@/api/bookings';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
-import { formatBookingRef, humanizeRejectionReason } from '@/displayLabels';
+import { formatBookingRef, formatCutOffAt, humanizeRejectionReason } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
@@ -320,6 +320,16 @@ export default function NewBookingRoute() {
               <View style={[styles.scheduleBanner,
                 drawStatus.data.requestWindowStatus === 'open' ? styles.scheduleBannerOpen : styles.scheduleBannerClosed]}>
                 <Text style={styles.scheduleText}>{drawStatus.data.safeMessage}</Text>
+                {drawStatus.data.nextDrawAt && (
+                  <Text style={styles.scheduleSubText}>
+                    Next draw: {formatCutOffAt(drawStatus.data.nextDrawAt, drawStatus.data.timeZone)}
+                  </Text>
+                )}
+                {drawStatus.data.cutOffAt && (
+                  <Text style={styles.scheduleSubText}>
+                    Cut-off: {formatCutOffAt(drawStatus.data.cutOffAt, drawStatus.data.timeZone)}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -651,4 +661,5 @@ const styles = StyleSheet.create({
   scheduleBannerOpen: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' },
   scheduleBannerClosed: { backgroundColor: '#f8fafc', borderColor: colors.border },
   scheduleText: { fontSize: 13, color: colors.text, lineHeight: 18 },
+  scheduleSubText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 });

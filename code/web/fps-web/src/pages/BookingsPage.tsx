@@ -168,6 +168,11 @@ export function BookingsPage() {
             background: scheduleOk.requestWindowStatus === 'open' ? '#f0fdf4' : '#fafafa',
             border: `1px solid ${scheduleOk.requestWindowStatus === 'open' ? '#bbf7d0' : '#e5e7eb'}` }}>
             <div style={{ color: '#374151' }}>{scheduleOk.safeMessage}</div>
+            {scheduleOk.nextDrawAt && (
+              <div style={{ color: '#6b7280', marginTop: 2 }}>
+                Next draw: {formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone)}
+              </div>
+            )}
             {scheduleOk.cutOffAt && (
               <div style={{ color: '#6b7280', marginTop: 2 }}>
                 Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}

@@ -328,6 +328,42 @@ public sealed class GetDrawStatusHandlerTests
     }
 
     [Fact]
+    public async Task Handle_KnownPolicy_CutOffAtIsOnDayBeforeParkingDate()
+    {
+        // Parking date is DrawDate (2026-06-02); cut-off must fall on 2026-06-01
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(DailyRequestCap: 50, DrawCutOffTime: new TimeOnly(18, 0), TimeZoneId: "UTC", SameDayBookingEnabled: false));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.NotNull(result.CutOffAt);
+        var cutOff = DateTimeOffset.Parse(result.CutOffAt);
+        var expectedDay = DrawDate.AddDays(-1);
+        Assert.Equal(expectedDay.Year, cutOff.Year);
+        Assert.Equal(expectedDay.Month, cutOff.Month);
+        Assert.Equal(expectedDay.Day, cutOff.Day);
+        Assert.Equal(18, cutOff.Hour);
+    }
+
+    [Fact]
+    public async Task Handle_KnownPolicy_NextDrawAtEqualsCutOffAt()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(DailyRequestCap: 50, DrawCutOffTime: new TimeOnly(18, 0), TimeZoneId: "UTC", SameDayBookingEnabled: false));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.NotNull(result.NextDrawAt);
+        Assert.Equal(result.CutOffAt, result.NextDrawAt);
+    }
+
+    [Fact]
     public async Task Handle_CompletedDraw_RequestWindowStatusIsClosed()
     {
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

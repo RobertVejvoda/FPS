@@ -54,6 +54,20 @@ const REJECTION_CODE_LABELS: Record<string, string> = {
   DrawNotSelected: 'Your request was not selected in this allocation draw.',
 };
 
+export function formatCutOffAt(cutOffAt: string | null, timeZone: string): string {
+  if (!cutOffAt) return '—';
+  try {
+    return new Date(cutOffAt).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+      timeZoneName: 'short',
+    });
+  } catch {
+    return cutOffAt;
+  }
+}
+
 export function humanizeRejectionReason(rejectionCode: string | null, reason: string | null): string {
   if (reason) return reason;
   if (rejectionCode) {
