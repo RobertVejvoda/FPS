@@ -528,10 +528,13 @@ The response must not include:
 
 As HR, I want to view Draw status and results so that I can explain allocation outcomes and handle exceptions.
 
+As an employee or customer reader, I want the UI to show the next Draw time and request cut-off so that the booking rules are understandable before I submit or inspect a request.
+
 ### Scope
 
 - Return Draw status by tenant, location, date, and time slot.
-- Include configured cut-off, next scheduled Draw run time when known, request counts, allocation counts, rejection counts, failure state, completion time, and summary reasons.
+- Include configured cut-off, next scheduled Draw run time when known, policy timezone, request-window status, schedule status/source, request counts, allocation counts, rejection counts, failure state, completion time, and summary reasons.
+- Expose employee/customer-safe schedule metadata to My Spots and mobile booking/status screens.
 - HR/auditor view may include weights, seed, and audit references.
 - Employee view must not expose other employees or audit-only diagnostics.
 
@@ -539,11 +542,14 @@ As HR, I want to view Draw status and results so that I can explain allocation o
 
 - Query/read model: Draw status and result summary.
 - API: `GET /draws/{date}/status`.
+- Web/mobile: visible next Draw time and cut-off summary in employee-safe booking/status surfaces.
 - Tests: HR visibility, employee redaction, failed/in-progress/completed statuses.
 
 ### Done Means
 
 - HR can explain high-level outcomes.
+- Employees and customer readers can see when the next Draw is expected to run and when requests close for the selected date/time slot.
+- Missing or disabled schedule configuration is visible as a safe UI readiness problem, not as an empty or misleading schedule value.
 - Sensitive implementation details are limited to authorized roles.
 
 ### B009 API Contract
@@ -569,13 +575,13 @@ Response must include for HR/admin/auditor roles:
 - rejected count;
 - pending waitlist count;
 - company-car overflow count;
-- configured cut-off time and next scheduled Draw run time when known;
+- configured cut-off time, policy timezone, next scheduled Draw run time when known, request-window status, schedule status, schedule source, and last schedule calculation timestamp;
 - failure reason when failed;
 - summary rejection reasons;
 - audit reference or Draw attempt ID;
 - algorithm version and seed visibility only for roles authorized to reproduce or audit the Draw.
 
-Employee view, if exposed through this endpoint, must be limited to the authenticated employee's own request outcome and must not include other employees, weights, candidate order, seed, or audit-only diagnostics.
+Employee view, if exposed through this endpoint, must be limited to safe schedule metadata, whether requests can still be submitted, the authenticated employee's own request outcome, and employee-safe explanation text. It must not include other employees, weights, candidate order, seed, or audit-only diagnostics.
 
 ### B009 Scope Rules
 

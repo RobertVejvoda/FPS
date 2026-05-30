@@ -51,6 +51,12 @@ The tenant administrator workspace must be different from both employee and HR d
 
 Administrators may have access to HR Operations when they also hold the required operational role, but their default landing page should be tenant administration/readiness, not My Spots or the HR request queue.
 
+## Draw Schedule Visibility
+
+Draw timing must be visible in the UI before customers need to ask how allocation works. Employee-facing My Spots and mobile booking/status screens should show the next scheduled Draw time, request cut-off, and policy timezone/context for the selected date/time slot. HR operations should show the same timing together with Draw lifecycle status and privileged controls. Tenant administration/readiness should show missing, disabled, or invalid Draw schedule configuration as a setup problem.
+
+When the backend cannot calculate the next scheduled Draw time, the UI should show a safe readiness/status message from the API rather than a blank value. Employee/customer-safe screens must not expose scheduler internals, workflow IDs, lottery seed, candidate order, raw penalties, stack traces, or other employees' outcomes.
+
 ## Security
 - **Login History**: View session history
 - **Session Management**: Log out from all devices

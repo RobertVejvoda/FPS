@@ -33,6 +33,32 @@ Acceptable fallback: keep direct application-handler computation only if the imp
 
 Do not keep two independent execution paths. If both scheduled and manual triggers exist, they must converge into the same workflow starter or the same single-execution Draw service.
 
+## Schedule Visibility Contract
+
+The next scheduled Draw time is a customer-facing rule, not only an internal scheduler detail. Readers should be able to understand when requests close, when allocation is expected to run, and what happens if the schedule is not yet configured.
+
+Minimum API-visible schedule metadata for a selected tenant, location, parking date, and time slot:
+
+| Field | Meaning |
+| --- | --- |
+| `cutOffAt` | Exact local timestamp when future requests stop being accepted for this Draw key. |
+| `nextDrawAt` | Exact local timestamp when the scheduled Draw is expected to run, when known. |
+| `timeZone` | Policy timezone used to calculate cut-off and Draw time. |
+| `requestWindowStatus` | `open`, `closed`, or `unknown`. |
+| `scheduleStatus` | `known`, `notConfigured`, `disabled`, or `unknown`. |
+| `scheduleSource` | `tenantPolicy`, `locationOverride`, `manualOnly`, or another documented source. |
+| `lastCalculatedAt` | Timestamp when the schedule metadata was calculated. |
+| `safeMessage` | Employee/customer-safe explanation suitable for UI display. |
+
+The UI must expose this information where readers make or review parking decisions:
+
+- employee **My Spots** should show next Draw time, request cut-off, timezone/context, and whether requests are still open for the selected date/time slot;
+- HR operations should show the same schedule metadata plus current Draw lifecycle status and the authorized **Run Draw now** action;
+- tenant/customer readiness views should make missing, disabled, or unknown Draw schedule configuration visible before go-live;
+- mobile should show the employee-safe schedule summary wherever the employee submits or checks a request.
+
+If the schedule cannot be calculated, the API must return an explicit schedule status and safe reason. It must not silently omit `nextDrawAt` in a way that makes the UI look complete. Employee/customer-safe views must not expose scheduler internals, workflow IDs, lottery seed, candidate order, raw penalties, stack traces, or other employees' outcomes.
+
 ## Dapr Workflow Target
 
 The workflow should coordinate idempotent activities. Manual HR/admin trigger and scheduled trigger both call the same workflow starter with the same input shape.

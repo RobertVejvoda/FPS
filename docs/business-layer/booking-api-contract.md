@@ -153,7 +153,9 @@ Rules:
 - list items must not expose lottery seed, candidate sequence, hidden weights, raw penalties, stack traces, or audit-only diagnostics;
 - cancellation from the HR view requires a human-readable reason and must produce employee notification and audit evidence.
 
-Draw status responses used by HR operations should include enough schedule information to make timing clear: configured cut-off, next scheduled Draw run time when known, status, counts, and last updated/completed timestamps. Employee-facing status may show only safe timing and own-outcome information.
+Draw status responses used by UI readers should include enough schedule information to make timing clear: configured cut-off, next scheduled Draw run time when known, policy timezone, request-window status, schedule status/source, current Draw lifecycle status, counts where authorized, and last calculated/updated/completed timestamps.
+
+Employee and customer-safe UI surfaces should show the next Draw time and rule explanation without exposing operational internals. HR operations may additionally show lifecycle counts, failure state, and the privileged manual Draw action. If the next scheduled Draw time is not known because configuration is missing, disabled, or invalid, the API must return an explicit schedule status and safe reason so the UI can show a readiness problem instead of a blank value.
 
 ## Validation Details
 
