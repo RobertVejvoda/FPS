@@ -7,4 +7,5 @@ public record CancelBookingCommand(
     Guid RequestId,
     string TenantId,
     string RequestorId,
-    string Reason) : IRequest<CancelBookingResult>;
+    string Reason,
+    string ActorType = "employee") : IRequest<CancelBookingResult>;

@@ -12,3 +12,10 @@ public record GetMyBookingsResponse(
     IReadOnlyList<BookingListItem> Items,
     string? NextCursor,
     int TotalCount = 0);
+
+public record GetHrBookingsResponse(
+    IReadOnlyList<HrBookingListItem> Items,
+    string? NextCursor,
+    int TotalCount = 0);
+
+public record HrCancelRequest(string Reason);

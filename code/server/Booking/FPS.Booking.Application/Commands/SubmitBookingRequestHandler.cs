@@ -152,6 +152,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         await repository.CreateBookingRequestAsync(
             ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, sameDaySlot));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
+        await queryRepository.AddToTenantOpsIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
         if (request.Status == BookingRequestStatus.Pending)
         {
             await queryRepository.AddToTenantPendingIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
@@ -191,6 +192,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         => new()
         {
             RequestId = request.Id.Value,
+            TenantId = tenantId,
             VehicleId = Guid.Empty,
             FacilityId = Guid.Parse(facilityId),
             LocationId = locationId ?? facilityId,

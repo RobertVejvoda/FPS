@@ -66,6 +66,9 @@ public sealed class SubmitBookingRequestHandlerTests
         queryRepository
             .Setup(r => r.AddToTenantPendingIndexAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        queryRepository
+            .Setup(r => r.AddToTenantOpsIndexAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         slotService
             .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
@@ -104,6 +107,48 @@ public sealed class SubmitBookingRequestHandlerTests
         await handler.Handle(cmd, CancellationToken.None);
         queryRepository.Verify(r => r.AddToTenantPendingIndexAsync(
             cmd.TenantId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ValidFutureRequest_AddsToTenantOpsIndex()
+    {
+        var cmd = FutureCommand();
+        await handler.Handle(cmd, CancellationToken.None);
+        queryRepository.Verify(r => r.AddToTenantOpsIndexAsync(
+            cmd.TenantId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedRequest_StillAddsToTenantOpsIndex()
+    {
+        repository.Setup(r => r.CountRequestsForDateAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(500);
+
+        var cmd = FutureCommand();
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Rejected", result.Status);
+        queryRepository.Verify(r => r.AddToTenantOpsIndexAsync(
+            cmd.TenantId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+        queryRepository.Verify(r => r.AddToTenantPendingIndexAsync(
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_SameDay_AllocatedRequest_AddsToTenantOpsIndex_NotPendingIndex()
+    {
+        var slot = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
+        slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { slot });
+
+        var cmd = SameDayCommand();
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        queryRepository.Verify(r => r.AddToTenantOpsIndexAsync(
+            cmd.TenantId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+        queryRepository.Verify(r => r.AddToTenantPendingIndexAsync(
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

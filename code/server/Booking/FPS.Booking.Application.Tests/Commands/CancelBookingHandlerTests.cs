@@ -172,6 +172,15 @@ public sealed class CancelBookingHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WrongTenant_ThrowsBookingNotFoundException()
+    {
+        var dto = DtoWithStatus("Pending");
+        dto.TenantId = "tenant-other";
+        SetupRequest(dto);
+        await Assert.ThrowsAsync<BookingNotFoundException>(() => handler.Handle(ValidCommand(), CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Handle_AlreadyCancelled_ThrowsBookingException()
     {
         SetupRequest(DtoWithStatus("Cancelled"));
