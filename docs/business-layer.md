@@ -24,6 +24,7 @@ FairSpot helps companies manage scarce parking capacity without turning HR into 
 - [Booking API Contract](./business-layer/booking-api-contract)
 - [Booking Context Contract](./business-layer/booking-context-contract)
 - [Booking Request Lifecycle](./business-layer/booking-request-lifecycle)
+- [Business Process Flows](./business-layer/business-process-flows)
 - [Allocation Process](./business-layer/process)
 - [Executable Allocation Rules](./business-layer/allocation-rules)
 - [Parking Policy Configuration](./business-layer/parking-policy-configuration)
@@ -49,3 +50,5 @@ FairSpot helps companies manage scarce parking capacity without turning HR into 
 ## Exchange Map
 
 ![Exchange Map](./images/fps-exchange-map.png)
+
+Validation note: [Exchange Map Validation](./exchange-map-validation)

@@ -9,6 +9,7 @@
   * [Personas](./business-layer/personas)
   * [Roles](./business-layer/roles)
   * [Requirements](./business-layer/requirements)
+  * [Business Process Flows](./business-layer/business-process-flows)
   * [Process](./business-layer/process)
   * [Booking](./business-layer/booking)
   * [Allocation Rules](./business-layer/allocation-rules)
