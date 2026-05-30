@@ -1,100 +1,62 @@
-using FPS.Booking.Application.Services;
-using FPS.Booking.Domain.Services;
-using FPS.Booking.Domain.ValueObjects;
+using FPS.Booking.Application.Models;
+using FPS.Booking.Application.Repositories;
+using FPS.Booking.Application.Workflows;
 
 namespace FPS.Booking.Application.Tests.Commands;
 
 public sealed class TriggerDrawHandlerTests
 {
-    private readonly Mock<IBookingRepository> bookingRepo = new();
-    private readonly Mock<IBookingQueryRepository> bookingQueryRepo = new();
     private readonly Mock<IDrawRepository> drawRepo = new();
-    private readonly Mock<IEmployeeMetricsService> metricsService = new();
-    private readonly Mock<IAvailableSlotService> slotService = new();
-    private readonly Mock<ITenantPolicyService> policyService = new();
-    private readonly Mock<IBookingEventPublisher> publisher = new();
+    private readonly Mock<IDrawWorkflowStarter> workflowStarter = new();
     private readonly TriggerDrawHandler handler;
 
-    private static readonly TenantPolicy DefaultPolicy = new(500, new TimeOnly(18, 0), "UTC", true, 10);
     private static readonly DateOnly DrawDate = new(2026, 6, 2);
     private static readonly DateTime SlotStart = new(2026, 6, 2, 9, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime SlotEnd = new(2026, 6, 2, 17, 0, 0, DateTimeKind.Utc);
 
     public TriggerDrawHandlerTests()
     {
-        handler = new TriggerDrawHandler(
-            bookingRepo.Object, bookingQueryRepo.Object, drawRepo.Object, metricsService.Object,
-            slotService.Object, policyService.Object, publisher.Object, new DrawService());
-
-        policyService.Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DefaultPolicy);
-
-        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<BookingRequestDto>());
-
-        slotService.Setup(s => s.GetAvailableSlotsAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
-            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        metricsService.Setup(m => m.GetMetricsSnapshotAsync(
-            It.IsAny<string>(), It.IsAny<IEnumerable<string>>(),
-            It.IsAny<DateOnly>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, EmployeeMetrics>());
+        handler = new TriggerDrawHandler(drawRepo.Object, workflowStarter.Object);
 
         drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawAttemptDto?)null);
 
-        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        publisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(publisher.Object);
-        publisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        workflowStarter
+            .Setup(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DrawStartResult("draw:tenant-1:loc-1:2026-06-02:0900", "draw:tenant-1:loc-1:2026-06-02:0900", "Started"));
     }
 
-    // ── Happy path ────────────────────────────────────────────────────────────
+    // ── Happy path: new draw starts workflow ──────────────────────────────────
 
     [Fact]
-    public async Task Handle_NoPendingRequests_ReturnsCompletedWithZeroCounts()
+    public async Task Handle_NoExistingAttempt_StartsWorkflowAndReturnsInProgress()
     {
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        Assert.Equal("Completed", result.Status);
-        Assert.Equal(0, result.AllocatedCount);
-        Assert.Equal(0, result.RejectedCount);
-        Assert.Equal(0, result.WaitlistedCount);
+        Assert.Equal("InProgress", result.Status);
         Assert.False(result.WasAlreadyCompleted);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // ── Duplicate start: already running ─────────────────────────────────────
+
     [Fact]
-    public async Task Handle_PersistsDrawAttempt()
+    public async Task Handle_ExistingInProgressAttempt_ReturnsInProgressWithoutStartingWorkflow()
     {
-        await handler.Handle(ValidCommand(), CancellationToken.None);
+        drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DrawAttemptDto { Status = "InProgress" });
 
-        drawRepo.Verify(r => r.SaveAsync(
-            It.Is<DrawAttemptDto>(d => d.Status == "Completed"),
-            It.IsAny<CancellationToken>()), Times.Once);
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.Equal("InProgress", result.Status);
+        Assert.False(result.WasAlreadyCompleted);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact]
-    public async Task Handle_PublishesStartAndCompletedEvents()
-    {
-        await handler.Handle(ValidCommand(), CancellationToken.None);
-
-        publisher.Verify(p => p.PublishAsync(
-            It.IsAny<FPS.Booking.Domain.Events.DrawAttemptStartedEvent>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-
-        publisher.Verify(p => p.PublishAsync(
-            It.IsAny<FPS.Booking.Domain.Events.DrawAttemptCompletedEvent>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    // ── Idempotency ───────────────────────────────────────────────────────────
+    // ── Existing completed draw ───────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_AlreadyCompletedDraw_ReturnsExistingWithoutReRunning()
+    public async Task Handle_ExistingCompletedAttempt_ReturnsCachedResultWithoutStartingWorkflow()
     {
         drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DrawAttemptDto
@@ -103,147 +65,43 @@ public sealed class TriggerDrawHandlerTests
                 Status = "Completed",
                 AllocatedCount = 3,
                 RejectedCount = 1,
-                WaitlistedCount = 2
+                WaitlistedCount = 2,
             });
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
         Assert.True(result.WasAlreadyCompleted);
+        Assert.Equal("Completed", result.Status);
         Assert.Equal(3, result.AllocatedCount);
-        drawRepo.Verify(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(1, result.RejectedCount);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Failed draw: surfaces Failed, does not attempt restart ───────────────
+
     [Fact]
-    public async Task Handle_AlreadyCompleted_DoesNotUpdateBookingStatuses()
+    public async Task Handle_ExistingFailedAttempt_ReturnsFailedWithoutStartingWorkflow()
     {
         drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DrawAttemptDto { Status = "Completed" });
-
-        await handler.Handle(ValidCommand(), CancellationToken.None);
-
-        bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    // ── Per-decision outcome events ───────────────────────────────────────────
-
-    [Fact]
-    public async Task Handle_DrawWaitlistsRequest_DoesNotPublishRejectedEvent()
-    {
-        // Regular (non-company-car) request with no available slots → Waitlisted, not Rejected.
-        // No booking.requestRejected event should be published for waitlisted decisions.
-        var pending = PendingDto();
-        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([pending]);
+            .ReturnsAsync(new DrawAttemptDto { Status = "Failed" });
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        Assert.Equal(0, result.RejectedCount);
-        Assert.Equal(1, result.WaitlistedCount);
-        publisher.Verify(p => p.PublishAsync(
-            It.IsAny<FPS.Booking.Domain.Events.BookingRequestRejectedEvent>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal("Failed", result.Status);
+        Assert.False(result.WasAlreadyCompleted);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact]
-    public async Task Handle_DrawAllocatesRequest_PublishesSlotAllocatedEvent()
-    {
-        var pending = PendingDto();
-        bookingQueryRepo.Setup(r => r.GetPendingRequestsForDrawAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([pending]);
-
-        slotService.Setup(s => s.GetAvailableSlotsAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
-            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("S1"))]);
-
-        await handler.Handle(ValidCommand(), CancellationToken.None);
-
-        publisher.Verify(p => p.PublishAsync(
-            It.IsAny<FPS.Booking.Domain.Events.SlotAllocationCreatedEvent>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-        publisher.Verify(p => p.WithContext(It.Is<BookingPublishContext>(c =>
-            c.TenantId == "tenant-1" &&
-            c.ActorType == "system" &&
-            c.SubjectRequestorId == pending.RequestedBy &&
-            c.AllocationSource == "draw")), Times.Once);
-    }
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    private static BookingRequestDto PendingDto() => new()
-    {
-        RequestId = Guid.NewGuid(),
-        RequestedBy = Guid.NewGuid().ToString(),
-        PlannedArrivalTime = SlotStart,
-        PlannedDepartureTime = SlotEnd,
-        RequestedAt = DateTime.UtcNow.AddHours(-1),
-        Status = "Pending",
-        LocationId = "loc-1",
-    };
-
-    // ── Lifecycle steps ───────────────────────────────────────────────────────
+    // ── Draw key is included in the result ───────────────────────────────────
 
     [Fact]
-    public async Task Handle_PersistsLifecycleSteps()
+    public async Task Handle_NoExistingAttempt_DrawKeyIncludedInResult()
     {
-        DrawAttemptDto? saved = null;
-        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
-            .Callback<DrawAttemptDto, CancellationToken>((a, _) => saved = a)
-            .Returns(Task.CompletedTask);
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        await handler.Handle(ValidCommand(), CancellationToken.None);
-
-        Assert.NotNull(saved);
-        Assert.NotEmpty(saved!.LifecycleSteps);
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "PolicyResolved" && s.Status == "Completed");
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "RequestsLoaded" && s.Status == "Completed");
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "CapacityLoaded" && s.Status == "Completed");
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "MetricsLoaded" && s.Status == "Completed");
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "WeightedAllocationCompleted" && s.Status == "Completed");
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "DecisionsPersisted" && s.Status == "Completed");
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "EventsPublished" && s.Status == "Attempted");
-    }
-
-    [Fact]
-    public async Task Handle_StartedAtCapturedBeforeExecution()
-    {
-        DrawAttemptDto? saved = null;
-        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
-            .Callback<DrawAttemptDto, CancellationToken>((a, _) => saved = a)
-            .Returns(Task.CompletedTask);
-
-        var before = DateTime.UtcNow;
-        await handler.Handle(ValidCommand(), CancellationToken.None);
-        var after = DateTime.UtcNow;
-
-        Assert.NotNull(saved);
-        Assert.True(saved!.StartedAt >= before);
-        Assert.True(saved.StartedAt <= saved.CompletedAt);
-        Assert.True(saved.CompletedAt <= after);
-    }
-
-    [Fact]
-    public async Task Handle_ServiceFailure_SavesFailedAttemptWithPartialSteps()
-    {
-        policyService.Setup(s => s.GetEffectivePolicyAsync(
-                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Policy service unavailable"));
-
-        DrawAttemptDto? saved = null;
-        drawRepo.Setup(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()))
-            .Callback<DrawAttemptDto, CancellationToken>((a, _) => saved = a)
-            .Returns(Task.CompletedTask);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => handler.Handle(ValidCommand(), CancellationToken.None));
-
-        Assert.NotNull(saved);
-        Assert.Equal("Failed", saved!.Status);
-        Assert.Contains(saved.LifecycleSteps, s => s.StepName == "DrawFailed" && s.Status == "Failed");
-        Assert.NotNull(saved.LifecycleSteps.First(s => s.StepName == "DrawFailed").ErrorMessage);
+        Assert.NotNull(result.DrawAttemptId);
+        Assert.Contains("tenant-1", result.DrawAttemptId);
+        Assert.Contains("loc-1", result.DrawAttemptId);
     }
 
     private static TriggerDrawCommand ValidCommand() => new(

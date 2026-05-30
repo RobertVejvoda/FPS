@@ -1,4 +1,5 @@
 using Dapr.Client;
+using Dapr.Workflow;
 using FPS.Booking.API.Identity;
 using FPS.Booking.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
@@ -10,6 +11,21 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddDapr();
+builder.Services.AddDaprWorkflow(options =>
+{
+    options.RegisterWorkflow<FPS.Booking.Application.Workflows.DrawWorkflow>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.ResolveDrawInputActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.AcquireDrawAttemptActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.CloseRequestWindowActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.LoadPendingRequestsActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.LoadCapacityActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.LoadMetricsActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.RunAllocationActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.PersistDecisionsActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.QueueIntegrationEventsActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.CompleteDrawAttemptActivity>();
+    options.RegisterActivity<FPS.Booking.Application.Workflows.Activities.FailDrawAttemptActivity>();
+});
 builder.Services.AddOpenApi("v1", options =>
 {
     options.AddDocumentTransformer((doc, _, _) =>
