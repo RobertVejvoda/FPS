@@ -32,6 +32,7 @@
   * [Gap Register](./security/gap-register)
   * [Production Model](./production)
   * [Hosting Strategy](./production/hosting-deployment-strategy)
+  * [Dapr-First Standards](./production/dapr-first-production-standards)
   * [Demo Environment](./production/demo-environment-baseline)
   * [Local Test Harness](./production/local-test-harness)
   * [Draw Scheduling](./production/draw-scheduling-and-workflow)

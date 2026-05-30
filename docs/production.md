@@ -6,6 +6,8 @@ The goal for v1 is not to operate production for clients directly. FairSpot must
 
 FairSpot is therefore a **bring-your-own-cloud** platform. The core architecture defines contracts for identity, ingress, service integration, persistence, messaging, secrets, object storage, observability, backup, restore, and operations. Local, Azure, AWS, Kubernetes, or client-owned infrastructure can satisfy those contracts with different concrete services as long as tenant isolation, security controls, and operational evidence remain intact.
 
+FairSpot is also a Dapr-first production reference for later systems. New production-facing slices should use Dapr building blocks first when they match the requirement: Workflow for orchestration, pub/sub for domain events, transactional outbox for state-plus-event reliability where supported, secret stores for runtime secrets, mTLS/Sentry for service identity, resiliency policies for dependency behavior, and state encryption where the selected component supports it.
+
 ## Production Story
 
 Read this section from high level to detail:
@@ -56,6 +58,7 @@ FairSpot production runtime is expected to contain:
 ## Cloud And Environment Notes
 
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
+- [Dapr-First Production Standards](./production/dapr-first-production-standards): production-grade Dapr usage rules for workflows, outbox, pub/sub, state, secrets, mTLS, resiliency, and validation.
 - [Demo Environment Baseline](./production/demo-environment-baseline): OPS002 baseline for low-cost hosted demo scope, components, seed data, smoke tests, cost evidence, reset, and teardown.
 - [Client Production Handoff](./production/client-production-handoff): OPS003 responsibility split, Dapr component replacement boundaries, identity integration requirements, backup/restore handoff, release process, and client IT checklist.
 - [Customer-First Deployment Gap Analysis](./production/customer-first-deployment-gap-analysis): gap analysis and prioritized slices for the NAS-hosted, Cloudflare-protected public-domain pilot path.
@@ -79,6 +82,7 @@ Minimum readiness before a hosted pilot:
 - tenant and user context come from the identity provider;
 - tenant storage scopes and indexes are provisioned repeatably;
 - Dapr pub/sub is configured and validated with the selected broker/provider;
+- Dapr production building blocks are configured where applicable: mTLS, secret store references, component scopes, resiliency policies, state transactions/outbox, and state encryption support;
 - secrets are injected from a secret-management system, not committed files;
 - backup and restore have been tested at least once;
 - metrics, logs, traces, usage counters, and alert routing exist;

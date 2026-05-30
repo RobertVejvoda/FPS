@@ -234,6 +234,10 @@ Identity deployment note: a self-hosted IdP usually cannot scale to zero safely 
 | **service invocation** | Dapr sidecar | Managed or self-hosted Dapr sidecar | Managed or self-hosted Dapr sidecar |
 | **mTLS / Sentry** | Local Dapr self-hosted | Runtime-managed or self-hosted Dapr mTLS | Client platform Dapr mTLS policy |
 | **Dapr Workflows** | Local Dapr 1.14+ where needed | Dapr workflow support if selected slice needs it | Client-supported Dapr workflow runtime or an approved alternative |
+| **Dapr outbox** | Enabled where the local state component supports transactions/outbox | Required for business state-plus-event flows where supported | Required or replaced by a documented service-owned pending-event outbox |
+| **resiliency policies** | Local retry/timeout policies for smoke evidence | Demo retry, timeout, and circuit-breaker policies | Client-approved Dapr resiliency policies |
+| **state encryption** | Optional local proof where supported | Enabled for confidential state where supported | Enabled where the selected component supports Dapr encryption, plus store-managed encryption at rest |
+| **component scopes** | Broad only where needed for local convenience | Scoped per service | Scoped per service and least privilege |
 
 Component YAML files live in `code/infrastructure/dapr/components/`. Local files may be broad for developer convenience. Demo and production files should scope components per app and use secret-store references instead of inline credentials.
 
@@ -264,6 +268,7 @@ Where the runtime supports workload identity, Dapr component connections should 
 
 - Use the selected profile's secret-management service through the Dapr secret-store boundary. For an Azure-native demo, Azure Key Vault with managed identity is the simplest candidate.
 - No secrets in source control, container images, or Dapr component YAML (use secretstore reference pattern).
+- Use Dapr secret scopes and component scopes so services can access only the secrets/components they require.
 - GitHub Actions secrets for ACR credentials and ACA deployment tokens are the CI boundary.
 
 ### 7.4 Private Networking
@@ -274,7 +279,13 @@ Demo can use a simpler network boundary if no real personal data is present. Cli
 
 External ingress must use HTTPS. Certificate ownership depends on the deployment profile: demo can use platform-managed certificates; client production should use client-approved certificate management. Internal service-to-service traffic should use Dapr mTLS where the runtime supports it.
 
-### 7.6 GDPR Audit Trail
+### 7.6 Dapr Resiliency And Outbox
+
+Business flows that persist state and publish integration events should use Dapr transactional outbox where the selected state store supports it. If not supported, the service must use a documented pending-event outbox with deterministic event IDs and retry behavior.
+
+Dapr resiliency policies should define timeouts, retries, and circuit breakers for state stores, pub/sub, service invocation, and workflow dependencies. Production readiness evidence must show how the app behaves when these dependencies are slow, unavailable, or redeliver messages.
+
+### 7.7 GDPR Audit Trail
 
 Pseudonymised audit records (`actor_hash`) as per the existing architecture decision are stored in the Audit service data store. The PII mapping store (hash-to-identity) must be in an approved region with restricted access. On GDPR erasure: delete the mapping row only; audit log remains immutable and anonymous.
 
