@@ -1,0 +1,67 @@
+@baseUrl = http://localhost:10000
+@locationId = Prague
+@drawDate = 2026-05-26
+@timeSlotStart = 2026-05-26T08:00:00
+@timeSlotEnd = 2026-05-26T18:00:00
+
+# These requests intentionally omit auth headers so no credential-like values are
+# committed. Add the correct local auth header in VS Code REST Client before
+# sending each request: employee for employee scenarios, HR for HR scenarios,
+# admin for lifecycle/admin scenarios.
+
+### 1. Employee creates a future booking request that waits for Draw
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "requestedDate": "{{drawDate}}",
+  "plannedArrivalTime": "{{timeSlotStart}}",
+  "plannedDepartureTime": "{{timeSlotEnd}}",
+  "vehicleId": "vehicle-employee1-default"
+}
+
+### 2. Employee cannot trigger Draw
+POST {{baseUrl}}/draws/trigger
+Content-Type: application/json
+
+{
+  "locationId": "{{locationId}}",
+  "date": "{{drawDate}}",
+  "timeSlotStart": "{{timeSlotStart}}",
+  "timeSlotEnd": "{{timeSlotEnd}}",
+  "reason": "Employee must not be allowed to run Draw"
+}
+
+### 3. HR sees pre-Draw status
+GET {{baseUrl}}/draws/{{drawDate}}/status?locationId={{locationId}}&timeSlotStart={{timeSlotStart}}&timeSlotEnd={{timeSlotEnd}}
+
+### 4. HR runs Draw on demand
+POST {{baseUrl}}/draws/trigger
+Content-Type: application/json
+
+{
+  "locationId": "{{locationId}}",
+  "date": "{{drawDate}}",
+  "timeSlotStart": "{{timeSlotStart}}",
+  "timeSlotEnd": "{{timeSlotEnd}}",
+  "reason": "REST Client smoke: HR on-demand Draw"
+}
+
+### 5. HR reruns the same Draw key and receives existing completed result
+POST {{baseUrl}}/draws/trigger
+Content-Type: application/json
+
+{
+  "locationId": "{{locationId}}",
+  "date": "{{drawDate}}",
+  "timeSlotStart": "{{timeSlotStart}}",
+  "timeSlotEnd": "{{timeSlotEnd}}",
+  "reason": "REST Client smoke: idempotency check"
+}
+
+### 6. Employee sees post-Draw status
+GET {{baseUrl}}/draws/{{drawDate}}/status?locationId={{locationId}}&timeSlotStart={{timeSlotStart}}&timeSlotEnd={{timeSlotEnd}}
+
+### 7. Admin sees lifecycle details
+GET {{baseUrl}}/draws/{{drawDate}}/lifecycle?locationId={{locationId}}&timeSlotStart={{timeSlotStart}}&timeSlotEnd={{timeSlotEnd}}
+

@@ -534,6 +534,8 @@ These checks prove service connectivity for local/demo readiness. They do not ye
 
 Seeded bookings are usually `Pending` because they target future dates and wait for the scheduled Draw. For a demo walkthrough, an administrator can run one Draw on demand.
 
+For repeatable API testing, use [Draw REST Client Scenarios](./draw-rest-client-scenarios.http) in VS Code with the REST Client extension.
+
 Web path:
 
 1. Start the local web smoke path:

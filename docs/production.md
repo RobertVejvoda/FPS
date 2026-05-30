@@ -61,6 +61,8 @@ FairSpot production runtime is expected to contain:
 - [Customer-First Deployment Gap Analysis](./production/customer-first-deployment-gap-analysis): gap analysis and prioritized slices for the NAS-hosted, Cloudflare-protected public-domain pilot path.
 - [Integration Evidence](./production/integration-evidence): OPS005 safe credential handling and evidence boundaries for integration actors.
 - [Local Test Harness](./production/local-test-harness): current local run instructions and one-command harness for full-stack smoke testing.
+- [Draw Scheduling And Workflow](./production/draw-scheduling-and-workflow): Dapr Workflow direction, on-demand Draw behavior, multi-instance scheduler safety, and UI progress requirements.
+- [Draw REST Client Scenarios](./production/draw-rest-client-scenarios.http): VS Code REST Client smoke scenarios for booking, Draw trigger, idempotency, status, and lifecycle checks.
 
 Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FairSpot.
 
