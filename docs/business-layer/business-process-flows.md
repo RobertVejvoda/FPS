@@ -392,8 +392,8 @@ Make the allocation process explainable, measurable, and defensible.
 
 1. Booking publishes business events after authoritative state changes.
 2. Audit consumes business events and privileged action events as append-only evidence.
-3. Reporting consumes Booking outcome events and builds tenant-scoped operational projections.
-4. HR/facilities user opens operational reports: demand, allocation, rejection, cancellation, no-show, fairness, and utilization.
+3. DataHub consumes Booking outcome events and builds tenant-scoped operational projections.
+4. Reporting uses approved DataHub read models plus its report catalog/configuration to serve operational reports: demand, allocation, rejection, cancellation, no-show, fairness, and utilization.
 5. Tenant administrator or auditor opens audit/evidence views for specific sensitive decisions or investigations.
 6. Reporting exports safe CSV output where permitted.
 7. Audit exports evidence packages where permitted.
@@ -410,11 +410,11 @@ Make the allocation process explainable, measurable, and defensible.
 
 - Reporting must not expose raw lottery seed, random ordering, hidden weights, secrets, or unrelated employee-private data.
 - Audit evidence must not be edited in place.
-- Reporting durable storage is required before customer reporting can be trusted across restart.
+- DataHub durable read-model storage is required before customer reporting can be trusted across restart.
 
 ### Current Status
 
-Reporting endpoints and projections exist, but durable relational Reporting storage is a P0 readiness gap tracked as `REPORT004`.
+Reporting endpoints and projections exist, but the durable relational storage target is now DataHub, not Reporting. `REPORT004` should be treated as obsolete unless re-scoped to report catalog/configuration cleanup.
 
 ## Process 8: Pilot Feedback
 

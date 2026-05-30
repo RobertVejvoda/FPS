@@ -1,6 +1,10 @@
 # Reporting Business
 
+> Status: legacy transitional capability. Reporting remains the business-facing report surface, but new durable cross-service read models should be owned by [DataHub](../application-layer/datahub.md).
+
 Reporting helps HR, facilities, tenant administrators, and client sponsors understand whether FairSpot is operating fairly and efficiently. Reporting must stay manager-safe: it explains parking operations and outcomes without exposing hidden lottery internals, raw audit payloads, secrets, or unnecessary employee-private data.
+
+Reporting is no longer the target owner for PostgreSQL projection storage. If the component remains, its durable responsibility should be limited to report catalog/configuration metadata such as report names, allowed filters, export definitions, column policies, and role-specific presentation rules. DataHub owns the event-fed PostgreSQL read models that reports query.
 
 Reporting is split into three product layers.
 
@@ -65,6 +69,20 @@ Those areas may become separate Billing, Operations, Security, Audit, or BI slic
 | `REPORT001` Reporting Read Models | Build tenant-scoped parking summary and fairness projections from Booking events. | Done. |
 | `WEB006` Web Reporting Dashboard And CSV Export | Expose first web reporting views. | Done. |
 | `REPORT002` Reporting Dashboards And Exports | Dashboard-facing aggregates and summary CSV export. | Done by backend/web combination; keep as completed parent/history. |
-| `REPORT003` Operational Report Catalog And Export Hardening | Add the fixed operational report catalog, utilization/reason/outcome exports, privacy-safe shaping, and CSV hardening. | Next implementation slice. |
+| `REPORT003` Operational Report Catalog And Export Hardening | Add or harden the fixed operational report catalog, utilization/reason/outcome exports, privacy-safe shaping, and CSV hardening. | Valid only as report-surface/catalog work; do not add Reporting-owned PostgreSQL projections. |
 | Future business reporting | Sponsor-level adoption, saved HR effort, satisfaction/support, and commercial metrics. | Separate from operational reporting. |
 | Future BI/export integration | External BI dataset/feed or scheduled reports. | Only after client demand is clear. |
+
+## DataHub Direction
+
+Reporting should become a consumer of DataHub read models rather than owning new durable projection storage itself.
+
+Target direction:
+
+- owning business services keep accepting changes and owning operational state;
+- domain events feed DataHub projections;
+- report screens and exports query approved DataHub read models;
+- Reporting-specific projection code becomes obsolete once equivalent DataHub projections exist;
+- any remaining Reporting persistence stores only report catalog/configuration metadata, not operational event projections.
+
+This preserves the business reporting surface while moving CQRS/read-model ownership into a clearer architecture component.

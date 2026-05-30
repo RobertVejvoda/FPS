@@ -39,11 +39,11 @@ Customer is represented correctly as an application service, but durable persist
 
 This is tracked as `DATA011: Customer durable tenant storage`.
 
-### Reporting Storage
+### DataHub Read Model Storage
 
-Reporting is represented correctly as an application service, but it should not be backed by the same document-store assumption as operational service state. For customer-ready reporting, FPS needs durable relational read models, preferably PostgreSQL-backed projections fed by Booking events.
+Reporting is represented correctly as a business report surface, but durable relational read models should not be added to Reporting by default. Customer-ready operational reporting depends on DataHub: PostgreSQL-backed projections fed by service events and exposed through approved read APIs or report views.
 
-This is tracked as `REPORT004: Durable relational reporting store`.
+The older `REPORT004: Durable relational reporting store` direction is obsolete unless explicitly re-scoped as transitional cleanup. New persistence and projection work should be tracked under DataHub slices.
 
 ### Feedback
 
@@ -66,7 +66,7 @@ Cache is reasonable as a technical architecture dependency, but it is not centra
 Use the diagram as a target application architecture with the following status split:
 
 1. Customer-first baseline: Web App, Mobile App, API Gateway, Identity/IAM, Booking, Profile, Configuration, Notification, Audit, Reporting endpoints, Dapr pub/sub, Dapr state stores, secrets, and observability.
-2. Customer-readiness gaps: Customer durable storage and Reporting relational persistence.
+2. Customer-readiness gaps: Customer durable storage and DataHub read-model persistence/projections.
 3. Partial or staged capabilities: Feedback, Communication channels, File/Object Storage, Cache.
 4. Future/deprioritized capabilities: Billing and Payment Gateway.
 
@@ -74,6 +74,6 @@ Use the diagram as a target application architecture with the following status s
 
 - Keep Application Architecture 1 as the target view, but annotate status in docs rather than redrawing it as a delivery board.
 - Complete the Customer durable storage slice before relying on tenant onboarding or tenant identity setup across restarts.
-- Complete the Reporting PostgreSQL read-model slice before promising durable customer reporting.
+- Complete the DataHub read-model storage and first projection slice before promising durable customer reporting.
 - Keep Billing and Payment Gateway out of the customer-first deployable scope for now.
 - Consider a small authenticated Feedback slice for pilots and demos after the P0 persistence gaps are moving.

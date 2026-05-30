@@ -1,0 +1,311 @@
+# DataHub Application
+
+DataHub is the proposed FairSpot application component for cross-service read models and query data. It is not a command-side service and must not own operational business state.
+
+The working name is **DataHub**. It may be renamed before implementation if a better product-neutral name is approved.
+
+## Purpose
+
+FairSpot change ownership stays with dedicated business services. In this document, an owning business service means the service that accepts changes and is the source of truth for one business area:
+
+- Booking owns booking requests, allocation, cancellation, usage, and no-show state.
+- Customer owns tenant workspace and readiness state.
+- Profile owns employee profile and vehicle facts.
+- Configuration owns policy, location, and capacity configuration.
+- Audit owns append-only business evidence.
+- Notification owns notification records and preferences.
+
+Those services publish domain events after authoritative state changes. DataHub subscribes to the event stream and maintains read-optimized projections for application queries, dashboards, reporting, exports, and cross-domain views.
+
+```text
+User action or API command -> owning business service -> service-owned state -> domain events
+Domain events -> DataHub projections -> read APIs / dashboards / reports
+```
+
+## Naming
+
+Candidate names:
+
+| Name | Fit | Concern |
+| --- | --- | --- |
+| DataHub | Broad, understandable, works for cross-service read models. | Can sound like a generic data lake if not scoped. |
+| Read Model Hub | Architecturally precise. | Too technical for product-facing docs. |
+| Insights Hub | Product-friendly for dashboards. | Too narrow if it also serves operational lookup/read APIs. |
+| Projection Service | Accurate implementation term. | Too internal and not user-facing. |
+| Query Service | CQRS-friendly. | Too generic and can be confused with every service's own query handlers. |
+
+Recommendation: use **DataHub** as the service/project name and **Read Model Store** as the database responsibility.
+
+## Responsibilities
+
+DataHub should:
+
+- consume domain events from service-owned event streams;
+- store tenant-scoped read models;
+- expose query APIs for cross-service read needs;
+- serve operational dashboards and report data;
+- support deterministic exports from approved read models;
+- provide projection health, lag, and rebuild status;
+- process events idempotently by source event ID;
+- preserve tenant isolation in every projection and query.
+
+DataHub should not:
+
+- accept commands that mutate Booking, Customer, Profile, Configuration, Audit, or Notification state;
+- become the source of truth for operational decisions;
+- publish corrective business events on behalf of owning services;
+- replace Audit as the evidence source;
+- expose raw events, secrets, hidden lottery internals, or unrelated employee-private data.
+
+## Relationship To Reporting
+
+Reporting is a business/report surface, not the durable CQRS store. Existing Reporting endpoints can stay as compatibility or presentation APIs while DataHub is introduced, but new PostgreSQL-backed projections should be implemented in DataHub.
+
+If Reporting keeps persistence at all, it should store only report catalog/configuration metadata:
+
+- stable report identifiers and display names;
+- allowed filter definitions;
+- export formats and column policies;
+- role-specific visibility rules;
+- report availability flags per tenant or deployment profile.
+
+It should not store booking outcome projections, operational metrics, event inbox rows, projection checkpoints, rebuild state, or cross-service query models. Those belong to DataHub.
+
+## Optional BI Tooling
+
+Apache Superset is a candidate free self-hosted BI tool for analytical dashboards over DataHub PostgreSQL views. Superset should be optional and admin/analyst-facing: FairSpot web and mobile screens still provide the core employee, HR, and administrator workflows.
+
+Superset should connect only to approved DataHub views or tables, never to private databases owned by Booking, Customer, Profile, Configuration, Audit, or Notification.
+
+## Storage Direction
+
+Use PostgreSQL for the DataHub Read Model Store.
+
+Rationale:
+
+- read models need filtering, grouping, ordering, aggregation, pagination, and exports;
+- PostgreSQL indexes and relational constraints fit operational dashboards better than a key-value state-store API;
+- read models can be rebuilt from events, so they are projections rather than command-side source of truth;
+- one store can serve multiple safe read surfaces while preserving service ownership for writes.
+
+Use Entity Framework Core with Npgsql for:
+
+- schema migrations;
+- typed projection tables;
+- ordinary report/dashboard queries;
+- tenant-scoped indexes;
+- integration tests with PostgreSQL-compatible infrastructure when feasible.
+
+Use raw SQL through EF/Npgsql only where EF would obscure intent:
+
+- idempotent event inbox insertion;
+- atomic upserts;
+- projection rebuild or backfill batches;
+- high-volume aggregation maintenance if needed.
+
+## Event Streaming Plan
+
+FairSpot should implement event streaming incrementally, using Dapr pub/sub first and keeping event contracts explicit. Kafka or another broker can be introduced later through the same Dapr pub/sub abstraction if customer deployment requires it.
+
+### Phase 1: Event Catalog
+
+Create a source-of-truth event catalog before building DataHub projections.
+
+For each event, document:
+
+- event name;
+- source service;
+- event version;
+- source event ID;
+- tenant ID;
+- aggregate or entity ID;
+- occurred timestamp;
+- publishing command or business trigger;
+- payload fields;
+- privacy classification;
+- consumers;
+- idempotency key;
+- retention expectation.
+
+Initial event families:
+
+- `booking.requestSubmitted`
+- `booking.requestRejected`
+- `booking.requestAllocated`
+- `booking.requestCancelled`
+- `booking.requestUsed`
+- `booking.requestNoShow`
+- `booking.requestExpired`
+- `booking.drawStarted`
+- `booking.drawCompleted`
+- `customer.tenantCreated`
+- `customer.tenantReadinessChanged`
+- `configuration.policyChanged`
+- `configuration.capacityChanged`
+- `profile.employeeChanged`
+- `notification.deliveryChanged`
+- `audit.recordCreated` for evidence references only, not raw audit payload replication.
+
+### Phase 2: Outbox Per Owning Service
+
+Each owning business service that publishes business events should use an outbox pattern.
+
+The outbox is a small service-owned pending-event store. When a business change is saved, the service also records the event it must publish. A background publisher or retry loop then sends unsent events to Dapr pub/sub and marks them as published.
+
+This prevents the classic failure where the service saves the business change but crashes before publishing the event. After restart, the pending outbox record is still present and can be published safely.
+
+Dapr remains the transport and state abstraction, not a substitute for the outbox decision. A Dapr pub/sub publish is separate from a service's state save unless the service explicitly stores a pending event and can retry it. The exact implementation depends on the Dapr state-store component used by that service.
+
+Minimum behavior:
+
+1. Persist the authoritative state change.
+2. Persist the event in a service-owned outbox or pending-publication record.
+3. Publish pending outbox events to Dapr pub/sub.
+4. Mark events as published after broker acknowledgement.
+5. Retry unpublished events idempotently.
+
+When the selected Dapr state-store component supports transactions or ETag concurrency, use those features to keep the aggregate update and pending event record consistent. When it does not, the service must still make publication recoverable:
+
+- use deterministic event IDs;
+- store pending publication state beside the aggregate or in a service-owned outbox key;
+- use ETags or compare-and-set where available to avoid lost updates;
+- make republishing safe;
+- let DataHub treat duplicate delivery as normal through inbox idempotency;
+- document the failure mode and recovery path.
+
+### Phase 3: DataHub Event Inbox
+
+DataHub consumes events through Dapr pub/sub and records every received event in an inbox table before applying projections.
+
+Minimum `event_inbox` fields:
+
+- `event_id` primary key;
+- `event_type`;
+- `event_version`;
+- `source_service`;
+- `tenant_id`;
+- `aggregate_id`;
+- `occurred_at`;
+- `received_at`;
+- `processed_at`;
+- `processing_status`;
+- `retry_count`;
+- `payload_hash`;
+- `error_summary`.
+
+Duplicate event delivery must not duplicate projection rows or counts. The inbox insert should be the idempotency gate.
+
+### Phase 4: Projection Handlers
+
+Projection handlers update PostgreSQL read models from inbox events.
+
+Rules:
+
+- one handler owns each projection table family;
+- handler updates are tenant-scoped;
+- handler code is deterministic;
+- handler failures leave the inbox row retryable;
+- poison events move to a failed state with operational visibility;
+- projection code never calls private write-service databases.
+
+Initial projections:
+
+| Projection | Source events | Read use |
+| --- | --- | --- |
+| Booking outcome projection | Booking request and lifecycle events | My Spots summaries, HR queues, demand widgets. |
+| Draw status projection | Draw lifecycle events plus Booking outcomes | Draw status, allocation explanation, HR operations. |
+| Operational metrics projection | Booking and Configuration events | Parking summary, utilization, reason-code reports. |
+| Tenant readiness projection | Customer, Identity, Configuration, Profile events | Administrator readiness workspace. |
+
+### Phase 5: Backfill And Rebuild
+
+DataHub projections must be rebuildable.
+
+Options in order of preference:
+
+1. Replay retained events from the broker/event archive.
+2. Use service-owned backfill endpoints that emit canonical events or snapshots.
+3. Use controlled one-time migration scripts for legacy data only.
+
+Backfill must record:
+
+- source;
+- time range;
+- tenant scope;
+- event/projection counts;
+- operator;
+- start/end time;
+- errors.
+
+### Phase 6: Observability
+
+Expose projection health:
+
+- latest processed event timestamp by event type;
+- lag from event occurrence to projection;
+- failed inbox count;
+- retry count;
+- projection rebuild status;
+- per-tenant projection freshness where useful.
+
+DataHub health must not expose raw event payloads, secrets, employee-private details, or hidden Draw internals.
+
+## Initial Projection Areas
+
+| Projection area | Source events | Example reads |
+| --- | --- | --- |
+| Booking outcomes | Booking | My Spots summaries, HR queue summaries, demand, allocation, rejection, cancellation, no-show counts. |
+| Draw status snapshots | Booking | Next/completed Draw status, request counts, capacity counts, allocation outcomes. |
+| Operational reporting | Booking, Configuration | Daily parking summary, utilization, reason-code reports, manager-safe exports. |
+| Tenant readiness summary | Customer, Identity, Configuration, Profile, Notification, Audit | Administrator readiness dashboard and setup gaps. |
+| Notification summary | Notification | User notification inbox counts and delivery status summaries where appropriate. |
+| Audit references | Audit | Links from dashboards to evidence IDs, not raw audit payload duplication. |
+
+## Migration From Reporting
+
+The current Reporting service is a legacy transitional component. It may continue serving existing report endpoints while DataHub is designed and implemented.
+
+Target direction:
+
+```text
+Existing Reporting API -> eventually served by DataHub read models
+New cross-service reads -> DataHub first
+Reporting projections -> deprecated once equivalent DataHub projections exist
+```
+
+Do not build new durable PostgreSQL persistence inside Reporting. New read-model persistence should be designed under DataHub unless Robert/Codex explicitly approves an exception.
+
+## Event Storming Needed
+
+Before implementation, run a lightweight event-storming pass for DataHub.
+
+Minimum output:
+
+1. Commands per owning business service.
+2. Domain events emitted by each service.
+3. Read models required by each role and screen.
+4. Event-to-projection mapping.
+5. Missing event fields.
+6. Privacy and tenant-isolation rules per read model.
+7. Projection rebuild/backfill strategy.
+8. Ownership boundary for every query.
+
+Start with the customer-first flows:
+
+- tenant setup/readiness;
+- employee request and allocation;
+- HR operations;
+- reporting/export summaries;
+- audit evidence links.
+
+Billing remains out of scope for the first DataHub event-storming pass.
+
+## Implementation Slices
+
+| Slice | Purpose |
+| --- | --- |
+| `DATAHUB001` DataHub Architecture And Event Catalog | Finalize naming, boundaries, event catalog, projection ownership, and first read models. |
+| `DATAHUB002` Project Skeleton And PostgreSQL Store | Create DataHub service/project, EF Core/Npgsql setup, migrations, health checks, and local Postgres profile. |
+| `DATAHUB003` Event Inbox And Projection Runtime | Consume Dapr pub/sub events idempotently and record processing status. |
+| `DATAHUB004` Booking Outcome Projections | Project Booking events into tenant-scoped operational read models. |
+| `DATAHUB005` Reporting Compatibility Reads | Serve existing operational report needs from DataHub projections, then deprecate equivalent Reporting internals. |

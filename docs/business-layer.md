@@ -31,12 +31,14 @@ FairSpot helps companies manage scarce parking capacity without turning HR into 
 - [SSO-First Customer Integration](./business-layer/customer-data-import)
 - [Business Strategy](./business-layer/strategy)
 - [Functional Architecture](./business-layer/functional-architecture)
+- [DataHub Application](./application-layer/datahub)
 
 ## Capability Areas
 
 - [Booking](./business-layer/booking)
 - [Profile](./business-layer/profile)
 - [Customer](./business-layer/customer)
+- [DataHub](./application-layer/datahub)
 - [Identity](./business-layer/identity)
 - [Configuration](./business-layer/configuration)
 - [Notification](./business-layer/notification)

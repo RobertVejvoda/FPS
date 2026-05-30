@@ -61,14 +61,14 @@ The map is broadly directionally correct, but several boxes are either not curre
 When the function map is updated, keep it as a target map but visually distinguish:
 
 1. Current baseline: Web App, Mobile App, Booking, Profile, Configuration, Identity, Notification, Audit, Reporting endpoints, Event Bus, API Gateway, Dapr, MongoDB-backed Dapr state stores, observability.
-2. Partial/current-boundary items: Customer Service durable storage, Reporting PostgreSQL read model, Configuration-to-Booking runtime exchange, Dapr Workflows, File/Object Storage, Secure Storage, Communication, Support/HR.
+2. Partial/current-boundary items: Customer Service durable storage, DataHub PostgreSQL read models, Configuration-to-Booking runtime exchange, Dapr Workflows, File/Object Storage, Secure Storage, Communication, Support/HR.
 3. Future/deprioritized: Billing, Payment Gateway, relational store as a generic reference, broad support desk.
 4. Candidate near-term testing support: Feedback.
 
 ## Implementation Follow-Ups
 
 - Define and implement the Customer durable storage slice needed for app/customer-readiness: Dapr-backed tenant registry, identity configuration/admins, parking bootstrap state, and local/demo/client `customerstore` components.
-- Define and implement the Reporting durable relational store slice: PostgreSQL-backed projections, event idempotency table, tenant-scoped report queries, and restart-persistence evidence.
+- Define and implement DataHub durable read-model slices: PostgreSQL-backed projections, event idempotency table, tenant-scoped report queries, and restart-persistence evidence. Keep Reporting limited to report catalog/configuration or compatibility APIs.
 - Prioritize making the app work end to end before Billing or payment work.
 - Prepare a small Feedback slice for customer testing if Robert approves:
   - authenticated web/mobile feedback submission;

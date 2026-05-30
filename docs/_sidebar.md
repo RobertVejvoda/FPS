@@ -19,6 +19,7 @@
   * [Mobile App](./business-layer/mobile-app)
   * [Web App](./business-layer/web-app)
   * [Audit](./business-layer/audit)
+  * [DataHub](./application-layer/datahub)
 * [Architecture Summary](./architecture-views)
   * [Business Architecture](./business-layer/functional-architecture)
   * [Software Architecture](./technology-layer/software-architecture)
