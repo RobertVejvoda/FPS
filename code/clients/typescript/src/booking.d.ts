@@ -769,6 +769,11 @@ export interface components {
              * @default 0
              */
             requestCount: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            availableSpotCount: number | string;
             /** @default true */
             canRequest: boolean;
             cannotRequestReason?: null | string;

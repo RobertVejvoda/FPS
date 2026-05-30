@@ -1,19 +1,31 @@
 using FPS.Booking.Application.Queries;
+using FPS.Booking.Application.Services;
+using FPS.Booking.Domain.ValueObjects;
 
 namespace FPS.Booking.Application.Tests.Queries;
 
 public sealed class GetDrawStatusHandlerTests
 {
     private readonly Mock<IDrawRepository> drawRepository = new();
+    private readonly Mock<IAvailableSlotService> slotService = new();
     private readonly GetDrawStatusHandler handler;
 
     private static readonly DateOnly DrawDate = new(2026, 6, 2);
     private static readonly DateTime SlotStart = new(2026, 6, 2, 9, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime SlotEnd = new(2026, 6, 2, 17, 0, 0, DateTimeKind.Utc);
 
+    private static readonly IReadOnlyList<AvailableSlot> DefaultSlots =
+        Enumerable.Range(0, 10).Select(_ => AvailableSlot.Create(ParkingSlotId.FromString($"S{_}"))).ToList();
+
     public GetDrawStatusHandlerTests()
     {
-        handler = new GetDrawStatusHandler(drawRepository.Object);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultSlots);
+
+        handler = new GetDrawStatusHandler(drawRepository.Object, slotService.Object);
     }
 
     [Fact]
@@ -225,7 +237,65 @@ public sealed class GetDrawStatusHandlerTests
         Assert.Equal("Unknown", result!.DemandLevel);
     }
 
-        private static GetDrawStatusQuery ValidQuery() => new(
+        [Fact]
+    public async Task Handle_NoDraw_AvailableSpotCountFromSlotService()
+    {
+        var slots = Enumerable.Range(0, 5).Select(i => AvailableSlot.Create(ParkingSlotId.FromString($"A{i}"))).ToList();
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(slots);
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal(5, result.AvailableSpotCount);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_AvailableSpotCountFromSlotService()
+    {
+        var slots = Enumerable.Range(0, 24).Select(i => AvailableSlot.Create(ParkingSlotId.FromString($"B{i}"))).ToList();
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(slots);
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 20, rejected: 4, waitlisted: 0));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal(24, result.AvailableSpotCount);
+    }
+
+    [Fact]
+    public async Task Handle_CallsSlotServiceWithQueryParameters()
+    {
+        string? capturedTenant = null;
+        string? capturedLocation = null;
+        DateOnly capturedDate = default;
+
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, DateOnly, TimeSlot, CancellationToken>(
+                (t, l, d, _, _) => { capturedTenant = t; capturedLocation = l; capturedDate = d; })
+            .ReturnsAsync(DefaultSlots);
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("tenant-1", capturedTenant);
+        Assert.Equal("loc-1", capturedLocation);
+        Assert.Equal(DrawDate, capturedDate);
+    }
+
+    private static GetDrawStatusQuery ValidQuery() => new(
         TenantId: "tenant-1",
         LocationId: "loc-1",
         Date: DrawDate,

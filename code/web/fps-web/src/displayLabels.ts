@@ -45,3 +45,17 @@ export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '
 export function shouldShowNextDraw(status?: string | null): boolean {
   return status === 'Pending' || status === 'Submitted';
 }
+
+const REJECTION_CODE_LABELS: Record<string, string> = {
+  PolicyCutoff: 'Booking deadline has passed for this date.',
+  IneligibleProfile: 'Your profile was not eligible for this allocation.',
+  MissingVehicleEligibility: 'Vehicle eligibility requirement was not met.',
+  NoMatchingCapacity: 'No available spaces matched this request.',
+  DrawNotSelected: 'Your request was not selected in this allocation draw.',
+};
+
+export function humanizeRejectionReason(reasonCode: string | null, reason: string | null): string {
+  if (reason) return reason;
+  if (reasonCode) return REJECTION_CODE_LABELS[reasonCode] ?? 'This request was not eligible for allocation.';
+  return 'This request was not eligible for allocation.';
+}

@@ -1,5 +1,6 @@
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
+using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.ValueObjects;
 using MediatR;
 
@@ -8,11 +9,14 @@ namespace FPS.Booking.Application.Queries;
 public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, DrawStatusResult>
 {
     private readonly IDrawRepository drawRepository;
+    private readonly IAvailableSlotService slotService;
 
-    public GetDrawStatusHandler(IDrawRepository drawRepository)
+    public GetDrawStatusHandler(IDrawRepository drawRepository, IAvailableSlotService slotService)
     {
         ArgumentNullException.ThrowIfNull(drawRepository);
+        ArgumentNullException.ThrowIfNull(slotService);
         this.drawRepository = drawRepository;
+        this.slotService = slotService;
     }
 
     public async Task<DrawStatusResult> Handle(GetDrawStatusQuery query, CancellationToken cancellationToken)
@@ -21,7 +25,11 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var drawKey = DrawKey.Create(query.TenantId, query.LocationId, query.Date, timeSlot);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var attempt = await drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
+        var attemptTask = drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
+        var slotsTask = slotService.GetAvailableSlotsAsync(query.TenantId, query.LocationId, query.Date, timeSlot, cancellationToken);
+        await Task.WhenAll(attemptTask, slotsTask);
+        var attempt = attemptTask.Result;
+        var availableSpotCount = slotsTask.Result.Count;
 
         var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
 
@@ -45,6 +53,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 StartedAt: null,
                 CompletedAt: null,
                 DemandLevel: DemandLevel.Unknown,
+                AvailableSpotCount: availableSpotCount,
                 CanRequest: canRequest,
                 CannotRequestReason: cannotRequestReason);
         }
@@ -78,6 +87,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             DemandLevel: attempt.Status == "Completed"
                 ? DemandLevel.FromOutcomes(attempt.Decisions.Count, attempt.AllocatedCount)
                 : DemandLevel.Unknown,
+            AvailableSpotCount: availableSpotCount,
             CanRequest: canRequest,
             CannotRequestReason: cannotRequestReason);
     }

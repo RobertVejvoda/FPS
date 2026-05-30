@@ -18,6 +18,7 @@ public record DrawStatusResult(
     DateTime? StartedAt,
     DateTime? CompletedAt,
     string DemandLevel,
+    int AvailableSpotCount = 0,
     bool CanRequest = true,
     string? CannotRequestReason = null);
 

@@ -48,6 +48,9 @@ export function BookingsPage() {
   const [drawLoading, setDrawLoading] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const drawLocationId = state.kind === 'ok'
+    ? state.items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID
+    : FALLBACK_LOCATION_ID;
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -64,15 +67,13 @@ export function BookingsPage() {
     let cancelled = false;
     setDrawLoading(true);
     setDrawStatus(null);
-    const items = stateRef.current.kind === 'ok' ? stateRef.current.items : [];
-    const locationId = items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID;
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: localDate(selectedChip), locationId, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: localDate(selectedChip), locationId: drawLocationId, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
       if (cancelled) return;
       setDrawLoading(false);
       setDrawStatus(result);
     });
     return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken, selectedChip]);
+  }, [apiBaseUrl, bearerToken, selectedChip, drawLocationId]);
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });
