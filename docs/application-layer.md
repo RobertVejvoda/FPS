@@ -2,6 +2,8 @@
 
 ![Application Architecture](./images/fps-application-arch-1.png)
 
+Validation note: [Application Architecture 1 Validation](./application-arch-1-validation.md)
+
 ## Application Components
 
 | App. Component | Description | Confidentiality | Integrity | Availability | Traceability |
