@@ -21,7 +21,8 @@ public sealed class DrawWorkflow : Workflow<DrawWorkflowInput, DrawWorkflowOutpu
             nameof(AcquireDrawAttemptActivity),
             new AcquireDrawAttemptInput(
                 resolved.DrawKey, input.TenantId, input.LocationId,
-                input.Date, resolved.Seed, input.TriggerSource, input.TriggeredBy));
+                input.Date, input.TimeSlotStart, input.TimeSlotEnd,
+                resolved.Seed, input.TriggerSource, input.TriggeredBy));
 
         try
         {

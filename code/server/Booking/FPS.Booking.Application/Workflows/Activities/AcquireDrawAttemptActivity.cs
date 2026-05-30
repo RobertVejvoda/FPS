@@ -11,6 +11,8 @@ public sealed record AcquireDrawAttemptInput(
     string TenantId,
     string LocationId,
     string Date,
+    string TimeSlotStart,
+    string TimeSlotEnd,
     long Seed,
     string TriggerSource,
     string TriggeredBy);
@@ -56,14 +58,16 @@ public sealed class AcquireDrawAttemptActivity(
         };
         await drawRepository.SaveAsync(attempt);
 
+        var slotStart = DateTime.Parse(input.TimeSlotStart, null, System.Globalization.DateTimeStyles.RoundtripKind);
+        var slotEnd = DateTime.Parse(input.TimeSlotEnd, null, System.Globalization.DateTimeStyles.RoundtripKind);
         var publisher = eventPublisher.WithContext(
             new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), "system", null));
-        _ = publisher.PublishAsync(new DrawAttemptStartedEvent(
+        await publisher.PublishAsync(new DrawAttemptStartedEvent(
             Domain.ValueObjects.DrawKey.Create(
                 input.TenantId,
                 input.LocationId,
                 DateOnly.Parse(input.Date),
-                Domain.ValueObjects.TimeSlot.Create(startedAt, startedAt)),
+                Domain.ValueObjects.TimeSlot.Create(slotStart, slotEnd)),
             input.Seed,
             startedAt));
 

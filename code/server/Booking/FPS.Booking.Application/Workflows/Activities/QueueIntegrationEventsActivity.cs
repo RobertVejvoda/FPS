@@ -48,7 +48,7 @@ public sealed class QueueIntegrationEventsActivity(
             switch (decision.Outcome)
             {
                 case "Allocated" when decision.SlotId is not null:
-                    _ = decisionPublisher.PublishAsync(new SlotAllocationCreatedEvent(
+                    await decisionPublisher.PublishAsync(new SlotAllocationCreatedEvent(
                         SlotAllocationId.New(),
                         BookingRequestId.FromGuid(dto.RequestId),
                         ParkingSlotId.FromString(decision.SlotId),
@@ -56,7 +56,7 @@ public sealed class QueueIntegrationEventsActivity(
                     break;
 
                 case "Rejected":
-                    _ = decisionPublisher.PublishAsync(new BookingRequestRejectedEvent(
+                    await decisionPublisher.PublishAsync(new BookingRequestRejectedEvent(
                         BookingRequestId.FromGuid(dto.RequestId),
                         BookingRejectionCode.DrawNotSelected,
                         decision.Reason ?? "Not selected in draw"));
@@ -66,15 +66,15 @@ public sealed class QueueIntegrationEventsActivity(
 
         var completedPublisher = eventPublisher.WithContext(
             new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), "system", null));
-        _ = completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(
+        await completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(
             drawKey, input.Seed,
             input.AllocatedCount, input.RejectedCount, input.WaitlistedCount,
             DateTime.UtcNow));
 
         await ActivityLifecycleHelper.AppendStepAsync(
             drawRepository, input.DrawKey,
-            "EventsQueued", "Attempted",
-            summary: "DrawAttemptCompleted and per-decision events dispatched fire-and-forget; delivery not guaranteed");
+            "EventsQueued", "Completed",
+            summary: $"DrawAttemptCompleted + {input.Decisions.Count} decision event(s) published");
 
         return true;
     }

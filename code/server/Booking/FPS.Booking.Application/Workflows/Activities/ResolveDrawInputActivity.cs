@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Dapr.Workflow;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.ValueObjects;
@@ -18,7 +20,9 @@ public sealed class ResolveDrawInputActivity(ITenantPolicyService policyService)
         var timeSlot = TimeSlot.Create(slotStart, slotEnd);
         var drawKey = DrawKey.Create(input.TenantId, input.LocationId, date, timeSlot);
         var storeKey = drawKey.ToStoreKey();
-        var seed = Math.Abs((long)storeKey.GetHashCode());
+        var keyBytes = Encoding.UTF8.GetBytes(storeKey);
+        var hash = SHA256.HashData(keyBytes);
+        var seed = Math.Abs(BitConverter.ToInt64(hash, 0));
 
         var policy = await policyService.GetEffectivePolicyAsync(input.TenantId, input.LocationId);
         return new ResolvedDrawInput(storeKey, seed, policy.AllocationLookbackDays);

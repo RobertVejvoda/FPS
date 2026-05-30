@@ -30,11 +30,13 @@ public sealed class TriggerDrawHandler(
 
         // Already running — return in-progress without starting a duplicate.
         if (existing?.Status == "InProgress")
-        {
             return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
-        }
 
-        // New or previously failed draw — start the workflow.
+        // Previously failed — explicit recovery path not yet implemented; surface Failed to caller.
+        if (existing?.Status == "Failed")
+            return new TriggerDrawResult(storeKey, "Failed", 0, 0, 0, WasAlreadyCompleted: false);
+
+        // No prior attempt — start the workflow.
         await workflowStarter.StartAsync(cmd, cancellationToken);
         return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
     }

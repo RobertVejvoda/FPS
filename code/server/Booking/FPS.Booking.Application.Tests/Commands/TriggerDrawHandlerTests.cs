@@ -77,19 +77,19 @@ public sealed class TriggerDrawHandlerTests
         workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // ── Failed draw: retried via workflow ─────────────────────────────────────
+    // ── Failed draw: surfaces Failed, does not attempt restart ───────────────
 
     [Fact]
-    public async Task Handle_ExistingFailedAttempt_RestartsWorkflowAndReturnsInProgress()
+    public async Task Handle_ExistingFailedAttempt_ReturnsFailedWithoutStartingWorkflow()
     {
         drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DrawAttemptDto { Status = "Failed" });
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        Assert.Equal("InProgress", result.Status);
+        Assert.Equal("Failed", result.Status);
         Assert.False(result.WasAlreadyCompleted);
-        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Draw key is included in the result ───────────────────────────────────
