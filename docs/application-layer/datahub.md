@@ -154,7 +154,9 @@ The outbox is a small service-owned pending-event store. When a business change 
 
 This prevents the classic failure where the service saves the business change but crashes before publishing the event. After restart, the pending outbox record is still present and can be published safely.
 
-Dapr remains the transport and state abstraction, not a substitute for the outbox decision. A Dapr pub/sub publish is separate from a service's state save unless the service explicitly stores a pending event and can retry it. The exact implementation depends on the Dapr state-store component used by that service.
+Dapr remains the runtime boundary for state and event transport. Prefer Dapr transactional outbox where the selected Dapr state store supports transactions and outbox behavior. In that model, the service saves state through Dapr state transactions and Dapr coordinates reliable pub/sub publication from the state-side outbox record.
+
+When the selected Dapr component does not support transactional outbox, the service must implement an explicit pending-event/outbox state record with deterministic event IDs and retry behavior. A direct Dapr pub/sub publish is not enough for business events that must survive process crashes.
 
 Minimum behavior:
 
@@ -164,7 +166,7 @@ Minimum behavior:
 4. Mark events as published after broker acknowledgement.
 5. Retry unpublished events idempotently.
 
-When the selected Dapr state-store component supports transactions or ETag concurrency, use those features to keep the aggregate update and pending event record consistent. When it does not, the service must still make publication recoverable:
+When the selected Dapr state-store component supports transactions, Dapr outbox, or ETag concurrency, use those features to keep the aggregate update and pending event record consistent. When it does not, the service must still make publication recoverable:
 
 - use deterministic event IDs;
 - store pending publication state beside the aggregate or in a service-owned outbox key;

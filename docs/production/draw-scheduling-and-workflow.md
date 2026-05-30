@@ -28,6 +28,7 @@ Acceptable fallback: keep direct application-handler computation only if the imp
 - single execution per Draw key across multiple Booking instances;
 - persisted lifecycle/progress state;
 - idempotent retry behavior;
+- durable integration-event publication through Dapr transactional outbox where supported, or an approved service-owned pending-event outbox;
 - safe failure state and explicit recovery path;
 - same HR/admin manual trigger behavior as the scheduled trigger.
 
@@ -89,7 +90,7 @@ Exact workflow actions:
 | 6 | `LoadMetricsActivity` | Load allocation lookback and penalty metrics for requestors. | Read-only. Writes `MetricsLoaded` with requestor count. |
 | 7 | `RunAllocationActivity` | Run the pure domain Draw algorithm with deterministic seed and inputs. | Pure/replay-safe. Writes `AllocationCompleted` with allocated/rejected/waitlisted counts and algorithm version. |
 | 8 | `PersistDecisionsActivity` | Persist request status changes, slot allocation records, rejection reasons, metric changes, and Draw decision records. | Must be idempotent by Draw key and request ID. Writes `DecisionsPersisted`. |
-| 9 | `QueueIntegrationEventsActivity` | Store/publish Draw and booking outcome events using the service outbox/event publisher. | Events use deterministic source event IDs where possible. Duplicate publish is safe for consumers. Writes `EventsQueued`. |
+| 9 | `QueueIntegrationEventsActivity` | Store/publish Draw and booking outcome events using Dapr transactional outbox where the state store supports it, or a service-owned pending-event outbox fallback. | Events use deterministic source event IDs. Duplicate publish is safe for consumers. Fire-and-forget publish is not acceptable for completed workflow evidence. Writes `EventsQueued`. |
 | 10 | `CompleteDrawAttemptActivity` | Mark Draw attempt completed and persist final lifecycle summary. | Idempotent finalization. Writes `Completed`. |
 | 11 | `FailDrawAttemptActivity` | Mark Draw attempt failed when an unrecoverable activity error occurs. | Writes `Failed` with safe error summary. Does not expose stack traces to employee views. |
 
@@ -107,7 +108,7 @@ High-level flow:
 10. Publish Booking events through the service outbox/event publisher.
 11. Mark the workflow complete or failed with safe error detail.
 
-Workflow activity retries should be conservative. Pure read activities can retry automatically. Activities that mutate state must be idempotent and should use deterministic ids, ETags, or explicit "already applied" checks before retry is enabled.
+Workflow activity retries should be conservative. Pure read activities can retry automatically. Activities that mutate state must be idempotent and should use deterministic ids, ETags, Dapr state transactions/outbox, or explicit "already applied" checks before retry is enabled.
 
 Manual trigger behavior:
 

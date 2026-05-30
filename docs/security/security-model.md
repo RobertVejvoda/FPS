@@ -93,10 +93,23 @@ Data at rest:
 | API gateway routing | HTTP(S) behind a selected ingress/API gateway. | TLS at the edge; internal service endpoints remain protected and tenant-aware. The concrete gateway is selected by the deployment profile. |
 | Service invocation | Dapr service invocation or HTTPS. | Dapr mTLS/Sentry for service identity; propagate user context only when the downstream service needs user-scoped authorization. |
 | Pub/sub | Dapr pub/sub over the selected broker/provider protocol. | TLS and authenticated broker access in production; event contracts exclude Secret data. |
-| State persistence | Dapr state store and service-owned persistence adapters. | Authenticated store connections, TLS in production, encryption at rest, and tenant-safe storage boundaries. |
+| State persistence | Dapr state store and service-owned persistence adapters. | Authenticated store connections, TLS in production, encryption at rest, Dapr state encryption where supported, and tenant-safe storage boundaries. |
 | Cache | Selected cache/session store. | Authenticated access, TLS in production when network boundary requires it, no Secret data unless explicitly approved and expiring. |
 | Object storage | Selected object-storage API. | TLS, bucket/path authorization, encryption at rest, and tenant-scoped object naming. |
 | Secret retrieval | Selected secret-management and CI secret mechanisms. | Authenticated, auditable access; secrets injected at runtime, not committed to source. |
+
+## Dapr Runtime Security Baseline
+
+Production profiles should use Dapr security capabilities wherever they fit the deployment profile:
+
+- Dapr mTLS/Sentry for internal service identity and encrypted sidecar traffic.
+- Dapr secret stores with secret-store references in component YAML.
+- Dapr secret scopes and component scopes so each service can access only required runtime dependencies.
+- Dapr resiliency policies for state, pub/sub, service invocation, and workflow dependency behavior.
+- Dapr state encryption where the selected state-store component supports it, in addition to infrastructure encryption at rest.
+- Dapr API token and app API token hardening for sidecar/app endpoints where the runtime exposes them.
+
+Dapr hardening complements application security. Services must still enforce tenant context, role authorization, safe event payloads, privacy filtering, and audit requirements in code.
 
 ## Secret Access Tracking
 
