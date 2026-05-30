@@ -6,5 +6,6 @@ public record DrawStatusResponse(
     DateTime? CompletedAt,
     string DemandLevel,
     int RequestCount = 0,
+    int AvailableSpotCount = 0,
     bool CanRequest = true,
     string? CannotRequestReason = null);

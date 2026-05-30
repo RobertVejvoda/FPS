@@ -85,7 +85,7 @@ export function HrOperationsPage() {
     let cancelled = false;
     setDrawLoading(true);
     setDrawStatus(null);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, selectedDate).then((result) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: selectedDate, locationId: 'Prague', timeSlotStart: '08:00:00', timeSlotEnd: '18:00:00' }).then((result) => {
       if (cancelled) return;
       setDrawLoading(false);
       setDrawStatus(result);

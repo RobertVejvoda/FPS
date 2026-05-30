@@ -17,7 +17,7 @@ export type BookingsResult =
   | { kind: 'error'; status: number; message: string };
 
 export type DrawStatusResult =
-  | { kind: 'ok'; status: string; demandLevel: string; requestCount: number; canRequest: boolean; cannotRequestReason: string | null }
+  | { kind: 'ok'; status: string; demandLevel: string; requestCount: number; availableSpotCount: number; completedAt: string | null; canRequest: boolean; cannotRequestReason: string | null }
   | { kind: 'unauthenticated' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
@@ -137,27 +137,24 @@ export async function confirmUsage(
   }
 }
 
-// Demo bridge — a /facilities API that returns the employee's home location does not yet exist.
-const DRAW_STATUS_LOCATION = 'Prague';
-
 export async function fetchDrawStatus(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
-  date: string,
+  opts: { date: string; locationId: string; timeSlotStart: string; timeSlotEnd: string },
 ): Promise<DrawStatusResult> {
   if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
   try {
     const params = new URLSearchParams({
-      locationId: DRAW_STATUS_LOCATION,
-      timeSlotStart: `${date}T08:00:00`,
-      timeSlotEnd: `${date}T18:00:00`,
+      locationId: opts.locationId,
+      timeSlotStart: `${opts.date}T${opts.timeSlotStart}`,
+      timeSlotEnd: `${opts.date}T${opts.timeSlotEnd}`,
     });
-    const res = await fetch(`${apiBaseUrl}/draws/${date}/status?${params}`, {
+    const res = await fetch(`${apiBaseUrl}/draws/${opts.date}/status?${params}`, {
       headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
     });
     if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /draws/status returned ${res.status}` };
-    const data = (await res.json()) as { status: string; demandLevel: string; requestCount: number | string; canRequest: boolean; cannotRequestReason: string | null };
-    return { kind: 'ok', status: data.status, demandLevel: data.demandLevel, requestCount: Number(data.requestCount), canRequest: data.canRequest, cannotRequestReason: data.cannotRequestReason ?? null };
+    const data = (await res.json()) as { status: string; demandLevel: string; requestCount: number | string; availableSpotCount: number | string; completedAt: string | null; canRequest: boolean; cannotRequestReason: string | null };
+    return { kind: 'ok', status: data.status, demandLevel: data.demandLevel, requestCount: Number(data.requestCount), availableSpotCount: Number(data.availableSpotCount ?? 0), completedAt: data.completedAt ?? null, canRequest: data.canRequest, cannotRequestReason: data.cannotRequestReason ?? null };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
