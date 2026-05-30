@@ -764,6 +764,15 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
             demandLevel: string;
+            cutOffAt: null | string;
+            nextDrawAt: null | string;
+            timeZone: string;
+            requestWindowStatus: string;
+            scheduleStatus: string;
+            scheduleSource: string;
+            /** Format: date-time */
+            lastCalculatedAt: string;
+            safeMessage: string;
             /**
              * Format: int32
              * @default 0

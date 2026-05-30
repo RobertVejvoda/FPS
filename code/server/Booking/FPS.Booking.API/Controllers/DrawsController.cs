@@ -111,13 +111,21 @@ public sealed class DrawsController : ControllerBase
             cancellationToken);
 
         return Ok(new DrawStatusResponse(
-            result.Status,
-            result.StartedAt,
-            result.CompletedAt,
-            result.DemandLevel,
-            result.RequestCount,
-            result.AvailableSpotCount,
-            result.CanRequest,
-            result.CannotRequestReason));
+            Status: result.Status,
+            StartedAt: result.StartedAt,
+            CompletedAt: result.CompletedAt,
+            DemandLevel: result.DemandLevel,
+            CutOffAt: result.CutOffAt,
+            NextDrawAt: result.NextDrawAt,
+            TimeZone: result.TimeZone,
+            RequestWindowStatus: result.RequestWindowStatus,
+            ScheduleStatus: result.ScheduleStatus,
+            ScheduleSource: result.ScheduleSource,
+            LastCalculatedAt: result.LastCalculatedAt,
+            SafeMessage: result.SafeMessage,
+            RequestCount: result.RequestCount,
+            AvailableSpotCount: result.AvailableSpotCount,
+            CanRequest: result.CanRequest,
+            CannotRequestReason: result.CannotRequestReason));
     }
 }

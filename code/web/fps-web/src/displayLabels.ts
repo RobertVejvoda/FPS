@@ -46,6 +46,20 @@ export function shouldShowNextDraw(status?: string | null): boolean {
   return status === 'Pending' || status === 'Submitted';
 }
 
+export function formatCutOffAt(cutOffAt: string | null, timeZone: string): string {
+  if (!cutOffAt) return '—';
+  try {
+    return new Date(cutOffAt).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+      timeZoneName: 'short',
+    });
+  } catch {
+    return cutOffAt;
+  }
+}
+
 const REJECTION_CODE_LABELS: Record<string, string> = {
   PolicyCutoff: 'Booking deadline has passed for this date.',
   IneligibleProfile: 'Your profile was not eligible for this allocation.',

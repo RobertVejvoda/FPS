@@ -8,6 +8,7 @@ public sealed class GetDrawStatusHandlerTests
 {
     private readonly Mock<IDrawRepository> drawRepository = new();
     private readonly Mock<IAvailableSlotService> slotService = new();
+    private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly GetDrawStatusHandler handler;
 
     private static readonly DateOnly DrawDate = new(2026, 6, 2);
@@ -17,6 +18,12 @@ public sealed class GetDrawStatusHandlerTests
     private static readonly IReadOnlyList<AvailableSlot> DefaultSlots =
         Enumerable.Range(0, 10).Select(_ => AvailableSlot.Create(ParkingSlotId.FromString($"S{_}"))).ToList();
 
+    private static readonly TenantPolicy DefaultPolicy = new(
+        DailyRequestCap: 100,
+        DrawCutOffTime: new TimeOnly(18, 0),
+        TimeZoneId: "UTC",
+        SameDayBookingEnabled: false);
+
     public GetDrawStatusHandlerTests()
     {
         slotService
@@ -25,7 +32,12 @@ public sealed class GetDrawStatusHandlerTests
                 It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultSlots);
 
-        handler = new GetDrawStatusHandler(drawRepository.Object, slotService.Object);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(
+                It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultPolicy);
+
+        handler = new GetDrawStatusHandler(drawRepository.Object, slotService.Object, policyService.Object);
     }
 
     [Fact]
@@ -293,6 +305,92 @@ public sealed class GetDrawStatusHandlerTests
         Assert.Equal("tenant-1", capturedTenant);
         Assert.Equal("loc-1", capturedLocation);
         Assert.Equal(DrawDate, capturedDate);
+    }
+
+    // ── Schedule metadata (DRAW005) ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_KnownPolicy_ReturnsCutOffAtAndTimeZone()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(DailyRequestCap: 50, DrawCutOffTime: new TimeOnly(18, 0), TimeZoneId: "UTC", SameDayBookingEnabled: false));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("known", result.ScheduleStatus);
+        Assert.Equal("UTC", result.TimeZone);
+        Assert.NotNull(result.CutOffAt);
+        Assert.Contains("18:00", result.CutOffAt);
+        Assert.Equal("tenantPolicy", result.ScheduleSource);
+    }
+
+    [Fact]
+    public async Task Handle_KnownPolicy_CutOffAtIsOnDayBeforeParkingDate()
+    {
+        // Parking date is DrawDate (2026-06-02); cut-off must fall on 2026-06-01
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(DailyRequestCap: 50, DrawCutOffTime: new TimeOnly(18, 0), TimeZoneId: "UTC", SameDayBookingEnabled: false));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.NotNull(result.CutOffAt);
+        var cutOff = DateTimeOffset.Parse(result.CutOffAt);
+        var expectedDay = DrawDate.AddDays(-1);
+        Assert.Equal(expectedDay.Year, cutOff.Year);
+        Assert.Equal(expectedDay.Month, cutOff.Month);
+        Assert.Equal(expectedDay.Day, cutOff.Day);
+        Assert.Equal(18, cutOff.Hour);
+    }
+
+    [Fact]
+    public async Task Handle_KnownPolicy_NextDrawAtEqualsCutOffAt()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(DailyRequestCap: 50, DrawCutOffTime: new TimeOnly(18, 0), TimeZoneId: "UTC", SameDayBookingEnabled: false));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.NotNull(result.NextDrawAt);
+        Assert.Equal(result.CutOffAt, result.NextDrawAt);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_RequestWindowStatusIsClosed()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 3, rejected: 2, waitlisted: 0));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("closed", result.RequestWindowStatus);
+        Assert.Contains("complete", result.SafeMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Handle_NoDraw_RequestWindowOpen_SafeMessageDescribesCutOff()
+    {
+        // DrawDate is in the past relative to test execution; CanRequest=false but window message shows cut-off
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TenantPolicy(DailyRequestCap: 50, DrawCutOffTime: new TimeOnly(18, 0), TimeZoneId: "Europe/Prague", SameDayBookingEnabled: false));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("known", result.ScheduleStatus);
+        Assert.Equal("Europe/Prague", result.TimeZone);
+        Assert.NotNull(result.SafeMessage);
+        Assert.NotEmpty(result.SafeMessage);
     }
 
     private static GetDrawStatusQuery ValidQuery() => new(

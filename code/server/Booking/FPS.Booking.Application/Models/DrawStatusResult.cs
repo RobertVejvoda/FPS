@@ -18,9 +18,40 @@ public record DrawStatusResult(
     DateTime? StartedAt,
     DateTime? CompletedAt,
     string DemandLevel,
+    // Schedule metadata (DRAW005)
+    string? CutOffAt,
+    string? NextDrawAt,
+    string TimeZone,
+    string RequestWindowStatus,
+    string ScheduleStatus,
+    string ScheduleSource,
+    DateTime LastCalculatedAt,
+    string SafeMessage,
     int AvailableSpotCount = 0,
     bool CanRequest = true,
     string? CannotRequestReason = null);
+
+public static class RequestWindowStatus
+{
+    public const string Open = "open";
+    public const string Closed = "closed";
+    public const string Unknown = "unknown";
+}
+
+public static class ScheduleStatus
+{
+    public const string Known = "known";
+    public const string NotConfigured = "notConfigured";
+    public const string Disabled = "disabled";
+    public const string Unknown = "unknown";
+}
+
+public static class ScheduleSource
+{
+    public const string TenantPolicy = "tenantPolicy";
+    public const string LocationOverride = "locationOverride";
+    public const string ManualOnly = "manualOnly";
+}
 
 public static class DemandLevel
 {

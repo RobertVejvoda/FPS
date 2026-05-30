@@ -17,7 +17,25 @@ export type BookingsResult =
   | { kind: 'error'; status: number; message: string };
 
 export type DrawStatusResult =
-  | { kind: 'ok'; status: string; demandLevel: string; requestCount: number; availableSpotCount: number; completedAt: string | null; canRequest: boolean; cannotRequestReason: string | null }
+  | {
+      kind: 'ok';
+      status: string;
+      demandLevel: string;
+      requestCount: number;
+      availableSpotCount: number;
+      completedAt: string | null;
+      canRequest: boolean;
+      cannotRequestReason: string | null;
+      // DRAW005 schedule metadata
+      cutOffAt: string | null;
+      nextDrawAt: string | null;
+      timeZone: string;
+      requestWindowStatus: string;
+      scheduleStatus: string;
+      scheduleSource: string;
+      lastCalculatedAt: string;
+      safeMessage: string;
+    }
   | { kind: 'unauthenticated' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
@@ -154,8 +172,31 @@ export async function fetchDrawStatus(
     });
     if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /draws/status returned ${res.status}` };
-    const data = (await res.json()) as { status: string; demandLevel: string; requestCount: number | string; availableSpotCount: number | string; completedAt: string | null; canRequest: boolean; cannotRequestReason: string | null };
-    return { kind: 'ok', status: data.status, demandLevel: data.demandLevel, requestCount: Number(data.requestCount), availableSpotCount: Number(data.availableSpotCount ?? 0), completedAt: data.completedAt ?? null, canRequest: data.canRequest, cannotRequestReason: data.cannotRequestReason ?? null };
+    const data = (await res.json()) as {
+      status: string; demandLevel: string; requestCount: number | string; availableSpotCount: number | string;
+      completedAt: string | null; canRequest: boolean; cannotRequestReason: string | null;
+      cutOffAt: string | null; nextDrawAt: string | null; timeZone: string;
+      requestWindowStatus: string; scheduleStatus: string; scheduleSource: string;
+      lastCalculatedAt: string; safeMessage: string;
+    };
+    return {
+      kind: 'ok',
+      status: data.status,
+      demandLevel: data.demandLevel,
+      requestCount: Number(data.requestCount),
+      availableSpotCount: Number(data.availableSpotCount ?? 0),
+      completedAt: data.completedAt ?? null,
+      canRequest: data.canRequest,
+      cannotRequestReason: data.cannotRequestReason ?? null,
+      cutOffAt: data.cutOffAt ?? null,
+      nextDrawAt: data.nextDrawAt ?? null,
+      timeZone: data.timeZone ?? 'UTC',
+      requestWindowStatus: data.requestWindowStatus ?? 'unknown',
+      scheduleStatus: data.scheduleStatus ?? 'unknown',
+      scheduleSource: data.scheduleSource ?? 'tenantPolicy',
+      lastCalculatedAt: data.lastCalculatedAt ?? '',
+      safeMessage: data.safeMessage ?? '',
+    };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }

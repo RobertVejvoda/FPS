@@ -10,13 +10,19 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
 {
     private readonly IDrawRepository drawRepository;
     private readonly IAvailableSlotService slotService;
+    private readonly ITenantPolicyService policyService;
 
-    public GetDrawStatusHandler(IDrawRepository drawRepository, IAvailableSlotService slotService)
+    public GetDrawStatusHandler(
+        IDrawRepository drawRepository,
+        IAvailableSlotService slotService,
+        ITenantPolicyService policyService)
     {
         ArgumentNullException.ThrowIfNull(drawRepository);
         ArgumentNullException.ThrowIfNull(slotService);
+        ArgumentNullException.ThrowIfNull(policyService);
         this.drawRepository = drawRepository;
         this.slotService = slotService;
+        this.policyService = policyService;
     }
 
     public async Task<DrawStatusResult> Handle(GetDrawStatusQuery query, CancellationToken cancellationToken)
@@ -27,11 +33,14 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var attemptTask = drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
         var slotsTask = slotService.GetAvailableSlotsAsync(query.TenantId, query.LocationId, query.Date, timeSlot, cancellationToken);
-        await Task.WhenAll(attemptTask, slotsTask);
+        var policyTask = policyService.GetEffectivePolicyAsync(query.TenantId, query.LocationId, cancellationToken);
+        await Task.WhenAll(attemptTask, slotsTask, policyTask);
         var attempt = attemptTask.Result;
         var availableSpotCount = slotsTask.Result.Count;
+        var policy = policyTask.Result;
 
         var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
+        var schedule = BuildScheduleMetadata(policy, query.Date, attempt?.Status, today);
 
         if (attempt is null)
         {
@@ -53,6 +62,14 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 StartedAt: null,
                 CompletedAt: null,
                 DemandLevel: DemandLevel.Unknown,
+                CutOffAt: schedule.CutOffAt,
+                NextDrawAt: schedule.NextDrawAt,
+                TimeZone: schedule.TimeZone,
+                RequestWindowStatus: schedule.RequestWindowStatus,
+                ScheduleStatus: schedule.ScheduleStatus,
+                ScheduleSource: schedule.ScheduleSource,
+                LastCalculatedAt: schedule.LastCalculatedAt,
+                SafeMessage: schedule.SafeMessage,
                 AvailableSpotCount: availableSpotCount,
                 CanRequest: canRequest,
                 CannotRequestReason: cannotRequestReason);
@@ -87,6 +104,14 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             DemandLevel: attempt.Status == "Completed"
                 ? DemandLevel.FromOutcomes(attempt.Decisions.Count, attempt.AllocatedCount)
                 : DemandLevel.Unknown,
+            CutOffAt: schedule.CutOffAt,
+            NextDrawAt: schedule.NextDrawAt,
+            TimeZone: schedule.TimeZone,
+            RequestWindowStatus: schedule.RequestWindowStatus,
+            ScheduleStatus: schedule.ScheduleStatus,
+            ScheduleSource: schedule.ScheduleSource,
+            LastCalculatedAt: schedule.LastCalculatedAt,
+            SafeMessage: schedule.SafeMessage,
             AvailableSpotCount: availableSpotCount,
             CanRequest: canRequest,
             CannotRequestReason: cannotRequestReason);
@@ -104,8 +129,74 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         return (true, null);
     }
 
-    // Company-car overflow rejections have a specific reason message set by the DrawService.
+    private static ScheduleMeta BuildScheduleMetadata(
+        TenantPolicy? policy,
+        DateOnly date,
+        string? drawStatus,
+        DateOnly today)
+    {
+        var calculatedAt = DateTime.UtcNow;
+
+        if (policy is null)
+        {
+            return new ScheduleMeta(
+                CutOffAt: null,
+                NextDrawAt: null,
+                TimeZone: "UTC",
+                RequestWindowStatus: Models.RequestWindowStatus.Unknown,
+                ScheduleStatus: Models.ScheduleStatus.NotConfigured,
+                ScheduleSource: Models.ScheduleSource.TenantPolicy,
+                LastCalculatedAt: calculatedAt,
+                SafeMessage: "Allocation schedule is not yet configured for this location.");
+        }
+
+        TimeZoneInfo tz;
+        try { tz = TimeZoneInfo.FindSystemTimeZoneById(policy.TimeZoneId); }
+        catch { tz = TimeZoneInfo.Utc; }
+
+        var cutOffDay = date.AddDays(-1);
+        var localCutOff = cutOffDay.ToDateTime(policy.DrawCutOffTime);
+        var offset = tz.GetUtcOffset(localCutOff);
+        var cutOffDto = new DateTimeOffset(localCutOff, offset);
+        var cutOffAt = cutOffDto.ToString("O");
+
+        var now = DateTimeOffset.UtcNow;
+        var windowClosed = date < today
+            || drawStatus is "Completed" or "InProgress" or "Failed"
+            || now >= cutOffDto;
+
+        var windowStatus = windowClosed
+            ? Models.RequestWindowStatus.Closed
+            : Models.RequestWindowStatus.Open;
+
+        var safeMessage = drawStatus is "Completed"
+            ? "Spot allocation is complete. Check your result in My Spots."
+            : windowClosed
+                ? "The request window is closed for this date."
+                : $"Requests are open until {policy.DrawCutOffTime:HH:mm} ({policy.TimeZoneId}).";
+
+        return new ScheduleMeta(
+            CutOffAt: cutOffAt,
+            NextDrawAt: cutOffAt,
+            TimeZone: policy.TimeZoneId,
+            RequestWindowStatus: windowStatus,
+            ScheduleStatus: Models.ScheduleStatus.Known,
+            ScheduleSource: Models.ScheduleSource.TenantPolicy,
+            LastCalculatedAt: calculatedAt,
+            SafeMessage: safeMessage);
+    }
+
     private static bool IsCompanyCarRequest(DrawDecisionDto d)
         => d.Reason?.Contains("company-car", StringComparison.OrdinalIgnoreCase) == true
         || d.Reason?.Contains("Company-car", StringComparison.OrdinalIgnoreCase) == true;
+
+    private sealed record ScheduleMeta(
+        string? CutOffAt,
+        string? NextDrawAt,
+        string TimeZone,
+        string RequestWindowStatus,
+        string ScheduleStatus,
+        string ScheduleSource,
+        DateTime LastCalculatedAt,
+        string SafeMessage);
 }
