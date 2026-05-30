@@ -146,6 +146,76 @@ Initial event families:
 - `notification.deliveryChanged`
 - `audit.recordCreated` for evidence references only, not raw audit payload replication.
 
+### Event Envelope
+
+Every DataHub-consumed event should use a stable envelope. Payload shape is event-specific, but envelope fields are common.
+
+| Field | Requirement |
+| --- | --- |
+| `eventId` | Globally unique source event ID. Prefer deterministic IDs for retryable state changes, for example `{sourceService}:{aggregateId}:{version}:{eventName}` or a persisted outbox ID. |
+| `eventType` | Stable event name from the catalog, such as `booking.requestSubmitted`. |
+| `eventVersion` | Integer version. Start at `1`; never change meaning in place. |
+| `sourceService` | Owning service that emitted the event. |
+| `tenantId` | Required for tenant-scoped projections. System events without tenant scope are out of scope for first DataHub slices. |
+| `aggregateId` | Owning aggregate/entity ID, such as booking request ID, tenant ID, policy ID, profile ID, notification ID, or audit record ID. |
+| `occurredAt` | Timestamp from the source service when the business fact happened. |
+| `publishedAt` | Timestamp when the event left the source outbox/publisher, when available. |
+| `correlationId` | Request/workflow correlation ID where available. |
+| `actorRef` | Optional pseudonymised actor reference or system actor. Never raw name or email. |
+| `payload` | Event-specific fields listed in the catalog. Payloads must be minimal and projection-oriented. |
+
+DataHub inbox idempotency key is `eventId`. If a legacy producer cannot provide a stable `eventId`, DataHub may derive a temporary key from `sourceService`, `eventType`, `eventVersion`, `tenantId`, `aggregateId`, and `occurredAt`, but that is transitional and must be visible in projection health.
+
+### Initial Event Catalog
+
+Privacy classifications:
+
+- **Internal**: operational data without direct employee/customer personal data.
+- **Confidential**: tenant, employee, booking, audit, notification, or operational data requiring tenant-scoped authorization.
+- **Restricted evidence**: evidence references that may point to sensitive audit records. DataHub stores references, not raw evidence payloads.
+
+All catalog rows use the common envelope above. Source event ID is `eventId`, tenant ID is `tenantId`, occurred timestamp is `occurredAt`, and the DataHub inbox idempotency key is `eventId` unless a future event version explicitly documents a different key.
+
+| Event | Source | Version | Aggregate/entity ID | Trigger | Payload fields | Privacy | Consumers | Retention |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `customer.tenantCreated` | Customer | 1 | `tenantId` | Tenant workspace created or imported. | `tenantId`, `displayName`, `status`, `createdAt`, `region`, `readinessState`. | Confidential | Tenant readiness projection, admin dashboard, report availability. | Retain while tenant exists; tombstone/anonymise according to tenant offboarding policy. |
+| `customer.tenantReadinessChanged` | Customer | 1 | `tenantId` | Tenant onboarding/readiness check changes. | `tenantId`, `previousState`, `newState`, `changedChecks`, `blockingChecks`, `changedAt`. | Confidential | Tenant readiness projection, production readiness dashboard. | Retain current projection plus event history required for setup evidence. |
+| `configuration.policyChanged` | Configuration | 1 | `policyId` or `tenantId:locationId` | Parking policy created/updated. | `tenantId`, `locationId`, `policyId`, `effectiveFrom`, `drawCutOffTime`, `timeZone`, `requestCap`, `sameDayEnabled`, `changedFields`. | Confidential | Tenant readiness, operational reporting, Draw schedule/readiness views. | Retain latest policy projection; keep event history needed for audit/evidence. |
+| `configuration.capacityChanged` | Configuration | 1 | `locationId` or `capacityVersionId` | Location/slot/capacity configuration changes. | `tenantId`, `locationId`, `capacityVersionId`, `effectiveFrom`, `slotCount`, `capabilityCounts`, `reservedCounts`, `changedFields`. | Confidential | Operational metrics, utilization, Draw status/readiness. | Retain latest capacity projection and historic summary needed for reports. |
+| `profile.employeeChanged` | Profile | 1 | `profileId` or `employeeRef` | Employee profile/vehicle/eligibility facts changed. | `tenantId`, `employeeRef`, `profileStatus`, `roleRefs`, `vehicleCount`, `hasDefaultVehicle`, `eligibilityFlags`, `changedFields`. | Confidential | Tenant readiness, HR support views, operational aggregates. | Retain current projection; avoid keeping raw profile history unless required by a report. |
+| `booking.requestSubmitted` | Booking | 1 | `requestId` | Employee submits a future Draw or same-day booking request. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `vehicleClass`, `capabilityFlags`, `requestSource`, `submittedAt`. | Confidential | Booking outcome, HR queue, demand, operational reporting. | Retain while request lifecycle is reportable; aggregate older data where possible. |
+| `booking.requestRejected` | Booking | 1 | `requestId` | Request rejected by validation, same-day allocation, Draw, expiry, or manual correction. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `status`, `reasonCode`, `safeReasonGroup`, `source`, `decidedAt`. | Confidential | Booking outcome, HR queue, reason-code reports, employee-safe summaries. | Retain lifecycle projection and aggregated reason-code metrics. |
+| `booking.requestAllocated` | Booking | 1 | `requestId` | Request receives a parking allocation. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `allocationId`, `slotCapabilityGroup`, `allocationSource`, `drawAttemptId`, `allocatedAt`. | Confidential | Booking outcome, HR queue, utilization, fairness and allocation summaries. | Retain lifecycle projection and aggregated utilization/fairness metrics. |
+| `booking.requestCancelled` | Booking | 1 | `requestId` | Employee or HR cancels a pending/allocated request. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `previousStatus`, `cancelledByRole`, `reasonCode`, `cancelledAt`, `reallocationTriggered`. | Confidential | Booking outcome, HR queue, cancellation reports, notification summary. | Retain lifecycle projection and cancellation aggregates. |
+| `booking.requestUsed` | Booking | 1 | `requestId` | Employee confirms usage or usage is observed. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `allocationId`, `confirmedAt`, `confirmationSource`. | Confidential | Usage/utilization reports, employee history, HR operations. | Retain lifecycle projection and aggregated usage metrics. |
+| `booking.requestNoShow` | Booking | 1 | `requestId` | Scheduled/manual no-show evaluation marks request no-show. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `allocationId`, `penaltyApplied`, `reasonCode`, `evaluatedAt`. | Confidential | No-show reports, fairness context, HR support views. | Retain lifecycle projection and aggregated no-show metrics. |
+| `booking.requestExpired` | Booking | 1 | `requestId` | Pending waitlist request is no longer actionable. | `tenantId`, `requestId`, `requestorRef`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `previousStatus`, `expiredAt`, `reasonCode`. | Confidential | Booking outcome, HR queue, pending/waitlist reports. | Retain lifecycle projection and expiry aggregates. |
+| `booking.drawStarted` | Booking | 1 | `drawAttemptId` | Manual/scheduled Draw workflow starts for a Draw key. | `tenantId`, `drawAttemptId`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `triggerSource`, `startedAt`, `algorithmVersion`, `seedRef`. | Confidential | Draw status projection, HR operations, audit evidence links. | Retain Draw attempt projection and summary history. Do not expose raw seed except to authorized audit roles. |
+| `booking.drawCompleted` | Booking | 1 | `drawAttemptId` | Draw workflow completes or fails. | `tenantId`, `drawAttemptId`, `locationId`, `requestedDate`, `timeSlotStart`, `timeSlotEnd`, `status`, `allocatedCount`, `rejectedCount`, `waitlistedCount`, `completedAt`, `safeFailureReason`. | Confidential | Draw status, operational reporting, HR explanations, readiness evidence. | Retain Draw attempt projection and aggregated Draw metrics. |
+| `notification.deliveryChanged` | Notification | 1 | `notificationId` | Notification created, sent, failed, read, or suppressed. | `tenantId`, `notificationId`, `recipientRef`, `channel`, `templateKey`, `deliveryStatus`, `changedAt`, `failureGroup`. | Confidential | Notification summary, tenant readiness, support diagnostics. | Retain summary/status projection; avoid copying message body. |
+| `audit.recordCreated` | Audit | 1 | `auditRecordId` | Append-only audit evidence record created. | `tenantId`, `auditRecordId`, `entityType`, `entityId`, `action`, `actorHash`, `occurredAt`, `evidenceClass`, `traceId`. | Restricted evidence | Audit reference projection, dashboards linking to evidence. | Retain reference while audit record is retained. DataHub must not duplicate raw audit payload. |
+
+Event IDs must remain stable across retries. Dapr pub/sub delivery is at-least-once; DataHub must treat duplicates as normal.
+
+### First Projection And Query Ownership
+
+| Projection | Owner | Source events | Query/read uses | Boundaries |
+| --- | --- | --- | --- | --- |
+| `tenant_readiness_summary` | DataHub | `customer.tenantCreated`, `customer.tenantReadinessChanged`, `configuration.policyChanged`, `configuration.capacityChanged`, `profile.employeeChanged`, `notification.deliveryChanged`, `audit.recordCreated` references. | Tenant administrator readiness workspace, hosted smoke readiness, go-live checklist. | Does not mutate Customer/Configuration/Profile. Stores readiness facts and evidence references only. |
+| `booking_outcome_summary` | DataHub | `booking.requestSubmitted`, `booking.requestRejected`, `booking.requestAllocated`, `booking.requestCancelled`, `booking.requestUsed`, `booking.requestNoShow`, `booking.requestExpired`. | My Spots summaries, HR queue counts, operational demand and lifecycle summaries. | Does not replace Booking `GET /bookings` authoritative own-booking queries until explicitly migrated. No raw lottery internals. |
+| `draw_status_snapshot` | DataHub | `booking.drawStarted`, `booking.drawCompleted`, Booking request lifecycle events. | HR Draw status, allocation explanation summaries, next/completed Draw dashboards. | Does not trigger or retry Draw. Seed visibility remains audit-role controlled. |
+| `parking_operational_metrics` | DataHub | Booking lifecycle events plus Configuration capacity/policy events. | Reporting dashboards and exports: demand, utilization, allocation, rejection, cancellation, no-show, expiry. | Reporting may query approved DataHub views but must not own projection storage. |
+| `notification_delivery_summary` | DataHub | `notification.deliveryChanged`. | Tenant readiness, support diagnostics, delivery health summaries. | Stores status/counts only, not notification message bodies. |
+| `audit_reference_index` | DataHub | `audit.recordCreated`. | Links from HR/admin/report views to authorized audit evidence. | DataHub stores references and safe metadata only; Audit remains source of truth for evidence and PII mapping. |
+
+Query ownership rules:
+
+- employee self-service reads stay in owning services unless a DataHub-backed read API is explicitly approved and privacy-shaped;
+- HR/admin dashboards may use DataHub projections for cross-service summaries;
+- Reporting may expose report definitions and exports over approved DataHub views;
+- Audit evidence reads remain served by Audit; DataHub only stores evidence references;
+- DataHub never writes corrective events back to owning services.
+
 ### Phase 2: Outbox Per Owning Service
 
 Each owning business service that publishes business events should use an outbox pattern.
