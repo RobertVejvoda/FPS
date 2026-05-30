@@ -1,0 +1,11 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: customerstore
+spec:
+  type: state.in-memory
+  version: v1
+scopes:
+- fps-customer
+# Smoke-test only. State is not persisted across restarts.
+# Smoke-test only. State is not persisted across restarts.

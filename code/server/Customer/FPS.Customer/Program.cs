@@ -12,9 +12,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
-builder.Services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
-builder.Services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
+builder.Services.AddDaprClient();
+builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>();
+builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
+builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
@@ -90,6 +91,11 @@ app.UseFpsRequestTraceLogging();
 app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 
+using (var scope = app.Services.CreateScope())
+{
+    await HydrateIdentityStoresAsync(scope.ServiceProvider);
+}
+
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -97,6 +103,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+static async Task HydrateIdentityStoresAsync(IServiceProvider services)
+{
+    var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
+    var configStore = services.GetRequiredService<InMemoryTenantIdentityConfigStore>();
+    var roleMappingStore = services.GetRequiredService<InMemoryTenantRoleMappingStore>();
+
+    var tenantIds = await identityRepository.GetConfiguredTenantIdsAsync(CancellationToken.None);
+    foreach (var tenantId in tenantIds)
+    {
+        var config = await identityRepository.GetConfigAsync(tenantId, CancellationToken.None);
+        if (config is null) continue;
+        configStore.Register(config.TenantId);
+        roleMappingStore.SetMapping(config.TenantId, config.RoleMapping);
+        configStore.SetClaimConfig(config.TenantId, new TenantClaimConfig(
+            config.TenantClaimName, config.SubjectClaimName, config.RoleClaimNames));
+    }
+}
 
 static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
 {

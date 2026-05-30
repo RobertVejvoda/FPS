@@ -311,6 +311,49 @@ public sealed class TenantIdentityServiceTests
         Assert.Equal(["hr_manager"], t2Roles);
     }
 
+    // ── Restart hydration ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetConfiguredTenantIdsAsync_ReturnsAllSavedTenantIds()
+    {
+        var t1 = await CreateTenant("corp-x");
+        var t2 = await CreateTenant("corp-y");
+        await service.ConfigureAsync(MakeConfig(t1), CancellationToken.None);
+        await service.ConfigureAsync(MakeConfig(t2), CancellationToken.None);
+
+        var ids = await identityRepo.GetConfiguredTenantIdsAsync(CancellationToken.None);
+
+        Assert.Contains(t1, ids);
+        Assert.Contains(t2, ids);
+    }
+
+    [Fact]
+    public async Task HydrationScenario_NewStores_PopulatedFromPersistedConfigs()
+    {
+        var tenantId = await CreateTenant("corp-hydrate");
+        var mapping = new Dictionary<string, string> { ["idp-admin"] = "admin" };
+        await service.ConfigureAsync(MakeConfig(tenantId, roleMapping: mapping), CancellationToken.None);
+
+        // Simulate restart: fresh stores, same repository
+        var freshConfigStore = new InMemoryTenantIdentityConfigStore();
+        var freshRoleStore = new InMemoryTenantRoleMappingStore(freshConfigStore);
+
+        var ids = await identityRepo.GetConfiguredTenantIdsAsync(CancellationToken.None);
+        foreach (var id in ids)
+        {
+            var config = await identityRepo.GetConfigAsync(id, CancellationToken.None);
+            if (config is null) continue;
+            freshConfigStore.Register(config.TenantId);
+            freshRoleStore.SetMapping(config.TenantId, config.RoleMapping);
+            freshConfigStore.SetClaimConfig(config.TenantId, new TenantClaimConfig(
+                config.TenantClaimName, config.SubjectClaimName, config.RoleClaimNames));
+        }
+
+        Assert.True(freshConfigStore.IsConfigured(tenantId));
+        Assert.True(freshConfigStore.IsEnforcementActive);
+        Assert.Equal(["admin"], freshRoleStore.MapToRoles(tenantId, ["idp-admin"]));
+    }
+
     // ── Blank subject guard ──────────────────────────────────────────────────
 
     [Fact]

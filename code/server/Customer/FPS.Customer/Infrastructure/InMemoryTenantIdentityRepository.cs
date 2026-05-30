@@ -32,4 +32,7 @@ public sealed class InMemoryTenantIdentityRepository : ITenantIdentityRepository
         lock (list) { list.Add(admin); }
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<string>> GetConfiguredTenantIdsAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<string>>(configs.Keys.ToList());
 }

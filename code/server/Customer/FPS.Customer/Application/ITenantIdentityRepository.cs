@@ -8,4 +8,5 @@ public interface ITenantIdentityRepository
     Task SaveConfigAsync(TenantIdentityConfig config, CancellationToken ct);
     Task<IReadOnlyList<TenantAdminRecord>> GetAdminsAsync(string tenantId, CancellationToken ct);
     Task SaveAdminAsync(TenantAdminRecord admin, CancellationToken ct);
+    Task<IReadOnlyList<string>> GetConfiguredTenantIdsAsync(CancellationToken ct);
 }
