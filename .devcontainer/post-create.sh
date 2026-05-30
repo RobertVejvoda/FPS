@@ -18,6 +18,12 @@ echo "npm: $(npm --version)"
 echo "Restoring .NET solution..."
 dotnet restore code/server/FPS.sln
 
+echo "Installing web dependencies..."
+npm ci --prefix code/web/fps-web
+
+echo "Installing mobile dependencies..."
+npm ci --prefix code/mobile/fps-mobile
+
 cat <<'EOF'
 
 Devcontainer ready.

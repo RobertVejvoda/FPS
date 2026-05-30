@@ -9,7 +9,7 @@
       "version": "10.0"
     },
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
+      "version": "22"
     },
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
@@ -29,13 +29,14 @@
   "forwardPorts": [
     5200,
     10000,
-    5192,
     5131,
-    5197,
-    5157,
     5141,
+    5157,
     5161,
     5171,
+    5181,
+    5192,
+    5197,
     8180,
     8200,
     15672,
@@ -43,31 +44,31 @@
     3000,
     19411,
     3601,
+    3602,
     3607,
-    3617,
     3611,
+    3617,
     3621,
-    3631
+    3631,
+    3641
   ],
   "portsAttributes": {
-    "5200": {
-      "label": "FPS Web"
-    },
-    "10000": {
-      "label": "FPS API Gateway"
-    },
-    "8180": {
-      "label": "Keycloak"
-    },
-    "8200": {
-      "label": "Vault"
-    },
-    "15672": {
-      "label": "RabbitMQ"
-    },
-    "19411": {
-      "label": "Zipkin"
-    }
+    "5200": { "label": "FPS Web" },
+    "10000": { "label": "FPS API Gateway" },
+    "5131": { "label": "Booking" },
+    "5141": { "label": "Configuration" },
+    "5157": { "label": "Notification" },
+    "5161": { "label": "Audit" },
+    "5171": { "label": "Reporting" },
+    "5181": { "label": "Customer" },
+    "5192": { "label": "Identity" },
+    "5197": { "label": "Profile" },
+    "8180": { "label": "Keycloak" },
+    "8200": { "label": "Vault" },
+    "15672": { "label": "RabbitMQ" },
+    "9001": { "label": "MinIO console" },
+    "3000": { "label": "Grafana" },
+    "19411": { "label": "Zipkin" }
   },
   "customizations": {
     "vscode": {
