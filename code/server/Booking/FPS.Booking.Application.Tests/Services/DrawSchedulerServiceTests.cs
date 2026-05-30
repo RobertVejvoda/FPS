@@ -79,6 +79,8 @@ public sealed class DrawSchedulerServiceTests
         Assert.Equal(TargetDate, captured.Date);
         Assert.Equal(9, captured.TimeSlotStart.Hour);
         Assert.Equal(17, captured.TimeSlotEnd.Hour);
+        Assert.Equal("scheduled", captured.TriggerSource);
+        Assert.Equal("dapr-cron", captured.TriggeredBy);
     }
 
     [Fact]

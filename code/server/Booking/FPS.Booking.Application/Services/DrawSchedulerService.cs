@@ -40,7 +40,9 @@ public sealed class DrawSchedulerService(
                     Date: targetDate,
                     TimeSlotStart: slotStart,
                     TimeSlotEnd: slotEnd,
-                    Reason: $"Scheduled draw for {targetDate:yyyy-MM-dd}"),
+                    Reason: $"Scheduled draw for {targetDate:yyyy-MM-dd}",
+                    TriggerSource: "scheduled",
+                    TriggeredBy: "dapr-cron"),
                     cancellationToken);
 
                 var status = result.WasAlreadyCompleted ? "AlreadyCompleted" : result.Status;
