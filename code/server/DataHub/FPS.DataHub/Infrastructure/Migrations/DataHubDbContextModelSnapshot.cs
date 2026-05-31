@@ -30,10 +30,18 @@ namespace FPS.DataHub.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("AggregateId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("EventName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("EventVersion")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone");
@@ -42,19 +50,39 @@ namespace FPS.DataHub.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("PayloadHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("ProcessingError")
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ProcessingStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("ReceivedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SourceEventId")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SourceService")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("TenantId")
                         .IsRequired()
@@ -69,6 +97,9 @@ namespace FPS.DataHub.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "ProcessedAt")
                         .HasDatabaseName("ix_event_inbox_tenant_processed");
+
+                    b.HasIndex("ProcessingStatus", "RetryCount")
+                        .HasDatabaseName("ix_event_inbox_status_retry");
 
                     b.ToTable("datahub_event_inbox");
                 });

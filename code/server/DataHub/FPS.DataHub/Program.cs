@@ -1,3 +1,4 @@
+using FPS.DataHub.Application;
 using FPS.DataHub.Identity;
 using FPS.DataHub.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
@@ -19,6 +20,7 @@ builder.Services.AddDbContext<DataHubDbContext>(options =>
         npgsql => npgsql.MigrationsAssembly(typeof(DataHubDbContext).Assembly.FullName)));
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<EventInboxService>();
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
@@ -57,7 +59,8 @@ builder.Services.AddOpenApi("v1", options =>
 });
 
 builder.Services.AddFpsHealthChecks()
-    .AddDbContextCheck<DataHubDbContext>("datahub-db");
+    .AddDbContextCheck<DataHubDbContext>("datahub-db")
+    .AddCheck<EventInboxHealthCheck>("datahub-event-inbox");
 
 builder.Services.AddFpsObservability("fps-datahub", builder.Configuration);
 builder.Services.AddFpsMetrics();
