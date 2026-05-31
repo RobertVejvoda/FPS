@@ -109,6 +109,7 @@ This inventory is the control point for the consolidation. It groups legacy page
 | 7 | Navigation cleanup and legacy retirement | Simplify `_sidebar.md`, remove old layer sections from public navigation, validate links, then delete only pages marked `Retire After Migration` with no active references. |
 | 8 | Diagram refresh control | Make the target diagram set explicit, classify source-evidence diagrams, record refresh dispositions, and prepare Robert TODO placeholders for capability/value stream, application cooperation, DataHub, deployment, workflow, trust boundary, privacy/audit, and transition roadmap. Asset replacement remains a follow-up once Robert updates or approves the model. |
 | 9 | Public reader path cleanup | Point Home and the Client Evaluation Pack at the new architecture repository by default. Keep legacy layer pages as source evidence until their detailed contracts, diagrams, or implementation traceability are explicitly superseded. |
+| 10 | Solution assessment refresh | Replace the placeholder assessment page with a product-facing customer-readiness assessment tied to architecture gaps, transition states, hosted evidence, and diagram/control follow-ups. |
 
 ## Completion Checks
 
