@@ -24,6 +24,15 @@ The FairSpot target architecture is a customer-ready, parking-first fair allocat
 | Technology | Dapr-first runtime supports workflows, pub/sub, state, secrets, resiliency, and observability where appropriate. | Local and hosted profiles can be started, smoke-tested, observed, and recovered with documented runbooks. |
 | Security | Authentication, tenant isolation, authorization, privacy, auditability, WAF, and secret handling are explicit. | Hosted pilot passes security checklist and exposes no admin/internal surfaces publicly. |
 
+## Target Architecture Sections
+
+- [Business Architecture](/architecture/business/)
+- [Information Systems Architecture](/architecture/information-systems/)
+- [Technology Architecture](/architecture/technology/)
+- [Security Architecture](/architecture/security/)
+- [Governance](/architecture/governance/)
+- [Views and Diagrams](/architecture/views/)
+
 ## Target Assumptions
 
 - Billing remains deferred.
