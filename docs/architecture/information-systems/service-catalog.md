@@ -6,7 +6,7 @@
 | Identity | User context and authentication/authorization boundary. | Local identity fallback where used; otherwise external IdP owns identities. | `/me`, claim mapping, OIDC integration. | High | Partial |
 | Profile | Employee profile, vehicle, default vehicle, and eligibility facts. | Profile snapshots, vehicles, eligibility facts. | Employee/HR APIs, profile events. | High | Partial |
 | Configuration | Tenant parking policy, location, time slot, capacity/resource map, closures, capabilities, publication validation, and Draw schedule. | Policies, locations, slots/resources, capacity/resource-map versions, publication history. | Admin APIs, facilities APIs, policy/capacity/resource-map events. | High | Partial |
-| Customer | Tenant onboarding, tenant lifecycle, readiness, support contacts, identity setup metadata. | Tenant lifecycle and setup/readiness state. | Tenant/admin APIs, readiness events. | High | Placeholder |
+| Customer | Tenant onboarding, tenant lifecycle, readiness, support contacts, identity setup metadata. | Tenant lifecycle and setup/readiness state. | Tenant/admin APIs, readiness events. | High | Partial |
 | Notification | Notification records, preferences, templates, delivery state. | Notification records, preferences, delivery history. | APIs, SSE/events, delivery events. | Medium/High | Partial |
 | Audit | Business evidence and sensitive access traceability. | Audit records, evidence references, PII mapping, retention/integrity state. | Auditor/admin APIs, audit reference events. | High | Partial |
 | DataHub | Cross-service read models, projection health, advisory impact-preview inputs, and sponsor-safe aggregate views. | Event inbox, projections, checkpoints, read stores. | Query APIs, dashboard/report views, export data, projection health. | Medium/High | Placeholder |
@@ -25,7 +25,7 @@
 
 ## Visible Service Gaps
 
-- Customer needs physical tenant persistence.
+- Customer primary stores are Dapr-backed (DATA010); remaining gap is Notification, Audit, Reporting, Profile, and Configuration persistence.
 - DataHub needs event inbox, read-model store, projection health, and first query APIs.
 - Configuration needs customer-ready resource-map publication APIs/events and validation evidence.
 - DataHub needs HR support summary, policy-impact preview, resource-map publication summary, and sponsor management summary projections.
