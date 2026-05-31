@@ -35,7 +35,7 @@ FairSpot is still a product under active development. The current focus is demo 
 | Review the architecture | [Architecture Summary](./docs/architecture-views.md) and [Software Architecture](./docs/technology-layer/software-architecture.md) |
 | Review security, privacy, and audit | [Security Review Pack](./docs/security/security-review-pack.md), [Security Model](./docs/security/security-model.md), and [Logging and Monitoring](./docs/security/logging-monitoring.md) |
 | Run the local demo | [Local Test Harness](./docs/production/local-test-harness.md) and [Demo Seed Data](./docs/demo-seed-data.md) |
-| Work on implementation | [GitHub Wiki](https://github.com/RobertVejvoda/fairspot/wiki), [AGENTS.md](./AGENTS.md), and [Development Plan](./docs/development-plan.md) |
+| Work on implementation | [AGENTS.md](./AGENTS.md), [Development Plan](./docs/development-plan.md), and [Delivery Board](./docs/delivery-board.md) |
 
 ## Run The Local Demo
 
@@ -83,7 +83,7 @@ Stop or reset:
 
 - **GitHub README**: short project front door for first-time visitors.
 - **Documentation site**: product, architecture, security, roadmap, demo, and client-evaluation material.
-- **GitHub Wiki**: maintainer/operator workspace for implementation workflow, agent handoffs, troubleshooting, and runbooks.
+- **GitHub issues and project board**: maintainer/operator workflow for implementation slices, agent handoffs, troubleshooting, and runbooks.
 
 ## License
 
