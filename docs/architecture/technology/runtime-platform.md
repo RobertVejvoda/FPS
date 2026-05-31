@@ -37,7 +37,7 @@ The table below records what is in place and what remains a gap for the NAS host
 
 | Capability | NAS / Local profile status | Evidence | Gap / Next step |
 | --- | --- | --- | --- |
-| Component scopes | **Done** — every component carries a `scopes:` list so only named app IDs can access it. | `local/bookingstore.yaml`, `local/fps-pubsub.yaml` (scopes: fps-booking, fps-notification, fps-audit, fps-reporting), all other local/demo/client components. | None. |
+| Component scopes | **Partial** — local/demo/client state, pub/sub, binding, and scheduler components carry `scopes:` lists for intended app IDs. Secret-store components and the smoke-test in-memory pub/sub remain unscoped. | `local/bookingstore.yaml`, `local/fps-pubsub.yaml` (scopes: fps-booking, fps-notification, fps-audit, fps-reporting), demo/client state and pub/sub components. | Decide whether secret-store component scoping is required for the hosted/NAS profile; keep smoke-test profile explicitly non-production. |
 | Secret references | **Done** — all credential-sensitive metadata fields use `secretKeyRef`; no inline passwords or tokens in demo or client profiles. Local dev vault uses a dev-only token, documented as non-production. | `local/vault.yaml` (dev-only token comment), `demo/vault-demo.yaml` (env-injected token), `client/bookingstore.yaml`, `client/fps-pubsub.yaml`. | Replace local dev vault token with injected secret before customer traffic. |
 | mTLS / Sentry | **Gap** — `code/infrastructure/dapr/configuration/fps-config.yaml` has `mtls.enabled: false`. Comments document that demo and client profiles should enable mTLS when Dapr sidecar injection is managed by the platform. | `code/infrastructure/dapr/configuration/fps-config.yaml` | Enable mTLS in the NAS profile once the deployment moves to a Dapr-managed runtime boundary (platform-hosted Sentry or self-hosted Sentry). Accepted limitation for local NAS pilot. |
 | Resiliency policies | **Gap** — no Dapr `Resiliency` YAML files exist in any profile. Retry, timeout, and circuit-breaker behavior is not yet declared. | None. | Add a `resiliency.yaml` per profile covering state store, pub/sub, and service invocation targets before customer-facing load. |
@@ -47,6 +47,7 @@ The table below records what is in place and what remains a gap for the NAS host
 
 ## Visible Runtime Gaps
 
+- Secret-store component scoping is not yet proven for the hosted/NAS profile; smoke-test components remain non-production evidence only.
 - mTLS/Sentry is disabled in the current NAS/local profile; accepted limitation until a managed runtime boundary is in place.
 - Resiliency policies (retry, timeout, circuit-breaker) are not defined; add before customer-facing load.
 - Dapr state encryption is not configured; infrastructure encryption at rest is the current accepted fallback.
