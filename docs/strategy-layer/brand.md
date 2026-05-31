@@ -1,6 +1,6 @@
 # Brand
 
-FairSpot uses a calm allocation identity to support the product story: fair access to limited workplace resources without making the interface feel playful or consumer-only.
+FairSpot uses a calm green identity to support the product story: fair access to limited workplace resources without making the interface feel playful or consumer-only.
 
 ## Logo Direction
 
@@ -19,12 +19,12 @@ Use the wordmark lockup when the product name should be explicit:
 | Token | Value | Use |
 | --- | --- | --- |
 | Charcoal | `#17212B` | Wordmark and high-contrast text |
-| Green | `#2F7D3F` | Primary allocation path |
-| Teal | `#2F80A7` | Secondary allocation path |
-| Amber | `#D9A441` | Tertiary allocation path |
+| Green | `#2F7D3F` | Primary lower allocation path |
+| Middle green | `#48B95E` | Middle allocation path, between lower and upper greens |
+| Fresh green | `#51C567` | Upper allocation path |
 | Warm surface | `#F7F4EE` | App icon background and calm brand surfaces |
 
-Product UI should continue to reserve warning, danger, and success colors for state communication. Brand colors are intentionally restrained so they do not compete with operational status indicators.
+Product UI should continue to reserve warning, danger, and success colors for state communication. The brand greens are intentionally restrained so they do not compete with operational status indicators.
 
 ## Asset Files
 
