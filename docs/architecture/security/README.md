@@ -3,7 +3,7 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Architecture State** | Target |
 | **ADM Phase** | Cross-cutting |
 | **Responsible** | Codex/Product Owner |
@@ -32,6 +32,9 @@ Core security and privacy direction has been restated from the legacy security m
 | AR-003 / AR-014 | Public ingress must be WAF-protected and must not expose internal/admin/debug/runtime/observability surfaces. | [Security Architecture](/architecture/security/security-architecture), [Controls](/architecture/security/controls), [Gap Register](/architecture/security/gap-register) | Hosted WAF smoke and origin exposure evidence. |
 | AR-004 / AR-008 | Employee and HR views expose only role-appropriate safe explanations and require audit for privileged cancellation/support actions. | [Privacy Architecture](/architecture/security/privacy-architecture), [Controls](/architecture/security/controls) | HR cancellation audit/notification validation. |
 | AR-009 / AR-013 | Dapr and DataHub must use least-privilege components, secret scopes, tenant-scoped projections, minimal payloads, and approved export paths. | [Controls](/architecture/security/controls), [Data Architecture](/architecture/information-systems/data-architecture) | Dapr hardening and DataHub privacy-shape proof. |
+| AR-017 / AR-020 | Resource-map publication and impact preview must preserve tenant scope, audit publication actions, and avoid exposing employee-level or hidden allocation detail. | [Security Architecture](/architecture/security/security-architecture), [Privacy Architecture](/architecture/security/privacy-architecture), [Controls](/architecture/security/controls) | Role-specific UI/API and projection privacy evidence. |
+| AR-019 | Sponsor summaries must be aggregate by default and must not expose employee-level detail unless a separate authorized HR/audit purpose exists. | [Privacy Architecture](/architecture/security/privacy-architecture), [Controls](/architecture/security/controls) | Sponsor-safe projection/export validation. |
+| AR-021 / AR-022 | Backup/restore, Dapr components, sidecars, state encryption, resiliency, secret references, and component scopes require hosted-profile evidence before customer traffic. | [Controls](/architecture/security/controls), [Gap Register](/architecture/security/gap-register), [Runtime Platform](/architecture/technology/runtime-platform) | Restore drill and Dapr hardening proof. |
 
 ## Legacy Evidence Disposition
 

@@ -9,7 +9,10 @@
 | Audit records | Compliance, dispute, privileged-action, and sensitive-access evidence. | Pseudonymised actors; PII mapping is restricted. | Mapping can be deleted/anonymised while audit evidence remains. | Partial |
 | Notifications | User communication and delivery evidence. | Store only needed message/status data; DataHub stores status summaries only. | Retention and deletion jobs required before production. | Placeholder |
 | DataHub read models | Management insight, HR/admin dashboards, report/export data. | Aggregate or role-safe detail depending on report; no raw audit payloads or unrelated employee-private data. | Projection retention and rebuild rules must preserve classification and tenant scope. | Placeholder |
+| Resource-map and policy preview data | Facilities/admin capacity publication and advisory impact preview. | Show capacity, closures, capability counts, and shortage/utilization signals without employee-level allocation internals by default. | Publication history and preview inputs need retention policy and audit references. | Placeholder |
+| Sponsor management summaries | Executive/customer sponsor business-value review. | Aggregate by tenant/location/time period by default; no employee-level detail unless separate HR/audit authorization applies. | Exports need approved columns, formula-injection protection, retention, and access audit. | Placeholder |
 | Technical telemetry | Incident diagnosis and operational support. | No secrets, tokens, raw user IDs, names, emails, license plates, or full request payloads. | Retention and access model are operator/client responsibilities. | Partial |
+| Backups and restore artifacts | Recovery of authoritative state, derived projections, identity configuration, object storage, and evidence. | Backup access is exceptional; restore validation uses minimum necessary data and redacted evidence. | Backup expiry and restore-time re-erasure must be defined before production. | Placeholder |
 
 ## Source Evidence
 
@@ -25,10 +28,14 @@
 - Pseudonymise audit actors where possible so immutable evidence can remain useful after PII mappings are removed.
 - Rights-request workflows must call service-owned APIs/activities; they should not edit another service's database directly.
 - Backups cannot usually be rewritten safely; retention policy must define backup expiry and restore-time re-erasure controls.
+- Aggregate sponsor views must not become a workaround for employee-level reporting.
+- Resource-map and policy-impact previews must not expose hidden Draw internals or other employees' outcomes.
 
 ## Visible Privacy Gaps
 
 - Booking and notification retention jobs remain production-blocking.
 - DataHub projection privacy shape must be finalized before customer-facing reports/exports are trusted.
+- Sponsor summaries, resource-map publication projections, and policy-impact previews need approved role-safe output shapes.
 - Profile/Booking erasure behavior needs durable-store smoke evidence.
+- Backup restore drills need re-erasure and PII-mapping handling evidence.
 - Customer privacy notices, controller/processor roles, subprocessors, DPA, DPIA, and legal review remain customer/legal responsibilities.
