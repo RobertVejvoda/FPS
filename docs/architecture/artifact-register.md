@@ -34,7 +34,7 @@ Major architecture pages should use this header when they become governed artifa
 | Security Architecture | [Security Architecture](/architecture/security/) | Cross-cutting | Target | Draft | 0.4 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
 | Architecture Principles | [Architecture Principles](/architecture/principles) | Preliminary | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | On architecture principle change |
 | Governance | [Governance](/architecture/governance/) | Preliminary + G/H | Cross-cutting | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | On governance change |
-| Views and Diagrams | [Views and Diagrams](/architecture/views/) | Cross-ADM | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | On diagram/model change |
+| Views and Diagrams | [Views and Diagrams](/architecture/views/) | Cross-ADM | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | On diagram/model change |
 | Architecture States | [Architecture States](/architecture/architecture-states/) | Cross-ADM | Baseline / Target / Gap Analysis | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | On milestone change |
 
 ## Layer Completeness
