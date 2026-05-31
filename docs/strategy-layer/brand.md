@@ -1,10 +1,10 @@
 # Brand
 
-FairSpot uses a calm green identity to support the product story: fair access to limited workplace resources without making the interface feel playful or consumer-only.
+FairSpot uses a calm allocation identity to support the product story: fair access to limited workplace resources without making the interface feel playful or consumer-only.
 
 ## Logo Direction
 
-The selected mark is an abstract `F` formed from layered allocation paths. It should read as a product mark first, not as a literal parking sign or car icon. This keeps FairSpot usable beyond parking if later resource modules such as desks, lockers, chargers, or seats are added.
+The selected mark is an abstract `F` formed from layered allocation paths. All paths originate from the same lower starting point and then separate into distinct allocation routes. It should read as a product mark first, not as a literal parking sign or car icon. This keeps FairSpot usable beyond parking if later resource modules such as desks, lockers, chargers, or seats are added.
 
 Use the light app icon as the default product mark:
 
@@ -19,11 +19,12 @@ Use the wordmark lockup when the product name should be explicit:
 | Token | Value | Use |
 | --- | --- | --- |
 | Charcoal | `#17212B` | Wordmark and high-contrast text |
-| Green | `#2F7D3F` | Primary brand color |
-| Fresh green | `#43B75A` | Accent and active state support |
+| Green | `#2F7D3F` | Primary allocation path |
+| Teal | `#2F80A7` | Secondary allocation path |
+| Amber | `#D9A441` | Tertiary allocation path |
 | Warm surface | `#F7F4EE` | App icon background and calm brand surfaces |
 
-Product UI should continue to reserve warning, danger, and success colors for state communication. The brand green is intentionally restrained so it does not compete with operational status indicators.
+Product UI should continue to reserve warning, danger, and success colors for state communication. Brand colors are intentionally restrained so they do not compete with operational status indicators.
 
 ## Asset Files
 
