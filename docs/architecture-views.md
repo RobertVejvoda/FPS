@@ -4,6 +4,8 @@ This page prepares an ArchiMate-style hierarchy for FairSpot architecture docume
 
 Core architecture pages describe provider-neutral product, service, data, security, and integration contracts. Local, demo, Azure, AWS, Kubernetes, and client-owned deployment details belong under [Production](./production.md) as environment profiles or implementation examples. Do not make Azure, AWS, Kubernetes, Traefik, Envoy, or any other runtime product part of the core design unless the decision is recorded in [Versions and Decisions](./versions-and-decisions.md).
 
+FairSpot now uses a lightweight TOGAF 10-inspired architecture repository overlay. The existing layer pages remain the source content; [Architecture Repository](./architecture/), [TOGAF ADM Map](./architecture/togaf-adm-map), [Artifact Register](./architecture/artifact-register), and [Architecture States](./architecture/architecture-states/) add governance, phase coverage, artifact status, baseline/target versioning, and gap analysis.
+
 ## Viewpoint Map
 
 | View | Audience | Question Answered | Current Source Pages |
@@ -17,6 +19,7 @@ Core architecture pages describe provider-neutral product, service, data, securi
 | Data and security view | Security reviewers, architects | Which data exists, who can access it, and how is it protected? | [Security](./security.md), [Data Privacy](./security/data-privacy.md), [Traceability](./security/traceability.md) |
 | Technology deployment view | Client IT, operators | How does FairSpot run locally, in demo, and in client-owned production? | [Production](./production.md), [Hosting and Deployment Strategy](./production/hosting-deployment-strategy.md), [Monitoring](./production/monitoring.md) |
 | Roadmap view | Product owners, evaluators | Which capability areas come next? | [Roadmap](./roadmap.md), [Versions and Decisions](./versions-and-decisions.md) |
+| Architecture governance view | Architects, client IT, product owners | What is draft or approved, what target is being modeled, and which gaps remain? | [TOGAF ADM Map](./architecture/togaf-adm-map.md), [Artifact Register](./architecture/artifact-register.md), [Gap Analysis](./architecture/architecture-states/gap-analysis.md) |
 
 ## Layer Hierarchy
 
@@ -28,6 +31,7 @@ Core architecture pages describe provider-neutral product, service, data, securi
 | Technology | [Technology Layer](./technology-layer.md) | Provider-neutral runtime technologies, service packages, Dapr boundaries, data stores, and non-functional requirements. |
 | Security | [Security](./security.md) | Data classification, authentication, authorization, encryption, audit, compliance, security operations. |
 | Production / Operations | [Production](./production.md) | Local/demo/client deployment profiles, provider-specific options, observability, backup/restore, incidents, maintenance, readiness evidence. |
+| Governance / Architecture states | [Architecture Repository](./architecture/) | TOGAF ADM mapping, artifact status/versioning, baseline and target versions, transition states, and gap analysis. |
 
 ## Planned View Content
 
@@ -46,3 +50,4 @@ Core architecture pages describe provider-neutral product, service, data, securi
 - Keep views layered but connected: business capability should trace to application services, technology components, security controls, and implementation slices.
 - Use placeholders when the model is not mature yet; do not invent decisions that are not recorded in [Versions and Decisions](./versions-and-decisions.md).
 - When a view becomes durable, link it from this page and update the corresponding layer index.
+- Use architecture state pages to distinguish target architecture from current-state evidence and implementation gaps.

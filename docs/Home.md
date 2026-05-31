@@ -45,6 +45,7 @@ This site is the product and business-facing view of FairSpot: problem, goals, a
 | Business evaluator | [Strategy](./strategy), [Business](./business-layer), [Demo and Evaluation](./demo-and-evaluation) | Understand the problem, product value, roles, and demo story. |
 | Product owner | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions), [Business Requirements](./business-layer/requirements) | Understand priorities, durable decisions, and outcome coverage. |
 | Architect | [Architecture Summary](./architecture-views), [Software Architecture](./technology-layer/software-architecture), [Technology Direction](./technology-layer) | Understand the capability model, bounded contexts, integration direction, and platform choices. |
+| Architecture governor | [TOGAF ADM Map](./architecture/togaf-adm-map), [Artifact Register](./architecture/artifact-register), [Gap Analysis](./architecture/architecture-states/gap-analysis) | Understand architecture phase coverage, artifact status, baseline/target versions, and known gaps. |
 | Security or client IT reviewer | [Security](./security), [Security Model](./security/security-model), [Production Model](./production) | Understand tenant isolation, privacy, auditability, deployment ownership, and operational evidence. |
 
 ## Site Scope
