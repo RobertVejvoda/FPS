@@ -12,7 +12,7 @@ FairSpot integrations use synchronous calls only where command decisions need cu
 | Booking lifecycle events | Booking | Notification, Audit, DataHub | Notify users, preserve evidence, update booking outcome/read-model projections. | Partial | Idempotent consumers and stable source event IDs required. |
 | Draw workflow events/status | Booking | DataHub, HR/Admin UI, Audit | Expose Draw lifecycle, next/completed Draw status, counts, and safe explanations. | Placeholder | Seeds/candidate ordering stay audit-controlled, not employee-facing. |
 | Customer readiness events | Customer | DataHub, Admin UI, Audit | Build tenant readiness projection and go-live evidence. | Placeholder | Depends on durable Customer storage. |
-| Configuration change events | Configuration | Booking, DataHub, Audit | Publish policy/capacity changes that affect readiness, Draw, and reporting. | Placeholder | Effective dates and version IDs required. |
+| Configuration change events | Configuration | Booking, DataHub, Audit | Publish policy/capacity/resource-map changes that affect readiness, Draw, impact preview, and reporting. | Placeholder | Effective dates, version IDs, publication status, and changed capability/closure summaries required. |
 | Profile change events | Profile | Booking where needed, DataHub | Update eligibility/default vehicle summaries and readiness. | Placeholder | Avoid copying raw profile history unless needed. |
 | Notification delivery events | Notification | DataHub, Audit where required | Summarize delivery health and support diagnostics. | Placeholder | Store status and failure group, not message body. |
 | Audit reference events | Audit | DataHub | Index safe evidence references. | Placeholder | DataHub stores references, not raw audit payloads or PII mapping. |
@@ -44,7 +44,7 @@ Every DataHub-consumed event should use a stable envelope.
 | `booking.drawStarted`, `booking.drawCompleted`, `booking.drawFailed` | Booking | DataHub, Audit, HR/Admin UI | Partial |
 | `booking.penaltyApplied`, `booking.manualCorrectionApplied` | Booking | Audit, DataHub where approved | Placeholder |
 | `customer.tenantCreated`, `customer.tenantReadinessChanged` | Customer | DataHub, Audit, Admin UI | Placeholder |
-| `configuration.policyChanged`, `configuration.capacityChanged` | Configuration | Booking, DataHub, Audit | Placeholder |
+| `configuration.policyChanged`, `configuration.capacityChanged`, `configuration.resourceMapPublished` | Configuration | Booking, DataHub, Audit | Placeholder |
 | `profile.employeeChanged` | Profile | Booking where needed, DataHub | Placeholder |
 | `notification.deliveryChanged` | Notification | DataHub, Audit where required | Placeholder |
 | `audit.recordCreated` | Audit | DataHub | Placeholder |
@@ -63,6 +63,7 @@ Every DataHub-consumed event should use a stable envelope.
 
 - Full source-of-truth event catalog needs implementation traceability to code.
 - Customer, Configuration, Profile, Notification, and Audit event producers are placeholders.
+- Resource-map publication and policy-impact preview event/read contracts need implementation traceability.
 - DataHub inbox schema and projection health endpoints are target architecture but not complete.
 - Poison event handling and replay/backfill process need operational design.
 
