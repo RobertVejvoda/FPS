@@ -23,6 +23,7 @@
 * [Architecture Repository](./architecture/)
   * [TOGAF ADM Map](./architecture/togaf-adm-map)
   * [Artifact Register](./architecture/artifact-register)
+  * [Migration Tracker](./architecture/migration-tracker)
   * [Architecture Vision](./architecture/architecture-vision)
   * [Stakeholders and Concerns](./architecture/stakeholders-and-concerns)
   * [Principles](./architecture/principles)
