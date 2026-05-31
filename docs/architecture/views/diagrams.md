@@ -13,7 +13,7 @@ Until a target view is explicitly marked authoritative, the text architecture pa
 
 | Evidence | Purpose | Source / Export | Refresh Disposition |
 | --- | --- | --- | --- |
-| Exchange map | Shows high-level business exchanges and capability relationships. | [Exchange Map image](/images/fps-exchange-map.png), [Architecture Views](/architecture-views) | Reuse as source evidence; refresh or annotate for customer-ready target scope and deferred Billing. |
+| Exchange map | Shows high-level business exchanges and capability relationships. | [Exchange Map image](/images/fps-exchange-map.png), [Legacy Architecture Evidence](/architecture-views) | Reuse as source evidence; refresh or annotate for customer-ready target scope and deferred Billing. |
 | Function map | Shows function/service relationship and implementation alignment. | [Function Map image](/images/fps-function-map.png), [Function Map Validation](/function-map-validation) | Reuse as source evidence; supersede with target capability and application cooperation views. |
 | Application architecture | Shows application/service structure. | [Application Architecture image](/images/fps-application-architecture.png) | Reuse as source evidence; replace with target application cooperation view. |
 | Application Architecture 1 | Shows browser/mobile, gateway, IAM, services, Dapr, stores, observability, and staged target components. | [Application Architecture 1 image](/images/fps-application-arch-1.png), [Validation](/application-arch-1-validation) | Strong source evidence; refresh to include DataHub, Customer persistence gap, Reporting obsolescence, and hosted profile. |
