@@ -7,7 +7,7 @@ FairSpot uses service-owned writes with event-fed read models. DataHub is the ta
 | Data Area | Write Owner | Classification | Target Direction | Status |
 | --- | --- | --- | --- | --- |
 | Booking requests, allocations, Draw attempts, penalties, usage/no-show state | Booking | Confidential | Service-owned command state; events published for projections and audit. | Partial |
-| Tenant lifecycle, readiness, identity setup metadata, support contacts | Customer | Confidential / Internal | Durable tenant state required before customer-ready hosted pilot. | Placeholder |
+| Tenant lifecycle, readiness, identity setup metadata, support contacts | Customer | Confidential / Internal | Service-owned Dapr-backed stores (`customerstore`). `CustomerStorageKey` enforces tenant-scoped key sanitisation. Identity caches hydrate from persistent state at startup. | Partial |
 | Employee profile and vehicle facts | Profile | Confidential | Tenant-scoped minimal facts; default vehicle and eligibility visible through approved APIs/events. | Partial |
 | Policy, locations, time slots, capacity/resource maps, zones, closures, capabilities, publication history | Configuration | Internal / Confidential | Versioned publication with history for Draw decisions, capacity impact, and audit explanation. Draft or failed publications do not affect allocation. | Partial |
 | Notifications, preferences, delivery status | Notification | Confidential | Operational notifications remain mandatory where required; message bodies should not be copied into DataHub. | Partial |
@@ -43,7 +43,7 @@ FairSpot uses service-owned writes with event-fed read models. DataHub is the ta
 
 ## Visible Data Gaps
 
-- Customer durable tenant storage is required before customer-ready deployment.
+- Customer primary stores are Dapr-backed (DATA010); Notification, Audit, Reporting, Profile, and Configuration remain in-memory and are not customer-ready for production traffic.
 - DataHub event inbox, projection checkpoints, and projection health are target architecture but not complete.
 - Resource-map publication projections and policy-impact preview inputs are target architecture but not complete.
 - Sponsor management summary projections need approved aggregation and privacy shaping.

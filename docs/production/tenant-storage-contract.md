@@ -158,9 +158,11 @@ Each bounded context that persists data must satisfy the following provisioning 
 
 | Requirement | Detail |
 | --- | --- |
+| Current state | Dapr-backed. `DaprCustomerTenantRepository` (`tenant:{tenantId}`), `DaprCustomerIdentityRepository` (`identity:config:{tenantId}`, `identity:admins:{tenantId}`, `identity:index`), and `DaprCustomerParkingBootstrapRepository` (`bootstrap:{tenantId}`) are registered as the authoritative stores. `InMemoryTenantIdentityConfigStore` and `InMemoryTenantRoleMappingStore` are startup caches hydrated from persistent Dapr state via `HydrateIdentityStoresAsync()`. No in-memory class is registered as primary storage. |
 | Scope | Owns tenant registry, onboarding state, and identity configuration. This service may need cross-tenant access for admin operations; it must use a separate admin store not accessible to per-tenant service accounts. |
-| Tenant registry | One record per tenant, keyed by sanitised tenant ID. |
-| Provisioning evidence | Tenant record exists and readiness check passes before activating tenant traffic. |
+| Tenant registry | One record per tenant, keyed by sanitised tenant ID via `CustomerStorageKey.Sanitise()`. Character set, length, reserved-prefix, and case-normalisation rules match the shared contract. |
+| Provisioning evidence | Tenant record exists and readiness check (`TenantReadinessService`) passes — checks lifecycle, identity, admin, role mapping, parking policy, parking location, and out-of-process service health — before activating tenant traffic. |
+| Implementation evidence (DATA010) | `DaprCustomerTenantRepository`, `DaprCustomerIdentityRepository`, `DaprCustomerParkingBootstrapRepository` registered in `Program.cs`. `CustomerStorageKey` enforces sanitisation rules; `CustomerStorageKeyTests` proves key format and rejection cases. `TenantReadinessServiceTests` proves all readiness checks and tenant isolation. `TenantIdentityServiceTests` proves hydration scenario (fresh stores populated from persisted config after simulated restart). |
 
 ### Object Storage
 
