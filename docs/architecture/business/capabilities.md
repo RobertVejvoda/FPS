@@ -31,9 +31,39 @@ This capability map is the parking-first customer-ready target. It does not mode
 | HR / facility operations | Booking lifecycle, audit, notification, operational insight | HR needs safe exception handling without exposing hidden lottery internals to employees. |
 | Operational insight and read models | Booking events, audit events, DataHub storage | Customer-facing reports must survive restart and be tenant-scoped. |
 
+## Capability Disposition
+
+This table separates customer-first capabilities from source-evidence ideas that should not drive near-term implementation.
+
+| Disposition | Capabilities / Ideas | Direction |
+| --- | --- | --- |
+| Customer-ready core | Tenant readiness, employee request, profile eligibility, configuration/policy, Draw allocation, booking lifecycle, notification, audit. | Keep in P0/P1 delivery until end-to-end customer demo is credible. |
+| Customer-ready operations | HR/facility operations, tenant administrator readiness, system administrator/operator visibility, safe operational insight. | Keep visible as customer-first gaps; do not collapse these into employee screens. |
+| DataHub target | Demand, allocation, rejection, cancellation, no-show, fairness, utilization, and management summaries. | Implement as event-fed DataHub read models; Reporting may present/report over approved views. |
+| Pilot support | Authenticated feedback from pilot users/evaluators. | Reasonable P2 candidate after core flows and persistence are stable. |
+| Future optional product | Motorcycle-specific capacity, recurring reserved-space release, sustainability incentives, advanced demand prediction, optimization, broad support portal. | Keep out of the customer-ready baseline unless Robert/customer priority changes. |
+| Deferred commercial scope | Billing, invoice generation, payments, subscription enforcement, employee-level charging. | Do not implement as part of customer-first deployability. |
+
+## Business Objects
+
+| Business Object | Owning Capability | Notes |
+| --- | --- | --- |
+| Tenant | Tenant onboarding and readiness | Customer service must persist lifecycle/readiness durably. |
+| Location / zone / resource map | Configuration and parking policy | Versioned, auditable, tenant-scoped configuration. |
+| Employee profile facts | Profile and eligibility facts | Minimum facts only; avoid broad HR import. |
+| Vehicle / capability facts | Profile and eligibility facts | Includes default vehicle, company-car, EV, accessibility, and capability signals where policy needs them. |
+| Parking request | Employee parking request / booking lifecycle | Employee-owned request intent; status changes are audit-visible. |
+| Draw attempt | Fair allocation Draw | Includes algorithm version, seed/order evidence, decisions, and safe reason codes. |
+| Allocation / reservation | Booking lifecycle management | Assigned spot/resource for a date and time slot. |
+| Penalty | Booking lifecycle management | Booking-owned v1 penalty ledger for booking-related penalties. |
+| Notification | Notification | User-facing operational communication. |
+| Audit record | Audit and compliance evidence | Business evidence, distinct from technical telemetry. |
+| Projection / report view | Operational insight and read models | DataHub-owned tenant-scoped read model. |
+
 ## Visible Placeholders
 
 - Customer / tenant administration needs durable storage before customer-ready deployment.
 - HR and administrator default workspaces need implementation and validation.
 - Operational insight should be reframed around DataHub/read models, not the obsolete Reporting PostgreSQL direction.
 - Billing remains deferred and should not appear as a required customer-first capability.
+- Robert TODO: confirm whether pilot feedback is P2 for customer demos or should remain deferred.

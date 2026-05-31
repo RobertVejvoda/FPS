@@ -22,8 +22,30 @@ These value streams describe the target operating model that should be visible t
 | Pilot support P2 | Pilot feedback is handled. |
 | Deferred | Billing/payment value streams. |
 
+## Value Stream To Capability Trace
+
+| Value Stream | Primary Capabilities | Missing Evidence |
+| --- | --- | --- |
+| Tenant goes live | Tenant onboarding and readiness; customer/tenant administration; configuration and parking policy; profile and eligibility facts; audit. | Durable Customer storage, readiness UI/API evidence, tenant object storage smoke evidence. |
+| Employee gets parking outcome | Employee parking request; booking lifecycle management; notification; employee-safe explanation; profile/default vehicle. | Final employee UI validation, next Draw visibility, same-day request validation evidence. |
+| Fair Draw allocates scarce capacity | Fair allocation Draw; configuration policy; profile facts; audit; notification; DataHub projections. | Workflow execution diagram, multi-instance-safe trigger evidence, DataHub projection evidence. |
+| HR manages operational exceptions | HR/facility operations; booking lifecycle; notification; audit; operational insight. | HR operations UI validation, HR cancellation with reason and notification evidence. |
+| Administrator manages tenant operations | Tenant administration; configuration; identity/profile setup; readiness; audit. | Tenant administrator default workspace and durable Customer persistence. |
+| Auditor reviews fairness | Audit evidence; DataHub projections; safe report views. | Audit/privacy view and role-specific evidence timeline validation. |
+| Customer evaluates deployment | Deployment profile; WAF/security; observability; backup/restore; gap analysis. | Hosted smoke run evidence and customer-facing architecture review. |
+| Pilot feedback is handled | Pilot feedback; notification/audit where sensitive; support review. | Robert decision on whether this belongs before pilot. |
+
+## Value Stream Boundaries
+
+- Employee value streams must use employee-safe language and must not expose lottery seeds, raw weights, other employees, tenant IDs, GUIDs, or internal service errors.
+- HR and administrator value streams may show deeper operational state, but still need tenant-scoped authorization and audit for privileged actions.
+- Auditor value streams use business audit evidence, not raw technical logs.
+- Operator value streams belong primarily in Technology/Operations; Business Architecture only states the business readiness concern.
+- Billing/payment value streams are intentionally excluded from the customer-ready target.
+
 ## Missing Diagrams
 
 - Capability-to-value-stream map is still a placeholder.
 - End-to-end employee request and Draw value stream diagram is still a placeholder.
 - HR/admin operations value stream diagram is still a placeholder.
+- Robert TODO: provide or approve the business value stream diagrams after the source content stabilizes.
