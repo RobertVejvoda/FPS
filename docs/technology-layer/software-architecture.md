@@ -124,7 +124,7 @@ Dapr is a design boundary, not a cloud decision. Local development can use self-
 
 ## Licensing
 
-FairSpot is licensed under AGPL-3.0-or-later. The repository license decision is recorded in [Versions and Decisions](../versions-and-decisions), and the full license text is available in the [repository LICENSE](https://github.com/RobertVejvoda/FPS/blob/master/LICENSE).
+FairSpot is licensed under AGPL-3.0-or-later. The repository license decision is recorded in [Versions and Decisions](../versions-and-decisions), and the full license text is available in the [repository LICENSE](https://github.com/RobertVejvoda/fairspot/blob/master/LICENSE).
 
 ## Tool/Framework Versions
 

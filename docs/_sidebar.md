@@ -42,4 +42,3 @@
 * [Client Evaluation Pack](./client-evaluation-pack)
 * [Versions and Decisions](./versions-and-decisions)
 * [Glossary](./glossary)
-* [Maintainer Wiki](https://github.com/RobertVejvoda/FPS/wiki)

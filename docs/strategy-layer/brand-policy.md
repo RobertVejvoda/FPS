@@ -33,7 +33,7 @@ FairSpot distributions should keep a visible legal or about screen that includes
 
 - copyright notice: `Copyright (c) 2026 Robert Vejvoda`;
 - license: `AGPL-3.0-or-later`;
-- upstream source link: `https://github.com/RobertVejvoda/FPS`;
+- upstream source link: `https://github.com/RobertVejvoda/fairspot`;
 - a note that the FairSpot name and logo identify Robert Vejvoda's project.
 
 ## No Warranty Or Support Promise

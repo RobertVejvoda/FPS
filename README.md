@@ -1,13 +1,13 @@
 <p align="center">
-  <a href="https://www.vejvoda.net/FPS/" aria-label="Open the FairSpot documentation site">
+  <a href="https://www.vejvoda.net/fairspot/" aria-label="Open the FairSpot documentation site">
     <img src="docs/images/brand/fairspot-logo.svg" alt="FairSpot" width="420">
   </a>
 </p>
 
 # FairSpot
 
-[![CI](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/FPS/actions/workflows/ci.yml)
-[![Docs](https://github.com/RobertVejvoda/FPS/actions/workflows/docs.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/FPS/actions/workflows/docs.yml)
+[![CI](https://github.com/RobertVejvoda/fairspot/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/fairspot/actions/workflows/ci.yml)
+[![Docs](https://github.com/RobertVejvoda/fairspot/actions/workflows/docs.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/fairspot/actions/workflows/docs.yml)
 
 FairSpot is an open-source, multi-tenant fair allocation platform for companies where demand for shared workplace resources exceeds supply. Parking is the first product module.
 
@@ -30,12 +30,12 @@ FairSpot is still a product under active development. The current focus is demo 
 
 | I want to... | Start here |
 | --- | --- |
-| Understand the product | [Documentation site](https://www.vejvoda.net/FPS/) and [Client Evaluation Pack](./docs/client-evaluation-pack.md) |
+| Understand the product | [Documentation site](https://www.vejvoda.net/fairspot/) and [Client Evaluation Pack](./docs/client-evaluation-pack.md) |
 | See the roadmap and status | [Roadmap](./docs/roadmap.md), [Implementation Tracker](./docs/implementation-tracker.md), and [Delivery Board](./docs/delivery-board.md) |
 | Review the architecture | [Architecture Summary](./docs/architecture-views.md) and [Software Architecture](./docs/technology-layer/software-architecture.md) |
 | Review security, privacy, and audit | [Security Review Pack](./docs/security/security-review-pack.md), [Security Model](./docs/security/security-model.md), and [Logging and Monitoring](./docs/security/logging-monitoring.md) |
 | Run the local demo | [Local Test Harness](./docs/production/local-test-harness.md) and [Demo Seed Data](./docs/demo-seed-data.md) |
-| Work on implementation | [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki), [AGENTS.md](./AGENTS.md), and [Development Plan](./docs/development-plan.md) |
+| Work on implementation | [GitHub Wiki](https://github.com/RobertVejvoda/fairspot/wiki), [AGENTS.md](./AGENTS.md), and [Development Plan](./docs/development-plan.md) |
 
 ## Run The Local Demo
 
@@ -76,7 +76,7 @@ Stop or reset:
 | Directory | Description |
 | --- | --- |
 | `code/` | Application source code for backend services, web, mobile, and infrastructure. |
-| `docs/` | Product, architecture, security, production, and delivery documentation. Published at [vejvoda.net/FPS](https://www.vejvoda.net/FPS/). |
+| `docs/` | Product, architecture, security, production, and delivery documentation. Published at [vejvoda.net/fairspot](https://www.vejvoda.net/fairspot/). |
 | `tools/` | Local harness, smoke, validation, seeding, auth, and generated-client scripts. |
 
 ## Documentation Model

@@ -67,7 +67,7 @@ FairSpot production runtime is expected to contain:
 - [Draw Scheduling And Workflow](./production/draw-scheduling-and-workflow): Dapr Workflow direction, on-demand Draw behavior, multi-instance scheduler safety, and UI progress requirements.
 - [Draw REST Client Scenarios](./production/draw-rest-client-scenarios.http): VS Code REST Client smoke scenarios for booking, Draw trigger, idempotency, status, and lifecycle checks.
 
-Provider-specific setup notes and local development environment details belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki). `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FairSpot.
+Provider-specific setup notes and local development environment details should stay out of the public production overview unless they are needed for client evaluation. `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FairSpot.
 
 ## Testing And Readiness
 
