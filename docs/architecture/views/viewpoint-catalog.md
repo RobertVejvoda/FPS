@@ -1,11 +1,21 @@
 # Viewpoint Catalog
 
-| Viewpoint | Audience | Concern Answered | Source |
-| --- | --- | --- | --- |
-| Motivation view | Sponsor, product owner | Why FairSpot exists and what outcomes matter. | [Strategy](/strategy) |
-| Capability view | Business evaluator, architect | Which business capabilities FairSpot provides. | [Capabilities](/architecture/business/capabilities) |
-| Business process view | HR, facilities, auditor | How request, Draw, allocation, cancellation, and audit work. | [Business Processes](/architecture/business/business-processes) |
-| Application cooperation view | Architect, technical evaluator | Which services collaborate through APIs/events. | [Information Systems](/architecture/information-systems/) |
-| Data and security view | Security reviewer, architect | Which data exists, who owns it, and how it is protected. | [Data Architecture](/architecture/information-systems/data-architecture), [Security](/architecture/security/) |
-| Technology deployment view | Client IT, operator | How FairSpot runs locally, hosted, and client-owned. | [Deployment Profiles](/architecture/technology/deployment-profiles) |
-| Governance view | Architect, product owner | What is draft, approved, baselined, or still a gap. | [Artifact Register](/architecture/artifact-register), [Gap Analysis](/architecture/architecture-states/gap-analysis) |
+The viewpoint catalog defines the audience and concern for each architecture view. A diagram should not be treated as authoritative unless it maps to one of these viewpoints or a documented extension.
+
+| Viewpoint | Primary Audience | Concern Answered | Owning Artifact | Diagram Need |
+| --- | --- | --- | --- | --- |
+| Motivation and outcome view | Sponsor, product owner, customer evaluator | Why FairSpot exists, what customer-ready means, and which scope is deferred. | [Architecture Vision](/architecture/architecture-vision) | Product outcome map; optional when strategy text is enough. |
+| Capability view | Business evaluator, architect | Which business capabilities FairSpot provides and which are deferred. | [Capabilities](/architecture/business/capabilities) | Target capability map. |
+| Value stream view | Sponsor, HR, facilities lead | How customer value flows from request to allocation, cancellation, audit, and feedback. | [Value Streams](/architecture/business/value-streams) | Target value stream map. |
+| Business process view | HR, facilities, auditor | How request, Draw, allocation, cancellation, manual Draw, next Draw visibility, and audit work. | [Business Processes](/architecture/business/business-processes) | Draw and cancellation process view. |
+| Role and actor view | HR, employee, tenant admin, system admin, security reviewer | Which actors use or operate FairSpot and what each role can see by default. | [Actors and Roles](/architecture/business/actors-roles) | Role interaction view when UI permissions need visual review. |
+| Application cooperation view | Architect, technical evaluator | Which applications and services collaborate through APIs, events, and Dapr building blocks. | [Application Architecture](/architecture/information-systems/application-architecture) | Application cooperation diagram. |
+| Data and read-model view | Architect, data reviewer, report consumer | Which services own writes, which events feed read models, and how DataHub serves read APIs. | [Data Architecture](/architecture/information-systems/data-architecture) | DataHub/read-model diagram. |
+| API and event context view | Implementer, integrator, auditor | Which contracts cross bounded-context or external integration boundaries. | [API Contracts](/architecture/information-systems/api-contracts), [Integrations and Events](/architecture/information-systems/integrations-events) | API/event context diagram if text contracts are not enough. |
+| Runtime deployment view | Client IT, operator, security reviewer | How FairSpot runs locally, on the hosted NAS profile, behind Cloudflare/WAF, and in future client-owned environments. | [Deployment Profiles](/architecture/technology/deployment-profiles) | Runtime deployment diagram. |
+| Workflow execution view | HR, operator, implementer | How scheduled and manual Draw execution works, including Dapr Workflow actions, idempotency, and UI progress. | [Runtime Platform](/architecture/technology/runtime-platform) | Draw workflow execution diagram. |
+| Operations and observability view | Operator, customer support, SRE | How logs, metrics, traces, alerts, smoke tests, and support diagnostics support production operation. | [Observability](/architecture/technology/observability) | Observability flow diagram. |
+| Trust boundary view | Security reviewer, client IT, architect | Where browser/mobile, edge, API, services, Dapr, state stores, secrets, and tenant data boundaries sit. | [Security Architecture](/architecture/security/security-architecture) | Trust-boundary diagram. |
+| Privacy and audit view | DPO, auditor, HR, tenant admin | Which personal data is processed, retained, audited, notified, or erased. | [Privacy Architecture](/architecture/security/privacy-architecture), [Controls](/architecture/security/controls) | Privacy/audit data-flow diagram. |
+| Transition roadmap view | Product owner, sponsor, architect | Which gaps must close before a customer-ready hosted pilot and which scope remains deferred. | [Transition Architectures](/architecture/architecture-states/transition-architectures), [Gap Analysis](/architecture/architecture-states/gap-analysis) | Transition roadmap diagram. |
+| Governance view | Architect, product owner, architecture board | What is draft, approved, baselined, superseded, or still a gap. | [Artifact Register](/architecture/artifact-register), [Architecture Version Register](/architecture/architecture-states/architecture-version-register) | Usually table-first; diagram optional. |
