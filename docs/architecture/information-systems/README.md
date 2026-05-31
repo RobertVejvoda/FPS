@@ -3,7 +3,7 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Architecture State** | Target |
 | **ADM Phase** | Phase C - Information Systems Architecture |
 | **Responsible** | Codex/Product Owner |
@@ -33,6 +33,9 @@ Core information systems direction has been restated from legacy application, te
 | AR-002 / AR-012 / AR-013 | Owning services keep command-side writes; DataHub owns durable cross-service reads; Reporting does not own operational projections. | [Data Architecture](/architecture/information-systems/data-architecture), [Integrations and Events](/architecture/information-systems/integrations-events) | DataHub inbox, checkpoint, projection health, and first projections. |
 | AR-006 / AR-008 | Web/mobile/API boundaries must support role-specific employee, HR, tenant admin, system admin, and audit workflows. | [Application Architecture](/architecture/information-systems/application-architecture), [Service Catalog](/architecture/information-systems/service-catalog) | Role-specific API/read contracts and HR cancellation validation evidence. |
 | AR-011 | Customer tenant lifecycle, readiness, identity setup, first admins, and parking bootstrap must be durably stored. | [Service Catalog](/architecture/information-systems/service-catalog), [Data Architecture](/architecture/information-systems/data-architecture) | Customer durable persistence slice. |
+| AR-017 / AR-020 | Configuration owns resource-map publication; DataHub provides advisory impact/read-model projections where reliable. | [Application Architecture](/architecture/information-systems/application-architecture), [Data Architecture](/architecture/information-systems/data-architecture), [API Contracts](/architecture/information-systems/api-contracts) | Resource-map publication APIs/events and impact-preview projections. |
+| AR-018 | HR support reads need safe request lookup and lifecycle explanation without hidden Draw internals or unrelated employee data. | [API Contracts](/architecture/information-systems/api-contracts), [Data Architecture](/architecture/information-systems/data-architecture) | HR query contracts and privacy-shaped DataHub/Booking reads. |
+| AR-019 | Sponsor summaries require aggregated DataHub-backed business-value projections. | [Data Architecture](/architecture/information-systems/data-architecture), [Service Catalog](/architecture/information-systems/service-catalog) | Sponsor-safe projection definitions, filters, and export boundaries. |
 
 ## Legacy Evidence Disposition
 
