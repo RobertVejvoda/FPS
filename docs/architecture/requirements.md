@@ -11,6 +11,10 @@
 | **Last Reviewed** | 2026-05-31 |
 | **Next Review** | Before customer architecture review |
 
+Requirements Management is continuous across the ADM. Requirements are not owned by only Phase A or Business Architecture; they are captured centrally here and traced to the affected business, information systems, technology, security, governance, and transition architecture views.
+
+When a phase introduces or changes an architecture-significant requirement, update this page or the linked traceability evidence, then reflect the impact in the affected phase artifact.
+
 | ID | Requirement | Source | Affected Views | Status |
 | --- | --- | --- | --- | --- |
 | AR-001 | FairSpot must preserve tenant isolation across API, persistence, events, audit, and read models. | Security and customer integration decisions | Security, data, application | Draft |
@@ -30,11 +34,26 @@
 | AR-015 | Billing and payment capabilities must remain visible as future/deferred architecture scope but must not block the customer-first deployable target. | Billing priority decision | Business, information systems | Draft |
 | AR-016 | Architecture pages that are governed artifacts must show metadata, status, version, owner, accountable owner, and review trigger. | TOGAF repository decision | Governance | Draft |
 
+## ADM Phase Impact
+
+| ADM Area | Requirement Use |
+| --- | --- |
+| Preliminary | Defines governance, principles, artifact lifecycle, review gates, and how requirement changes are controlled. |
+| Phase A - Architecture Vision | Sets target scope, stakeholder concerns, success measures, and initial architecture-significant requirements. |
+| Phase B - Business Architecture | Refines requirements into capabilities, value streams, processes, roles, and policies. |
+| Phase C - Information Systems | Converts requirements into application, data, API, event, service, and read-model contracts. |
+| Phase D - Technology Architecture | Converts requirements into runtime, deployment, Dapr, observability, backup, and operational platform needs. |
+| Phases E/F - Opportunities, Solutions, Migration | Groups gaps into transition architectures, work packages, priorities, and delivery sequencing. |
+| Phase G - Implementation Governance | Checks implementation evidence and PRs against accepted requirements and architecture constraints. |
+| Phase H - Architecture Change Management | Reopens or revises requirements when customer feedback, risk, implementation evidence, or operating assumptions change. |
+| Security / Privacy | Cross-cutting requirements can affect every phase and may require explicit risk acceptance or controls. |
+
 ## Robert TODOs
 
 - Robert TODO: prioritize AR-011 through AR-014 into delivery slices before customer-facing review.
 - Robert TODO: confirm which AR items are mandatory for the first hosted demo versus mandatory for a paid pilot.
 - Robert TODO: confirm whether Feedback is required as a small evaluator-feedback slice before the first customer demo.
+- Robert TODO: confirm whether requirements approval should happen per phase artifact, centrally on this page, or both for customer-facing reviews.
 
 ## Source Evidence
 
