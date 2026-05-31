@@ -161,7 +161,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | --- | --- | --- | --- | --- |
 | 1 | Status and traceability cleanup | Make docs truthful after recent merges. | Stale tracker and traceability pages create wrong handoffs and wrong client expectations. | [Tracker](./implementation-tracker), [Traceability](./requirements-traceability) |
 | 2 | Business story cleanup | Explain value, roles, and parking-first scope. | Business readers need the product story before architecture detail. | [Business Layer](./business-layer), [Demo and Evaluation](./demo-and-evaluation) |
-| 3 | ArchiMate view hierarchy | Prepare business/application/technology/security/production view structure. | Architects need a stable hierarchy before richer diagrams are added. | [Architecture Views](./architecture-views) |
+| 3 | ArchiMate view hierarchy | Prepare business/application/technology/security/production view structure. | Architects need a stable hierarchy before richer diagrams are added. | [Legacy Architecture Evidence](./architecture-views) |
 | 4 | Demo and client evaluation plan | Define how each role can try FPS. | Demo readiness exposes missing product and operational slices. | [Demo and Evaluation](./demo-and-evaluation) |
 | 5 | Pluggable operations plan | Define local, demo, and client-owned production profiles. | Dapr only helps if each component boundary is explicit and replaceable. | [Production](./production), [Hosting Strategy](./production/hosting-deployment-strategy) |
 | 6 | Observability and performance evidence | Make usage, metrics, logs, and traces consumable by client tooling. | Client production will run outside our environment, so evidence must be portable. | [Monitoring](./production/monitoring), `OPS004` |

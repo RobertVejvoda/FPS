@@ -103,5 +103,5 @@ FairSpot does not maintain a separate Statement of Architecture Work document fo
 - [Strategy](/strategy)
 - [Client Evaluation Pack](/client-evaluation-pack)
 - [Versions and Decisions](/versions-and-decisions)
-- [Architecture Views](/architecture-views)
+- [Legacy Architecture Evidence](/architecture-views)
 - [Application Architecture 1 Validation](/application-arch-1-validation)
