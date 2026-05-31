@@ -29,7 +29,7 @@ Major architecture pages should use this header when they become governed artifa
 | Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Phase C | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Technology Architecture | [Technology Architecture](/architecture/technology/) | Phase D | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
-| Security Architecture | [Security Architecture](/architecture/security/) | Cross-cutting | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
+| Security Architecture | [Security Architecture](/architecture/security/) | Cross-cutting | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
 | Governance | [Governance](/architecture/governance/) | Preliminary + G/H | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | On governance change |
 | Views and Diagrams | [Views and Diagrams](/architecture/views/) | Cross-ADM | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | On diagram/model change |
 | Architecture States | [Architecture States](/architecture/architecture-states/) | Cross-ADM | Baseline / Target / Gap Analysis | Draft | 0.1 | Codex/Product Owner | Robert | - | On milestone change |
