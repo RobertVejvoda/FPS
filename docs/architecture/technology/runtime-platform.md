@@ -31,10 +31,27 @@ FairSpot is Dapr-first by design. Dapr is a production-grade runtime boundary, n
 - Derived state such as DataHub projections can be rebuilt, but projection rebuild health and lag must be visible.
 - Runtime maintenance commands and provider-specific procedures belong in `production/` runbooks, not in core architecture pages.
 
+## Dapr Hardening Evidence
+
+The table below records what is in place and what remains a gap for the NAS hosted profile. Component YAML files are in `code/infrastructure/dapr/components/{profile}/`.
+
+| Capability | NAS / Local profile status | Evidence | Gap / Next step |
+| --- | --- | --- | --- |
+| Component scopes | **Partial** — local/demo/client state, pub/sub, binding, and scheduler components carry `scopes:` lists for intended app IDs. Secret-store components and the smoke-test in-memory pub/sub remain unscoped. | `local/bookingstore.yaml`, `local/fps-pubsub.yaml` (scopes: fps-booking, fps-notification, fps-audit, fps-reporting), demo/client state and pub/sub components. | Decide whether secret-store component scoping is required for the hosted/NAS profile; keep smoke-test profile explicitly non-production. |
+| Secret references | **Done** — all credential-sensitive metadata fields use `secretKeyRef`; no inline passwords or tokens in demo or client profiles. Local dev vault uses a dev-only token, documented as non-production. | `local/vault.yaml` (dev-only token comment), `demo/vault-demo.yaml` (env-injected token), `client/bookingstore.yaml`, `client/fps-pubsub.yaml`. | Replace local dev vault token with injected secret before customer traffic. |
+| mTLS / Sentry | **Gap** — `code/infrastructure/dapr/configuration/fps-config.yaml` has `mtls.enabled: false`. Comments document that demo and client profiles should enable mTLS when Dapr sidecar injection is managed by the platform. | `code/infrastructure/dapr/configuration/fps-config.yaml` | Enable mTLS in the NAS profile once the deployment moves to a Dapr-managed runtime boundary (platform-hosted Sentry or self-hosted Sentry). Accepted limitation for local NAS pilot. |
+| Resiliency policies | **Gap** — no Dapr `Resiliency` YAML files exist in any profile. Retry, timeout, and circuit-breaker behavior is not yet declared. | None. | Add a `resiliency.yaml` per profile covering state store, pub/sub, and service invocation targets before customer-facing load. |
+| State encryption | **Gap** — no `encryption` block in any state component YAML. MongoDB Atlas and managed stores provide infrastructure encryption at rest. Dapr-layer encryption is not configured. | None. | Evaluate Dapr state encryption support for MongoDB provider; use infrastructure encryption at rest as accepted fallback where Dapr encryption is not supported. |
+| Transactional outbox | **Gap** — Dapr pub/sub publish currently used directly in command handlers. Dapr transactional outbox with MongoDB requires Dapr state store transaction support; this has not been validated. | [Dapr-First Standards](/production/dapr-first-production-standards) — outbox direction documented. | Validate MongoDB state store transaction support or implement service-owned pending-event outbox with deterministic event IDs before customer traffic. |
+| Secret scoping | **Partial** — `auth.secretStore: secretstore` is present on all components that use `secretKeyRef`. No per-component secret scope restriction is configured. | `local/bookingstore.yaml`, `local/fps-pubsub.yaml`, `demo/` equivalents. | Add Dapr secret scope configuration if fine-grained secret access restriction is required for the NAS profile. |
+
 ## Visible Runtime Gaps
 
-- Dapr outbox support must be validated for the selected state store or replaced by explicit service-owned outbox records.
-- Component scopes, mTLS/Sentry, resiliency policies, and state encryption need hosted-profile evidence.
+- Secret-store component scoping is not yet proven for the hosted/NAS profile; smoke-test components remain non-production evidence only.
+- mTLS/Sentry is disabled in the current NAS/local profile; accepted limitation until a managed runtime boundary is in place.
+- Resiliency policies (retry, timeout, circuit-breaker) are not defined; add before customer-facing load.
+- Dapr state encryption is not configured; infrastructure encryption at rest is the current accepted fallback.
+- Transactional outbox is not validated; must be resolved or replaced by service-owned outbox before customer traffic.
 - DataHub PostgreSQL read-model store is target architecture but not customer-ready yet.
 - Backup/restore drills and RTO/RPO evidence are not complete for the hosted profile.
 - Resource-map publication persistence and DataHub impact-preview projections need implementation evidence.

@@ -69,6 +69,7 @@ Every DataHub-consumed event should use a stable envelope.
 
 ## Source Evidence
 
-- [Booking Event Contracts](/business-layer/booking-event-contracts)
+- [Booking Event Contracts](/business-layer/booking-event-contracts) — narrative catalog; Booking service is the authoritative producer
+- Booking event publishing: `code/server/Booking/` — `booking.*` event families are emitted via Dapr pub/sub
 - [Dapr-First Standards](/production/dapr-first-production-standards)
 - [Software Architecture](/technology-layer/software-architecture)

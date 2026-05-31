@@ -1,19 +1,35 @@
 # API Contracts
 
-API contracts should be generated or documented close to the owning service. This page records architecture expectations and missing contract surfaces.
+API contracts should be generated or documented close to the owning service. This page records architecture expectations, generated contract evidence, and missing contract surfaces.
+
+## Generated Contract Evidence
+
+The following services expose OpenAPI endpoints and have generated TypeScript clients maintained by `tools/generate-api-client.sh`. The stale-client CI check fails if generated files diverge from the running service.
+
+| Service | OpenAPI spec (source of truth) | Generated TypeScript client |
+| --- | --- | --- |
+| Booking | `code/clients/typescript/openapi/booking.json` | `code/clients/typescript/src/booking.d.ts` |
+| Identity | `code/clients/typescript/openapi/identity.json` | `code/clients/typescript/src/identity.d.ts` |
+| Notification | `code/clients/typescript/openapi/notification.json` | `code/clients/typescript/src/notification.d.ts` |
+| Profile | `code/clients/typescript/openapi/profile.json` | `code/clients/typescript/src/profile.d.ts` |
+
+Audit, Configuration, and Customer expose OpenAPI but do not yet have generated TypeScript clients in `code/clients/typescript/`. HR, DataHub, and Reporting have no generated contract yet.
+
+## Contract Index
 
 | API Area | Owner | Contract Location | Status | Compatibility Notes |
 | --- | --- | --- | --- | --- |
-| Booking employee APIs | Booking | OpenAPI/generated TypeScript client; [Booking API Contract](/business-layer/booking-api-contract) | Partial | Must derive tenant/user from authenticated context. Own-bookings reads must not expose other employees. |
-| Draw operations APIs | Booking | OpenAPI/generated TypeScript client; [Booking API Contract](/business-layer/booking-api-contract) | Partial | Admin/controlled operations only; idempotency required; employees cannot trigger Draw. |
-| HR operations APIs | Booking / DataHub | Booking API contract and future DataHub query contracts. | Placeholder | Tenant/location-scoped request queues, safe request lookup, lifecycle explanation, next Draw status, controlled Draw, and cancellation with reason. |
-| Profile APIs | Profile | OpenAPI/generated TypeScript client | Partial | Employee-safe profile/default vehicle facts and HR/admin facts must stay separated. |
-| Notification APIs | Notification | OpenAPI/generated TypeScript client | Partial | Notification history, unread counts, mark-read, SSE stream, delivery summaries. |
-| Audit APIs | Audit | OpenAPI/generated TypeScript client | Partial | Auditor/admin authorization required; PII mapping lookups require reason and audit trail. |
-| Configuration APIs | Configuration | OpenAPI/generated TypeScript client | Partial | Policy/location/slot/resource-map admin surfaces, publication validation, closures, capabilities, and effective version history. |
-| Customer APIs | Customer | Service API docs/OpenAPI where available | Placeholder | Durable tenant state and readiness API gap remains. |
-| DataHub APIs | DataHub | Future query contracts | Placeholder | Projection ownership, privacy shape, query filters, pagination, impact-preview inputs, sponsor summaries, and export boundaries must be explicit. |
-| Reporting APIs | Reporting, if retained | Future report catalog/configuration contract | Deferred | Should expose report metadata and approved DataHub-backed report surfaces only. |
+| Booking employee APIs | Booking | `code/clients/typescript/openapi/booking.json`; [Booking API Contract](/business-layer/booking-api-contract) (narrative) | Generated | Must derive tenant/user from authenticated context. Own-bookings reads must not expose other employees. |
+| Draw operations APIs | Booking | `code/clients/typescript/openapi/booking.json`; [Booking API Contract](/business-layer/booking-api-contract) (narrative) | Generated | Admin/controlled operations only; idempotency required; employees cannot trigger Draw. |
+| Profile APIs | Profile | `code/clients/typescript/openapi/profile.json` | Generated | Employee-safe profile/default vehicle facts and HR/admin facts must stay separated. |
+| Notification APIs | Notification | `code/clients/typescript/openapi/notification.json` | Generated | Notification history, unread counts, mark-read, SSE stream, delivery summaries. |
+| Identity APIs | Identity | `code/clients/typescript/openapi/identity.json` | Generated | Auth context establishment only; services must not trust client-supplied identity claims. |
+| Audit APIs | Audit | Service OpenAPI (no generated client yet) | Partial | Auditor/admin authorization required; PII mapping lookups require reason and audit trail. |
+| Configuration APIs | Configuration | Service OpenAPI (no generated client yet) | Partial | Policy/location/slot/resource-map admin surfaces, publication validation, closures, capabilities, and effective version history. |
+| HR operations APIs | Booking / DataHub | Booking OpenAPI (partial); DataHub query contracts not yet defined | Placeholder | Tenant/location-scoped request queues, safe request lookup, lifecycle explanation, next Draw status, controlled Draw, and cancellation with reason. |
+| Customer APIs | Customer | Service OpenAPI where available; durable state gap remains | Placeholder | Durable tenant state and readiness API gap remains. |
+| DataHub APIs | DataHub | Not yet defined | Placeholder | Projection ownership, privacy shape, query filters, pagination, impact-preview inputs, sponsor summaries, and export boundaries must be explicit. |
+| Reporting APIs | Reporting, if retained | Not yet defined | Deferred | Should expose report metadata and approved DataHub-backed report surfaces only. |
 
 ## Contract Rules
 
@@ -42,5 +58,7 @@ API contracts should be generated or documented close to the owning service. Thi
 
 ## Source Evidence
 
+- Generated OpenAPI specs: `code/clients/typescript/openapi/` (Booking, Identity, Notification, Profile)
+- Generated TypeScript clients: `code/clients/typescript/src/` (Booking, Identity, Notification, Profile)
+- [Booking API Contract](/business-layer/booking-api-contract) — narrative contract; generated spec is authoritative
 - [API client stale check](/tooling)
-- [Booking API Contract](/business-layer/booking-api-contract)
