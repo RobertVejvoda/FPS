@@ -14,6 +14,7 @@ The process summaries below are authoritative for business intent. When a detail
 | Same-day parking request | Employee requests parking for the current day after scheduled Draw path is no longer applicable. | Immediate allocation or rejection based on policy and matching live capacity; same-day waitlist is future policy scope. | Partial | [Booking Request Lifecycle](/business-layer/booking-request-lifecycle), [Allocation Rules](/business-layer/allocation-rules) |
 | Cancellation, reallocation, usage, and no-show | Employee, HR, system, or confirmation process changes an active request. | Capacity is released/reallocated where possible; usage, no-show, expiry, penalties, notifications, and audit evidence are recorded. | Partial | [Booking Request Lifecycle](/business-layer/booking-request-lifecycle), [Allocation Rules](/business-layer/allocation-rules) |
 | HR and administrator operations | Privileged role needs to manage operations or tenant setup. | Role-specific workspace supports queues, next Draw visibility, controlled Draw, cancellation with reason, tenant setup, policy, and readiness. | Placeholder | [Roles](/business-layer/roles), [Role Intent Roadmap](/business-layer/role-intent-roadmap), [My Spots UX](/business-layer/my-spots-ux) |
+| Resource map and capacity publication | Facilities or administrator changes physical capacity, zones, capabilities, or closures. | Resource map changes are validated, published, audited, and reflected in policy-compatible allocation and insight views. | Placeholder | [Business Requirements](/business-layer/requirements), [Personas](/business-layer/personas), [Role Intent Roadmap](/business-layer/role-intent-roadmap) |
 | Reporting and audit evidence | Booking events, privileged actions, or review request occurs. | Audit evidence and DataHub-backed operational projections support safe reporting and review. | Placeholder | [Audit](/business-layer/audit), [Reporting](/business-layer/reporting), [DataHub](/application-layer/datahub) |
 | Pilot feedback | Authenticated pilot user submits feedback. | Tenant-scoped feedback is captured, reviewed, optionally answered, and audited where sensitive. | Deferred | [Feedback](/business-layer/feedback) |
 | Billing and payment | Commercial model is approved in future. | Tenant-level commercial records may be managed separately from employee booking details. | Deferred | [Billing](/business-layer/billing), [Commercialisation](/strategy-layer/commercialisation) |
@@ -22,7 +23,7 @@ The process summaries below are authoritative for business intent. When a detail
 
 | Classification | Processes | Architecture Direction |
 | --- | --- | --- |
-| Customer-ready P0 | Tenant setup and readiness; future parking request; scheduled Draw and allocation; same-day parking request; cancellation/reallocation/usage/no-show; HR and administrator operations. | Keep visible in target state and transition gaps until implemented and validated. |
+| Customer-ready P0 | Tenant setup and readiness; future parking request; scheduled Draw and allocation; same-day parking request; cancellation/reallocation/usage/no-show; HR and administrator operations; resource map and capacity publication. | Keep visible in target state and transition gaps until implemented and validated. |
 | Customer-ready P1 | Reporting and audit evidence. | DataHub projections and Audit evidence must be durable before customer claims are strong. |
 | Pilot support P2 | Pilot feedback. | Optional narrow flow for customer evaluation feedback. |
 | Deferred | Billing and payment. | Do not include in customer-ready acceptance gates. |
@@ -85,21 +86,36 @@ Visible gap: durable Customer/tenant storage is required for customer-ready depl
 
 1. Privileged user opens a role-appropriate dashboard.
 2. HR/facilities can see request queues, allocation outcomes, pending waitlist, cancellation/reallocation state, and next Draw time.
-3. HR/facilities can run controlled on-demand Draw actions where allowed.
-4. HR/facilities can cancel any tenant-scoped request or allocation with a required reason and employee notification.
-5. Tenant administrator manages tenant configuration, locations, policies, roles, identity mapping, readiness, and setup data.
-6. System administrator sees platform/operator views that are not employee or HR defaults.
-7. Sensitive actions publish events, notify affected users, and write audit records.
+3. HR/facilities can search by safe business reference or permitted employee display value and open request lifecycle evidence without exposing hidden Draw internals.
+4. HR/facilities can run controlled on-demand Draw actions where allowed.
+5. HR/facilities can cancel any tenant-scoped request or allocation with a required reason and employee notification.
+6. Tenant administrator manages tenant configuration, locations, policies, roles, identity mapping, readiness, and setup data.
+7. Tenant administrator can preview readiness and policy/capacity impact before publishing customer-visible changes where projections support it.
+8. System administrator sees platform/operator views that are not employee or HR defaults.
+9. Sensitive actions publish events, notify affected users, and write audit records.
 
 Visible gap: role-specific HR, tenant administrator, and system administrator default screens must be implemented and validated.
+
+### Resource Map And Capacity Publication
+
+1. Facilities coordinator or authorized tenant administrator opens a resource-map workspace.
+2. User maintains locations, zones, spaces, capacity pools, EV/accessibility/company-car/reserved capabilities, and temporary closures.
+3. FairSpot validates that the map is tenant-scoped, internally consistent, policy-compatible, and does not create impossible capacity promises.
+4. User previews visible impact where possible: reduced capacity, shortage risk, unused pools, capability mismatch, and affected time slots.
+5. Publication records who changed the map, what changed, effective time, validation result, and reason when required.
+6. Booking uses only the published compatible capacity for allocation; drafts or failed publications must not affect Draw decisions.
+7. DataHub/read-model projections expose utilization and shortage trends by location, zone, capability, and time period.
+
+Visible gap: resource-map workspace, publication workflow, and policy-impact preview need implementation and customer validation.
 
 ### Reporting And Audit Evidence
 
 1. Booking, Customer, Configuration, Profile, Notification, and privileged UI actions produce business events or audit records where relevant.
 2. Audit keeps append-only business evidence for setup, policy changes, request decisions, Draw attempts, cancellations, manual actions, and sensitive access.
-3. DataHub consumes approved events into tenant-scoped projections for demand, allocation, rejection, cancellation, no-show, fairness, utilization, readiness, and management summaries.
+3. DataHub consumes approved events into tenant-scoped projections for demand, allocation, rejection, cancellation, no-show, fairness, utilization, capacity pressure, readiness, and management summaries.
 4. Reporting, if retained, exposes report catalog/configuration or presentation over approved DataHub views.
 5. HR/facilities, tenant administrators, auditors, and sponsors see role-appropriate summaries without raw technical logs or unrelated employee data.
+6. Executive sponsors see aggregated business-value evidence rather than operational detail: HR effort avoided, unmet demand, allocation rate, fairness trend, utilization, no-show/cancellation trend, and capacity pressure.
 
 Visible gap: DataHub durable projections are required before customer-facing operational reporting should be treated as reliable.
 
@@ -134,5 +150,6 @@ Billing and payment are not part of the customer-ready business process baseline
 - Same-day request process.
 - Cancellation and reallocation process.
 - HR/admin operations process.
+- Resource map and capacity publication process.
 - Reporting and audit evidence process.
 - Robert TODO: decide which process diagrams must be authored first for external review.
