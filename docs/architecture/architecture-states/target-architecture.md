@@ -3,7 +3,7 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.1 |
+| **Version** | 0.2 |
 | **Architecture State** | Target |
 | **Target Version** | Customer-Ready Target v0.1 |
 | **ADM Phase** | Cross-ADM |
@@ -14,6 +14,8 @@
 
 The FairSpot target architecture is a customer-ready, parking-first fair allocation product that can be evaluated and deployed under a client-owned or low-cost hosted profile.
 
+The target is intentionally pilot-sized. It must be coherent enough for a small or medium company with real parking scarcity to evaluate, but it does not need the operating model, sales model, or legal/compliance breadth of a large-enterprise rollout.
+
 ## Target Characteristics
 
 | Area | Target State | Acceptance Criteria |
@@ -23,6 +25,7 @@ The FairSpot target architecture is a customer-ready, parking-first fair allocat
 | Data | Tenant-scoped data ownership, audit evidence, notification history, and read models are durable enough for hosted pilot. | Customer and Booking state needed for pilot survives process restart and can be backed up/restored by profile. |
 | Technology | Dapr-first runtime supports workflows, pub/sub, state, secrets, resiliency, and observability where appropriate. | Local and hosted profiles can be started, smoke-tested, observed, and recovered with documented runbooks. |
 | Security | Authentication, tenant isolation, authorization, privacy, auditability, WAF, and secret handling are explicit. | Hosted pilot passes security checklist and exposes no admin/internal surfaces publicly. |
+| Product adoption | Setup, support, production readiness, and client-specific integration can be demonstrated as service opportunities without in-product Billing. | Customer evaluation is not blocked by pricing, subscriptions, or payment workflows. |
 
 ## Target Architecture Sections
 
@@ -36,5 +39,7 @@ The FairSpot target architecture is a customer-ready, parking-first fair allocat
 ## Target Assumptions
 
 - Billing remains deferred.
+- First pilot evaluation is expected to fit a small or medium company before enterprise rollout is reconsidered.
+- Fairness, normal tenant operation, audit/privacy evidence, and basic operational insight stay in the open core.
 - `fairspot.net` is for the application domain, not the GitHub Pages documentation site.
 - Current service namespaces may continue to use `FPS` until a later technical rename is approved.
