@@ -3,7 +3,7 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.2 |
+| **Version** | 0.3 |
 | **Architecture State** | Target |
 | **ADM Phase** | Phase A - Architecture Vision |
 | **Responsible** | Codex/Product Owner |
@@ -20,6 +20,7 @@
 | Auditor / Compliance Reviewer | Business decisions are explainable and supported by audit evidence without exposing unrelated personal data or technical logs. | [Security Architecture](/architecture/security/), [Controls](/architecture/security/controls), [Privacy Architecture](/architecture/security/privacy-architecture) |
 | Client IT / Security Reviewer | Identity, tenancy, ingress, secrets, data stores, Dapr, encryption, audit, retention, backup, and operational responsibilities are reviewable. | [Security Architecture](/architecture/security/), [Technology Architecture](/architecture/technology/), [Architecture States](/architecture/architecture-states/) |
 | Product Sponsor | Product value, open-source posture, customer readiness, deferred billing scope, and visible implementation gaps are clear. | [Architecture Vision](/architecture/architecture-vision), [Architecture States](/architecture/architecture-states/), [Gap Analysis](/architecture/architecture-states/gap-analysis) |
+| Pilot Customer Sponsor | The first pilot is small enough to support, valuable enough to prove parking fairness, and clear about what is live versus a known gap. | [Architecture Vision](/architecture/architecture-vision), [Target Architecture](/architecture/architecture-states/target-architecture), [Transition Architectures](/architecture/architecture-states/transition-architectures) |
 | Product Owner / Architecture Owner | Architecture decisions, delivery priorities, acceptance criteria, versioning, and implementation handoffs stay consistent. | [Governance](/architecture/governance/), [Artifact Register](/architecture/artifact-register), [Migration Tracker](/architecture/migration-tracker) |
 
 ## Concern To View Traceability
@@ -35,6 +36,7 @@
 | Role-specific default views | Actor/role, application architecture, web/mobile UX, and authorization views. | Partial |
 | Audit and privacy evidence | Security architecture, controls, privacy architecture, audit service, and retention evidence. | Partial |
 | Billing exclusion | Architecture vision, migration tracker, and gap analysis. | Draft |
+| Pilot size and supportability | Architecture vision, target architecture, transition architecture, deployment profile, and client evaluation pack. | Draft |
 
 ## Open Concerns
 
