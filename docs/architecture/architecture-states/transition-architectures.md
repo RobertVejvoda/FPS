@@ -1,15 +1,15 @@
 # Transition Architectures
 
-| Field | Value |
+|  |  |
 | --- | --- |
-| Status | Draft |
-| Version | 0.1 |
-| Architecture State | Transition |
-| ADM Phase | Phases E/F |
-| Responsible | Codex/Product Owner |
-| Accountable | Robert |
-| Last Reviewed | - |
-| Next Review | On milestone change |
+| **Status** | Draft |
+| **Version** | 0.1 |
+| **Architecture State** | Transition |
+| **ADM Phase** | Phases E/F |
+| **Responsible** | Codex/Product Owner |
+| **Accountable** | Robert |
+| **Last Reviewed** | - |
+| **Next Review** | On milestone change |
 
 Transition architectures describe staged movement from current-state evidence toward the customer-ready target.
 

@@ -1,15 +1,15 @@
 # Governance
 
-| Field | Value |
+|  |  |
 | --- | --- |
-| Status | Draft |
-| Version | 0.1 |
-| Architecture State | Cross-cutting |
-| ADM Phase | Preliminary + Phases G/H |
-| Responsible | Codex/Product Owner |
-| Accountable | Robert |
-| Last Reviewed | - |
-| Next Review | On governance change |
+| **Status** | Draft |
+| **Version** | 0.1 |
+| **Architecture State** | Cross-cutting |
+| **ADM Phase** | Preliminary + Phases G/H |
+| **Responsible** | Codex/Product Owner |
+| **Accountable** | Robert |
+| **Last Reviewed** | - |
+| **Next Review** | On governance change |
 
 Governance is established in Preliminary, executed in Phase G, and evolved in Phase H.
 
