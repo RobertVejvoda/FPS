@@ -26,7 +26,7 @@ Major architecture pages should use this header when they become governed artifa
 | TOGAF ADM Map | [TOGAF ADM Map](/architecture/togaf-adm-map) | Preliminary | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | On structure change |
 | Architecture Migration Tracker | [Architecture Migration Tracker](/architecture/migration-tracker) | Cross-ADM | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | During each migration slice |
 | Architecture Vision | [Architecture Vision](/architecture/architecture-vision) | Phase A | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
-| Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
+| Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Phase C | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
 | Technology Architecture | [Technology Architecture](/architecture/technology/) | Phase D | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
 | Security Architecture | [Security Architecture](/architecture/security/) | Cross-cutting | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
