@@ -1,21 +1,42 @@
 # Application Architecture
 
-| Application / Component | Responsibility | Source Of Truth | Notes |
-| --- | --- | --- | --- |
-| Booking | Booking request lifecycle, Draw, allocation, cancellation, usage confirmation, booking events. | Booking service | Core domain and highest-complexity bounded context. |
-| Identity | Authenticated user context and OIDC integration boundary. | Identity service / IdP | Tenant and user identity must come from authenticated claims. |
-| Profile | Employee/profile facts, vehicle facts, eligibility, HR bootstrap/import. | Profile service | Booking validates submitted vehicle/profile facts against Profile-owned data. |
-| Configuration | Parking policy, locations, slots, publication/history. | Configuration service | Booking integration with Configuration remains an important architecture boundary. |
-| Customer | Tenant lifecycle, readiness, identity setup, parking bootstrap. | Customer service | Durable Customer state is a known gap. |
-| Notification | In-app/email notification records, preferences, API/SSE. | Notification service | Notification failure must not roll back authoritative booking state. |
-| Audit | Append-only business audit records, query, retention, integrity, PII mapping. | Audit service | Business evidence source, distinct from technical telemetry. |
-| DataHub | Cross-service CQRS read models and projections. | DataHub | Target for durable event-fed operational reads. |
-| Reporting | Legacy/transitional report surface and possible report catalog metadata. | Reporting service | Should not own PostgreSQL operational projections. |
-| Web app | Role-centered browser experience for employee, HR, admin, reporting, and audit surfaces. | Web client | Must avoid exposing technical tenant details to non-technical roles. |
-| Mobile app | Employee self-service mobile experience. | Expo mobile client | Employee-first flow for booking, notifications, profile, and My Spots. |
+FairSpot uses independently deployable services around business ownership boundaries. Command-side writes stay with the owning service. Cross-service reads are projected into DataHub when a single service query is not enough.
+
+## Application Components
+
+| Application / Component | Responsibility | Source Of Truth | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Booking | Booking request lifecycle, Draw, allocation, cancellation, usage confirmation, penalties, booking events, and Draw workflow actions. | Booking service | Partial | Core domain and highest-complexity bounded context. Booking state is not owned by DataHub or Reporting. |
+| Identity | Authenticated user context, OIDC integration boundary, current user/tenant/role resolution. | Identity service / IdP | Partial | Tenant and user identity must come from authenticated claims and fail closed when missing. |
+| Profile | Employee facts, vehicle facts, default vehicle, eligibility, company-car/accessibility facts, HR bootstrap/import. | Profile service | Partial | Booking validates submitted vehicle/profile facts against Profile-owned data. |
+| Configuration | Parking policy, locations, time slots, slots/resource maps, capacity versions, Draw schedule and publication history. | Configuration service | Partial | Booking integration with Configuration is a key boundary; default/stub policy paths are not customer-ready. |
+| Customer | Tenant lifecycle, readiness, identity setup, support contacts, parking bootstrap, tenant object storage. | Customer service | Placeholder | Durable Customer state is a P0 gap. |
+| Notification | In-app/email notification records, preferences, templates, delivery status, API/SSE. | Notification service | Partial | Notification failure must not roll back authoritative Booking state. |
+| Audit | Append-only business audit records, query, retention, integrity checks, PII mapping. | Audit service | Partial | Business evidence source, distinct from technical telemetry and DataHub projections. |
+| DataHub | Cross-service CQRS read models, event inbox, projections, dashboards/read APIs, approved export data. | DataHub | Placeholder | Target for durable event-fed operational reads and customer-facing summaries. |
+| Reporting | Report catalog/configuration and possible presentation surface over approved DataHub views. | Reporting service | Deferred | Should not own PostgreSQL operational projections or cross-service read models. |
+| Web app | Role-centered browser experience for employee, HR, tenant admin, system admin, reporting, and audit surfaces. | Web client | Partial | Employee, HR, administrator, and operator defaults must differ. |
+| Mobile app | Employee self-service mobile experience. | Expo mobile client | Partial | Employee-first flow for booking, notifications, profile, default vehicle, and My Spots. |
+
+## Boundary Rules
+
+- A service that owns a business fact accepts commands and stores authoritative state for that fact.
+- DataHub serves cross-service reads and projections; it must not accept corrective commands or mutate owning service state.
+- Reporting can expose report definitions, filters, visibility rules, and exports over approved DataHub views; it must not become the read-model store.
+- Audit remains the evidence source. DataHub may store audit references and safe metadata, not raw audit payloads or PII mappings.
+- Web and mobile clients must not compose privileged behavior by bypassing backend authorization.
+- Dapr is the integration/runtime boundary for pub/sub, workflows, state, service invocation, secrets, and mTLS where supported.
+
+## Missing Or Incomplete Views
+
+- Application cooperation diagram with DataHub, Audit, Notification, and Reporting separated.
+- Customer persistent storage design.
+- Role-specific web client application view for employee, HR, tenant administrator, and system administrator.
+- Reporting cleanup decision if report catalog/configuration remains as a separate service.
 
 ## Source Evidence
 
 - [Software Architecture](/technology-layer/software-architecture)
 - [Function Map Validation](/function-map-validation)
 - [Application Layer](/application-layer)
+- [DataHub](/application-layer/datahub)
