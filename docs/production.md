@@ -8,6 +8,18 @@ FairSpot is therefore a **bring-your-own-cloud** platform. The core architecture
 
 FairSpot is also a Dapr-first production reference for later systems. New production-facing slices should use Dapr building blocks first when they match the requirement: Workflow for orchestration, pub/sub for domain events, transactional outbox for state-plus-event reliability where supported, secret stores for runtime secrets, mTLS/Sentry for service identity, resiliency policies for dependency behavior, and state encryption where the selected component supports it.
 
+## TOGAF Placement
+
+Operations runbooks are implementation-governance evidence, not a separate architecture layer.
+
+| TOGAF Area | How Operations Runbooks Are Used |
+| --- | --- |
+| Phase D - Technology Architecture | Deployment profiles, runtime platform, observability, Dapr component standards, backup/restore expectations, and security boundaries define the target technology architecture. |
+| Phase E - Opportunities and Solutions | Hosted pilot, Dapr hardening, backup/restore, and observability gaps become work package groups in [Transition Architectures](./architecture/architecture-states/transition-architectures). |
+| Phase F - Migration Planning | Runbooks provide the migration evidence needed to sequence hosted pilot and client-owned production work. |
+| Phase G - Implementation Governance | Smoke tests, reset evidence, incident/maintenance runbooks, restore drills, and Dapr validation prove whether implementation conforms to the architecture. |
+| Phase H - Architecture Change Management | Operational incidents, waivers, provider changes, and accepted risks feed [Change Control](./architecture/governance/change-control), [Waivers](./architecture/governance/waivers), and [Versions and Decisions](./versions-and-decisions). |
+
 ## Production Story
 
 Read this section from high level to detail:
