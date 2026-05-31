@@ -3,12 +3,12 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.1 |
+| **Version** | 0.3 |
 | **Architecture State** | Target |
 | **ADM Phase** | Cross-cutting |
 | **Responsible** | Codex/Product Owner |
 | **Accountable** | Robert |
-| **Last Reviewed** | - |
+| **Last Reviewed** | 2026-05-31 |
 | **Next Review** | Before hosted pilot |
 
 Security architecture describes FairSpot identity, tenant isolation, privacy, controls, and known gaps.
@@ -23,6 +23,24 @@ Core security and privacy direction has been restated from the legacy security m
 | Privacy architecture | Partial | Data classes, minimization, audit pseudonymisation, erasure, and retention concerns are stated. |
 | Controls | Partial | Architecture-significant controls are stated with evidence links. |
 | Gap register | Partial | High-impact hosted pilot and production-blocking gaps are visible. |
+
+## Requirement Interpretation
+
+| Requirement | Security / Privacy Interpretation | Evidence | Gap |
+| --- | --- | --- | --- |
+| AR-001 | Tenant isolation is enforced across authorization, storage, events, DataHub projections, audit, backup, and support flows. | [Security Architecture](/architecture/security/security-architecture), [Controls](/architecture/security/controls) | Tenant-isolation evidence across DataHub and hosted profile. |
+| AR-003 / AR-014 | Public ingress must be WAF-protected and must not expose internal/admin/debug/runtime/observability surfaces. | [Security Architecture](/architecture/security/security-architecture), [Controls](/architecture/security/controls), [Gap Register](/architecture/security/gap-register) | Hosted WAF smoke and origin exposure evidence. |
+| AR-004 / AR-008 | Employee and HR views expose only role-appropriate safe explanations and require audit for privileged cancellation/support actions. | [Privacy Architecture](/architecture/security/privacy-architecture), [Controls](/architecture/security/controls) | HR cancellation audit/notification validation. |
+| AR-009 / AR-013 | Dapr and DataHub must use least-privilege components, secret scopes, tenant-scoped projections, minimal payloads, and approved export paths. | [Controls](/architecture/security/controls), [Data Architecture](/architecture/information-systems/data-architecture) | Dapr hardening and DataHub privacy-shape proof. |
+
+## Legacy Evidence Disposition
+
+| Legacy Source | Target Disposition |
+| --- | --- |
+| `security/**` | Source evidence for controls, threat assumptions, data classification, and review pack. Target controls and gaps belong here. |
+| `security/cloudflare-waf-profile.md` | Migrated directionally into Security and Technology; keep as executable WAF profile evidence. |
+| `security/gap-register.md` | Migrated directionally into [Security Gap Register](/architecture/security/gap-register); keep until all rows are mapped or closed. |
+| GDPR/security user stories | Source evidence for privacy architecture and controls; not all are customer-ready P0 implementation slices. |
 
 ## Contents
 
