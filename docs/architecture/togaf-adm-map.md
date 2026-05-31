@@ -2,6 +2,8 @@
 
 This page maps FairSpot documentation to TOGAF ADM areas. The mapping is intentionally lightweight: it makes coverage and validation explicit without forcing every TOGAF artifact.
 
+Formal TOGAF deliverables are mapped in [TOGAF Deliverable Coverage](/architecture/artifact-register?id=togaf-deliverable-coverage). FairSpot creates standalone deliverable pages only when the content does not have a natural home elsewhere.
+
 ## ADM Coverage
 
 | ADM Phase | FairSpot Pages | Status | Notes |
