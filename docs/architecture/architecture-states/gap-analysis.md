@@ -1,17 +1,17 @@
 # Gap Analysis
 
-| Field | Value |
+|  |  |
 | --- | --- |
-| Status | Draft |
-| Version | 0.1 |
-| Architecture State | Gap Analysis |
-| Baseline Version | Current State v0.1 |
-| Target Version | Customer-Ready Target v0.1 |
-| ADM Phase | Phases E/F + Requirements Management |
-| Responsible | Codex/Product Owner |
-| Accountable | Robert |
-| Last Reviewed | - |
-| Next Review | Before hosted pilot |
+| **Status** | Draft |
+| **Version** | 0.1 |
+| **Architecture State** | Gap Analysis |
+| **Baseline Version** | Current State v0.1 |
+| **Target Version** | Customer-Ready Target v0.1 |
+| **ADM Phase** | Phases E/F + Requirements Management |
+| **Responsible** | Codex/Product Owner |
+| **Accountable** | Robert |
+| **Last Reviewed** | - |
+| **Next Review** | Before hosted pilot |
 
 This page compares current-state evidence with the customer-ready target architecture.
 

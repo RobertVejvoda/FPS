@@ -1,15 +1,15 @@
 # Architecture Principles
 
-| Field | Value |
+|  |  |
 | --- | --- |
-| Status | Draft |
-| Version | 0.1 |
-| Architecture State | Target |
-| ADM Phase | Preliminary |
-| Responsible | Codex/Product Owner |
-| Accountable | Robert |
-| Last Reviewed | - |
-| Next Review | On architecture principle change |
+| **Status** | Draft |
+| **Version** | 0.1 |
+| **Architecture State** | Target |
+| **ADM Phase** | Preliminary |
+| **Responsible** | Codex/Product Owner |
+| **Accountable** | Robert |
+| **Last Reviewed** | - |
+| **Next Review** | On architecture principle change |
 
 | Principle | Statement | Rationale | Implications |
 | --- | --- | --- | --- |
