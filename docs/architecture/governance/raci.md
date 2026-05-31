@@ -1,5 +1,7 @@
 # RACI
 
+This RACI defines architecture governance responsibilities. It does not replace delivery-board ownership for individual implementation issues.
+
 | Architecture Artifact / Activity | Sponsor | Architecture Owner | Business Owner | Security Lead | Delivery Lead | Implementer |
 | --- | --- | --- | --- | --- | --- | --- |
 | Architecture Vision | A | R | C | C | C | I |
@@ -19,3 +21,19 @@
 Legend: `R` responsible, `A` accountable, `C` consulted, `I` informed.
 
 Every row should have one accountable owner. If multiple actors are accountable, the activity should be split or escalated.
+
+## Role Mapping
+
+| RACI Role | FairSpot Mapping | Notes |
+| --- | --- | --- |
+| Sponsor | Robert | Accepts product/architecture direction and external-facing risk. |
+| Architecture Owner | Robert + Codex | Robert is accountable; Codex prepares and maintains reviewable architecture content. |
+| Business Owner | Robert | Owns business value, scope, and customer-facing fit. |
+| Security Lead | Codex review; Robert risk acceptance | Security/privacy findings can require Robert acceptance when risk remains. |
+| Delivery Lead | Codex | Maintains issue readiness, routing, PR review, validation, and merge decisions. |
+| Implementer | Claude, Copilot, Human, or Codex when explicitly implementing | Provides implementation evidence and validation, but does not self-approve. |
+
+## Robert TODOs
+
+- Robert TODO: confirm whether Security Lead should remain Codex review plus Robert acceptance or name a separate human reviewer before customer pilot.
+- Robert TODO: confirm whether customer pilot artifacts require a customer-side consulted role in the RACI.
