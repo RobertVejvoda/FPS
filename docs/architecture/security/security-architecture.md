@@ -14,6 +14,8 @@ FairSpot security centers on authenticated context, tenant isolation, least priv
 | Audit evidence | Business evidence is append-only where possible and pseudonymised where required. Audit is separate from technical telemetry. | Partial | [Audit](/security/audit), [Security Model](/security/security-model) |
 | Observability safety | Logs, metrics, and traces support operations without secrets, raw personal data, full payloads, or business-audit replacement. | Partial | [Observability](/architecture/technology/observability), [Local Observability](/local-observability) |
 | DataHub/read-model privacy | Projections preserve tenant scope, minimal data, role-safe views, and approved exports only. | Placeholder | [Data Architecture](/architecture/information-systems/data-architecture), [Data Privacy](/security/data-privacy) |
+| Resource-map and policy preview safety | Facilities/admin previews and publication flows remain tenant-scoped, audited, advisory where previewed, and separate from allocation decisions. | Placeholder | [Information Systems](/architecture/information-systems/), [Business Policies](/architecture/business/policies) |
+| Backup and restore security | Restore actions preserve tenant boundaries, secret handling, audit evidence, PII mapping rules, and restore-time re-erasure obligations. | Placeholder | [Backup And Restore](/production/backup-restore), [RTO/RPO Requirements](/production/rto-rpo-requirements) |
 
 ## Trust Boundary Rules
 
@@ -24,7 +26,9 @@ FairSpot security centers on authenticated context, tenant isolation, least priv
 - Dapr secures runtime transport and component access, but does not replace application authorization or privacy filtering.
 - Domain events omit secrets, stack traces, hidden lottery internals, raw names/emails/license plates, and unrelated employee data.
 - Audit PII mapping is a restricted path with reason capture and its own audit trail.
+- Backup and restore operations are privileged security events when they can expose Confidential or Secret data.
+- Sponsor, HR, and facilities views can use DataHub projections only after the projection shape is role-safe and tenant-scoped.
 
 ## Required Trust Boundary Diagram
 
-Placeholder: a security trust-boundary view should show browser/mobile clients, Cloudflare/Tunnel/WAF, API gateway, Keycloak/OIDC, services, Dapr sidecars, state stores, pub/sub broker, DataHub PostgreSQL, Audit PII mapping, observability backends, and secret stores.
+Placeholder: a security trust-boundary view should show browser/mobile clients, Cloudflare/Tunnel/WAF, API gateway, Keycloak/OIDC, services, Dapr sidecars, state stores, pub/sub broker, DataHub PostgreSQL, Audit PII mapping, observability backends, secret stores, backup/restore path, and operator-only access path.

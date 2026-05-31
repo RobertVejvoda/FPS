@@ -3,7 +3,7 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.4 |
+| **Version** | 0.5 |
 | **Architecture State** | Target |
 | **ADM Phase** | Requirements Management |
 | **Responsible** | Codex/Product Owner |
@@ -39,6 +39,8 @@ When a phase introduces or changes an architecture-significant requirement, upda
 | AR-020 | Customer-visible policy or capacity changes should support advisory impact preview when reliable DataHub projections exist; preview must not allocate spaces or override policy. | Role intent roadmap and DataHub direction | Business, data, application | Draft |
 | AR-021 | Customer-ready hosted profiles must have tested backup/restore evidence for authoritative state and a documented rebuild path for derived DataHub projections. | Backup/restore and RTO/RPO requirements | Technology, security, architecture states | Placeholder |
 | AR-022 | Production-facing Dapr components must have profile-specific evidence for component scopes, secret references, mTLS/service identity where used, resiliency policies, state encryption where supported, and sidecar/API hardening. | Dapr-first production direction | Technology, security | Placeholder |
+| AR-023 | Backup, restore, export, and break-glass operations must preserve tenant boundaries, avoid recording secrets, audit privileged access, and document restore-time re-erasure where personal data is restored. | Security model and backup/restore direction | Security, technology, privacy | Placeholder |
+| AR-024 | Sponsor, facilities, HR support, and DataHub projection views must have approved role-safe output shapes before external customer use. | Privacy architecture and DataHub direction | Security, business, data | Placeholder |
 
 ## ADM Phase Impact
 
@@ -56,7 +58,7 @@ When a phase introduces or changes an architecture-significant requirement, upda
 
 ## Robert TODOs
 
-- Robert TODO: prioritize AR-011 through AR-014 and AR-017 through AR-022 into delivery slices before customer-facing review.
+- Robert TODO: prioritize AR-011 through AR-014 and AR-017 through AR-024 into delivery slices before customer-facing review.
 - Robert TODO: confirm which AR items are mandatory for the first hosted demo versus mandatory for a paid pilot.
 - Robert TODO: confirm whether Feedback is required as a small evaluator-feedback slice before the first customer demo.
 - Robert TODO: confirm whether requirements approval should happen per phase artifact, centrally on this page, or both for customer-facing reviews.

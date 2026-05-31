@@ -14,6 +14,9 @@
 | SEC-010 | Secret access, rotation, export, and break-glass activity must be tracked without recording secret values. | [Security Model](/security/security-model) | Operations/Security | Draft |
 | SEC-011 | Technical telemetry must not replace business audit evidence and must not contain confidential payloads or secrets. | [Observability](/architecture/technology/observability), [Local Observability](/local-observability) | Operations/Security | Draft |
 | SEC-012 | Rights-request workflows must preserve audit accountability while deleting, anonymising, pseudonymising, or retaining data according to policy. | [Data Privacy](/security/data-privacy) | Privacy/Security | Draft |
+| SEC-013 | Backup and restore operations that can expose Confidential or Secret data require authorization, evidence, restore validation, and restore-time re-erasure handling. | [Backup And Restore](/production/backup-restore), [RTO/RPO Requirements](/production/rto-rpo-requirements) | Operations/Security | Draft |
+| SEC-014 | Resource-map publication and policy-impact preview must be tenant-scoped, audited, advisory where previewed, and must not expose employee-level allocation internals by default. | [Business Policies](/architecture/business/policies), [Information Systems](/architecture/information-systems/) | Product/Security | Draft |
+| SEC-015 | Sponsor management summaries and exports must be aggregate by default, role-authorized, tenant-scoped, and protected against spreadsheet formula injection. | [Privacy Architecture](/architecture/security/privacy-architecture), [Data Architecture](/architecture/information-systems/data-architecture) | Product/Security | Draft |
 
 ## Evidence Needed Before Hosted Pilot
 
@@ -21,6 +24,9 @@
 - Origin scan or smoke evidence showing internal paths are not public.
 - OIDC public-domain redirect/CORS/cookie validation.
 - Dapr sidecar/component access hardening evidence for the selected profile.
+- Dapr component scopes, secret scopes, resiliency policies, state encryption support, and sidecar/API token settings reviewed for the selected profile.
 - Tenant-scoped persistence restart test for P0 state.
+- Backup/restore drill evidence for authoritative state or an accepted hosted-pilot waiver.
 - Log/trace sample review showing no secrets or raw confidential payloads.
 - Audit record sample for privileged Draw/cancellation and PII mapping access where applicable.
+- Role-safe DataHub projection samples for HR support, sponsor summaries, and resource-map publication views.
