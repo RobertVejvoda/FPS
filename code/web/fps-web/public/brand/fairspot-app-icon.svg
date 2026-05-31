@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">FairSpot app icon</title>
-  <desc id="desc">A warm square icon with a multicolor abstract FairSpot allocation mark.</desc>
+  <desc id="desc">A warm square icon with a green abstract FairSpot allocation mark.</desc>
   <rect width="512" height="512" rx="104" fill="#F7F4EE"/>
   <g transform="translate(50 60) scale(0.75)">
   <path
@@ -8,9 +8,9 @@
     fill="#2F7D3F"/>
   <path
     d="M136 386c15-92 73-160 167-188 34-10 74-15 119-15h58l-11 34c-8 25-31 42-58 42h-61c-53 0-94 11-124 34-28 22-47 53-56 93h-34Z"
-    fill="#2F80A7"/>
+    fill="#48B95E"/>
   <path
     d="M136 386c18-116 90-206 205-255 43-18 90-27 142-27h34l-12 34c-9 26-33 43-61 43h-68c-64 0-114 18-150 55-36 36-55 86-56 150h-34Z"
-    fill="#D9A441"/>
+    fill="#51C567"/>
   </g>
 </svg>
