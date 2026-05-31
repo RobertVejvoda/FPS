@@ -41,15 +41,19 @@ Milestones are delivery checkpoints across phases. Phases explain the product ar
 
 ## Current Priority
 
-The current next product phase is **Pilot Story and Client Evaluation**. Most platform, customer onboarding, reporting, operations, and employee surfaces are now implemented; the next work should make the story easy to test, explain, and trust.
+The current next product phase is **Customer-Ready Hosted Evaluation**. The product story is coherent enough to explain, but the hosted pilot is not ready for real customer data until persistence, DataHub, role-specific UI, and hosted operations evidence are closed.
 
-| Slice | Goal | Notes |
-| --- | --- | --- |
-| Status and evidence cleanup | Keep roadmap and tracker aligned after tenant readiness and tenant admin merges. | Avoid stale handoffs while moving into commercialisation and pilot-story work. |
-| Pilot story cleanup | Explain the open-source, privacy-first, fair-allocation story for small companies under about 150 employees. | Emphasize company-owned deployment/data, anonymous or pseudonymous records, and parking-first value before paid product mechanics. |
-| Test scenarios and evidence | Turn local harness, demo seed, and readiness checks into a small repeatable test plan. | Use real-device/mobile smoke paths and business-readable evidence, not only service health. |
-| Resource map and zone preference slicing | Prepare future slices for resource map upload, zone preference capture, team default zones, and fallback allocation. | Keep parking as first implementation, but design the model so chairs/desks/seats fit naturally later. |
-| `BILL001` deferred decision | Keep Billing out of implementation until a concrete commercial offer is approved. | Source of truth: [Commercialisation Impact Review](./strategy-layer/commercialisation). |
+In TOGAF terms, the roadmap is the business-readable companion to [Transition Architectures](./architecture/architecture-states/transition-architectures). This page explains the sequence; the architecture state pages own gaps, work package groups, and validation gates.
+
+| Slice | Goal | TOGAF Placement | Notes |
+| --- | --- | --- | --- |
+| Customer durable tenant state | Make tenant onboarding/readiness state survive restart and hosted deployment changes. | Phase C/E/F | Closes `GAP-001`; implementation issue #317. |
+| DataHub first projections | Build event-fed read models for customer-facing reports, HR/admin views, and readiness summaries. | Phase C/E/F | Starts with #332, then #335/#334. |
+| Hosted public-domain evidence | Prove NAS/Cloudflare/WAF/auth/smoke/reset behavior before real customer data. | Phase D/G | Issues #316, #315, #314, and Dapr hardening #378. |
+| Role-centered UX validation | Validate Employee, HR/facility, tenant admin, system admin, auditor, and sponsor default views. | Phase B/C/G | Draw schedule #340, Draw progress #339, HR operations #310, and UX follow-ups. |
+| Contract evidence consolidation | Make API/event/generated client evidence discoverable from Information Systems Architecture. | Phase C/G | Issue #377. |
+| Diagram refresh | Produce Robert-approved target views for capability/value stream, application cooperation, DataHub, deployment, workflow, trust boundary, privacy/audit, and transition roadmap. | Cross-ADM / Architecture Definition | Needed before architecture baseline. |
+| `BILL001` deferred decision | Keep Billing out of implementation until a concrete commercial offer is approved. | Phase H / Commercial decision | Source of truth: [Commercialisation Impact Review](./strategy-layer/commercialisation). |
 
 ## Board Usage
 

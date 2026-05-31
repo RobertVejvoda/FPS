@@ -1,10 +1,21 @@
-# Strategy
+# Product Strategy Source Evidence
+
+This page is retained as source evidence. Product strategy is no longer a separate public navigation section.
+
+Current strategy content is governed through:
+
+- [Product Overview](./Home) for the concise public product entry.
+- [Architecture Vision](./architecture/architecture-vision) for target scope, outcomes, constraints, non-goals, and Statement of Architecture Work coverage.
+- [Principles](./architecture/principles) for durable architecture/product constraints.
+- [Roadmap](./roadmap) and [Transition Architectures](./architecture/architecture-states/transition-architectures) for sequencing and migration planning.
+- [Commercialisation](./strategy-layer/commercialisation) for paid services, licensing implications, and deferred Billing.
+- [Versions and Decisions](./versions-and-decisions) for durable decisions.
 
 FairSpot starts with parking because parking is a concrete, high-friction reservation problem: demand often exceeds supply, allocation decisions affect employees directly, and manual coordination creates poor evidence. The strategic goal is to turn that process into a fair, auditable, tenant-isolated allocation platform for limited workplace resources.
 
 Parking remains the v1 product focus. Future resource domains such as desks, chairs, or company seats should reuse the same platform ideas only after parking reaches a stable demo and hosted baseline.
 
-This page is the product-level strategy entry. Architecture scope, constraints, stakeholders, target state, and gaps are maintained in the [Architecture Repository](./architecture/).
+Architecture scope, constraints, stakeholders, target state, and gaps are maintained in the [Architecture Repository](./architecture/).
 
 ## Strategic Questions
 

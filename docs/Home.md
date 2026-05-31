@@ -15,6 +15,8 @@ The implemented backend now covers Booking, Identity/Profile context, Notificati
 
 This site is the product and business-facing view of FairSpot: problem, goals, actors, policy model, architecture summary, trust story, roadmap, and demo/evaluation narrative.
 
+Product strategy is not maintained as a separate public section. Strategy is expressed through this overview and then governed in the architecture and product artifacts: [Architecture Vision](./architecture/architecture-vision), [Principles](./architecture/principles), [Roadmap](./roadmap), [Commercialisation](./strategy-layer/commercialisation), and [Versions and Decisions](./versions-and-decisions). Older strategy pages remain source evidence until fully retired.
+
 ## Product Outcomes
 
 - **Fair access to scarce parking**: allocate spaces with explicit, auditable rules instead of first-come, first-served coordination.
@@ -42,7 +44,7 @@ This site is the product and business-facing view of FairSpot: problem, goals, a
 
 | Reader | Start here | Purpose |
 | --- | --- | --- |
-| Business evaluator | [Strategy](./strategy), [Business Architecture](./architecture/business/), [Demo and Evaluation](./demo-and-evaluation) | Understand the problem, product value, roles, and demo story. |
+| Business evaluator | [Product Overview](./Home), [Business Architecture](./architecture/business/), [Demo and Evaluation](./demo-and-evaluation) | Understand the problem, product value, roles, and demo story. |
 | Product owner | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions), [Architecture Requirements](./architecture/requirements) | Understand priorities, durable decisions, and outcome coverage. |
 | Architect | [Architecture Repository](./architecture/), [Information Systems](./architecture/information-systems/), [Technology Architecture](./architecture/technology/) | Understand the capability model, bounded contexts, integration direction, and platform choices. |
 | Architecture governor | [TOGAF ADM Map](./architecture/togaf-adm-map), [Artifact Register](./architecture/artifact-register), [Gap Analysis](./architecture/architecture-states/gap-analysis) | Understand architecture phase coverage, artifact status, baseline/target versions, and known gaps. |

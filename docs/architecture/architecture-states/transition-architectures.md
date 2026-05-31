@@ -13,6 +13,8 @@
 
 Transition architectures describe staged movement from current-state evidence toward the customer-ready target.
 
+In TOGAF terms, this page is the architecture-controlled home for Opportunities and Solutions plus Migration Planning. The public [Roadmap](/roadmap) stays business-readable; this page maps that roadmap into architecture work package groups, target transitions, risks, and exit criteria.
+
 | Transition | From Version | To Version | Capabilities Added | Risks | Exit Criteria |
 | --- | --- | --- | --- | --- | --- |
 | T1 Customer-ready docs and architecture governance | Current State v0.1 | Customer-Ready Target v0.1 | TOGAF map, artifact register, architecture states, public docs cleanup, requirements cross-phase traceability, legacy evidence disposition. | Documentation can look complete before validation catches up. | Gaps are explicit and client-facing docs avoid maintainer-only workflow. |
@@ -31,3 +33,15 @@ Transition architectures describe staged movement from current-state evidence to
 | Contract consolidation | GAP-007 | T2 | Link generated API/OpenAPI and event contracts from Information Systems Architecture. |
 | Dapr hosted hardening | GAP-008 | T2 | Prove component scopes, secret scopes, resiliency, mTLS/Sentry where supported, state encryption, and outbox behavior. |
 | Customer-owned production handoff | GAP-001 through GAP-008 as applicable | T3 | Convert pilot evidence into client-owned deployment guidance and acceptance checklist. |
+
+## Roadmap Trace
+
+| Roadmap Area | Architecture Transition | Work Package Groups | Current Implementation Cards |
+| --- | --- | --- | --- |
+| Customer-ready docs and architecture governance | T1 | Architecture repository consolidation | Documentation migration slices, diagram refresh, architecture review/baseline. |
+| Customer data and readiness | T2 | Customer durable tenant state | `DATA010` / issue #317 and Customer readiness follow-ups. |
+| DataHub/read models | T2 | DataHub first projections | `DATAHUB003` / #332, `DATAHUB004` / #335, `DATAHUB005` / #334. |
+| Hosted public-domain readiness | T2 | Hosted WAF and smoke evidence, Dapr hosted hardening | `OPS012` / #316, `SEC010` / #315, `OPS013` / #314, `OPS014` / #378. |
+| Role-centered customer UX | T2 | Role-centered UX validation | `DRAW005` / #340, `DRAW004` / #339, HR operations / #310, UX follow-ups. |
+| Contract evidence | T2 | Contract consolidation | `API007` / #377. |
+| Customer-owned production | T3 | Customer-owned production handoff | OPS/BYOC and handoff issues after hosted pilot evidence. |

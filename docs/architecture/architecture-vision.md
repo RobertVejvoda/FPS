@@ -26,7 +26,7 @@ The customer-ready target is not a full enterprise architecture baseline. It is 
 
 ## Product Strategy Translation
 
-FairSpot's product strategy remains outside the architecture repository where it is useful to business readers. The architecture repository translates that strategy into reviewable target-state constraints.
+FairSpot's strategy is expressed through the product overview, roadmap, commercialisation notes, durable decisions, and architecture repository. The architecture vision translates that strategy into reviewable target-state constraints.
 
 | Product Direction | Architecture Translation |
 | --- | --- |
