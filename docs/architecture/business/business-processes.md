@@ -2,6 +2,8 @@
 
 This page is the target business process catalog. Detailed executable rules still live in the legacy business-layer contracts until the information systems slice migrates the implementation contracts.
 
+The process summaries below are authoritative for business intent. When a detailed implementation rule is needed, use the referenced legacy contract until that rule is migrated into the appropriate Information Systems contract artifact.
+
 ## Process Catalog
 
 | Process | Trigger | Main Outcome | Status | Source Evidence |
@@ -15,6 +17,15 @@ This page is the target business process catalog. Detailed executable rules stil
 | Reporting and audit evidence | Booking events, privileged actions, or review request occurs. | Audit evidence and DataHub-backed operational projections support safe reporting and review. | Placeholder | [Audit](/business-layer/audit), [Reporting](/business-layer/reporting), [DataHub](/application-layer/datahub) |
 | Pilot feedback | Authenticated pilot user submits feedback. | Tenant-scoped feedback is captured, reviewed, optionally answered, and audited where sensitive. | Deferred | [Feedback](/business-layer/feedback) |
 | Billing and payment | Commercial model is approved in future. | Tenant-level commercial records may be managed separately from employee booking details. | Deferred | [Billing](/business-layer/billing), [Commercialisation](/strategy-layer/commercialisation) |
+
+## Process Classification
+
+| Classification | Processes | Architecture Direction |
+| --- | --- | --- |
+| Customer-ready P0 | Tenant setup and readiness; future parking request; scheduled Draw and allocation; same-day parking request; cancellation/reallocation/usage/no-show; HR and administrator operations. | Keep visible in target state and transition gaps until implemented and validated. |
+| Customer-ready P1 | Reporting and audit evidence. | DataHub projections and Audit evidence must be durable before customer claims are strong. |
+| Pilot support P2 | Pilot feedback. | Optional narrow flow for customer evaluation feedback. |
+| Deferred | Billing and payment. | Do not include in customer-ready acceptance gates. |
 
 ## Core Process Summaries
 
@@ -82,6 +93,39 @@ Visible gap: durable Customer/tenant storage is required for customer-ready depl
 
 Visible gap: role-specific HR, tenant administrator, and system administrator default screens must be implemented and validated.
 
+### Reporting And Audit Evidence
+
+1. Booking, Customer, Configuration, Profile, Notification, and privileged UI actions produce business events or audit records where relevant.
+2. Audit keeps append-only business evidence for setup, policy changes, request decisions, Draw attempts, cancellations, manual actions, and sensitive access.
+3. DataHub consumes approved events into tenant-scoped projections for demand, allocation, rejection, cancellation, no-show, fairness, utilization, readiness, and management summaries.
+4. Reporting, if retained, exposes report catalog/configuration or presentation over approved DataHub views.
+5. HR/facilities, tenant administrators, auditors, and sponsors see role-appropriate summaries without raw technical logs or unrelated employee data.
+
+Visible gap: DataHub durable projections are required before customer-facing operational reporting should be treated as reliable.
+
+### Pilot Feedback
+
+1. Authenticated pilot user or evaluator submits feedback from web/mobile or a customer-facing support path.
+2. Feedback captures tenant/user context from authentication, category, message, optional page/context, and status.
+3. The UI warns users not to submit secrets or unrelated personal data.
+4. Authorized support/product users review feedback and convert actionable items into GitHub issues or customer follow-ups.
+5. Sensitive or policy-relevant feedback receives audit evidence where required.
+
+Visible gap: Robert must decide whether this is needed before the first customer demo or remains deferred.
+
+### Billing And Payment
+
+Billing and payment are not part of the customer-ready business process baseline. Future commercial records, support/subscription metadata, or external invoice references must be tenant-scoped and auditable, but employee booking data must not become commercial input unless a later approved decision changes that boundary.
+
+## Business Rule Contract Migration
+
+| Legacy Contract | Business Architecture Summary | Later Target Location |
+| --- | --- | --- |
+| [Allocation Rules](/business-layer/allocation-rules) | Draw tiers, weighted fairness, slot matching, resource maps, zones, same-day allocation, cancellation reallocation, penalties, audit, idempotency. | Information Systems API/event/domain contracts and Booking implementation docs. |
+| [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) | Statuses, transitions, cancellation, usage confirmation, no-show, expiry, employee-visible outcomes. | API contracts, event contracts, mobile/web UX contracts. |
+| [Booking Reason Codes](/business-layer/booking-reason-codes) | Stable reason codes and employee-safe text rules. | API contracts, notification templates, DataHub/report views. |
+| [Parking Policy Configuration](/business-layer/parking-policy-configuration) | Tenant/location policy, draw schedule, caps, penalties, resource map, zone, reserved-space, company-car, usage/no-show. | Configuration service contracts and data architecture. |
+
 ## Business Process Diagram Placeholders
 
 - Tenant setup and readiness process.
@@ -91,3 +135,4 @@ Visible gap: role-specific HR, tenant administrator, and system administrator de
 - Cancellation and reallocation process.
 - HR/admin operations process.
 - Reporting and audit evidence process.
+- Robert TODO: decide which process diagrams must be authored first for external review.

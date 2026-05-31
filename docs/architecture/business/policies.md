@@ -30,3 +30,20 @@ Business policies define target behavior. Tenant-specific configuration may adju
 - DataHub read models need durable implementation before customer reporting can be trusted.
 - Zone preference/resource map behavior is documented but needs customer-ready implementation proof.
 - No-show and usage confirmation need tenant capability decisions before enabling automation.
+
+## Deferred Or Optional Policy Areas
+
+| Policy Area | Direction |
+| --- | --- |
+| Motorcycle-specific capacity | Future optional extension unless a pilot customer requires it. Keep documented but do not make it a v1 customer-ready gate. |
+| Recurring reserved-space release | Future optional extension; current company-car and cancellation/reallocation rules are enough for v1. |
+| Sustainability incentives | Future product direction after parking allocation is stable. |
+| Advanced demand prediction / optimization | Future analytics/AI support only; AI must not allocate spots or override policy. |
+| Broad support portal | Deferred unless Robert decides customer service is required before pilot. Narrow authenticated feedback may be enough for evaluation. |
+| Billing/payment policy | Deferred until commercial model is approved. |
+
+## Robert TODOs
+
+- Robert TODO: confirm whether usage confirmation/no-show automation is required for the first customer demo.
+- Robert TODO: confirm whether motorcycle capacity stays future optional scope.
+- Robert TODO: confirm whether pilot feedback is sufficient instead of a broader customer-support policy.
