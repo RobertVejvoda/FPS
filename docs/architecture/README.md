@@ -12,6 +12,7 @@ FairSpot primarily models target architecture. The baseline is current-state evi
 | --- | --- |
 | TOGAF ADM map | [TOGAF ADM Map](/architecture/togaf-adm-map) |
 | Artifact status and page versions | [Artifact Register](/architecture/artifact-register) |
+| Legacy-to-repository migration status | [Architecture Migration Tracker](/architecture/migration-tracker) |
 | Architecture vision | [Architecture Vision](/architecture/architecture-vision) |
 | Stakeholders and concerns | [Stakeholders and Concerns](/architecture/stakeholders-and-concerns) |
 | Business architecture | [Business Architecture](/architecture/business/) |
@@ -31,3 +32,4 @@ FairSpot primarily models target architecture. The baseline is current-state evi
 - Use Docsify absolute links (`/path/to/page`) inside nested pages so local and hosted routes behave the same.
 - Treat page status and version as artifact metadata, not as a replacement for Git history.
 - Mark assumptions and current-state evidence clearly when a complete baseline does not exist.
+- Keep missing layers visible as placeholders instead of leaving readers to infer gaps from legacy documentation.

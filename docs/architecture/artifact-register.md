@@ -24,6 +24,7 @@ Major architecture pages should use this header when they become governed artifa
 | Artifact | Path | ADM Phase | Architecture State | Status | Version | Responsible | Accountable | Last Reviewed | Next Review |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | TOGAF ADM Map | [TOGAF ADM Map](/architecture/togaf-adm-map) | Preliminary | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | On structure change |
+| Architecture Migration Tracker | [Architecture Migration Tracker](/architecture/migration-tracker) | Cross-ADM | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | During each migration slice |
 | Architecture Vision | [Architecture Vision](/architecture/architecture-vision) | Phase A | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
 | Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
 | Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Phase C | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
@@ -32,6 +33,24 @@ Major architecture pages should use this header when they become governed artifa
 | Governance | [Governance](/architecture/governance/) | Preliminary + G/H | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | On governance change |
 | Views and Diagrams | [Views and Diagrams](/architecture/views/) | Cross-ADM | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | On diagram/model change |
 | Architecture States | [Architecture States](/architecture/architecture-states/) | Cross-ADM | Baseline / Target / Gap Analysis | Draft | 0.1 | Codex/Product Owner | Robert | - | On milestone change |
+
+## Layer Completeness
+
+The architecture repository must show all expected layers even when content is incomplete.
+
+| Layer / Area | Required Artifact | Completeness Status |
+| --- | --- | --- |
+| Preliminary and governance | [Governance](/architecture/governance/) | Partial |
+| Phase A - Architecture Vision | [Architecture Vision](/architecture/architecture-vision) | Placeholder |
+| Requirements Management | [Requirements](/architecture/requirements) | Placeholder |
+| Phase B - Business Architecture | [Business Architecture](/architecture/business/) | Partial |
+| Phase C - Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Partial |
+| Phase D - Technology Architecture | [Technology Architecture](/architecture/technology/) | Partial |
+| Cross-cutting Security Architecture | [Security Architecture](/architecture/security/) | Partial |
+| Architecture states and gaps | [Architecture States](/architecture/architecture-states/) | Partial |
+| Views and diagrams | [Views and Diagrams](/architecture/views/) | Partial |
+| Deferred billing scope | [Architecture Migration Tracker](/architecture/migration-tracker) | Deferred |
+| Obsolete reporting direction | [Architecture Migration Tracker](/architecture/migration-tracker) | Deferred |
 
 ## Status Definitions
 
