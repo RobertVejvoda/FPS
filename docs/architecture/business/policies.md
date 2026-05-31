@@ -10,6 +10,8 @@ Business policies define target behavior. Tenant-specific configuration may adju
 | Weighted fairness | Non-company-car allocation uses recent successful non-company-car allocation count and active penalties. Every eligible Tier 2 request keeps a non-zero weight unless policy excludes it before lottery. | Product / Tenant policy owner | Partial | [Allocation Rules](/business-layer/allocation-rules) |
 | Slot matching | Allocation must satisfy tenant, location, date, time slot, vehicle/resource capability, accessibility, EV/charger, reserved-only, and active/inactive resource constraints. | Product / Tenant policy owner | Partial | [Allocation Rules](/business-layer/allocation-rules) |
 | Zone preference fallback | Preferred zone and team default zone guide placement after eligibility/fairness selection, but do not normally make an eligible employee lose allocation when another compatible resource exists. | Product / Tenant policy owner | Placeholder | [Allocation Rules](/business-layer/allocation-rules) |
+| Resource-map publication | Location, zone, space, capacity-pool, capability, and closure changes must be validated and published before they affect allocation. Failed or draft resource-map changes must not affect Draw decisions. | Facilities / Tenant administrator | Placeholder | [Business Requirements](/business-layer/requirements), [Role Intent Roadmap](/business-layer/role-intent-roadmap) |
+| Policy impact preview | Customer-visible policy or capacity changes should show likely operational impact where reliable projections exist. Preview is advisory and must not allocate spaces or override approved policy. | Product / Tenant policy owner | Placeholder | [Role Intent Roadmap](/business-layer/role-intent-roadmap), [DataHub](/application-layer/datahub) |
 | Same-day support | Employees can request same-day parking when tenant policy allows it. v1 immediate allocation rejects when no matching capacity exists; same-day waitlist is future policy scope. | Product owner | Partial | [Booking Request Lifecycle](/business-layer/booking-request-lifecycle), [Allocation Rules](/business-layer/allocation-rules) |
 | Late cancellation | Late cancellation starts after allocation in v1; no additional hours-before-start threshold applies unless tenant policy later changes it. | Product owner | Partial | [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) |
 | No-show detection | No-show automation runs only when tenant policy enables it and a valid usage confirmation source exists. | Product / Tenant policy owner | Placeholder | [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) |
@@ -21,6 +23,7 @@ Business policies define target behavior. Tenant-specific configuration may adju
 | Employee-safe explanation | Employees see stable business reason codes and clear text, not seeds, internal weights, stack traces, or hidden diagnostics. | Product / Security | Partial | [Booking Reason Codes](/business-layer/booking-reason-codes), [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) |
 | Audit append-only evidence | Booking decisions, Draw attempts, privileged actions, policy changes, readiness transitions, and sensitive access produce append-only evidence. | Product / Compliance | Partial | [Audit](/business-layer/audit) |
 | DataHub read model | Customer-facing operational insight must come from durable tenant-scoped read models, not volatile in-memory state. | Product / Architecture owner | Placeholder | [DataHub](/application-layer/datahub) |
+| Sponsor summary privacy | Management summaries should be aggregated by tenant/location/time period and avoid employee-level detail by default. Drill-down requires a role-specific operational, HR, or audit purpose. | Product / Security | Placeholder | [Personas](/business-layer/personas), [Data Privacy](/security/data-privacy) |
 | Billing deferred | Billing, invoice generation, payment collection, subscription enforcement, and employee parking charges are not part of the customer-ready target. | Product sponsor | Deferred | [Commercialisation](/strategy-layer/commercialisation), [Billing](/business-layer/billing) |
 
 ## Policy Gaps To Track
@@ -29,6 +32,8 @@ Business policies define target behavior. Tenant-specific configuration may adju
 - HR and administrator actions need UI and authorization validation.
 - DataHub read models need durable implementation before customer reporting can be trusted.
 - Zone preference/resource map behavior is documented but needs customer-ready implementation proof.
+- Resource-map publication and policy-impact preview need role-specific UI/API evidence.
+- Management summaries need DataHub-backed aggregate evidence before they are customer-facing claims.
 - No-show and usage confirmation need tenant capability decisions before enabling automation.
 
 ## Deferred Or Optional Policy Areas
