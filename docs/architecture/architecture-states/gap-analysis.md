@@ -3,14 +3,14 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.1 |
+| **Version** | 0.2 |
 | **Architecture State** | Gap Analysis |
 | **Baseline Version** | Current State v0.1 |
 | **Target Version** | Customer-Ready Target v0.1 |
 | **ADM Phase** | Phases E/F + Requirements Management |
 | **Responsible** | Codex/Product Owner |
 | **Accountable** | Robert |
-| **Last Reviewed** | - |
+| **Last Reviewed** | 2026-05-31 |
 | **Next Review** | Before hosted pilot |
 
 This page compares current-state evidence with the customer-ready target architecture.
@@ -22,6 +22,9 @@ This page compares current-state evidence with the customer-ready target archite
 | GAP-003 | Hosted pilot security | Current State v0.1 | Customer-Ready Target v0.1 | Cloudflare/WAF and NAS deployment docs exist. | Public domain deployment is smoke-tested with WAF, auth, secrets, and no internal exposure. | End-to-end hosted validation remains needed. | Public demo risk until validated. | Hosted smoke and WAF validation. | Codex/Robert | Open |
 | GAP-004 | Role-centered UI | Current State v0.1 | Customer-Ready Target v0.1 | Employee, HR, and admin views exist or are emerging. | Each role lands on a clear role-specific workspace with safe terminology and expected actions. | Role-specific polish and validation remain ongoing. | Customer evaluation can be confusing. | UX/customer evaluation slices. | Claude/Codex | Open |
 | GAP-005 | Architecture validation | Current State v0.1 | Customer-Ready Target v0.1 | Architecture docs are distributed across existing layer pages. | TOGAF map, artifact status, and gap register are reviewed and baselined. | Formal architecture validation is not complete. | Harder to prove architecture readiness to client IT. | Architecture review pass. | Codex/Robert | Open |
+| GAP-006 | Diagrams | Current State v0.1 | Customer-Ready Target v0.1 | Existing diagrams are source evidence and do not clearly show target status or gaps. | Authoritative target diagrams exist for capability/value stream, application cooperation, DataHub, deployment, workflow, trust boundary, and transition roadmap. | Diagram refresh is incomplete. | Architecture may be hard to validate visually. | Diagram refresh work package. | Robert/Codex | Open |
+| GAP-007 | API/event contract evidence | Current State v0.1 | Customer-Ready Target v0.1 | Contract pages and implementation exist in several places. | Generated or source-of-truth API/event contracts are linked from Information Systems Architecture. | Contract evidence is not consolidated. | Implementers and reviewers can miss cross-service contract drift. | API/event contract consolidation. | Codex/Claude | Open |
+| GAP-008 | Dapr hardening evidence | Current State v0.1 | Customer-Ready Target v0.1 | Dapr-first direction is documented. | Hosted profile proves component scopes, secret scopes, resiliency, mTLS/Sentry where supported, and outbox behavior. | Runtime hardening evidence is incomplete. | Hosted pilot security/operability risk. | Dapr hosted hardening slice. | Codex/Claude | Open |
 
 ## Gap Status Values
 

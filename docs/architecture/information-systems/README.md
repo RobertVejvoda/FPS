@@ -3,12 +3,12 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.1 |
+| **Version** | 0.3 |
 | **Architecture State** | Target |
 | **ADM Phase** | Phase C - Information Systems Architecture |
 | **Responsible** | Codex/Product Owner |
 | **Accountable** | Robert |
-| **Last Reviewed** | - |
+| **Last Reviewed** | 2026-05-31 |
 | **Next Review** | Before customer architecture review |
 
 Information systems architecture defines FairSpot application, data, service, API, and event boundaries.
@@ -24,6 +24,25 @@ Core information systems direction has been restated from legacy application, te
 | Integrations and events | Partial | Event families, envelope expectations, and Dapr/outbox direction are stated. Full event catalog implementation remains pending. |
 | Service catalog | Partial | Services and ownership are stated. Criticality and persistence gaps are explicit. |
 | API contracts | Partial | Contract boundaries are stated. Some OpenAPI/read API contracts still need source-of-truth generation or publication. |
+
+## Requirement Interpretation
+
+| Requirement | Information Systems Interpretation | Evidence | Gap |
+| --- | --- | --- | --- |
+| AR-001 | APIs, events, service stores, DataHub projections, and audit references derive tenant scope from authenticated or trusted service context. | [Application Architecture](/architecture/information-systems/application-architecture), [Data Architecture](/architecture/information-systems/data-architecture), [API Contracts](/architecture/information-systems/api-contracts) | Projection isolation evidence and generated contract checks. |
+| AR-002 / AR-012 / AR-013 | Owning services keep command-side writes; DataHub owns durable cross-service reads; Reporting does not own operational projections. | [Data Architecture](/architecture/information-systems/data-architecture), [Integrations and Events](/architecture/information-systems/integrations-events) | DataHub inbox, checkpoint, projection health, and first projections. |
+| AR-006 / AR-008 | Web/mobile/API boundaries must support role-specific employee, HR, tenant admin, system admin, and audit workflows. | [Application Architecture](/architecture/information-systems/application-architecture), [Service Catalog](/architecture/information-systems/service-catalog) | Role-specific API/read contracts and HR cancellation validation evidence. |
+| AR-011 | Customer tenant lifecycle, readiness, identity setup, first admins, and parking bootstrap must be durably stored. | [Service Catalog](/architecture/information-systems/service-catalog), [Data Architecture](/architecture/information-systems/data-architecture) | Customer durable persistence slice. |
+
+## Legacy Evidence Disposition
+
+| Legacy Source | Target Disposition |
+| --- | --- |
+| `application-layer/**` | Source evidence for service responsibilities and client surfaces. New authoritative service/data/API/event boundaries belong here. |
+| `application-layer/datahub.md` | Migrated directionally into [Data Architecture](/architecture/information-systems/data-architecture) and [Integrations and Events](/architecture/information-systems/integrations-events). Detailed implementation slices remain delivery work. |
+| `technology-layer/software-architecture.md` and service package diagrams | Source evidence for component shape; authoritative target service ownership belongs in [Application Architecture](/architecture/information-systems/application-architecture) and [Service Catalog](/architecture/information-systems/service-catalog). |
+| Booking API/event contract pages | Remain implementation contracts until generated API/event evidence and source-of-truth contracts are consolidated here. |
+| Reporting legacy pages | Deferred/obsolete for operational projection storage; keep only report catalog/configuration/presentation if retained. |
 
 ## Contents
 

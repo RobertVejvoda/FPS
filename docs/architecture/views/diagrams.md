@@ -32,6 +32,17 @@ This index keeps current diagrams discoverable and makes missing architecture vi
 | Privacy and audit view | Security | Placeholder | Should show personal data, retention, audit trail, and notification responsibilities. |
 | Transition roadmap view | Architecture States | Placeholder | Should show customer-ready target gaps, transition increments, and deferred billing/reporting scope. |
 
+## Diagram Refresh Order
+
+| Priority | Diagram | Why It Comes Next |
+| --- | --- | --- |
+| 1 | Application cooperation view | It is needed to explain Booking, Configuration, Customer, Notification, Audit, DataHub, Reporting, and Dapr boundaries after the DataHub decision. |
+| 2 | Data ownership and read-model view | It makes Customer durable storage and DataHub projection gaps visible before implementation. |
+| 3 | Runtime deployment / trust boundary view | It supports hosted NAS/Cloudflare/WAF security review and public-domain readiness. |
+| 4 | Workflow execution view | It explains scheduled/manual Draw, Dapr Workflow, idempotency, and UI progress. |
+| 5 | Capability/value stream/process views | They support customer-facing business review once the technical target is stable. |
+| 6 | Transition roadmap view | It links gaps, work package groups, and named architecture versions. |
+
 ## Robert TODO Placeholders
 
 - Robert TODO: provide or approve the authoritative application cooperation diagram for the customer-ready target.
