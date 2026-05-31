@@ -27,10 +27,10 @@ Major architecture pages should use this header when they become governed artifa
 | Architecture Migration Tracker | [Architecture Migration Tracker](/architecture/migration-tracker) | Cross-ADM | Cross-cutting | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | During each migration slice |
 | Architecture Vision | [Architecture Vision](/architecture/architecture-vision) | Phase A | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Stakeholders and Concerns | [Stakeholders and Concerns](/architecture/stakeholders-and-concerns) | Phase A | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
-| Architecture Requirements | [Architecture Requirements](/architecture/requirements) | Requirements Management | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
+| Architecture Requirements | [Architecture Requirements](/architecture/requirements) | Requirements Management | Target | Draft | 0.4 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Phase C | Target | Draft | 0.4 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
-| Technology Architecture | [Technology Architecture](/architecture/technology/) | Phase D | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
+| Technology Architecture | [Technology Architecture](/architecture/technology/) | Phase D | Target | Draft | 0.4 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
 | Security Architecture | [Security Architecture](/architecture/security/) | Cross-cutting | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
 | Architecture Principles | [Architecture Principles](/architecture/principles) | Preliminary | Target | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | On architecture principle change |
 | Governance | [Governance](/architecture/governance/) | Preliminary + G/H | Cross-cutting | Draft | 0.2 | Codex/Product Owner | Robert | 2026-05-31 | On governance change |

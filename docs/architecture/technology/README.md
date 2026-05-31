@@ -3,7 +3,7 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Architecture State** | Target |
 | **ADM Phase** | Phase D - Technology Architecture |
 | **Responsible** | Codex/Product Owner |
@@ -32,6 +32,19 @@ Core technology direction has been restated from production and technology-layer
 | AR-009 | Dapr is the preferred runtime boundary for pub/sub, state, workflow, service invocation, secrets, resiliency, mTLS, component scopes, and outbox where supported. | [Runtime Platform](/architecture/technology/runtime-platform) | Hosted-profile Dapr hardening evidence. |
 | AR-010 | Scheduled Draw and other recurring jobs must use deterministic keys and idempotent acquisition so multiple replicas do not execute the same work repeatedly. | [Runtime Platform](/architecture/technology/runtime-platform), [Deployment Profiles](/architecture/technology/deployment-profiles) | Workflow execution diagram and multi-instance test evidence. |
 | AR-011 / AR-013 | Customer and DataHub persistence must be restart-safe and suitable for hosted pilot operation. | [Runtime Platform](/architecture/technology/runtime-platform), [Deployment Profiles](/architecture/technology/deployment-profiles) | Customer durable store and DataHub PostgreSQL projection store. |
+| AR-017 / AR-020 | Resource-map publication, policy-impact preview, and DataHub projections require restart-safe stores, event reliability, and observable projection health. | [Runtime Platform](/architecture/technology/runtime-platform), [Observability](/architecture/technology/observability) | Configuration publication evidence and DataHub projection health. |
+
+## Operations Boundary
+
+Technology architecture defines the target platform responsibilities and acceptance gates. Operational runbooks remain under `production/` until a separate operations repository structure is approved.
+
+| Operational Area | Architecture Responsibility | Runbook / Evidence Location |
+| --- | --- | --- |
+| Local validation | Define local profile capabilities and smoke expectations. | [Local Test Harness](/production/local-test-harness), [Testing Scenarios](/production/testing-scenarios) |
+| NAS/Cloudflare hosted pilot | Define ingress, WAF, private service, Dapr, storage, observability, and smoke gates. | [NAS Cloudflare Deployment Profile](/production/nas-cloudflare-deployment-profile), [Hosted Smoke Runbook](/production/hosted-smoke-runbook) |
+| Backup and restore | Define recoverability classes, target assets, and evidence gates. | [Backup And Restore](/production/backup-restore), [RTO/RPO Requirements](/production/rto-rpo-requirements) |
+| Maintenance | Define recurring runtime/platform responsibilities. | [Maintenance](/production/maintenance) |
+| Mobile testing | Define release gate relationship to hosted API/auth readiness. | [Mobile Device Testing](/production/mobile-device-testing) |
 
 ## Legacy Evidence Disposition
 
