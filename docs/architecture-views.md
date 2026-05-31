@@ -28,7 +28,6 @@ Core architecture pages describe provider-neutral product, service, data, securi
 | Technology | [Technology Layer](./technology-layer.md) | Provider-neutral runtime technologies, service packages, Dapr boundaries, data stores, and non-functional requirements. |
 | Security | [Security](./security.md) | Data classification, authentication, authorization, encryption, audit, compliance, security operations. |
 | Production / Operations | [Production](./production.md) | Local/demo/client deployment profiles, provider-specific options, observability, backup/restore, incidents, maintenance, readiness evidence. |
-| Working delivery detail | [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki) | Slice order, PR evidence, validation, remaining gaps, GitHub links, and maintainer process. |
 
 ## Planned View Content
 
@@ -38,7 +37,7 @@ Core architecture pages describe provider-neutral product, service, data, securi
 | 2 | Application cooperation view | Show Booking publishing events to Notification, Audit, Reporting, and future consumers. | Use Dapr pub/sub as the integration boundary. |
 | 3 | Data and security view | Show tenant/user context, public/internal/confidential/secret data, and audit/erasure flows. | Link to security pages rather than duplicating controls. |
 | 4 | Technology deployment view | Show local, demo, and client-owned production deployment variants. | Keep Dapr components pluggable. |
-| 5 | Product roadmap view | Show phase order, milestones, and capability evidence at a business-readable level. | Keep implementation evidence in the GitHub Wiki. |
+| 5 | Product roadmap view | Show phase order, milestones, and capability evidence at a business-readable level. | Keep implementation evidence out of public-facing architecture views unless it helps client evaluation. |
 
 ## Modeling Rules
 

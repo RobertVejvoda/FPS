@@ -1,6 +1,6 @@
 # Licensing Strategy
 
-FairSpot is licensed as open-source software under **AGPL-3.0-or-later**. The durable decision is recorded in [Versions and Decisions](../versions-and-decisions), and the full license text is in the [repository LICENSE](https://github.com/RobertVejvoda/FPS/blob/master/LICENSE).
+FairSpot is licensed as open-source software under **AGPL-3.0-or-later**. The durable decision is recorded in [Versions and Decisions](../versions-and-decisions), and the full license text is in the [repository LICENSE](https://github.com/RobertVejvoda/fairspot/blob/master/LICENSE).
 
 ## Current Position
 

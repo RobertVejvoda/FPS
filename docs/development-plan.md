@@ -333,8 +333,8 @@ Booking Phase 1 and the first integration/mobile sequence are complete. New impl
 | Done | `MOB002` Mobile My Bookings | Implement the first read-only employee booking screen in mobile. | Merged. Read-only, authenticated-scoped, cursor-paginated `GET /bookings` screen. |
 | Done | `MOB003` Mobile Real Login | Replace development bearer-token handoff with a production OIDC flow. | Merged in PR #78. |
 | Done | `MOB004` Mobile Booking Submission | Let employees submit parking requests from mobile. | Merged in PR #87. |
-| Done | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Merged in [PR #95](https://github.com/RobertVejvoda/FPS/pull/95). Uses existing Booking endpoints and employee-safe error/reason handling. |
-| Done | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Implemented in PR #93; SSE JSON casing follow-up in [PR #94](https://github.com/RobertVejvoda/FPS/pull/94). Email remains separate. |
+| Done | `MOB005` Mobile Booking Actions | Add cancel and confirm-usage actions to mobile. | Merged in [PR #95](https://github.com/RobertVejvoda/fairspot/pull/95). Uses existing Booking endpoints and employee-safe error/reason handling. |
+| Done | `N002` Notification API And Stream | Expose notification history, unread counts, mark-read API, and SSE stream. | Implemented in PR #93; SSE JSON casing follow-up in [PR #94](https://github.com/RobertVejvoda/fairspot/pull/94). Email remains separate. |
 | Done | `N003` Notification Email Delivery | Add mandatory email-channel delivery for Booking operational notifications. | Merged in PR #111. |
 | Done | `OPS000` Hosting and Deployment Strategy Options | Compare hosting/deployment options before more production infrastructure work. | Merged in PR #102. Current docs reframe this as local/demo/client-owned production profiles. |
 | Done | `A002` Audit Query And Erasure Support | Add auditor query API and GDPR PII mapping erasure support. | Merged in PR #112. Retention and integrity jobs remain later slices. |

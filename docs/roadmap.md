@@ -1,8 +1,6 @@
 # Roadmap
 
-This roadmap explains the high-level delivery direction for FairSpot. Phases describe product and operational capability areas; issue cards in GitHub carry the detailed implementation work.
-
-Detailed implementation evidence, requirement traceability, and board operating rules belong in the [GitHub Wiki](https://github.com/RobertVejvoda/FPS/wiki) and GitHub issues. This page stays focused on business-readable sequence and milestones.
+This roadmap explains the high-level delivery direction for FairSpot. Phases describe product and operational capability areas. This page stays focused on business-readable sequence and milestones.
 
 ## Roadmap Principles
 
@@ -75,4 +73,4 @@ Agent workflow:
 | Claude | Uses assignment plus `Status = Ready` or a direct handoff comment as the durable signal. If a Ready issue lacks enough implementation detail, Claude should comment with the blocker instead of guessing. |
 | Copilot | Works only on issues assigned to Copilot. Mechanical slices should still have clear expected files and acceptance criteria. |
 
-When a phase or slice changes status, update the board and maintainer evidence in the GitHub Wiki if the change affects delivery evidence. New slices should naturally appear on the board by creating a GitHub issue, adding it to `FPS Delivery Kanban`, setting the `Phase`, and setting `Status` to `Backlog`, `Ready`, `In progress`, `In review`, or `Done`.
+When a phase or slice changes status, update the board if the change affects delivery evidence. New slices should naturally appear on the board by creating a GitHub issue, adding it to `FPS Delivery Kanban`, setting the `Phase`, and setting `Status` to `Backlog`, `Ready`, `In progress`, `In review`, or `Done`.
