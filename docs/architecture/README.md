@@ -29,6 +29,7 @@ FairSpot primarily models target architecture. The baseline is current-state evi
 
 - Keep new architecture content under `docs/architecture/`.
 - Treat older layer pages as source evidence, not as the target architecture repository structure.
+- Treat [Legacy Architecture Evidence](/architecture-views) as a bridge to old view hierarchy evidence, not as a current architecture entry point.
 - Use Docsify absolute links (`/path/to/page`) inside nested pages so local and hosted routes behave the same.
 - Treat page status and version as artifact metadata, not as a replacement for Git history.
 - Mark assumptions and current-state evidence clearly when a complete baseline does not exist.
