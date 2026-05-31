@@ -23,12 +23,14 @@ Major architecture pages should use this header when they become governed artifa
 
 | Artifact | Path | ADM Phase | Architecture State | Status | Version | Responsible | Accountable | Last Reviewed | Next Review |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Architecture Views | [Architecture Views](/architecture-views) | Cross-ADM | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | On major architecture change |
 | TOGAF ADM Map | [TOGAF ADM Map](/architecture/togaf-adm-map) | Preliminary | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | On structure change |
-| Business Architecture | [Functional Architecture](/business-layer/functional-architecture) | Phase B | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
-| Information Systems Architecture | [Software Architecture](/technology-layer/software-architecture) | Phase C | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
-| Technology Architecture | [Technology Layer](/technology-layer) | Phase D | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
-| Security Architecture | [Security Model](/security/security-model) | Cross-cutting | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
+| Architecture Vision | [Architecture Vision](/architecture/architecture-vision) | Phase A | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
+| Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
+| Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Phase C | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before client architecture review |
+| Technology Architecture | [Technology Architecture](/architecture/technology/) | Phase D | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
+| Security Architecture | [Security Architecture](/architecture/security/) | Cross-cutting | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | Before hosted pilot |
+| Governance | [Governance](/architecture/governance/) | Preliminary + G/H | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | - | On governance change |
+| Views and Diagrams | [Views and Diagrams](/architecture/views/) | Cross-ADM | Target | Draft | 0.1 | Codex/Product Owner | Robert | - | On diagram/model change |
 | Architecture States | [Architecture States](/architecture/architecture-states/) | Cross-ADM | Baseline / Target / Gap Analysis | Draft | 0.1 | Codex/Product Owner | Robert | - | On milestone change |
 
 ## Status Definitions

@@ -4,7 +4,7 @@ This page prepares an ArchiMate-style hierarchy for FairSpot architecture docume
 
 Core architecture pages describe provider-neutral product, service, data, security, and integration contracts. Local, demo, Azure, AWS, Kubernetes, and client-owned deployment details belong under [Production](./production.md) as environment profiles or implementation examples. Do not make Azure, AWS, Kubernetes, Traefik, Envoy, or any other runtime product part of the core design unless the decision is recorded in [Versions and Decisions](./versions-and-decisions.md).
 
-FairSpot now uses a lightweight TOGAF 10-inspired architecture repository overlay. The existing layer pages remain the source content; [Architecture Repository](./architecture/), [TOGAF ADM Map](./architecture/togaf-adm-map), [Artifact Register](./architecture/artifact-register), and [Architecture States](./architecture/architecture-states/) add governance, phase coverage, artifact status, baseline/target versioning, and gap analysis.
+FairSpot now uses a lightweight TOGAF 10-inspired architecture repository under [Architecture Repository](./architecture/). The older layer pages remain legacy/source evidence until migrated or superseded. New target-state architecture, governance, artifact status, baseline/target versioning, and gap analysis should be maintained under `docs/architecture/`.
 
 ## Viewpoint Map
 
@@ -31,7 +31,7 @@ FairSpot now uses a lightweight TOGAF 10-inspired architecture repository overla
 | Technology | [Technology Layer](./technology-layer.md) | Provider-neutral runtime technologies, service packages, Dapr boundaries, data stores, and non-functional requirements. |
 | Security | [Security](./security.md) | Data classification, authentication, authorization, encryption, audit, compliance, security operations. |
 | Production / Operations | [Production](./production.md) | Local/demo/client deployment profiles, provider-specific options, observability, backup/restore, incidents, maintenance, readiness evidence. |
-| Governance / Architecture states | [Architecture Repository](./architecture/) | TOGAF ADM mapping, artifact status/versioning, baseline and target versions, transition states, and gap analysis. |
+| Governance / Architecture states | [Architecture Repository](./architecture/) | TOGAF ADM mapping, target architecture folders, artifact status/versioning, baseline and target versions, transition states, and gap analysis. |
 
 ## Planned View Content
 

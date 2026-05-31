@@ -1,23 +1,33 @@
 # Architecture Repository
 
-This section applies the lightweight TOGAF 10-inspired architecture repository pattern to FairSpot without moving the existing documentation set.
+This section is the new lightweight TOGAF 10-inspired architecture repository for FairSpot.
+
+It is intentionally separate from the older layer-based documentation. Existing pages under `business-layer/`, `application-layer/`, `technology-layer/`, `security/`, `production/`, and the delivery trackers remain source evidence until their content is migrated or superseded. New architecture governance and target-state content should be added under `docs/architecture/`.
 
 FairSpot primarily models target architecture. The baseline is current-state evidence: implemented product behavior, current documentation, deployment assumptions, and known gaps. Baseline evidence exists to support gap analysis; it is not treated as a complete enterprise baseline architecture.
 
 ## Repository Model
 
-| Area | FairSpot Source |
+| Area | New Architecture Repository Page |
 | --- | --- |
-| Architecture summary and viewpoints | [Architecture Views](/architecture-views) |
 | TOGAF ADM map | [TOGAF ADM Map](/architecture/togaf-adm-map) |
 | Artifact status and page versions | [Artifact Register](/architecture/artifact-register) |
+| Architecture vision | [Architecture Vision](/architecture/architecture-vision) |
+| Stakeholders and concerns | [Stakeholders and Concerns](/architecture/stakeholders-and-concerns) |
+| Business architecture | [Business Architecture](/architecture/business/) |
+| Information systems architecture | [Information Systems](/architecture/information-systems/) |
+| Technology architecture | [Technology Architecture](/architecture/technology/) |
+| Security architecture | [Security Architecture](/architecture/security/) |
+| Governance | [Governance](/architecture/governance/) |
+| Views and diagrams | [Views and Diagrams](/architecture/views/) |
 | Baseline, target, transition, and gap tracking | [Architecture States](/architecture/architecture-states/) |
 | Durable decisions | [Versions and Decisions](/versions-and-decisions) |
+| Legacy/source evidence | [Legacy Architecture Evidence](/architecture-views) |
 
 ## Rules
 
-- Keep existing layer pages as the content source until a later restructure is approved.
-- Use this section for governance, architecture state, versioning, and gap traceability.
+- Keep new architecture content under `docs/architecture/`.
+- Treat older layer pages as source evidence, not as the target architecture repository structure.
 - Use Docsify absolute links (`/path/to/page`) inside nested pages so local and hosted routes behave the same.
 - Treat page status and version as artifact metadata, not as a replacement for Git history.
 - Mark assumptions and current-state evidence clearly when a complete baseline does not exist.

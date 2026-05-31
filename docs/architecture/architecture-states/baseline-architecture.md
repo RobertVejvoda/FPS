@@ -28,3 +28,4 @@ FairSpot does not yet maintain a full enterprise baseline architecture. The base
 - Existing current-state evidence is assembled from docs, implementation tracker, and PR history rather than one formal baseline model.
 - Some implementation tracker entries are historical and may need review before customer-facing claims.
 - Billing is intentionally deferred and should not be treated as part of the customer-ready target.
+- Legacy layer pages are evidence sources, not the new target architecture folder structure.
