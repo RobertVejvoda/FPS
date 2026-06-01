@@ -61,6 +61,9 @@ public sealed class EventInboxService(
     private async Task DispatchAsync(EventInboxRecord record, BookingEventEnvelope envelope, CancellationToken ct)
     {
         var applicable = handlers.Where(h => h.CanHandle(envelope.EventType)).ToList();
+        if (applicable.Count == 0)
+            return; // No handlers registered yet — leave Pending so future handlers can process it
+
         try
         {
             foreach (var h in applicable)
@@ -78,6 +81,10 @@ public sealed class EventInboxService(
                 ? EventProcessingStatus.Poisoned
                 : EventProcessingStatus.Failed;
             await db.SaveChangesAsync(ct);
+
+            if (record.ProcessingStatus == EventProcessingStatus.Failed)
+                throw; // Return 500 so Dapr retries delivery
+            // Poisoned: accept delivery as terminal, no rethrow
         }
     }
 

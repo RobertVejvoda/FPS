@@ -115,7 +115,9 @@ public sealed class EventInboxServiceTests
     {
         using var db = CreateDb();
         var service = new EventInboxService(db, [new AlwaysFailHandler()]);
-        await service.AcceptAsync(MakeEnvelope(), CancellationToken.None);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AcceptAsync(MakeEnvelope(), CancellationToken.None));
 
         var record = await db.EventInbox.SingleAsync();
         Assert.Equal(EventProcessingStatus.Failed, record.ProcessingStatus);
@@ -130,9 +132,11 @@ public sealed class EventInboxServiceTests
         var service = new EventInboxService(db, [new AlwaysFailHandler()]);
         var envelope = MakeEnvelope();
 
-        // 3 attempts — MaxRetries = 3
-        await service.AcceptAsync(envelope, CancellationToken.None);
-        await service.AcceptAsync(envelope, CancellationToken.None);
+        // Attempts 1 and 2 throw (status=Failed); attempt 3 reaches MaxRetries, marks Poisoned and returns
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AcceptAsync(envelope, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AcceptAsync(envelope, CancellationToken.None));
         await service.AcceptAsync(envelope, CancellationToken.None);
 
         var record = await db.EventInbox.SingleAsync();
@@ -147,10 +151,14 @@ public sealed class EventInboxServiceTests
         var service = new EventInboxService(db, [new AlwaysFailHandler()]);
         var envelope = MakeEnvelope();
 
+        // Reach Poisoned state (attempts 1–2 throw, 3rd returns)
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AcceptAsync(envelope, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AcceptAsync(envelope, CancellationToken.None));
         await service.AcceptAsync(envelope, CancellationToken.None);
-        await service.AcceptAsync(envelope, CancellationToken.None);
-        await service.AcceptAsync(envelope, CancellationToken.None);
-        await service.AcceptAsync(envelope, CancellationToken.None); // 4th — should be no-op
+
+        await service.AcceptAsync(envelope, CancellationToken.None); // 4th — Poisoned no-op
 
         var record = await db.EventInbox.SingleAsync();
         Assert.Equal(3, record.RetryCount);
@@ -245,13 +253,13 @@ public sealed class EventInboxServiceTests
     // ── No handlers ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Accept_NoHandlers_MarksProcessed()
+    public async Task Accept_NoHandlers_StaysPending()
     {
         using var db = CreateDb();
         var service = new EventInboxService(db, []);
         await service.AcceptAsync(MakeEnvelope(), CancellationToken.None);
 
         var record = await db.EventInbox.SingleAsync();
-        Assert.Equal(EventProcessingStatus.Processed, record.ProcessingStatus);
+        Assert.Equal(EventProcessingStatus.Pending, record.ProcessingStatus);
     }
 }
