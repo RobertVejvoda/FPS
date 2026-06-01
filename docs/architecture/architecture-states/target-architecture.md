@@ -1,17 +1,5 @@
 # Target Architecture
 
-|  |  |
-| --- | --- |
-| **Status** | Draft |
-| **Version** | 0.2 |
-| **Architecture State** | Target |
-| **Target Version** | Customer-Ready Target v0.1 |
-| **ADM Phase** | Cross-ADM |
-| **Responsible** | Codex/Product Owner |
-| **Accountable** | Robert |
-| **Last Reviewed** | - |
-| **Next Review** | Before hosted pilot |
-
 The FairSpot target architecture is a customer-ready, parking-first fair allocation product that can be evaluated and deployed under a client-owned or low-cost hosted profile.
 
 The target is intentionally pilot-sized. It must be coherent enough for a small or medium company with real parking scarcity to evaluate, but it does not need the operating model, sales model, or legal/compliance breadth of a large-enterprise rollout.

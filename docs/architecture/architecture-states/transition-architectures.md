@@ -1,16 +1,5 @@
 # Transition Architectures
 
-|  |  |
-| --- | --- |
-| **Status** | Draft |
-| **Version** | 0.2 |
-| **Architecture State** | Transition |
-| **ADM Phase** | Phases E/F |
-| **Responsible** | Codex/Product Owner |
-| **Accountable** | Robert |
-| **Last Reviewed** | 2026-05-31 |
-| **Next Review** | On milestone change |
-
 Transition architectures describe staged movement from current-state evidence toward the customer-ready target.
 
 In TOGAF terms, this page is the architecture-controlled home for Opportunities and Solutions plus Migration Planning. The public [Roadmap](/roadmap) stays business-readable; this page maps that roadmap into architecture work package groups, target transitions, risks, and exit criteria.

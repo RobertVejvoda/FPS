@@ -1,16 +1,5 @@
 # Baseline Architecture
 
-|  |  |
-| --- | --- |
-| **Status** | Draft |
-| **Version** | 0.1 |
-| **Architecture State** | Baseline |
-| **ADM Phase** | Cross-ADM |
-| **Responsible** | Codex/Product Owner |
-| **Accountable** | Robert |
-| **Last Reviewed** | - |
-| **Next Review** | Before first customer-ready baseline |
-
 FairSpot does not yet maintain a full enterprise baseline architecture. The baseline is current-state evidence: what is implemented, documented, deployable, or known to be missing.
 
 ## Current-State Evidence

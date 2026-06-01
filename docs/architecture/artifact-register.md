@@ -4,7 +4,7 @@ This register tracks the status, version, ownership, and review state of FairSpo
 
 ## Artifact Metadata Standard
 
-Major architecture pages should use this header when they become governed artifacts.
+Top-level pages inside the Architecture Repository should use this header when they become governed artifacts. Detailed child pages, including Architecture State detail pages, are tracked from this register instead of repeating the metadata block on every page.
 
 |  |  |
 | --- | --- |
