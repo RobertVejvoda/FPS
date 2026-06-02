@@ -16,13 +16,12 @@ import { submitBooking } from '@/api/bookings';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
 import { formatBookingRef, formatCutOffAt, humanizeRejectionReason } from '@/displayLabels';
+import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
 import { colors, radius, spacing } from '@/theme';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 
-// Demo facility — a facility picker requires a /facilities API that does not yet exist.
-const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_LOCATION_ID = 'Prague';
+// DEMO_FACILITY_ID and DEMO_LOCATION_ID are imported from @/demoDefaults
 
 type FormState = {
   facilityId: string;
@@ -154,7 +153,7 @@ export default function NewBookingRoute() {
     let cancelled = false;
     setDrawStatus(null);
     const date = dateStrFromOffset(form.dateOffset);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date, locationId: DEMO_LOCATION_ID, timeSlotStart: '08:00:00', timeSlotEnd: '18:00:00' }).then((res) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date, locationId: DEMO_LOCATION_ID, timeSlotStart: DEFAULT_TIME_SLOT_START, timeSlotEnd: DEFAULT_TIME_SLOT_END }).then((res) => {
       if (!cancelled) setDrawStatus(res);
     });
     return () => { cancelled = true; };

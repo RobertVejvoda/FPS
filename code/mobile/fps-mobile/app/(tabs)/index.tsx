@@ -9,6 +9,7 @@ import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { BookingCard } from '@/components/BookingCard';
 import { StateView } from '@/components/StateView';
 import { displaySlot, displayNextDrawRun, shouldShowNextDraw, STATUS_BADGE_LABEL, formatCutOffAt } from '@/displayLabels';
+import { DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
 import { colors, radius, spacing } from '@/theme';
 
 function localDateStr(offsetDays = 0): string {
@@ -65,9 +66,9 @@ export default function HomeRoute() {
     setDrawStatus(null);
     fetchDrawStatus({ apiBaseUrl, bearerToken }, {
       date: localDateStr(selectedChip),
-      locationId: 'Prague',
-      timeSlotStart: '08:00:00',
-      timeSlotEnd: '18:00:00',
+      locationId: DEMO_LOCATION_ID,
+      timeSlotStart: DEFAULT_TIME_SLOT_START,
+      timeSlotEnd: DEFAULT_TIME_SLOT_END,
     }).then((result) => {
       if (cancelled) return;
       setDrawLoading(false);
