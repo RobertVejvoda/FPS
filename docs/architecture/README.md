@@ -11,15 +11,20 @@ FairSpot primarily models target architecture. The baseline is current-state evi
 | Area | New Architecture Repository Page |
 | --- | --- |
 | TOGAF ADM map | [TOGAF ADM Map](/architecture/togaf-adm-map) |
+| Lightweight ADM execution checklist | [ADM Checklist](/architecture/adm-checklist) |
 | Artifact status and page versions | [Artifact Register](/architecture/artifact-register) |
 | Legacy-to-repository migration status | [Architecture Migration Tracker](/architecture/migration-tracker) |
 | Architecture vision | [Architecture Vision](/architecture/architecture-vision) |
 | Stakeholders and concerns | [Stakeholders and Concerns](/architecture/stakeholders-and-concerns) |
+| Constraints | [Constraints](/architecture/constraints) |
+| Architecture decision log | [Architecture Decisions](/architecture/decisions) |
+| Architecture vocabulary | [Architecture Glossary](/architecture/glossary) |
 | Business architecture | [Business Architecture](/architecture/business/) |
 | Information systems architecture | [Information Systems](/architecture/information-systems/) |
 | Technology architecture | [Technology Architecture](/architecture/technology/) |
 | Security architecture | [Security Architecture](/architecture/security/) |
 | Governance | [Governance](/architecture/governance/) |
+| Implementation and migration | [Implementation And Migration](/architecture/implementation-migration/) |
 | Views and diagrams | [Views and Diagrams](/architecture/views/) |
 | Baseline, target, transition, and gap tracking | [Architecture States](/architecture/architecture-states/) |
 | Durable decisions | [Versions and Decisions](/versions-and-decisions) |

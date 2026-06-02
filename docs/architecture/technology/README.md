@@ -21,6 +21,7 @@ Core technology direction has been restated from production and technology-layer
 | --- | --- | --- |
 | Runtime platform | Partial | Dapr-first runtime, service stack, persistence, ingress, and secrets boundaries are stated. |
 | Deployment profiles | Partial | Local, NAS/Cloudflare hosted pilot, demo/cloud, and client-owned production profiles are stated. |
+| Technology standards | Draft | Approved API, event, runtime, ingress, observability, persistence, and secret-handling standards are stated. |
 | Observability | Partial | Logs, metrics, traces, and business audit separation are stated. Retention and hosted evidence remain gaps. |
 | Workflow and scheduled work | Partial | Draw workflow and schedule safety are stated. Broader scheduled jobs remain placeholders. |
 
@@ -60,6 +61,7 @@ Technology architecture defines the target platform responsibilities and accepta
 
 - [Runtime Platform](/architecture/technology/runtime-platform)
 - [Deployment Profiles](/architecture/technology/deployment-profiles)
+- [Technology Standards](/architecture/technology/standards)
 - [Observability](/architecture/technology/observability)
 
 ## Source Evidence
