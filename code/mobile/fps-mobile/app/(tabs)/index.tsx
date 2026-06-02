@@ -4,10 +4,11 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { useBookings } from '@/api/useBookings';
-import { fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '@/api/bookings';
+import { type BookingListItem } from '@/api/bookings';
+import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { BookingCard } from '@/components/BookingCard';
 import { StateView } from '@/components/StateView';
-import { displaySlot, displayNextDrawRun, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displaySlot, displayNextDrawRun, shouldShowNextDraw, STATUS_BADGE_LABEL, formatCutOffAt } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 function localDateStr(offsetDays = 0): string {
@@ -62,7 +63,12 @@ export default function HomeRoute() {
     let cancelled = false;
     setDrawLoading(true);
     setDrawStatus(null);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, localDateStr(selectedChip)).then((result) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, {
+      date: localDateStr(selectedChip),
+      locationId: 'Prague',
+      timeSlotStart: '08:00:00',
+      timeSlotEnd: '18:00:00',
+    }).then((result) => {
       if (cancelled) return;
       setDrawLoading(false);
       setDrawStatus(result);
@@ -117,13 +123,6 @@ export default function HomeRoute() {
   const tomorrowBooking = state.items.find(i => i.requestedDate === tomorrow) ?? null;
   const allItems = sortMixed(state.items);
 
-  const demandText = drawLoading ? 'Loading…'
-    : drawStatus?.kind === 'ok' ? `Demand: ${drawStatus.demandLevel}`
-    : null;
-  const canRequestText = drawStatus?.kind === 'ok'
-    ? (drawStatus.canRequest ? 'Can request: Yes' : `Can request: No${drawStatus.cannotRequestReason ? ` — ${drawStatus.cannotRequestReason}` : ''}`)
-    : null;
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -160,8 +159,22 @@ export default function HomeRoute() {
             </Pressable>
           </View>
           {drawLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.xs }} />}
-          {demandText && !drawLoading && <Text style={styles.demandText}>{demandText}</Text>}
-          {canRequestText && !drawLoading && <Text style={styles.canRequestText}>{canRequestText}</Text>}
+          {drawStatus?.kind === 'ok' && (
+            <View style={[styles.scheduleBanner,
+              drawStatus.data.requestWindowStatus === 'open' ? styles.scheduleBannerOpen : styles.scheduleBannerClosed]}>
+              <Text style={styles.scheduleText}>{drawStatus.data.safeMessage}</Text>
+              {drawStatus.data.nextDrawAt && (
+                <Text style={styles.scheduleSubText}>
+                  Next draw: {formatCutOffAt(drawStatus.data.nextDrawAt, drawStatus.data.timeZone)}
+                </Text>
+              )}
+              {drawStatus.data.cutOffAt && (
+                <Text style={styles.scheduleSubText}>
+                  Cut-off: {formatCutOffAt(drawStatus.data.cutOffAt, drawStatus.data.timeZone)}
+                </Text>
+              )}
+            </View>
+          )}
           <Pressable
             onPress={() => router.push({ pathname: '/(tabs)/new', params: { offset: String(selectedChip) } })}
             style={({ pressed }) => [styles.requestBtn, pressed && { opacity: 0.7 }]}
@@ -273,8 +286,11 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '500', color: colors.textMuted },
   chipTextActive: { color: colors.primaryText },
-  demandText: { fontSize: 13, color: colors.textMuted },
-  canRequestText: { fontSize: 13, color: colors.textMuted },
+  scheduleBanner: { borderRadius: radius.md, padding: spacing.sm, borderWidth: 1 },
+  scheduleBannerOpen: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' },
+  scheduleBannerClosed: { backgroundColor: '#f8fafc', borderColor: colors.border },
+  scheduleText: { fontSize: 13, color: colors.text, lineHeight: 18 },
+  scheduleSubText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   requestBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
