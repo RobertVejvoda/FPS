@@ -39,6 +39,30 @@ Milestones are delivery checkpoints across phases. Phases explain the product ar
 | `Commercialisation Later` | `BILL000`, `BILL001` | Decide how FairSpot can recover cost without weakening the free/open core. | `BILL000` documents the commercial posture; `BILL001` remains deferred until a real Billing workflow is approved. | Billing and paid features follow product proof, not lead it. |
 | `Resource Map and Preferences` | Future `MAP`/`PREF` slices | Prove FairSpot can allocate within uploaded maps and prefer employee/team zones before fallback. | Tenant admins can publish a resource map with zones; employees can express a preferred zone; allocation records assigned zone and fallback reason when preference cannot be met. | This is the bridge from parking-only configuration to the broader FairSpot story for desks, chairs, seats, lockers, chargers, and other limited workplace resources. |
 
+## Release Validation Model
+
+Releases are validation checkpoints cut from `master`. They are not a replacement for product milestones. A milestone says what capability area we are proving; a release branch says what exact code and docs are being tested.
+
+| Release | Branch | Related Milestone | Purpose | Fix Rule | Exit Criteria |
+| --- | --- | --- | --- | --- | --- |
+| `Release 1` | `release/1` | Client Evaluation / Production Handoff preparation | Validate the current customer-ready hosted evaluation baseline after merged architecture, DataHub, mobile schedule visibility, Dapr hardening, and operations docs work. | Test fixes branch from `release/1`, merge back into `release/1`, then merge `release/1` back to `master` when accepted. No unrelated feature expansion. | Local and hosted smoke scenarios pass or have accepted residual risk; release notes list known gaps; readiness status is updated; `release/1` is merged back to `master` and tagged. |
+| `Release 1.x` | Normal feature branch or short-lived `release/1.x` branch | Client Evaluation follow-up | Contain small fixes or evidence updates discovered after Release 1 validation. | Keep fixes issue-backed and small. Larger capability changes return to normal milestone planning. | Fix PRs are merged to `master`; release notes are updated if user-visible. |
+
+Release branches should be short-lived. If validation discovers a new requirement rather than a defect, create a normal issue and route it through the delivery board instead of expanding the release branch silently.
+
+### Release 1 Scope
+
+Release 1 should validate what is already merged, not wait for every planned customer-ready feature. The goal is to learn whether the current baseline can be demonstrated and hosted safely enough for evaluation.
+
+| Area | In Release 1 Validation | Not Required For Release 1 |
+| --- | --- | --- |
+| Employee mobile | Login/session, My Spots, request submission, cancellation/confirmation where implemented, vehicle/default behavior, and Draw schedule visibility. | Full app store distribution approval. |
+| Booking and Draw | Request lifecycle, same-day behavior, manual/scheduled Draw behavior where implemented, employee-safe Draw status, and schedule metadata. | Full future resource-map allocation beyond parking. |
+| Data and reads | Service-owned state evidence and first event-fed projection/inbox behavior already merged. | Complete replacement of every reporting/read path. |
+| Hosted operations | NAS/Cloudflare/WAF/auth/runbook evidence and smoke/reset scenarios sufficient for evaluation. | Client-owned production handoff completeness. |
+| Architecture and docs | Architecture Repository alignment, roadmap/readiness/work-package traceability, release notes, and known gaps. | Final ArchiMate diagram refresh for every viewpoint. |
+| Commercialisation | Free-core/deferred Billing decision remains documented. | Billing implementation. |
+
 ## Current Priority
 
 The current next product phase is **Customer-Ready Hosted Evaluation**. The product story is coherent enough to explain, but the hosted pilot is not ready for real customer data until persistence, DataHub, role-specific UI, and hosted operations evidence are closed.
@@ -50,7 +74,7 @@ In TOGAF terms, the roadmap is the business-readable companion to [Transition Ar
 | Customer durable tenant state | Make tenant onboarding/readiness state survive restart and hosted deployment changes. | Phase C/E/F | Closes `GAP-001`; implementation issue #317. |
 | DataHub first projections | Build event-fed read models for customer-facing reports, HR/admin views, and readiness summaries. | Phase C/E/F | Starts with #332, then #335/#334. |
 | Hosted public-domain evidence | Prove NAS/Cloudflare/WAF/auth/smoke/reset behavior before real customer data. | Phase D/G | Issues #316, #315, #314, and Dapr hardening #378. |
-| Role-centered UX validation | Validate Employee, HR/facility, tenant admin, system admin, auditor, and sponsor default views. | Phase B/C/G | Draw schedule #340, Draw progress #339, HR operations #310, and UX follow-ups. |
+| Role-centered UX validation | Validate Employee, HR/facility, tenant admin, system admin, auditor, and sponsor default views. | Phase B/C/G | Draw schedule #340 is merged; Draw progress #339, HR operations #310, and UX follow-ups remain. |
 | Contract evidence consolidation | Make API/event/generated client evidence discoverable from Information Systems Architecture. | Phase C/G | Issue #377. |
 | Diagram refresh | Produce Robert-approved target views for capability/value stream, application cooperation, DataHub, deployment, workflow, trust boundary, privacy/audit, and transition roadmap. | Cross-ADM / Architecture Definition | Needed before architecture baseline. |
 | `BILL001` deferred decision | Keep Billing out of implementation until a concrete commercial offer is approved. | Phase H / Commercial decision | Source of truth: [Commercialisation Impact Review](./strategy-layer/commercialisation). |
