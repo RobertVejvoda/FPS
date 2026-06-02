@@ -37,6 +37,7 @@ Preliminary contains the architecture method and governance rules, not product b
 | RACI | [RACI](/architecture/governance/raci) | Partial |
 | Artifact lifecycle | [Artifact Lifecycle](/architecture/governance/artifact-lifecycle) | Partial |
 | Architecture review gates | [Architecture Review](/architecture/governance/architecture-review) | Partial |
+| Architecture contract | [Architecture Contract](/architecture/governance/architecture-contract) | Draft |
 | Change control | [Change Control](/architecture/governance/change-control) | Partial |
 | Waivers | [Waivers](/architecture/governance/waivers) | Draft |
 | Source-evidence migration rules | [Architecture Migration Tracker](/architecture/migration-tracker) | Partial |
@@ -47,6 +48,7 @@ Preliminary contains the architecture method and governance rules, not product b
 - [RACI](/architecture/governance/raci)
 - [Artifact Lifecycle](/architecture/governance/artifact-lifecycle)
 - [Architecture Review](/architecture/governance/architecture-review)
+- [Architecture Contract](/architecture/governance/architecture-contract)
 - [Change Control](/architecture/governance/change-control)
 - [Waivers](/architecture/governance/waivers)
 

@@ -12,6 +12,7 @@ FairSpot uses lightweight current-state evidence as its baseline. The target arc
 | Target | A named future architecture accepted or under review. | Customer-ready FairSpot architecture for hosted pilot and client evaluation. |
 | Transition | An intermediate architecture state between baseline and target. | Milestone or slice groups that move FairSpot toward deployability. |
 | Gap Analysis | Structured comparison between baseline and target. | Customer-first readiness gaps and architecture implementation gaps. |
+| Risk | Uncertain condition that can affect customer-ready target outcomes. | Delivery, integration, operations, data, and mobile risks with owners and review dates. |
 
 ## Versioning Rules
 
@@ -28,3 +29,4 @@ FairSpot uses lightweight current-state evidence as its baseline. The target arc
 - [Transition Architectures](/architecture/architecture-states/transition-architectures)
 - [Architecture Version Register](/architecture/architecture-states/architecture-version-register)
 - [Gap Analysis](/architecture/architecture-states/gap-analysis)
+- [Risk Register](/architecture/architecture-states/risk-register)
