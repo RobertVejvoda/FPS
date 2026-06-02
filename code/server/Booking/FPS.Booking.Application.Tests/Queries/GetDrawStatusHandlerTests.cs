@@ -310,6 +310,24 @@ public sealed class GetDrawStatusHandlerTests
     // ── Schedule metadata (DRAW005) ──────────────────────────────────────────
 
     [Fact]
+    public async Task Handle_NullPolicy_ReturnsNotConfiguredScheduleStatus()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TenantPolicy)null!);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal("notConfigured", result.ScheduleStatus);
+        Assert.Null(result.CutOffAt);
+        Assert.Null(result.NextDrawAt);
+        Assert.Equal("UTC", result.TimeZone);
+        Assert.NotEmpty(result.SafeMessage);
+    }
+
+    [Fact]
     public async Task Handle_KnownPolicy_ReturnsCutOffAtAndTimeZone()
     {
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
