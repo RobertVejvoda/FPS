@@ -46,6 +46,18 @@ Core business architecture has been restated from legacy business-layer evidence
 - [Business Processes](/architecture/business/business-processes)
 - [Policies](/architecture/business/policies)
 
+## Requirement Coverage
+
+Business Architecture interprets central requirements from [Requirements Management](/architecture/requirements). The requirement ID, lifecycle, and ownership stay central; this section records business impact, affected artifacts, and evidence gaps.
+
+| Requirement | Business Interpretation | Impacted Artifacts | Evidence / Gap |
+| --- | --- | --- | --- |
+| AR-001 | Tenant boundaries must be visible in roles, processes, policies, HR/facilities actions, and customer onboarding flows. | [Actors and Roles](/architecture/business/actors-roles), [Business Processes](/architecture/business/business-processes), [Policies](/architecture/business/policies) | HR/support privileged actions still need customer-ready validation evidence. |
+| AR-004 / AR-007 | Employees need safe, understandable booking, allocation, and next-Draw schedule information without lottery internals. | [Value Streams](/architecture/business/value-streams), [Business Processes](/architecture/business/business-processes), [Policies](/architecture/business/policies) | Draw schedule is merged; Draw progress and final role-specific validation remain. |
+| AR-008 | HR/facilities cancellation is a controlled business process, not a raw data edit. It requires authorization, reason capture, audit, and employee notification where affected. | [Business Processes](/architecture/business/business-processes), [Policies](/architecture/business/policies), [Actors and Roles](/architecture/business/actors-roles) | HR operations workspace and cancellation evidence remain open. |
+| AR-017 / AR-020 | Facilities resource-map publication and policy-impact preview must be governed business actions before they affect allocation. | [Capabilities](/architecture/business/capabilities), [Business Processes](/architecture/business/business-processes), [Policies](/architecture/business/policies) | Resource-map publication and impact-preview slices remain future scope. |
+| AR-019 | Sponsors need aggregate business-value evidence by default, not employee-level operational detail. | [Capabilities](/architecture/business/capabilities), [Value Streams](/architecture/business/value-streams), [Policies](/architecture/business/policies) | Sponsor-safe metrics and aggregation rules remain a DataHub/read-model gap. |
+
 ## Source Evidence
 
 - [Legacy Business Layer](/business-layer)

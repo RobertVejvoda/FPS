@@ -24,9 +24,11 @@ Core security and privacy direction has been restated from the legacy security m
 | Controls | Partial | Architecture-significant controls are stated with evidence links. |
 | Gap register | Partial | High-impact hosted pilot and production-blocking gaps are visible. |
 
-## Requirement Interpretation
+## Requirement Coverage
 
-| Requirement | Security / Privacy Interpretation | Evidence | Gap |
+Security and Privacy Architecture interprets central requirements from [Requirements Management](/architecture/requirements). Requirement ownership stays central; this section records control, privacy, threat, audit, and accepted-risk consequences.
+
+| Requirement | Security / Privacy Interpretation | Impacted Artifacts | Evidence / Gap |
 | --- | --- | --- | --- |
 | AR-001 | Tenant isolation is enforced across authorization, storage, events, DataHub projections, audit, backup, and support flows. | [Security Architecture](/architecture/security/security-architecture), [Controls](/architecture/security/controls) | Tenant-isolation evidence across DataHub and hosted profile. |
 | AR-003 / AR-014 | Public ingress must be WAF-protected and must not expose internal/admin/debug/runtime/observability surfaces. | [Security Architecture](/architecture/security/security-architecture), [Controls](/architecture/security/controls), [Gap Register](/architecture/security/gap-register) | Hosted WAF smoke and origin exposure evidence. |

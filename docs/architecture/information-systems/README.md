@@ -25,9 +25,11 @@ Core information systems direction has been restated from legacy application, te
 | Service catalog | Partial | Services and ownership are stated. Criticality and persistence gaps are explicit. |
 | API contracts | Partial | Contract boundaries are stated. Some OpenAPI/read API contracts still need source-of-truth generation or publication. |
 
-## Requirement Interpretation
+## Requirement Coverage
 
-| Requirement | Information Systems Interpretation | Evidence | Gap |
+Information Systems Architecture interprets central requirements from [Requirements Management](/architecture/requirements). Requirement ownership stays central; this section records application, data, API, integration, event, and read-model impact.
+
+| Requirement | Information Systems Interpretation | Impacted Artifacts | Evidence / Gap |
 | --- | --- | --- | --- |
 | AR-001 | APIs, events, service stores, DataHub projections, and audit references derive tenant scope from authenticated or trusted service context. | [Application Architecture](/architecture/information-systems/application-architecture), [Data Architecture](/architecture/information-systems/data-architecture), [API Contracts](/architecture/information-systems/api-contracts) | Projection isolation evidence and generated contract checks. |
 | AR-002 / AR-012 / AR-013 | Owning services keep command-side writes; DataHub owns durable cross-service reads; Reporting does not own operational projections. | [Data Architecture](/architecture/information-systems/data-architecture), [Integrations and Events](/architecture/information-systems/integrations-events) | DataHub inbox, checkpoint, projection health, and first projections. |

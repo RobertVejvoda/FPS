@@ -25,9 +25,11 @@ Core technology direction has been restated from production and technology-layer
 | Observability | Partial | Logs, metrics, traces, and business audit separation are stated. Retention and hosted evidence remain gaps. |
 | Workflow and scheduled work | Partial | Draw workflow and schedule safety are stated. Broader scheduled jobs remain placeholders. |
 
-## Requirement Interpretation
+## Requirement Coverage
 
-| Requirement | Technology Interpretation | Evidence | Gap |
+Technology Architecture interprets central requirements from [Requirements Management](/architecture/requirements). Requirement ownership stays central; this section records runtime, platform, deployment, observability, backup, and operational consequences.
+
+| Requirement | Technology Interpretation | Impacted Artifacts | Evidence / Gap |
 | --- | --- | --- | --- |
 | AR-003 / AR-014 | Hosted public surfaces must be exposed through the selected ingress/WAF profile and proven by smoke evidence. | [Deployment Profiles](/architecture/technology/deployment-profiles), [Observability](/architecture/technology/observability) | Hosted NAS/Cloudflare smoke evidence. |
 | AR-009 | Dapr is the preferred runtime boundary for pub/sub, state, workflow, service invocation, secrets, resiliency, mTLS, component scopes, and outbox where supported. | [Runtime Platform](/architecture/technology/runtime-platform) | Hosted-profile Dapr hardening evidence. |
