@@ -52,6 +52,17 @@ Preliminary contains the architecture method and governance rules, not product b
 - [Change Control](/architecture/governance/change-control)
 - [Waivers](/architecture/governance/waivers)
 
+## Requirement Coverage
+
+Governance interprets central requirements from [Requirements Management](/architecture/requirements) as review, conformance, waiver, and change-control expectations. Governance does not redefine the requirement; it defines how FairSpot proves or accepts it.
+
+| Requirement | Governance Interpretation | Impacted Artifacts | Evidence / Gap |
+| --- | --- | --- | --- |
+| AR-005 / AR-016 | Architecture artifacts must separate target state, current evidence, gaps, metadata, ownership, and review triggers. | [Artifact Lifecycle](/architecture/governance/artifact-lifecycle), [Architecture Review](/architecture/governance/architecture-review), [Artifact Register](/architecture/artifact-register) | Customer-facing approval state remains Draft until review. |
+| AR-001 / AR-023 | Tenant isolation, backup/restore, export, and privileged operations require explicit review evidence or accepted residual risk. | [Architecture Contract](/architecture/governance/architecture-contract), [Architecture Review](/architecture/governance/architecture-review), [Waivers](/architecture/governance/waivers) | Release 1 validation and hosted readiness evidence must record remaining risks. |
+| AR-003 / AR-014 / AR-022 | Hosted ingress, WAF, Dapr hardening, and smoke evidence must be reviewed before customer traffic. | [Architecture Board](/architecture/governance/architecture-board), [Architecture Review](/architecture/governance/architecture-review), [Change Control](/architecture/governance/change-control) | Hosted-profile evidence and any waivers remain open. |
+| AR-024 | Role-safe output shapes for sponsor, facilities, HR support, and DataHub projection views need approval before external use. | [Architecture Contract](/architecture/governance/architecture-contract), [Architecture Review](/architecture/governance/architecture-review) | Role-specific output review is not complete. |
+
 ## Robert TODOs
 
 - Robert TODO: confirm whether the lightweight board membership is enough for customer-facing architecture review.
