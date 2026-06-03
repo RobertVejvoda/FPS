@@ -52,6 +52,14 @@ Preliminary contains the architecture method and governance rules, not product b
 - [Change Control](/architecture/governance/change-control)
 - [Waivers](/architecture/governance/waivers)
 
+## Related Views
+
+| View | Purpose |
+| --- | --- |
+| [Governance View](/architecture/views/viewpoint-catalog?id=viewpoint-catalog) | Shows which artifact states, approval gates, and governance records matter for architecture review. |
+| [Organization Model](/architecture/views/diagrams?id=target-view-catalog) | Supports architecture board, RACI, role, and responsibility review when a visual model is useful. |
+| [Transition Roadmap View](/architecture/views/diagrams?id=target-view-catalog) | Helps governance review what remains Draft, In Review, deferred, or accepted as residual risk. |
+
 ## Requirement Coverage
 
 Governance interprets central requirements from [Requirements Management](/architecture/requirements) as review, conformance, waiver, and change-control expectations. Governance does not redefine the requirement; it defines how FairSpot proves or accepts it.

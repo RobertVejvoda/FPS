@@ -49,6 +49,22 @@ Information Systems Architecture interprets central requirements from [Requireme
 | Booking API/event contract pages | Remain implementation contracts until generated API/event evidence and source-of-truth contracts are consolidated here. |
 | Reporting legacy pages | Deferred/obsolete for operational projection storage; keep only report catalog/configuration/presentation if retained. |
 
+## Related Views
+
+| View | Purpose |
+| --- | --- |
+| [Information Model](/architecture/views/diagrams?id=target-view-catalog) | Shows business information concepts and relationships. |
+| [Information Lifecycle Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows create/use/project/retain/erase/rebuild paths for important data. |
+| [Application Data Model](/architecture/views/diagrams?id=target-view-catalog) | Shows service-owned data structures and DataHub projection shape where needed. |
+| [Application Data Dictionary](/architecture/views/diagrams?id=target-view-catalog) | Defines important entities, attributes, classifications, owners, and API fields. |
+| [Application Data Flows Catalog](/architecture/views/diagrams?id=target-view-catalog) | Catalogs API, event, read-model, export, and integration flows. |
+| [Applications mapped over Business Process](/architecture/views/diagrams?id=target-view-catalog) | Shows which applications support each process step. |
+| [End-to-end Application Exchange Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows full exchange paths across apps, services, Dapr, events, DataHub, notification, and audit. |
+| [Application Exchange Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows application-to-application APIs/events and external boundaries. |
+| [Applications mapped over Functional Architecture](/architecture/views/diagrams?id=target-view-catalog) | Shows how FairSpot functions are realized by applications and services. |
+| [Application Use-Case Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows which actors use which application capabilities. |
+| [Application Logical Architecture Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows logical components, services, dependencies, and responsibilities. |
+
 ## Contents
 
 - [Application Architecture](/architecture/information-systems/application-architecture)

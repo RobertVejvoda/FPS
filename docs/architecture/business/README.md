@@ -46,6 +46,18 @@ Core business architecture has been restated from legacy business-layer evidence
 - [Business Processes](/architecture/business/business-processes)
 - [Policies](/architecture/business/policies)
 
+## Related Views
+
+| View | Purpose |
+| --- | --- |
+| [Functional Architecture Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows FairSpot functions/capabilities and how they relate to product scope and application responsibility. |
+| [Process Classification Diagram](/architecture/views/diagrams?id=target-view-catalog) | Groups FairSpot processes into management, core, and support responsibilities. |
+| [Business Process Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows request, Draw, allocation, cancellation/reallocation, and HR/admin process flows. |
+| [Organized Process Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows which roles or organizational units perform each process step. |
+| [Organization Model](/architecture/views/diagrams?id=target-view-catalog) | Shows relevant roles, responsibilities, and governance relationships. |
+| [Product and Service Catalog](/architecture/views/diagrams?id=target-view-catalog) | Lists FairSpot product/service scope, deferred Billing, and future resource domains. |
+| [Product and Service Realization](/architecture/views/diagrams?id=target-view-catalog) | Shows how processes, functions, applications, and technology realize each product or service. |
+
 ## Requirement Coverage
 
 Business Architecture interprets central requirements from [Requirements Management](/architecture/requirements). The requirement ID, lifecycle, and ownership stay central; this section records business impact, affected artifacts, and evidence gaps.

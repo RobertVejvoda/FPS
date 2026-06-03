@@ -47,6 +47,15 @@ Security and Privacy Architecture interprets central requirements from [Requirem
 | `security/gap-register.md` | Migrated directionally into [Security Gap Register](/architecture/security/gap-register); keep until all rows are mapped or closed. |
 | GDPR/security user stories | Source evidence for privacy architecture and controls; not all are customer-ready P0 implementation slices. |
 
+## Related Views
+
+| View | Purpose |
+| --- | --- |
+| [Trust Boundary View](/architecture/views/diagrams?id=target-view-catalog) | Shows browser/mobile, edge, API, services, Dapr, state stores, secrets, and tenant data boundaries. |
+| [Privacy and Audit View](/architecture/views/diagrams?id=target-view-catalog) | Shows personal data processing, retention, audit, notification, and erasure responsibilities. |
+| [Application Data Flows Catalog](/architecture/views/diagrams?id=target-view-catalog) | Helps review privacy shape and trust implications of API/event/read-model/export flows. |
+| [Deployment Diagram](/architecture/views/diagrams?id=target-view-catalog) | Helps review ingress, origin exposure, runtime boundaries, stores, and hosted WAF assumptions. |
+
 ## Contents
 
 - [Security Architecture](/architecture/security/security-architecture)
