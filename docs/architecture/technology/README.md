@@ -59,6 +59,15 @@ Technology architecture defines the target platform responsibilities and accepta
 | `production/nas-cloudflare-deployment-profile.md` | Migrated directionally into [Deployment Profiles](/architecture/technology/deployment-profiles); keep as operational profile detail. |
 | Local observability and smoke runbooks | Remain operational evidence linked from Technology and Security until hosted evidence is complete. |
 
+## Related Views
+
+| View | Purpose |
+| --- | --- |
+| [Deployment Diagram](/architecture/views/diagrams?id=target-view-catalog) | Shows runtime nodes, ingress, networks, stores, sidecars, and platform components. |
+| [Physical Application Architecture Diagram](/architecture/views/diagrams?id=target-view-catalog) | Maps logical applications to deployable units, processes, stores, and runtime boundaries. |
+| [Draw Workflow Execution View](/architecture/views/diagrams?id=target-view-catalog) | Shows scheduled/manual Draw execution, Dapr Workflow actions, idempotency, and UI progress. |
+| [Operations and Observability View](/architecture/views/diagrams?id=target-view-catalog) | Shows logs, metrics, traces, alerts, smoke tests, and support diagnostics. |
+
 ## Contents
 
 - [Runtime Platform](/architecture/technology/runtime-platform)

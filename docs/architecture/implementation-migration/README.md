@@ -22,6 +22,15 @@ FairSpot is currently in the **Customer-Ready Pilot** transition: the product st
 - [Work Packages](/architecture/implementation-migration/work-packages)
 - [Readiness](/architecture/implementation-migration/readiness)
 
+## Related Views
+
+| View | Purpose |
+| --- | --- |
+| [Transition Roadmap View](/architecture/views/diagrams?id=target-view-catalog) | Shows customer-ready work packages, transition states, delivery gates, and deferred scope. |
+| [Deployment Diagram](/architecture/views/diagrams?id=target-view-catalog) | Supports hosted pilot readiness and release validation. |
+| [Application Logical Architecture Diagram](/architecture/views/diagrams?id=target-view-catalog) | Supports migration planning for service boundaries, DataHub, Customer persistence, and Reporting cleanup. |
+| [Data Ownership and Read-Model View](/architecture/views/diagrams?id=target-view-catalog) | Supports transition planning for DataHub projections and remaining data gaps. |
+
 ## Migration Principles
 
 | Principle | Meaning |
