@@ -11,9 +11,9 @@ public sealed class GetDrawStatusHandlerTests
     private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly GetDrawStatusHandler handler;
 
-    private static readonly DateOnly DrawDate = new(2026, 6, 2);
-    private static readonly DateTime SlotStart = new(2026, 6, 2, 9, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime SlotEnd = new(2026, 6, 2, 17, 0, 0, DateTimeKind.Utc);
+    private static readonly DateOnly DrawDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+    private static readonly DateTime SlotStart = DrawDate.ToDateTime(new TimeOnly(9, 0), DateTimeKind.Utc);
+    private static readonly DateTime SlotEnd = DrawDate.ToDateTime(new TimeOnly(17, 0), DateTimeKind.Utc);
 
     private static readonly IReadOnlyList<AvailableSlot> DefaultSlots =
         Enumerable.Range(0, 10).Select(_ => AvailableSlot.Create(ParkingSlotId.FromString($"S{_}"))).ToList();
@@ -348,7 +348,7 @@ public sealed class GetDrawStatusHandlerTests
     [Fact]
     public async Task Handle_KnownPolicy_CutOffAtIsOnDayBeforeParkingDate()
     {
-        // Parking date is DrawDate (2026-06-02); cut-off must fall on 2026-06-01
+        // Parking date is DrawDate; cut-off must fall on the previous day.
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawAttemptDto?)null);
         policyService
@@ -396,7 +396,6 @@ public sealed class GetDrawStatusHandlerTests
     [Fact]
     public async Task Handle_NoDraw_RequestWindowOpen_SafeMessageDescribesCutOff()
     {
-        // DrawDate is in the past relative to test execution; CanRequest=false but window message shows cut-off
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((DrawAttemptDto?)null);
         policyService
@@ -420,7 +419,7 @@ public sealed class GetDrawStatusHandlerTests
 
     private static DrawAttemptDto CompletedAttempt(int allocated, int rejected, int waitlisted) => new()
     {
-        DrawKey = "draw:tenant-1:loc-1:2026-06-02:0900",
+        DrawKey = $"draw:tenant-1:loc-1:{DrawDate:yyyy-MM-dd}:0900",
         TenantId = "tenant-1",
         LocationId = "loc-1",
         Date = DrawDate,
