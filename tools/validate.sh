@@ -4,6 +4,7 @@ set -eu
 # Ensure .NET 10 (user install) is on PATH
 export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
 export DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+CONFIGURATION="${CONFIGURATION:-Release}"
 
 echo "== Git status =="
 git status --short
@@ -16,10 +17,10 @@ echo "== Restore =="
 dotnet restore code/server/FPS.sln
 
 echo "== Build =="
-dotnet build code/server/FPS.sln --no-restore
+dotnet build code/server/FPS.sln --no-restore --configuration "$CONFIGURATION"
 
 echo "== Test =="
-dotnet test code/server/FPS.sln --no-build
+dotnet test code/server/FPS.sln --no-build --configuration "$CONFIGURATION" --verbosity minimal
 
 echo "== Check unwanted tracked build artifacts =="
 if git ls-files | grep -E '(^|/)(bin|obj)/' >/dev/null; then
