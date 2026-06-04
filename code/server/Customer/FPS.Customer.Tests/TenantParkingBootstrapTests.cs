@@ -15,7 +15,7 @@ public sealed class TenantParkingBootstrapTests
 
     public TenantParkingBootstrapTests()
     {
-        tenantService = new TenantService(tenantRepo, bootstrapRepo);
+        tenantService = new TenantService(tenantRepo);
         var readiness = new TenantReadinessService(
             tenantRepo, identityRepo, bootstrapRepo,
             new NoOpProfileReadinessProbe(),
@@ -23,7 +23,7 @@ public sealed class TenantParkingBootstrapTests
             new NoOpNotificationReadinessProbe(),
             new NoOpAuditReadinessProbe(),
             new NoOpReportingReadinessProbe());
-        tenantServiceWithReadiness = new TenantService(tenantRepo, bootstrapRepo, readiness);
+        tenantServiceWithReadiness = new TenantService(tenantRepo, readiness);
         service = new TenantParkingBootstrapService(bootstrapRepo, tenantRepo);
     }
 
