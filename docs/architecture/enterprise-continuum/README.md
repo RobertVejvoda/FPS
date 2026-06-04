@@ -19,10 +19,10 @@ The worked example is a fictive company, **FairSpot Operator**, that runs FairSp
 
 | Step | What To Learn | FairSpot Application | Output |
 | --- | --- | --- | --- |
-| 1 | What the Enterprise Continuum classifies. | Separate generic architecture assets from FairSpot Operator-specific assets. | [Continuum Map](continuum-map.md) |
-| 2 | How the Architecture Continuum works. | Classify architecture guidance from foundation patterns to organization-specific target architecture. | [Architecture Continuum](architecture-continuum.md) |
-| 3 | How the Solutions Continuum works. | Classify actual reusable solution building blocks used to run FairSpot. | [Solutions Continuum](solutions-continuum.md) |
-| 4 | How ADM consumes continuum assets. | Use the ADM checklist phase by phase and decide what belongs where. | [ADM Application Guide](adm-application-guide.md) |
+| 1 | What the Enterprise Continuum classifies. | Separate generic architecture assets from FairSpot Operator-specific assets. | [Continuum Map](continuum-map) |
+| 2 | How the Architecture Continuum works. | Classify architecture guidance from foundation patterns to organization-specific target architecture. | [Architecture Continuum](architecture-continuum) |
+| 3 | How the Solutions Continuum works. | Classify actual reusable solution building blocks used to run FairSpot. | [Solutions Continuum](solutions-continuum) |
+| 4 | How ADM consumes continuum assets. | Use the ADM checklist phase by phase and decide what belongs where. | [ADM Application Guide](adm-application-guide) |
 
 ## Learning Rule
 
@@ -43,7 +43,7 @@ FairSpot Operator architecture describes the fictive enterprise that commerciali
 
 ## Contents
 
-- [Continuum Map](continuum-map.md)
-- [Architecture Continuum](architecture-continuum.md)
-- [Solutions Continuum](solutions-continuum.md)
-- [ADM Application Guide](adm-application-guide.md)
+- [Continuum Map](continuum-map)
+- [Architecture Continuum](architecture-continuum)
+- [Solutions Continuum](solutions-continuum)
+- [ADM Application Guide](adm-application-guide)
