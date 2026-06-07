@@ -191,9 +191,9 @@ function BrandLockup({ branding, compact = false }: { branding: { productName: s
 function DemoPills() {
   return (
     <div className="demo-pills" aria-label="Demo highlights">
-      <span className="demo-pill">Fair allocation</span>
-      <span className="demo-pill">Tenant ready</span>
-      <span className="demo-pill">Audit evidence</span>
+      <span className="demo-pill">Transparent allocation</span>
+      <span className="demo-pill">Team-ready policies</span>
+      <span className="demo-pill">Audit-ready history</span>
     </div>
   );
 }
