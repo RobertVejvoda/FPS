@@ -61,13 +61,18 @@ export function ProfilePage() {
       </section>
 
       <section style={card}>
-        <h3 style={cardTitle}>Active Vehicles</h3>
+        <h3 style={cardTitle}>My Vehicles</h3>
         {profile.vehicles.filter(v => v.isActive).length === 0 ? (
           <p style={muted}>No active vehicles linked to this profile.</p>
         ) : (
           profile.vehicles.filter(v => v.isActive).map(v => (
             <div key={v.vehicleId} style={{ borderTop: '1px solid #e5e7eb', paddingTop: 10, marginTop: 10 }}>
-              <div style={{ fontWeight: 600 }}>{v.licensePlate || v.vehicleType}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontWeight: 600 }}>{v.licensePlate || v.vehicleType}</span>
+                {v.isDefault && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', borderRadius: 4, padding: '1px 6px', textTransform: 'uppercase' }}>Default</span>
+                )}
+              </div>
               <div style={muted}>{v.vehicleType} · {v.isElectric ? 'Electric' : 'Standard'}</div>
             </div>
           ))

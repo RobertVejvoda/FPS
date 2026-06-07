@@ -136,6 +136,52 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
   );
 }
 
+function TimelineStep({ label, value, done }: { label: string; value?: string; done: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+      <div style={{
+        width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+        background: done ? '#1d4ed8' : 'transparent',
+        border: `2px solid ${done ? '#1d4ed8' : '#d1d5db'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {done && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+      </div>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: '#111827' }}>{label}</div>
+        {value && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{value}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Timeline({ booking, draw, nextDrawLabel }: {
+  booking: BookingListItem;
+  draw: DrawStatusResult | null;
+  nextDrawLabel: string | null;
+}) {
+  const isPreDraw = shouldShowNextDraw(booking.status);
+  const isCompleted = draw?.kind === 'ok' && draw.status === 'Completed';
+  const drawCompletedAt = isCompleted && draw.kind === 'ok' && draw.completedAt ? formatDateTime(draw.completedAt) : null;
+  const isTerminal = ['Allocated', 'Rejected', 'Cancelled', 'Expired', 'UsageConfirmed', 'NoShow'].includes(booking.status);
+
+  return (
+    <section className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <span style={{ fontWeight: 700, fontSize: 15 }}>Timeline</span>
+      <TimelineStep label="Request submitted" value={formatDateTime(booking.createdAt)} done />
+      {isPreDraw && nextDrawLabel && (
+        <TimelineStep label="Draw scheduled" value={nextDrawLabel} done={false} />
+      )}
+      {drawCompletedAt && (
+        <TimelineStep label="Draw completed" value={drawCompletedAt} done />
+      )}
+      {isTerminal && booking.lastStatusChangedAt !== booking.createdAt && (
+        <TimelineStep label="Last updated" value={formatDateTime(booking.lastStatusChangedAt)} done />
+      )}
+    </section>
+  );
+}
+
 export function BookingDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -238,6 +284,8 @@ export function BookingDetailPage() {
       </section>
 
       <AllocationExplanation booking={booking} draw={draw} nextDrawLabel={nextDrawLabel} />
+
+      <Timeline booking={booking} draw={draw} nextDrawLabel={nextDrawLabel} />
 
       {toast && (
         <div style={{ padding: '10px 16px', borderRadius: 8, background: toast.ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${toast.ok ? '#bbf7d0' : '#fecaca'}`, color: toast.ok ? '#166534' : '#b91c1c', fontSize: 13, fontWeight: 500 }}>
