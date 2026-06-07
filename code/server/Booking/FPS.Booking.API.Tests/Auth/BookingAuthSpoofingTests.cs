@@ -41,6 +41,9 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
                     .Setup(m => m.Send(It.IsAny<GetMyBookingsQuery>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new BookingListResult(new List<BookingListItem>(), null));
                 mediatorMock
+                    .Setup(m => m.Send(It.IsAny<GetHrBookingListQuery>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new HrBookingListResult(new List<HrBookingListItem>(), null));
+                mediatorMock
                     .Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new TriggerDrawResult("draw:tenant-1:LOC-MAIN:2026-05-25:0800", "Completed", 1, 0, 0, false));
                 services.AddSingleton(mediatorMock.Object);
@@ -162,6 +165,30 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
 
         // 404 or other — but the actor in the command comes from the JWT, not the header
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HrOperations_AdminRole_RoutesToGetEndpoint()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("admin-1", "tenant-1", "admin"));
+
+        var response = await client.GetAsync("/bookings/operations?locationId=Prague");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HrOperations_EmployeeRole_Returns403()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "tenant-1", "employee"));
+
+        var response = await client.GetAsync("/bookings/operations?locationId=Prague");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
