@@ -14,7 +14,8 @@ dapr/
     demo/     ← template files for demo-hosted environment (OPS002)
     client/   ← template files for client-owned production (OPS003)
   configuration/
-    fps-config.yaml   ← Dapr tracing and mTLS configuration
+    fps-config.yaml   ← Dapr tracing, actors, and mTLS configuration
+    fps-smoke-config.yaml ← Host-local smoke config without tracing export
 ```
 
 Dapr loads components from the directory mounted at `/components` in the sidecar.
@@ -34,6 +35,7 @@ template/documentation — copy and adapt them for each deployment target.
 | `profilestore`     | state          | MongoDB            | Same                        | Same                     |
 | `configstore`      | state          | MongoDB            | Same                        | Same                     |
 | `reportingstore`   | state          | MongoDB            | Same                        | Same                     |
+| `workflowstore`    | actor state    | MongoDB            | Same                        | Same                     |
 | `s3store`          | output binding | MinIO (S3-compat.) | Cloud object storage        | Client-approved S3-compatible store |
 | `secretstore`      | secret store   | HashiCorp Vault    | Azure Key Vault / Vault managed | Client secret-management platform |
 
@@ -79,6 +81,7 @@ Each service owns its own MongoDB database. Collections are named per entity typ
 | fps-profile        | `fps-profile`     | `profiles`              |
 | fps-configuration  | `fps-configuration`| `policies`, `slots`    |
 | fps-reporting      | `fps-reporting`   | `projections`           |
+| Dapr workflow actor runtime | `fps-workflow` | `workflows` |
 
 For multi-tenant sharding, prefix the collection name with `{tenantId}_` (e.g. `acme_bookings`).
 Dapr state store keys embed the tenant-scoped key; the collection name is the partition boundary.
@@ -92,15 +95,19 @@ Indexes to create per collection:
 
 ## App Scoping
 
-State-store components are scoped to the owning service app ID in every profile. Pub/sub,
-binding, and secret-store components may be shared when multiple apps need them. App IDs
-follow the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
+State-store components are scoped to the owning service app ID in every profile. `workflowstore`
+is shared because it backs the Dapr actor runtime used by Dapr Workflow. Pub/sub, binding,
+and secret-store components may also be shared when multiple apps need them. App IDs follow
+the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
 
 ---
 
 ## Observability
 
-The `fps-config.yaml` Dapr configuration enables tracing at 100% sampling rate (local).
+The `fps-config.yaml` Dapr configuration selects `workflowstore` as the actor state store
+and enables tracing at 100% sampling rate (local). `fps-smoke-config.yaml` selects the same
+actor state store but omits tracing so host-local `dapr run -f dapr.yaml` does not try to
+export to the Docker-network Zipkin endpoint.
 - **Local**: Zipkin at `http://zipkin:9411/api/v2/spans`
 - **Local host UI**: Docker Compose maps Zipkin to `http://localhost:19411` to avoid colliding with Dapr's default local Zipkin on host port `9411`.
 - **Demo / client**: Uncomment the `otel:` block and point at an OpenTelemetry Collector.

@@ -30,8 +30,6 @@ spec:
     secretKeyRef:
       name: mongodb-connection
       key: password
-  - name: actorStateStore
-    value: "true"
 scopes:
 - fps-booking
 auth:

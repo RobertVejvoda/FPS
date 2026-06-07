@@ -1,10 +1,11 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: bookingstore
+  name: workflowstore
 spec:
   type: state.in-memory
   version: v1
-scopes:
-- fps-booking
+  metadata:
+  - name: actorStateStore
+    value: "true"
 # Smoke-test only. State is not persisted across restarts.

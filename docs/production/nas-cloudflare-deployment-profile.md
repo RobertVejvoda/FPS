@@ -345,6 +345,7 @@ If the file is not ignored, do not proceed — add it to `.gitignore` first.
 The NAS pilot uses the local Dapr component set from `code/infrastructure/dapr/components/local/`. These components are unchanged from local development. For customer pilot use:
 
 - MongoDB state-store components target the NAS-local MongoDB container. Named volumes ensure data persists across restarts.
+- `workflowstore` is the shared Dapr actor state store required by Dapr Workflow.
 - `fps-pubsub` uses RabbitMQ on the same Docker network.
 - `secretstore` uses HashiCorp Vault in dev mode. **Dev mode Vault does not persist state across restarts.** Before customer traffic, either run Vault in server mode with a persistent volume or replace the secretstore component with a production-grade secret manager.
 

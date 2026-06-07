@@ -277,9 +277,9 @@ The run file is `dapr.yaml` at the repository root. It starts these services:
 
 ### In-memory vs local components
 
-`dapr.yaml` loads `code/infrastructure/dapr/components/smoke` — in-memory state and pub/sub components that need no Vault or MongoDB credentials. State is lost on restart but Dapr sidecar connections work immediately.
+`dapr.yaml` loads `code/infrastructure/dapr/components/smoke` and `code/infrastructure/dapr/configuration/fps-smoke-config.yaml` — in-memory state and pub/sub components that need no Vault or MongoDB credentials, plus the actor-state configuration required by Dapr Workflow. State is lost on restart but Dapr sidecar connections work immediately.
 
-To use durable local state (MongoDB + RabbitMQ + Vault), change `resourcesPath` in `dapr.yaml` to `code/infrastructure/dapr/components/local` and ensure Vault is initialised with the required secrets.
+To use durable local state (MongoDB + RabbitMQ + Vault), change `resourcesPath` in `dapr.yaml` to `code/infrastructure/dapr/components/local`, change `configFilePath` to `code/infrastructure/dapr/configuration/fps-config.yaml`, and ensure Vault is initialised with the required secrets.
 
 ### Smoke commands with Dapr sidecars
 

@@ -3,6 +3,8 @@ kind: Configuration
 metadata:
   name: dapr-configuration
 spec:
+  actors:
+    actorStateStore: workflowstore
   tracing:
     samplingRate: "1"
     zipkin:

@@ -1,10 +1,9 @@
-# Demo profile — MongoDB-compatible managed store.
-# Replace host with a managed MongoDB Atlas connection string or equivalent.
-# Use collection-per-tenant provisioning: {tenantId}_bookings.
+# Demo profile — MongoDB-compatible managed workflow state store.
+# Used by Dapr Workflow actor runtime, separate from service-owned business state.
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: bookingstore
+  name: workflowstore
 spec:
   type: state.mongodb
   version: v1
@@ -14,9 +13,9 @@ spec:
       name: mongodb-connection
       key: host
   - name: databaseName
-    value: fps-booking
+    value: fps-workflow
   - name: collectionName
-    value: bookings
+    value: workflows
   - name: username
     secretKeyRef:
       name: mongodb-connection
@@ -27,7 +26,7 @@ spec:
       key: password
   - name: params
     value: "?ssl=true&replicaSet=atlas-xxx"
-scopes:
-- fps-booking
+  - name: actorStateStore
+    value: "true"
 auth:
   secretStore: secretstore

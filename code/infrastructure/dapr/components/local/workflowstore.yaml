@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: bookingstore
+  name: workflowstore
 spec:
   type: state.mongodb
   version: v1
@@ -9,9 +9,9 @@ spec:
   - name: host
     value: host.docker.internal:27017
   - name: databaseName
-    value: fps-booking
+    value: fps-workflow
   - name: collectionName
-    value: bookings
+    value: workflows
   - name: username
     secretKeyRef:
       name: mongodb-credentials
@@ -24,7 +24,7 @@ spec:
     value: admin
   - name: params
     value: "?authSource=admin&ssl=false"
-scopes:
-- fps-booking
+  - name: actorStateStore
+    value: "true"
 auth:
   secretStore: secretstore
