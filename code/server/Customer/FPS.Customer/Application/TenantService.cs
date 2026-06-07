@@ -4,7 +4,6 @@ namespace FPS.Customer.Application;
 
 public sealed class TenantService(
     ITenantRepository repository,
-    ITenantParkingBootstrapRepository? parkingBootstrap = null,
     TenantReadinessService? readinessService = null)
 {
     public async Task<(TenantWorkspace? tenant, string? error)> CreateAsync(

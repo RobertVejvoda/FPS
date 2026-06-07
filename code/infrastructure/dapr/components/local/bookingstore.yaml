@@ -24,6 +24,8 @@ spec:
     value: admin
   - name: params
     value: "?authSource=admin&ssl=false"
+  - name: actorStateStore
+    value: "true"
 scopes:
 - fps-booking
 auth:

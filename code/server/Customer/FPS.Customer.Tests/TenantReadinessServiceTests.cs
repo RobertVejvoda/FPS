@@ -364,7 +364,7 @@ public sealed class TenantReadinessServiceTests
     {
         // TenantService wired with a connected readiness service but no identity/admin/parking seeded.
         var tenantId = await SeedTenantAsync(TenantLifecycleState.Seeded);
-        var tenantService = new TenantService(tenantRepo, parkingRepo, connectedService);
+        var tenantService = new TenantService(tenantRepo, connectedService);
         var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready,
             "actor", null, null, CancellationToken.None);
         Assert.NotNull(error);
@@ -376,7 +376,7 @@ public sealed class TenantReadinessServiceTests
     public async Task TransitionToReady_WhenAllChecksPassing_Succeeds()
     {
         var tenantId = await FullyConfiguredTenantAsync();
-        var tenantService = new TenantService(tenantRepo, parkingRepo, connectedService);
+        var tenantService = new TenantService(tenantRepo, connectedService);
         var error = await tenantService.TransitionAsync(tenantId, TenantLifecycleState.Ready,
             "actor", null, null, CancellationToken.None);
         Assert.Null(error);

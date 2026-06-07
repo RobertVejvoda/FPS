@@ -27,6 +27,8 @@ spec:
       key: password
   - name: params
     value: "?ssl=true&replicaSet=atlas-xxx"
+  - name: actorStateStore
+    value: "true"
 scopes:
 - fps-booking
 auth:

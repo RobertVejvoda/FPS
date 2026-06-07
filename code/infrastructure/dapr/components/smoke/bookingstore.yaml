@@ -5,6 +5,9 @@ metadata:
 spec:
   type: state.in-memory
   version: v1
+  metadata:
+  - name: actorStateStore
+    value: "true"
 scopes:
 - fps-booking
 # Smoke-test only. State is not persisted across restarts.
