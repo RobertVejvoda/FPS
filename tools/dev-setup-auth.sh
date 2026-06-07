@@ -37,6 +37,10 @@ keycloak_error_message() {
   printf '%s' "$TOKEN_BODY" | grep -o '"error_description":"[^"]*"' | cut -d'"' -f4 || true
 }
 
+keycloak_error_code() {
+  printf '%s' "$TOKEN_BODY" | grep -o '"error":"[^"]*"' | cut -d'"' -f4 || true
+}
+
 # Wait for Keycloak to be ready
 echo "Waiting for Keycloak..."
 for i in $(seq 1 30); do
@@ -57,13 +61,22 @@ done
 echo "Waiting for admin auth..."
 ADMIN_TOKEN=""
 TOKEN_BODY=""
-for i in $(seq 1 30); do
+for i in $(seq 1 5); do
   ADMIN_TOKEN=$(get_admin_token)
   if [ -n "$ADMIN_TOKEN" ]; then
     break
   fi
-  if [ "$(keycloak_error_message)" = "HTTPS required" ]; then
+  ERROR_MESSAGE=$(keycloak_error_message)
+  ERROR_CODE=$(keycloak_error_code)
+  if [ "$ERROR_MESSAGE" = "HTTPS required" ]; then
     break
+  fi
+  if [ -n "$ERROR_MESSAGE" ]; then
+    echo "Admin auth attempt $i/5 not ready: $ERROR_MESSAGE"
+  elif [ -n "$ERROR_CODE" ]; then
+    echo "Admin auth attempt $i/5 not ready: $ERROR_CODE"
+  else
+    echo "Admin auth attempt $i/5 not ready yet."
   fi
   sleep 2
 done
