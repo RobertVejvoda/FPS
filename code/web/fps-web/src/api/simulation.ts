@@ -13,9 +13,11 @@ type SimResult =
 
 async function callSimulation(cfg: ApiClientConfig, method: string, path: string, body?: object): Promise<SimResult> {
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (cfg.bearerToken) headers['Authorization'] = `Bearer ${cfg.bearerToken}`;
     const res = await fetch(`${cfg.apiBaseUrl}/simulation/${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (res.status === 404) return { kind: 'not-available' };

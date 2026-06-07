@@ -92,7 +92,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             UserId.FromString(dto.RequestedBy),
             PenaltyType.LateCancellation,
             score: policy.LateCancellationPenalty,
-            effectiveDate: DateOnly.FromDateTime(clock.UtcNow.UtcDateTime),
+            effectiveDate: DateOnly.FromDateTime(clock.GetTenantUtcNow(command.TenantId).UtcDateTime),
             expiryDays: policy.AllocationLookbackDays,
             sourceEventId: sourceEventId);
 

@@ -29,7 +29,7 @@ public sealed class GetMyBookingsHandler : IRequestHandler<GetMyBookingsQuery, B
     {
         var policy = await policyService.GetEffectivePolicyAsync(query.TenantId, cancellationToken: cancellationToken);
         var pageSize = Math.Min(Math.Max(1, query.PageSize), MaxPageSize);
-        var from = query.From ?? DateOnly.FromDateTime(clock.UtcNow.UtcDateTime.AddDays(-policy.AllocationLookbackDays));
+        var from = query.From ?? DateOnly.FromDateTime(clock.GetTenantUtcNow(query.TenantId).UtcDateTime.AddDays(-policy.AllocationLookbackDays));
 
         return await queryRepository.GetByRequestorAsync(
             query.TenantId,

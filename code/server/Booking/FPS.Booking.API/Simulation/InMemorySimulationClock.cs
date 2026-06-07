@@ -1,35 +1,39 @@
+using System.Collections.Concurrent;
 using FPS.SharedKernel.Time;
 
 namespace FPS.Booking.API.Simulation;
 
 public sealed class InMemorySimulationClock : ISystemClock
 {
-    private readonly object _lock = new();
-    private TimeSpan? _offset;
+    private readonly ConcurrentDictionary<string, TimeSpan> _tenantOffsets = new();
 
-    public DateTimeOffset UtcNow
+    /// <summary>Real UTC — always returns system time; used for audit timestamps and the Dapr scheduler.</summary>
+    public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+
+    /// <summary>Returns virtual time for the tenant if a simulation offset has been set; otherwise real UTC.</summary>
+    public DateTimeOffset GetTenantUtcNow(string tenantId)
     {
-        get
-        {
-            lock (_lock)
-                return _offset.HasValue ? DateTimeOffset.UtcNow + _offset.Value : DateTimeOffset.UtcNow;
-        }
+        return _tenantOffsets.TryGetValue(tenantId, out var offset)
+            ? DateTimeOffset.UtcNow + offset
+            : DateTimeOffset.UtcNow;
     }
 
-    public bool IsSimulating
+    public bool IsTenantSimulating(string tenantId) => _tenantOffsets.ContainsKey(tenantId);
+
+    public void Advance(string tenantId, TimeSpan delta)
     {
-        get { lock (_lock) { return _offset.HasValue && _offset.Value != TimeSpan.Zero; } }
+        _tenantOffsets.AddOrUpdate(tenantId, delta, (_, existing) => existing + delta);
     }
 
-    public void Advance(TimeSpan delta)
+    public void Reset(string tenantId)
     {
-        lock (_lock)
-            _offset = (_offset ?? TimeSpan.Zero) + delta;
+        _tenantOffsets.TryRemove(tenantId, out _);
     }
 
-    public void Reset()
+    public DateTimeOffset? GetVirtualNow(string tenantId)
     {
-        lock (_lock)
-            _offset = null;
+        return _tenantOffsets.TryGetValue(tenantId, out var offset)
+            ? DateTimeOffset.UtcNow + offset
+            : null;
     }
 }

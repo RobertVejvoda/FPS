@@ -35,7 +35,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var timeSlot = TimeSlot.Create(query.TimeSlotStart, query.TimeSlotEnd);
         var drawKey = DrawKey.Create(query.TenantId, query.LocationId, query.Date, timeSlot);
 
-        var now = clock.UtcNow;
+        var now = clock.GetTenantUtcNow(query.TenantId);
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var attemptTask = drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
         var slotsTask = slotService.GetAvailableSlotsAsync(query.TenantId, query.LocationId, query.Date, timeSlot, cancellationToken);

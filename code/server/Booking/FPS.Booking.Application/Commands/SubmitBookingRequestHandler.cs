@@ -103,7 +103,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             snapshot.AccessibilityEligible,
             snapshot.HasCompanyCar);
 
-        var now = clock.UtcNow;
+        var now = clock.GetTenantUtcNow(cmd.TenantId);
         var isSameDay = IsSameDay(policy, requestedPeriod.Start, now);
         var existingCount = await repository.CountRequestsForDateAsync(
             cmd.TenantId, requestedPeriod.Start.Date, cancellationToken);

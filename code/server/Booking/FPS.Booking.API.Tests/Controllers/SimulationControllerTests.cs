@@ -1,5 +1,6 @@
 using FPS.Booking.API.Controllers;
 using FPS.Booking.API.Simulation;
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -8,14 +9,22 @@ namespace FPS.Booking.API.Tests.Controllers;
 
 public sealed class SimulationControllerTests
 {
+    private const string TenantId = "tenant-test";
+
     private readonly InMemorySimulationClock clock = new();
     private readonly Mock<IWebHostEnvironment> env = new();
+    private readonly Mock<ICurrentUser> currentUser = new();
+
+    public SimulationControllerTests()
+    {
+        currentUser.Setup(u => u.TenantId).Returns(TenantId);
+        currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+    }
 
     private SimulationController CreateController(bool isProduction)
     {
-        env.Setup(e => e.EnvironmentName)
-            .Returns(isProduction ? "Production" : "Development");
-        var controller = new SimulationController(clock, env.Object);
+        env.Setup(e => e.EnvironmentName).Returns(isProduction ? "Production" : "Development");
+        var controller = new SimulationController(clock, env.Object, currentUser.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
         {
             HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
@@ -49,10 +58,9 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
-    public void Advance_ValidHours_AdvancesClockAndReturnsActive()
+    public void Advance_ValidHours_AdvancesClockForTenantAndReturnsActive()
     {
         var controller = CreateController(isProduction: false);
-        var before = clock.UtcNow;
 
         var result = controller.Advance(new AdvanceRequest(8));
 
@@ -60,7 +68,8 @@ public sealed class SimulationControllerTests
         var body = Assert.IsType<SimulationStatusResponse>(ok.Value);
         Assert.True(body.SimulationActive);
         Assert.NotNull(body.VirtualNow);
-        Assert.True(clock.UtcNow > before.AddHours(7));
+        Assert.True(clock.IsTenantSimulating(TenantId));
+        Assert.True(clock.GetTenantUtcNow(TenantId) > clock.UtcNow.AddHours(7));
     }
 
     [Fact]
@@ -78,6 +87,16 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
+    public void Advance_DoesNotAffectOtherTenant()
+    {
+        var controller = CreateController(isProduction: false);
+        controller.Advance(new AdvanceRequest(4));
+
+        Assert.True(clock.IsTenantSimulating(TenantId));
+        Assert.False(clock.IsTenantSimulating("other-tenant"));
+    }
+
+    [Fact]
     public void Reset_Production_Returns404()
     {
         var result = CreateController(isProduction: true).Reset();
@@ -85,11 +104,11 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
-    public void Reset_AfterAdvance_ClearsSimulation()
+    public void Reset_AfterAdvance_ClearsSimulationForTenant()
     {
         var controller = CreateController(isProduction: false);
         controller.Advance(new AdvanceRequest(4));
-        Assert.True(clock.IsSimulating);
+        Assert.True(clock.IsTenantSimulating(TenantId));
 
         var result = controller.Reset();
 
@@ -97,6 +116,6 @@ public sealed class SimulationControllerTests
         var body = Assert.IsType<SimulationStatusResponse>(ok.Value);
         Assert.False(body.SimulationActive);
         Assert.Null(body.VirtualNow);
-        Assert.False(clock.IsSimulating);
+        Assert.False(clock.IsTenantSimulating(TenantId));
     }
 }

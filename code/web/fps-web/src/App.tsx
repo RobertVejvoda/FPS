@@ -37,8 +37,8 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
 }
 
 function AppFooter() {
-  const { apiBaseUrl, environment, simulationEnabled } = useAuth();
-  const cfg = { apiBaseUrl, bearerToken: '' };
+  const { apiBaseUrl, bearerToken, environment, simulationEnabled } = useAuth();
+  const cfg = { apiBaseUrl, bearerToken };
   const [sim, setSim] = useState<SimulationStatus | null>(null);
   const [busy, setBusy] = useState(false);
 

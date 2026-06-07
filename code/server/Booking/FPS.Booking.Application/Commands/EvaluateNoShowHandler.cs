@@ -56,7 +56,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
             command.TenantId, command.LocationId, command.Date, cancellationToken);
 
         var markedCount = 0;
-        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        var today = DateOnly.FromDateTime(clock.GetTenantUtcNow(command.TenantId).UtcDateTime);
 
         foreach (var dto in allocatedRequests)
         {
