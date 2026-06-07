@@ -10,6 +10,7 @@ import {
   type VehicleSnapshot,
 } from '../api/profile';
 import { fetchMe, type MeResponse } from '../api/client';
+import { formatRoles } from '../displayLabels';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 
@@ -113,7 +114,7 @@ export function ProfilePage() {
 
       <section style={card}>
         <h3 style={cardTitle}>Account</h3>
-        <Row label="Roles" value={me.roles.length ? me.roles.join(', ') : 'Employee'} />
+        <Row label="Roles" value={formatRoles(me.roles)} />
       </section>
 
       <section style={card}>
