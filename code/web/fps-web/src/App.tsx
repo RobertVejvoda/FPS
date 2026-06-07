@@ -42,12 +42,34 @@ function AppFooter() {
   const cfg = { apiBaseUrl, bearerToken };
   const canControl = canControlSimulation(roles);
   const [sim, setSim] = useState<SimulationStatus | null>(null);
+  const [simStatus, setSimStatus] = useState<'idle' | 'loading' | 'ok' | 'unavailable' | 'error'>('idle');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!simulationEnabled) return;
-    void getSimulationStatus(cfg).then(r => { if (r.kind === 'ok') setSim(r.data); });
-  }, [simulationEnabled, apiBaseUrl]);
+    let cancelled = false;
+    if (!simulationEnabled) {
+      setSim(null);
+      setSimStatus('idle');
+      return () => { cancelled = true; };
+    }
+    if (!bearerToken) {
+      setSim(null);
+      setSimStatus('loading');
+      return () => { cancelled = true; };
+    }
+    setSimStatus('loading');
+    void getSimulationStatus(cfg).then(r => {
+      if (cancelled) return;
+      if (r.kind === 'ok') {
+        setSim(r.data);
+        setSimStatus('ok');
+        return;
+      }
+      setSim(null);
+      setSimStatus(r.kind === 'not-available' ? 'unavailable' : 'error');
+    });
+    return () => { cancelled = true; };
+  }, [simulationEnabled, apiBaseUrl, bearerToken]);
 
   async function handleAdvance(hours: number) {
     setBusy(true);
@@ -79,6 +101,15 @@ function AppFooter() {
       )}
       {simulationEnabled && sim?.simulationActive && sim.virtualNow && (
         <span className="footer-sim-time">Sim: {fmtTime(sim.virtualNow)}</span>
+      )}
+      {simulationEnabled && canControl && simStatus === 'loading' && (
+        <span className="footer-sim-state">Loading simulation clock...</span>
+      )}
+      {simulationEnabled && canControl && simStatus === 'unavailable' && (
+        <span className="footer-sim-state">Simulation clock unavailable</span>
+      )}
+      {simulationEnabled && canControl && simStatus === 'error' && (
+        <span className="footer-sim-state">Simulation clock not reachable</span>
       )}
       {simulationEnabled && canControl && (
         <div className="footer-sim-controls">
