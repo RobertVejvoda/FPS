@@ -24,11 +24,10 @@ import { AuditPage } from './pages/AuditPage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
 import { HrOperationsPage } from './pages/HrOperationsPage';
-import { ForbiddenPage } from './pages/ForbiddenPage';
 import { LegalPage } from './pages/LegalPage';
 
-function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
-  return allowed ? <>{children}</> : <ForbiddenPage />;
+function Guard({ allowed, roles, children }: { allowed: boolean; roles: string[]; children: React.ReactNode }) {
+  return allowed ? <>{children}</> : <Navigate to={defaultRoute(roles)} replace />;
 }
 
 function Shell() {
@@ -81,17 +80,17 @@ function Shell() {
       </header>
       <main className="app-main">
         <Routes>
-          <Route path="/bookings" element={<Guard allowed={canAccessBookings(roles)}><BookingsPage /></Guard>} />
-          <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
-          <Route path="/bookings/:requestId" element={<Guard allowed={canAccessBookings(roles)}><BookingDetailPage /></Guard>} />
-          <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
-          <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
-          <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
-          <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
-          <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
-          <Route path="/hr-operations" element={<Guard allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
-          <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
-          <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
+          <Route path="/bookings" element={<Guard roles={roles} allowed={canAccessBookings(roles)}><BookingsPage /></Guard>} />
+          <Route path="/bookings/new" element={<Guard roles={roles} allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
+          <Route path="/bookings/:requestId" element={<Guard roles={roles} allowed={canAccessBookings(roles)}><BookingDetailPage /></Guard>} />
+          <Route path="/profile" element={<Guard roles={roles} allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
+          <Route path="/notifications" element={<Guard roles={roles} allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
+          <Route path="/reporting" element={<Guard roles={roles} allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
+          <Route path="/configuration" element={<Guard roles={roles} allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
+          <Route path="/hr-import" element={<Guard roles={roles} allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
+          <Route path="/hr-operations" element={<Guard roles={roles} allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
+          <Route path="/audit" element={<Guard roles={roles} allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
+          <Route path="/tenant-admin" element={<Guard roles={roles} allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
           <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />
         </Routes>
       </main>

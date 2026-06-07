@@ -205,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearCredentials();
     setBearerToken('');
     setRoles([]);
+    setPhase('unauthenticated');
     const um = userManagerRef.current;
     if (um) {
       await clearOidcUser(um);
@@ -213,8 +214,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         setPhase('unauthenticated');
       }
-    } else {
-      setPhase('unauthenticated');
     }
   }, []);
 
