@@ -294,7 +294,7 @@ export function BookingDetailPage() {
       )}
 
       {(booking.nextAction === 'cancel' || booking.nextAction === 'confirmUsage') && (
-        <section className="panel" style={{ display: 'flex', gap: 10 }}>
+        <section className="panel" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           {booking.nextAction === 'cancel' && (
             <button onClick={handleCancel} disabled={busy} style={actionBtn('#b91c1c')}>
               Cancel request

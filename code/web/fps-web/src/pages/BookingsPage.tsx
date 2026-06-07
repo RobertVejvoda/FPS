@@ -264,7 +264,7 @@ function FocusCard({ label, booking, busy, onCancel, onConfirm }: {
       </div>
       {slot && <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>Spot: {slot}</div>}
       {nextDraw && <div style={{ fontSize: 12, color: '#1d4ed8', marginTop: 4 }}>Next draw: {nextDraw}</div>}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {onCancel && <button onClick={onCancel} disabled={busy} style={focusCancelBtn}>Cancel</button>}
         {onConfirm && <button onClick={onConfirm} disabled={busy} style={focusConfirmBtn}>Confirm usage</button>}
       </div>

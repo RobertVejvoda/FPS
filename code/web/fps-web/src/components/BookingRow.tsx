@@ -71,21 +71,25 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
         </p>
       ) : null}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        {meaning ? (
-          <button
-            onClick={() => setExpanded((e) => !e)}
-            style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            {expanded ? 'Hide detail' : 'What does this mean?'}
-          </button>
-        ) : null}
-        {booking.nextAction === 'cancel' && onCancel ? (
-          <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>Cancel request</button>
-        ) : null}
-        {booking.nextAction === 'confirmUsage' && onConfirmUsage ? (
-          <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('#15803d')}>Confirm usage</button>
-        ) : null}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <div>
+          {meaning ? (
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              {expanded ? 'Hide detail' : 'What does this mean?'}
+            </button>
+          ) : null}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          {booking.nextAction === 'cancel' && onCancel ? (
+            <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>Cancel request</button>
+          ) : null}
+          {booking.nextAction === 'confirmUsage' && onConfirmUsage ? (
+            <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('#15803d')}>Confirm usage</button>
+          ) : null}
+        </div>
       </div>
 
       {expanded && meaning ? (
