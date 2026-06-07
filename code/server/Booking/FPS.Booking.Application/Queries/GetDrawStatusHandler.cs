@@ -36,7 +36,6 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var drawKey = DrawKey.Create(query.TenantId, query.LocationId, query.Date, timeSlot);
 
         var now = clock.GetTenantUtcNow(query.TenantId);
-        var today = DateOnly.FromDateTime(now.UtcDateTime);
         var attemptTask = drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
         var slotsTask = slotService.GetAvailableSlotsAsync(query.TenantId, query.LocationId, query.Date, timeSlot, cancellationToken);
         var policyTask = policyService.GetEffectivePolicyAsync(query.TenantId, query.LocationId, cancellationToken);
@@ -44,6 +43,9 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var attempt = attemptTask.Result;
         var availableSpotCount = slotsTask.Result.Count;
         var policy = policyTask.Result;
+
+        var tz = policy is not null ? GetTimeZone(policy.TimeZoneId) : TimeZoneInfo.Utc;
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, tz).DateTime);
 
         var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
         var schedule = BuildScheduleMetadata(policy, query.Date, attempt?.Status, today, now);
@@ -157,9 +159,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 SafeMessage: "Allocation schedule is not yet configured for this location.");
         }
 
-        TimeZoneInfo tz;
-        try { tz = TimeZoneInfo.FindSystemTimeZoneById(policy.TimeZoneId); }
-        catch { tz = TimeZoneInfo.Utc; }
+        var tz = GetTimeZone(policy.TimeZoneId);
 
         var cutOffDay = date.AddDays(-1);
         var localCutOff = cutOffDay.ToDateTime(policy.DrawCutOffTime);
@@ -190,6 +190,12 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             ScheduleSource: Models.ScheduleSource.TenantPolicy,
             LastCalculatedAt: calculatedAt,
             SafeMessage: safeMessage);
+    }
+
+    private static TimeZoneInfo GetTimeZone(string tzId)
+    {
+        try { return TimeZoneInfo.FindSystemTimeZoneById(tzId); }
+        catch { return TimeZoneInfo.Utc; }
     }
 
     private static bool IsCompanyCarRequest(DrawDecisionDto d)

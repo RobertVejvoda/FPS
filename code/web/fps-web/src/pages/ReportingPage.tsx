@@ -97,7 +97,12 @@ export function ReportingPage() {
   }
 
   if (dash.kind === 'loading') return <p style={muted}>Loading report…</p>;
-  if (dash.kind === 'forbidden') return <p style={{ color: '#b91c1c' }}>You do not have permission to view reporting data.</p>;
+  if (dash.kind === 'forbidden') return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p style={{ color: '#b91c1c', margin: 0 }}>Reporting data is not available for your current role.</p>
+      <p style={{ ...muted, margin: 0 }}>HR and administrator accounts can access reports. If you expect access, contact your administrator.</p>
+    </div>
+  );
   if (dash.kind === 'error') return (
     <div>
       <p style={{ color: '#b91c1c' }}>{dash.message}</p>
@@ -106,6 +111,8 @@ export function ReportingPage() {
   );
 
   const d = dash.data;
+  const hasData = d.totalDemand > 0 || d.totalAllocations > 0 || d.totalRejections > 0;
+
   return (
     <div style={page}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -119,6 +126,15 @@ export function ReportingPage() {
           </button>
         </div>
       </div>
+
+      {!hasData && (
+        <section style={{ ...card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#374151' }}>No report data yet</p>
+          <p style={{ ...muted, margin: '6px 0 0' }}>
+            Reports are generated from completed allocation draws. Run a draw from HR Operations to see allocation outcomes, rejection reasons, and utilization data here.
+          </p>
+        </section>
+      )}
 
       <div style={grid}>
         <StatCard label="Total demand" value={d.totalDemand} />

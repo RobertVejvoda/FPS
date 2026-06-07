@@ -73,3 +73,58 @@ export function humanizeRejectionReason(reasonCode: string | null, reason: strin
   if (reasonCode) return REJECTION_CODE_LABELS[reasonCode] ?? 'This request was not eligible for allocation.';
   return 'This request was not eligible for allocation.';
 }
+
+const SCHEDULE_STATUS_LABELS: Record<string, string> = {
+  known: 'Schedule configured',
+  unknown: 'Not configured',
+  pending: 'Pending',
+  completed: 'Completed',
+  running: 'Running',
+};
+
+const SCHEDULE_SOURCE_LABELS: Record<string, string> = {
+  tenantPolicy: 'Tenant policy',
+  locationOverride: 'Location override',
+  manualOnly: 'Manual only',
+  default: 'Default',
+};
+
+export function formatScheduleStatus(status: string): string {
+  return SCHEDULE_STATUS_LABELS[status] ?? status;
+}
+
+export function formatScheduleSource(source: string): string {
+  return SCHEDULE_SOURCE_LABELS[source] ?? source;
+}
+
+export function formatDrawTimestamp(at: string | null, timeZone: string): string {
+  if (!at) return '—';
+  try {
+    return new Date(at).toLocaleString(undefined, {
+      weekday: 'short', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+      timeZone, timeZoneName: 'short',
+    });
+  } catch {
+    return at;
+  }
+}
+
+export function isTimestampInPast(isoTimestamp: string | null): boolean {
+  if (!isoTimestamp) return false;
+  return new Date(isoTimestamp) < new Date();
+}
+
+const HR_REJECTION_LABELS: Record<string, string> = {
+  PolicyCutoff: 'Cut-off deadline passed',
+  IneligibleProfile: 'Profile ineligible',
+  MissingVehicleEligibility: 'Vehicle eligibility not met',
+  NoMatchingCapacity: 'No matching capacity',
+  DrawNotSelected: 'Not selected in draw',
+};
+
+export function humanizeHrRejection(reasonCode: string | null, reason: string | null): string {
+  if (reason) return reason;
+  if (reasonCode) return HR_REJECTION_LABELS[reasonCode] ?? reasonCode;
+  return '—';
+}
