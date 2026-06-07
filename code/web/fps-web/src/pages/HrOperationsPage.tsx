@@ -9,7 +9,14 @@ import {
   type HrBookingListItem,
   type DrawStatusResult,
 } from '../api/bookings';
-import { displaySlot, formatCutOffAt } from '../displayLabels';
+import {
+  displaySlot,
+  formatDrawTimestamp,
+  formatScheduleSource,
+  formatScheduleStatus,
+  humanizeHrRejection,
+  isTimestampInPast,
+} from '../displayLabels';
 
 function localDate(offsetDays = 0): string {
   const d = new Date();
@@ -181,21 +188,19 @@ export function HrOperationsPage() {
                   {drawOk.requestWindowStatus === 'open' ? 'Open' : drawOk.requestWindowStatus === 'closed' ? 'Closed' : 'Unknown'}
                 </div>
               </div>
-              {drawOk.nextDrawAt && (
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Next draw</div>
-                  <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatCutOffAt(drawOk.nextDrawAt, drawOk.timeZone)}</div>
-                </div>
-              )}
               {drawOk.cutOffAt && (
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cut-off</div>
-                  <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatCutOffAt(drawOk.cutOffAt, drawOk.timeZone)}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {isTimestampInPast(drawOk.cutOffAt) ? 'Cut-off passed' : 'Cut-off'}
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: isTimestampInPast(drawOk.cutOffAt) ? '#6b7280' : '#374151', marginTop: 2 }}>
+                    {formatDrawTimestamp(drawOk.cutOffAt, drawOk.timeZone)}
+                  </div>
                 </div>
               )}
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Schedule</div>
-                <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{drawOk.scheduleStatus} · {drawOk.scheduleSource}</div>
+                <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatScheduleStatus(drawOk.scheduleStatus)} · {formatScheduleSource(drawOk.scheduleSource)}</div>
               </div>
             </div>
             <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#6b7280' }}>{drawOk.safeMessage}</div>
@@ -256,9 +261,12 @@ export function HrOperationsPage() {
             {listState.items.map(item => (
               <li key={item.requestId} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.75rem 1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: 4, fontFamily: 'monospace', color: '#475569' }}>
-                      {item.requestorRef}…
+                      {item.requestorRef}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                      #{item.requestId.replace(/-/g, '').slice(-6).toUpperCase()}
                     </span>
                     <span style={{ fontWeight: 600, fontSize: '0.875rem', color: statusColor(item.status) }}>{item.status}</span>
                     {item.locationId && <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{item.locationId}</span>}
@@ -277,8 +285,10 @@ export function HrOperationsPage() {
                     </button>
                   )}
                 </div>
-                {item.reasonCode && (
-                  <p style={{ marginTop: '0.25rem', fontSize: '0.8rem', color: '#6b7280' }}>{item.reasonCode}</p>
+                {(item.reasonCode || item.reason) && (
+                  <p style={{ marginTop: '0.25rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                    {humanizeHrRejection(item.reasonCode, item.reason)}
+                  </p>
                 )}
               </li>
             ))}
