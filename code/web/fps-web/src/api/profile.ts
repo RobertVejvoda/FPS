@@ -18,6 +18,7 @@ export interface VehicleSnapshot {
   vehicleType: string;
   isElectric: boolean;
   isActive: boolean;
+  isDefault?: boolean;
 }
 
 export async function fetchProfileSnapshot(
@@ -35,4 +36,51 @@ export async function fetchProfileSnapshot(
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
+}
+
+export type VehicleWriteResult =
+  | { kind: 'ok'; vehicleId?: string }
+  | { kind: 'unauthenticated' }
+  | { kind: 'error'; status: number; message: string }
+  | { kind: 'unreachable'; message: string };
+
+async function vehicleRequest(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<VehicleWriteResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (!res.ok) {
+      let message = `${method} ${path} returned ${res.status}`;
+      try { const j = await res.json(); if (j?.error) message = j.error; } catch { /* ignore */ }
+      return { kind: 'error', status: res.status, message };
+    }
+    if (res.status === 200) return { kind: 'ok', vehicleId: (await res.json()).vehicleId as string };
+    return { kind: 'ok' };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export function addVehicle(
+  cfg: ApiClientConfig,
+  vehicle: { licensePlate: string; vehicleType: string; isElectric: boolean },
+): Promise<VehicleWriteResult> {
+  return vehicleRequest(cfg, 'POST', '/profile/vehicles', vehicle);
+}
+
+export function removeVehicle(cfg: ApiClientConfig, vehicleId: string): Promise<VehicleWriteResult> {
+  return vehicleRequest(cfg, 'DELETE', `/profile/vehicles/${vehicleId}`);
+}
+
+export function setDefaultVehicle(cfg: ApiClientConfig, vehicleId: string): Promise<VehicleWriteResult> {
+  return vehicleRequest(cfg, 'PUT', `/profile/vehicles/${vehicleId}/default`);
 }

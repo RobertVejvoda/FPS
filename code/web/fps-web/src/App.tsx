@@ -24,11 +24,12 @@ import { AuditPage } from './pages/AuditPage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
 import { HrOperationsPage } from './pages/HrOperationsPage';
-import { ForbiddenPage } from './pages/ForbiddenPage';
 import { LegalPage } from './pages/LegalPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
-  return allowed ? <>{children}</> : <ForbiddenPage />;
+  const { roles } = useAuth();
+  if (!allowed) return <Navigate to={defaultRoute(roles)} replace />;
+  return <>{children}</>;
 }
 
 function Shell() {
