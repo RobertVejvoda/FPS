@@ -66,14 +66,19 @@ function AppFooter() {
   const hasContent = !!environment || simulationEnabled;
   if (!hasContent) return null;
 
+  function fmtTime(iso: string) {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
   return (
     <footer className="app-footer">
       {environment && <span className="footer-env-badge">{environment}</span>}
       {sim?.simulationActive && <span className="footer-sim-banner">Non-production simulation</span>}
-      {sim?.simulationActive && sim.virtualNow && (
-        <span className="footer-sim-time">
-          {new Date(sim.virtualNow).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-        </span>
+      {simulationEnabled && sim && (
+        <span className="footer-real-time">Real: {fmtTime(sim.realNow)}</span>
+      )}
+      {simulationEnabled && sim?.simulationActive && sim.virtualNow && (
+        <span className="footer-sim-time">Sim: {fmtTime(sim.virtualNow)}</span>
       )}
       {simulationEnabled && canControl && (
         <div className="footer-sim-controls">

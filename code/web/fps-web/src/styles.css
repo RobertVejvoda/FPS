@@ -157,6 +157,12 @@ select {
   letter-spacing: 0.04em;
 }
 
+.footer-real-time {
+  color: var(--muted);
+  font-size: 11px;
+  font-family: monospace;
+}
+
 .footer-sim-time {
   color: #92400e;
   font-size: 11px;
