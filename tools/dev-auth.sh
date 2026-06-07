@@ -26,15 +26,25 @@ if [ -z "$USERNAME" ]; then
   exit 1
 fi
 
-RESPONSE=$(curl -sf \
+RESPONSE=$(curl -s \
   -X POST "$KEYCLOAK_URL/realms/$REALM/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password&client_id=$CLIENT_ID&username=$USERNAME&password=$DEV_PASSWORD")
+  --data-urlencode "grant_type=password" \
+  --data-urlencode "client_id=$CLIENT_ID" \
+  --data-urlencode "username=$USERNAME" \
+  --data-urlencode "password=$DEV_PASSWORD" || true)
 
 ACCESS_TOKEN=$(printf '%s' "$RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$ACCESS_TOKEN" ]; then
   echo "ERROR: Could not get token for '$USERNAME'." >&2
+  ERROR_MESSAGE=$(printf '%s' "$RESPONSE" | grep -o '"error_description":"[^"]*"' | cut -d'"' -f4 || true)
+  if [ -z "$ERROR_MESSAGE" ]; then
+    ERROR_MESSAGE=$(printf '%s' "$RESPONSE" | grep -o '"error":"[^"]*"' | cut -d'"' -f4 || true)
+  fi
+  if [ -n "$ERROR_MESSAGE" ]; then
+    echo "  Keycloak response: $ERROR_MESSAGE" >&2
+  fi
   echo "  Check that dev-setup-auth.sh has been run and Keycloak is up." >&2
   exit 1
 fi

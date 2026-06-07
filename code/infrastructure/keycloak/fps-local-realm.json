@@ -1,6 +1,7 @@
 {
   "realm": "fps-local",
   "enabled": true,
+  "sslRequired": "none",
   "displayName": "FPS Local Development",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,

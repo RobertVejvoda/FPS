@@ -16,7 +16,7 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d
 
 Local-only infrastructure defaults:
 
-- Keycloak admin credentials are the Docker Compose/dev-script defaults used by `tools/dev-setup-auth.sh`; override them with `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` if needed.
+- Keycloak admin credentials are the Docker Compose/dev-script defaults used by `tools/dev-setup-auth.sh`; override them with `KC_BOOTSTRAP_ADMIN_USERNAME` and `KC_BOOTSTRAP_ADMIN_PASSWORD` if needed. The legacy `KEYCLOAK_ADMIN` variables are still accepted by the script for older local shells.
 - Vault runs in dev mode for local Docker Compose. Use the local Vault token documented in `code/infrastructure/readme.md`, or set `VAULT_ADDR` and `VAULT_TOKEN` for your shell before using Vault CLI commands.
 
 These values are disposable development defaults for the local Docker Compose profile only. Do not reuse them for demo, pilot, or client-owned environments.

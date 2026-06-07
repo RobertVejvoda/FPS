@@ -11,15 +11,31 @@
 set -eu
 
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
-ADMIN_USER="${KEYCLOAK_ADMIN:-admin}"
-ADMIN_PASS="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
+ADMIN_USER="${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-admin}}"
+ADMIN_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 REALM="fps-local"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
 USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor"
 
 echo "== FPS local Keycloak setup =="
 echo "Keycloak: $KEYCLOAK_URL"
+
+get_admin_token() {
+  TOKEN_BODY=$(curl -s \
+    -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "grant_type=password" \
+    --data-urlencode "client_id=admin-cli" \
+    --data-urlencode "username=$ADMIN_USER" \
+    --data-urlencode "password=$ADMIN_PASS" || true)
+  printf '%s' "$TOKEN_BODY" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || true
+}
+
+keycloak_error_message() {
+  printf '%s' "$TOKEN_BODY" | grep -o '"error_description":"[^"]*"' | cut -d'"' -f4 || true
+}
 
 # Wait for Keycloak to be ready
 echo "Waiting for Keycloak..."
@@ -35,15 +51,58 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-# Get admin access token from master realm
-ADMIN_TOKEN=$(curl -sf \
-  -X POST "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=password&client_id=admin-cli&username=$ADMIN_USER&password=$ADMIN_PASS" \
-  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+# Get admin access token from master realm. The realm endpoint can respond
+# before the admin password grant is ready, especially after a fresh container
+# boot, so wait for the actual admin auth path.
+echo "Waiting for admin auth..."
+ADMIN_TOKEN=""
+TOKEN_BODY=""
+for i in $(seq 1 30); do
+  ADMIN_TOKEN=$(get_admin_token)
+  if [ -n "$ADMIN_TOKEN" ]; then
+    break
+  fi
+  if [ "$(keycloak_error_message)" = "HTTPS required" ]; then
+    break
+  fi
+  sleep 2
+done
+
+if [ -z "$ADMIN_TOKEN" ] && command -v docker > /dev/null 2>&1; then
+  ERROR_MESSAGE=$(keycloak_error_message)
+  if [ -n "$ERROR_MESSAGE" ]; then
+    echo "Admin auth not ready from host: $ERROR_MESSAGE"
+  fi
+  echo "Trying local-container admin setup..."
+  if ! docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T \
+      -e FPS_KEYCLOAK_ADMIN_USER="$ADMIN_USER" \
+      -e FPS_KEYCLOAK_ADMIN_PASSWORD="$ADMIN_PASS" \
+      keycloak sh -lc '
+        /opt/keycloak/bin/kcadm.sh config credentials \
+          --server http://localhost:8080 \
+          --realm master \
+          --user "$FPS_KEYCLOAK_ADMIN_USER" \
+          --password "$FPS_KEYCLOAK_ADMIN_PASSWORD" >/dev/null &&
+        /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+      '; then
+    echo "WARNING: Local-container admin setup failed."
+  else
+    for i in $(seq 1 15); do
+      ADMIN_TOKEN=$(get_admin_token)
+      if [ -n "$ADMIN_TOKEN" ]; then
+        break
+      fi
+      sleep 2
+    done
+  fi
+fi
 
 if [ -z "$ADMIN_TOKEN" ]; then
   echo "ERROR: Could not get admin token from Keycloak."
+  ERROR_MESSAGE=$(keycloak_error_message)
+  if [ -n "$ERROR_MESSAGE" ]; then
+    echo "Keycloak response: $ERROR_MESSAGE"
+  fi
   exit 1
 fi
 echo "Admin auth: ok"
