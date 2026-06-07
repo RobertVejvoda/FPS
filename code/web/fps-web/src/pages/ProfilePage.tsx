@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { formatRoles } from '../auth/roles';
 import {
   addVehicle,
   fetchProfileSnapshot,
@@ -113,7 +114,7 @@ export function ProfilePage() {
 
       <section style={card}>
         <h3 style={cardTitle}>Account</h3>
-        <Row label="Roles" value={me.roles.length ? me.roles.join(', ') : 'Employee'} />
+        <Row label="Roles" value={formatRoles(me.roles)} />
       </section>
 
       <section style={card}>

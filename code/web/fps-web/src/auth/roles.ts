@@ -50,6 +50,24 @@ export function canAccessTenantAdmin(roles: string[]): boolean {
   return hasRole(roles, FpsRole.Admin);
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  employee: 'Employee',
+  hr_manager: 'HR Manager',
+  admin: 'Administrator',
+  report_viewer: 'Report Viewer',
+  auditor: 'Auditor',
+};
+
+export function formatRoles(roles: string[]): string {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const r of roles) {
+    const label = ROLE_LABELS[r.toLowerCase()] ?? null;
+    if (label && !seen.has(label)) { seen.add(label); labels.push(label); }
+  }
+  return labels.join(', ') || 'Employee';
+}
+
 // Returns the first route this user can access, for default redirects.
 // Priority: employee → admin → hr_manager → reporting → audit → profile.
 // Admin is checked before hr-operations because canAccessHrOperations also matches admin.
