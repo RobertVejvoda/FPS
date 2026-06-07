@@ -20,7 +20,7 @@ public sealed class GetMyBookingsHandlerTests
 
     public GetMyBookingsHandlerTests()
     {
-        handler = new GetMyBookingsHandler(queryRepository.Object, policyService.Object);
+        handler = new GetMyBookingsHandler(queryRepository.Object, policyService.Object, new SystemClock());
 
         policyService
             .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))

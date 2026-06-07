@@ -20,7 +20,7 @@ public sealed class CancelBookingHandlerTests
     {
         handler = new CancelBookingHandler(
             repository.Object, queryRepository.Object, penaltyRepository.Object,
-            drawRepository.Object, policyService.Object, eventPublisher.Object, new DrawService());
+            drawRepository.Object, policyService.Object, eventPublisher.Object, new DrawService(), new SystemClock());
 
         policyService.Setup(s => s.GetEffectivePolicyAsync(
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))

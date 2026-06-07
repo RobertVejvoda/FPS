@@ -14,5 +14,7 @@
     "primaryColor": "#2f7d3f",
     "accentColor": "#43b75a"
   },
-  "devTokenFallbackEnabled": false
+  "devTokenFallbackEnabled": false,
+  "environment": "Local",
+  "simulationEnabled": true
 }

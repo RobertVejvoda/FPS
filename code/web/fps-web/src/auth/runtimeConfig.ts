@@ -11,6 +11,8 @@ export type RuntimeConfig = {
   oidc: OidcConfig;
   branding: BrandingConfig;
   devTokenFallbackEnabled: boolean;
+  environment?: string;
+  simulationEnabled?: boolean;
 };
 
 export type BrandingConfig = {
@@ -56,8 +58,10 @@ function validateConfig(raw: unknown): RuntimeConfig {
   };
   const devTokenFallbackEnabled =
     typeof r['devTokenFallbackEnabled'] === 'boolean' ? r['devTokenFallbackEnabled'] : false;
+  const environment = typeof r['environment'] === 'string' ? r['environment'] : undefined;
+  const simulationEnabled = typeof r['simulationEnabled'] === 'boolean' ? r['simulationEnabled'] : false;
   const branding = validateBranding(r['branding']);
-  return { apiBaseUrl, oidc, branding, devTokenFallbackEnabled };
+  return { apiBaseUrl, oidc, branding, devTokenFallbackEnabled, environment, simulationEnabled };
 }
 
 function optionalString(obj: Record<string, unknown>, key: string, fallback: string): string {

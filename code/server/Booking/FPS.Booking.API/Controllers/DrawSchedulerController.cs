@@ -1,4 +1,5 @@
 using FPS.Booking.Application.Services;
+using FPS.SharedKernel.Time;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,13 +15,14 @@ namespace FPS.Booking.API.Controllers;
 [AllowAnonymous]
 public sealed class DrawSchedulerController(
     IDrawSchedulerService schedulerService,
-    DrawSchedulerOptions schedulerOptions) : ControllerBase
+    DrawSchedulerOptions schedulerOptions,
+    ISystemClock clock) : ControllerBase
 {
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> OnSchedulerTick(CancellationToken cancellationToken)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
         var targetDate = today.AddDays(schedulerOptions.TargetDateOffsetDays);
 
         await schedulerService.TriggerDueDrawsAsync(targetDate, cancellationToken);

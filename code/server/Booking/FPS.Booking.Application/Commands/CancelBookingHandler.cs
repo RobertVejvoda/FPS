@@ -8,6 +8,7 @@ using FPS.Booking.Domain.Exceptions;
 using FPS.Booking.Domain.Services;
 using FPS.Booking.Domain.ValueObjects;
 using FPS.SharedKernel.DomainEvents;
+using FPS.SharedKernel.Time;
 using MediatR;
 
 namespace FPS.Booking.Application.Commands;
@@ -21,6 +22,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
     private readonly ITenantPolicyService policyService;
     private readonly IBookingEventPublisher eventPublisher;
     private readonly DrawService drawService;
+    private readonly ISystemClock clock;
 
     public CancelBookingHandler(
         IBookingRepository repository,
@@ -29,7 +31,8 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         IDrawRepository drawRepository,
         ITenantPolicyService policyService,
         IBookingEventPublisher eventPublisher,
-        DrawService drawService)
+        DrawService drawService,
+        ISystemClock clock)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(queryRepository);
@@ -38,6 +41,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         ArgumentNullException.ThrowIfNull(policyService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
         ArgumentNullException.ThrowIfNull(drawService);
+        ArgumentNullException.ThrowIfNull(clock);
         this.repository = repository;
         this.queryRepository = queryRepository;
         this.penaltyRepository = penaltyRepository;
@@ -45,6 +49,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         this.policyService = policyService;
         this.eventPublisher = eventPublisher;
         this.drawService = drawService;
+        this.clock = clock;
     }
 
     public async Task<CancelBookingResult> Handle(CancelBookingCommand command, CancellationToken cancellationToken)
@@ -87,7 +92,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             UserId.FromString(dto.RequestedBy),
             PenaltyType.LateCancellation,
             score: policy.LateCancellationPenalty,
-            effectiveDate: DateOnly.FromDateTime(DateTime.UtcNow),
+            effectiveDate: DateOnly.FromDateTime(clock.UtcNow.UtcDateTime),
             expiryDays: policy.AllocationLookbackDays,
             sourceEventId: sourceEventId);
 
