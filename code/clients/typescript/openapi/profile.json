@@ -163,6 +163,97 @@
         ]
       }
     },
+    "/profile/vehicles": {
+      "post": {
+        "tags": [
+          "EmployeeVehicle"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddVehicleRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddVehicleRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddVehicleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/profile/vehicles/{vehicleId}": {
+      "delete": {
+        "tags": [
+          "EmployeeVehicle"
+        ],
+        "parameters": [
+          {
+            "name": "vehicleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/profile/vehicles/{vehicleId}/default": {
+      "put": {
+        "tags": [
+          "EmployeeVehicle"
+        ],
+        "parameters": [
+          {
+            "name": "vehicleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/erasure": {
       "post": {
         "tags": [
@@ -322,6 +413,25 @@
   },
   "components": {
     "schemas": {
+      "AddVehicleRequest": {
+        "required": [
+          "licensePlate",
+          "vehicleType",
+          "isElectric"
+        ],
+        "type": "object",
+        "properties": {
+          "licensePlate": {
+            "type": "string"
+          },
+          "vehicleType": {
+            "type": "string"
+          },
+          "isElectric": {
+            "type": "boolean"
+          }
+        }
+      },
       "BootstrapRequest": {
         "required": [
           "externalSubject",
@@ -626,6 +736,9 @@
   "tags": [
     {
       "name": "EmployeeBootstrap"
+    },
+    {
+      "name": "EmployeeVehicle"
     },
     {
       "name": "Erasure"
