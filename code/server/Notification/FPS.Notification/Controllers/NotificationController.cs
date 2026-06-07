@@ -22,6 +22,7 @@ public sealed class NotificationController(
         [FromQuery] bool unreadOnly = false,
         [FromQuery] string? type = null,
         [FromQuery] int pageSize = 50,
+        [FromQuery] string channel = NotificationChannel.InApp,
         CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId) || string.IsNullOrEmpty(currentUser.TenantId))
@@ -30,7 +31,7 @@ public sealed class NotificationController(
         pageSize = Math.Clamp(pageSize, 1, 200);
 
         var records = await repository.GetByRecipientAsync(
-            currentUser.TenantId, currentUser.UserId, unreadOnly, type, pageSize, cancellationToken);
+            currentUser.TenantId, currentUser.UserId, unreadOnly, type, pageSize, channel, cancellationToken);
 
         var items = records.Select(ToDto).ToList();
         return Ok(new NotificationListResponse(items, items.Count, items.Count >= pageSize));

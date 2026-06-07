@@ -9,6 +9,7 @@ public interface INotificationRepository
     Task<IReadOnlyList<NotificationRecord>> GetByRecipientAsync(
         string tenantId, string recipientId,
         bool unreadOnly = false, string? type = null, int pageSize = 50,
+        string? channel = null,
         CancellationToken cancellationToken = default);
     Task<int> GetUnreadCountAsync(string tenantId, string recipientId, CancellationToken cancellationToken = default);
     Task<bool> MarkReadAsync(Guid notificationId, string tenantId, string recipientId, CancellationToken cancellationToken = default);

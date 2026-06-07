@@ -21,6 +21,7 @@ public sealed class InMemoryNotificationRepository : INotificationRepository
     public Task<IReadOnlyList<NotificationRecord>> GetByRecipientAsync(
         string tenantId, string recipientId,
         bool unreadOnly = false, string? type = null, int pageSize = 50,
+        string? channel = null,
         CancellationToken cancellationToken = default)
     {
         var query = store.Values
@@ -32,6 +33,9 @@ public sealed class InMemoryNotificationRepository : INotificationRepository
         if (!string.IsNullOrEmpty(type))
             query = query.Where(r => r.NotificationType.StartsWith(type + ".", StringComparison.OrdinalIgnoreCase)
                                   || r.NotificationType.Equals(type, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(channel))
+            query = query.Where(r => r.Channel.Equals(channel, StringComparison.OrdinalIgnoreCase));
 
         IReadOnlyList<NotificationRecord> results = query
             .OrderByDescending(r => r.CreatedAt)
