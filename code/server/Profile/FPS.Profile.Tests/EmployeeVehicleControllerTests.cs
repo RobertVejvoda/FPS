@@ -42,9 +42,8 @@ public sealed class EmployeeVehicleControllerTests
         var result = await controller.AddVehicle(new AddVehicleRequest("abc-123", "Sedan", false), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var body = ok.Value!;
-        var vehicleId = body.GetType().GetProperty("vehicleId")!.GetValue(body) as string;
-        Assert.False(string.IsNullOrEmpty(vehicleId));
+        var body = Assert.IsType<AddVehicleResponse>(ok.Value);
+        Assert.False(string.IsNullOrEmpty(body.VehicleId));
     }
 
     [Fact]

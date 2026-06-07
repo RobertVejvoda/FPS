@@ -28,6 +28,7 @@ export function ProfilePage() {
   const [addForm, setAddForm] = useState<AddForm>(emptyForm());
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const cfg = { apiBaseUrl, bearerToken };
@@ -82,17 +83,21 @@ export function ProfilePage() {
   async function handleRemove(vehicleId: string) {
     if (!confirm('Remove this vehicle from your profile?')) return;
     setBusy(true);
+    setActionError('');
     const res = await removeVehicle(cfg, vehicleId);
     setBusy(false);
     if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+    if (res.kind !== 'ok') { setActionError('Could not remove vehicle. Please try again.'); return; }
     await reloadProfile();
   }
 
   async function handleSetDefault(vehicleId: string) {
     setBusy(true);
+    setActionError('');
     const res = await setDefaultVehicle(cfg, vehicleId);
     setBusy(false);
     if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+    if (res.kind !== 'ok') { setActionError('Could not update default vehicle. Please try again.'); return; }
     await reloadProfile();
   }
 
@@ -170,6 +175,8 @@ export function ProfilePage() {
             </button>
           </form>
         )}
+
+        {actionError && <p style={{ margin: '4px 0 0', fontSize: 13, color: '#b91c1c' }}>{actionError}</p>}
 
         {activeVehicles.length === 0 && !addOpen && (
           <p style={muted}>No vehicles linked to your profile. Add one to speed up spot requests.</p>

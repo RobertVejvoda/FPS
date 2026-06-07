@@ -168,7 +168,7 @@ function EligibilityPanel({
       </View>
 
       <View style={styles.card} testID="profile-vehicles-card">
-        <Text style={styles.cardTitle}>Your Vehicles</Text>
+        <Text style={styles.cardTitle}>My Vehicles</Text>
         {profile.vehicles.length === 0 ? (
           <Text style={styles.bodyText}>No vehicles are linked to your profile.</Text>
         ) : (

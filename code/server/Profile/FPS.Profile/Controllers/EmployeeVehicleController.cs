@@ -14,6 +14,10 @@ public sealed class EmployeeVehicleController(
     ICurrentUser currentUser) : ControllerBase
 {
     [HttpPost]
+    [ProducesResponseType(typeof(AddVehicleResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddVehicle(
         [FromBody] AddVehicleRequest request,
         CancellationToken ct)
@@ -35,10 +39,13 @@ public sealed class EmployeeVehicleController(
             request.VehicleType, request.IsElectric, IsActive: true, IsDefault: isFirstActive);
 
         await repository.SaveAsync(WithVehicles(profile, [.. profile.Vehicles, newVehicle]), ct);
-        return Ok(new { vehicleId });
+        return Ok(new AddVehicleResponse(vehicleId));
     }
 
     [HttpDelete("{vehicleId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveVehicle(string vehicleId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -66,6 +73,9 @@ public sealed class EmployeeVehicleController(
     }
 
     [HttpPut("{vehicleId}/default")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetDefault(string vehicleId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -111,3 +121,5 @@ public sealed record AddVehicleRequest(
     string LicensePlate,
     string VehicleType,
     bool IsElectric);
+
+public sealed record AddVehicleResponse(string VehicleId);

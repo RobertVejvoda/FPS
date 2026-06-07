@@ -406,7 +406,7 @@ export default function NewBookingRoute() {
                     autoCapitalize="characters"
                   />
                   <Text style={styles.hint}>
-                    No vehicles in profile. Add vehicles in More → Your Vehicles to speed up spot requests.
+                    No vehicles in profile. Add vehicles in More → My Vehicles to speed up spot requests.
                   </Text>
                 </FieldRow>
 
