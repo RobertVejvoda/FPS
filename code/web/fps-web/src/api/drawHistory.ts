@@ -1,0 +1,50 @@
+import type { ApiClientConfig, FetchResult } from './client';
+
+export interface HrDrawOutcomeItem {
+  requestId: string;
+  requestorRef: string;
+  outcome: string;
+  reasonCode: string | null;
+  reason: string | null;
+  allocatedSlotId: string | null;
+}
+
+export interface HrDrawOutcomeSummary {
+  date: string;
+  timeSlot: string;
+  locationId: string | null;
+  drawStatus: string;
+  allocatedCount: number;
+  rejectedCount: number;
+  waitlistedCount: number;
+  totalRequests: number;
+  completedAt: string | null;
+  outcomes: HrDrawOutcomeItem[];
+}
+
+export interface HrDrawOutcomesResponse {
+  draws: HrDrawOutcomeSummary[];
+}
+
+export async function fetchHrDrawOutcomes(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  params: { from?: string; to?: string; locationId?: string } = {},
+): Promise<FetchResult<HrDrawOutcomesResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const qs = new URLSearchParams();
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  if (params.locationId) qs.set('locationId', params.locationId);
+  const url = `${apiBaseUrl}/draws/outcomes${qs.size ? `?${qs}` : ''}`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /draws/outcomes returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as HrDrawOutcomesResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}

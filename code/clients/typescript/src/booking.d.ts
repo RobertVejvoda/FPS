@@ -591,6 +591,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/draws/outcomes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                    locationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HrDrawOutcomesResponse"];
+                        "application/json": components["schemas"]["HrDrawOutcomesResponse"];
+                        "text/json": components["schemas"]["HrDrawOutcomesResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/erasure/check-active": {
         parameters: {
             query?: never;
@@ -1087,6 +1128,35 @@ export interface components {
         };
         HrCancelRequest: {
             reason: string;
+        };
+        HrDrawOutcomeItemResponse: {
+            /** Format: uuid */
+            requestId: string;
+            requestorRef: string;
+            outcome: string;
+            reasonCode: null | string;
+            reason: null | string;
+            allocatedSlotId: null | string;
+        };
+        HrDrawOutcomesResponse: {
+            draws: components["schemas"]["HrDrawOutcomeSummaryResponse"][];
+        };
+        HrDrawOutcomeSummaryResponse: {
+            date: string;
+            timeSlot: string;
+            locationId: null | string;
+            drawStatus: string;
+            /** Format: int32 */
+            allocatedCount: number | string;
+            /** Format: int32 */
+            rejectedCount: number | string;
+            /** Format: int32 */
+            waitlistedCount: number | string;
+            /** Format: int32 */
+            totalRequests: number | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            outcomes: components["schemas"]["HrDrawOutcomeItemResponse"][];
         };
         ManualCorrectionRequest: {
             correctionType: string;

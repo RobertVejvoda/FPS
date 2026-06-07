@@ -6,6 +6,7 @@ using FPS.SharedKernel.Identity;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace FPS.Booking.API.Controllers;
 
@@ -127,5 +128,41 @@ public sealed class DrawsController : ControllerBase
             AvailableSpotCount: result.AvailableSpotCount,
             CanRequest: result.CanRequest,
             CannotRequestReason: result.CannotRequestReason));
+    }
+
+    [HttpGet("outcomes")]
+    [Authorize(Roles = "admin,hr_manager")]
+    [ProducesResponseType(typeof(HrDrawOutcomesResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHrDrawOutcomes(
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? locationId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var effectiveFrom = from ?? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-90));
+        var effectiveTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var summaries = await mediator.Send(
+            new GetHrDrawOutcomesQuery(currentUser.TenantId, locationId, effectiveFrom, effectiveTo),
+            cancellationToken);
+
+        var draws = summaries.Select(s => new HrDrawOutcomeSummaryResponse(
+            Date: s.Date,
+            TimeSlot: s.TimeSlot,
+            LocationId: s.LocationId,
+            DrawStatus: s.DrawStatus,
+            AllocatedCount: s.AllocatedCount,
+            RejectedCount: s.RejectedCount,
+            WaitlistedCount: s.WaitlistedCount,
+            TotalRequests: s.TotalRequests,
+            CompletedAt: s.CompletedAt,
+            Outcomes: s.Outcomes.Select(o => new HrDrawOutcomeItemResponse(
+                o.RequestId, o.RequestorRef, o.Outcome, o.ReasonCode, o.Reason, o.AllocatedSlotId
+            )).ToList())).ToList();
+
+        return Ok(new HrDrawOutcomesResponse(draws));
     }
 }

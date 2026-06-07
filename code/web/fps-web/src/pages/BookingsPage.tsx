@@ -235,6 +235,38 @@ export function BookingsPage() {
           </div>
         )}
       </section>
+
+      {/* Past draw outcomes */}
+      {okState && (() => {
+        const today = localDate(0);
+        const pastOutcomes = okState.items.filter(
+          b => b.requestedDate < today && (b.status === 'Allocated' || b.status === 'Rejected')
+        );
+        if (pastOutcomes.length === 0) return null;
+        return (
+          <section>
+            <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Past draw outcomes</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {pastOutcomes.map(b => (
+                <div key={b.requestId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fff', border: '1px solid var(--border)', borderLeft: `4px solid ${b.status === 'Allocated' ? 'var(--success)' : 'var(--danger)'}`, borderRadius: 8, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{new Date(b.requestedDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</div>
+                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>{b.timeSlotStart}–{b.timeSlotEnd}{b.locationId ? ` · ${b.locationId}` : ''}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: b.status === 'Allocated' ? 'var(--success)' : 'var(--danger)' }}>
+                      {b.status === 'Allocated' ? 'Spot allocated' : 'Not selected'}
+                    </span>
+                    {b.status === 'Rejected' && b.reason && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{b.reason}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
     </div>
   );
 }
