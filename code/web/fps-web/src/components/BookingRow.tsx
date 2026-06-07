@@ -62,7 +62,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
       ) : null}
 
       {slotLabel ? (
-        <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Slot: {slotLabel}</p>
+        <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Spot: {slotLabel}</p>
       ) : null}
 
       {nextDrawLabel ? (

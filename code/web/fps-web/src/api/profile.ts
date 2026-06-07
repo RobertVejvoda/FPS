@@ -18,6 +18,7 @@ export interface VehicleSnapshot {
   vehicleType: string;
   isElectric: boolean;
   isActive: boolean;
+  isDefault?: boolean;
 }
 
 export async function fetchProfileSnapshot(

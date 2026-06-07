@@ -71,7 +71,19 @@ export function NewBookingPage() {
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
       if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-      if (res.kind === 'ok') setProfile(res.data);
+      if (res.kind === 'ok') {
+        setProfile(res.data);
+        const defaultVehicle = res.data.vehicles.find(v => v.isActive && v.isDefault);
+        if (defaultVehicle) {
+          setForm((f) => ({
+            ...f,
+            selectedVehicleId: defaultVehicle.vehicleId,
+            licensePlate: defaultVehicle.licensePlate,
+            vehicleType: defaultVehicle.vehicleType,
+            isElectric: defaultVehicle.isElectric,
+          }));
+        }
+      }
       setProfileLoading(false);
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
