@@ -237,7 +237,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
 
     private static HrBookingListItem ToHrListItem(BookingRequestDto dto) => new(
         RequestId: dto.RequestId,
-        RequestorRef: dto.RequestedBy.Length >= 8 ? dto.RequestedBy[..8] : dto.RequestedBy,
+        RequestorRef: dto.RequestedBy,
         RequestedDate: DateOnly.FromDateTime(dto.PlannedArrivalTime),
         TimeSlotStart: TimeOnly.FromDateTime(dto.PlannedArrivalTime),
         TimeSlotEnd: TimeOnly.FromDateTime(dto.PlannedDepartureTime),

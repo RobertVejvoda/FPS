@@ -188,16 +188,6 @@ export function HrOperationsPage() {
                   {drawOk.requestWindowStatus === 'open' ? 'Open' : drawOk.requestWindowStatus === 'closed' ? 'Closed' : 'Unknown'}
                 </div>
               </div>
-              {drawOk.nextDrawAt && (
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {isTimestampInPast(drawOk.nextDrawAt) ? 'Last scheduled draw' : 'Next draw'}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: isTimestampInPast(drawOk.nextDrawAt) ? '#6b7280' : '#374151', marginTop: 2 }}>
-                    {formatDrawTimestamp(drawOk.nextDrawAt, drawOk.timeZone)}
-                  </div>
-                </div>
-              )}
               {drawOk.cutOffAt && (
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
