@@ -50,6 +50,11 @@ export function canAccessTenantAdmin(roles: string[]): boolean {
   return hasRole(roles, FpsRole.Admin);
 }
 
+// Simulation clock controls — advance/reset require hr_manager or admin.
+export function canControlSimulation(roles: string[]): boolean {
+  return hasRole(roles, FpsRole.HrManager, FpsRole.Admin);
+}
+
 const ROLE_LABELS: Record<string, string> = {
   employee: 'Employee',
   hr_manager: 'HR Manager',

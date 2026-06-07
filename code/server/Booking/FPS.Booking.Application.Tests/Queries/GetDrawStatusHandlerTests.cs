@@ -37,7 +37,7 @@ public sealed class GetDrawStatusHandlerTests
                 It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultPolicy);
 
-        handler = new GetDrawStatusHandler(drawRepository.Object, slotService.Object, policyService.Object);
+        handler = new GetDrawStatusHandler(drawRepository.Object, slotService.Object, policyService.Object, new SystemClock());
     }
 
     [Fact]

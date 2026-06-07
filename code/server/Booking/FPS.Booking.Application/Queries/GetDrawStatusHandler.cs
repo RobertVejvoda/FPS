@@ -2,6 +2,7 @@ using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.ValueObjects;
+using FPS.SharedKernel.Time;
 using MediatR;
 
 namespace FPS.Booking.Application.Queries;
@@ -11,18 +12,22 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
     private readonly IDrawRepository drawRepository;
     private readonly IAvailableSlotService slotService;
     private readonly ITenantPolicyService policyService;
+    private readonly ISystemClock clock;
 
     public GetDrawStatusHandler(
         IDrawRepository drawRepository,
         IAvailableSlotService slotService,
-        ITenantPolicyService policyService)
+        ITenantPolicyService policyService,
+        ISystemClock clock)
     {
         ArgumentNullException.ThrowIfNull(drawRepository);
         ArgumentNullException.ThrowIfNull(slotService);
         ArgumentNullException.ThrowIfNull(policyService);
+        ArgumentNullException.ThrowIfNull(clock);
         this.drawRepository = drawRepository;
         this.slotService = slotService;
         this.policyService = policyService;
+        this.clock = clock;
     }
 
     public async Task<DrawStatusResult> Handle(GetDrawStatusQuery query, CancellationToken cancellationToken)
@@ -30,6 +35,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var timeSlot = TimeSlot.Create(query.TimeSlotStart, query.TimeSlotEnd);
         var drawKey = DrawKey.Create(query.TenantId, query.LocationId, query.Date, timeSlot);
 
+        var now = clock.GetTenantUtcNow(query.TenantId);
         var attemptTask = drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
         var slotsTask = slotService.GetAvailableSlotsAsync(query.TenantId, query.LocationId, query.Date, timeSlot, cancellationToken);
         var policyTask = policyService.GetEffectivePolicyAsync(query.TenantId, query.LocationId, cancellationToken);
@@ -39,10 +45,10 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var policy = policyTask.Result;
 
         var tz = policy is not null ? GetTimeZone(policy.TimeZoneId) : TimeZoneInfo.Utc;
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tz).DateTime);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, tz).DateTime);
 
         var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
-        var schedule = BuildScheduleMetadata(policy, query.Date, attempt?.Status, today);
+        var schedule = BuildScheduleMetadata(policy, query.Date, attempt?.Status, today, now);
 
         if (attempt is null)
         {
@@ -135,9 +141,10 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         TenantPolicy? policy,
         DateOnly date,
         string? drawStatus,
-        DateOnly today)
+        DateOnly today,
+        DateTimeOffset now)
     {
-        var calculatedAt = DateTime.UtcNow;
+        var calculatedAt = now.UtcDateTime;
 
         if (policy is null)
         {
@@ -160,7 +167,6 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var cutOffDto = new DateTimeOffset(localCutOff, offset);
         var cutOffAt = cutOffDto.ToString("O");
 
-        var now = DateTimeOffset.UtcNow;
         var windowClosed = date < today
             || drawStatus is "Completed" or "InProgress" or "Failed"
             || now >= cutOffDto;

@@ -1,10 +1,12 @@
 using Dapr.Client;
 using Dapr.Workflow;
 using FPS.Booking.API.Identity;
+using FPS.Booking.API.Simulation;
 using FPS.Booking.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
+using FPS.SharedKernel.Time;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -70,6 +72,16 @@ builder.Services.AddAuthentication("Bearer")
     {
         options.ConfigureFpsJwtBearer(builder.Configuration, builder.Environment);
     });
+
+if (builder.Environment.IsProduction())
+{
+    builder.Services.AddSingleton<ISystemClock, SystemClock>();
+}
+else
+{
+    builder.Services.AddSingleton<InMemorySimulationClock>();
+    builder.Services.AddSingleton<ISystemClock>(sp => sp.GetRequiredService<InMemorySimulationClock>());
+}
 
 builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-booking", builder.Configuration);

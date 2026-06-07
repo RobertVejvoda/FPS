@@ -5,6 +5,7 @@ using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 using FPS.Booking.Domain.ValueObjects;
 using FPS.SharedKernel.DomainEvents;
 using FPS.SharedKernel.Profile;
+using FPS.SharedKernel.Time;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     private readonly IProfileSnapshotService profileSnapshotService;
     private readonly IBookingEventPublisher eventPublisher;
     private readonly ILogger<SubmitBookingRequestHandler> logger;
+    private readonly ISystemClock clock;
 
     public SubmitBookingRequestHandler(
         IBookingRepository repository,
@@ -29,7 +31,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         ITenantPolicyService policyService,
         IProfileSnapshotService profileSnapshotService,
         IBookingEventPublisher eventPublisher,
-        ILogger<SubmitBookingRequestHandler> logger)
+        ILogger<SubmitBookingRequestHandler> logger,
+        ISystemClock clock)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(queryRepository);
@@ -39,6 +42,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         ArgumentNullException.ThrowIfNull(profileSnapshotService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(clock);
         this.repository = repository;
         this.queryRepository = queryRepository;
         this.slotService = slotService;
@@ -47,6 +51,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         this.profileSnapshotService = profileSnapshotService;
         this.eventPublisher = eventPublisher;
         this.logger = logger;
+        this.clock = clock;
     }
 
     public async Task<SubmitBookingRequestResult> Handle(
@@ -98,7 +103,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             snapshot.AccessibilityEligible,
             snapshot.HasCompanyCar);
 
-        var isSameDay = IsSameDay(policy, requestedPeriod.Start);
+        var now = clock.GetTenantUtcNow(cmd.TenantId);
+        var isSameDay = IsSameDay(policy, requestedPeriod.Start, now);
         var existingCount = await repository.CountRequestsForDateAsync(
             cmd.TenantId, requestedPeriod.Start.Date, cancellationToken);
         var hasOverlap = await repository.HasOverlappingRequestAsync(
@@ -125,7 +131,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         }
         else
         {
-            var isCutOffPassed = IsCutOffPassed(policy, requestedPeriod.Start);
+            var isCutOffPassed = IsCutOffPassed(policy, requestedPeriod.Start, now);
             context = SubmissionContext.Create(policy.DailyRequestCap, existingCount, hasOverlap, isCutOffPassed);
         }
 
@@ -169,17 +175,17 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             request.RejectionReason);
     }
 
-    private static bool IsSameDay(TenantPolicy policy, DateTime requestedStart)
+    private static bool IsSameDay(TenantPolicy policy, DateTime requestedStart, DateTimeOffset now)
     {
         var tz = TimeZoneInfo.FindSystemTimeZoneById(policy.TimeZoneId);
-        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime, tz);
         return requestedStart.Date == nowLocal.Date;
     }
 
-    private static bool IsCutOffPassed(TenantPolicy policy, DateTime requestedStart)
+    private static bool IsCutOffPassed(TenantPolicy policy, DateTime requestedStart, DateTimeOffset now)
     {
         var tz = TimeZoneInfo.FindSystemTimeZoneById(policy.TimeZoneId);
-        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime, tz);
 
         if (requestedStart.Date > nowLocal.Date.AddDays(1))
             return false;

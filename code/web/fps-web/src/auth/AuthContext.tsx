@@ -33,6 +33,8 @@ type AuthState = {
   isConfigured: boolean;
   devFallbackEnabled: boolean;
   branding: BrandingConfig;
+  environment: string;
+  simulationEnabled: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   save: (apiBaseUrl: string, token: string) => Promise<void>;
@@ -84,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<string[]>([]);
   const [devFallbackEnabled, setDevFallbackEnabled] = useState(false);
   const [branding, setBranding] = useState<BrandingConfig>(DEFAULT_BRANDING);
+  const [environment, setEnvironment] = useState('');
+  const [simulationEnabled, setSimulationEnabled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setApiBaseUrl(config.apiBaseUrl);
         setDevFallbackEnabled(config.devTokenFallbackEnabled);
         setBranding(config.branding);
+        setEnvironment(config.environment ?? '');
+        setSimulationEnabled(config.simulationEnabled ?? false);
         applyBranding(config.branding);
 
         // On the callback page, handle the OIDC redirect inline.
@@ -250,12 +256,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isConfigured: phase === 'authenticated',
       devFallbackEnabled,
       branding,
+      environment,
+      simulationEnabled,
       login,
       logout,
       save,
       clear,
     }),
-    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, branding, login, logout, save, clear],
+    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, branding, environment, simulationEnabled, login, logout, save, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -23,6 +23,7 @@ global using Dapr.Client;
 // Health checks
 global using Microsoft.Extensions.Diagnostics.HealthChecks;
 global using FPS.SharedKernel.HealthChecks;
+global using FPS.SharedKernel.Time;
 
 
 using FPS.SharedKernel.Interfaces;

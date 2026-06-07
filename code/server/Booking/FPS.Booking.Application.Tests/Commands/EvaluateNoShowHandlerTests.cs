@@ -20,7 +20,7 @@ public sealed class EvaluateNoShowHandlerTests
     {
         handler = new EvaluateNoShowHandler(
             repository.Object, queryRepository.Object, penaltyRepository.Object,
-            policyService.Object, eventPublisher.Object);
+            policyService.Object, eventPublisher.Object, new SystemClock());
 
         policyService.Setup(s => s.GetEffectivePolicyAsync(
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))

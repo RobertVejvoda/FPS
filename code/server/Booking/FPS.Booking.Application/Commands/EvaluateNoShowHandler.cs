@@ -5,6 +5,7 @@ using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 using FPS.Booking.Domain.Entities;
 using FPS.Booking.Domain.ValueObjects;
 using FPS.SharedKernel.DomainEvents;
+using FPS.SharedKernel.Time;
 using MediatR;
 
 namespace FPS.Booking.Application.Commands;
@@ -16,24 +17,28 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
     private readonly IPenaltyRepository penaltyRepository;
     private readonly ITenantPolicyService policyService;
     private readonly IBookingEventPublisher eventPublisher;
+    private readonly ISystemClock clock;
 
     public EvaluateNoShowHandler(
         IBookingRepository repository,
         IBookingQueryRepository queryRepository,
         IPenaltyRepository penaltyRepository,
         ITenantPolicyService policyService,
-        IBookingEventPublisher eventPublisher)
+        IBookingEventPublisher eventPublisher,
+        ISystemClock clock)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(queryRepository);
         ArgumentNullException.ThrowIfNull(penaltyRepository);
         ArgumentNullException.ThrowIfNull(policyService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
+        ArgumentNullException.ThrowIfNull(clock);
         this.repository = repository;
         this.queryRepository = queryRepository;
         this.penaltyRepository = penaltyRepository;
         this.policyService = policyService;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     public async Task<EvaluateNoShowResult> Handle(EvaluateNoShowCommand command, CancellationToken cancellationToken)
@@ -51,7 +56,7 @@ public sealed class EvaluateNoShowHandler : IRequestHandler<EvaluateNoShowComman
             command.TenantId, command.LocationId, command.Date, cancellationToken);
 
         var markedCount = 0;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(clock.GetTenantUtcNow(command.TenantId).UtcDateTime);
 
         foreach (var dto in allocatedRequests)
         {

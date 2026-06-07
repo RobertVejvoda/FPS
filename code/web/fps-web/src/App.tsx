@@ -1,5 +1,9 @@
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
+import {
+  getSimulationStatus, advanceSimulation, resetSimulation, type SimulationStatus,
+} from './api/simulation';
 import {
   canAccessAudit,
   canAccessBookings,
@@ -9,6 +13,7 @@ import {
   canAccessProfile,
   canAccessReporting,
   canAccessTenantAdmin,
+  canControlSimulation,
   defaultRoute,
 } from './auth/roles';
 import { SessionPage } from './pages/SessionPage';
@@ -30,6 +35,60 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
   const { roles } = useAuth();
   if (!allowed) return <Navigate to={defaultRoute(roles)} replace />;
   return <>{children}</>;
+}
+
+function AppFooter() {
+  const { apiBaseUrl, bearerToken, environment, simulationEnabled, roles } = useAuth();
+  const cfg = { apiBaseUrl, bearerToken };
+  const canControl = canControlSimulation(roles);
+  const [sim, setSim] = useState<SimulationStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!simulationEnabled) return;
+    void getSimulationStatus(cfg).then(r => { if (r.kind === 'ok') setSim(r.data); });
+  }, [simulationEnabled, apiBaseUrl]);
+
+  async function handleAdvance(hours: number) {
+    setBusy(true);
+    const r = await advanceSimulation(cfg, hours);
+    setBusy(false);
+    if (r.kind === 'ok') setSim(r.data);
+  }
+
+  async function handleReset() {
+    setBusy(true);
+    const r = await resetSimulation(cfg);
+    setBusy(false);
+    if (r.kind === 'ok') setSim(r.data);
+  }
+
+  const hasContent = !!environment || simulationEnabled;
+  if (!hasContent) return null;
+
+  function fmtTime(iso: string) {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  return (
+    <footer className="app-footer">
+      {environment && <span className="footer-env-badge">{environment}</span>}
+      {sim?.simulationActive && <span className="footer-sim-banner">Non-production simulation</span>}
+      {simulationEnabled && sim && (
+        <span className="footer-real-time">Real: {fmtTime(sim.realNow)}</span>
+      )}
+      {simulationEnabled && sim?.simulationActive && sim.virtualNow && (
+        <span className="footer-sim-time">Sim: {fmtTime(sim.virtualNow)}</span>
+      )}
+      {simulationEnabled && canControl && (
+        <div className="footer-sim-controls">
+          <button className="footer-sim-btn" disabled={busy} onClick={() => void handleAdvance(1)}>+1 h</button>
+          <button className="footer-sim-btn" disabled={busy} onClick={() => void handleAdvance(8)}>+8 h</button>
+          <button className="footer-sim-btn" disabled={busy} onClick={() => void handleReset()}>Reset</button>
+        </div>
+      )}
+    </footer>
+  );
 }
 
 function Shell() {
@@ -96,6 +155,7 @@ function Shell() {
           <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />
         </Routes>
       </main>
+      <AppFooter />
     </div>
   );
 }
