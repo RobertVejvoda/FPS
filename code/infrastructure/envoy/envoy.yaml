@@ -44,6 +44,10 @@ static_resources:
                           route:
                             cluster: fps-booking
                         - match:
+                            prefix: "/simulation"
+                          route:
+                            cluster: fps-booking
+                        - match:
                             prefix: "/reports"
                           route:
                             cluster: fps-reporting
