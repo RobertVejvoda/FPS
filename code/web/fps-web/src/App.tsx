@@ -13,6 +13,7 @@ import {
   canAccessProfile,
   canAccessReporting,
   canAccessTenantAdmin,
+  canControlSimulation,
   defaultRoute,
 } from './auth/roles';
 import { SessionPage } from './pages/SessionPage';
@@ -37,8 +38,9 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
 }
 
 function AppFooter() {
-  const { apiBaseUrl, bearerToken, environment, simulationEnabled } = useAuth();
+  const { apiBaseUrl, bearerToken, environment, simulationEnabled, roles } = useAuth();
   const cfg = { apiBaseUrl, bearerToken };
+  const canControl = canControlSimulation(roles);
   const [sim, setSim] = useState<SimulationStatus | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -73,7 +75,7 @@ function AppFooter() {
           {new Date(sim.virtualNow).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
         </span>
       )}
-      {simulationEnabled && (
+      {simulationEnabled && canControl && (
         <div className="footer-sim-controls">
           <button className="footer-sim-btn" disabled={busy} onClick={() => void handleAdvance(1)}>+1 h</button>
           <button className="footer-sim-btn" disabled={busy} onClick={() => void handleAdvance(8)}>+8 h</button>
