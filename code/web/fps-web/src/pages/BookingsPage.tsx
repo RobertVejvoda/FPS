@@ -266,9 +266,19 @@ export function BookingsPage() {
       </section>
 
       {/* Past draw outcomes */}
-      {myDrawOutcomes.length > 0 && (
-        <section>
-          <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Past draw outcomes</h3>
+      <section>
+        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Past draw outcomes</h3>
+        {myDrawOutcomes.length === 0 && (
+          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem', textAlign: 'center' }}>
+            <p style={{ color: '#1e293b', fontSize: 14, fontWeight: 600, margin: '0 0 0.5rem' }}>
+              No past Draw outcomes yet
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
+              Your allocation outcomes from completed Draws will appear here. Submit a request and wait for the scheduled Draw time to see results.
+            </p>
+          </div>
+        )}
+        {myDrawOutcomes.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {myDrawOutcomes.map(d => {
               const allocated = d.myOutcome === 'Allocated';
@@ -298,8 +308,8 @@ export function BookingsPage() {
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }

@@ -173,11 +173,30 @@ export function HrOperationsPage() {
         <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#6b7280' }}>{selectedDate}</span>
       </div>
 
-      {/* Draw panel (DRAW005) */}
+      {/* Draw panel (DRAW005 + DRAW007 enhancements) */}
       <section style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem', marginBottom: '1.25rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.75rem', color: '#1e293b' }}>
+          Draw Schedule & Progress
+        </h2>
         {drawLoading && <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Loading schedule…</p>}
         {drawOk && (
           <div style={{ marginBottom: '0.75rem' }}>
+            {/* Next Draw time - prominent display */}
+            {drawOk.nextDrawAt && (
+              <div style={{ background: isTimestampInPast(drawOk.nextDrawAt) ? '#fef3c7' : '#dbeafe', border: `1px solid ${isTimestampInPast(drawOk.nextDrawAt) ? '#fcd34d' : '#93c5fd'}`, borderRadius: 6, padding: '0.75rem', marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+                  {isTimestampInPast(drawOk.nextDrawAt) ? 'Scheduled Draw time passed' : 'Next scheduled Draw'}
+                </div>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
+                  {formatDrawTimestamp(drawOk.nextDrawAt, drawOk.timeZone)}
+                </div>
+                {isTimestampInPast(drawOk.nextDrawAt) && drawOk.status !== 'Completed' && (
+                  <div style={{ fontSize: '0.8rem', color: '#92400e', marginTop: 4 }}>
+                    Warning: Draw should have run but may not have been triggered yet. Use "Run Draw now" below.
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Draw status</div>
@@ -206,12 +225,24 @@ export function HrOperationsPage() {
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Schedule</div>
                 <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatScheduleStatus(drawOk.scheduleStatus)} · {formatScheduleSource(drawOk.scheduleSource)}</div>
               </div>
+              {drawOk.completedAt && (
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Completed</div>
+                  <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>
+                    {formatDrawTimestamp(drawOk.completedAt, drawOk.timeZone)}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#6b7280' }}>{drawOk.safeMessage}</div>
           </div>
         )}
         {!drawLoading && !drawOk && (
-          <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 0.75rem' }}>Schedule unavailable.</p>
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '0.75rem', marginBottom: '0.75rem' }}>
+            <p style={{ fontSize: '0.875rem', color: '#991b1b', margin: 0 }}>
+              Draw schedule unavailable. The Draw may not be configured for this date/location/time slot, or the DataHub projection may be stale.
+            </p>
+          </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div />
@@ -259,7 +290,14 @@ export function HrOperationsPage() {
             {listState.totalCount} request{listState.totalCount !== 1 ? 's' : ''} for {selectedDate}
           </p>
           {listState.items.length === 0 && (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>No requests for this date{statusFilter !== 'All' ? ` with status "${statusFilter}"` : ''}.</p>
+            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: '1rem', textAlign: 'center' }}>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
+                {statusFilter !== 'All'
+                  ? `No requests with status "${statusFilter}" for ${selectedDate}.`
+                  : `No requests for ${selectedDate} yet. Requests will appear here as employees submit them.`
+                }
+              </p>
+            </div>
           )}
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {listState.items.map(item => (
