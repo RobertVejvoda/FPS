@@ -309,8 +309,8 @@ Mobile should be one column and card-first:
 My Spots
 +-- Today card
 +-- Tomorrow card
-+-- Request date chips
-+-- Demand/can-request row
++-- Next weekday card
++-- Following weekday card
 +-- My requests compact rows
 ```
 
