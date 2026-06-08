@@ -4,6 +4,7 @@ using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Dapr.Client;
 
 namespace FPS.Notification.Tests;
 
@@ -12,6 +13,7 @@ public sealed class EmailNotificationHandlerTests
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly Mock<IEmailNotificationSender> emailSender = new();
+    private readonly Mock<DaprClient> daprClient = new();
     private readonly Mock<ILogger<BookingEventNotificationHandler>> logger = new();
     private readonly BookingEventNotificationHandler handler;
 
@@ -19,6 +21,7 @@ public sealed class EmailNotificationHandlerTests
     {
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
             new InMemoryNotificationPreferencesRepository(),
+            daprClient.Object,
             logger.Object);
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);

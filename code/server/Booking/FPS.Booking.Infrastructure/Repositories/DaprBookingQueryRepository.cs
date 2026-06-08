@@ -58,7 +58,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         // Fetch policy configuration to determine if usage confirmation is enabled
         var policyDto = await daprClient.GetStateAsync<TenantPolicyDto>(
             "configurationstore",
-            TenantStorageKey.For("parking-policy", tenantId),
+            $"parking-policy:{TenantStorageKey.Sanitise(tenantId)}",
             cancellationToken: cancellationToken);
         var usageConfirmationEnabled = policyDto?.UsageConfirmationEnabled ?? false;
 
