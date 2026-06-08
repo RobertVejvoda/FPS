@@ -27,11 +27,12 @@ public sealed class GetMyBookingsHandler : IRequestHandler<GetMyBookingsQuery, B
 
     public async Task<BookingListResult> Handle(GetMyBookingsQuery query, CancellationToken cancellationToken)
     {
-        var policy = await policyService.GetEffectivePolicyAsync(query.TenantId, cancellationToken: cancellationToken);
+        // Tenant default policy (no location) is used for window/paging; location overrides apply per item below
+        var tenantPolicy = await policyService.GetEffectivePolicyAsync(query.TenantId, cancellationToken: cancellationToken);
         var pageSize = Math.Min(Math.Max(1, query.PageSize), MaxPageSize);
-        var from = query.From ?? DateOnly.FromDateTime(clock.GetTenantUtcNow(query.TenantId).UtcDateTime.AddDays(-policy.AllocationLookbackDays));
+        var from = query.From ?? DateOnly.FromDateTime(clock.GetTenantUtcNow(query.TenantId).UtcDateTime.AddDays(-tenantPolicy.AllocationLookbackDays));
 
-        return await queryRepository.GetByRequestorAsync(
+        var result = await queryRepository.GetByRequestorAsync(
             query.TenantId,
             query.RequestorId,
             from,
@@ -40,5 +41,30 @@ public sealed class GetMyBookingsHandler : IRequestHandler<GetMyBookingsQuery, B
             pageSize,
             query.Cursor,
             cancellationToken);
+
+        // Suppress confirmUsage per item using the location-effective policy.
+        // Cache policy per unique LocationId to avoid redundant calls.
+        var policyCache = new Dictionary<string, TenantPolicy>(StringComparer.OrdinalIgnoreCase);
+        var items = new BookingListItem[result.Items.Count];
+        for (var i = 0; i < result.Items.Count; i++)
+        {
+            var item = result.Items[i];
+            if (item.NextAction == "confirmUsage")
+            {
+                var cacheKey = item.LocationId ?? string.Empty;
+                if (!policyCache.TryGetValue(cacheKey, out var locPolicy))
+                {
+                    locPolicy = await policyService.GetEffectivePolicyAsync(query.TenantId, item.LocationId, cancellationToken);
+                    policyCache[cacheKey] = locPolicy;
+                }
+                items[i] = locPolicy.UsageConfirmationEnabled ? item : item with { NextAction = "none" };
+            }
+            else
+            {
+                items[i] = item;
+            }
+        }
+
+        return result with { Items = items };
     }
 }
