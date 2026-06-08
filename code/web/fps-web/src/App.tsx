@@ -39,7 +39,7 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
 }
 
 function AppFooter() {
-  const { apiBaseUrl, bearerToken, environment, simulationEnabled, roles } = useAuth();
+  const { apiBaseUrl, bearerToken, environment, simulationEnabled, appVersion, roles } = useAuth();
   const cfg = { apiBaseUrl, bearerToken };
   const canControl = canControlSimulation(roles);
   const [sim, setSim] = useState<SimulationStatus | null>(null);
@@ -86,7 +86,7 @@ function AppFooter() {
     if (r.kind === 'ok') setSim(r.data);
   }
 
-  const hasContent = !!environment || simulationEnabled;
+  const hasContent = !!environment || simulationEnabled || !!appVersion;
   if (!hasContent) return null;
 
   function fmtTime(iso: string) {
@@ -96,6 +96,7 @@ function AppFooter() {
   return (
     <footer className="app-footer">
       {environment && <span className="footer-env-badge">{environment}</span>}
+      {appVersion && <span className="footer-version">v{appVersion}</span>}
       {sim?.simulationActive && <span className="footer-sim-banner">Non-production simulation</span>}
       {simulationEnabled && sim && (
         <span className="footer-real-time">Real: {fmtTime(sim.realNow)}</span>
