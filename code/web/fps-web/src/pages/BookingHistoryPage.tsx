@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, type BookingListItem } from '../api/bookings';
+import { displayLocation } from '../displayLabels';
 
 type ListState =
   | { kind: 'loading' }
@@ -97,7 +98,7 @@ export function BookingHistoryPage() {
                   <tr key={b.requestId} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={tdStyle}>{new Date(b.requestedDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
                     <td style={tdStyle}>{b.timeSlotStart.slice(0, 5)}–{b.timeSlotEnd.slice(0, 5)}</td>
-                    <td style={tdStyle}>{b.locationId ?? '–'}</td>
+                    <td style={tdStyle}>{displayLocation(b.locationId) ?? '–'}</td>
                     <td style={tdStyle}><StatusChip status={b.status} /></td>
                     <td style={tdStyle}>{b.reason ?? '–'}</td>
                     <td style={tdStyle}>{new Date(b.lastStatusChangedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</td>
