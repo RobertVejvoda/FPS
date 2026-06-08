@@ -13,6 +13,12 @@ function localDate(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function weekdayLabel(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toLocaleDateString(undefined, { weekday: 'long' });
+}
+
 // No employee-profile API yet; derive location from any loaded booking, fall back to placeholder.
 const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
@@ -21,8 +27,8 @@ const WORKDAY_END = '18:00:00';
 const CHIPS = [
   { label: 'Today', offset: 0 },
   { label: 'Tomorrow', offset: 1 },
-  { label: 'D+2', offset: 2 },
-  { label: 'D+3', offset: 3 },
+  { label: weekdayLabel(2), offset: 2 },
+  { label: weekdayLabel(3), offset: 3 },
 ];
 
 function sortMixed(items: BookingListItem[]): BookingListItem[] {
@@ -128,10 +134,15 @@ export function BookingsPage() {
 
   const today = localDate(0);
   const tomorrow = localDate(1);
+  const d2 = localDate(2);
+  const d3 = localDate(3);
   const okState = state.kind === 'ok' ? state : null;
   const allItems = okState ? sortMixed(okState.items) : [];
+  const upcomingItems = allItems.filter(i => i.requestedDate >= today);
   const todayBooking = okState?.items.find(i => i.requestedDate === today) ?? null;
   const tomorrowBooking = okState?.items.find(i => i.requestedDate === tomorrow) ?? null;
+  const d2Booking = okState?.items.find(i => i.requestedDate === d2) ?? null;
+  const d3Booking = okState?.items.find(i => i.requestedDate === d3) ?? null;
 
   const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
   const demandLabel = drawLoading ? 'Loading…'
@@ -147,11 +158,13 @@ export function BookingsPage() {
         <h2>My Spots</h2>
       </section>
 
-      {/* Today / Tomorrow focus cards */}
-      {(todayBooking || tomorrowBooking || state.kind === 'ok') && (
+      {/* Four-day focus cards: Today / Tomorrow / D+2 / D+3 */}
+      {state.kind === 'ok' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <FocusCard label="Today" booking={todayBooking} busy={busyId === todayBooking?.requestId} onCancel={todayBooking?.nextAction === 'cancel' ? () => handleCancel(todayBooking.requestId) : undefined} onConfirm={todayBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(todayBooking.requestId) : undefined} />
           <FocusCard label="Tomorrow" booking={tomorrowBooking} busy={busyId === tomorrowBooking?.requestId} onCancel={tomorrowBooking?.nextAction === 'cancel' ? () => handleCancel(tomorrowBooking.requestId) : undefined} onConfirm={tomorrowBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(tomorrowBooking.requestId) : undefined} />
+          <FocusCard label={weekdayLabel(2)} booking={d2Booking} busy={busyId === d2Booking?.requestId} onCancel={d2Booking?.nextAction === 'cancel' ? () => handleCancel(d2Booking.requestId) : undefined} onConfirm={d2Booking?.nextAction === 'confirmUsage' ? () => handleConfirm(d2Booking.requestId) : undefined} />
+          <FocusCard label={weekdayLabel(3)} booking={d3Booking} busy={busyId === d3Booking?.requestId} onCancel={d3Booking?.nextAction === 'cancel' ? () => handleCancel(d3Booking.requestId) : undefined} onConfirm={d3Booking?.nextAction === 'confirmUsage' ? () => handleConfirm(d3Booking.requestId) : undefined} />
         </div>
       )}
 
@@ -208,11 +221,14 @@ export function BookingsPage() {
         </div>
       )}
 
-      {/* My requests */}
+      {/* My requests — upcoming only */}
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>My requests</h3>
-          {okState && <span style={{ fontSize: 13, color: '#6b7280' }}>Showing {okState.items.length} of {okState.totalCount}</span>}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {okState && <span style={{ fontSize: 13, color: '#6b7280' }}>Showing {upcomingItems.length} of {okState.totalCount}</span>}
+            <button onClick={() => navigate('/bookings/history')} style={historyLinkBtn}>History</button>
+          </div>
         </div>
         {state.kind === 'loading' ? (
           <div className="panel"><p style={{ color: '#6b7280', margin: 0 }}>Loading…</p></div>
@@ -221,14 +237,14 @@ export function BookingsPage() {
             <p style={{ color: '#b91c1c' }}>{state.message}</p>
             <button onClick={load} className="btn-primary">Retry</button>
           </div>
-        ) : allItems.length === 0 ? (
+        ) : upcomingItems.length === 0 ? (
           <section className="panel">
-            <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No requests yet</h3>
-            <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Your spot requests will appear here.</p>
+            <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No upcoming requests</h3>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Your upcoming spot requests will appear here.</p>
           </section>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {allItems.map((b) => (
+            {upcomingItems.map((b) => (
               <BookingRow
                 key={b.requestId}
                 booking={b}
@@ -326,3 +342,4 @@ const requestBtn: React.CSSProperties = { background: 'var(--brand-primary)', co
 const focusCancelBtn: React.CSSProperties = { background: '#fff', border: '1px solid #b91c1c', color: '#b91c1c', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 const focusConfirmBtn: React.CSSProperties = { background: '#15803d', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 const loadMoreBtn: React.CSSProperties = { background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 600, color: 'var(--brand-primary)', cursor: 'pointer', width: '100%' };
+const historyLinkBtn: React.CSSProperties = { background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 500, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' };
