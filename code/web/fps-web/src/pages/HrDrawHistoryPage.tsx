@@ -63,9 +63,17 @@ export function HrDrawHistoryPage() {
         )}
 
         {state.kind === 'ok' && state.draws.length === 0 && (
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
-            Past draws appear here after a draw has completed. Run a draw from HR Operations to see results.
-          </p>
+          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: '1.5rem', textAlign: 'center' }}>
+            <p style={{ color: '#1e293b', fontSize: 16, fontWeight: 600, margin: '0 0 0.5rem' }}>
+              No completed Draws yet
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
+              Draw outcomes appear here after a Draw completes. To run a Draw, go to <strong>HR Operations</strong> and use the "Run Draw now" action, or advance simulation time past the scheduled Draw time.
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0.75rem 0 0', fontStyle: 'italic' }}>
+              If a Draw has completed but history is empty, the DataHub projection may be unavailable or not yet populated with events from Booking.
+            </p>
+          </div>
         )}
 
         {state.kind === 'ok' && state.draws.length > 0 && (

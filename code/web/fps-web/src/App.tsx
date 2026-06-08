@@ -96,12 +96,23 @@ function AppFooter() {
   return (
     <footer className="app-footer">
       {environment && <span className="footer-env-badge">{environment}</span>}
-      {sim?.simulationActive && <span className="footer-sim-banner">Non-production simulation</span>}
+      {sim?.simulationActive && (
+        <span className="footer-sim-banner" title="Non-production simulation mode is active. Virtual time is being used instead of real time.">
+          🕐 Non-production simulation
+        </span>
+      )}
       {simulationEnabled && sim && (
-        <span className="footer-real-time">Real: {fmtTime(sim.realNow)}</span>
+        <span className="footer-real-time" title="Current real-world time">Real: {fmtTime(sim.realNow)}</span>
       )}
       {simulationEnabled && sim?.simulationActive && sim.virtualNow && (
-        <span className="footer-sim-time">Sim: {fmtTime(sim.virtualNow)}</span>
+        <span className="footer-sim-time" title="Current virtual/simulated time used for testing" style={{ fontWeight: 600, color: '#1d4ed8' }}>
+          Sim: {fmtTime(sim.virtualNow)}
+        </span>
+      )}
+      {simulationEnabled && !sim?.simulationActive && sim && (
+        <span className="footer-sim-state" style={{ color: '#6b7280', fontSize: '0.8rem' }}>
+          Simulation: inactive (using real time)
+        </span>
       )}
       {simulationEnabled && canControl && simStatus === 'loading' && (
         <span className="footer-sim-state">Loading simulation clock...</span>
