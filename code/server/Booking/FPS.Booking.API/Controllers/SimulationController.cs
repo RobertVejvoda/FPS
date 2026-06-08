@@ -61,22 +61,27 @@ public sealed class SimulationController(
         string tenantId, DateTimeOffset oldNow, DateTimeOffset newNow, CancellationToken cancellationToken)
     {
         if (!schedulerOptions.Enabled) return;
-        foreach (var date in ComputeTriggerTargets(oldNow, newNow, schedulerOptions.DrawCutOffTime, schedulerOptions.TargetDateOffsetDays))
-            await schedulerService.TriggerDueDrawsAsync(date, cancellationToken);
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(schedulerOptions.PolicyTimeZoneId);
+        foreach (var date in ComputeTriggerTargets(oldNow, newNow, schedulerOptions.DrawCutOffTime, schedulerOptions.TargetDateOffsetDays, timeZone))
+            await schedulerService.TriggerDueDrawsAsync(date, tenantId: tenantId, cancellationToken: cancellationToken);
     }
 
     // Determines which draw target dates are triggered when virtual time advances from oldNow to newNow.
-    // A draw fires when the configured cut-off moment (date + cutOffTime UTC) falls in (oldNow, newNow].
+    // A draw fires when the cut-off moment in the policy timezone falls in (oldNow, newNow].
     internal static IReadOnlyList<DateOnly> ComputeTriggerTargets(
-        DateTimeOffset oldNow, DateTimeOffset newNow, TimeSpan cutOffTime, int targetOffsetDays)
+        DateTimeOffset oldNow, DateTimeOffset newNow, TimeSpan cutOffTime, int targetOffsetDays,
+        TimeZoneInfo? policyTimeZone = null)
     {
+        policyTimeZone ??= TimeZoneInfo.Utc;
         var results = new List<DateOnly>();
         var firstDate = DateOnly.FromDateTime(oldNow.UtcDateTime);
         var lastDate = DateOnly.FromDateTime(newNow.UtcDateTime);
         for (var d = firstDate; d <= lastDate; d = d.AddDays(1))
         {
-            var cutOffOn = new DateTimeOffset(d.Year, d.Month, d.Day,
-                cutOffTime.Hours, cutOffTime.Minutes, cutOffTime.Seconds, TimeSpan.Zero);
+            // Construct the cut-off as a local datetime in the policy timezone, then convert to UTC offset.
+            var localCutOff = new DateTime(d.Year, d.Month, d.Day,
+                cutOffTime.Hours, cutOffTime.Minutes, cutOffTime.Seconds, DateTimeKind.Unspecified);
+            var cutOffOn = new DateTimeOffset(localCutOff, policyTimeZone.GetUtcOffset(localCutOff));
             if (oldNow < cutOffOn && newNow >= cutOffOn)
                 results.Add(d.AddDays(targetOffsetDays));
         }

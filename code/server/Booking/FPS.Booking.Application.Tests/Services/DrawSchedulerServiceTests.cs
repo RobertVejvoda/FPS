@@ -201,4 +201,55 @@ public sealed class DrawSchedulerServiceTests
         Assert.Equal("Failed", results[0].Status);
         Assert.Equal("InProgress", results[1].Status);
     }
+
+    // ── Tenant-scoped triggering (DRAW006) ────────────────────────────────────
+
+    [Fact]
+    public async Task TriggerDueDrawsAsync_WithTenantId_OnlyTriggersMatchingTenantTargets()
+    {
+        var tenant1Target = DefaultTarget(); // TenantId = "tenant-1"
+        var tenant2Target = new DrawScheduleTarget
+        {
+            TenantId = "tenant-2", LocationId = "loc-2",
+            TimeSlotStart = TimeSpan.FromHours(9), TimeSlotEnd = TimeSpan.FromHours(17)
+        };
+        var options = new DrawSchedulerOptions { Enabled = true, Targets = [tenant1Target, tenant2Target] };
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TriggerDrawCommand cmd, CancellationToken _) => CompletedResult($"draw:{cmd.TenantId}"));
+        var svc = new DrawSchedulerService(options, mediator.Object, NullLogger<DrawSchedulerService>.Instance);
+
+        var results = await svc.TriggerDueDrawsAsync(TargetDate, tenantId: "tenant-1");
+
+        Assert.Single(results);
+        Assert.Equal("tenant-1", results[0].TenantId);
+        mediator.Verify(m => m.Send(
+            It.Is<TriggerDrawCommand>(c => c.TenantId == "tenant-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        mediator.Verify(m => m.Send(
+            It.Is<TriggerDrawCommand>(c => c.TenantId == "tenant-2"),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TriggerDueDrawsAsync_WithNullTenantId_TriggersAllTenantTargets()
+    {
+        var tenant1Target = DefaultTarget();
+        var tenant2Target = new DrawScheduleTarget
+        {
+            TenantId = "tenant-2", LocationId = "loc-2",
+            TimeSlotStart = TimeSpan.FromHours(9), TimeSlotEnd = TimeSpan.FromHours(17)
+        };
+        var options = new DrawSchedulerOptions { Enabled = true, Targets = [tenant1Target, tenant2Target] };
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TriggerDrawCommand cmd, CancellationToken _) => CompletedResult($"draw:{cmd.TenantId}"));
+        var svc = new DrawSchedulerService(options, mediator.Object, NullLogger<DrawSchedulerService>.Instance);
+
+        var results = await svc.TriggerDueDrawsAsync(TargetDate, tenantId: null);
+
+        Assert.Equal(2, results.Count);
+    }
 }

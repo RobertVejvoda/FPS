@@ -3,7 +3,7 @@ namespace FPS.Booking.Application.Services;
 public interface IDrawSchedulerService
 {
     Task<IReadOnlyList<DrawSchedulerResult>> TriggerDueDrawsAsync(
-        DateOnly targetDate, CancellationToken cancellationToken = default);
+        DateOnly targetDate, string? tenantId = null, CancellationToken cancellationToken = default);
 }
 
 public sealed record DrawSchedulerResult(

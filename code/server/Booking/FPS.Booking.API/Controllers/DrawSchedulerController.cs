@@ -25,7 +25,7 @@ public sealed class DrawSchedulerController(
         var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
         var targetDate = today.AddDays(schedulerOptions.TargetDateOffsetDays);
 
-        await schedulerService.TriggerDueDrawsAsync(targetDate, cancellationToken);
+        await schedulerService.TriggerDueDrawsAsync(targetDate, cancellationToken: cancellationToken);
 
         // Dapr requires 2xx to acknowledge receipt; 200 is idiomatic for bindings.
         return Ok();
