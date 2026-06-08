@@ -49,6 +49,21 @@ DataHub should:
 - process events idempotently by source event ID;
 - preserve tenant isolation in every projection and query.
 
+## Immediate Priority
+
+The first customer-test-ready DataHub priority is Draw and booking outcome visibility.
+
+After a Draw runs, testers must be able to see:
+
+- HR Draw History with completed Draws, counts, and safe per-request outcomes;
+- employee Past Draw Outcomes with only the authenticated employee's result;
+- reporting/dashboard summaries populated from completed booking outcomes;
+- projection health/freshness so empty reports are explainable.
+
+Booking remains the write-side owner. DataHub must not trigger, retry, or correct Draws. It consumes Booking events and projects read models that make the completed Draw understandable to HR, employees, administrators, reports, and later customer service/support roles.
+
+This makes DataHub part of test readiness, not a later analytics nicety. A completed Draw that does not appear in history/reports should be treated as an implementation gap until the DataHub projection path is working.
+
 DataHub should not:
 
 - accept commands that mutate Booking, Customer, Profile, Configuration, Audit, or Notification state;
@@ -381,3 +396,4 @@ Billing remains out of scope for the first DataHub event-storming pass.
 | `DATAHUB003` Event Inbox And Projection Runtime | Consume Dapr pub/sub events idempotently and record processing status. |
 | `DATAHUB004` Booking Outcome Projections | Project Booking events into tenant-scoped operational read models. |
 | `DATAHUB005` Reporting Compatibility Reads | Serve existing operational report needs from DataHub projections, then deprecate equivalent Reporting internals. |
+| `DATAHUB006` Draw And Booking Outcome Projections For Test-Ready History | Immediate test-readiness slice: project completed Draws, employee-safe outcomes, HR history, and report-ready metrics from Booking events. |

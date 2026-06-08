@@ -4,6 +4,45 @@ Current Draw execution is API-driven. `POST /draws/trigger` runs one explicit Dr
 
 FairSpot must keep an on-demand Draw action for HR/admin users. Scheduled execution and manual execution should use the same Draw key semantics and produce the same lifecycle/progress evidence.
 
+## Test-Ready Gap
+
+The current implementation is not yet test-ready as a customer demo flow. It has Draw workflow execution, persisted Draw attempts, schedule metadata, simulation clock support, and HR/employee history endpoints, but the pieces do not yet behave as one understandable scenario.
+
+Observed gaps:
+
+- advancing simulation time changes the clock only; it does not trigger due scheduled Draws;
+- the local scheduler target is not clearly tied to the demo tenant/location/time slot used by seeded data;
+- HR Draw History can appear empty even after a tester expects a Draw to have run;
+- reports can remain empty because Reporting/DataHub-style projections are not yet reliable as the source of operational reads;
+- the UI does not make the flow obvious enough: request window, next Draw, manual trigger, scheduled trigger, running progress, completion, and history should be visible from HR Operations and employee My Spots;
+- Draw persistence exists, but lifecycle/progress and outcome persistence still need production-grade idempotency and recovery hardening before customer data is used.
+
+The next implementation priority is therefore not more theory. It is a test-ready Draw path:
+
+1. seed demo requests and capacity;
+2. show request window and next Draw time;
+3. let HR advance non-production time or run the Draw explicitly;
+4. automatically trigger due scheduled Draws when simulation time crosses the configured Draw time;
+5. show persisted progress while the Draw runs;
+6. show HR Draw History and employee Past Draw Outcomes after completion;
+7. feed reports/projections from the completed outcome events;
+8. survive service restart without losing Draw history.
+
+Until this path works, Draw should be treated as partially implemented even when individual endpoints or tests pass.
+
+## Test-Ready Implementation Slices
+
+Use these focused slices before broader production-hardening work:
+
+| Slice | Purpose | Must prove |
+| --- | --- | --- |
+| `DRAW006` Simulation-driven scheduled Draw | Make non-production time travel actually run due scheduled Draws for the configured tenant/location/time slot. | Advancing simulation time across the Draw time triggers the same workflow as the Dapr cron/manual trigger, idempotently. |
+| `DRAW007` Draw history and progress visibility | Make HR and employee views show Draw progress/history clearly, including useful empty states. | After a Draw completes, HR sees counts and per-request outcomes; employee sees own past outcome; empty state says what is missing. |
+| `DRAW008` Draw persistence and recovery hardening | Make persisted Draw attempts safe under retries, duplicate triggers, and restart. | Draw attempt, booking outcomes, allocated slot references, lifecycle steps, and events remain consistent and recoverable. |
+| `DATAHUB006` Draw and booking outcome projections | Move customer-facing Draw history, employee outcomes, and report metrics toward DataHub/read-model projections. | Reports/history no longer depend on ad hoc reconstruction from private Booking state. |
+
+`DRAW006`, `DATAHUB006`, and `DRAW007` are needed for internal/customer test readiness. `DRAW008` is needed before treating the feature as production-grade.
+
 ## REST Client Scenarios
 
 Use [Draw REST Client Scenarios](./draw-rest-client-scenarios.http) with the VS Code REST Client extension for repeatable local and hosted smoke testing.
@@ -33,6 +72,27 @@ Acceptable fallback: keep direct application-handler computation only if the imp
 - same HR/admin manual trigger behavior as the scheduled trigger.
 
 Do not keep two independent execution paths. If both scheduled and manual triggers exist, they must converge into the same workflow starter or the same single-execution Draw service.
+
+## Trigger Model
+
+There are three valid trigger sources. All of them must resolve due Draw keys and call the same workflow starter.
+
+| Trigger source | Environment | What starts it | Required behavior |
+| --- | --- | --- | --- |
+| Scheduled runtime trigger | Local/demo/production | Dapr cron binding or platform scheduler calls `POST /draw-scheduler`. | Computes due Draw keys from configured tenant/location/time-slot schedule and starts each one idempotently. |
+| Manual HR/admin trigger | Local/demo/production | HR/admin clicks **Run Draw now** or calls `POST /draws/trigger`. | Starts the selected Draw key immediately with a required reason. It must not bypass the workflow. |
+| Simulation trigger | Non-production only | HR/admin advances simulation time. | Detects Draw keys whose scheduled time is crossed by the virtual clock advance and starts them idempotently through the same scheduler/workflow path. |
+
+Simulation time advance must do more than update the visible clock. When the virtual time moves from `oldNow` to `newNow`, the application must find every configured Draw whose scheduled run time is `> oldNow` and `<= newNow`, then trigger those Draws through the same scheduler service used by Dapr cron. This makes local/customer testing understandable: move time past the Draw time, then the Draw runs, notifications are produced, DataHub projections update, and UI history/reports show results.
+
+Production must not depend on simulation. In production, the same behavior is driven by Dapr cron/platform scheduling plus manual HR/admin recovery. Simulation endpoints must return `404` or be disabled in production.
+
+DataHub is the preferred read side after a Draw completes:
+
+- Booking remains the command-side owner for Draw execution and booking status changes.
+- Notification consumes Booking events to notify employees and HR.
+- DataHub consumes the same Booking events to project Draw status, employee-safe outcomes, HR Draw history, and report metrics.
+- UI/history/reporting screens should move toward DataHub-backed reads rather than reconstructing completed Draws from Booking private state.
 
 ## Schedule Visibility Contract
 
