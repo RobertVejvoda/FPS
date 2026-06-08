@@ -32,6 +32,7 @@ Top-level pages inside the Architecture Repository should use this header when t
 | Constraints | [Constraints](/architecture/constraints) | Preliminary / Phase A | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | 2026-06-02 | Before client architecture review |
 | Architecture Decisions | [Architecture Decisions](/architecture/decisions) | Preliminary / Phase H | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | 2026-06-02 | On durable architecture decision change |
 | Architecture Glossary | [Architecture Glossary](/architecture/glossary) | Preliminary / Requirements Management | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | 2026-06-02 | On terminology change |
+| Enterprise Continuum | [Enterprise Continuum](/architecture/enterprise-continuum/) | Preliminary / Cross-ADM | Cross-cutting | Draft | 0.1 | Codex/Product Owner | Robert | 2026-06-04 | During commercial-operator architecture review |
 | Business Architecture | [Business Architecture](/architecture/business/) | Phase B | Target | Draft | 0.3 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Phase C | Target | Draft | 0.4 | Codex/Product Owner | Robert | 2026-05-31 | Before client architecture review |
 | Technology Architecture | [Technology Architecture](/architecture/technology/) | Phase D | Target | Draft | 0.4 | Codex/Product Owner | Robert | 2026-05-31 | Before hosted pilot |
@@ -56,6 +57,7 @@ The architecture repository must show all expected layers even when content is i
 | Stakeholder Map and Concerns | [Stakeholders and Concerns](/architecture/stakeholders-and-concerns) | Partial |
 | Requirements Management | [Requirements](/architecture/requirements) | Partial |
 | Constraints | [Constraints](/architecture/constraints) | Draft |
+| Enterprise Continuum | [Enterprise Continuum](/architecture/enterprise-continuum/) | Draft |
 | Phase B - Business Architecture | [Business Architecture](/architecture/business/) | Partial |
 | Phase C - Information Systems Architecture | [Information Systems](/architecture/information-systems/) | Partial |
 | Phase D - Technology Architecture | [Technology Architecture](/architecture/technology/) | Partial |
@@ -73,6 +75,7 @@ FairSpot does not create a separate page for every formal TOGAF deliverable when
 | TOGAF Deliverable / Content Area | FairSpot Coverage | Coverage Status | Notes |
 | --- | --- | --- | --- |
 | Architecture Repository | [Architecture Repository](/architecture/), [Artifact Register](/architecture/artifact-register), [Architecture Migration Tracker](/architecture/migration-tracker) | Partial | Repository structure exists. Content migration and diagram refresh continue. |
+| Enterprise Continuum | [Enterprise Continuum](/architecture/enterprise-continuum/), [Continuum Map](/architecture/enterprise-continuum/continuum-map) | Draft | Learning guide exists for distinguishing product architecture, fictive operator enterprise architecture, architecture continuum assets, and solution continuum assets. |
 | Architecture Principles | [Principles](/architecture/principles), [Constraints](/architecture/constraints), [Architecture Decisions](/architecture/decisions) | Partial | Customer-ready principles have been restated from decision log, Dapr-first direction, tenant isolation, privacy/security, provider-neutral deployment, and delivery governance. Robert approval remains open. |
 | Architecture Governance Framework | [Governance](/architecture/governance/), [Architecture Board](/architecture/governance/architecture-board), [RACI](/architecture/governance/raci), [Artifact Lifecycle](/architecture/governance/artifact-lifecycle), [Architecture Contract](/architecture/governance/architecture-contract) | Partial | Lightweight governance, board, RACI, artifact lifecycle, review levels, conformance expectations, change control, and waiver rules are restated. Customer-facing sign-off expectations remain open. |
 | Request for Architecture Work | [Architecture Vision](/architecture/architecture-vision), [Requirements](/architecture/requirements), [Constraints](/architecture/constraints), [Architecture Migration Tracker](/architecture/migration-tracker) | Partial | Intent, scope, constraints, strategy translation, and migration slices are covered; no standalone document needed unless an external customer asks for it. |

@@ -115,6 +115,94 @@ public sealed class GetMyBookingsHandlerTests
         Assert.Equal("user-42", capturedRequestorId);
     }
 
+    // ── Usage confirmation suppression (B008) ─────────────────────────────────
+
+    [Fact]
+    public async Task Handle_UsageConfirmationDisabled_ConfirmUsageNextActionBecomesNone()
+    {
+        var disabledPolicy = DefaultPolicy with { UsageConfirmationEnabled = false };
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(disabledPolicy);
+
+        var items = AllocatedItems("loc-1");
+        queryRepository.Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("none", result.Items[0].NextAction);
+    }
+
+    [Fact]
+    public async Task Handle_UsageConfirmationEnabled_KeepsConfirmUsageNextAction()
+    {
+        var enabledPolicy = DefaultPolicy with { UsageConfirmationEnabled = true };
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(enabledPolicy);
+
+        var items = AllocatedItems("loc-1");
+        queryRepository.Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("confirmUsage", result.Items[0].NextAction);
+    }
+
+    [Fact]
+    public async Task Handle_TenantDisabledButLocationEnabled_KeepsConfirmUsage()
+    {
+        // Tenant default off; location override turns it on — confirm button must appear
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultPolicy with { UsageConfirmationEnabled = false });
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), "loc-override", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultPolicy with { UsageConfirmationEnabled = true });
+
+        var items = AllocatedItems("loc-override");
+        queryRepository.Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("confirmUsage", result.Items[0].NextAction);
+    }
+
+    [Fact]
+    public async Task Handle_TenantEnabledButLocationDisabled_SuppressesConfirmUsage()
+    {
+        // Tenant default on; location override turns it off — confirm button must be hidden
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultPolicy with { UsageConfirmationEnabled = true });
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), "loc-disabled", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultPolicy with { UsageConfirmationEnabled = false });
+
+        var items = AllocatedItems("loc-disabled");
+        queryRepository.Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("none", result.Items[0].NextAction);
+    }
+
     // ── Returns result as-is ──────────────────────────────────────────────────
 
     [Fact]
@@ -164,6 +252,14 @@ public sealed class GetMyBookingsHandlerTests
         Assert.Equal("DrawNotSelected", result.Items[0].ReasonCode);
         Assert.Equal("Not selected in draw", result.Items[0].Reason);
     }
+
+    private static List<BookingListItem> AllocatedItems(string? locationId) =>
+    [
+        new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+            new TimeOnly(9, 0), new TimeOnly(17, 0), locationId,
+            "Allocated", null, null, "slot-1", "confirmUsage",
+            DateTime.UtcNow, DateTime.UtcNow)
+    ];
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
