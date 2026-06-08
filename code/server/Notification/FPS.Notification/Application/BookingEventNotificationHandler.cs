@@ -10,18 +10,21 @@ public sealed class BookingEventNotificationHandler(
     INotificationPreferencesRepository preferencesRepository,
     ILogger<BookingEventNotificationHandler> logger)
 {
-    private static readonly IReadOnlyDictionary<string, string> MessageTemplates = new Dictionary<string, string>
+    // Maps ReasonCode values to employee-safe human-readable text.
+    // Codes correspond to BookingRejectionCode enum values.
+    private static readonly IReadOnlyDictionary<string, string> SafeRejectionReasons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["booking.requestSubmitted"] = "Your parking request was submitted and is waiting for allocation.",
-        ["booking.requestRejected"] = "Your parking request could not be allocated.",
-        ["booking.slotAllocated"] = "A parking slot was allocated to your request.",
-        ["booking.requestCancelled"] = "Your parking request was cancelled.",
-        ["booking.penaltyApplied"] = "A penalty was applied to your parking account.",
-        ["booking.noShowRecorded"] = "Your allocated parking slot was not confirmed as used.",
-        ["booking.drawCompleted"] = "Parking allocation for your requested time slot is complete.",
-        ["booking.manualCorrectionApplied"] = "Your parking request was updated by an authorized administrator.",
-        ["booking.usageConfirmed"] = "Your parking usage has been confirmed.",
-        ["booking.requestExpired"] = "Your parking request has expired.",
+        ["PastDate"]                  = "The requested date has already passed.",
+        ["CutOffPassed"]              = "The submission deadline for this time slot has passed.",
+        ["DailyCapExceeded"]          = "The maximum number of requests for this day has been reached.",
+        ["DuplicateRequest"]          = "You already have an active request for this time slot.",
+        ["VehicleConstraintUnmatched"] = "Your vehicle does not meet the requirements for this parking area.",
+        ["NoCapacityAvailable"]       = "There are no available spots for this time slot.",
+        ["RequestorIneligible"]       = "Your account is not currently eligible to request parking.",
+        ["SameDayBookingDisabled"]    = "Same-day parking requests are not enabled.",
+        ["NoCapacityForSameDay"]      = "No spots are available for same-day allocation.",
+        ["ProfileUnavailable"]        = "Your profile information could not be verified. Please check your account.",
+        ["DrawNotSelected"]           = "Your request was not selected in the draw for this time slot.",
     };
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
@@ -133,13 +136,109 @@ public sealed class BookingEventNotificationHandler(
 
     private static string ResolveMessage(BookingEventEnvelope envelope)
     {
-        if (MessageTemplates.TryGetValue(envelope.EventType, out var template))
+        var p = envelope.Payload;
+        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
+
+        return envelope.EventType switch
         {
-            if (!string.IsNullOrEmpty(envelope.Payload.ReasonText))
-                return $"{template} Reason: {envelope.Payload.ReasonText}";
-            return template;
+            "booking.requestSubmitted" =>
+                $"Your parking request{ctx} has been submitted and is waiting for draw allocation.",
+
+            "booking.requestRejected" =>
+                BuildRejectionMessage(p, ctx),
+
+            "booking.slotAllocated" =>
+                p.AllocationSource == "reallocation"
+                    ? $"A parking spot has been reallocated to your request{ctx} after a cancellation freed a slot."
+                    : $"A parking spot has been allocated to your request{ctx}.",
+
+            "booking.requestCancelled" =>
+                BuildCancelledMessage(p, envelope.ActorType),
+
+            "booking.drawCompleted" =>
+                BuildDrawCompletedMessage(p),
+
+            "booking.noShowRecorded" =>
+                $"Your parking spot{ctx} was recorded as a no-show. This may affect your future allocation priority.",
+
+            "booking.penaltyApplied" =>
+                BuildPenaltyMessage(p),
+
+            "booking.usageConfirmed" =>
+                $"Your parking usage{ctx} has been confirmed.",
+
+            "booking.requestExpired" =>
+                $"Your parking request{ctx} has expired and is no longer active.",
+
+            "booking.manualCorrectionApplied" =>
+                string.IsNullOrEmpty(p.ReasonText)
+                    ? "Your parking request was updated by an authorized administrator."
+                    : $"Your parking request was updated by an authorized administrator. Reason: {p.ReasonText}",
+
+            _ => $"A booking event occurred: {envelope.EventType}."
+        };
+    }
+
+    private static string BuildContext(string? date, string? locationId, string? timeSlot)
+    {
+        if (string.IsNullOrEmpty(date)) return string.Empty;
+        var datePart = TryFormatDate(date);
+        var location = string.IsNullOrEmpty(locationId) ? string.Empty : $" at {locationId}";
+        var slot = string.IsNullOrEmpty(timeSlot) ? string.Empty : $" ({timeSlot})";
+        return $" for {datePart}{location}{slot}";
+    }
+
+    private static string TryFormatDate(string date)
+    {
+        return DateOnly.TryParse(date, out var d)
+            ? d.ToString("d MMM yyyy")
+            : date;
+    }
+
+    private static string BuildRejectionMessage(BookingEventPayload p, string ctx)
+    {
+        var reason = !string.IsNullOrEmpty(p.ReasonCode) && SafeRejectionReasons.TryGetValue(p.ReasonCode, out var safe)
+            ? safe
+            : !string.IsNullOrEmpty(p.ReasonText) ? p.ReasonText : null;
+
+        return reason is not null
+            ? $"Your parking request{ctx} could not be processed. {reason}"
+            : $"Your parking request{ctx} could not be processed.";
+    }
+
+    private static string BuildCancelledMessage(BookingEventPayload p, string actorType)
+    {
+        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
+        var isHr = actorType is "hr_manager" or "admin";
+        if (isHr)
+        {
+            return string.IsNullOrEmpty(p.ReasonText)
+                ? $"Your parking request{ctx} was cancelled by HR."
+                : $"Your parking request{ctx} was cancelled by HR. Reason: {p.ReasonText}";
         }
-        return $"A booking event occurred: {envelope.EventType}.";
+        return $"Your parking request{ctx} has been cancelled.";
+    }
+
+    private static string BuildDrawCompletedMessage(BookingEventPayload p)
+    {
+        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
+        if (p.AllocatedCount.HasValue && p.RejectedCount.HasValue)
+        {
+            var total = p.AllocatedCount.Value + p.RejectedCount.Value + (p.WaitlistedCount ?? 0);
+            return $"Parking allocation{ctx} is complete: {p.AllocatedCount} of {total} requests allocated.";
+        }
+        return $"Parking allocation{ctx} is complete.";
+    }
+
+    private static string BuildPenaltyMessage(BookingEventPayload p)
+    {
+        var penaltyLabel = p.ReasonCode switch
+        {
+            "NoShow"    => "no-show",
+            "LateCancel" => "late cancellation",
+            _           => "a booking violation"
+        };
+        return $"A penalty was applied to your account due to {penaltyLabel}. This may affect your future allocation priority.";
     }
 
     private static string? ResolveNextAction(string eventType) =>

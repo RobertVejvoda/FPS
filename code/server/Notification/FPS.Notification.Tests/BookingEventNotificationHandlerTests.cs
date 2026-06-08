@@ -159,6 +159,144 @@ public sealed class BookingEventNotificationHandlerTests
         Assert.Equal(key1, key2);
     }
 
+    // ── Message content (NOTIF002) ────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("booking.requestSubmitted")]
+    [InlineData("booking.slotAllocated")]
+    [InlineData("booking.requestCancelled")]
+    [InlineData("booking.noShowRecorded")]
+    [InlineData("booking.usageConfirmed")]
+    [InlineData("booking.requestExpired")]
+    public async Task Handle_DateInPayload_MessageIncludesDate(string eventType)
+    {
+        await handler.HandleAsync(BuildEnvelope(eventType, "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.MessageText.Contains("12 May 2026") && n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedWithKnownReasonCode_UsesEmployeeSafeText()
+    {
+        var envelope = BuildEnvelopeFull("booking.requestRejected", "user-1",
+            reasonCode: "DrawNotSelected", reasonText: "Internal draw detail that should not appear");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("not selected in the draw") &&
+                !n.MessageText.Contains("Internal draw detail") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedWithNoCapacity_UsesEmployeeSafeText()
+    {
+        var envelope = BuildEnvelopeFull("booking.requestRejected", "user-1", reasonCode: "NoCapacityAvailable");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("no available spots") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedWithUnknownReasonCode_FallsBackToReasonText()
+    {
+        var envelope = BuildEnvelopeFull("booking.requestRejected", "user-1",
+            reasonCode: "SomeUnknownCode", reasonText: "Custom reason text");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("Custom reason text") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_Reallocation_MessageDistinguishesFromNormalAllocation()
+    {
+        var envelope = BuildEnvelopeFull("booking.slotAllocated", "user-1", allocationSource: "reallocation");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("reallocated") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_HrCancellation_MessageMentionsHr()
+    {
+        var envelope = BuildEnvelopeFull("booking.requestCancelled", "user-1", actorType: "hr_manager");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("HR") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmployeeCancellation_MessageDoesNotMentionHr()
+    {
+        var envelope = BuildEnvelopeFull("booking.requestCancelled", "user-1", actorType: "employee");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                !n.MessageText.Contains("HR") &&
+                n.MessageText.Contains("cancelled") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DrawCompletedWithCounts_MessageIncludesSummary()
+    {
+        // Simulate a draw event with a recipient present (future HR routing).
+        var envelope = BuildEnvelopeFull("booking.drawCompleted", requestorId: "hr-user-1",
+            allocatedCount: 8, rejectedCount: 4, waitlistedCount: 0);
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("8") &&
+                n.MessageText.Contains("12") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DrawCompletedNoCounts_MessageIsGeneric()
+    {
+        // Simulate a draw event with a recipient present (future HR routing).
+        var envelope = BuildEnvelopeFull("booking.drawCompleted", requestorId: "hr-user-1");
+
+        await handler.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("complete") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static BookingEventEnvelope BuildEnvelope(
         string eventType, string requestorId,
         IReadOnlyList<string>? affectedRecipientIds = null,
@@ -184,4 +322,40 @@ public sealed class BookingEventNotificationHandlerTests
             ReasonCode: null,
             ReasonText: reasonText,
             AffectedRecipientIds: affectedRecipientIds));
+
+    private static BookingEventEnvelope BuildEnvelopeFull(
+        string eventType,
+        string? requestorId = "user-1",
+        string? reasonCode = null,
+        string? reasonText = null,
+        string? allocationSource = null,
+        string? actorType = "employee",
+        int? allocatedCount = null,
+        int? rejectedCount = null,
+        int? waitlistedCount = null) => new(
+        EventId: "event-1",
+        EventType: eventType,
+        EventVersion: 1,
+        OccurredAt: DateTime.UtcNow,
+        TenantId: "tenant-1",
+        CorrelationId: "corr-1",
+        CausationId: null,
+        ActorType: actorType ?? "employee",
+        ActorId: requestorId,
+        Source: "booking",
+        Payload: new BookingEventPayload(
+            BookingRequestId: requestorId is not null ? "req-1" : null,
+            RequestorId: requestorId,
+            LocationId: "loc-1",
+            Date: "2026-05-12",
+            TimeSlot: "09:00-17:00",
+            PreviousStatus: null,
+            NewStatus: null,
+            ReasonCode: reasonCode,
+            ReasonText: reasonText,
+            AffectedRecipientIds: null,
+            AllocationSource: allocationSource,
+            AllocatedCount: allocatedCount,
+            RejectedCount: rejectedCount,
+            WaitlistedCount: waitlistedCount));
 }
