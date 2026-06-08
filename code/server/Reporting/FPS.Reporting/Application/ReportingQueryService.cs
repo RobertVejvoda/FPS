@@ -112,6 +112,22 @@ public sealed class ReportingQueryService(IReportingQueryRepository repository)
         var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
         return CsvExport.FromAllocationOutcomes(items);
     }
+
+    public async Task<EmployeeImpactResponse> GetEmployeeImpactAsync(FairnessQueryRequest request, string tenantId, int minRejections = 2, CancellationToken cancellationToken = default)
+    {
+        var fairnessRecords = await repository.QueryFairnessAsync(request, tenantId, cancellationToken);
+        var impactedEmployees = fairnessRecords
+            .Where(f => f.RejectionCount >= minRejections)
+            .OrderByDescending(f => f.RejectionCount)
+            .ThenBy(f => f.RequestorHash)
+            .Select(f => new EmployeeImpactEntry(
+                f.RequestorHash,
+                f.RequestCount,
+                f.RejectionCount,
+                f.AllocationCount))
+            .ToList();
+        return new EmployeeImpactResponse(impactedEmployees, minRejections);
+    }
 }
 
 public sealed record ParkingMetricsSummary(
@@ -171,6 +187,14 @@ public sealed record UtilizationResponse(IReadOnlyList<UtilizationEntry> Items);
 public sealed record ReasonCodeEntry(string ReasonCode, int Count, double RateOfDemand);
 
 public sealed record ReasonCodeResponse(IReadOnlyList<ReasonCodeEntry> Items, int TotalDemand);
+
+public sealed record EmployeeImpactEntry(
+    string RequestorHash,
+    int TotalRequests,
+    int TotalRejections,
+    int TotalAllocations);
+
+public sealed record EmployeeImpactResponse(IReadOnlyList<EmployeeImpactEntry> Items, int MinRejectionThreshold);
 
 public static class CsvExport
 {

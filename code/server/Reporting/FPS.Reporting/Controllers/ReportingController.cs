@@ -79,6 +79,16 @@ public sealed class ReportingController(ReportingQueryService queryService, ICur
         var csv = await queryService.GetAllocationOutcomesCsvAsync(request, currentUser.TenantId, cancellationToken);
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fps-allocation-outcomes.csv");
     }
+
+    [HttpGet("/reports/parking/employee-impact")]
+    public async Task<IActionResult> GetEmployeeImpact([FromQuery] FairnessQueryRequest request, [FromQuery] int minRejections = 2, CancellationToken cancellationToken = default)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await queryService.GetEmployeeImpactAsync(request, currentUser.TenantId, minRejections, cancellationToken);
+        return Ok(result);
+    }
 }
 
 internal static class ReportingRoles

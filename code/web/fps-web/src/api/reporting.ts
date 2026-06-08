@@ -65,6 +65,18 @@ export interface ReasonCodeResponse {
   totalDemand: number;
 }
 
+export interface EmployeeImpactEntry {
+  requestorHash: string;
+  totalRequests: number;
+  totalRejections: number;
+  totalAllocations: number;
+}
+
+export interface EmployeeImpactResponse {
+  items: EmployeeImpactEntry[];
+  minRejectionThreshold: number;
+}
+
 type CsvResult = { kind: 'ok'; blob: Blob } | { kind: 'unauthenticated' } | { kind: 'error'; message: string; status?: number } | { kind: 'unreachable'; message: string };
 
 function authHeaders(bearerToken: string) {
@@ -155,6 +167,22 @@ export async function fetchReasonCodeReport(
     if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/reason-codes returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as ReasonCodeResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchEmployeeImpact(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  minRejections = 2,
+): Promise<FetchResult<EmployeeImpactResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/reports/parking/employee-impact?minRejections=${minRejections}`, { headers: authHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/employee-impact returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as EmployeeImpactResponse };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }

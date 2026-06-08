@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchReportingDashboard, fetchReportingSummary, fetchReportingFairness,
-  fetchUtilizationReport, fetchReasonCodeReport,
+  fetchUtilizationReport, fetchReasonCodeReport, fetchEmployeeImpact,
   downloadCsvReport, downloadAllocationOutcomesCsv,
   type DashboardResponse, type SummaryResponse, type FairnessResponse,
-  type UtilizationResponse, type ReasonCodeResponse,
+  type UtilizationResponse, type ReasonCodeResponse, type EmployeeImpactResponse,
 } from '../api/reporting';
 import { displayLocation } from '../displayLabels';
 
@@ -15,6 +15,7 @@ type SumState = { kind: 'loading' } | { kind: 'ok'; data: SummaryResponse } | { 
 type FairState = { kind: 'loading' } | { kind: 'ok'; data: FairnessResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 type UtilState = { kind: 'loading' } | { kind: 'ok'; data: UtilizationResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 type RcState = { kind: 'loading' } | { kind: 'ok'; data: ReasonCodeResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
+type EmpImpactState = { kind: 'loading' } | { kind: 'ok'; data: EmployeeImpactResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 
 export function ReportingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
@@ -24,6 +25,7 @@ export function ReportingPage() {
   const [fair, setFair] = useState<FairState>({ kind: 'loading' });
   const [util, setUtil] = useState<UtilState>({ kind: 'loading' });
   const [rc, setRc] = useState<RcState>({ kind: 'loading' });
+  const [empImpact, setEmpImpact] = useState<EmpImpactState>({ kind: 'loading' });
   const [csvBusy, setCsvBusy] = useState(false);
   const [outcomesBusy, setOutcomesBusy] = useState(false);
 
@@ -33,6 +35,7 @@ export function ReportingPage() {
     setFair({ kind: 'loading' });
     setUtil({ kind: 'loading' });
     setRc({ kind: 'loading' });
+    setEmpImpact({ kind: 'loading' });
     const cfg = { apiBaseUrl, bearerToken };
 
     fetchReportingDashboard(cfg).then((r) => {
@@ -68,6 +71,13 @@ export function ReportingPage() {
       if (r.kind === 'error' && r.status === 403) { setRc({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setRc({ kind: 'ok', data: r.data });
       else setRc({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load reason codes.' });
+    });
+
+    fetchEmployeeImpact(cfg, 2).then((r) => {
+      if (r.kind === 'unauthenticated') return;
+      if (r.kind === 'error' && r.status === 403) { setEmpImpact({ kind: 'skip' }); return; }
+      if (r.kind === 'ok') setEmpImpact({ kind: 'ok', data: r.data });
+      else setEmpImpact({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load employee impact.' });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
@@ -273,6 +283,31 @@ export function ReportingPage() {
         </section>
       )}
       {fair.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Fairness: {fair.message}</p>}
+
+      {empImpact.kind === 'ok' && empImpact.data.items.length > 0 && (
+        <section style={card}>
+          <h3 style={cardTitle}>Employee Impact Summary</h3>
+          <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
+            Employees with {empImpact.data.minRejectionThreshold}+ rejections in the selected period (pseudonymized for privacy)
+          </p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tbl}>
+              <thead><tr>{['Requestor', 'Total Requests', 'Rejections', 'Allocations'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {empImpact.data.items.map(row => (
+                  <tr key={row.requestorHash}>
+                    <td style={td}>{row.requestorHash}</td>
+                    <td style={td}>{row.totalRequests}</td>
+                    <td style={{ ...td, color: '#dc2626', fontWeight: 600 }}>{row.totalRejections}</td>
+                    <td style={td}>{row.totalAllocations}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {empImpact.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Employee impact: {empImpact.message}</p>}
     </div>
   );
 }
