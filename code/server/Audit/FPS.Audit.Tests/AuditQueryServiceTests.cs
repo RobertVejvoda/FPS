@@ -173,6 +173,62 @@ public sealed class AuditQueryServiceTests
         Assert.DoesNotContain("tenantid", props);
     }
 
+    // ── Category filter (AUDIT003) ────────────────────────────────────────────
+
+    [Fact]
+    public async Task Query_CategoryBookingLifecycle_ReturnsBookingEventsOnly()
+    {
+        await AppendRecord("t1", "booking.requestSubmitted", "bookingRequest", "req-1");
+        await AppendRecord("t1", "booking.slotAllocated", "bookingRequest", "req-2");
+        await AppendRecord("t1", "booking.drawCompleted", "drawAttempt", "draw-1");
+
+        var result = await service.QueryAsync(
+            new AuditQueryRequest { Category = ActivityCategory.BookingLifecycle }, "t1");
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.All(result.Items, r => Assert.DoesNotContain("draw", r.EventType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Query_CategoryDrawEvents_ReturnsDrawEventsOnly()
+    {
+        await AppendRecord("t1", "booking.requestSubmitted", "bookingRequest", "req-1");
+        await AppendRecord("t1", "booking.drawCompleted", "drawAttempt", "draw-1");
+        await AppendRecord("t1", "booking.drawFailed", "drawAttempt", "draw-2");
+
+        var result = await service.QueryAsync(
+            new AuditQueryRequest { Category = ActivityCategory.DrawEvents }, "t1");
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.All(result.Items, r => Assert.StartsWith("booking.draw", r.EventType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Query_CategoryAll_ReturnsAllRecords()
+    {
+        await AppendRecord("t1", "booking.requestSubmitted", "bookingRequest", "req-1");
+        await AppendRecord("t1", "booking.drawCompleted", "drawAttempt", "draw-1");
+        await AppendRecord("t1", "privacy.erasure.completed", "privacyRequest", "priv-1");
+
+        var result = await service.QueryAsync(
+            new AuditQueryRequest { Category = ActivityCategory.All }, "t1");
+
+        Assert.Equal(3, result.TotalCount);
+    }
+
+    [Fact]
+    public async Task Query_CategoryPrivacyErasure_ReturnsPrivacyEventsOnly()
+    {
+        await AppendRecord("t1", "booking.requestSubmitted", "bookingRequest", "req-1");
+        await AppendRecord("t1", "privacy.erasure.completed", "privacyRequest", "priv-1");
+
+        var result = await service.QueryAsync(
+            new AuditQueryRequest { Category = ActivityCategory.PrivacyErasure }, "t1");
+
+        Assert.Single(result.Items);
+        Assert.StartsWith("privacy.erasure", result.Items[0].EventType, StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task AppendRecord(
         string tenantId, string eventType, string entityType, string entityId,
         string? actorHash = null, DateTime? occurredAt = null)
