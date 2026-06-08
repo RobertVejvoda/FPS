@@ -19,6 +19,7 @@ FairSpot primarily models target architecture. The baseline is current-state evi
 | Constraints | [Constraints](/architecture/constraints) |
 | Architecture decision log | [Architecture Decisions](/architecture/decisions) |
 | Architecture vocabulary | [Architecture Glossary](/architecture/glossary) |
+| Enterprise Continuum learning guide | [Enterprise Continuum](/architecture/enterprise-continuum/) |
 | Business architecture | [Business Architecture](/architecture/business/) |
 | Information systems architecture | [Information Systems](/architecture/information-systems/) |
 | Technology architecture | [Technology Architecture](/architecture/technology/) |
@@ -39,3 +40,4 @@ FairSpot primarily models target architecture. The baseline is current-state evi
 - Treat page status and version as artifact metadata, not as a replacement for Git history.
 - Mark assumptions and current-state evidence clearly when a complete baseline does not exist.
 - Keep missing layers visible as placeholders instead of leaving readers to infer gaps from legacy documentation.
+- Use [Enterprise Continuum](/architecture/enterprise-continuum/) to distinguish FairSpot product architecture from the fictive FairSpot Operator enterprise architecture.

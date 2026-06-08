@@ -15,6 +15,7 @@ This checklist is the lightweight readiness tool for the FairSpot architecture r
 
 ## Preliminary
 
+- Enterprise Continuum distinguishes reusable architecture assets, reusable solution assets, FairSpot product architecture, and FairSpot Operator enterprise architecture.
 - Governance, RACI, artifact lifecycle, review rules, and waiver handling are visible.
 - Principles, constraints, architecture decisions, and glossary terms are linked.
 - Artifact status is tracked in [Artifact Register](/architecture/artifact-register).

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchNotifications, markNotificationRead, type NotificationItem } from '../api/notifications';
+import { displayLocation } from '../displayLabels';
 
 // Important notifications are critical operational events that require user attention
 function isImportantNotification(type: string): boolean {
@@ -115,7 +116,7 @@ export function NotificationBanner({ className, style }: NotificationBannerProps
           <div style={{ fontSize: 13, color: '#78350f' }}>
             {notification.relatedDate}
             {notification.relatedTimeSlot ? ` · ${notification.relatedTimeSlot}` : ''}
-            {notification.locationId ? ` · ${notification.locationId}` : ''}
+            {displayLocation(notification.locationId) ? ` · ${displayLocation(notification.locationId)}` : ''}
           </div>
         )}
       </div>

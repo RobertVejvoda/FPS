@@ -8,7 +8,7 @@ Formal TOGAF deliverables are mapped in [TOGAF Deliverable Coverage](/architectu
 
 | ADM Phase | FairSpot Pages | Status | Notes |
 | --- | --- | --- | --- |
-| Preliminary | [Architecture Repository](/architecture/), [ADM Checklist](/architecture/adm-checklist), [Principles](/architecture/principles), [Constraints](/architecture/constraints), [Governance](/architecture/governance/), [Artifact Register](/architecture/artifact-register), [Architecture Glossary](/architecture/glossary) | Draft | Defines repository rules, ADM validation gates, principles, constraints, artifact status/versioning, architecture board, RACI, lifecycle, shared language, and review process. |
+| Preliminary | [Architecture Repository](/architecture/), [ADM Checklist](/architecture/adm-checklist), [Enterprise Continuum](/architecture/enterprise-continuum/), [Principles](/architecture/principles), [Constraints](/architecture/constraints), [Governance](/architecture/governance/), [Artifact Register](/architecture/artifact-register), [Architecture Glossary](/architecture/glossary) | Draft | Defines repository rules, ADM validation gates, enterprise-continuum classification, principles, constraints, artifact status/versioning, architecture board, RACI, lifecycle, shared language, and review process. |
 | A. Architecture Vision | [Architecture Vision](/architecture/architecture-vision), [Stakeholders and Concerns](/architecture/stakeholders-and-concerns), [Constraints](/architecture/constraints) | Draft | Explains FairSpot purpose, scope, stakeholders, concerns, constraints, and customer evaluation story. |
 | B. Business Architecture | [Business Architecture](/architecture/business/), [Capabilities](/architecture/business/capabilities), [Business Processes](/architecture/business/business-processes), [Policies](/architecture/business/policies) | Draft | Covers capabilities, actors, processes, policies, and parking allocation business rules. |
 | C. Information Systems Architecture | [Information Systems](/architecture/information-systems/), [Application Architecture](/architecture/information-systems/application-architecture), [Data Architecture](/architecture/information-systems/data-architecture), [Integrations and Events](/architecture/information-systems/integrations-events) | Draft | Covers applications, bounded contexts, data/read-model direction, APIs, and events. |
@@ -35,6 +35,10 @@ An artifact can move from `Draft` to `Approved` or `Baselined` when:
 FairSpot is a greenfield product, not a classic enterprise estate transformation. The target architecture is the main model. Baseline architecture is represented by current-state evidence and implemented-state snapshots rather than a full baseline architecture document.
 
 Legacy layer pages remain source evidence until their content is migrated or superseded by pages under `docs/architecture/`.
+
+## Enterprise Continuum Placement
+
+The [Enterprise Continuum](/architecture/enterprise-continuum/) is used as a learning and classification guide. It separates reusable architecture assets, reusable solution building blocks, FairSpot product architecture, and the fictive FairSpot Operator enterprise architecture.
 
 ## Roadmap And Operations Placement
 
