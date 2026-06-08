@@ -16,5 +16,6 @@
   },
   "devTokenFallbackEnabled": false,
   "environment": "Local",
-  "simulationEnabled": true
+  "simulationEnabled": true,
+  "appVersion": "0.1.0"
 }
