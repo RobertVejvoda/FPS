@@ -19,6 +19,7 @@ import {
 import { SessionPage } from './pages/SessionPage';
 import { OidcCallbackPage } from './pages/OidcCallbackPage';
 import { BookingsPage } from './pages/BookingsPage';
+import { BookingHistoryPage } from './pages/BookingHistoryPage';
 import { BookingDetailPage } from './pages/BookingDetailPage';
 import { NewBookingPage } from './pages/NewBookingPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -177,6 +178,7 @@ function Shell() {
       <main className="app-main">
         <Routes>
           <Route path="/bookings" element={<Guard allowed={canAccessBookings(roles)}><BookingsPage /></Guard>} />
+          <Route path="/bookings/history" element={<Guard allowed={canAccessBookings(roles)}><BookingHistoryPage /></Guard>} />
           <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
           <Route path="/bookings/:requestId" element={<Guard allowed={canAccessBookings(roles)}><BookingDetailPage /></Guard>} />
           <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
