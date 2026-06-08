@@ -33,10 +33,11 @@ export function SessionPage() {
         <div className="session-story">
           <BrandLockup branding={branding} />
           <div>
-            <h1>Fair allocation, visible outcomes.</h1>
-            <p>Request workplace resources, understand the result, and keep operational decisions traceable.</p>
+            <p className="session-eyebrow">Workplace parking operations</p>
+            <h1>Fair allocation with evidence your business can trust.</h1>
+            <p>Request parking, run policy-based Draws, and give HR a clear operational record without exposing private employee data.</p>
           </div>
-          <DemoPills />
+          <SessionSnapshot />
         </div>
         <div className="session-panel-wrap">
           <div className="session-panel">
@@ -55,10 +56,11 @@ export function SessionPage() {
         <div className="session-story">
           <BrandLockup branding={branding} />
           <div>
+            <p className="session-eyebrow">Runtime configuration</p>
             <h1>Configuration needs attention.</h1>
             <p>The app cannot load the runtime identity settings required for sign-in.</p>
           </div>
-          <DemoPills />
+          <SessionSnapshot />
         </div>
         <div className="session-panel-wrap">
           <div className="session-panel">
@@ -92,10 +94,11 @@ export function SessionPage() {
       <div className="session-story">
         <BrandLockup branding={branding} />
         <div>
-          <h1>Parking today, handled fairly.</h1>
-          <p>Employees see their own status. Operators see readiness, policy, reporting, and audit evidence.</p>
+          <p className="session-eyebrow">FairSpot for modern workplaces</p>
+          <h1>Parking allocation that employees can understand.</h1>
+          <p>Give employees a clear answer, give HR operational control, and keep every Draw ready for review.</p>
         </div>
-        <DemoPills />
+        <SessionSnapshot />
         <Link className="session-legal-link" to="/legal">Legal notices</Link>
       </div>
 
@@ -105,8 +108,8 @@ export function SessionPage() {
           <h2>Sign in</h2>
           <p>
             {branding.tenantName
-              ? `Continue to ${branding.tenantName}.`
-              : 'Continue to the employee portal.'}
+              ? `Secure access for ${branding.tenantName}.`
+              : 'Secure access to employee and HR workspaces.'}
           </p>
 
           {statusMessage ? (
@@ -116,10 +119,15 @@ export function SessionPage() {
           <button
             onClick={() => { void login(); }}
             className="btn-primary"
-            style={{ width: '100%', marginTop: 22 }}
+            style={{ width: '100%', marginTop: 22, minHeight: 46 }}
           >
             Sign in with SSO
           </button>
+          <div className="session-security-note">
+            <span>SSO protected</span>
+            <span>Tenant scoped</span>
+            <span>Audit ready</span>
+          </div>
 
           {devFallbackEnabled ? (
             <div style={{ marginTop: 18 }}>
@@ -188,12 +196,24 @@ function BrandLockup({ branding, compact = false }: { branding: { productName: s
   );
 }
 
-function DemoPills() {
+function SessionSnapshot() {
   return (
-    <div className="demo-pills" aria-label="Demo highlights">
-      <span className="demo-pill">Transparent allocation</span>
-      <span className="demo-pill">Team-ready policies</span>
-      <span className="demo-pill">Audit-ready history</span>
+    <div className="session-snapshot" aria-label="Operational highlights">
+      <div className="session-snapshot-card session-snapshot-card-strong">
+        <span>Next Draw</span>
+        <strong>18:00</strong>
+        <small>Policy window visible to employees</small>
+      </div>
+      <div className="session-snapshot-card">
+        <span>HR view</span>
+        <strong>Live</strong>
+        <small>Requests, outcomes, and exceptions</small>
+      </div>
+      <div className="session-snapshot-card">
+        <span>Evidence</span>
+        <strong>Traceable</strong>
+        <small>Allocation decisions kept for review</small>
+      </div>
     </div>
   );
 }
