@@ -13,17 +13,24 @@ public sealed class ConfirmSlotUsageHandler : IRequestHandler<ConfirmSlotUsageCo
 {
     private readonly IBookingRepository repository;
     private readonly IBookingEventPublisher eventPublisher;
+    private readonly ITenantPolicyService policyService;
 
-    public ConfirmSlotUsageHandler(IBookingRepository repository, IBookingEventPublisher eventPublisher)
+    public ConfirmSlotUsageHandler(IBookingRepository repository, IBookingEventPublisher eventPublisher, ITenantPolicyService policyService)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(eventPublisher);
+        ArgumentNullException.ThrowIfNull(policyService);
         this.repository = repository;
         this.eventPublisher = eventPublisher;
+        this.policyService = policyService;
     }
 
     public async Task<ConfirmSlotUsageResult> Handle(ConfirmSlotUsageCommand command, CancellationToken cancellationToken)
     {
+        var policy = await policyService.GetEffectivePolicyAsync(command.TenantId, cancellationToken: cancellationToken);
+        if (!policy.UsageConfirmationEnabled)
+            throw new BookingException("Usage confirmation is not enabled for this tenant.");
+
         var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
 

@@ -7,11 +7,23 @@ public sealed class ConfirmSlotUsageHandlerTests
 {
     private readonly Mock<IBookingRepository> repository = new();
     private readonly Mock<IBookingEventPublisher> eventPublisher = new();
+    private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly ConfirmSlotUsageHandler handler;
+
+    private static readonly TenantPolicy EnabledPolicy = new(
+        DailyRequestCap: 500,
+        DrawCutOffTime: new TimeOnly(18, 0),
+        TimeZoneId: "UTC",
+        SameDayBookingEnabled: true,
+        UsageConfirmationEnabled: true);
 
     public ConfirmSlotUsageHandlerTests()
     {
-        handler = new ConfirmSlotUsageHandler(repository.Object, eventPublisher.Object);
+        handler = new ConfirmSlotUsageHandler(repository.Object, eventPublisher.Object, policyService.Object);
+
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EnabledPolicy);
 
         repository.Setup(r => r.UpdateBookingRequestUsageAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
@@ -93,6 +105,22 @@ public sealed class ConfirmSlotUsageHandlerTests
         repository.Verify(r => r.UpdateBookingRequestUsageAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<DateTime>(),
             It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ── Policy guard (B008) ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_UsageConfirmationDisabled_ThrowsBookingException()
+    {
+        var disabledPolicy = EnabledPolicy with { UsageConfirmationEnabled = false };
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(disabledPolicy);
+
+        await Assert.ThrowsAsync<BookingException>(() =>
+            handler.Handle(ValidCommand(), CancellationToken.None));
+
+        repository.Verify(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never);
     }
 
     // ── Error paths ───────────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ public sealed class GetMyBookingsHandler : IRequestHandler<GetMyBookingsQuery, B
         var pageSize = Math.Min(Math.Max(1, query.PageSize), MaxPageSize);
         var from = query.From ?? DateOnly.FromDateTime(clock.GetTenantUtcNow(query.TenantId).UtcDateTime.AddDays(-policy.AllocationLookbackDays));
 
-        return await queryRepository.GetByRequestorAsync(
+        var result = await queryRepository.GetByRequestorAsync(
             query.TenantId,
             query.RequestorId,
             from,
@@ -40,5 +40,15 @@ public sealed class GetMyBookingsHandler : IRequestHandler<GetMyBookingsQuery, B
             pageSize,
             query.Cursor,
             cancellationToken);
+
+        if (!policy.UsageConfirmationEnabled)
+        {
+            var items = result.Items
+                .Select(i => i.NextAction == "confirmUsage" ? i with { NextAction = "none" } : i)
+                .ToArray();
+            return result with { Items = items };
+        }
+
+        return result;
     }
 }

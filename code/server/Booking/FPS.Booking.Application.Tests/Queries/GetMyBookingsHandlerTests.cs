@@ -115,6 +115,62 @@ public sealed class GetMyBookingsHandlerTests
         Assert.Equal("user-42", capturedRequestorId);
     }
 
+    // ── Usage confirmation suppression (B008) ─────────────────────────────────
+
+    [Fact]
+    public async Task Handle_UsageConfirmationDisabled_ConfirmUsageNextActionBecomesNone()
+    {
+        var policy = DefaultPolicy with { UsageConfirmationEnabled = false };
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(policy);
+
+        var items = new List<BookingListItem>
+        {
+            new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                new TimeOnly(9, 0), new TimeOnly(17, 0), null,
+                "Allocated", null, null, "slot-1", "confirmUsage",
+                DateTime.UtcNow, DateTime.UtcNow)
+        };
+        queryRepository
+            .Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("none", result.Items[0].NextAction);
+    }
+
+    [Fact]
+    public async Task Handle_UsageConfirmationEnabled_KeepsConfirmUsageNextAction()
+    {
+        var policy = DefaultPolicy with { UsageConfirmationEnabled = true };
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(policy);
+
+        var items = new List<BookingListItem>
+        {
+            new(Guid.NewGuid(), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                new TimeOnly(9, 0), new TimeOnly(17, 0), null,
+                "Allocated", null, null, "slot-1", "confirmUsage",
+                DateTime.UtcNow, DateTime.UtcNow)
+        };
+        queryRepository
+            .Setup(r => r.GetByRequestorAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+                It.IsAny<DateOnly?>(), It.IsAny<string?>(), It.IsAny<int>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BookingListResult(items, null));
+
+        var result = await handler.Handle(QueryWith(), CancellationToken.None);
+
+        Assert.Equal("confirmUsage", result.Items[0].NextAction);
+    }
+
     // ── Returns result as-is ──────────────────────────────────────────────────
 
     [Fact]
