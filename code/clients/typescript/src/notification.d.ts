@@ -311,6 +311,12 @@ export interface components {
             slotId?: null | string;
             allocationSource?: null | string;
             reallocatedFromBookingRequestId?: null | string;
+            /** Format: int32 */
+            allocatedCount?: null | number | string;
+            /** Format: int32 */
+            rejectedCount?: null | number | string;
+            /** Format: int32 */
+            waitlistedCount?: null | number | string;
         };
         ServiceErasureInput: {
             erasureRequestId: string;
