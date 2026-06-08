@@ -107,20 +107,48 @@ public sealed class ConfirmSlotUsageHandlerTests
             It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // ── Policy guard (B008) ───────────────────────────────────────────────────
+    // ── Policy guard — location-aware (B008) ─────────────────────────────────
 
     [Fact]
     public async Task Handle_UsageConfirmationDisabled_ThrowsBookingException()
     {
-        var disabledPolicy = EnabledPolicy with { UsageConfirmationEnabled = false };
         policyService
             .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(disabledPolicy);
+            .ReturnsAsync(EnabledPolicy with { UsageConfirmationEnabled = false });
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
+            .ReturnsAsync(AllocatedDto("loc-1"));
 
         await Assert.ThrowsAsync<BookingException>(() =>
             handler.Handle(ValidCommand(), CancellationToken.None));
+    }
 
-        repository.Verify(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never);
+    [Fact]
+    public async Task Handle_TenantDisabledButLocationEnabled_Confirms()
+    {
+        // Tenant default off; location override on — confirmation must succeed
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), "loc-on", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EnabledPolicy with { UsageConfirmationEnabled = true });
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
+            .ReturnsAsync(AllocatedDto("loc-on"));
+
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.Equal("Used", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_TenantEnabledButLocationDisabled_ThrowsBookingException()
+    {
+        // Tenant default on; location override off — confirmation must be blocked
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), "loc-off", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EnabledPolicy with { UsageConfirmationEnabled = false });
+        repository.Setup(r => r.GetBookingRequestAsync(It.IsAny<string>(), It.IsAny<Guid>()))
+            .ReturnsAsync(AllocatedDto("loc-off"));
+
+        await Assert.ThrowsAsync<BookingException>(() =>
+            handler.Handle(ValidCommand(), CancellationToken.None));
     }
 
     // ── Error paths ───────────────────────────────────────────────────────────
@@ -166,6 +194,7 @@ public sealed class ConfirmSlotUsageHandlerTests
         SourceEventId: null);
 
     private static BookingRequestDto AllocatedDto() => DtoWithStatus("Allocated");
+    private static BookingRequestDto AllocatedDto(string? locationId) { var d = DtoWithStatus("Allocated"); d.LocationId = locationId; return d; }
 
     private static BookingRequestDto UsedDto(DateTime usedAt)
     {

@@ -27,12 +27,13 @@ public sealed class ConfirmSlotUsageHandler : IRequestHandler<ConfirmSlotUsageCo
 
     public async Task<ConfirmSlotUsageResult> Handle(ConfirmSlotUsageCommand command, CancellationToken cancellationToken)
     {
-        var policy = await policyService.GetEffectivePolicyAsync(command.TenantId, cancellationToken: cancellationToken);
-        if (!policy.UsageConfirmationEnabled)
-            throw new BookingException("Usage confirmation is not enabled for this tenant.");
-
+        // Load booking first so the location-aware effective policy can be resolved
         var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
+
+        var policy = await policyService.GetEffectivePolicyAsync(command.TenantId, dto.LocationId, cancellationToken);
+        if (!policy.UsageConfirmationEnabled)
+            throw new BookingException("Usage confirmation is not enabled for this location.");
 
         var confirmedAt = command.ConfirmedAt ?? DateTime.UtcNow;
         var source = Enum.Parse<ConfirmationSource>(command.ConfirmationSource, ignoreCase: true);
