@@ -61,34 +61,26 @@ public sealed class SimulationController(
         string tenantId, DateTimeOffset oldNow, DateTimeOffset newNow, CancellationToken cancellationToken)
     {
         if (!schedulerOptions.Enabled) return;
+        foreach (var date in ComputeTriggerTargets(oldNow, newNow, schedulerOptions.DrawCutOffTime, schedulerOptions.TargetDateOffsetDays))
+            await schedulerService.TriggerDueDrawsAsync(date, cancellationToken);
+    }
 
-        // The scheduler runs daily and triggers draws for (today + TargetDateOffsetDays).
-        // When simulation time advances, we need to detect all days that were crossed
-        // and trigger their corresponding draws.
-
-        var oldDate = DateOnly.FromDateTime(oldNow.UtcDateTime);
-        var newDate = DateOnly.FromDateTime(newNow.UtcDateTime);
-
-        // If we crossed into a new day, trigger the scheduler for each day crossed
-        // The scheduler would have run at the start of each new day
-        var currentDate = oldDate;
-        while (currentDate < newDate)
+    // Determines which draw target dates are triggered when virtual time advances from oldNow to newNow.
+    // A draw fires when the configured cut-off moment (date + cutOffTime UTC) falls in (oldNow, newNow].
+    internal static IReadOnlyList<DateOnly> ComputeTriggerTargets(
+        DateTimeOffset oldNow, DateTimeOffset newNow, TimeSpan cutOffTime, int targetOffsetDays)
+    {
+        var results = new List<DateOnly>();
+        var firstDate = DateOnly.FromDateTime(oldNow.UtcDateTime);
+        var lastDate = DateOnly.FromDateTime(newNow.UtcDateTime);
+        for (var d = firstDate; d <= lastDate; d = d.AddDays(1))
         {
-            currentDate = currentDate.AddDays(1);
-            var targetDate = currentDate.AddDays(schedulerOptions.TargetDateOffsetDays);
-            await schedulerService.TriggerDueDrawsAsync(targetDate, cancellationToken);
+            var cutOffOn = new DateTimeOffset(d.Year, d.Month, d.Day,
+                cutOffTime.Hours, cutOffTime.Minutes, cutOffTime.Seconds, TimeSpan.Zero);
+            if (oldNow < cutOffOn && newNow >= cutOffOn)
+                results.Add(d.AddDays(targetOffsetDays));
         }
-
-        // Also check if we need to trigger for the current newDate
-        // (in case we advanced within the same day but need to check)
-        if (oldDate != newDate)
-        {
-            // Already handled above by the loop
-        }
-        else
-        {
-            // Stayed within the same day - no scheduled trigger crossed
-        }
+        return results;
     }
 
     [HttpPost("reset")]

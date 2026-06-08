@@ -122,7 +122,70 @@ public sealed class SimulationControllerTests
         Assert.False(clock.IsTenantSimulating(TenantId));
     }
 
-    // ── Simulation-triggered Draw tests ─────────────────────────────────────
+    // ── ComputeTriggerTargets unit tests (pure, time-independent) ────────────
+
+    [Fact]
+    public void ComputeTriggerTargets_SameDayCutOffCrossed_ReturnsTriggerDate()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 6, 6), dates[0]);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_SameDayCutOffNotCrossed_ReturnsEmpty()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 14, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Empty(dates);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_AdvanceAfterCutOff_SameDayNoTrigger()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 21, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Empty(dates);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_MultiDayCrossing_ReturnsAllTriggerDates()
+    {
+        // Range covers three 18:00 cut-offs: June 5, 6, and 7 → targets June 6, 7, 8
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 7, 19, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Equal(3, dates.Count);
+        Assert.Equal(new DateOnly(2026, 6, 6), dates[0]);
+        Assert.Equal(new DateOnly(2026, 6, 7), dates[1]);
+        Assert.Equal(new DateOnly(2026, 6, 8), dates[2]);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_TargetOffsetDays_AppliedToTriggerDate()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 2);
+
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 6, 7), dates[0]);
+    }
+
+    // ── Simulation-triggered Draw integration tests ──────────────────────────
 
     [Fact]
     public async Task Advance_WhenSchedulerDisabled_DoesNotTriggerDraws()
@@ -143,9 +206,9 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
-    public async Task Advance_CrossesMidnight_TriggersScheduledDraw()
+    public async Task Advance_CrossesCutOffTime_TriggersScheduledDraw()
     {
-        var options = new DrawSchedulerOptions { Enabled = true, TargetDateOffsetDays = 1 };
+        var options = new DrawSchedulerOptions { Enabled = true, DrawCutOffTime = TimeSpan.FromHours(18), TargetDateOffsetDays = 1 };
         var service = new Mock<IDrawSchedulerService>();
         service
             .Setup(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
@@ -159,17 +222,16 @@ public sealed class SimulationControllerTests
 
         env.Setup(e => e.EnvironmentName).Returns("Development");
 
-        // Advance 25 hours to ensure we cross at least one full day boundary
+        // 25-hour advance always crosses at least one 18:00 cut-off regardless of starting time
         await controller.Advance(new AdvanceRequest(25), CancellationToken.None);
 
-        // Should trigger at least once (for the new day crossed)
         service.Verify(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Fact]
     public async Task Advance_LargeTimeJump_TriggersMultipleDates()
     {
-        var options = new DrawSchedulerOptions { Enabled = true, TargetDateOffsetDays = 1 };
+        var options = new DrawSchedulerOptions { Enabled = true, DrawCutOffTime = TimeSpan.FromHours(18), TargetDateOffsetDays = 1 };
         var service = new Mock<IDrawSchedulerService>();
         var calledDates = new List<DateOnly>();
         service
@@ -185,47 +247,9 @@ public sealed class SimulationControllerTests
 
         env.Setup(e => e.EnvironmentName).Returns("Development");
 
-        // Advance 3 days
+        // 72 hours (3 days) always crosses at least two 18:00 cut-offs
         await controller.Advance(new AdvanceRequest(72), CancellationToken.None);
 
-        // Should trigger for multiple dates
-        Assert.NotEmpty(calledDates);
-    }
-
-    [Fact]
-    public async Task Advance_IdempotentWithExistingScheduler_UsesSameWorkflowPath()
-    {
-        // This test verifies the integration: simulation advances trigger through
-        // IDrawSchedulerService, which uses the same TriggerDrawCommand path as Dapr cron.
-        var options = new DrawSchedulerOptions
-        {
-            Enabled = true,
-            TargetDateOffsetDays = 1,
-            Targets = [new DrawScheduleTarget
-            {
-                TenantId = TenantId,
-                LocationId = "loc-1",
-                TimeSlotStart = TimeSpan.FromHours(9),
-                TimeSlotEnd = TimeSpan.FromHours(17)
-            }]
-        };
-        var service = new Mock<IDrawSchedulerService>();
-        service
-            .Setup(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new DrawSchedulerResult(TenantId, "loc-1", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)), "draw:key", "InProgress")]);
-
-        var controller = new SimulationController(clock, env.Object, currentUser.Object, service.Object, options);
-        controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
-        {
-            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
-        };
-
-        env.Setup(e => e.EnvironmentName).Returns("Development");
-
-        // Advance 25 hours to cross midnight
-        await controller.Advance(new AdvanceRequest(25), CancellationToken.None);
-
-        // Verify the service was called (proving the integration path is working)
-        service.Verify(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        Assert.True(calledDates.Count >= 2);
     }
 }
