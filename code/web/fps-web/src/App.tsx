@@ -99,7 +99,7 @@ function AppFooter() {
       {environment && <span className="footer-env-badge">{environment}</span>}
       {sim?.simulationActive && (
         <span className="footer-sim-banner" title="Non-production simulation mode is active. Virtual time is being used instead of real time.">
-          🕐 Non-production simulation
+          NON-PRODUCTION SIMULATION
         </span>
       )}
       {simulationEnabled && sim && (
