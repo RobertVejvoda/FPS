@@ -10,6 +10,12 @@ public sealed class DrawSchedulerOptions
     // Default 1 = "tomorrow's draw runs tonight".
     public int TargetDateOffsetDays { get; set; } = 1;
 
+    // The IANA/Windows timezone ID used to interpret DrawCutOffTime. Defaults to UTC.
+    public string PolicyTimeZoneId { get; set; } = "UTC";
+
+    // The local time of day (in PolicyTimeZoneId) at which the draw is considered "due". Defaults to 18:00.
+    public TimeSpan DrawCutOffTime { get; set; } = TimeSpan.FromHours(18);
+
     public List<DrawScheduleTarget> Targets { get; set; } = [];
 }
 

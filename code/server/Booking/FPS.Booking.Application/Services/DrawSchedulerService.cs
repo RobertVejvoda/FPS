@@ -10,24 +10,28 @@ public sealed class DrawSchedulerService(
     ILogger<DrawSchedulerService> logger) : IDrawSchedulerService
 {
     public async Task<IReadOnlyList<DrawSchedulerResult>> TriggerDueDrawsAsync(
-        DateOnly targetDate, CancellationToken cancellationToken = default)
+        DateOnly targetDate, string? tenantId = null, CancellationToken cancellationToken = default)
     {
+        var targets = tenantId is null
+            ? options.Targets
+            : options.Targets.Where(t => t.TenantId == tenantId).ToList();
+
         if (!options.Enabled)
         {
-            logger.LogInformation("DrawScheduler is disabled; skipping {Count} target(s)", options.Targets.Count);
-            return options.Targets.Select(t => new DrawSchedulerResult(
+            logger.LogInformation("DrawScheduler is disabled; skipping {Count} target(s)", targets.Count);
+            return targets.Select(t => new DrawSchedulerResult(
                 t.TenantId, t.LocationId, targetDate, DrawKey: "", Status: "Disabled")).ToList();
         }
 
-        if (options.Targets.Count == 0)
+        if (targets.Count == 0)
         {
-            logger.LogWarning("DrawScheduler is enabled but no targets are configured");
+            logger.LogWarning("DrawScheduler is enabled but no targets are configured for tenant={TenantId}", tenantId ?? "all");
             return [];
         }
 
-        var results = new List<DrawSchedulerResult>(options.Targets.Count);
+        var results = new List<DrawSchedulerResult>(targets.Count);
 
-        foreach (var target in options.Targets)
+        foreach (var target in targets)
         {
             var slotStart = targetDate.ToDateTime(TimeOnly.FromTimeSpan(target.TimeSlotStart), DateTimeKind.Utc);
             var slotEnd   = targetDate.ToDateTime(TimeOnly.FromTimeSpan(target.TimeSlotEnd),   DateTimeKind.Utc);

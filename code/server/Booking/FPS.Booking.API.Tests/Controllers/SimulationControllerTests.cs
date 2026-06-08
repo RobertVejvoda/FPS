@@ -1,5 +1,6 @@
 using FPS.Booking.API.Controllers;
 using FPS.Booking.API.Simulation;
+using FPS.Booking.Application.Services;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,8 @@ public sealed class SimulationControllerTests
     private readonly InMemorySimulationClock clock = new();
     private readonly Mock<IWebHostEnvironment> env = new();
     private readonly Mock<ICurrentUser> currentUser = new();
+    private readonly Mock<IDrawSchedulerService> schedulerService = new();
+    private readonly DrawSchedulerOptions schedulerOptions = new() { Enabled = false };
 
     public SimulationControllerTests()
     {
@@ -24,7 +27,7 @@ public sealed class SimulationControllerTests
     private SimulationController CreateController(bool isProduction)
     {
         env.Setup(e => e.EnvironmentName).Returns(isProduction ? "Production" : "Development");
-        var controller = new SimulationController(clock, env.Object, currentUser.Object);
+        var controller = new SimulationController(clock, env.Object, currentUser.Object, schedulerService.Object, schedulerOptions);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
         {
             HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
@@ -51,18 +54,18 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
-    public void Advance_Production_Returns404()
+    public async Task Advance_Production_Returns404()
     {
-        var result = CreateController(isProduction: true).Advance(new AdvanceRequest(1));
+        var result = await CreateController(isProduction: true).Advance(new AdvanceRequest(1), CancellationToken.None);
         Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
-    public void Advance_ValidHours_AdvancesClockForTenantAndReturnsActive()
+    public async Task Advance_ValidHours_AdvancesClockForTenantAndReturnsActive()
     {
         var controller = CreateController(isProduction: false);
 
-        var result = controller.Advance(new AdvanceRequest(8));
+        var result = await controller.Advance(new AdvanceRequest(8), CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<SimulationStatusResponse>(ok.Value);
@@ -73,24 +76,24 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
-    public void Advance_ZeroHours_Returns400()
+    public async Task Advance_ZeroHours_Returns400()
     {
-        var result = CreateController(isProduction: false).Advance(new AdvanceRequest(0));
+        var result = await CreateController(isProduction: false).Advance(new AdvanceRequest(0), CancellationToken.None);
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
-    public void Advance_TooManyHours_Returns400()
+    public async Task Advance_TooManyHours_Returns400()
     {
-        var result = CreateController(isProduction: false).Advance(new AdvanceRequest(999));
+        var result = await CreateController(isProduction: false).Advance(new AdvanceRequest(999), CancellationToken.None);
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
-    public void Advance_DoesNotAffectOtherTenant()
+    public async Task Advance_DoesNotAffectOtherTenant()
     {
         var controller = CreateController(isProduction: false);
-        controller.Advance(new AdvanceRequest(4));
+        await controller.Advance(new AdvanceRequest(4), CancellationToken.None);
 
         Assert.True(clock.IsTenantSimulating(TenantId));
         Assert.False(clock.IsTenantSimulating("other-tenant"));
@@ -104,10 +107,10 @@ public sealed class SimulationControllerTests
     }
 
     [Fact]
-    public void Reset_AfterAdvance_ClearsSimulationForTenant()
+    public async Task Reset_AfterAdvance_ClearsSimulationForTenant()
     {
         var controller = CreateController(isProduction: false);
-        controller.Advance(new AdvanceRequest(4));
+        await controller.Advance(new AdvanceRequest(4), CancellationToken.None);
         Assert.True(clock.IsTenantSimulating(TenantId));
 
         var result = controller.Reset();
@@ -117,5 +120,188 @@ public sealed class SimulationControllerTests
         Assert.False(body.SimulationActive);
         Assert.Null(body.VirtualNow);
         Assert.False(clock.IsTenantSimulating(TenantId));
+    }
+
+    // ── ComputeTriggerTargets unit tests (pure, time-independent) ────────────
+
+    [Fact]
+    public void ComputeTriggerTargets_SameDayCutOffCrossed_ReturnsTriggerDate()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 6, 6), dates[0]);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_SameDayCutOffNotCrossed_ReturnsEmpty()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 14, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Empty(dates);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_AdvanceAfterCutOff_SameDayNoTrigger()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 21, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Empty(dates);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_MultiDayCrossing_ReturnsAllTriggerDates()
+    {
+        // Range covers three 18:00 cut-offs: June 5, 6, and 7 → targets June 6, 7, 8
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 7, 19, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1);
+
+        Assert.Equal(3, dates.Count);
+        Assert.Equal(new DateOnly(2026, 6, 6), dates[0]);
+        Assert.Equal(new DateOnly(2026, 6, 7), dates[1]);
+        Assert.Equal(new DateOnly(2026, 6, 8), dates[2]);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_TargetOffsetDays_AppliedToTriggerDate()
+    {
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 2);
+
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 6, 7), dates[0]);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_PolicyTimezone_ConvertsToUtc()
+    {
+        // Prague = UTC+2 in summer; 18:00 Prague = 16:00 UTC
+        var prague = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        var oldNow = new DateTimeOffset(2026, 6, 5, 15, 0, 0, TimeSpan.Zero); // 15:00 UTC (< 16:00 UTC cut-off)
+        var newNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero); // 17:00 UTC (> 16:00 UTC cut-off)
+
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1, prague);
+
+        Assert.Single(dates); // cut-off crossed
+        Assert.Equal(new DateOnly(2026, 6, 6), dates[0]);
+    }
+
+    [Fact]
+    public void ComputeTriggerTargets_PolicyTimezone_NoCross_WhenUtcAloneWouldCross()
+    {
+        // If Prague timezone is used, 18:00 Prague = 16:00 UTC.
+        // Range 17:00–19:00 UTC crosses 18:00 UTC but NOT 16:00 UTC.
+        var prague = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        var oldNow = new DateTimeOffset(2026, 6, 5, 17, 0, 0, TimeSpan.Zero);
+        var newNow = new DateTimeOffset(2026, 6, 5, 19, 0, 0, TimeSpan.Zero);
+
+        // With Prague, cut-off is at 16:00 UTC on June 5 (already passed at 17:00)
+        var dates = SimulationController.ComputeTriggerTargets(oldNow, newNow, TimeSpan.FromHours(18), targetOffsetDays: 1, prague);
+
+        Assert.Empty(dates); // cut-off already passed before oldNow
+    }
+
+    // ── Simulation-triggered Draw integration tests ──────────────────────────
+
+    [Fact]
+    public async Task Advance_WhenSchedulerDisabled_DoesNotTriggerDraws()
+    {
+        var options = new DrawSchedulerOptions { Enabled = false };
+        var service = new Mock<IDrawSchedulerService>();
+        var controller = new SimulationController(clock, env.Object, currentUser.Object, service.Object, options);
+        controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
+        };
+
+        env.Setup(e => e.EnvironmentName).Returns("Development");
+
+        await controller.Advance(new AdvanceRequest(24), CancellationToken.None);
+
+        service.Verify(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Advance_CrossesCutOffTime_TriggersScheduledDraw()
+    {
+        var options = new DrawSchedulerOptions { Enabled = true, DrawCutOffTime = TimeSpan.FromHours(18), TargetDateOffsetDays = 1 };
+        var service = new Mock<IDrawSchedulerService>();
+        service
+            .Setup(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var controller = new SimulationController(clock, env.Object, currentUser.Object, service.Object, options);
+        controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
+        };
+
+        env.Setup(e => e.EnvironmentName).Returns("Development");
+
+        // 25-hour advance always crosses at least one 18:00 cut-off regardless of starting time
+        await controller.Advance(new AdvanceRequest(25), CancellationToken.None);
+
+        service.Verify(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task Advance_LargeTimeJump_TriggersMultipleDates()
+    {
+        var options = new DrawSchedulerOptions { Enabled = true, DrawCutOffTime = TimeSpan.FromHours(18), TargetDateOffsetDays = 1 };
+        var service = new Mock<IDrawSchedulerService>();
+        var calledDates = new List<DateOnly>();
+        service
+            .Setup(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<DateOnly, string?, CancellationToken>((date, _, _) => calledDates.Add(date))
+            .ReturnsAsync([]);
+
+        var controller = new SimulationController(clock, env.Object, currentUser.Object, service.Object, options);
+        controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
+        };
+
+        env.Setup(e => e.EnvironmentName).Returns("Development");
+
+        // 72 hours (3 days) always crosses at least two 18:00 cut-offs
+        await controller.Advance(new AdvanceRequest(72), CancellationToken.None);
+
+        Assert.True(calledDates.Count >= 2);
+    }
+
+    [Fact]
+    public async Task Advance_CrossesCutOff_PassesTenantIdToScheduler()
+    {
+        var options = new DrawSchedulerOptions { Enabled = true, DrawCutOffTime = TimeSpan.FromHours(18), TargetDateOffsetDays = 1 };
+        var service = new Mock<IDrawSchedulerService>();
+        string? capturedTenantId = null;
+        service
+            .Setup(s => s.TriggerDueDrawsAsync(It.IsAny<DateOnly>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<DateOnly, string?, CancellationToken>((_, tid, _) => capturedTenantId = tid)
+            .ReturnsAsync([]);
+
+        var controller = new SimulationController(clock, env.Object, currentUser.Object, service.Object, options);
+        controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext(),
+        };
+        env.Setup(e => e.EnvironmentName).Returns("Development");
+
+        await controller.Advance(new AdvanceRequest(25), CancellationToken.None);
+
+        Assert.Equal(TenantId, capturedTenantId);
     }
 }
