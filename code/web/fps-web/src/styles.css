@@ -372,8 +372,8 @@ select {
   justify-content: space-between;
   color: #ffffff;
   background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(37, 99, 235, 0.86) 54%, rgba(22, 163, 74, 0.78)),
-    linear-gradient(180deg, #111827, #0f172a);
+    linear-gradient(135deg, rgba(6, 78, 59, 0.96), rgba(22, 163, 74, 0.88) 56%, rgba(132, 204, 22, 0.76)),
+    linear-gradient(180deg, #064e3b, #0f172a);
 }
 
 .session-eyebrow {
