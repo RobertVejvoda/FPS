@@ -89,7 +89,7 @@ public sealed class ParkingPolicyValidationTests
         var policy = ValidPolicy() with
         {
             NoShowDetectionEnabled = true,
-            UsageConfirmationRequired = false,
+            UsageConfirmationEnabled = false,
             UsageConfirmationMethods = ["employee_self"]
         };
         var errors = ParkingPolicyService.Validate(policy);
@@ -102,7 +102,7 @@ public sealed class ParkingPolicyValidationTests
         var policy = ValidPolicy() with
         {
             NoShowDetectionEnabled = true,
-            UsageConfirmationRequired = true,
+            UsageConfirmationEnabled = true,
             UsageConfirmationMethods = []
         };
         var errors = ParkingPolicyService.Validate(policy);
@@ -115,7 +115,7 @@ public sealed class ParkingPolicyValidationTests
         var policy = ValidPolicy() with
         {
             NoShowDetectionEnabled = true,
-            UsageConfirmationRequired = true,
+            UsageConfirmationEnabled = true,
             UsageConfirmationMethods = ["employee_self"]
         };
         var errors = ParkingPolicyService.Validate(policy);

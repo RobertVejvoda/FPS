@@ -14,7 +14,7 @@ public sealed record ParkingPolicy
     public bool SameDayBookingEnabled { get; init; }
     public bool SameDayUsesRequestCap { get; init; }
     public bool AutomaticReallocationEnabled { get; init; }
-    public bool UsageConfirmationRequired { get; init; }
+    public bool UsageConfirmationEnabled { get; init; }
     public int UsageConfirmationWindowMinutes { get; init; }
     public IReadOnlyList<string> UsageConfirmationMethods { get; init; } = [];
     public bool NoShowDetectionEnabled { get; init; }

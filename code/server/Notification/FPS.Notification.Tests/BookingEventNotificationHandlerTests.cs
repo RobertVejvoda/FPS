@@ -1,8 +1,9 @@
 using FPS.Notification.Application;
 using FPS.Notification.Domain;
 using FPS.Notification.Infrastructure;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.NullLoggers;
 using Moq;
+using Dapr.Client;
 
 namespace FPS.Notification.Tests;
 
@@ -11,12 +12,14 @@ public sealed class BookingEventNotificationHandlerTests
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly Mock<IEmailNotificationSender> emailSender = new();
+    private readonly Mock<DaprClient> daprClient = new();
     private readonly BookingEventNotificationHandler handler;
 
     public BookingEventNotificationHandlerTests()
     {
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
             new InMemoryNotificationPreferencesRepository(),
+            daprClient.Object,
             NullLogger<BookingEventNotificationHandler>.Instance);
         emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
@@ -26,6 +29,10 @@ public sealed class BookingEventNotificationHandlerTests
             .Returns(Task.CompletedTask);
         broadcaster.Setup(b => b.BroadcastAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        // Default: usage confirmation disabled
+        daprClient.Setup(d => d.GetStateAsync<It.IsAnyType>(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ConsistencyMode?>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object)null!);
     }
 
     [Fact]
@@ -58,8 +65,24 @@ public sealed class BookingEventNotificationHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AllocationEvent_SetsConfirmUsageNextAction()
+    public async Task Handle_AllocationEvent_WhenConfirmationDisabled_SetsNoNextAction()
     {
+        // Default daprClient setup returns null, which means usage confirmation is disabled
+        await handler.HandleAsync(BuildEnvelope("booking.slotAllocated", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.NextAction == null && n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AllocationEvent_WhenConfirmationEnabled_SetsConfirmUsageNextAction()
+    {
+        // Setup: usage confirmation enabled
+        daprClient.Setup(d => d.GetStateAsync<It.IsAnyType>(
+            "configurationstore", It.IsAny<string>(), It.IsAny<ConsistencyMode?>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new { UsageConfirmationEnabled = true });
+
         await handler.HandleAsync(BuildEnvelope("booking.slotAllocated", "user-1"));
 
         repository.Verify(r => r.SaveAsync(

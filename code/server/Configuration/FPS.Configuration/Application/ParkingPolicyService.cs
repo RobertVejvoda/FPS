@@ -55,9 +55,9 @@ public sealed class ParkingPolicyService(IParkingPolicyRepository repository)
             errors.Add("noShowPenalty must be non-negative.");
 
         if (policy.NoShowDetectionEnabled &&
-            (!policy.UsageConfirmationRequired || policy.UsageConfirmationMethods.Count == 0))
+            (!policy.UsageConfirmationEnabled || policy.UsageConfirmationMethods.Count == 0))
         {
-            errors.Add("noShowDetectionEnabled requires usageConfirmationRequired=true and at least one usageConfirmationMethod.");
+            errors.Add("noShowDetectionEnabled requires usageConfirmationEnabled=true and at least one usageConfirmationMethod.");
         }
 
         return errors;

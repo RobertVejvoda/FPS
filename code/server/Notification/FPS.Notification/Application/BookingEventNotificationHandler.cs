@@ -1,5 +1,6 @@
 using FPS.Notification.Domain;
 using Microsoft.Extensions.Logging;
+using Dapr.Client;
 
 namespace FPS.Notification.Application;
 
@@ -8,6 +9,7 @@ public sealed class BookingEventNotificationHandler(
     INotificationBroadcaster broadcaster,
     IEmailNotificationSender emailSender,
     INotificationPreferencesRepository preferencesRepository,
+    DaprClient daprClient,
     ILogger<BookingEventNotificationHandler> logger)
 {
     // Maps ReasonCode values to employee-safe human-readable text.
@@ -35,6 +37,9 @@ public sealed class BookingEventNotificationHandler(
 
         var notificationClass = NotificationClassifier.Classify(envelope.EventType);
 
+        // Fetch tenant policy to determine if usage confirmation is enabled
+        var usageConfirmationEnabled = await GetUsageConfirmationEnabledAsync(envelope.TenantId, cancellationToken);
+
         var recipientCount = 0;
         foreach (var recipientId in ResolveRecipients(envelope))
         {
@@ -47,8 +52,8 @@ public sealed class BookingEventNotificationHandler(
                 continue;
             }
 
-            await HandleInAppAsync(envelope, recipientId, cancellationToken);
-            await HandleEmailAsync(envelope, recipientId, cancellationToken);
+            await HandleInAppAsync(envelope, recipientId, usageConfirmationEnabled, cancellationToken);
+            await HandleEmailAsync(envelope, recipientId, usageConfirmationEnabled, cancellationToken);
             recipientCount++;
         }
 
@@ -57,25 +62,25 @@ public sealed class BookingEventNotificationHandler(
             envelope.TenantId, envelope.EventType, envelope.EventId, recipientCount);
     }
 
-    private async Task HandleInAppAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
+    private async Task HandleInAppAsync(BookingEventEnvelope envelope, string recipientId, bool usageConfirmationEnabled, CancellationToken cancellationToken)
     {
         var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType, NotificationChannel.InApp);
         if (await repository.ExistsAsync(dedupKey, cancellationToken))
             return;
 
-        var record = CreateRecord(envelope, recipientId, NotificationChannel.InApp, dedupKey);
+        var record = CreateRecord(envelope, recipientId, NotificationChannel.InApp, dedupKey, usageConfirmationEnabled);
         await repository.SaveAsync(record, cancellationToken);
         // Best-effort — broadcaster failure must not affect persistence
         try { await broadcaster.BroadcastAsync(record, cancellationToken); } catch { }
     }
 
-    private async Task HandleEmailAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
+    private async Task HandleEmailAsync(BookingEventEnvelope envelope, string recipientId, bool usageConfirmationEnabled, CancellationToken cancellationToken)
     {
         var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType, NotificationChannel.Email);
         if (await repository.ExistsAsync(dedupKey, cancellationToken))
             return;
 
-        var record = CreateRecord(envelope, recipientId, NotificationChannel.Email, dedupKey);
+        var record = CreateRecord(envelope, recipientId, NotificationChannel.Email, dedupKey, usageConfirmationEnabled);
 
         EmailSendResult result;
         try { result = await emailSender.SendAsync(record, cancellationToken); }
@@ -98,7 +103,7 @@ public sealed class BookingEventNotificationHandler(
     }
 
     private static NotificationRecord CreateRecord(
-        BookingEventEnvelope envelope, string recipientId, string channel, string dedupKey) => new()
+        BookingEventEnvelope envelope, string recipientId, string channel, string dedupKey, bool usageConfirmationEnabled) => new()
     {
         Id = Guid.NewGuid(),
         DeduplicationKey = dedupKey,
@@ -111,7 +116,7 @@ public sealed class BookingEventNotificationHandler(
         RelatedDate = envelope.Payload.Date,
         RelatedTimeSlot = envelope.Payload.TimeSlot,
         LocationId = envelope.Payload.LocationId,
-        NextAction = ResolveNextAction(envelope.EventType),
+        NextAction = ResolveNextAction(envelope.EventType, usageConfirmationEnabled),
         SourceEventId = envelope.EventId,
         CreatedAt = DateTime.UtcNow
     };
@@ -241,10 +246,10 @@ public sealed class BookingEventNotificationHandler(
         return $"A penalty was applied to your account due to {penaltyLabel}. This may affect your future allocation priority.";
     }
 
-    private static string? ResolveNextAction(string eventType) =>
+    private static string? ResolveNextAction(string eventType, bool usageConfirmationEnabled) =>
         eventType switch
         {
-            "booking.slotAllocated" => "confirmUsage",
+            "booking.slotAllocated" => usageConfirmationEnabled ? "confirmUsage" : null,
             "booking.requestSubmitted" => "cancel",
             _ => null
         };
@@ -252,4 +257,32 @@ public sealed class BookingEventNotificationHandler(
     public static string DeduplicationKey(string eventId, string recipientId, string notificationType,
         string channel = NotificationChannel.InApp)
         => $"{eventId}:{recipientId}:{notificationType}:{channel}";
+
+    private async Task<bool> GetUsageConfirmationEnabledAsync(string tenantId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var policyDto = await daprClient.GetStateAsync<TenantPolicyDto>(
+                "configurationstore",
+                TenantPolicyKey(tenantId),
+                cancellationToken: cancellationToken);
+            return policyDto?.UsageConfirmationEnabled ?? false;
+        }
+        catch
+        {
+            // If policy cannot be fetched, default to false (usage confirmation disabled)
+            return false;
+        }
+    }
+
+    private static string TenantPolicyKey(string tenantId)
+        => $"parking-policy:{SanitiseTenantId(tenantId)}";
+
+    private static string SanitiseTenantId(string tenantId)
+        => tenantId.ToLowerInvariant();
+
+    private sealed class TenantPolicyDto
+    {
+        public bool UsageConfirmationEnabled { get; set; }
+    }
 }

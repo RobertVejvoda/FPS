@@ -55,8 +55,15 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             ? EncodeCursor(offset + page.Count)
             : null;
 
+        // Fetch policy configuration to determine if usage confirmation is enabled
+        var policyDto = await daprClient.GetStateAsync<TenantPolicyDto>(
+            "configurationstore",
+            TenantStorageKey.For("parking-policy", tenantId),
+            cancellationToken: cancellationToken);
+        var usageConfirmationEnabled = policyDto?.UsageConfirmationEnabled ?? false;
+
         return new BookingListResult(
-            page.Select(ToListItem).ToList(),
+            page.Select(d => ToListItem(d, usageConfirmationEnabled)).ToList(),
             nextCursor,
             filtered.Count);
     }
@@ -221,7 +228,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
     private static string UserIndexKey(string tenantId, string requestorId)
         => $"user-requests:{TenantStorageKey.Sanitise(tenantId)}:{requestorId}";
 
-    private static BookingListItem ToListItem(BookingRequestDto dto) => new(
+    private static BookingListItem ToListItem(BookingRequestDto dto, bool usageConfirmationEnabled) => new(
         RequestId: dto.RequestId,
         RequestedDate: DateOnly.FromDateTime(dto.PlannedArrivalTime),
         TimeSlotStart: TimeOnly.FromDateTime(dto.PlannedArrivalTime),
@@ -231,7 +238,7 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         ReasonCode: dto.Status == "Rejected" ? dto.RejectionCode : null,
         Reason: ReasonFor(dto),
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
-        NextAction: NextActionFor(dto.Status),
+        NextAction: NextActionFor(dto.Status, usageConfirmationEnabled),
         CreatedAt: dto.RequestedAt,
         LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
 
@@ -267,11 +274,11 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             _ => null
         };
 
-    private static string NextActionFor(string status) =>
+    private static string NextActionFor(string status, bool usageConfirmationEnabled) =>
         status switch
         {
             "Pending" => "cancel",
-            "Allocated" => "confirmUsage",
+            "Allocated" => usageConfirmationEnabled ? "confirmUsage" : "none",
             _ => "none"
         };
 
@@ -298,5 +305,10 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
     private sealed class TenantOpsIndex
     {
         public List<Guid> RequestIds { get; set; } = [];
+    }
+
+    private sealed class TenantPolicyDto
+    {
+        public bool UsageConfirmationEnabled { get; set; }
     }
 }
