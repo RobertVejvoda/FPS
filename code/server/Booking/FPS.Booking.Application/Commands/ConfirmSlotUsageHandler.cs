@@ -13,19 +13,27 @@ public sealed class ConfirmSlotUsageHandler : IRequestHandler<ConfirmSlotUsageCo
 {
     private readonly IBookingRepository repository;
     private readonly IBookingEventPublisher eventPublisher;
+    private readonly ITenantPolicyService policyService;
 
-    public ConfirmSlotUsageHandler(IBookingRepository repository, IBookingEventPublisher eventPublisher)
+    public ConfirmSlotUsageHandler(IBookingRepository repository, IBookingEventPublisher eventPublisher, ITenantPolicyService policyService)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(eventPublisher);
+        ArgumentNullException.ThrowIfNull(policyService);
         this.repository = repository;
         this.eventPublisher = eventPublisher;
+        this.policyService = policyService;
     }
 
     public async Task<ConfirmSlotUsageResult> Handle(ConfirmSlotUsageCommand command, CancellationToken cancellationToken)
     {
+        // Load booking first so the location-aware effective policy can be resolved
         var dto = await repository.GetBookingRequestAsync(command.TenantId, command.RequestId);
         if (dto is null) throw new BookingNotFoundException(command.RequestId);
+
+        var policy = await policyService.GetEffectivePolicyAsync(command.TenantId, dto.LocationId, cancellationToken);
+        if (!policy.UsageConfirmationEnabled)
+            throw new BookingException("Usage confirmation is not enabled for this location.");
 
         var confirmedAt = command.ConfirmedAt ?? DateTime.UtcNow;
         var source = Enum.Parse<ConfirmationSource>(command.ConfirmationSource, ignoreCase: true);
