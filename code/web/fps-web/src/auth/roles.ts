@@ -81,6 +81,6 @@ export function defaultRoute(roles: string[]): string {
   if (canAccessTenantAdmin(roles)) return '/tenant-admin';
   if (canAccessHrOperations(roles)) return '/hr-operations';
   if (canAccessReporting(roles)) return '/reporting';
-  if (canAccessAudit(roles)) return '/audit';
+  if (canAccessAudit(roles)) return '/auditor-workspace';
   return '/profile';
 }
