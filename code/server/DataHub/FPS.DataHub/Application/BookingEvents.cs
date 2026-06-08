@@ -31,7 +31,11 @@ public sealed record BookingEventPayload(
     string? AllocationId = null,
     string? SlotId = null,
     string? AllocationSource = null,
-    string? ReallocatedFromBookingRequestId = null)
+    string? ReallocatedFromBookingRequestId = null,
+    string? DrawAttemptId = null,
+    int? AllocatedCount = null,
+    int? RejectedCount = null,
+    int? WaitlistedCount = null)
 {
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? AdditionalData { get; init; }
