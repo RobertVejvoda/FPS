@@ -72,7 +72,7 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
             .Where(f => request.DateTo == null || string.Compare(f.Date, request.DateTo, StringComparison.Ordinal) <= 0)
             .Where(f => request.LocationId == null || f.LocationId == request.LocationId)
             .GroupBy(f => f.RequestorHash)
-            .Select(g => FairnessRecord.Aggregate(tenantId, g.Key, g.Sum(f => f.RequestCount), g.Sum(f => f.AllocationCount)))
+            .Select(g => FairnessRecord.Aggregate(tenantId, g.Key, g.Sum(f => f.RequestCount), g.Sum(f => f.AllocationCount), g.Sum(f => f.RejectionCount)))
             .OrderByDescending(f => f.AllocationRate)
             .ToList();
 
