@@ -25,9 +25,20 @@ public sealed class PersistDecisionsActivity(
     {
         var date = DateOnly.Parse(input.Date);
 
+        // Build lookup to check current request status for idempotency
+        var pendingLookup = input.PendingRequests.ToDictionary(r => r.RequestId.ToString());
+
         foreach (var decision in input.Decisions)
         {
             if (!Guid.TryParse(decision.RequestId, out var requestGuid)) continue;
+
+            // Idempotency check: only update if request is still in expected Pending state
+            // Prevents duplicate status changes if activity is retried or replayed
+            if (!pendingLookup.ContainsKey(decision.RequestId))
+            {
+                // Request not in pending list — skip to avoid duplicate update
+                continue;
+            }
 
             switch (decision.Outcome)
             {

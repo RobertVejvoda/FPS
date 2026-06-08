@@ -17,6 +17,13 @@ public class DrawAttemptDto
     public List<DrawDecisionDto> Decisions { get; set; } = [];
     public List<string> Tier2CandidateSequence { get; set; } = [];
     public List<DrawLifecycleStepRecord> LifecycleSteps { get; set; } = [];
+
+    /// <summary>
+    /// ETag for optimistic concurrency control. Dapr state stores supporting ETags
+    /// will use this for compare-and-set semantics. For stores without ETag support,
+    /// updates use last-write-wins.
+    /// </summary>
+    public string? ETag { get; set; }
 }
 
 public class DrawLifecycleStepRecord
@@ -37,6 +44,13 @@ public class DrawDecisionDto
     public string Outcome { get; set; } = string.Empty;
     public string? SlotId { get; set; }
     public string? Reason { get; set; }
+
+    /// <summary>
+    /// Allocated parking slot reference visible to employee and HR views.
+    /// Populated when Outcome is "Allocated". Used for allocation explanations
+    /// and HR operational views, not just internal Draw decisions.
+    /// </summary>
+    public string? AllocatedSlotReference { get; set; }
 }
 
 public record TriggerDrawResult(

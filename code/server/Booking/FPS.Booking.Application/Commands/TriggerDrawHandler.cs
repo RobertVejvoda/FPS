@@ -20,6 +20,7 @@ public sealed class TriggerDrawHandler(
         var existing = await drawRepository.GetByKeyAsync(storeKey, cancellationToken);
 
         // Idempotency: already completed — return cached result without re-running.
+        // Completed draws must not be mutated.
         if (existing?.Status == "Completed")
         {
             return new TriggerDrawResult(
@@ -32,9 +33,33 @@ public sealed class TriggerDrawHandler(
         if (existing?.Status == "InProgress")
             return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
 
-        // Previously failed — explicit recovery path not yet implemented; surface Failed to caller.
+        // Previously failed — allow explicit recovery if requested
         if (existing?.Status == "Failed")
-            return new TriggerDrawResult(storeKey, "Failed", 0, 0, 0, WasAlreadyCompleted: false);
+        {
+            if (!cmd.AllowRecovery)
+            {
+                // Surface failed state without automatic retry
+                return new TriggerDrawResult(storeKey, "Failed", 0, 0, 0, WasAlreadyCompleted: false);
+            }
+
+            // Recovery mode: archive the failed attempt and start fresh
+            existing.Status = "FailedArchived";
+            existing.LifecycleSteps ??= [];
+            existing.LifecycleSteps.Add(new DrawLifecycleStepRecord
+            {
+                StepName = "RecoveryInitiated",
+                Status = "Completed",
+                StartedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                Summary = $"Recovery triggered: {cmd.Reason}. Previous failure archived.",
+            });
+            await drawRepository.SaveAsync(existing, cancellationToken);
+
+            // Start new workflow with recovery trigger source
+            var recoveryCmd = cmd with { TriggerSource = "recovery" };
+            await workflowStarter.StartAsync(recoveryCmd, cancellationToken);
+            return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
+        }
 
         // No prior attempt — start the workflow.
         await workflowStarter.StartAsync(cmd, cancellationToken);
