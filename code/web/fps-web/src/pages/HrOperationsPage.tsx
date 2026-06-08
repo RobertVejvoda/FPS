@@ -188,7 +188,7 @@ export function HrOperationsPage() {
                 </div>
                 {isTimestampInPast(drawOk.nextDrawAt) && drawOk.status !== 'Completed' && (
                   <div style={{ fontSize: '0.8rem', color: '#92400e', marginTop: 4 }}>
-                    ⚠️ Draw should have run but may not have been triggered yet. Use "Run Draw now" below.
+                    Warning: Draw should have run but may not have been triggered yet. Use "Run Draw now" below.
                   </div>
                 )}
               </div>
@@ -236,7 +236,7 @@ export function HrOperationsPage() {
         {!drawLoading && !drawOk && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '0.75rem', marginBottom: '0.75rem' }}>
             <p style={{ fontSize: '0.875rem', color: '#991b1b', margin: 0 }}>
-              ⚠️ Draw schedule unavailable. The Draw may not be configured for this date/location/time slot, or the DataHub projection may be stale.
+              Draw schedule unavailable. The Draw may not be configured for this date/location/time slot, or the DataHub projection may be stale.
             </p>
           </div>
         )}
