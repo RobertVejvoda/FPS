@@ -32,6 +32,7 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
             .Where(r => query.Result is null || r.Result == query.Result)
             .Where(r => query.ReasonCode is null || r.ReasonCode == query.ReasonCode)
             .Where(r => query.TraceId is null || r.TraceId == query.TraceId || r.ProcessingTraceId == query.TraceId)
+            .Where(r => query.Category is null || MatchesCategory(r, query.Category.Value))
             .OrderByDescending(r => r.OccurredAt)
             .ToList();
 
@@ -42,6 +43,27 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
             .ToList();
 
         return Task.FromResult(((IReadOnlyList<AuditRecord>)items, totalCount));
+    }
+
+    private static bool MatchesCategory(AuditRecord record, ActivityCategory category)
+    {
+        return category switch
+        {
+            ActivityCategory.All => true,
+            ActivityCategory.BookingLifecycle => record.EventType.StartsWith("booking.request", StringComparison.OrdinalIgnoreCase)
+                || record.EventType.Equals("booking.slotAllocated", StringComparison.OrdinalIgnoreCase)
+                || record.EventType.Equals("booking.usageConfirmed", StringComparison.OrdinalIgnoreCase)
+                || record.EventType.Equals("booking.noShowRecorded", StringComparison.OrdinalIgnoreCase),
+            ActivityCategory.DrawEvents => record.EventType.StartsWith("booking.draw", StringComparison.OrdinalIgnoreCase),
+            ActivityCategory.PolicyChanges => record.EventType.Contains("policy", StringComparison.OrdinalIgnoreCase)
+                || record.EventType.Contains("capacity", StringComparison.OrdinalIgnoreCase)
+                || record.EventType.Contains("configuration", StringComparison.OrdinalIgnoreCase),
+            ActivityCategory.Notifications => record.EventType.Contains("notification", StringComparison.OrdinalIgnoreCase),
+            ActivityCategory.PrivacyErasure => record.EventType.StartsWith("privacy.erasure", StringComparison.OrdinalIgnoreCase),
+            ActivityCategory.ManualCorrections => record.EventType.Contains("manualCorrection", StringComparison.OrdinalIgnoreCase)
+                || record.EventType.Contains("correction", StringComparison.OrdinalIgnoreCase),
+            _ => true
+        };
     }
 
     public Task<int> CountOlderThanAsync(string tenantId, DateTime cutoff, CancellationToken cancellationToken = default)

@@ -27,6 +27,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { ReportingPage } from './pages/ReportingPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { AuditPage } from './pages/AuditPage';
+import { AuditorWorkspacePage } from './pages/AuditorWorkspacePage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
 import { HrOperationsPage } from './pages/HrOperationsPage';
@@ -40,7 +41,7 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
 }
 
 function AppFooter() {
-  const { apiBaseUrl, bearerToken, environment, simulationEnabled, roles } = useAuth();
+  const { apiBaseUrl, bearerToken, environment, simulationEnabled, appVersion, roles } = useAuth();
   const cfg = { apiBaseUrl, bearerToken };
   const canControl = canControlSimulation(roles);
   const [sim, setSim] = useState<SimulationStatus | null>(null);
@@ -87,7 +88,7 @@ function AppFooter() {
     if (r.kind === 'ok') setSim(r.data);
   }
 
-  const hasContent = !!environment || simulationEnabled;
+  const hasContent = !!environment || simulationEnabled || !!appVersion;
   if (!hasContent) return null;
 
   function fmtTime(iso: string) {
@@ -97,6 +98,7 @@ function AppFooter() {
   return (
     <footer className="app-footer">
       {environment && <span className="footer-env-badge">{environment}</span>}
+      {appVersion && <span className="footer-version">v{appVersion}</span>}
       {sim?.simulationActive && (
         <span className="footer-sim-banner" title="Non-production simulation mode is active. Virtual time is being used instead of real time.">
           NON-PRODUCTION SIMULATION
@@ -149,7 +151,8 @@ function Shell() {
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
     canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
     canAccessConfiguration(roles) && { to: '/hr-import', label: 'HR Import' },
-    canAccessAudit(roles) && { to: '/audit', label: 'Audit' },
+    canAccessAudit(roles) && { to: '/auditor-workspace', label: 'Auditor Workspace' },
+    canAccessAudit(roles) && { to: '/audit', label: 'Audit Console' },
     canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: 'Admin' },
     { to: '/legal', label: 'Legal' },
   ].filter(Boolean) as { to: string; label: string }[];
@@ -197,6 +200,7 @@ function Shell() {
           <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
           <Route path="/hr-operations" element={<Guard allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
           <Route path="/hr-draw-history" element={<Guard allowed={canAccessHrOperations(roles)}><HrDrawHistoryPage /></Guard>} />
+          <Route path="/auditor-workspace" element={<Guard allowed={canAccessAudit(roles)}><AuditorWorkspacePage /></Guard>} />
           <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
           <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
           <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />

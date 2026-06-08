@@ -13,6 +13,7 @@ export type RuntimeConfig = {
   devTokenFallbackEnabled: boolean;
   environment?: string;
   simulationEnabled?: boolean;
+  appVersion?: string;
 };
 
 export type BrandingConfig = {
@@ -60,8 +61,9 @@ function validateConfig(raw: unknown): RuntimeConfig {
     typeof r['devTokenFallbackEnabled'] === 'boolean' ? r['devTokenFallbackEnabled'] : false;
   const environment = typeof r['environment'] === 'string' ? r['environment'] : undefined;
   const simulationEnabled = typeof r['simulationEnabled'] === 'boolean' ? r['simulationEnabled'] : false;
+  const appVersion = typeof r['appVersion'] === 'string' ? r['appVersion'] : undefined;
   const branding = validateBranding(r['branding']);
-  return { apiBaseUrl, oidc, branding, devTokenFallbackEnabled, environment, simulationEnabled };
+  return { apiBaseUrl, oidc, branding, devTokenFallbackEnabled, environment, simulationEnabled, appVersion };
 }
 
 function optionalString(obj: Record<string, unknown>, key: string, fallback: string): string {

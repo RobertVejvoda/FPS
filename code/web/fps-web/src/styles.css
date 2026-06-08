@@ -145,6 +145,17 @@ select {
   letter-spacing: 0.04em;
 }
 
+.footer-version {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: monospace;
+}
+
 .footer-sim-banner {
   padding: 3px 10px;
   border-radius: 4px;

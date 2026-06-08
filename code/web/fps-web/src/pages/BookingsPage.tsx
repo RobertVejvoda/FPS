@@ -6,6 +6,7 @@ import { fetchMyDrawOutcomes, type MyDrawOutcomeSummary } from '../api/drawHisto
 import { BookingRow } from '../components/BookingRow';
 import { displaySlot, displayNextDrawRun, shouldShowNextDraw, formatCutOffAt } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
+import { NotificationBanner } from '../components/NotificationBanner';
 
 function localDate(offsetDays = 0): string {
   const d = new Date();
@@ -157,6 +158,9 @@ export function BookingsPage() {
       <section className="page-hero">
         <h2>My Spots</h2>
       </section>
+
+      {/* Important notification banner */}
+      <NotificationBanner />
 
       {/* Four-day focus cards: Today / Tomorrow / D+2 / D+3 */}
       {state.kind === 'ok' && (

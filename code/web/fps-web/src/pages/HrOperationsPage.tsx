@@ -17,6 +17,7 @@ import {
   humanizeHrRejection,
   isTimestampInPast,
 } from '../displayLabels';
+import { NotificationBanner } from '../components/NotificationBanner';
 
 function localDate(offsetDays = 0): string {
   const d = new Date();
@@ -143,6 +144,9 @@ export function HrOperationsPage() {
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem 1rem' }}>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>HR Operations</h1>
+
+      {/* Important notification banner */}
+      <NotificationBanner style={{ marginBottom: '1rem' }} />
 
       {toast && (
         <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 6,
