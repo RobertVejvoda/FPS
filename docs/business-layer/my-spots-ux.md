@@ -55,9 +55,9 @@ HR / Admin additions
 
 The default page is one practical view with three parts:
 
-1. Today and tomorrow focus.
-2. Quick request controls.
-3. A compact request table showing today, upcoming, and a few past records.
+1. Four day focus cards: today, tomorrow, and the next two working/requestable days.
+2. A compact request table for upcoming and past records with results.
+3. Secondary date selection only for uncommon dates outside the four focus cards.
 
 ```text
 [My Spots]
@@ -75,13 +75,23 @@ The default page is one practical view with three parts:
 | Tomorrow                               |
 | Waiting for draw                       |
 | Next draw: Today 18:00                 |
+| Cut-off: Today 18:00                   |
 | Demand so far: Medium                  |
 | [Details] [Change]                     |
 +----------------------------------------+
-| Request a spot                         |
-| [Today] [Tomorrow] [D+2] [D+3] [More]  |
-| Demand: Medium                         |
-| Can request: Yes                       |
+| Wednesday                              |
+| No request yet                         |
+| Next draw: Tue 18:00                   |
+| Cut-off: Tue 18:00                     |
+| Demand so far: Low                     |
+| [Request a spot]                       |
++----------------------------------------+
+| Thursday                               |
+| No request yet                         |
+| Next draw: Wed 18:00                   |
+| Cut-off: Wed 18:00                     |
+| Demand so far: Medium                  |
+| [Request a spot]                       |
 +----------------------------------------+
 | My requests                            |
 | Showing 8 of 42 records                |
@@ -212,23 +222,28 @@ For the demo, exact `requestCount` and `availableSpotCount` are useful. Producti
 
 The draw and the UI must use the same effective capacity logic so the employee explanation does not drift from allocation behavior.
 
-## Quick Request
+## Day Card Request Action
 
-Most employee requests should not require a calendar. The quick request area should cover the common case:
+Most employee requests should not require a calendar or a second date selector. The four day focus cards cover the common case and each card owns its request action, draw timing, cut-off, demand, and current request state.
 
 ```text
-Request a spot
-[Today] [Tomorrow] [D+2] [D+3] [More]
+Wednesday
+No request yet
+Next draw: Tue 18:00
+Cut-off: Tue 18:00
 Demand: Medium
 Can request: Yes
+[Request a spot]
 ```
 
 Rules:
 
-- **Today**, **Tomorrow**, **D+2**, and **D+3** are large, touch-friendly date chips.
-- **More** opens a calendar/date-time picker for uncommon dates.
-- The selected date updates demand, availability, next draw, and can-request state.
-- If the employee cannot request the selected date, show a business reason, not an HTTP/API error.
+- Show four large, touch-friendly day cards: **Today**, **Tomorrow**, and two named weekdays, not `D+2` / `D+3`.
+- If there is already a request for the day, the card shows the request state, result, and valid actions such as details, cancel, or confirm usage.
+- If there is no request and requests are open, the card shows **Request a spot** directly.
+- Each card shows business-readable draw timing and cut-off context when available, for example `Next draw: Tue 18:00` and `Cut-off: Tue 18:00`.
+- If the employee cannot request that day, show a business reason on the card, not an HTTP/API error.
+- A secondary date picker may exist only for uncommon dates outside the four focus cards. It should not duplicate Today/Tomorrow/next-two-day choices.
 
 Examples:
 
@@ -272,8 +287,10 @@ Web should use the same information hierarchy, with more horizontal space:
 | Spot 349 - Zone A            | Next draw: Today 18:00       |
 | [Details] [Cancel]           | [Details] [Change]           |
 +------------------------------+------------------------------+
-| Request a spot                                                |
-| [Today] [Tomorrow] [D+2] [D+3] [More]  Demand: Medium         |
+| Wednesday                    | Thursday                     |
+| No request yet               | No request yet               |
+| Cut-off: Tue 18:00           | Cut-off: Wed 18:00           |
+| [Request a spot]             | [Request a spot]             |
 +---------------------------------------------------------------+
 | My requests                                      Showing 8/42 |
 | Date        State       Result       Vehicle     Action       |
@@ -328,8 +345,8 @@ Suggested employee-facing states:
 - Employee landing page is `My Spots` for employee-only users.
 - Employee screens do not show raw user ID, tenant ID, tenant wording, GUIDs, API URLs, or technical storage identifiers.
 - `Tenant` is replaced by `Company` or hidden on employee-facing screens.
-- `My Spots` shows today/tomorrow allocation focus, quick request controls, demand/can-request state, and a mixed request table with total count.
-- Quick request supports Today, Tomorrow, D+2, D+3, and a secondary date picker.
+- `My Spots` shows four day focus cards with request actions, demand/can-request state, next Draw timing, cut-off timing, and current request state/result.
+- A secondary date picker is only for uncommon dates outside the four focus cards.
 - Request rows are clickable.
 - Past request details are read-only.
 - Current/future request details expose only valid actions.
