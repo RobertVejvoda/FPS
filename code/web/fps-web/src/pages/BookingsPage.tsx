@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
 import { fetchMyDrawOutcomes, type MyDrawOutcomeSummary } from '../api/drawHistory';
 import { BookingRow } from '../components/BookingRow';
-import { displaySlot, displayNextDrawRun, shouldShowNextDraw, formatCutOffAt } from '../displayLabels';
+import { displaySlot, displayNextDrawRun, shouldShowNextDraw, formatCutOffAt, getWeekdayName, displayLocation, humanizeRejectionReason } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
 
 function localDate(offsetDays = 0): string {
@@ -18,11 +18,17 @@ const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
 const WORKDAY_END = '18:00:00';
 
+function getDayLabel(offset: number): string {
+  if (offset === 0) return 'Today';
+  if (offset === 1) return 'Tomorrow';
+  return getWeekdayName(localDate(offset));
+}
+
 const CHIPS = [
-  { label: 'Today', offset: 0 },
-  { label: 'Tomorrow', offset: 1 },
-  { label: 'D+2', offset: 2 },
-  { label: 'D+3', offset: 3 },
+  { label: getDayLabel(0), offset: 0 },
+  { label: getDayLabel(1), offset: 1 },
+  { label: getDayLabel(2), offset: 2 },
+  { label: getDayLabel(3), offset: 3 },
 ];
 
 function sortMixed(items: BookingListItem[]): BookingListItem[] {
@@ -128,10 +134,20 @@ export function BookingsPage() {
 
   const today = localDate(0);
   const tomorrow = localDate(1);
+  const dayTwo = localDate(2);
+  const dayThree = localDate(3);
   const okState = state.kind === 'ok' ? state : null;
   const allItems = okState ? sortMixed(okState.items) : [];
+
+  // Separate current/future requests (today through D+3) from history (past/older)
+  const fourDayWindow = [today, tomorrow, dayTwo, dayThree];
+  const currentRequests = allItems.filter(i => fourDayWindow.includes(i.requestedDate) || i.requestedDate > dayThree);
+  const historyRequests = allItems.filter(i => i.requestedDate < today);
+
   const todayBooking = okState?.items.find(i => i.requestedDate === today) ?? null;
   const tomorrowBooking = okState?.items.find(i => i.requestedDate === tomorrow) ?? null;
+  const dayTwoBooking = okState?.items.find(i => i.requestedDate === dayTwo) ?? null;
+  const dayThreeBooking = okState?.items.find(i => i.requestedDate === dayThree) ?? null;
 
   const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
   const demandLabel = drawLoading ? 'Loading…'
@@ -147,11 +163,41 @@ export function BookingsPage() {
         <h2>My Spots</h2>
       </section>
 
-      {/* Today / Tomorrow focus cards */}
-      {(todayBooking || tomorrowBooking || state.kind === 'ok') && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <FocusCard label="Today" booking={todayBooking} busy={busyId === todayBooking?.requestId} onCancel={todayBooking?.nextAction === 'cancel' ? () => handleCancel(todayBooking.requestId) : undefined} onConfirm={todayBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(todayBooking.requestId) : undefined} />
-          <FocusCard label="Tomorrow" booking={tomorrowBooking} busy={busyId === tomorrowBooking?.requestId} onCancel={tomorrowBooking?.nextAction === 'cancel' ? () => handleCancel(tomorrowBooking.requestId) : undefined} onConfirm={tomorrowBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(tomorrowBooking.requestId) : undefined} />
+      {/* Today / Tomorrow / Day+2 / Day+3 focus cards */}
+      {(todayBooking || tomorrowBooking || dayTwoBooking || dayThreeBooking || state.kind === 'ok') && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <FocusCard
+            label={getDayLabel(0)}
+            booking={todayBooking}
+            busy={busyId === todayBooking?.requestId}
+            onCancel={todayBooking?.nextAction === 'cancel' ? () => handleCancel(todayBooking.requestId) : undefined}
+            onConfirm={todayBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(todayBooking.requestId) : undefined}
+            onRequestClick={() => navigate(`/bookings/new?date=${today}`)}
+          />
+          <FocusCard
+            label={getDayLabel(1)}
+            booking={tomorrowBooking}
+            busy={busyId === tomorrowBooking?.requestId}
+            onCancel={tomorrowBooking?.nextAction === 'cancel' ? () => handleCancel(tomorrowBooking.requestId) : undefined}
+            onConfirm={tomorrowBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(tomorrowBooking.requestId) : undefined}
+            onRequestClick={() => navigate(`/bookings/new?date=${tomorrow}`)}
+          />
+          <FocusCard
+            label={getDayLabel(2)}
+            booking={dayTwoBooking}
+            busy={busyId === dayTwoBooking?.requestId}
+            onCancel={dayTwoBooking?.nextAction === 'cancel' ? () => handleCancel(dayTwoBooking.requestId) : undefined}
+            onConfirm={dayTwoBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(dayTwoBooking.requestId) : undefined}
+            onRequestClick={() => navigate(`/bookings/new?date=${dayTwo}`)}
+          />
+          <FocusCard
+            label={getDayLabel(3)}
+            booking={dayThreeBooking}
+            busy={busyId === dayThreeBooking?.requestId}
+            onCancel={dayThreeBooking?.nextAction === 'cancel' ? () => handleCancel(dayThreeBooking.requestId) : undefined}
+            onConfirm={dayThreeBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(dayThreeBooking.requestId) : undefined}
+            onRequestClick={() => navigate(`/bookings/new?date=${dayThree}`)}
+          />
         </div>
       )}
 
@@ -212,7 +258,7 @@ export function BookingsPage() {
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>My requests</h3>
-          {okState && <span style={{ fontSize: 13, color: '#6b7280' }}>Showing {okState.items.length} of {okState.totalCount}</span>}
+          {okState && currentRequests.length > 0 && <span style={{ fontSize: 13, color: '#6b7280' }}>Showing {currentRequests.length}</span>}
         </div>
         {state.kind === 'loading' ? (
           <div className="panel"><p style={{ color: '#6b7280', margin: 0 }}>Loading…</p></div>
@@ -221,14 +267,14 @@ export function BookingsPage() {
             <p style={{ color: '#b91c1c' }}>{state.message}</p>
             <button onClick={load} className="btn-primary">Retry</button>
           </div>
-        ) : allItems.length === 0 ? (
+        ) : currentRequests.length === 0 ? (
           <section className="panel">
-            <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No requests yet</h3>
-            <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Your spot requests will appear here.</p>
+            <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>No current requests</h3>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Your current and upcoming spot requests will appear here.</p>
           </section>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {allItems.map((b) => (
+            {currentRequests.map((b) => (
               <BookingRow
                 key={b.requestId}
                 booking={b}
@@ -244,6 +290,49 @@ export function BookingsPage() {
           </div>
         )}
       </section>
+
+      {/* History */}
+      {historyRequests.length > 0 && (
+        <section>
+          <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>History</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={historyTable}>
+              <thead>
+                <tr>
+                  <th style={historyTh}>Date</th>
+                  <th style={historyTh}>Time</th>
+                  <th style={historyTh}>Location</th>
+                  <th style={historyTh}>Status</th>
+                  <th style={historyTh}>Reason</th>
+                  <th style={historyTh}>Last Changed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyRequests.map((item) => {
+                  const date = new Date(item.requestedDate + 'T00:00:00');
+                  const dateStr = date.toLocaleDateString(undefined, { dateStyle: 'medium' });
+                  const timeStr = `${item.timeSlotStart.slice(0, 5)} - ${item.timeSlotEnd.slice(0, 5)}`;
+                  const location = displayLocation(item.locationId) ?? '—';
+                  const reason = humanizeRejectionReason(item.reasonCode, item.reason);
+                  const lastChanged = item.lastStatusChangedAt
+                    ? new Date(item.lastStatusChangedAt).toLocaleDateString(undefined, { dateStyle: 'short', timeStyle: 'short' } as any)
+                    : '—';
+                  return (
+                    <tr key={item.requestId} style={historyTr}>
+                      <td style={historyTd}>{dateStr}</td>
+                      <td style={historyTd}>{timeStr}</td>
+                      <td style={historyTd}>{location}</td>
+                      <td style={historyTd}><StatusBadge status={item.status} /></td>
+                      <td style={historyTd}>{reason}</td>
+                      <td style={historyTd}>{lastChanged}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Past draw outcomes */}
       {myDrawOutcomes.length > 0 && (
@@ -284,18 +373,24 @@ export function BookingsPage() {
   );
 }
 
-function FocusCard({ label, booking, busy, onCancel, onConfirm }: {
+function FocusCard({ label, booking, busy, onCancel, onConfirm, onRequestClick }: {
   label: string;
   booking: BookingListItem | null;
   busy?: boolean;
   onCancel?: () => void;
   onConfirm?: () => void;
+  onRequestClick?: () => void;
 }) {
   if (!booking) {
     return (
       <div style={focusCard}>
         <div style={focusDay}>{label}</div>
         <div style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>No request yet</div>
+        {onRequestClick && (
+          <button onClick={onRequestClick} style={{ ...requestBtn, marginTop: 10, width: '100%', fontSize: 13, padding: '6px 12px' }}>
+            Request spot
+          </button>
+        )}
       </div>
     );
   }
@@ -326,3 +421,7 @@ const requestBtn: React.CSSProperties = { background: 'var(--brand-primary)', co
 const focusCancelBtn: React.CSSProperties = { background: '#fff', border: '1px solid #b91c1c', color: '#b91c1c', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 const focusConfirmBtn: React.CSSProperties = { background: '#15803d', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 const loadMoreBtn: React.CSSProperties = { background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 600, color: 'var(--brand-primary)', cursor: 'pointer', width: '100%' };
+const historyTable: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8 };
+const historyTh: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', borderBottom: '2px solid #e5e7eb', fontSize: 13, fontWeight: 700, color: '#374151', background: '#f9fafb' };
+const historyTd: React.CSSProperties = { padding: '12px 16px', borderBottom: '1px solid #f3f4f6', fontSize: 13, color: '#374151' };
+const historyTr: React.CSSProperties = { transition: 'background 0.2s' };

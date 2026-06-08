@@ -128,3 +128,8 @@ export function humanizeHrRejection(reasonCode: string | null, reason: string | 
   if (reasonCode) return HR_REJECTION_LABELS[reasonCode] ?? reasonCode;
   return '—';
 }
+
+export function getWeekdayName(dateString: string): string {
+  const date = new Date(dateString + 'T00:00:00');
+  return date.toLocaleDateString(undefined, { weekday: 'long' });
+}
