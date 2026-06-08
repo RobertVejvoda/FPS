@@ -27,6 +27,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { ReportingPage } from './pages/ReportingPage';
 import { ConfigurationPage } from './pages/ConfigurationPage';
 import { AuditPage } from './pages/AuditPage';
+import { AuditorWorkspacePage } from './pages/AuditorWorkspacePage';
 import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
 import { HrOperationsPage } from './pages/HrOperationsPage';
@@ -138,7 +139,8 @@ function Shell() {
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
     canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
     canAccessConfiguration(roles) && { to: '/hr-import', label: 'HR Import' },
-    canAccessAudit(roles) && { to: '/audit', label: 'Audit' },
+    canAccessAudit(roles) && { to: '/auditor-workspace', label: 'Auditor Workspace' },
+    canAccessAudit(roles) && { to: '/audit', label: 'Audit Console' },
     canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: 'Admin' },
     { to: '/legal', label: 'Legal' },
   ].filter(Boolean) as { to: string; label: string }[];
@@ -186,6 +188,7 @@ function Shell() {
           <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
           <Route path="/hr-operations" element={<Guard allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
           <Route path="/hr-draw-history" element={<Guard allowed={canAccessHrOperations(roles)}><HrDrawHistoryPage /></Guard>} />
+          <Route path="/auditor-workspace" element={<Guard allowed={canAccessAudit(roles)}><AuditorWorkspacePage /></Guard>} />
           <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />
           <Route path="/tenant-admin" element={<Guard allowed={canAccessTenantAdmin(roles)}><TenantAdminPage /></Guard>} />
           <Route path="*" element={<Navigate to={defaultRoute(roles)} replace />} />

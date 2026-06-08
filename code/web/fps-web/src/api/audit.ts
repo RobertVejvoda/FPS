@@ -1,5 +1,14 @@
 import type { ApiClientConfig, FetchResult } from './client';
 
+export type ActivityCategory =
+  | 'All'
+  | 'BookingLifecycle'
+  | 'DrawEvents'
+  | 'PolicyChanges'
+  | 'Notifications'
+  | 'PrivacyErasure'
+  | 'ManualCorrections';
+
 export interface AuditRecord {
   auditRecordId: string;
   sourceEventId: string;
@@ -14,6 +23,12 @@ export interface AuditRecord {
   source: string;
   entityType: string;
   entityId: string | null;
+  // Business activity timeline fields (AUD006, AUDIT003)
+  action: string;
+  result: string | null;
+  reasonCode: string | null;
+  summary: string | null;
+  traceId: string | null;
 }
 
 export interface AuditListResponse {
@@ -23,15 +38,39 @@ export interface AuditListResponse {
   pageSize: number;
 }
 
+export interface AuditQueryFilters {
+  eventType?: string;
+  entityType?: string;
+  entityId?: string;
+  actorHash?: string;
+  action?: string;
+  result?: string;
+  reasonCode?: string;
+  category?: ActivityCategory;
+  occurredAfter?: string; // ISO 8601 date-time
+  occurredBefore?: string; // ISO 8601 date-time
+  page?: number;
+  pageSize?: number;
+}
+
 export async function fetchAuditRecords(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
-  opts?: { eventType?: string; entityType?: string; page?: number },
+  opts?: AuditQueryFilters,
 ): Promise<FetchResult<AuditListResponse>> {
   if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
   const params = new URLSearchParams();
   if (opts?.eventType) params.set('eventType', opts.eventType);
   if (opts?.entityType) params.set('entityType', opts.entityType);
+  if (opts?.entityId) params.set('entityId', opts.entityId);
+  if (opts?.actorHash) params.set('actorHash', opts.actorHash);
+  if (opts?.action) params.set('action', opts.action);
+  if (opts?.result) params.set('result', opts.result);
+  if (opts?.reasonCode) params.set('reasonCode', opts.reasonCode);
+  if (opts?.category) params.set('category', opts.category);
+  if (opts?.occurredAfter) params.set('occurredAfter', opts.occurredAfter);
+  if (opts?.occurredBefore) params.set('occurredBefore', opts.occurredBefore);
   if (opts?.page) params.set('page', String(opts.page));
+  if (opts?.pageSize) params.set('pageSize', String(opts.pageSize));
   const query = params.toString();
   try {
     const res = await fetch(`${apiBaseUrl}/audit${query ? `?${query}` : ''}`, {
