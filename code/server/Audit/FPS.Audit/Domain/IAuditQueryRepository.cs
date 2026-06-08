@@ -1,5 +1,19 @@
 namespace FPS.Audit.Domain;
 
+/// <summary>
+/// Activity category groupings for auditor workspace filtering (AUDIT003).
+/// </summary>
+public enum ActivityCategory
+{
+    All,
+    BookingLifecycle,
+    DrawEvents,
+    PolicyChanges,
+    Notifications,
+    PrivacyErasure,
+    ManualCorrections
+}
+
 public sealed record AuditQueryRequest
 {
     public string? EntityType { get; init; }
@@ -13,6 +27,8 @@ public sealed record AuditQueryRequest
     public string? Result { get; init; }
     public string? ReasonCode { get; init; }
     public string? TraceId { get; init; }
+    // Activity category grouping (AUDIT003)
+    public ActivityCategory? Category { get; init; }
     public int PageSize { get; init; } = 50;
     public int Page { get; init; } = 1;
 

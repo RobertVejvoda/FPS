@@ -128,3 +128,99 @@ export function humanizeHrRejection(reasonCode: string | null, reason: string | 
   if (reasonCode) return HR_REJECTION_LABELS[reasonCode] ?? reasonCode;
   return '—';
 }
+
+// Audit event type display labels (AUDIT003)
+const AUDIT_EVENT_TYPE_LABELS: Record<string, string> = {
+  'booking.requestSubmitted': 'Booking request submitted',
+  'booking.requestRejected': 'Booking request rejected',
+  'booking.slotAllocated': 'Parking slot allocated',
+  'booking.requestCancelled': 'Booking request cancelled',
+  'booking.usageConfirmed': 'Usage confirmed',
+  'booking.noShowRecorded': 'No-show recorded',
+  'booking.requestExpired': 'Booking request expired',
+  'booking.drawStarted': 'Draw started',
+  'booking.drawCompleted': 'Draw completed',
+  'booking.drawFailed': 'Draw failed',
+  'booking.penaltyApplied': 'Penalty applied',
+  'booking.manualCorrectionApplied': 'Manual correction applied',
+  'privacy.erasureRequested': 'Privacy erasure requested',
+  'privacy.erasureCompleted': 'Privacy erasure completed',
+  'privacy.erasureRejected': 'Privacy erasure rejected',
+  'privacy.erasureStepRecorded': 'Privacy erasure step recorded',
+  'configuration.policyChanged': 'Policy configuration changed',
+  'configuration.capacityChanged': 'Capacity configuration changed',
+  'notification.deliveryChanged': 'Notification delivery status changed',
+};
+
+export function humanizeAuditEventType(eventType: string): string {
+  return AUDIT_EVENT_TYPE_LABELS[eventType] ?? eventType;
+}
+
+// Audit action display labels (AUDIT003)
+export function humanizeAuditAction(action: string): string {
+  return action.charAt(0).toUpperCase() + action.slice(1).replace(/([A-Z])/g, ' $1').trim();
+}
+
+// Audit result display labels (AUDIT003)
+const AUDIT_RESULT_LABELS: Record<string, string> = {
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  allocated: 'Allocated',
+  cancelled: 'Cancelled',
+  started: 'Started',
+  completed: 'Completed',
+  failed: 'Failed',
+  recorded: 'Recorded',
+  applied: 'Applied',
+  updated: 'Updated',
+  confirmed: 'Confirmed',
+  expired: 'Expired',
+};
+
+export function humanizeAuditResult(result: string | null): string {
+  if (!result) return '—';
+  return AUDIT_RESULT_LABELS[result] ?? result;
+}
+
+// Activity category display labels (AUDIT003)
+export function humanizeActivityCategory(category: string): string {
+  const labels: Record<string, string> = {
+    All: 'All activity',
+    BookingLifecycle: 'Booking lifecycle',
+    DrawEvents: 'Draw events',
+    PolicyChanges: 'Policy & configuration',
+    Notifications: 'Notifications',
+    PrivacyErasure: 'Privacy & erasure',
+    ManualCorrections: 'Manual corrections',
+  };
+  return labels[category] ?? category;
+}
+
+// Actor type display labels (AUDIT003)
+export function humanizeActorType(actorType: string): string {
+  const labels: Record<string, string> = {
+    employee: 'Employee',
+    hr: 'HR Manager',
+    admin: 'Administrator',
+    system: 'System',
+    integration: 'Integration',
+  };
+  return labels[actorType] ?? actorType;
+}
+
+// Entity type display labels (AUDIT003)
+export function humanizeEntityType(entityType: string): string {
+  const labels: Record<string, string> = {
+    bookingRequest: 'Booking request',
+    drawAttempt: 'Draw attempt',
+    policy: 'Policy',
+    capacity: 'Capacity',
+    notification: 'Notification',
+    erasureRequest: 'Erasure request',
+    allocation: 'Allocation',
+    penalty: 'Penalty',
+    profile: 'Profile',
+    tenant: 'Tenant',
+  };
+  return labels[entityType] ?? entityType;
+}
