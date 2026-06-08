@@ -130,6 +130,31 @@ public sealed class DrawsController : ControllerBase
             CannotRequestReason: result.CannotRequestReason));
     }
 
+    [HttpGet("my-outcomes")]
+    [ProducesResponseType(typeof(MyDrawOutcomesResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyDrawOutcomes(
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
+        var effectiveFrom = from ?? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-180));
+        var effectiveTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var summaries = await mediator.Send(
+            new GetMyDrawOutcomesQuery(currentUser.TenantId, currentUser.UserId, effectiveFrom, effectiveTo),
+            cancellationToken);
+
+        var draws = summaries.Select(s => new MyDrawOutcomeSummaryResponse(
+            s.Date, s.TimeSlot, s.LocationId, s.DrawStatus,
+            s.AllocatedCount, s.TotalRequests, s.CompletedAt,
+            s.MyOutcome, s.MyReason, s.MyAllocatedSlotId)).ToList();
+
+        return Ok(new MyDrawOutcomesResponse(draws));
+    }
+
     [HttpGet("outcomes")]
     [Authorize(Roles = "admin,hr_manager")]
     [ProducesResponseType(typeof(HrDrawOutcomesResponse), StatusCodes.Status200OK)]

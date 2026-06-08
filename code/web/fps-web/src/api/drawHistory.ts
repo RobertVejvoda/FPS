@@ -26,6 +26,44 @@ export interface HrDrawOutcomesResponse {
   draws: HrDrawOutcomeSummary[];
 }
 
+export interface MyDrawOutcomeSummary {
+  date: string;
+  timeSlot: string;
+  locationId: string | null;
+  drawStatus: string;
+  allocatedCount: number;
+  totalRequests: number;
+  completedAt: string | null;
+  myOutcome: string;
+  myReason: string | null;
+  myAllocatedSlotId: string | null;
+}
+
+export interface MyDrawOutcomesResponse {
+  draws: MyDrawOutcomeSummary[];
+}
+
+export async function fetchMyDrawOutcomes(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  params: { from?: string; to?: string } = {},
+): Promise<FetchResult<MyDrawOutcomesResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const qs = new URLSearchParams();
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  const url = `${apiBaseUrl}/draws/my-outcomes${qs.size ? `?${qs}` : ''}`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /draws/my-outcomes returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MyDrawOutcomesResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchHrDrawOutcomes(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   params: { from?: string; to?: string; locationId?: string } = {},

@@ -591,6 +591,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/draws/my-outcomes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MyDrawOutcomesResponse"];
+                        "application/json": components["schemas"]["MyDrawOutcomesResponse"];
+                        "text/json": components["schemas"]["MyDrawOutcomesResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/draws/outcomes": {
         parameters: {
             query?: never;
@@ -1173,6 +1213,24 @@ export interface components {
             newValue: string;
             /** Format: date-time */
             appliedAt: string;
+        };
+        MyDrawOutcomesResponse: {
+            draws: components["schemas"]["MyDrawOutcomeSummaryResponse"][];
+        };
+        MyDrawOutcomeSummaryResponse: {
+            date: string;
+            timeSlot: string;
+            locationId: null | string;
+            drawStatus: string;
+            /** Format: int32 */
+            allocatedCount: number | string;
+            /** Format: int32 */
+            totalRequests: number | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            myOutcome: string;
+            myReason: null | string;
+            myAllocatedSlotId: null | string;
         };
         NoShowEvaluationRequest: {
             locationId: string;

@@ -902,6 +902,58 @@
         ]
       }
     },
+    "/draws/my-outcomes": {
+      "get": {
+        "tags": [
+          "Draws"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDrawOutcomesResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDrawOutcomesResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDrawOutcomesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/draws/outcomes": {
       "get": {
         "tags": [
@@ -2174,6 +2226,90 @@
           "appliedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "MyDrawOutcomesResponse": {
+        "required": [
+          "draws"
+        ],
+        "type": "object",
+        "properties": {
+          "draws": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyDrawOutcomeSummaryResponse"
+            }
+          }
+        }
+      },
+      "MyDrawOutcomeSummaryResponse": {
+        "required": [
+          "date",
+          "timeSlot",
+          "locationId",
+          "drawStatus",
+          "allocatedCount",
+          "totalRequests",
+          "completedAt",
+          "myOutcome",
+          "myReason",
+          "myAllocatedSlotId"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "timeSlot": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "drawStatus": {
+            "type": "string"
+          },
+          "allocatedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalRequests": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "myOutcome": {
+            "type": "string"
+          },
+          "myReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "myAllocatedSlotId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

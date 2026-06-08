@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
+import { fetchMyDrawOutcomes, type MyDrawOutcomeSummary } from '../api/drawHistory';
 import { BookingRow } from '../components/BookingRow';
 import { displaySlot, displayNextDrawRun, shouldShowNextDraw, formatCutOffAt } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
@@ -46,6 +47,7 @@ export function BookingsPage() {
   const [selectedChip, setSelectedChip] = useState(0);
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
   const [drawLoading, setDrawLoading] = useState(false);
+  const [myDrawOutcomes, setMyDrawOutcomes] = useState<MyDrawOutcomeSummary[]>([]);
   const stateRef = useRef(state);
   stateRef.current = state;
   const drawLocationId = state.kind === 'ok'
@@ -62,6 +64,13 @@ export function BookingsPage() {
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!bearerToken) return;
+    fetchMyDrawOutcomes({ apiBaseUrl, bearerToken }).then(r => {
+      if (r.kind === 'ok') setMyDrawOutcomes(r.data.draws);
+    });
+  }, [apiBaseUrl, bearerToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,36 +246,40 @@ export function BookingsPage() {
       </section>
 
       {/* Past draw outcomes */}
-      {okState && (() => {
-        const today = localDate(0);
-        const pastOutcomes = okState.items.filter(
-          b => b.requestedDate < today && (b.status === 'Allocated' || b.status === 'Rejected')
-        );
-        if (pastOutcomes.length === 0) return null;
-        return (
-          <section>
-            <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Past draw outcomes</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {pastOutcomes.map(b => (
-                <div key={b.requestId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fff', border: '1px solid var(--border)', borderLeft: `4px solid ${b.status === 'Allocated' ? 'var(--success)' : 'var(--danger)'}`, borderRadius: 8, flexWrap: 'wrap' }}>
+      {myDrawOutcomes.length > 0 && (
+        <section>
+          <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Past draw outcomes</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myDrawOutcomes.map(d => {
+              const allocated = d.myOutcome === 'Allocated';
+              return (
+                <div key={`${d.date}:${d.locationId}:${d.timeSlot}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fff', border: '1px solid var(--border)', borderLeft: `4px solid ${allocated ? 'var(--success)' : 'var(--danger)'}`, borderRadius: 8, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 120 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{new Date(b.requestedDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</div>
-                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>{b.timeSlotStart}–{b.timeSlotEnd}{b.locationId ? ` · ${b.locationId}` : ''}</div>
-                  </div>
-                  <div>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: b.status === 'Allocated' ? 'var(--success)' : 'var(--danger)' }}>
-                      {b.status === 'Allocated' ? 'Spot allocated' : 'Not selected'}
-                    </span>
-                    {b.status === 'Rejected' && b.reason && (
-                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{b.reason}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{new Date(d.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</div>
+                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>{d.timeSlot}{d.locationId ? ` · ${d.locationId}` : ''}</div>
+                    {d.completedAt && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                        Draw completed {new Date(d.completedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                      </div>
                     )}
                   </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: allocated ? 'var(--success)' : 'var(--danger)' }}>
+                      {allocated ? 'Spot allocated' : 'Not selected'}
+                    </div>
+                    {!allocated && d.myReason && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{d.myReason}</div>
+                    )}
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                      {d.allocatedCount} of {d.totalRequests} allocated
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        );
-      })()}
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

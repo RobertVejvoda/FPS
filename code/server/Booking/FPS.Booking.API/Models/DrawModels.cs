@@ -35,3 +35,17 @@ public record HrDrawOutcomeItemResponse(
     string? ReasonCode,
     string? Reason,
     string? AllocatedSlotId);
+
+public record MyDrawOutcomesResponse(IReadOnlyList<MyDrawOutcomeSummaryResponse> Draws);
+
+public record MyDrawOutcomeSummaryResponse(
+    string Date,
+    string TimeSlot,
+    string? LocationId,
+    string DrawStatus,
+    int AllocatedCount,
+    int TotalRequests,
+    DateTime? CompletedAt,
+    string MyOutcome,
+    string? MyReason,
+    string? MyAllocatedSlotId);

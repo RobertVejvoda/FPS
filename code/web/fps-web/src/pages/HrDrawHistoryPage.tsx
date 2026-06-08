@@ -113,11 +113,11 @@ export function HrDrawHistoryPage() {
                       {draw.outcomes.map(item => (
                         <div key={item.requestId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', background: 'var(--surface-muted)', borderRadius: 6 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 12, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace', color: '#475569' }}>
+                            <span
+                              title={`Request ID: ${item.requestId}`}
+                              style={{ fontSize: 13, fontWeight: 600, background: '#f1f5f9', padding: '3px 8px', borderRadius: 4, fontFamily: 'monospace', color: '#1e293b', border: '1px solid var(--border)', letterSpacing: '0.01em' }}
+                            >
                               {item.requestorRef}
-                            </span>
-                            <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>
-                              #{item.requestId.replace(/-/g, '').slice(-6).toUpperCase()}
                             </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
