@@ -46,6 +46,12 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
                 mediatorMock
                     .Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new TriggerDrawResult("draw:tenant-1:LOC-MAIN:2026-05-25:0800", "Completed", 1, 0, 0, false));
+                mediatorMock
+                    .Setup(m => m.Send(It.IsAny<GetMyDrawOutcomesQuery>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new List<MyDrawOutcomeSummary>());
+                mediatorMock
+                    .Setup(m => m.Send(It.IsAny<GetHrDrawOutcomesQuery>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new List<HrDrawOutcomeSummary>());
                 services.AddSingleton(mediatorMock.Object);
 
                 services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
@@ -215,6 +221,30 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
             new StringContent(JsonSerializer.Serialize(ValidDrawBody()), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MyDrawOutcomes_EmployeeRole_RoutesToGetEndpoint()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("user-1", "tenant-1", "employee"));
+
+        var response = await client.GetAsync("/draws/my-outcomes");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HrDrawOutcomes_HrManagerRole_RoutesToGetEndpoint()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken("hr-1", "tenant-1", "hr_manager"));
+
+        var response = await client.GetAsync("/draws/outcomes");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private static string CreateToken(string userId, string tenantId, string role = "employee")
