@@ -89,6 +89,16 @@ public sealed class ReportingController(ReportingQueryService queryService, ICur
         var result = await queryService.GetEmployeeImpactAsync(request, currentUser.TenantId, minRejections, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("/reports/parking/operational-exceptions")]
+    public async Task<IActionResult> GetOperationalExceptions([FromQuery] ReportingQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var result = await queryService.GetOperationalExceptionsAsync(request, currentUser.TenantId, cancellationToken);
+        return Ok(result);
+    }
 }
 
 internal static class ReportingRoles

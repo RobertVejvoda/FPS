@@ -311,4 +311,68 @@ public sealed class OperationalReportTests
         Assert.Single(summary.Items);
         Assert.Equal(1, dashboard.TotalDemand);
     }
+
+    // ── Operational exceptions ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task OperationalExceptions_EmptyData_ReturnsEmpty()
+    {
+        var result = await service.GetOperationalExceptionsAsync(new(), "tenant-1");
+
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
+    public async Task OperationalExceptions_DemandWithNoAllocationsOrRejections_ReturnsException()
+    {
+        await Submit("e1", "t1", "loc-A", "2026-06-01");
+
+        var result = await service.GetOperationalExceptionsAsync(new(), "t1");
+
+        Assert.Single(result.Items);
+        Assert.Equal("demand_no_allocations", result.Items[0].ExceptionType);
+        Assert.Equal("loc-A", result.Items[0].LocationId);
+        Assert.Equal(1, result.Items[0].TotalDemand);
+    }
+
+    [Fact]
+    public async Task OperationalExceptions_AllRequestsRejectedZeroAllocations_ReturnsException()
+    {
+        await Submit("e1", "t1", "loc-A", "2026-06-01");
+        await Reject("e2", "t1", "loc-A", "2026-06-01", "cap_exceeded");
+
+        var result = await service.GetOperationalExceptionsAsync(new(), "t1");
+
+        Assert.Single(result.Items);
+        Assert.Equal("all_rejected", result.Items[0].ExceptionType);
+        Assert.Equal(1, result.Items[0].TotalDemand);
+        Assert.Equal(1, result.Items[0].TotalRejections);
+    }
+
+    [Fact]
+    public async Task OperationalExceptions_PartialAllocations_NoException()
+    {
+        await Submit("e1", "t1", "loc-A", "2026-06-01");
+        await Submit("e2", "t1", "loc-A", "2026-06-01");
+        await handler.HandleAsync(new BookingEventEnvelope(
+            "e3", "booking.slotAllocated", 1, DateTime.UtcNow, "t1", "c",
+            null, "system", null, "booking",
+            new("e1", "user-1", "loc-A", "2026-06-01", "09:00-17:00", null, null, null, null, null)));
+        await Reject("e4", "t1", "loc-A", "2026-06-01", "cap_exceeded");
+
+        var result = await service.GetOperationalExceptionsAsync(new(), "t1");
+
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
+    public async Task OperationalExceptions_TenantIsolation_ExcludesOtherTenants()
+    {
+        await Submit("e1", "t1", "loc-A", "2026-06-01");
+        await Submit("e2", "t2", "loc-B", "2026-06-01");
+
+        var result = await service.GetOperationalExceptionsAsync(new(), "t1");
+
+        Assert.All(result.Items, e => Assert.NotEqual("loc-B", e.LocationId));
+    }
 }

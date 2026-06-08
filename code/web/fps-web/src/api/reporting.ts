@@ -77,6 +77,20 @@ export interface EmployeeImpactResponse {
   minRejectionThreshold: number;
 }
 
+export interface OperationalExceptionEntry {
+  date: string;
+  locationId: string;
+  exceptionType: string;
+  description: string;
+  totalDemand: number;
+  totalAllocations: number;
+  totalRejections: number;
+}
+
+export interface OperationalExceptionsResponse {
+  items: OperationalExceptionEntry[];
+}
+
 type CsvResult = { kind: 'ok'; blob: Blob } | { kind: 'unauthenticated' } | { kind: 'error'; message: string; status?: number } | { kind: 'unreachable'; message: string };
 
 function authHeaders(bearerToken: string) {
@@ -183,6 +197,21 @@ export async function fetchEmployeeImpact(
     if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/employee-impact returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as EmployeeImpactResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchOperationalExceptions(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+): Promise<FetchResult<OperationalExceptionsResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/reports/parking/operational-exceptions`, { headers: authHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/operational-exceptions returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as OperationalExceptionsResponse };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }
