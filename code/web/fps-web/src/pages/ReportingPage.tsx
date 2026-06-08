@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchReportingDashboard, fetchReportingSummary, fetchReportingFairness,
-  fetchUtilizationReport, fetchReasonCodeReport,
+  fetchUtilizationReport, fetchReasonCodeReport, fetchEmployeeImpact, fetchOperationalExceptions,
   downloadCsvReport, downloadAllocationOutcomesCsv,
   type DashboardResponse, type SummaryResponse, type FairnessResponse,
-  type UtilizationResponse, type ReasonCodeResponse,
+  type UtilizationResponse, type ReasonCodeResponse, type EmployeeImpactResponse,
+  type OperationalExceptionsResponse,
 } from '../api/reporting';
 import { displayLocation } from '../displayLabels';
 
@@ -15,6 +16,8 @@ type SumState = { kind: 'loading' } | { kind: 'ok'; data: SummaryResponse } | { 
 type FairState = { kind: 'loading' } | { kind: 'ok'; data: FairnessResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 type UtilState = { kind: 'loading' } | { kind: 'ok'; data: UtilizationResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 type RcState = { kind: 'loading' } | { kind: 'ok'; data: ReasonCodeResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
+type EmpImpactState = { kind: 'loading' } | { kind: 'ok'; data: EmployeeImpactResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
+type OpsState = { kind: 'loading' } | { kind: 'ok'; data: OperationalExceptionsResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
 
 export function ReportingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
@@ -24,6 +27,8 @@ export function ReportingPage() {
   const [fair, setFair] = useState<FairState>({ kind: 'loading' });
   const [util, setUtil] = useState<UtilState>({ kind: 'loading' });
   const [rc, setRc] = useState<RcState>({ kind: 'loading' });
+  const [empImpact, setEmpImpact] = useState<EmpImpactState>({ kind: 'loading' });
+  const [ops, setOps] = useState<OpsState>({ kind: 'loading' });
   const [csvBusy, setCsvBusy] = useState(false);
   const [outcomesBusy, setOutcomesBusy] = useState(false);
 
@@ -33,6 +38,8 @@ export function ReportingPage() {
     setFair({ kind: 'loading' });
     setUtil({ kind: 'loading' });
     setRc({ kind: 'loading' });
+    setEmpImpact({ kind: 'loading' });
+    setOps({ kind: 'loading' });
     const cfg = { apiBaseUrl, bearerToken };
 
     fetchReportingDashboard(cfg).then((r) => {
@@ -68,6 +75,20 @@ export function ReportingPage() {
       if (r.kind === 'error' && r.status === 403) { setRc({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setRc({ kind: 'ok', data: r.data });
       else setRc({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load reason codes.' });
+    });
+
+    fetchEmployeeImpact(cfg, 2).then((r) => {
+      if (r.kind === 'unauthenticated') return;
+      if (r.kind === 'error' && r.status === 403) { setEmpImpact({ kind: 'skip' }); return; }
+      if (r.kind === 'ok') setEmpImpact({ kind: 'ok', data: r.data });
+      else setEmpImpact({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load employee impact.' });
+    });
+
+    fetchOperationalExceptions(cfg).then((r) => {
+      if (r.kind === 'unauthenticated') return;
+      if (r.kind === 'error' && r.status === 403) { setOps({ kind: 'skip' }); return; }
+      if (r.kind === 'ok') setOps({ kind: 'ok', data: r.data });
+      else setOps({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load operational exceptions.' });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
@@ -273,6 +294,64 @@ export function ReportingPage() {
         </section>
       )}
       {fair.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Fairness: {fair.message}</p>}
+
+      {empImpact.kind === 'ok' && empImpact.data.items.length > 0 && (
+        <section style={card}>
+          <h3 style={cardTitle}>Employee Impact Summary</h3>
+          <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
+            Employees with {empImpact.data.minRejectionThreshold}+ rejections in the selected period (pseudonymized for privacy)
+          </p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tbl}>
+              <thead><tr>{['Requestor', 'Total Requests', 'Rejections', 'Allocations'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {empImpact.data.items.map(row => (
+                  <tr key={row.requestorHash}>
+                    <td style={td}>{row.requestorHash}</td>
+                    <td style={td}>{row.totalRequests}</td>
+                    <td style={{ ...td, color: '#dc2626', fontWeight: 600 }}>{row.totalRejections}</td>
+                    <td style={td}>{row.totalAllocations}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {empImpact.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Employee impact: {empImpact.message}</p>}
+
+      {ops.kind === 'ok' && ops.data.items.length > 0 && (
+        <section style={card}>
+          <h3 style={cardTitle}>Operational Exceptions</h3>
+          <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
+            Dates where demand was recorded but allocations are missing or all requests were rejected.
+          </p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tbl}>
+              <thead><tr>{['Date', 'Location', 'Issue', 'Demand', 'Allocated', 'Rejected'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {ops.data.items.map((row, i) => (
+                  <tr key={i}>
+                    <td style={td}>{new Date(row.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                    <td style={td}>{displayLocation(row.locationId) ?? row.locationId}</td>
+                    <td style={{ ...td, color: '#b45309', fontWeight: 500 }}>{row.exceptionType === 'demand_no_allocations' ? 'No allocations' : 'All rejected'}</td>
+                    <td style={td}>{row.totalDemand}</td>
+                    <td style={td}>{row.totalAllocations}</td>
+                    <td style={{ ...td, color: '#dc2626' }}>{row.totalRejections}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {ops.kind === 'ok' && ops.data.items.length === 0 && (
+        <section style={card}>
+          <h3 style={cardTitle}>Operational Exceptions</h3>
+          <p style={{ ...muted, margin: 0 }}>No operational exceptions found in the selected period.</p>
+        </section>
+      )}
+      {ops.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Operational exceptions: {ops.message}</p>}
     </div>
   );
 }

@@ -112,6 +112,61 @@ public sealed class ReportingQueryService(IReportingQueryRepository repository)
         var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
         return CsvExport.FromAllocationOutcomes(items);
     }
+
+    public async Task<EmployeeImpactResponse> GetEmployeeImpactAsync(FairnessQueryRequest request, string tenantId, int minRejections = 2, CancellationToken cancellationToken = default)
+    {
+        var fairnessRecords = await repository.QueryFairnessAsync(request, tenantId, cancellationToken);
+        var impactedEmployees = fairnessRecords
+            .Where(f => f.RejectionCount >= minRejections)
+            .OrderByDescending(f => f.RejectionCount)
+            .ThenBy(f => f.RequestorHash)
+            .Select(f => new EmployeeImpactEntry(
+                f.RequestorHash,
+                f.RequestCount,
+                f.RejectionCount,
+                f.AllocationCount))
+            .ToList();
+        return new EmployeeImpactResponse(impactedEmployees, minRejections);
+    }
+
+    public async Task<OperationalExceptionsResponse> GetOperationalExceptionsAsync(ReportingQueryRequest request, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var items = await repository.QueryMetricsAsync(request, tenantId, cancellationToken);
+        var exceptions = new List<OperationalExceptionEntry>();
+
+        var byDateLocation = items
+            .GroupBy(m => (m.Date, m.LocationId))
+            .OrderBy(g => g.Key.Date)
+            .ThenBy(g => g.Key.LocationId);
+
+        foreach (var g in byDateLocation)
+        {
+            var demand = g.Sum(m => m.DemandCount);
+            var allocations = g.Sum(m => m.AllocationCount);
+            var rejections = g.Sum(m => m.RejectionCount);
+
+            if (demand == 0) continue;
+
+            if (allocations == 0 && rejections == 0)
+            {
+                exceptions.Add(new OperationalExceptionEntry(
+                    g.Key.Date, g.Key.LocationId,
+                    "demand_no_allocations",
+                    "Demand recorded but no allocations or rejections — draw may not have run.",
+                    demand, allocations, rejections));
+            }
+            else if (allocations == 0 && rejections == demand)
+            {
+                exceptions.Add(new OperationalExceptionEntry(
+                    g.Key.Date, g.Key.LocationId,
+                    "all_rejected",
+                    "All requests rejected with zero allocations — draw completed but no spots were assigned.",
+                    demand, allocations, rejections));
+            }
+        }
+
+        return new OperationalExceptionsResponse(exceptions);
+    }
 }
 
 public sealed record ParkingMetricsSummary(
@@ -171,6 +226,25 @@ public sealed record UtilizationResponse(IReadOnlyList<UtilizationEntry> Items);
 public sealed record ReasonCodeEntry(string ReasonCode, int Count, double RateOfDemand);
 
 public sealed record ReasonCodeResponse(IReadOnlyList<ReasonCodeEntry> Items, int TotalDemand);
+
+public sealed record EmployeeImpactEntry(
+    string RequestorHash,
+    int TotalRequests,
+    int TotalRejections,
+    int TotalAllocations);
+
+public sealed record EmployeeImpactResponse(IReadOnlyList<EmployeeImpactEntry> Items, int MinRejectionThreshold);
+
+public sealed record OperationalExceptionEntry(
+    string Date,
+    string LocationId,
+    string ExceptionType,
+    string Description,
+    int TotalDemand,
+    int TotalAllocations,
+    int TotalRejections);
+
+public sealed record OperationalExceptionsResponse(IReadOnlyList<OperationalExceptionEntry> Items);
 
 public static class CsvExport
 {

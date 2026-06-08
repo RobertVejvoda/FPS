@@ -45,6 +45,8 @@ public sealed class BookingEventReportingHandler(IReportingRepository repository
 
             case "booking.requestRejected":
                 await repository.ApplyMetricsAsync(tenantId, date, locationId, timeSlot, m => m.IncrementRejection(payload.ReasonCode), cancellationToken);
+                if (!string.IsNullOrEmpty(payload.RequestorId))
+                    await repository.ApplyFairnessAsync(tenantId, Hash(payload.RequestorId), date, locationId, f => f.IncrementRejection(), cancellationToken);
                 break;
 
             case "booking.requestCancelled":
