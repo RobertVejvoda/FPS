@@ -112,6 +112,14 @@
               "format": "int32",
               "default": 50
             }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "in-app"
+            }
           }
         ],
         "responses": {

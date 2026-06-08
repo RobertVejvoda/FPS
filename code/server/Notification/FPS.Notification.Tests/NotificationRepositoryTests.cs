@@ -10,7 +10,8 @@ public sealed class NotificationRepositoryTests
     private static NotificationRecord MakeRecord(string tenantId, string recipientId,
         string notificationType = "booking.requestSubmitted",
         bool isRead = false,
-        DateTime? createdAt = null)
+        DateTime? createdAt = null,
+        string channel = NotificationChannel.InApp)
     {
         var record = new NotificationRecord
         {
@@ -19,7 +20,7 @@ public sealed class NotificationRepositoryTests
             TenantId = tenantId,
             RecipientId = recipientId,
             NotificationType = notificationType,
-            Channel = NotificationChannel.InApp,
+            Channel = channel,
             MessageText = "Test message",
             SourceEventId = Guid.NewGuid().ToString(),
             CreatedAt = createdAt ?? DateTime.UtcNow
@@ -174,6 +175,31 @@ public sealed class NotificationRepositoryTests
 
         Assert.True(found);
         Assert.True(record.IsRead);
+    }
+
+    // ── Channel filter ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetByRecipient_ChannelFilter_ExcludesEmailRecords()
+    {
+        await repo.SaveAsync(MakeRecord("t1", "u1", channel: NotificationChannel.InApp));
+        await repo.SaveAsync(MakeRecord("t1", "u1", channel: NotificationChannel.Email));
+
+        var results = await repo.GetByRecipientAsync("t1", "u1", channel: NotificationChannel.InApp);
+
+        Assert.Single(results);
+        Assert.Equal(NotificationChannel.InApp, results[0].Channel);
+    }
+
+    [Fact]
+    public async Task GetByRecipient_NullChannel_ReturnsAllChannels()
+    {
+        await repo.SaveAsync(MakeRecord("t1", "u1", channel: NotificationChannel.InApp));
+        await repo.SaveAsync(MakeRecord("t1", "u1", channel: NotificationChannel.Email));
+
+        var results = await repo.GetByRecipientAsync("t1", "u1", channel: null);
+
+        Assert.Equal(2, results.Count);
     }
 
     // ── DeleteByRecipientIdAsync (PRIV001 erasure) ───────────────────────────

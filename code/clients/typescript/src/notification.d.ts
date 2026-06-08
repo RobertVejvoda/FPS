@@ -95,6 +95,7 @@ export interface paths {
                     unreadOnly?: boolean;
                     type?: string;
                     pageSize?: number | string;
+                    channel?: string;
                 };
                 header?: never;
                 path?: never;
