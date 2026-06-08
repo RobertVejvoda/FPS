@@ -98,7 +98,7 @@ function AppFooter() {
     <footer className="app-footer">
       {environment && <span className="footer-env-badge">{environment}</span>}
       {appVersion && <span className="footer-version">v{appVersion}</span>}
-      {sim?.simulationActive && <span className="footer-sim-banner">Non-production simulation</span>}
+      {sim?.simulationActive && <span className="footer-sim-banner">NON-PRODUCTION SIMULATION</span>}
       {simulationEnabled && sim && (
         <span className="footer-real-time">Real: {fmtTime(sim.realNow)}</span>
       )}
