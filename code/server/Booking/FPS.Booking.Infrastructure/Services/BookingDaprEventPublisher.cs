@@ -120,7 +120,10 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     Date: e.DrawKey.Date.ToString("yyyy-MM-dd"),
                     TimeSlot: $"{e.DrawKey.TimeSlot.Start:HH:mm}-{e.DrawKey.TimeSlot.End:HH:mm}",
                     PreviousStatus: null, NewStatus: null,
-                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null),
+                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    AllocatedCount: e.AllocatedCount,
+                    RejectedCount: e.RejectedCount,
+                    WaitlistedCount: e.WaitlistedCount),
 
                 PenaltyAppliedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),

@@ -9,6 +9,13 @@ const TYPE_LABELS: Record<string, string> = {
   'booking.slotAllocated': 'Spot allocated',
   'booking.slotCancelled': 'Spot cancelled',
   'booking.requestCancelled': 'Request cancelled',
+  'booking.drawCompleted': 'Draw completed',
+  'booking.drawStarted': 'Draw started',
+  'booking.noShowRecorded': 'No-show recorded',
+  'booking.penaltyApplied': 'Penalty applied',
+  'booking.usageConfirmed': 'Usage confirmed',
+  'booking.requestExpired': 'Request expired',
+  'booking.manualCorrectionApplied': 'Request updated',
 };
 
 function typeLabel(notificationType: string): string {
