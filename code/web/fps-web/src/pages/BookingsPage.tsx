@@ -25,13 +25,6 @@ const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
 const WORKDAY_END = '18:00:00';
 
-const CHIPS = [
-  { label: 'Today', offset: 0 },
-  { label: 'Tomorrow', offset: 1 },
-  { label: weekdayLabel(2), offset: 2 },
-  { label: weekdayLabel(3), offset: 3 },
-];
-
 function sortMixed(items: BookingListItem[]): BookingListItem[] {
   const today = localDate(0);
   const todayItems = items.filter(i => i.requestedDate === today);
@@ -51,10 +44,9 @@ export function BookingsPage() {
   const [state, setState] = useState<ListState>({ kind: 'loading' });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
-  const [selectedChip, setSelectedChip] = useState(0);
-  const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
-  const [drawLoading, setDrawLoading] = useState(false);
   const [myDrawOutcomes, setMyDrawOutcomes] = useState<MyDrawOutcomeSummary[]>([]);
+  const [drawStatusByDate, setDrawStatusByDate] = useState<Record<string, DrawStatusResult | null>>({});
+  const [drawLoadingByDate, setDrawLoadingByDate] = useState<Record<string, boolean>>({});
   const stateRef = useRef(state);
   stateRef.current = state;
   const drawLocationId = state.kind === 'ok'
@@ -79,17 +71,18 @@ export function BookingsPage() {
     });
   }, [apiBaseUrl, bearerToken]);
 
+  // Fetch draw status for each of the four focus days
   useEffect(() => {
-    let cancelled = false;
-    setDrawLoading(true);
-    setDrawStatus(null);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: localDate(selectedChip), locationId: drawLocationId, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
-      if (cancelled) return;
-      setDrawLoading(false);
-      setDrawStatus(result);
+    if (!bearerToken) return;
+    const dates = [0, 1, 2, 3].map(offset => localDate(offset));
+    dates.forEach(date => {
+      setDrawLoadingByDate(prev => ({ ...prev, [date]: true }));
+      fetchDrawStatus({ apiBaseUrl, bearerToken }, { date, locationId: drawLocationId, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
+        setDrawLoadingByDate(prev => ({ ...prev, [date]: false }));
+        setDrawStatusByDate(prev => ({ ...prev, [date]: result }));
+      });
     });
-    return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken, selectedChip, drawLocationId]);
+  }, [apiBaseUrl, bearerToken, drawLocationId]);
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });
@@ -145,14 +138,6 @@ export function BookingsPage() {
   const d2Booking = okState?.items.find(i => i.requestedDate === d2) ?? null;
   const d3Booking = okState?.items.find(i => i.requestedDate === d3) ?? null;
 
-  const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
-  const demandLabel = drawLoading ? 'Loading…'
-    : scheduleOk ? `Demand: ${scheduleOk.demandLevel}`
-    : '–';
-  const canRequestLabel = scheduleOk
-    ? (scheduleOk.canRequest ? 'Can request: Yes' : `Can request: No${scheduleOk.cannotRequestReason ? ` — ${scheduleOk.cannotRequestReason}` : ''}`)
-    : null;
-
   return (
     <div className="page-stack">
       <section className="page-hero">
@@ -162,60 +147,63 @@ export function BookingsPage() {
       {/* Important notification banner */}
       <NotificationBanner />
 
-      {/* Four-day focus cards: Today / Tomorrow / D+2 / D+3 */}
+      {/* Four-day focus cards: Today / Tomorrow / Next two weekdays */}
       {state.kind === 'ok' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <FocusCard label="Today" booking={todayBooking} busy={busyId === todayBooking?.requestId} onCancel={todayBooking?.nextAction === 'cancel' ? () => handleCancel(todayBooking.requestId) : undefined} onConfirm={todayBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(todayBooking.requestId) : undefined} />
-          <FocusCard label="Tomorrow" booking={tomorrowBooking} busy={busyId === tomorrowBooking?.requestId} onCancel={tomorrowBooking?.nextAction === 'cancel' ? () => handleCancel(tomorrowBooking.requestId) : undefined} onConfirm={tomorrowBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(tomorrowBooking.requestId) : undefined} />
-          <FocusCard label={weekdayLabel(2)} booking={d2Booking} busy={busyId === d2Booking?.requestId} onCancel={d2Booking?.nextAction === 'cancel' ? () => handleCancel(d2Booking.requestId) : undefined} onConfirm={d2Booking?.nextAction === 'confirmUsage' ? () => handleConfirm(d2Booking.requestId) : undefined} />
-          <FocusCard label={weekdayLabel(3)} booking={d3Booking} busy={busyId === d3Booking?.requestId} onCancel={d3Booking?.nextAction === 'cancel' ? () => handleCancel(d3Booking.requestId) : undefined} onConfirm={d3Booking?.nextAction === 'confirmUsage' ? () => handleConfirm(d3Booking.requestId) : undefined} />
+          <FocusCard
+            label="Today"
+            booking={todayBooking}
+            busy={busyId === todayBooking?.requestId}
+            onCancel={todayBooking?.nextAction === 'cancel' ? () => handleCancel(todayBooking.requestId) : undefined}
+            onConfirm={todayBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(todayBooking.requestId) : undefined}
+            onRequestForDate={() => navigate(`/bookings/new?date=${today}`)}
+            drawStatus={drawStatusByDate[today]}
+            drawLoading={drawLoadingByDate[today]}
+          />
+          <FocusCard
+            label="Tomorrow"
+            booking={tomorrowBooking}
+            busy={busyId === tomorrowBooking?.requestId}
+            onCancel={tomorrowBooking?.nextAction === 'cancel' ? () => handleCancel(tomorrowBooking.requestId) : undefined}
+            onConfirm={tomorrowBooking?.nextAction === 'confirmUsage' ? () => handleConfirm(tomorrowBooking.requestId) : undefined}
+            onRequestForDate={() => navigate(`/bookings/new?date=${tomorrow}`)}
+            drawStatus={drawStatusByDate[tomorrow]}
+            drawLoading={drawLoadingByDate[tomorrow]}
+          />
+          <FocusCard
+            label={weekdayLabel(2)}
+            booking={d2Booking}
+            busy={busyId === d2Booking?.requestId}
+            onCancel={d2Booking?.nextAction === 'cancel' ? () => handleCancel(d2Booking.requestId) : undefined}
+            onConfirm={d2Booking?.nextAction === 'confirmUsage' ? () => handleConfirm(d2Booking.requestId) : undefined}
+            onRequestForDate={() => navigate(`/bookings/new?date=${d2}`)}
+            drawStatus={drawStatusByDate[d2]}
+            drawLoading={drawLoadingByDate[d2]}
+          />
+          <FocusCard
+            label={weekdayLabel(3)}
+            booking={d3Booking}
+            busy={busyId === d3Booking?.requestId}
+            onCancel={d3Booking?.nextAction === 'cancel' ? () => handleCancel(d3Booking.requestId) : undefined}
+            onConfirm={d3Booking?.nextAction === 'confirmUsage' ? () => handleConfirm(d3Booking.requestId) : undefined}
+            onRequestForDate={() => navigate(`/bookings/new?date=${d3}`)}
+            drawStatus={drawStatusByDate[d3]}
+            drawLoading={drawLoadingByDate[d3]}
+          />
         </div>
       )}
 
-      {/* Quick request */}
+      {/* Secondary date picker for uncommon dates */}
       <section style={sectionCard}>
-        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Request a spot</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-          {CHIPS.map((chip) => (
-            <button
-              key={chip.offset}
-              onClick={() => setSelectedChip(chip.offset)}
-              style={{ ...chipBtn, ...(selectedChip === chip.offset ? chipActive : {}) }}
-            >
-              {chip.label}
-            </button>
-          ))}
-          <button onClick={() => navigate('/bookings/new')} style={chipBtn}>More</button>
-        </div>
-        {/* Schedule info (DRAW005) */}
-        {drawLoading && <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Loading schedule…</div>}
-        {scheduleOk && (
-          <div style={{ fontSize: 13, marginBottom: 8, padding: '8px 10px', borderRadius: 6,
-            background: scheduleOk.requestWindowStatus === 'open' ? '#f0fdf4' : '#fafafa',
-            border: `1px solid ${scheduleOk.requestWindowStatus === 'open' ? '#bbf7d0' : '#e5e7eb'}` }}>
-            <div style={{ color: '#374151' }}>{scheduleOk.safeMessage}</div>
-            {scheduleOk.nextDrawAt && (
-              <div style={{ color: '#6b7280', marginTop: 2 }}>
-                Next draw: {formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone)}
-              </div>
-            )}
-            {scheduleOk.cutOffAt && (
-              <div style={{ color: '#6b7280', marginTop: 2 }}>
-                Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}
-              </div>
-            )}
-          </div>
-        )}
-        {!drawLoading && !scheduleOk && (
-          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
-            {demandLabel}{canRequestLabel ? ` · ${canRequestLabel}` : ''}
-          </div>
-        )}
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Request for other dates</div>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 10 }}>
+          Need a spot for a different date? Use the date picker below.
+        </p>
         <button
-          onClick={() => navigate(`/bookings/new?date=${localDate(selectedChip)}`)}
+          onClick={() => navigate('/bookings/new')}
           style={requestBtn}
         >
-          Request for {CHIPS[selectedChip]?.label ?? localDate(selectedChip)} →
+          Choose a different date →
         </button>
       </section>
 
@@ -314,21 +302,74 @@ export function BookingsPage() {
   );
 }
 
-function FocusCard({ label, booking, busy, onCancel, onConfirm }: {
+function FocusCard({ label, booking, busy, onCancel, onConfirm, onRequestForDate, drawStatus, drawLoading }: {
   label: string;
   booking: BookingListItem | null;
   busy?: boolean;
   onCancel?: () => void;
   onConfirm?: () => void;
+  onRequestForDate?: () => void;
+  drawStatus?: DrawStatusResult | null;
+  drawLoading?: boolean;
 }) {
+  const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
+
   if (!booking) {
+    // No existing request - show request action and timing info
     return (
       <div style={focusCard}>
         <div style={focusDay}>{label}</div>
         <div style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>No request yet</div>
+
+        {/* Draw/cut-off timing when available */}
+        {drawLoading && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Loading schedule…</div>}
+        {scheduleOk && (
+          <div style={{ marginTop: 8, fontSize: 12 }}>
+            {scheduleOk.nextDrawAt && (
+              <div style={{ color: '#6b7280', marginTop: 2 }}>
+                Next draw: {formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone)}
+              </div>
+            )}
+            {scheduleOk.cutOffAt && (
+              <div style={{ color: '#6b7280', marginTop: 2 }}>
+                Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}
+              </div>
+            )}
+            {scheduleOk.demandLevel && (
+              <div style={{ color: '#6b7280', marginTop: 2 }}>
+                Demand: {scheduleOk.demandLevel}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Request action or blocked reason */}
+        {scheduleOk && !scheduleOk.canRequest && scheduleOk.cannotRequestReason && (
+          <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca' }}>
+            <div style={{ fontSize: 12, color: '#991b1b' }}>Cannot request: {scheduleOk.cannotRequestReason}</div>
+          </div>
+        )}
+        {scheduleOk && scheduleOk.canRequest && onRequestForDate && (
+          <button
+            onClick={onRequestForDate}
+            style={{ ...requestBtn, marginTop: 10, width: '100%', fontSize: 13 }}
+          >
+            Request a spot
+          </button>
+        )}
+        {!scheduleOk && !drawLoading && onRequestForDate && (
+          <button
+            onClick={onRequestForDate}
+            style={{ ...requestBtn, marginTop: 10, width: '100%', fontSize: 13 }}
+          >
+            Request a spot
+          </button>
+        )}
       </div>
     );
   }
+
+  // Existing request - show status and actions
   const slot = displaySlot(booking.allocatedSlotId);
   const nextDraw = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
   return (
@@ -339,6 +380,23 @@ function FocusCard({ label, booking, busy, onCancel, onConfirm }: {
       </div>
       {slot && <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>Spot: {slot}</div>}
       {nextDraw && <div style={{ fontSize: 12, color: '#1d4ed8', marginTop: 4 }}>Next draw: {nextDraw}</div>}
+
+      {/* Show draw/cut-off timing for waiting requests */}
+      {booking.status === 'Pending' && scheduleOk && (
+        <div style={{ marginTop: 6, fontSize: 12 }}>
+          {scheduleOk.nextDrawAt && (
+            <div style={{ color: '#6b7280', marginTop: 2 }}>
+              Next draw: {formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone)}
+            </div>
+          )}
+          {scheduleOk.cutOffAt && (
+            <div style={{ color: '#6b7280', marginTop: 2 }}>
+              Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {onCancel && <button onClick={onCancel} disabled={busy} style={focusCancelBtn}>Cancel</button>}
         {onConfirm && <button onClick={onConfirm} disabled={busy} style={focusConfirmBtn}>Confirm usage</button>}
@@ -350,8 +408,6 @@ function FocusCard({ label, booking, busy, onCancel, onConfirm }: {
 const sectionCard: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '16px 20px' };
 const focusCard: React.CSSProperties = { ...sectionCard, minHeight: 100 };
 const focusDay: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 };
-const chipBtn: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 20, padding: '6px 16px', fontSize: 14, fontWeight: 500, color: '#374151', cursor: 'pointer' };
-const chipActive: React.CSSProperties = { background: 'var(--brand-primary)', borderColor: 'var(--brand-primary)', color: '#fff' };
 const requestBtn: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer' };
 const focusCancelBtn: React.CSSProperties = { background: '#fff', border: '1px solid #b91c1c', color: '#b91c1c', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
 const focusConfirmBtn: React.CSSProperties = { background: '#15803d', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };

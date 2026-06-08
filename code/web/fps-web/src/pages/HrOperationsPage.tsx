@@ -25,6 +25,12 @@ function localDate(offsetDays = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function weekdayLabel(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toLocaleDateString(undefined, { weekday: 'long' });
+}
+
 const LOCATION_ID = 'Prague';
 // No facilities API yet; workday slot boundaries are a known gap (UX008).
 const WORKDAY_START = '08:00:00';
@@ -33,8 +39,8 @@ const WORKDAY_END = '18:00:00';
 const DATE_CHIPS = [
   { label: 'Today', offset: 0 },
   { label: 'Tomorrow', offset: 1 },
-  { label: 'D+2', offset: 2 },
-  { label: 'D+3', offset: 3 },
+  { label: weekdayLabel(2), offset: 2 },
+  { label: weekdayLabel(3), offset: 3 },
 ];
 
 const STATUS_FILTERS = ['All', 'Pending', 'Allocated', 'Cancelled', 'Rejected'];
