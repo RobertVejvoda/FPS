@@ -13,11 +13,10 @@ export function BookingHistoryPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
   const [state, setState] = useState<ListState>({ kind: 'loading' });
-  const [page, setPage] = useState(1);
 
-  const load = useCallback((p: number) => {
+  const load = useCallback(() => {
     setState({ kind: 'loading' });
-    fetchMyOutcomes({ apiBaseUrl, bearerToken }, { page: p, pageSize: 50 }).then((result) => {
+    fetchMyOutcomes({ apiBaseUrl, bearerToken }, { page: 1, pageSize: 50 }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') {
         setState({ kind: 'ok', items: result.data.items, page: result.data.page, total: result.data.total });
@@ -27,12 +26,11 @@ export function BookingHistoryPage() {
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
-  useEffect(() => { load(page); }, [load, page]);
+  useEffect(() => { load(); }, [load]);
 
   function loadMore() {
     if (state.kind !== 'ok') return;
     const next = state.page + 1;
-    setPage(next);
     fetchMyOutcomes({ apiBaseUrl, bearerToken }, { page: next, pageSize: 50 }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') {
@@ -69,7 +67,7 @@ export function BookingHistoryPage() {
         {state.kind === 'error' && (
           <div className="panel">
             <p style={{ color: '#b91c1c' }}>{state.message}</p>
-            <button onClick={() => load(1)} className="btn-primary">Retry</button>
+            <button onClick={load} className="btn-primary">Retry</button>
           </div>
         )}
         {state.kind === 'ok' && state.items.length === 0 && (
