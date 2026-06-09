@@ -12,4 +12,5 @@ public record TriggerDrawCommand(
     string Reason,
     string TriggerSource = "manual",
     string TriggeredBy = "hr-admin",
-    bool AllowRecovery = false) : IRequest<TriggerDrawResult>;
+    bool AllowRecovery = false,
+    string? WorkflowInstanceIdOverride = null) : IRequest<TriggerDrawResult>;

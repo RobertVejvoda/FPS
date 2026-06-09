@@ -33,16 +33,15 @@ public sealed class TriggerDrawHandler(
         if (existing?.Status == "InProgress")
             return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
 
-        // Previously failed — allow explicit recovery if requested
+        // Previously failed — surface Failed without automatic retry.
+        // Explicit recovery archives the failed attempt under the same store key and starts a
+        // new workflow with a distinct instance ID so Dapr does not hit the existing-instance path.
         if (existing?.Status == "Failed")
         {
             if (!cmd.AllowRecovery)
-            {
-                // Surface failed state without automatic retry
                 return new TriggerDrawResult(storeKey, "Failed", 0, 0, 0, WasAlreadyCompleted: false);
-            }
 
-            // Recovery mode: archive the failed attempt and start fresh
+            var recoveryInstanceId = $"{storeKey}-r-{Guid.NewGuid().ToString("N")[..8]}";
             existing.Status = "FailedArchived";
             existing.LifecycleSteps ??= [];
             existing.LifecycleSteps.Add(new DrawLifecycleStepRecord
@@ -51,12 +50,11 @@ public sealed class TriggerDrawHandler(
                 Status = "Completed",
                 StartedAt = DateTime.UtcNow,
                 CompletedAt = DateTime.UtcNow,
-                Summary = $"Recovery triggered: {cmd.Reason}. Previous failure archived.",
+                Summary = $"Recovery triggered. New instance: {recoveryInstanceId}. Reason: {cmd.Reason}",
             });
             await drawRepository.SaveAsync(existing, cancellationToken);
 
-            // Start new workflow with recovery trigger source
-            var recoveryCmd = cmd with { TriggerSource = "recovery" };
+            var recoveryCmd = cmd with { TriggerSource = "recovery", WorkflowInstanceIdOverride = recoveryInstanceId };
             await workflowStarter.StartAsync(recoveryCmd, cancellationToken);
             return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
         }

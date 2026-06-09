@@ -13,8 +13,9 @@ public sealed class DaprDrawWorkflowStarter(DaprWorkflowClient workflowClient) :
         var drawKey = DrawKey.Create(command.TenantId, command.LocationId, command.Date, timeSlot);
         var storeKey = drawKey.ToStoreKey();
 
-        // Instance ID is deterministic from the draw key so duplicate triggers are safe.
-        var instanceId = storeKey;
+        // Normal triggers use a deterministic instance ID (draw key) so duplicate triggers are safe.
+        // Recovery triggers supply a distinct override to avoid collision with the failed instance.
+        var instanceId = command.WorkflowInstanceIdOverride ?? storeKey;
 
         var workflowInput = new DrawWorkflowInput(
             command.TenantId,

@@ -158,26 +158,72 @@ public sealed class TriggerDrawHandlerTests
         Assert.Contains("loc-1", result.DrawAttemptId);
     }
 
-    // ── Duplicate triggers produce same outcome ──────────────────────────────
+    // ── Recovery: distinct workflow instance ID avoids AlreadyRunning collision ─
 
     [Fact]
-    public async Task Handle_MultipleConcurrentTriggers_OnlyFirstStartsWorkflow()
+    public async Task Handle_FailedDraw_WithAllowRecovery_ArchivesAndStartsWithDistinctInstanceId()
     {
-        // Simulate race condition: first call finds no attempt, subsequent calls find InProgress
-        var callCount = 0;
+        var failedAttempt = new DrawAttemptDto
+        {
+            DrawKey = "draw:tenant-1:loc-1:2026-06-02:0900-1700",
+            Status = "Failed",
+            LifecycleSteps = []
+        };
         drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                callCount++;
-                return callCount == 1 ? null : new DrawAttemptDto { Status = "InProgress" };
-            });
+            .ReturnsAsync(failedAttempt);
 
-        var result1 = await handler.Handle(ValidCommand(), CancellationToken.None);
-        var result2 = await handler.Handle(ValidCommand(), CancellationToken.None);
+        TriggerDrawCommand? capturedCmd = null;
+        workflowStarter
+            .Setup(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<TriggerDrawCommand, CancellationToken>((c, _) => capturedCmd = c)
+            .ReturnsAsync(new DrawStartResult("key", "recovery-instance", "Started"));
 
-        Assert.Equal("InProgress", result1.Status);
-        Assert.Equal("InProgress", result2.Status);
-        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        var result = await handler.Handle(ValidCommand() with { AllowRecovery = true }, CancellationToken.None);
+
+        Assert.Equal("InProgress", result.Status);
+
+        // Archived with recovery step
+        drawRepo.Verify(r => r.SaveAsync(
+            It.Is<DrawAttemptDto>(a =>
+                a.Status == "FailedArchived" &&
+                a.LifecycleSteps.Any(s => s.StepName == "RecoveryInitiated")),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        // New workflow started with TriggerSource=recovery and a distinct instance ID
+        Assert.NotNull(capturedCmd);
+        Assert.Equal("recovery", capturedCmd!.TriggerSource);
+        Assert.NotNull(capturedCmd.WorkflowInstanceIdOverride);
+        Assert.Contains("-r-", capturedCmd.WorkflowInstanceIdOverride);
+
+        // Instance ID must differ from the draw key (avoids AlreadyRunning collision)
+        var drawKey = result.DrawAttemptId;
+        Assert.NotEqual(drawKey, capturedCmd.WorkflowInstanceIdOverride);
+    }
+
+    [Fact]
+    public async Task Handle_FailedDraw_WithoutAllowRecovery_ReturnsFailedAndDoesNotStart()
+    {
+        drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DrawAttemptDto { Status = "Failed" });
+
+        var result = await handler.Handle(ValidCommand() with { AllowRecovery = false }, CancellationToken.None);
+
+        Assert.Equal("Failed", result.Status);
+        drawRepo.Verify(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()), Times.Never);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_IsImmutableEvenWithAllowRecovery()
+    {
+        drawRepo.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DrawAttemptDto { Status = "Completed", AllocatedCount = 4 });
+
+        var result = await handler.Handle(ValidCommand() with { AllowRecovery = true }, CancellationToken.None);
+
+        Assert.Equal("Completed", result.Status);
+        Assert.True(result.WasAlreadyCompleted);
+        workflowStarter.Verify(s => s.StartAsync(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static TriggerDrawCommand ValidCommand() => new(

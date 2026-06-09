@@ -25,20 +25,14 @@ public sealed class PersistDecisionsActivity(
     {
         var date = DateOnly.Parse(input.Date);
 
-        // Build lookup to check current request status for idempotency
-        var pendingLookup = input.PendingRequests.ToDictionary(r => r.RequestId.ToString());
-
         foreach (var decision in input.Decisions)
         {
             if (!Guid.TryParse(decision.RequestId, out var requestGuid)) continue;
 
-            // Idempotency check: only update if request is still in expected Pending state
-            // Prevents duplicate status changes if activity is retried or replayed
-            if (!pendingLookup.ContainsKey(decision.RequestId))
-            {
-                // Request not in pending list — skip to avoid duplicate update
-                continue;
-            }
+            // Read current status to guard against duplicate application on activity retry/replay.
+            // Only requests still in Pending state should be updated; those already decided are skipped.
+            var current = await bookingRepository.GetBookingRequestAsync(input.TenantId, requestGuid);
+            if (current is null || current.Status != "Pending") continue;
 
             switch (decision.Outcome)
             {
