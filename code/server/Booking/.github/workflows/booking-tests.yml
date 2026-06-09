@@ -1,34 +1,26 @@
-# .github/workflows/booking-tests.yml
 name: Booking Service Tests
 
 on:
   push:
     paths:
-      - 'FPS.Booking/**'
+      - 'code/server/Booking/**'
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
     paths:
-      - 'FPS.Booking/**'
+      - 'code/server/Booking/**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 7.0.x
-      - name: Restore dependencies
-        run: dotnet restore FPS.Booking/FPS.Booking.sln
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore code/server/Booking/FPS.Booking.sln
       - name: Build
-        run: dotnet build FPS.Booking/FPS.Booking.sln --no-restore
-      - name: Unit Tests
-        run: |
-          dotnet test FPS.Booking/FPS.Booking.Domain.Tests
-          dotnet test FPS.Booking/FPS.Booking.Application.Tests
-      - name: Integration Tests
-        run: |
-          dotnet test FPS.Booking/FPS.Booking.Infrastructure.Tests
-          dotnet test FPS.Booking/FPS.Booking.API.Tests
-          dotnet test FPS.Booking/FPS.Booking.IntegrationTests
+        run: dotnet build code/server/Booking/FPS.Booking.sln --no-restore
+      - name: Test
+        run: dotnet test code/server/Booking/FPS.Booking.Tests/FPS.Booking.Tests.csproj --no-build
