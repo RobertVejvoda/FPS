@@ -69,7 +69,8 @@ public sealed class QueueIntegrationEventsActivity(
         await completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(
             drawKey, input.Seed,
             input.AllocatedCount, input.RejectedCount, input.WaitlistedCount,
-            DateTime.UtcNow));
+            DateTime.UtcNow,
+            DrawAttemptId: input.DrawKey));
 
         await ActivityLifecycleHelper.AppendStepAsync(
             drawRepository, input.DrawKey,

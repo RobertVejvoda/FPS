@@ -21,6 +21,7 @@ builder.Services.AddDbContext<DataHubDbContext>(options =>
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<EventInboxService>();
+builder.Services.AddScoped<IProjectionHandler, BookingProjectionHandler>();
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>

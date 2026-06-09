@@ -30,6 +30,7 @@ public sealed record BookingIntegrationPayload(
     string? SlotId = null,
     string? AllocationSource = null,
     string? ReallocatedFromBookingRequestId = null,
+    string? DrawAttemptId = null,
     int? AllocatedCount = null,
     int? RejectedCount = null,
     int? WaitlistedCount = null);

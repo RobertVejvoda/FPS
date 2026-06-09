@@ -188,6 +188,55 @@ public sealed class BookingEventPublisherTests
         Assert.DoesNotContain(seed.ToString(), payloadJson);
     }
 
+    // ── DrawAttemptId flows through both draw events (DATAHUB006 regression) ──
+
+    [Fact]
+    public async Task PublishAsync_DrawStarted_IncludesDrawAttemptIdInPayload()
+    {
+        BookingIntegrationEnvelope? captured = null;
+        dapr.Setup(d => d.PublishEventAsync(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<BookingIntegrationEnvelope>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, BookingIntegrationEnvelope, CancellationToken>(
+                (_, _, env, _) => captured = env)
+            .Returns(Task.CompletedTask);
+
+        var timeSlot = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(8));
+        var drawKey = DrawKey.Create("tenant-abc", "loc-1", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)), timeSlot);
+        const string stableId = "draw:tenant-abc:loc-1:2026-06-15:0800-1600";
+        var evt = new DrawAttemptStartedEvent(drawKey, 0, DateTime.UtcNow, DrawAttemptId: stableId);
+        await publisher.WithContext(testCtx).PublishAsync(evt);
+
+        Assert.Equal(stableId, captured!.Payload.DrawAttemptId);
+    }
+
+    [Fact]
+    public async Task PublishAsync_DrawCompleted_IncludesSameDrawAttemptIdAsStarted()
+    {
+        var envelopes = new List<BookingIntegrationEnvelope>();
+        dapr.Setup(d => d.PublishEventAsync(
+            It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<BookingIntegrationEnvelope>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, BookingIntegrationEnvelope, CancellationToken>(
+                (_, _, env, _) => envelopes.Add(env))
+            .Returns(Task.CompletedTask);
+
+        var timeSlot = TimeSlot.Create(DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(8));
+        var drawKey = DrawKey.Create("tenant-abc", "loc-1", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)), timeSlot);
+        const string stableId = "draw:tenant-abc:loc-1:2026-06-15:0800-1600";
+
+        await publisher.WithContext(testCtx).PublishAsync(
+            new DrawAttemptStartedEvent(drawKey, 0, DateTime.UtcNow, DrawAttemptId: stableId));
+        await publisher.WithContext(testCtx).PublishAsync(
+            new DrawAttemptCompletedEvent(drawKey, 0, 3, 1, 0, DateTime.UtcNow, DrawAttemptId: stableId));
+
+        Assert.Equal(2, envelopes.Count);
+        Assert.Equal(stableId, envelopes[0].Payload.DrawAttemptId);
+        Assert.Equal(stableId, envelopes[1].Payload.DrawAttemptId);
+        Assert.Equal("booking.drawStarted", envelopes[0].EventType);
+        Assert.Equal("booking.drawCompleted", envelopes[1].EventType);
+    }
+
     // ── tenant isolation ──────────────────────────────────────────────────────
 
     [Fact]

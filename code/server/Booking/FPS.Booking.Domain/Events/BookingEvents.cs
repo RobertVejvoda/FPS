@@ -90,7 +90,8 @@ public record SlotUsageCompletedEvent(
 public record DrawAttemptStartedEvent(
     DrawKey DrawKey,
     long Seed,
-    DateTime StartedAt) : DomainEvent;
+    DateTime StartedAt,
+    string? DrawAttemptId = null) : DomainEvent;
 
 public record DrawAttemptCompletedEvent(
     DrawKey DrawKey,
@@ -98,7 +99,8 @@ public record DrawAttemptCompletedEvent(
     int AllocatedCount,
     int RejectedCount,
     int WaitlistedCount,
-    DateTime CompletedAt) : DomainEvent;
+    DateTime CompletedAt,
+    string? DrawAttemptId = null) : DomainEvent;
 
 // kept for backwards compat with existing workflow
 public record DrawRunEvent(
