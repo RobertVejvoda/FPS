@@ -1,7 +1,7 @@
 using Dapr.Client;
 using Dapr.Workflow;
-using FPS.Booking.API.Identity;
-using FPS.Booking.API.Simulation;
+using FPS.Booking.Identity;
+using FPS.Booking.Simulation;
 using FPS.Booking.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Observability;

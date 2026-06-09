@@ -1,7 +1,7 @@
 using FPS.SharedKernel.Identity;
 using System.Security.Claims;
 
-namespace FPS.Booking.API.Identity;
+namespace FPS.Booking.Identity;
 
 public sealed class CurrentUser : ICurrentUser
 {

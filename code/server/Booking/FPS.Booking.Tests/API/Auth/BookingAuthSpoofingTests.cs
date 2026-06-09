@@ -16,7 +16,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 
-namespace FPS.Booking.API.Tests.Auth;
+namespace FPS.Booking.Tests.Auth;
 
 public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFactory<Program>>
 {

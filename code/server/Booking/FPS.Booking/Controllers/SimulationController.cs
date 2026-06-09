@@ -1,10 +1,10 @@
-using FPS.Booking.API.Simulation;
+using FPS.Booking.Simulation;
 using FPS.Booking.Application.Services;
 using FPS.SharedKernel.Identity;
 using FPS.SharedKernel.Time;
 using Microsoft.AspNetCore.Authorization;
 
-namespace FPS.Booking.API.Controllers;
+namespace FPS.Booking.Controllers;
 
 [ApiController]
 [Route("simulation")]

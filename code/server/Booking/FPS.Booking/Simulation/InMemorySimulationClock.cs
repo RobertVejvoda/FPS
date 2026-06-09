@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using FPS.SharedKernel.Time;
 
-namespace FPS.Booking.API.Simulation;
+namespace FPS.Booking.Simulation;
 
 public sealed class InMemorySimulationClock : ISystemClock
 {

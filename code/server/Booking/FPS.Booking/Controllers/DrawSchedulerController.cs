@@ -3,7 +3,7 @@ using FPS.SharedKernel.Time;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FPS.Booking.API.Controllers;
+namespace FPS.Booking.Controllers;
 
 // Receives Dapr cron binding ticks. The route must match the Dapr component name.
 // Multiple Booking replicas may receive the same tick; idempotency is guaranteed by the

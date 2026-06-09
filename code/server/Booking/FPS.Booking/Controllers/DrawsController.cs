@@ -1,4 +1,4 @@
-using FPS.Booking.API.Models;
+using FPS.Booking.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Queries;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 
-namespace FPS.Booking.API.Controllers;
+namespace FPS.Booking.Controllers;
 
 [ApiController]
 [Route("draws")]

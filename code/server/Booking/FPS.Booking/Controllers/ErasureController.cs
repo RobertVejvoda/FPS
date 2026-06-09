@@ -2,7 +2,7 @@ using FPS.Booking.Application.Repositories;
 using FPS.SharedKernel.Filters;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FPS.Booking.API.Controllers;
+namespace FPS.Booking.Controllers;
 
 /// <summary>
 /// Service-owned erasure endpoints called by the privacy workflow via Dapr service invocation.

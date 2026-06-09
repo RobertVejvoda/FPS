@@ -1,6 +1,6 @@
 using FPS.Booking.Application.Models;
 
-namespace FPS.Booking.API.Models;
+namespace FPS.Booking.Models;
 
 public record SubmitBookingResponse(
     Guid RequestId,

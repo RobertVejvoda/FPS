@@ -1,5 +1,5 @@
-using FPS.Booking.API.Controllers;
-using FPS.Booking.API.Models;
+using FPS.Booking.Controllers;
+using FPS.Booking.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
-namespace FPS.Booking.API.Tests.Controllers;
+namespace FPS.Booking.Tests.Controllers;
 
 public sealed class BookingControllerTests
 {

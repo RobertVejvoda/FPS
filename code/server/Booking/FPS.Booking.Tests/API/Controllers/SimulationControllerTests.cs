@@ -1,12 +1,12 @@
-using FPS.Booking.API.Controllers;
-using FPS.Booking.API.Simulation;
+using FPS.Booking.Controllers;
+using FPS.Booking.Simulation;
 using FPS.Booking.Application.Services;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
-namespace FPS.Booking.API.Tests.Controllers;
+namespace FPS.Booking.Tests.Controllers;
 
 public sealed class SimulationControllerTests
 {

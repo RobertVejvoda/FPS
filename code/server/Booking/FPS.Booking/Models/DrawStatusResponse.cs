@@ -1,4 +1,4 @@
-namespace FPS.Booking.API.Models;
+namespace FPS.Booking.Models;
 
 public record DrawStatusResponse(
     string Status,

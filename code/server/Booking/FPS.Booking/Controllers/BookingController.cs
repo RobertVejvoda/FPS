@@ -1,4 +1,4 @@
-using FPS.Booking.API.Models;
+using FPS.Booking.Models;
 using FPS.Booking.Application.Commands;
 using FPS.Booking.Application.Exceptions;
 using FPS.Booking.Application.Models;
@@ -9,7 +9,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FPS.Booking.API.Controllers;
+namespace FPS.Booking.Controllers;
 
 [ApiController]
 [Route("bookings")]
