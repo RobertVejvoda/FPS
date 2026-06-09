@@ -12,7 +12,7 @@ public static class FpsObservabilityExtensions
     // Registers OpenTelemetry tracing with OTLP export. serviceName should be a
     // short kebab-case identifier (e.g. "fps-identity"). The OTLP endpoint is
     // read from Otlp:Endpoint config or the standard OTEL_EXPORTER_OTLP_ENDPOINT
-    // env var; defaults to http://localhost:4318 for local development.
+    // env var; defaults to Jaeger's OTLP HTTP traces endpoint for local development.
     public static IServiceCollection AddFpsObservability(
         this IServiceCollection services,
         string serviceName,
@@ -20,7 +20,8 @@ public static class FpsObservabilityExtensions
     {
         var endpoint = configuration["Otlp:Endpoint"]
             ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
-            ?? "http://localhost:4318";
+            ?? "http://localhost:4318/v1/traces";
+        endpoint = NormalizeOtlpHttpTraceEndpoint(endpoint);
 
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
@@ -37,6 +38,14 @@ public static class FpsObservabilityExtensions
                 }));
 
         return services;
+    }
+
+    private static string NormalizeOtlpHttpTraceEndpoint(string endpoint)
+    {
+        var normalized = endpoint.TrimEnd('/');
+        return normalized.EndsWith("/v1/traces", StringComparison.OrdinalIgnoreCase)
+            ? normalized
+            : $"{normalized}/v1/traces";
     }
 
     // Middleware that logs the active TraceId and SpanId at the start of each

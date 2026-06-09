@@ -58,11 +58,11 @@ Rules:
 
 ## OTLP endpoint configuration
 
-By default services export to `http://localhost:4318` (Jaeger OTLP HTTP port). Override with:
+By default services export to `http://localhost:4318/v1/traces` (Jaeger OTLP HTTP traces endpoint). Override with:
 
 ```bash
 # In shell or .env.local
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
 ```
 
 Or in `appsettings.json` / `appsettings.Development.json`:
@@ -70,7 +70,7 @@ Or in `appsettings.json` / `appsettings.Development.json`:
 ```json
 {
   "Otlp": {
-    "Endpoint": "http://localhost:4318"
+    "Endpoint": "http://localhost:4318/v1/traces"
   }
 }
 ```

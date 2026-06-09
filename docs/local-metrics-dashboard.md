@@ -35,7 +35,7 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d prometheus grafa
 | HTTP In-Flight | `http_requests_in_progress` | Concurrent active requests per service |
 | GC Heap Size | `dotnet_gc_heap_size_bytes` | .NET managed heap in MB |
 | Thread Pool Queue | `dotnet_threadpool_queue_length` | Work-item backlog in the thread pool |
-| Service Health | `up` | UP/DOWN per scrape target; red = Prometheus cannot reach the service |
+| Service Health | `up{job=~"fps-(identity\|booking\|notification\|profile\|audit\|reporting\|configuration\|customer)"}` | UP/DOWN per local FairSpot service scrape target; red = Prometheus cannot reach that service |
 | RabbitMQ Published Rate | `rabbitmq_channel_messages_published_total` | Events published per second |
 | RabbitMQ Queue Depth | `rabbitmq_queue_messages` | Messages waiting per queue |
 
@@ -92,8 +92,8 @@ Raw metric browser and PromQL REPL: **http://localhost:9090**
 
 Useful queries:
 ```promql
-# All up/down targets
-up
+# Local FairSpot service up/down targets
+up{job=~"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer)"}
 
 # 95th-percentile latency for all FPS services (ms)
 histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[1m]))) * 1000
