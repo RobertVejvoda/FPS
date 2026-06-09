@@ -212,6 +212,14 @@ export default function NewBookingRoute() {
       setFieldErrors(errors);
       return;
     }
+    if (drawStatus?.kind === 'ok' && !drawStatus.data.canRequest) {
+      setSubmitStatus({
+        kind: 'rejected',
+        rejectionCode: null,
+        reason: drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? 'Requests are closed for this time.',
+      });
+      return;
+    }
     setSubmitStatus({ kind: 'submitting' });
     const requestedDate = dateStrFromOffset(form.dateOffset);
     const result = await submitBooking(
@@ -277,6 +285,7 @@ export default function NewBookingRoute() {
   }
 
   const isSubmitting = submitStatus.kind === 'submitting';
+  const requestWindowClosed = drawStatus?.kind === 'ok' && !drawStatus.data.canRequest;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -474,8 +483,8 @@ export default function NewBookingRoute() {
         ) : null}
 
         <Pressable
-          style={({ pressed }) => [styles.primary, (isSubmitting || pressed) && styles.primaryDimmed]}
-          disabled={isSubmitting}
+          style={({ pressed }) => [styles.primary, (isSubmitting || requestWindowClosed || pressed) && styles.primaryDimmed]}
+          disabled={isSubmitting || requestWindowClosed}
           onPress={handleSubmit}
           accessibilityRole="button"
           testID="button-submit"

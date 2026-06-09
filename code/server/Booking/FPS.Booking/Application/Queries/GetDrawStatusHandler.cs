@@ -47,8 +47,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var tz = policy is not null ? GetTimeZone(policy.TimeZoneId) : TimeZoneInfo.Utc;
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, tz).DateTime);
 
-        var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today);
         var schedule = BuildScheduleMetadata(policy, query.Date, attempt?.Status, today, now);
+        var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today, schedule);
 
         if (attempt is null)
         {
@@ -126,7 +126,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
     }
 
     private static (bool CanRequest, string? CannotRequestReason) ResolveCanRequest(
-        DateOnly date, string? drawStatus, DateOnly today)
+        DateOnly date, string? drawStatus, DateOnly today, ScheduleMeta schedule)
     {
         if (date < today)
             return (false, "Date has passed");
@@ -134,6 +134,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             return (false, "Spot allocation is complete for this date");
         if (drawStatus is "InProgress")
             return (false, "Draw in progress");
+        if (schedule.RequestWindowStatus == Models.RequestWindowStatus.Closed)
+            return (false, schedule.SafeMessage);
         return (true, null);
     }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { submitBooking } from '../api/bookings';
+import { fetchDrawStatus, submitBooking, type DrawStatusResult } from '../api/bookings';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
@@ -67,6 +67,8 @@ export function NewBookingPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
+  const [drawStatusLoading, setDrawStatusLoading] = useState(false);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -87,6 +89,30 @@ export function NewBookingPage() {
       setProfileLoading(false);
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
+
+  useEffect(() => {
+    const arrivalMatch = form.plannedArrival.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/);
+    const departureMatch = form.plannedDeparture.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/);
+    if (!arrivalMatch || !departureMatch || arrivalMatch[1] !== departureMatch[1]) {
+      setDrawStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    setDrawStatusLoading(true);
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, {
+      date: arrivalMatch[1],
+      locationId: form.locationId.trim() || DEMO_LOCATION_ID,
+      timeSlotStart: `${arrivalMatch[2]}:00`,
+      timeSlotEnd: `${departureMatch[2]}:00`,
+    }).then((res) => {
+      if (cancelled) return;
+      setDrawStatus(res);
+      setDrawStatusLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken, form.locationId, form.plannedArrival, form.plannedDeparture]);
 
   function set<K extends keyof Form>(k: K, v: Form[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -117,6 +143,7 @@ export function NewBookingPage() {
     if (!arrival) errs.plannedArrival = 'Use YYYY-MM-DDTHH:MM';
     if (!departure) errs.plannedDeparture = 'Use YYYY-MM-DDTHH:MM';
     if (arrival && departure && departure <= arrival) errs.plannedDeparture = 'Must be after arrival';
+    if (drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = drawStatus.cannotRequestReason || 'Requests are closed for this time.';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setSubmitting(true);
@@ -252,7 +279,19 @@ export function NewBookingPage() {
             </div>
           ) : null}
 
-          <button type="submit" disabled={submitting} style={{ ...primaryBtn, opacity: submitting ? 0.6 : 1 }}>
+          {drawStatusLoading ? (
+            <div style={{ fontSize: 13, color: '#6b7280' }}>Checking request window…</div>
+          ) : drawStatus?.kind === 'ok' && !drawStatus.canRequest ? (
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: '#f9fafb', border: '1px solid #e5e7eb', color: '#6b7280', fontSize: 13 }}>
+              {drawStatus.cannotRequestReason || drawStatus.safeMessage || 'Requests are closed for this time.'}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={submitting || drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest)}
+            style={{ ...primaryBtn, opacity: submitting || drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest) ? 0.6 : 1 }}
+          >
             {submitting ? 'Submitting…' : 'Submit request'}
           </button>
         </form>

@@ -1,6 +1,7 @@
 using FPS.Booking.Application.Queries;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.ValueObjects;
+using FPS.SharedKernel.Time;
 
 namespace FPS.Booking.Application.Tests.Queries;
 
@@ -129,6 +130,32 @@ public sealed class GetDrawStatusHandlerTests
 
         Assert.False(result.CanRequest);
         Assert.NotNull(result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_NoDraw_AfterPolicyCutOff_CanRequestIsFalse()
+    {
+        var tomorrow = new DateOnly(2026, 6, 11);
+        var currentTime = new DateTimeOffset(2026, 6, 10, 19, 0, 0, TimeSpan.Zero);
+        var handlerAfterCutOff = new GetDrawStatusHandler(
+            drawRepository.Object,
+            slotService.Object,
+            policyService.Object,
+            new FixedClock(currentTime));
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var result = await handlerAfterCutOff.Handle(new GetDrawStatusQuery(
+            TenantId: "tenant-1",
+            LocationId: "loc-1",
+            Date: tomorrow,
+            TimeSlotStart: tomorrow.ToDateTime(new TimeOnly(8, 0), DateTimeKind.Utc),
+            TimeSlotEnd: tomorrow.ToDateTime(new TimeOnly(18, 0), DateTimeKind.Utc)),
+            CancellationToken.None);
+
+        Assert.Equal("closed", result.RequestWindowStatus);
+        Assert.False(result.CanRequest);
+        Assert.Contains("closed", result.CannotRequestReason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -438,4 +465,11 @@ public sealed class GetDrawStatusHandlerTests
             })
             .ToList()
     };
+
+    private sealed class FixedClock(DateTimeOffset utcNow) : ISystemClock
+    {
+        public DateTimeOffset UtcNow => utcNow;
+
+        public DateTimeOffset GetTenantUtcNow(string tenantId) => utcNow;
+    }
 }
