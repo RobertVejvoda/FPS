@@ -33,7 +33,7 @@ apps:
     command: ["dotnet", "run", "--no-build", "--no-launch-profile", "--", "--urls", "http://0.0.0.0:5192"]
 
   - appID: fps-booking
-    appDirPath: code/server/Booking/FPS.Booking.API
+    appDirPath: code/server/Booking/FPS.Booking
     appPort: 5131
     daprHTTPPort: 3601
     daprGRPCPort: 50001
