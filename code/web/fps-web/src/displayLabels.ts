@@ -22,6 +22,35 @@ export function displaySlot(value?: string | null): string | null {
   return isGuid(value) ? 'Assigned space' : value.replace(/^Prague-/, 'Space ');
 }
 
+export function displayRequestorRef(value?: string | null): string {
+  if (!value) return 'Employee';
+
+  const compact = value.replace(/-/g, '');
+  if (/^[0-9a-f]{32,}$/i.test(compact)) {
+    return `Employee ${compact.slice(0, 6).toUpperCase()}`;
+  }
+
+  return value.length > 18 ? `${value.slice(0, 18)}...` : value;
+}
+
+export function displayDate(value?: string | null): string {
+  if (!value) return '-';
+  try {
+    return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { dateStyle: 'medium' });
+  } catch {
+    return value;
+  }
+}
+
+export function displayDateTime(value?: string | null): string {
+  if (!value) return '-';
+  try {
+    return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return value;
+  }
+}
+
 function formatDisplayTime(hour: number, minute: number): string {
   return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
 }

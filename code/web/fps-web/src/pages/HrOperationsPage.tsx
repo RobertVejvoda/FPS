@@ -12,6 +12,9 @@ import {
   type DrawLifecycleResult,
 } from '../api/bookings';
 import {
+  displayDate,
+  displayLocation,
+  displayRequestorRef,
   displaySlot,
   formatDrawStatus,
   formatDrawRequestSummary,
@@ -219,7 +222,7 @@ export function HrOperationsPage() {
             {chip.label}
           </button>
         ))}
-        <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#6b7280' }}>{selectedDate}</span>
+        <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#6b7280' }}>{displayDate(selectedDate)}</span>
       </div>
 
       {/* Draw panel */}
@@ -408,14 +411,14 @@ export function HrOperationsPage() {
       {listState.kind === 'ok' && (
         <>
           <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-            {listState.totalCount} request{listState.totalCount !== 1 ? 's' : ''} for {selectedDate}
+            {listState.totalCount} request{listState.totalCount !== 1 ? 's' : ''} for {displayDate(selectedDate)}
           </p>
           {listState.items.length === 0 && (
             <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: '1rem', textAlign: 'center' }}>
               <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
                 {statusFilter !== 'All'
-                  ? `No requests with status "${statusFilter}" for ${selectedDate}.`
-                  : `No requests for ${selectedDate} yet. Requests will appear here as employees submit them.`
+                  ? `No requests with status "${statusFilter}" for ${displayDate(selectedDate)}.`
+                  : `No requests for ${displayDate(selectedDate)} yet. Requests will appear here as employees submit them.`
                 }
               </p>
             </div>
@@ -425,14 +428,17 @@ export function HrOperationsPage() {
               <li key={item.requestId} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.75rem 1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: 4, fontFamily: 'monospace', color: '#475569' }}>
-                      {item.requestorRef}
+                    <span
+                      title={item.requestorRef}
+                      style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: 4, color: '#475569' }}
+                    >
+                      {displayRequestorRef(item.requestorRef)}
                     </span>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
                       #{item.requestId.replace(/-/g, '').slice(-6).toUpperCase()}
                     </span>
                     <span style={{ fontWeight: 600, fontSize: '0.875rem', color: statusColor(item.status) }}>{item.status}</span>
-                    {item.locationId && <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{item.locationId}</span>}
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{displayLocation(item.locationId) ?? displayLocation(LOCATION_ID) ?? 'Location not set'}</span>
                     {item.allocatedSlotId && (
                       <span style={{ fontSize: '0.8rem', color: '#374151' }}>{displaySlot(item.allocatedSlotId)}</span>
                     )}

@@ -9,19 +9,12 @@ import {
   type DrawOutcomeItem,
   type ProjectionHealthResponse,
 } from '../api/dataHub';
-
-function fmtDate(iso: string) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' });
-}
+import { displayDate, displayDateTime, displayLocation, displayRequestorRef, displaySlot } from '../displayLabels';
 
 function outcomeColor(status: string) {
   if (status === 'Allocated') return 'var(--success)';
   if (status === 'Rejected') return 'var(--danger)';
   return 'var(--muted)';
-}
-
-function safeRequestorRef(requestorId: string): string {
-  return requestorId.length > 8 ? requestorId.slice(0, 8) + '…' : requestorId;
 }
 
 type DrilldownState =
@@ -114,7 +107,7 @@ export function HrDrawHistoryPage() {
                 Projection status: {health.status}
                 {health.lastProcessedEventAt && (
                   <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 8 }}>
-                    · last event {new Date(health.lastProcessedEventAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                    · last event {displayDateTime(health.lastProcessedEventAt)}
                   </span>
                 )}
                 {!health.lastProcessedEventAt && (
@@ -138,11 +131,11 @@ export function HrDrawHistoryPage() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: 14 }}>{fmtDate(draw.date)}</span>
+                        <span style={{ fontWeight: 700, fontSize: 14 }}>{displayDate(draw.date)}</span>
                         <span style={{ fontSize: 13, color: 'var(--muted)' }}>{draw.timeSlot}</span>
                         {draw.locationId && (
                           <span style={{ fontSize: 12, background: '#f1f5f9', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px', color: '#475569' }}>
-                            {draw.locationId}
+                            {displayLocation(draw.locationId) ?? draw.locationId}
                           </span>
                         )}
                         {draw.safeFailureReason && (
@@ -160,7 +153,7 @@ export function HrDrawHistoryPage() {
                     </div>
                     {draw.completedAt && (
                       <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
-                        Completed {new Date(draw.completedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                        Completed {displayDateTime(draw.completedAt)}
                       </div>
                     )}
                   </button>
@@ -182,7 +175,7 @@ export function HrDrawHistoryPage() {
                             title="Requestor reference"
                             style={{ fontSize: 13, fontWeight: 600, background: '#f1f5f9', padding: '3px 8px', borderRadius: 4, fontFamily: 'monospace', color: '#1e293b', border: '1px solid var(--border)', letterSpacing: '0.01em' }}
                           >
-                            {safeRequestorRef(item.requestorId)}
+                            {displayRequestorRef(item.requestorId)}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: outcomeColor(item.finalStatus) }}>{item.finalStatus}</span>
@@ -190,7 +183,7 @@ export function HrDrawHistoryPage() {
                               <span style={{ fontSize: 12, color: 'var(--muted)' }}>{item.safeReasonText}</span>
                             )}
                             {item.slotId && (
-                              <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'monospace' }}>Slot {item.slotId}</span>
+                              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{displaySlot(item.slotId) ?? 'Assigned space'}</span>
                             )}
                           </div>
                         </div>
