@@ -1,6 +1,6 @@
 # Requirements Traceability
 
-This page maps FPS requirements to implementation slices, PR evidence, and remaining gaps. It complements the [Implementation Tracker](./implementation-tracker): the tracker follows delivery ownership; this page follows requirement coverage.
+This page maps FairSpot requirements to implementation slices, PR evidence, and remaining gaps. It complements the [Implementation Tracker](./implementation-tracker): the tracker follows delivery ownership; this page follows requirement coverage.
 
 ## How To Use This Matrix
 
