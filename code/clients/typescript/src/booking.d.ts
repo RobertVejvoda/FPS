@@ -1290,6 +1290,8 @@ export interface components {
             /** Format: date-time */
             timeSlotEnd: string;
             reason: string;
+            /** @default false */
+            allowRecovery: boolean;
         };
         TriggerDrawResponse: {
             drawAttemptId: string;

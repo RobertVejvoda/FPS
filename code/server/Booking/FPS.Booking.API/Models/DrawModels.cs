@@ -5,7 +5,8 @@ public record TriggerDrawRequest(
     DateOnly Date,
     DateTime TimeSlotStart,
     DateTime TimeSlotEnd,
-    string Reason);
+    string Reason,
+    bool AllowRecovery = false);
 
 public record TriggerDrawResponse(
     string DrawAttemptId,

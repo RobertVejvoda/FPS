@@ -20,6 +20,7 @@ public sealed class TriggerDrawHandler(
         var existing = await drawRepository.GetByKeyAsync(storeKey, cancellationToken);
 
         // Idempotency: already completed — return cached result without re-running.
+        // Completed draws must not be mutated.
         if (existing?.Status == "Completed")
         {
             return new TriggerDrawResult(
@@ -32,9 +33,31 @@ public sealed class TriggerDrawHandler(
         if (existing?.Status == "InProgress")
             return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
 
-        // Previously failed — explicit recovery path not yet implemented; surface Failed to caller.
+        // Previously failed — surface Failed without automatic retry.
+        // Explicit recovery archives the failed attempt under the same store key and starts a
+        // new workflow with a distinct instance ID so Dapr does not hit the existing-instance path.
         if (existing?.Status == "Failed")
-            return new TriggerDrawResult(storeKey, "Failed", 0, 0, 0, WasAlreadyCompleted: false);
+        {
+            if (!cmd.AllowRecovery)
+                return new TriggerDrawResult(storeKey, "Failed", 0, 0, 0, WasAlreadyCompleted: false);
+
+            var recoveryInstanceId = $"{storeKey}-r-{Guid.NewGuid().ToString("N")[..8]}";
+            existing.Status = "FailedArchived";
+            existing.LifecycleSteps ??= [];
+            existing.LifecycleSteps.Add(new DrawLifecycleStepRecord
+            {
+                StepName = "RecoveryInitiated",
+                Status = "Completed",
+                StartedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                Summary = $"Recovery triggered. New instance: {recoveryInstanceId}. Reason: {cmd.Reason}",
+            });
+            await drawRepository.SaveAsync(existing, cancellationToken);
+
+            var recoveryCmd = cmd with { TriggerSource = "recovery", WorkflowInstanceIdOverride = recoveryInstanceId };
+            await workflowStarter.StartAsync(recoveryCmd, cancellationToken);
+            return new TriggerDrawResult(storeKey, "InProgress", 0, 0, 0, WasAlreadyCompleted: false);
+        }
 
         // No prior attempt — start the workflow.
         await workflowStarter.StartAsync(cmd, cancellationToken);

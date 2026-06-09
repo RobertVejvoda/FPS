@@ -29,6 +29,11 @@ public sealed class PersistDecisionsActivity(
         {
             if (!Guid.TryParse(decision.RequestId, out var requestGuid)) continue;
 
+            // Read current status to guard against duplicate application on activity retry/replay.
+            // Only requests still in Pending state should be updated; those already decided are skipped.
+            var current = await bookingRepository.GetBookingRequestAsync(input.TenantId, requestGuid);
+            if (current is null || current.Status != "Pending") continue;
+
             switch (decision.Outcome)
             {
                 case "Allocated":

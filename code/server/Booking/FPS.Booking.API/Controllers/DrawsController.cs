@@ -43,7 +43,8 @@ public sealed class DrawsController : ControllerBase
             Date: body.Date,
             TimeSlotStart: body.TimeSlotStart,
             TimeSlotEnd: body.TimeSlotEnd,
-            Reason: body.Reason),
+            Reason: body.Reason,
+            AllowRecovery: body.AllowRecovery),
             cancellationToken);
 
         var response = new TriggerDrawResponse(

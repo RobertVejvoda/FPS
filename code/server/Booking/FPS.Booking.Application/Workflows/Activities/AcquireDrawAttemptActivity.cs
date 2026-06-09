@@ -35,6 +35,21 @@ public sealed class AcquireDrawAttemptActivity(
             return new AcquireDrawAttemptOutput(WasAlreadyRunning: true, existing.StartedAt.ToString("O"));
 
         var startedAt = DateTime.UtcNow;
+        var scheduledStep = new DrawLifecycleStepRecord
+        {
+            StepName = "Scheduled",
+            Status = "Completed",
+            StartedAt = startedAt,
+            CompletedAt = startedAt,
+            Summary = $"Draw triggered by {input.TriggerSource} ({input.TriggeredBy})",
+        };
+
+        // Recovery: carry archived lifecycle history forward so the failed-attempt audit
+        // trail is not lost when the new InProgress attempt overwrites the same store key.
+        List<DrawLifecycleStepRecord> lifecycleSteps = existing?.Status == "FailedArchived" && existing.LifecycleSteps?.Count > 0
+            ? [.. existing.LifecycleSteps, scheduledStep]
+            : [scheduledStep];
+
         var attempt = new DrawAttemptDto
         {
             DrawKey = input.DrawKey,
@@ -44,17 +59,7 @@ public sealed class AcquireDrawAttemptActivity(
             Status = "InProgress",
             Seed = input.Seed,
             StartedAt = startedAt,
-            LifecycleSteps =
-            [
-                new DrawLifecycleStepRecord
-                {
-                    StepName = "Scheduled",
-                    Status = "Completed",
-                    StartedAt = startedAt,
-                    CompletedAt = startedAt,
-                    Summary = $"Draw triggered by {input.TriggerSource} ({input.TriggeredBy})",
-                }
-            ],
+            LifecycleSteps = lifecycleSteps,
         };
         await drawRepository.SaveAsync(attempt);
 

@@ -11,4 +11,6 @@ public record TriggerDrawCommand(
     DateTime TimeSlotEnd,
     string Reason,
     string TriggerSource = "manual",
-    string TriggeredBy = "hr-admin") : IRequest<TriggerDrawResult>;
+    string TriggeredBy = "hr-admin",
+    bool AllowRecovery = false,
+    string? WorkflowInstanceIdOverride = null) : IRequest<TriggerDrawResult>;
