@@ -506,6 +506,12 @@ select {
   line-height: 1.1;
 }
 
+.day-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
 @media (max-width: 820px) {
   .app-header {
     flex-wrap: wrap;
@@ -556,6 +562,10 @@ select {
   }
 
   .session-security-note {
+    grid-template-columns: 1fr;
+  }
+
+  .day-tiles-grid {
     grid-template-columns: 1fr;
   }
 }

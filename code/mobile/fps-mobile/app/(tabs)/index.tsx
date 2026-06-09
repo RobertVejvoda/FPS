@@ -181,7 +181,7 @@ export default function HomeRoute() {
               busy={busyId === booking?.requestId}
               onCancel={booking?.nextAction === 'cancel' ? () => handleCancel(booking.requestId) : undefined}
               onConfirm={booking?.nextAction === 'confirmUsage' ? () => handleConfirm(booking.requestId) : undefined}
-              onRequest={() => router.push({ pathname: '/(tabs)/new', params: { date } })}
+              onRequest={() => router.push({ pathname: '/(tabs)/new', params: { offset: String(day.offset) } })}
               onDetails={booking ? () => router.push(bookingParams(booking)) : undefined}
             />
           );

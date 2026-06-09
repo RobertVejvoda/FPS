@@ -126,7 +126,7 @@ export function BookingsPage() {
       )}
 
       {/* Three-day tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div className="day-tiles-grid">
         {DAYS.map((day, i) => {
           const date = localDate(day.offset);
           const booking = items.find(b => b.requestedDate === date) ?? null;
