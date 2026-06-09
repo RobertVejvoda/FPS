@@ -1,4 +1,4 @@
-# FPS Development Plan
+# FairSpot Development Plan
 
 ## What We Are Building
 
