@@ -69,7 +69,8 @@ public sealed class AcquireDrawAttemptActivity(
                 DateOnly.Parse(input.Date),
                 Domain.ValueObjects.TimeSlot.Create(slotStart, slotEnd)),
             input.Seed,
-            startedAt));
+            startedAt,
+            DrawAttemptId: input.DrawKey));
 
         return new AcquireDrawAttemptOutput(WasAlreadyRunning: false, startedAt.ToString("O"));
     }

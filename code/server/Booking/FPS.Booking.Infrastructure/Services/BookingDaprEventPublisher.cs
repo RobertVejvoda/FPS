@@ -111,7 +111,8 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     Date: e.DrawKey.Date.ToString("yyyy-MM-dd"),
                     TimeSlot: $"{e.DrawKey.TimeSlot.Start:HH:mm}-{e.DrawKey.TimeSlot.End:HH:mm}",
                     PreviousStatus: null, NewStatus: null,
-                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null),
+                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    DrawAttemptId: e.DrawAttemptId),
 
                 DrawAttemptCompletedEvent e => new(
                     BookingRequestId: null,
@@ -121,6 +122,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     TimeSlot: $"{e.DrawKey.TimeSlot.Start:HH:mm}-{e.DrawKey.TimeSlot.End:HH:mm}",
                     PreviousStatus: null, NewStatus: null,
                     ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    DrawAttemptId: e.DrawAttemptId,
                     AllocatedCount: e.AllocatedCount,
                     RejectedCount: e.RejectedCount,
                     WaitlistedCount: e.WaitlistedCount),
