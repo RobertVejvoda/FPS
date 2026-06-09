@@ -69,6 +69,33 @@ public sealed class DrawsControllerTests
         Assert.Equal("tenant-99", captured?.TenantId);
     }
 
+    [Fact]
+    public async Task TriggerDraw_FailedDraw_Returns202WithSafeStatus()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TriggerDrawResult("draw-key", "Failed", 0, 0, 0, WasAlreadyCompleted: false));
+
+        var result = await controller.TriggerDraw(ValidBody(), CancellationToken.None);
+
+        var accepted = Assert.IsType<AcceptedResult>(result);
+        var body = Assert.IsType<TriggerDrawResponse>(accepted.Value);
+        Assert.Equal("Failed", body.Status);
+    }
+
+    [Fact]
+    public async Task TriggerDraw_AllowRecovery_PassesFlagToCommand()
+    {
+        TriggerDrawCommand? captured = null;
+        mediator.Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<TriggerDrawResult>, CancellationToken>((cmd, _) => captured = (TriggerDrawCommand)cmd)
+            .ReturnsAsync(new TriggerDrawResult("draw-key", "InProgress", 0, 0, 0, WasAlreadyCompleted: false));
+
+        var body = ValidBody() with { AllowRecovery = true };
+        await controller.TriggerDraw(body, CancellationToken.None);
+
+        Assert.True(captured?.AllowRecovery);
+    }
+
     // ── GET /draws/{date}/status ──────────────────────────────────────────────
 
     [Fact]
