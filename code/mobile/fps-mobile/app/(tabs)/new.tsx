@@ -141,6 +141,7 @@ export default function NewBookingRoute() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
+  const [dateStatuses, setDateStatuses] = useState<Record<number, DrawStatusResult>>({});
   const dates = availableDates();
 
   useEffect(() => {
@@ -158,6 +159,21 @@ export default function NewBookingRoute() {
     });
     return () => { cancelled = true; };
   }, [apiBaseUrl, bearerToken, form.dateOffset]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(dates.map(async ({ offset }) => {
+      const date = dateStrFromOffset(offset);
+      const status = await fetchDrawStatus(
+        { apiBaseUrl, bearerToken },
+        { date, locationId: DEMO_LOCATION_ID, timeSlotStart: DEFAULT_TIME_SLOT_START, timeSlotEnd: DEFAULT_TIME_SLOT_END },
+      );
+      return [offset, status] as const;
+    })).then((entries) => {
+      if (!cancelled) setDateStatuses(Object.fromEntries(entries));
+    });
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken]);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -305,20 +321,32 @@ export default function NewBookingRoute() {
             <FieldRow label="Date">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {dates.map(({ offset, label }) => (
-                  <Pressable
-                    key={offset}
-                    style={({ pressed }) => [
-                      styles.chip,
-                      form.dateOffset === offset && styles.chipActive,
-                      pressed && styles.chipPressed,
-                    ]}
-                    onPress={() => set('dateOffset', offset)}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.chipText, form.dateOffset === offset && styles.chipTextActive]}>
-                      {label}
-                    </Text>
-                  </Pressable>
+                  (() => {
+                    const status = dateStatuses[offset];
+                    const disabled = status?.kind === 'ok' && !status.data.canRequest;
+                    return (
+                      <Pressable
+                        key={offset}
+                        style={({ pressed }) => [
+                          styles.chip,
+                          form.dateOffset === offset && styles.chipActive,
+                          disabled && styles.chipDisabled,
+                          pressed && !disabled && styles.chipPressed,
+                        ]}
+                        disabled={disabled}
+                        onPress={() => set('dateOffset', offset)}
+                        accessibilityRole="button"
+                      >
+                        <Text style={[
+                          styles.chipText,
+                          form.dateOffset === offset && styles.chipTextActive,
+                          disabled && styles.chipTextDisabled,
+                        ]}>
+                          {label}{disabled ? ' closed' : ''}
+                        </Text>
+                      </Pressable>
+                    );
+                  })()
                 ))}
               </ScrollView>
             </FieldRow>
@@ -572,9 +600,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBackground,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+  chipDisabled: { borderColor: colors.border, backgroundColor: colors.cardBackground, opacity: 0.5 },
   chipPressed: { opacity: 0.7 },
   chipText: { fontSize: 13, color: colors.text, fontWeight: '500' },
   chipTextActive: { color: colors.primaryText, fontWeight: '600' },
+  chipTextDisabled: { color: colors.textMuted },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

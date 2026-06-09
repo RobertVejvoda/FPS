@@ -36,6 +36,32 @@ function datetimeLocalValue(offsetDays: number, hour: number, minute = 0): strin
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+function dateFromDateTimeLocal(value: string): string {
+  return value.slice(0, 10);
+}
+
+function timeFromDateTimeLocal(value: string): string {
+  return value.slice(11, 16);
+}
+
+function withDate(value: string, date: string): string {
+  return `${date}T${timeFromDateTimeLocal(value) || '08:00'}`;
+}
+
+function withTime(value: string, time: string): string {
+  return `${dateFromDateTimeLocal(value) || dateFromOffset(1)}T${time}`;
+}
+
+function dateFromOffset(offsetDays: number): string {
+  return datetimeLocalValue(offsetDays, 0).slice(0, 10);
+}
+
+function dateLabel(date: string, offsetDays: number): string {
+  if (offsetDays === 0) return 'Today';
+  if (offsetDays === 1) return 'Tomorrow';
+  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
 function dateOffsetFromParam(dateStr: string | null): number {
   if (!dateStr) return 1;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -57,6 +83,8 @@ const initialForm = (offsetDays = 1): Form => ({
   plannedDeparture: datetimeLocalValue(offsetDays, 18),
 });
 
+const DATE_OFFSETS = Array.from({ length: 7 }, (_, offset) => offset);
+
 export function NewBookingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +97,8 @@ export function NewBookingPage() {
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
   const [drawStatusLoading, setDrawStatusLoading] = useState(false);
+  const [dateStatuses, setDateStatuses] = useState<Record<string, DrawStatusResult>>({});
+  const [dateStatusesLoading, setDateStatusesLoading] = useState(false);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -114,6 +144,31 @@ export function NewBookingPage() {
     return () => { cancelled = true; };
   }, [apiBaseUrl, bearerToken, form.locationId, form.plannedArrival, form.plannedDeparture]);
 
+  useEffect(() => {
+    const arrivalTime = timeFromDateTimeLocal(form.plannedArrival);
+    const departureTime = timeFromDateTimeLocal(form.plannedDeparture);
+    if (!arrivalTime || !departureTime) return;
+
+    let cancelled = false;
+    setDateStatusesLoading(true);
+    Promise.all(DATE_OFFSETS.map(async (offset) => {
+      const date = dateFromOffset(offset);
+      const status = await fetchDrawStatus({ apiBaseUrl, bearerToken }, {
+        date,
+        locationId: form.locationId.trim() || DEMO_LOCATION_ID,
+        timeSlotStart: `${arrivalTime}:00`,
+        timeSlotEnd: `${departureTime}:00`,
+      });
+      return [date, status] as const;
+    })).then((entries) => {
+      if (cancelled) return;
+      setDateStatuses(Object.fromEntries(entries));
+      setDateStatusesLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken, form.locationId, form.plannedArrival, form.plannedDeparture]);
+
   function set<K extends keyof Form>(k: K, v: Form[K]) {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
@@ -131,6 +186,15 @@ export function NewBookingPage() {
       }));
       setErrors((e) => ({ ...e, licensePlate: undefined, vehicleType: undefined }));
     }
+  }
+
+  function setRequestDate(date: string) {
+    setForm((f) => ({
+      ...f,
+      plannedArrival: withDate(f.plannedArrival, date),
+      plannedDeparture: withDate(f.plannedDeparture, date),
+    }));
+    setErrors((e) => ({ ...e, plannedArrival: undefined, plannedDeparture: undefined }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -250,11 +314,31 @@ export function NewBookingPage() {
             </>
           )}
 
-          <Field label="Planned arrival *" error={errors.plannedArrival}>
-            <input type="datetime-local" value={form.plannedArrival} onChange={(e) => set('plannedArrival', e.target.value)} style={inputStyle} />
+          <Field label="Date *" error={errors.plannedArrival}>
+            <select
+              value={dateFromDateTimeLocal(form.plannedArrival)}
+              onChange={(e) => setRequestDate(e.target.value)}
+              style={inputStyle}
+              disabled={dateStatusesLoading}
+            >
+              {DATE_OFFSETS.map((offset) => {
+                const date = dateFromOffset(offset);
+                const status = dateStatuses[date];
+                const closed = status?.kind === 'ok' && !status.canRequest;
+                return (
+                  <option key={date} value={date} disabled={closed}>
+                    {dateLabel(date, offset)}{closed ? ' - closed' : ''}
+                  </option>
+                );
+              })}
+            </select>
+            {dateStatusesLoading ? <span style={{ fontSize: 12, color: '#6b7280' }}>Checking available dates...</span> : null}
+          </Field>
+          <Field label="Planned arrival *">
+            <input type="time" value={timeFromDateTimeLocal(form.plannedArrival)} onChange={(e) => set('plannedArrival', withTime(form.plannedArrival, e.target.value))} style={inputStyle} />
           </Field>
           <Field label="Planned departure *" error={errors.plannedDeparture}>
-            <input type="datetime-local" value={form.plannedDeparture} onChange={(e) => set('plannedDeparture', e.target.value)} style={inputStyle} />
+            <input type="time" value={timeFromDateTimeLocal(form.plannedDeparture)} onChange={(e) => set('plannedDeparture', withTime(form.plannedDeparture, e.target.value))} style={inputStyle} />
           </Field>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {form.selectedVehicleId ? null : (
