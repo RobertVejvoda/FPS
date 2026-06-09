@@ -212,6 +212,7 @@ export function ConfigurationPage() {
       timeSlotStart: `${demoDraw.date}T${demoDraw.timeSlotStart}:00`,
       timeSlotEnd: `${demoDraw.date}T${demoDraw.timeSlotEnd}:00`,
       reason: demoDraw.reason.trim() || 'Demo on-demand Draw',
+      allowRecovery: false,
     });
     setDemoDrawBusy(false);
     if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }

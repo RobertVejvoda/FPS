@@ -129,6 +129,33 @@ export function humanizeHrRejection(reasonCode: string | null, reason: string | 
   return '—';
 }
 
+// Draw lifecycle step labels (DRAW004)
+const LIFECYCLE_STEP_LABELS: Record<string, string> = {
+  Scheduled: 'Draw scheduled',
+  DrawInputReady: 'Input data ready',
+  DrawExecuted: 'Draw executed',
+  DecisionsPersisted: 'Decisions saved',
+  NotificationsSent: 'Notifications sent',
+  DrawCompleted: 'Draw completed',
+  DrawFailed: 'Draw failed',
+  RecoveryInitiated: 'Recovery initiated',
+};
+
+export function formatLifecycleStepName(name: string): string {
+  return LIFECYCLE_STEP_LABELS[name] ?? name;
+}
+
+const LIFECYCLE_STEP_STATUS_COLORS: Record<string, string> = {
+  Completed: '#22c55e',
+  Failed: '#ef4444',
+  InProgress: '#2563eb',
+  Pending: '#94a3b8',
+};
+
+export function lifecycleStepStatusColor(status: string): string {
+  return LIFECYCLE_STEP_STATUS_COLORS[status] ?? '#94a3b8';
+}
+
 // Audit event type display labels (AUDIT003)
 const AUDIT_EVENT_TYPE_LABELS: Record<string, string> = {
   'booking.requestSubmitted': 'Booking request submitted',
