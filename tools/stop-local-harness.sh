@@ -58,6 +58,8 @@ for pattern in \
   "FPS.Reporting" \
   "FPS.Configuration" \
   "FPS.Customer" \
+  "FPS.DataHub" \
+  "dapr run -f dapr.yaml" \
   "daprd"; do
   pkill -TERM -f "$pattern" 2>/dev/null && log "Stopped $pattern processes" || true
 done
@@ -77,6 +79,8 @@ for pattern in \
   "FPS.Reporting" \
   "FPS.Configuration" \
   "FPS.Customer" \
+  "FPS.DataHub" \
+  "dapr run -f dapr.yaml" \
   "daprd"; do
   pkill -KILL -f "$pattern" 2>/dev/null && log "Force-stopped $pattern processes" || true
 done

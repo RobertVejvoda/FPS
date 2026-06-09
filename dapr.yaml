@@ -80,3 +80,10 @@ apps:
     daprHTTPPort: 3641
     daprGRPCPort: 50041
     command: ["dotnet", "run", "--no-build"]
+
+  - appID: fps-datahub
+    appDirPath: code/server/DataHub/FPS.DataHub
+    appPort: 5211
+    daprHTTPPort: 3651
+    daprGRPCPort: 50151
+    command: ["dotnet", "run", "--no-build", "--no-launch-profile", "--", "--urls", "http://0.0.0.0:5211"]

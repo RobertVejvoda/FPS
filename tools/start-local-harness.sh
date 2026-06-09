@@ -2,7 +2,7 @@
 # start-local-harness.sh — Start the FPS full-stack local test harness.
 #
 # Starts Docker Compose infrastructure, sets up Keycloak auth, launches Identity
-# and seven Dapr-paired services in the background, then seeds demo data.
+# and eight Dapr-paired services in the background, then seeds demo data.
 # Service logs go to logs/local-harness/. PIDs are saved for stop-local-harness.sh.
 #
 # Prerequisites:
@@ -129,6 +129,7 @@ for port_label in \
   "5171 Reporting" \
   "5141 Configuration" \
   "5181 Customer" \
+  "5211 DataHub" \
   "3601 Booking-Dapr-HTTP" \
   "3607 Notification-Dapr-HTTP" \
   "3617 Profile-Dapr-HTTP" \
@@ -136,13 +137,15 @@ for port_label in \
   "3621 Reporting-Dapr-HTTP" \
   "3631 Configuration-Dapr-HTTP" \
   "3641 Customer-Dapr-HTTP" \
+  "3651 DataHub-Dapr-HTTP" \
   "50001 Booking-Dapr-GRPC" \
   "50007 Notification-Dapr-GRPC" \
   "50017 Profile-Dapr-GRPC" \
   "50011 Audit-Dapr-GRPC" \
   "50021 Reporting-Dapr-GRPC" \
   "50031 Configuration-Dapr-GRPC" \
-  "50041 Customer-Dapr-GRPC"; do
+  "50041 Customer-Dapr-GRPC" \
+  "50151 DataHub-Dapr-GRPC"; do
   ensure_port_free "${port_label%% *}" "${port_label#* }"
 done
 
@@ -176,7 +179,7 @@ dotnet build code/server/FPS.sln --no-restore
 
 # ── Services with Dapr sidecars ───────────────────────────────────────────────
 
-log "Starting Identity, Booking, Notification, Profile, Audit, Reporting, Configuration, Customer"
+log "Starting Identity, Booking, Notification, Profile, Audit, Reporting, Configuration, Customer, DataHub"
 log "  with Dapr sidecars (logs -> $LOG_DIR/dapr-run.log)..."
 cd "$REPO_ROOT"
 dapr run -f dapr.yaml > "$LOG_DIR/dapr-run.log" 2>&1 &
@@ -201,6 +204,8 @@ require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.
 require_port 5141 "Configuration" 90 "$LOG_DIR/dapr-run.log"
 require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 require_port 5181 "Customer"      90 "$LOG_DIR/dapr-run.log"
+require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
+require_port 5211 "DataHub"       90 "$LOG_DIR/dapr-run.log"
 require_process_running "$DAPR_RUN_PID" "Dapr multi-app run" "$LOG_DIR/dapr-run.log"
 
 # ── Seed demo data ────────────────────────────────────────────────────────────
@@ -228,6 +233,7 @@ printf ' Audit:           http://localhost:5161\n'
 printf ' Reporting:       http://localhost:5171\n'
 printf ' Configuration:   http://localhost:5141\n'
 printf ' Customer:        http://localhost:5181\n'
+printf ' DataHub:         http://localhost:5211\n'
 printf ' Logs:            %s/\n' "$LOG_DIR"
 printf '\n'
 printf ' Smoke (run in a new shell):\n'

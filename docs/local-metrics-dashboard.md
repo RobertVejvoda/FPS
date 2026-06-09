@@ -35,7 +35,7 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d prometheus grafa
 | HTTP In-Flight | `http_requests_in_progress` | Concurrent active requests per service |
 | GC Heap Size | `dotnet_gc_heap_size_bytes` | .NET managed heap in MB |
 | Thread Pool Queue | `dotnet_threadpool_queue_length` | Work-item backlog in the thread pool |
-| Service Health | `up{job=~"fps-(identity\|booking\|notification\|profile\|audit\|reporting\|configuration\|customer)"}` | UP/DOWN per local FairSpot service scrape target; red = Prometheus cannot reach that service |
+| Service Health | `up{job=~"fps-(identity\|booking\|notification\|profile\|audit\|reporting\|configuration\|customer\|datahub)"}` | UP/DOWN per local FairSpot service scrape target; red = Prometheus cannot reach that service |
 | RabbitMQ Published Rate | `rabbitmq_channel_messages_published_total` | Events published per second |
 | RabbitMQ Queue Depth | `rabbitmq_queue_messages` | Messages waiting per queue |
 
@@ -55,6 +55,7 @@ Each FPS service exposes `GET /metrics` (prometheus-net). Prometheus scrapes eve
 | Reporting | 5171 | http://localhost:5171/metrics |
 | Configuration | 5141 | http://localhost:5141/metrics |
 | Customer | 5181 | http://localhost:5181/metrics |
+| DataHub | 5211 | http://localhost:5211/metrics |
 
 RabbitMQ (port 15692) is scraped from within the Docker network — the prometheus plugin is enabled via the compose command. Keycloak `start-dev` mode does not expose a `/metrics` endpoint and is not scraped.
 
@@ -93,7 +94,7 @@ Raw metric browser and PromQL REPL: **http://localhost:9090**
 Useful queries:
 ```promql
 # Local FairSpot service up/down targets
-up{job=~"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer)"}
+up{job=~"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer|datahub)"}
 
 # 95th-percentile latency for all FPS services (ms)
 histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[1m]))) * 1000

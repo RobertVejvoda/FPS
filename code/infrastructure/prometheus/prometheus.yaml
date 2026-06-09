@@ -62,6 +62,11 @@ scrape_configs:
       - targets: ['host.docker.internal:5181']
     metrics_path: /metrics
 
+  - job_name: 'fps-datahub'
+    static_configs:
+      - targets: ['host.docker.internal:5211']
+    metrics_path: /metrics
+
   # Infrastructure dependencies
   - job_name: 'rabbitmq'
     static_configs:

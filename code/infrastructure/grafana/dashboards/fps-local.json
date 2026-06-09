@@ -102,7 +102,7 @@
       "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
       "targets": [
         {
-          "expr": "up{job=~\"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer)\"}",
+          "expr": "up{job=~\"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer|datahub)\"}",
           "legendFormat": "{{job}}"
         }
       ],
