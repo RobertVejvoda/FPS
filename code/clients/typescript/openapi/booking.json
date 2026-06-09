@@ -2533,6 +2533,10 @@
           },
           "reason": {
             "type": "string"
+          },
+          "allowRecovery": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
