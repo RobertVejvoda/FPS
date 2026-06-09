@@ -154,11 +154,29 @@ export function HrOperationsPage() {
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (result.kind === 'forbidden') { showToast(false, 'Not authorized to run a Draw.'); return; }
     if (result.kind === 'accepted') {
-      const { data } = result;
-      const msg = data.status === 'Failed'
-        ? 'Draw ended in Failed state. Check lifecycle steps for details.'
-        : `Draw complete: ${data.allocatedCount} allocated, ${data.waitlistedCount ?? 0} waitlisted, ${data.rejectedCount} rejected.`;
-      showToast(data.status !== 'Failed', msg);
+      const { data, wasAlreadyCompleted } = result;
+      let msg: string;
+      let isSuccess: boolean;
+
+      if (data.status === 'Failed') {
+        msg = 'Draw ended in Failed state. Check lifecycle steps for details.';
+        isSuccess = false;
+      } else if (data.status === 'InProgress') {
+        msg = wasAlreadyCompleted
+          ? 'Draw was already completed. Showing existing results.'
+          : 'Draw started. Progress will refresh below.';
+        isSuccess = true;
+      } else if (data.status === 'Completed') {
+        msg = wasAlreadyCompleted
+          ? `Draw was already completed: ${data.allocatedCount} allocated, ${data.waitlistedCount ?? 0} waitlisted, ${data.rejectedCount} rejected.`
+          : `Draw complete: ${data.allocatedCount} allocated, ${data.waitlistedCount ?? 0} waitlisted, ${data.rejectedCount} rejected.`;
+        isSuccess = true;
+      } else {
+        msg = `Draw status: ${data.status}`;
+        isSuccess = true;
+      }
+
+      showToast(isSuccess, msg);
       loadBookings();
       loadDrawData();
     } else {
