@@ -140,6 +140,10 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=admin
     volumes:
       - mongodb_data:/data/db
+    command: >
+      bash -c "tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32 > /data/configdb/keyfile
+      && chmod 400 /data/configdb/keyfile
+      && exec mongod --replSet rs0 --bind_ip_all --keyFile /data/configdb/keyfile"
     networks:
       - web
     

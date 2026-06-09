@@ -7,7 +7,7 @@ spec:
   version: v1
   metadata:
   - name: host
-    value: host.docker.internal:27017
+    value: localhost:27017
   - name: databaseName
     value: fps-notification
   - name: collectionName

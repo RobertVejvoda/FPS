@@ -7,12 +7,15 @@ scopes:
 - fps-notification
 - fps-audit
 - fps-reporting
+- fps-datahub
 spec:
   type: pubsub.rabbitmq
   version: v1
   metadata:
-  - name: host
-    value: amqp://host.docker.internal:5672
+  - name: protocol
+    value: amqp
+  - name: hostname
+    value: localhost
   - name: durable
     value: "true"
   - name: deletedWhenUnused

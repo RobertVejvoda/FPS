@@ -19,6 +19,6 @@ spec:
   - name: bucket
     value: fps-bucket
   - name: endpoint
-    value: http://minio:9000
+    value: http://localhost:9000
 auth:
   secretStore: secretstore

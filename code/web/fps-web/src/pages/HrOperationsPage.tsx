@@ -13,10 +13,11 @@ import {
 } from '../api/bookings';
 import {
   displaySlot,
+  formatDrawStatus,
+  formatDrawRequestSummary,
   formatDrawTimestamp,
   formatLifecycleStepName,
-  formatScheduleSource,
-  formatScheduleStatus,
+  formatScheduleSummary,
   humanizeHrRejection,
   isTimestampInPast,
   lifecycleStepStatusColor,
@@ -224,7 +225,7 @@ export function HrOperationsPage() {
       {/* Draw panel */}
       <section style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem', marginBottom: '1.25rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.75rem', color: '#1e293b' }}>
-          Draw Schedule & Progress
+          Draw Schedule and Progress
         </h2>
         {drawLoading && <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Loading schedule…</p>}
         {drawOk && (
@@ -248,20 +249,23 @@ export function HrOperationsPage() {
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Draw status</div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, color: drawOk.status === 'Failed' ? '#dc2626' : '#1e293b', marginTop: 2 }}>
-                  {drawOk.status} · {drawOk.requestCount} request{drawOk.requestCount !== 1 ? 's' : ''} · demand: {drawOk.demandLevel}
+                  {formatDrawStatus(drawOk.status)}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>
+                  {formatDrawRequestSummary(drawOk.requestCount, drawOk.demandLevel)}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Request window</div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Request deadline</div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: 2,
                   color: drawOk.requestWindowStatus === 'open' ? '#166534' : drawOk.requestWindowStatus === 'closed' ? '#dc2626' : '#92400e' }}>
-                  {drawOk.requestWindowStatus === 'open' ? 'Open' : drawOk.requestWindowStatus === 'closed' ? 'Closed' : 'Unknown'}
+                  {drawOk.requestWindowStatus === 'open' ? 'Requests are open' : drawOk.requestWindowStatus === 'closed' ? 'Requests are closed' : 'Deadline unknown'}
                 </div>
               </div>
               {drawOk.cutOffAt && (
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {isTimestampInPast(drawOk.cutOffAt) ? 'Cut-off passed' : 'Cut-off'}
+                    {isTimestampInPast(drawOk.cutOffAt) ? 'Deadline passed' : 'Deadline'}
                   </div>
                   <div style={{ fontSize: '0.9rem', color: isTimestampInPast(drawOk.cutOffAt) ? '#6b7280' : '#374151', marginTop: 2 }}>
                     {formatDrawTimestamp(drawOk.cutOffAt, drawOk.timeZone)}
@@ -270,7 +274,7 @@ export function HrOperationsPage() {
               )}
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Schedule</div>
-                <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatScheduleStatus(drawOk.scheduleStatus)} · {formatScheduleSource(drawOk.scheduleSource)}</div>
+                <div style={{ fontSize: '0.9rem', color: '#374151', marginTop: 2 }}>{formatScheduleSummary(drawOk.scheduleStatus, drawOk.scheduleSource)}</div>
               </div>
               {drawOk.completedAt && (
                 <div>

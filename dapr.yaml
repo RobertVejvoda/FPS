@@ -14,12 +14,11 @@
 
 version: 1
 common:
-  resourcesPath: code/infrastructure/dapr/components/smoke
+  resourcesPath: code/infrastructure/dapr/components/local
   configFilePath: code/infrastructure/dapr/configuration/fps-smoke-config.yaml
-  # The smoke config intentionally omits tracing. fps-config.yaml references
-  # http://zipkin:9411, which is only reachable inside the Docker network.
-  # For durable local state with tracing: use components/local and
-  # code/infrastructure/dapr/configuration/fps-config.yaml.
+  # The host-local harness uses durable local components. The smoke config
+  # intentionally omits tracing because fps-config.yaml references Docker-network
+  # endpoints that host-local Dapr sidecars cannot resolve.
   env:
     ASPNETCORE_ENVIRONMENT: Development
     DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE: "false"

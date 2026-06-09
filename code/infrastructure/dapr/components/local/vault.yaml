@@ -7,7 +7,7 @@ spec:
   version: v1
   metadata:
   - name: vaultAddr
-    value: http://host.docker.internal:8200
+    value: http://localhost:8200
   - name: skipVerify
     value : "true"
   - name: vaultToken

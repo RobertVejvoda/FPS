@@ -97,6 +97,48 @@ export function formatScheduleSource(source: string): string {
   return SCHEDULE_SOURCE_LABELS[source] ?? source;
 }
 
+const DRAW_STATUS_LABELS: Record<string, string> = {
+  NotScheduled: 'No draw has run yet',
+  Scheduled: 'Draw is scheduled',
+  InProgress: 'Draw is running',
+  Completed: 'Draw completed',
+  Failed: 'Draw failed',
+};
+
+const DEMAND_LEVEL_LABELS: Record<string, string> = {
+  Unknown: 'Demand unknown',
+  None: 'No demand',
+  Low: 'Low demand',
+  Medium: 'Medium demand',
+  High: 'High demand',
+};
+
+export function formatDrawStatus(status: string): string {
+  return DRAW_STATUS_LABELS[status] ?? status;
+}
+
+export function formatDemandLevel(demandLevel: string): string {
+  return DEMAND_LEVEL_LABELS[demandLevel] ?? demandLevel;
+}
+
+export function formatDrawRequestSummary(requestCount: number, demandLevel: string): string {
+  if (requestCount === 0 && demandLevel === 'Unknown') {
+    return 'No employee requests for this day yet. Demand will be calculated after requests exist.';
+  }
+
+  const requestText = `${requestCount} employee request${requestCount !== 1 ? 's' : ''}`;
+  return `${requestText}. ${formatDemandLevel(demandLevel)}.`;
+}
+
+export function formatScheduleSummary(status: string, source: string): string {
+  if (status === 'known' && source === 'tenantPolicy') return 'Automatic schedule from tenant policy';
+  if (status === 'known' && source === 'locationOverride') return 'Automatic schedule from location settings';
+  if (status === 'known' && source === 'manualOnly') return 'Manual draw only';
+  if (status === 'known') return 'Automatic schedule configured';
+  if (status === 'unknown') return 'No automatic schedule configured';
+  return formatScheduleStatus(status);
+}
+
 export function formatDrawTimestamp(at: string | null, timeZone: string): string {
   if (!at) return '—';
   try {

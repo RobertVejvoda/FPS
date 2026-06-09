@@ -161,6 +161,41 @@ fi
 # ── Keycloak health ───────────────────────────────────────────────────────────
 
 require_port 8180 "Keycloak" 60 "docker compose logs keycloak" "$INFRA_HOST"
+require_port 8200 "Vault"    60 "docker compose logs vault"    "$INFRA_HOST"
+
+log "Ensuring MongoDB single-node replica set is initialized..."
+for attempt in $(seq 1 30); do
+  if docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongodb \
+    mongosh -u admin -p admin --authenticationDatabase admin --quiet \
+    --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]}).ok }' 2>/dev/null | grep -qE '^(1|true)$'; then
+    break
+  fi
+
+  if [ "$attempt" -eq 30 ]; then
+    log "ERROR: MongoDB replica set did not initialize."
+    log "  Inspect with: docker compose -f code/infrastructure/docker-compose.yaml logs mongodb"
+    exit 1
+  fi
+
+  sleep 2
+done
+
+log "Seeding local Dapr secrets in Vault..."
+VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
+VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
+seed_vault_secret() {
+  path="$1"
+  payload="$2"
+  curl -sf \
+    -H "X-Vault-Token: $VAULT_TOKEN" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "$payload" \
+    "$VAULT_ADDR/v1/secret/data/dapr/$path" > /dev/null
+}
+seed_vault_secret "mongodb-credentials" '{"data":{"username":"admin","password":"admin"}}'
+seed_vault_secret "rabbitmq-credentials" '{"data":{"username":"admin","password":"admin"}}'
+seed_vault_secret "minio-credentials" '{"data":{"accessKey":"minioadmin","secretKey":"minioadmin"}}'
 
 # ── Auth setup ────────────────────────────────────────────────────────────────
 
