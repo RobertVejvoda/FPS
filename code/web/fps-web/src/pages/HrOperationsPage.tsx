@@ -169,6 +169,7 @@ export function HrOperationsPage() {
   const drawOk = drawStatus?.kind === 'ok' ? drawStatus : null;
   const lifecycleOk = lifecycle?.kind === 'ok' ? lifecycle : null;
   const showLifecycleSteps = lifecycleOk !== null && lifecycleOk.steps.length > 0;
+  const lifecycleUnavailable = lifecycle !== null && lifecycle.kind !== 'ok' && lifecycle.kind !== 'notFound';
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -331,6 +332,14 @@ export function HrOperationsPage() {
                 ))}
               </ol>
             )}
+          </div>
+        )}
+
+        {/* Lifecycle unavailable message */}
+        {lifecycleUnavailable && (
+          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#92400e',
+            background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 4, padding: '0.5rem 0.75rem' }}>
+            Lifecycle details are unavailable.
           </div>
         )}
 
