@@ -1,10 +1,10 @@
 # HR Bootstrap Import Contract
 
-FPS uses a lightweight CSV import to bootstrap demo and pilot tenants without requiring first names, last names, employee IDs, or passwords. This document defines the contract between HR/IT and the FPS platform.
+FairSpot uses a lightweight CSV import to bootstrap demo and pilot tenants without requiring first names, last names, employee IDs, or passwords. This document defines the contract between HR/IT and FairSpot.
 
 ## Ownership boundaries
 
-| Data | Owner | Stored in FPS |
+| Data | Owner | Stored in FairSpot |
 |------|-------|---------------|
 | Identity (username, password, MFA) | Company IdP | No |
 | External subject / username | Company IdP | As a link key only |
@@ -14,7 +14,7 @@ FPS uses a lightweight CSV import to bootstrap demo and pilot tenants without re
 | Location, zone, eligibility flags | HR | Yes |
 | Vehicle license plates | HR / employee | Yes |
 
-FPS never requests or stores: passwords, national IDs, employee numbers, salary, date of birth, or personal addresses.
+FairSpot never requests or stores: passwords, national IDs, employee numbers, salary, date of birth, or personal addresses.
 
 ## File format
 
@@ -28,7 +28,7 @@ Two CSV files are used: one for employees, one for vehicles. Both use comma sepa
 | `display_name` | No | string | UI display only. |
 | `email` | No | string | Notifications only. |
 | `roles` | Yes | see below | Semicolon-separated. |
-| `home_location` | Yes | location code | Must match a configured FPS location. |
+| `home_location` | Yes | location code | Must match a configured FairSpot location. |
 | `preferred_zone` | No | zone code | Leave blank for no preference. |
 | `parking_eligible` | Yes | `true`/`false` | |
 | `has_company_car` | Yes | `true`/`false` | |
@@ -68,7 +68,7 @@ The `tools/validate-hr-import.sh` script enforces:
 - No forbidden columns (`password`, `passwd`, `secret`, `token`, `credential`, `ssn`, `national_id`, `salary`, `employee_id`, `manager_notes`, `department`, `internal_role`)
 - No unknown columns — only the documented column set is accepted; any additional column is an error
 - All required columns present
-- `home_location` must match a configured FPS location (local demo: `Prague`)
+- `home_location` must match a configured FairSpot location (local demo: `Prague`)
 - `preferred_zone` must be one of the allowed zones when provided (local demo: `A`, `B`, `COVERED`)
 - No duplicate `external_subject` values in employees.csv
 - No duplicate `vehicle_license_plate` values in vehicles.csv
@@ -96,7 +96,7 @@ Blank templates with column documentation are in `tools/templates/`:
 
 The company IdP remains authoritative for:
 - Password and MFA
-- Group membership (mapped to FPS roles via tenant role mapping config)
+- Group membership (mapped to FairSpot roles via tenant role mapping config)
 - Account lockout and suspension
 
-FPS only stores the minimum needed for access control, allocation, and demo usability. When a user is removed from the IdP, their FPS account can be deactivated by setting `active=false` and re-importing.
+FairSpot only stores the minimum needed for access control, allocation, and demo usability. When a user is removed from the IdP, their FairSpot account can be deactivated by setting `active=false` and re-importing.

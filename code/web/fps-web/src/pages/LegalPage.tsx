@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 
-const sourceUrl = 'https://github.com/RobertVejvoda/FPS';
-const licenseUrl = 'https://github.com/RobertVejvoda/FPS/blob/master/LICENSE';
-const brandPolicyUrl = 'https://github.com/RobertVejvoda/FPS/blob/master/docs/strategy-layer/brand-policy.md';
+const sourceUrl = 'https://github.com/RobertVejvoda/fairspot';
+const licenseUrl = 'https://github.com/RobertVejvoda/fairspot/blob/master/LICENSE';
+const brandPolicyUrl = 'https://github.com/RobertVejvoda/fairspot/blob/master/docs/strategy-layer/brand-policy.md';
 
 export function LegalPage() {
   return (

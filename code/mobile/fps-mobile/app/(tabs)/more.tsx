@@ -105,7 +105,7 @@ function AboutCard() {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel="Open FairSpot source code"
-        onPress={() => { void Linking.openURL('https://github.com/RobertVejvoda/FPS'); }}
+        onPress={() => { void Linking.openURL('https://github.com/RobertVejvoda/fairspot'); }}
         style={({ pressed }) => [styles.link, pressed && { opacity: 0.6 }]}
       >
         <Text style={styles.linkText}>Source code and license</Text>

@@ -1,4 +1,4 @@
-# FPS Development Plan
+# FairSpot Development Plan
 
 ## What We Are Building
 
@@ -136,7 +136,7 @@ This section tracks historical gaps that were found while planning and the remai
 ### Resolved
 
 **1. Dapr version was outdated** ✅ *Resolved*
-FPS targets **Dapr 1.14+**. Dapr Workflows require at least 1.10, and the current architecture treats durable workflow adoption as a future hardening step where needed.
+FairSpot targets **Dapr 1.14+**. Dapr Workflows require at least 1.10, and the current architecture treats durable workflow adoption as a future hardening step where needed.
 
 **2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved, revised 14.5.2026*
 The current decision is tenant-scoped storage inside service-owned stores. The current implementation direction uses collection-per-tenant where the selected store supports it, but the durable architecture rule is that services resolve tenant-specific storage names, partitions, or keys from authenticated/service context.
@@ -175,7 +175,7 @@ Notification history/SSE/email and audit query/PII erasure are implemented. Pref
 
 **13. Card reader / physical confirmation integration** — no vendor or protocol specified. Leave as a stub interface.
 
-**14. Seat booking as a future product extension** — after FPS parking reaches a stable hosted v1, the same allocation and booking platform approach could be applied to company seat/desk booking. Treat this as future scope, not v1 parking scope. It would reuse the concepts of tenant-scoped resources, employee requests, policy-driven allocation, notification, audit, reporting, and admin configuration, but would need separate business rules for seats, zones, teams, recurring occupancy, collaboration needs, health/safety constraints, and workspace-specific fairness.
+**14. Seat booking as a future product extension** — after FairSpot parking reaches a stable hosted v1, the same allocation and booking platform approach could be applied to company seat/desk booking. Treat this as future scope, not v1 parking scope. It would reuse the concepts of tenant-scoped resources, employee requests, policy-driven allocation, notification, audit, reporting, and admin configuration, but would need separate business rules for seats, zones, teams, recurring occupancy, collaboration needs, health/safety constraints, and workspace-specific fairness.
 
 ---
 
@@ -200,7 +200,7 @@ Goal: every developer can run the full stack locally with a single command.
 
 ### Phase 1 — Booking Domain (Week 3–6)
 
-This is the core of FPS. Everything else is supporting.
+This is the core of FairSpot. Everything else is supporting.
 
 Implementation should follow vertical slices from `docs/implementation/booking-vertical-slices.md`. Do not complete the whole domain layer before application and API work; each story should cut through the layers and be independently testable.
 
@@ -232,7 +232,7 @@ Remaining work in this phase is hardening and integration with the surrounding p
     - `RecentAllocationCount`: successful non-company-car allocations in the tenant's configured lookback window; same-day allocations count
     - Lookback window is tenant-configurable and defaults to `10` days
     - `ActivePenaltyScore`: active penalty points from late cancellations, no-shows, policy violations, or manual HR adjustments
-    - Rejected requests are not part of the default denominator; if FPS later rewards repeated unlucky requestors, it should be modelled as a separate positive factor
+    - Rejected requests are not part of the default denominator; if FairSpot later rewards repeated unlucky requestors, it should be modelled as a separate positive factor
     - If company-car requests exceed available matching capacity, reject overflow requests for now
 - [ ] `HasCompanyCar` flag on `UserProfile` aggregate — set by admin, read by allocation service
   - Booking currently consumes company-car eligibility through request/profile snapshots. The Profile aggregate remains Phase 2 work.
