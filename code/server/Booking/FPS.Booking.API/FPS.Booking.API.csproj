@@ -8,21 +8,24 @@
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>FPS.Booking.API.Tests</_Parameter1>
+      <_Parameter1>FPS.Booking.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapr.AspNetCore" Version="1.15.2" />
+    <PackageReference Include="Dapr.Client" Version="1.15.2" />
     <PackageReference Include="Dapr.Workflow" Version="1.15.2" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.4.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.5.0" />
+    <PackageReference Include="SharpCompress" Version="0.48.0" />
+    <PackageReference Include="Snappier" Version="1.3.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FPS.Booking.Application\FPS.Booking.Application.csproj" />
-    <ProjectReference Include="..\FPS.Booking.Infrastructure\FPS.Booking.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Shared\FPS.SharedKernel\FPS.SharedKernel.csproj" />
   </ItemGroup>
 

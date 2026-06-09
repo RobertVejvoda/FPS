@@ -1,4 +1,6 @@
 global using System;
+global using System.Collections.Generic;
+global using System.Linq;
 global using System.Threading;
 global using System.Threading.Tasks;
 
@@ -10,7 +12,10 @@ global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Hosting;
 
+// Domain
+global using FPS.Booking.Domain.Exceptions;
 global using FPS.Booking.Domain.ValueObjects;
+global using FPS.Booking.Domain.Events;
 global using FPS.Booking.Domain.Aggregates.SlotAllocationAggregate;
 
 // Application layer
@@ -25,6 +30,10 @@ global using Microsoft.Extensions.Diagnostics.HealthChecks;
 global using FPS.SharedKernel.HealthChecks;
 global using FPS.SharedKernel.Time;
 
+// Shared kernel
+global using FPS.SharedKernel.Domain;
+global using FPS.SharedKernel.DomainEvents;
+global using FPS.SharedKernel.Interfaces;
+global using FPS.SharedKernel.ValueObjects;
 
-using FPS.SharedKernel.Interfaces;
 using MediatR;
