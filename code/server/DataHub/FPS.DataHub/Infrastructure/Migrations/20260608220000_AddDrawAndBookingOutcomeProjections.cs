@@ -1,3 +1,5 @@
+using FPS.DataHub.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -6,6 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FPS.DataHub.Infrastructure.Migrations;
 
 /// <inheritdoc />
+[DbContext(typeof(DataHubDbContext))]
+[Migration("20260608220000_AddDrawAndBookingOutcomeProjections")]
 public partial class AddDrawAndBookingOutcomeProjections : Migration
 {
     /// <inheritdoc />

@@ -1,4 +1,6 @@
 using System;
+using FPS.DataHub.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +8,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FPS.DataHub.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(DataHubDbContext))]
+    [Migration("20260531100000_AddInboxEnrichedFields")]
     public partial class AddInboxEnrichedFields : Migration
     {
         /// <inheritdoc />

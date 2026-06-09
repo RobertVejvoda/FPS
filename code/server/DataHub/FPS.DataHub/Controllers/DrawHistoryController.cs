@@ -19,7 +19,7 @@ public sealed class DrawHistoryController(
     /// Requires HR or admin role.
     /// </summary>
     [HttpGet("/datahub/draw-history")]
-    [Authorize(Policy = "RequireHrOrAdmin")]
+    [Authorize(Roles = "hr_manager,admin")]
     public async Task<IActionResult> GetDrawHistory(
         [FromQuery] string? locationId = null,
         [FromQuery] DateOnly? fromDate = null,
@@ -84,7 +84,7 @@ public sealed class DrawHistoryController(
     /// Shows last processed event timestamp and staleness indicators.
     /// </summary>
     [HttpGet("/datahub/projection-health")]
-    [Authorize(Policy = "RequireHrOrAdmin")]
+    [Authorize(Roles = "hr_manager,admin")]
     public async Task<IActionResult> GetProjectionHealth(CancellationToken ct)
     {
         var tenantId = currentUser.TenantId;

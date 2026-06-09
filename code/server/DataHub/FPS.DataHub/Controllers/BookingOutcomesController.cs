@@ -79,7 +79,7 @@ public sealed class BookingOutcomesController(
     /// Shows safe per-request outcomes without exposing lottery internals.
     /// </summary>
     [HttpGet("/datahub/draw-outcomes/{drawAttemptId}")]
-    [Authorize(Policy = "RequireHrOrAdmin")]
+    [Authorize(Roles = "hr_manager,admin")]
     public async Task<IActionResult> GetDrawOutcomes(
         string drawAttemptId,
         [FromQuery] int page = 1,

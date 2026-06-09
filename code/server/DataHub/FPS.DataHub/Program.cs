@@ -5,6 +5,7 @@ using FPS.SharedKernel.HealthChecks;
 using FPS.SharedKernel.Identity;
 using FPS.SharedKernel.Observability;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -14,10 +15,16 @@ builder.Services.AddControllers().AddDapr();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<DataHubDbContext>(options =>
+{
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DataHub")
             ?? throw new InvalidOperationException("ConnectionStrings:DataHub is required"),
-        npgsql => npgsql.MigrationsAssembly(typeof(DataHubDbContext).Assembly.FullName)));
+        npgsql => npgsql.MigrationsAssembly(typeof(DataHubDbContext).Assembly.FullName));
+
+    if (builder.Environment.IsDevelopment())
+        options.ConfigureWarnings(warnings =>
+            warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<EventInboxService>();
@@ -68,6 +75,13 @@ builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<DataHubDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("DataHub API"));

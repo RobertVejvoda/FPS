@@ -1,4 +1,6 @@
 using System;
+using FPS.DataHub.Infrastructure;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -7,6 +9,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FPS.DataHub.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(DataHubDbContext))]
+    [Migration("20260531000000_InitialSchema")]
     public partial class InitialSchema : Migration
     {
         /// <inheritdoc />
