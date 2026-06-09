@@ -326,7 +326,10 @@ function FocusCard({ label, booking, drawStatus, drawLoading, busy, onCancel, on
             {onConfirm && <button onClick={onConfirm} disabled={busy} style={focusConfirmBtn}>Confirm usage</button>}
           </div>
         </>
-      ) : !drawLoading && scheduleOk && !scheduleOk.canRequest ? (
+      ) : drawLoading ? null
+      : !scheduleOk ? (
+        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>Schedule unavailable — check back later</div>
+      ) : !scheduleOk.canRequest ? (
         <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
           {scheduleOk.cannotRequestReason || scheduleOk.safeMessage || 'Requests not available'}
         </div>
