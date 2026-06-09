@@ -1,59 +1,54 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { fetchBookings, type BookingListItem } from '../api/bookings';
+import { fetchMyOutcomes, type BookingOutcomeItem } from '../api/dataHub';
 import { displayLocation } from '../displayLabels';
 
 type ListState =
   | { kind: 'loading' }
-  | { kind: 'ok'; items: BookingListItem[]; nextCursor: string | null }
+  | { kind: 'ok'; items: BookingOutcomeItem[]; page: number; total: number }
   | { kind: 'error'; message: string };
-
-function localDate(offsetDays = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export function BookingHistoryPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
   const [state, setState] = useState<ListState>({ kind: 'loading' });
 
-  const yesterday = localDate(-1);
-
   const load = useCallback(() => {
     setState({ kind: 'loading' });
-    fetchBookings({ apiBaseUrl, bearerToken }, { to: yesterday }).then((result) => {
+    fetchMyOutcomes({ apiBaseUrl, bearerToken }, { page: 1, pageSize: 50 }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') {
-        const past = result.items.filter(i => i.requestedDate <= yesterday);
-        past.sort((a, b) => b.requestedDate.localeCompare(a.requestedDate));
-        setState({ kind: 'ok', items: past, nextCursor: result.nextCursor });
+        setState({ kind: 'ok', items: result.data.items, page: result.data.page, total: result.data.total });
       } else {
         setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load history.' });
       }
     });
-  }, [apiBaseUrl, bearerToken, clear, navigate, yesterday]);
+  }, [apiBaseUrl, bearerToken, clear, navigate]);
 
   useEffect(() => { load(); }, [load]);
 
   function loadMore() {
-    if (state.kind !== 'ok' || !state.nextCursor) return;
-    const cursor = state.nextCursor;
-    fetchBookings({ apiBaseUrl, bearerToken }, { cursor, to: yesterday }).then((result) => {
+    if (state.kind !== 'ok') return;
+    const next = state.page + 1;
+    fetchMyOutcomes({ apiBaseUrl, bearerToken }, { page: next, pageSize: 50 }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') {
-        const past = result.items.filter(i => i.requestedDate <= yesterday);
-        past.sort((a, b) => b.requestedDate.localeCompare(a.requestedDate));
         setState(prev => {
           if (prev.kind !== 'ok') return prev;
-          const seen = new Set(prev.items.map(i => i.requestId));
-          return { ...prev, items: [...prev.items, ...past.filter(i => !seen.has(i.requestId))], nextCursor: result.nextCursor };
+          const seen = new Set(prev.items.map(i => i.bookingRequestId));
+          return {
+            ...prev,
+            items: [...prev.items, ...result.data.items.filter(i => !seen.has(i.bookingRequestId))],
+            page: result.data.page,
+            total: result.data.total,
+          };
         });
       }
     });
   }
+
+  const hasMore = state.kind === 'ok' && state.items.length < state.total;
 
   return (
     <div className="page-stack">
@@ -90,23 +85,23 @@ export function BookingHistoryPage() {
                   <th style={thStyle}>Location</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Reason</th>
-                  <th style={thStyle}>Last change</th>
+                  <th style={thStyle}>Decided</th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map(b => (
-                  <tr key={b.requestId} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={tdStyle}>{new Date(b.requestedDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
-                    <td style={tdStyle}>{b.timeSlotStart.slice(0, 5)}–{b.timeSlotEnd.slice(0, 5)}</td>
+                  <tr key={b.bookingRequestId} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={tdStyle}>{new Date(b.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                    <td style={tdStyle}>{b.timeSlot}</td>
                     <td style={tdStyle}>{displayLocation(b.locationId) ?? '–'}</td>
-                    <td style={tdStyle}><StatusChip status={b.status} /></td>
-                    <td style={tdStyle}>{b.reason ?? '–'}</td>
-                    <td style={tdStyle}>{new Date(b.lastStatusChangedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td style={tdStyle}><StatusChip status={b.finalStatus} /></td>
+                    <td style={tdStyle}>{b.safeReasonText ?? '–'}</td>
+                    <td style={tdStyle}>{b.decidedAt ? new Date(b.decidedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {state.nextCursor && (
+            {hasMore && (
               <button onClick={loadMore} style={loadMoreBtn}>Load more</button>
             )}
           </div>
