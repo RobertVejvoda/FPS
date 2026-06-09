@@ -51,7 +51,7 @@ for pattern in \
   "dotnet run .*FPS.Identity" \
   "dotnet .*FPS.Identity.dll" \
   "FPS.Identity" \
-  "FPS.Booking.API" \
+  "FPS.Booking" \
   "FPS.Notification" \
   "FPS.Profile" \
   "FPS.Audit" \
@@ -70,7 +70,7 @@ for pattern in \
   "dotnet run .*FPS.Identity" \
   "dotnet .*FPS.Identity.dll" \
   "FPS.Identity" \
-  "FPS.Booking.API" \
+  "FPS.Booking" \
   "FPS.Notification" \
   "FPS.Profile" \
   "FPS.Audit" \

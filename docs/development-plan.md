@@ -294,7 +294,7 @@ Each activity is idempotent. The workflow is durable — if it crashes mid-run, 
 - [ ] Dapr pub/sub subscriber for `configuration.slotsUpdated`
 - [x] Remove: EF Core, SQL Server, `BookingDbContext` (already exists in code — dead code to delete)
 
-**API layer** (`FPS.Booking.API`):
+**API layer** (`FPS.Booking`):
 - [x] `POST /bookings` — submit request (future date → queued for Draw; today → immediate allocation if slot available); same 500-cap applies to both paths
 - [x] `DELETE /bookings/{id}` — cancel
 - [x] `GET /bookings` — my bookings
@@ -390,7 +390,7 @@ Purpose: migrate employee-facing Booking APIs from caller-supplied tenant/user h
 
 Scope:
 
-- Register and consume the shared `ICurrentUser` abstraction in `FPS.Booking.API`.
+- Register and consume the shared `ICurrentUser` abstraction in `FPS.Booking`.
 - Add authentication and authorization middleware to Booking API using the same JWT claim mapping documented by `ID001`.
 - For employee self-service Booking endpoints, resolve `tenantId` from `ICurrentUser.TenantId` and requestor/actor ID from `ICurrentUser.UserId`.
 - Remove trust in `X-Tenant-Id`, `X-Requestor-Id`, request body, or query string for employee tenant/user identity.

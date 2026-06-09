@@ -138,7 +138,7 @@ Run services as needed:
 ```sh
 source ./tools/dev-env.sh
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
-dotnet run --project code/server/Booking/FPS.Booking.API/FPS.Booking.API.csproj
+dotnet run --project code/server/Booking/FPS.Booking/FPS.Booking.csproj
 dotnet run --project code/server/Profile/FPS.Profile/FPS.Profile.csproj
 dotnet run --project code/server/Notification/FPS.Notification/FPS.Notification.csproj
 dotnet run --project code/server/Audit/FPS.Audit/FPS.Audit.csproj

@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FPS.Booking.API\FPS.Booking.API.csproj" />
+    <ProjectReference Include="..\FPS.Booking\FPS.Booking.csproj" />
     <ProjectReference Include="..\..\Shared\FPS.SharedKernel\FPS.SharedKernel.csproj" />
   </ItemGroup>
 

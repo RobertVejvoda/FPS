@@ -21,7 +21,7 @@ TMP_SRC="$TMP_DIR/src"
 mkdir -p "$TMP_OPENAPI" "$TMP_SRC"
 
 SERVICES="identity:code/server/Identity/FPS.Identity:5110
-booking:code/server/Booking/FPS.Booking.API:5111
+booking:code/server/Booking/FPS.Booking:5111
 profile:code/server/Profile/FPS.Profile:5112
 notification:code/server/Notification/FPS.Notification:5113"
 

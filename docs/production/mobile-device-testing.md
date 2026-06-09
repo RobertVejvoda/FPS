@@ -95,7 +95,7 @@ Individual services can then be run from their projects when needed:
 ```sh
 source ./tools/dev-env.sh
 dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj
-dotnet run --project code/server/Booking/FPS.Booking.API/FPS.Booking.API.csproj
+dotnet run --project code/server/Booking/FPS.Booking/FPS.Booking.csproj
 dotnet run --project code/server/Configuration/FPS.Configuration/FPS.Configuration.csproj
 dotnet run --project code/server/Audit/FPS.Audit/FPS.Audit.csproj
 dotnet run --project code/server/Reporting/FPS.Reporting/FPS.Reporting.csproj

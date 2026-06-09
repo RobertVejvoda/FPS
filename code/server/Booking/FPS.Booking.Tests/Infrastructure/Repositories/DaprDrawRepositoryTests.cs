@@ -41,7 +41,7 @@ public sealed class DaprDrawRepositoryTests
     {
         mockDaprClient
             .Setup(c => c.GetStateAndETagAsync<DrawAttemptDto>("bookingstore", TestDrawKey, null, null, default))
-            .ReturnsAsync(((DrawAttemptDto?)null, string.Empty));
+            .ReturnsAsync((null!, string.Empty));
 
         var result = await repository.GetByKeyAsync(TestDrawKey);
 

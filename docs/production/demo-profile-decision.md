@@ -17,7 +17,7 @@ What the local harness already provides, from `local-test-harness.md` and the re
 | Service | Port | Dapr sidecar | Notes |
 |---|---|---|---|
 | Identity (FPS.Identity) | 5192 | No | OIDC issuer, `/me`, token exchange |
-| Booking (FPS.Booking.API) | 5131 | Yes | Booking requests, draw, allocation workflow |
+| Booking (FPS.Booking) | 5131 | Yes | Booking requests, draw, allocation workflow |
 | Profile (FPS.Profile) | 5197 | Yes | Profile snapshots, employee bootstrap |
 | Notification (FPS.Notification) | 5157 | Yes | Email/in-app notification consumer |
 | Audit (FPS.Audit) | 5161 | Yes | Audit record consumer |

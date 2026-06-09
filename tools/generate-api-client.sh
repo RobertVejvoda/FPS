@@ -15,7 +15,7 @@ OPENAPI_DIR="$OUT_DIR/openapi"
 SRC_DIR="$OUT_DIR/src"
 
 SERVICES="identity:code/server/Identity/FPS.Identity:5100
-booking:code/server/Booking/FPS.Booking.API:5101
+booking:code/server/Booking/FPS.Booking:5101
 profile:code/server/Profile/FPS.Profile:5102
 notification:code/server/Notification/FPS.Notification:5103"
 
