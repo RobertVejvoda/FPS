@@ -73,7 +73,7 @@ public sealed class BookingProjectionHandler(
             return;
         }
 
-        var drawAttemptId = envelope.EventId; // Use event ID as Draw attempt ID
+        var drawAttemptId = payload.DrawAttemptId ?? envelope.EventId;
         var existing = await db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == drawAttemptId, ct);
 
         if (existing is null)
@@ -109,10 +109,8 @@ public sealed class BookingProjectionHandler(
             return;
         }
 
-        // Try to derive DrawAttemptId from event - look for related drawStarted event or use event ID patterns
-        var drawAttemptId = envelope.CausationId ?? envelope.EventId;
+        var drawAttemptId = payload.DrawAttemptId ?? envelope.CausationId ?? envelope.EventId;
 
-        // Try to find by tenant+location+date+timeslot as fallback
         var projection = await db.DrawHistory.FirstOrDefaultAsync(
             d => d.DrawAttemptId == drawAttemptId, ct);
 
