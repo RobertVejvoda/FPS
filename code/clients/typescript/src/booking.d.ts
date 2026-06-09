@@ -1065,8 +1065,8 @@ export interface components {
             status: string;
             algorithmVersion: string;
             /** Format: int64 */
-            seed: number | string;
-            auditReference: string;
+            seed: null | number | string;
+            auditReference: null | string;
             /** Format: int32 */
             requestCount: number | string;
             /** Format: int32 */

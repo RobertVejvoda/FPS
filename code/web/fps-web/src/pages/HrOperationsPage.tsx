@@ -5,17 +5,21 @@ import {
   fetchHrBookings,
   hrCancelBooking,
   fetchDrawStatus,
+  fetchDrawLifecycle,
   triggerDraw,
   type HrBookingListItem,
   type DrawStatusResult,
+  type DrawLifecycleResult,
 } from '../api/bookings';
 import {
   displaySlot,
   formatDrawTimestamp,
+  formatLifecycleStepName,
   formatScheduleSource,
   formatScheduleStatus,
   humanizeHrRejection,
   isTimestampInPast,
+  lifecycleStepStatusColor,
 } from '../displayLabels';
 import { NotificationBanner } from '../components/NotificationBanner';
 
@@ -69,6 +73,10 @@ export function HrOperationsPage() {
   const [listState, setListState] = useState<ListState>({ kind: 'loading' });
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
   const [drawLoading, setDrawLoading] = useState(false);
+  const [lifecycle, setLifecycle] = useState<DrawLifecycleResult | null>(null);
+  const [showLifecycle, setShowLifecycle] = useState(false);
+  const [recoveryReason, setRecoveryReason] = useState('');
+  const [recoveryRunning, setRecoveryRunning] = useState(false);
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -98,17 +106,24 @@ export function HrOperationsPage() {
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadDrawData = useCallback(() => {
+    const opts = { date: selectedDate, locationId: LOCATION_ID, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END };
     setDrawLoading(true);
     setDrawStatus(null);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date: selectedDate, locationId: LOCATION_ID, timeSlotStart: WORKDAY_START, timeSlotEnd: WORKDAY_END }).then((result) => {
-      if (cancelled) return;
+    setLifecycle(null);
+    Promise.all([
+      fetchDrawStatus({ apiBaseUrl, bearerToken }, opts),
+      fetchDrawLifecycle({ apiBaseUrl, bearerToken }, opts),
+    ]).then(([statusResult, lifecycleResult]) => {
       setDrawLoading(false);
-      setDrawStatus(result);
+      setDrawStatus(statusResult);
+      setLifecycle(lifecycleResult);
     });
-    return () => { cancelled = true; };
   }, [apiBaseUrl, bearerToken, selectedDate]);
+
+  useEffect(() => {
+    loadDrawData();
+  }, [loadDrawData]);
 
   async function handleHrCancel() {
     if (!cancelTarget || !cancelReason.trim()) return;
@@ -122,30 +137,57 @@ export function HrOperationsPage() {
     else showToast(false, 'message' in result ? result.message : 'Cancel failed.');
   }
 
-  async function handleRunDraw() {
-    if (!drawReason.trim()) { showToast(false, 'Reason is required to run a Draw.'); return; }
-    setDrawRunning(true);
+  async function handleRunDraw(opts?: { allowRecovery?: boolean; reason?: string }) {
+    const reason = (opts?.reason ?? drawReason).trim();
+    if (!reason) { showToast(false, 'Reason is required to run a Draw.'); return; }
+    if (opts?.allowRecovery) { setRecoveryRunning(true); } else { setDrawRunning(true); }
     const result = await triggerDraw({ apiBaseUrl, bearerToken }, {
       locationId: LOCATION_ID,
       date: selectedDate,
       timeSlotStart: `${selectedDate}T08:00:00`,
       timeSlotEnd: `${selectedDate}T18:00:00`,
-      reason: drawReason.trim(),
+      reason,
+      allowRecovery: opts?.allowRecovery ?? false,
     });
-    setDrawRunning(false);
-    setDrawReason('');
+    if (opts?.allowRecovery) { setRecoveryRunning(false); setRecoveryReason(''); }
+    else { setDrawRunning(false); setDrawReason(''); }
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (result.kind === 'forbidden') { showToast(false, 'Not authorized to run a Draw.'); return; }
     if (result.kind === 'accepted') {
-      const { data } = result;
-      showToast(true, `Draw complete: ${data.allocatedCount} allocated, ${data.waitlistedCount ?? 0} waitlisted, ${data.rejectedCount} rejected.`);
+      const { data, wasAlreadyCompleted } = result;
+      let msg: string;
+      let isSuccess: boolean;
+
+      if (data.status === 'Failed') {
+        msg = 'Draw ended in Failed state. Check lifecycle steps for details.';
+        isSuccess = false;
+      } else if (data.status === 'InProgress') {
+        msg = wasAlreadyCompleted
+          ? 'Draw was already completed. Showing existing results.'
+          : 'Draw started. Progress will refresh below.';
+        isSuccess = true;
+      } else if (data.status === 'Completed') {
+        msg = wasAlreadyCompleted
+          ? `Draw was already completed: ${data.allocatedCount} allocated, ${data.waitlistedCount ?? 0} waitlisted, ${data.rejectedCount} rejected.`
+          : `Draw complete: ${data.allocatedCount} allocated, ${data.waitlistedCount ?? 0} waitlisted, ${data.rejectedCount} rejected.`;
+        isSuccess = true;
+      } else {
+        msg = `Draw status: ${data.status}`;
+        isSuccess = true;
+      }
+
+      showToast(isSuccess, msg);
       loadBookings();
+      loadDrawData();
     } else {
       showToast(false, 'message' in result ? result.message : 'Draw failed.');
     }
   }
 
   const drawOk = drawStatus?.kind === 'ok' ? drawStatus : null;
+  const lifecycleOk = lifecycle?.kind === 'ok' ? lifecycle : null;
+  const showLifecycleSteps = lifecycleOk !== null && lifecycleOk.steps.length > 0;
+  const lifecycleUnavailable = lifecycle !== null && lifecycle.kind !== 'ok' && lifecycle.kind !== 'notFound';
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -179,7 +221,7 @@ export function HrOperationsPage() {
         <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#6b7280' }}>{selectedDate}</span>
       </div>
 
-      {/* Draw panel (DRAW005 + DRAW007 enhancements) */}
+      {/* Draw panel */}
       <section style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem', marginBottom: '1.25rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.75rem', color: '#1e293b' }}>
           Draw Schedule & Progress
@@ -187,7 +229,6 @@ export function HrOperationsPage() {
         {drawLoading && <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Loading schedule…</p>}
         {drawOk && (
           <div style={{ marginBottom: '0.75rem' }}>
-            {/* Next Draw time - prominent display */}
             {drawOk.nextDrawAt && (
               <div style={{ background: isTimestampInPast(drawOk.nextDrawAt) ? '#fef3c7' : '#dbeafe', border: `1px solid ${isTimestampInPast(drawOk.nextDrawAt) ? '#fcd34d' : '#93c5fd'}`, borderRadius: 6, padding: '0.75rem', marginBottom: '0.75rem' }}>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
@@ -206,7 +247,7 @@ export function HrOperationsPage() {
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Draw status</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1e293b', marginTop: 2 }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: drawOk.status === 'Failed' ? '#dc2626' : '#1e293b', marginTop: 2 }}>
                   {drawOk.status} · {drawOk.requestCount} request{drawOk.requestCount !== 1 ? 's' : ''} · demand: {drawOk.demandLevel}
                 </div>
               </div>
@@ -241,6 +282,37 @@ export function HrOperationsPage() {
               )}
             </div>
             <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#6b7280' }}>{drawOk.safeMessage}</div>
+
+            {/* Recovery action for Failed draws */}
+            {drawOk.status === 'Failed' && (
+              <div style={{ marginTop: '0.75rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '0.75rem' }}>
+                <p style={{ fontSize: '0.875rem', color: '#991b1b', margin: '0 0 0.5rem', fontWeight: 600 }}>
+                  Draw failed
+                </p>
+                <p style={{ fontSize: '0.8rem', color: '#7f1d1d', margin: '0 0 0.75rem' }}>
+                  The Draw did not complete. Check the lifecycle steps below for details. You can retry with recovery mode — the failed attempt is preserved for audit.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    placeholder="Recovery reason (required)"
+                    value={recoveryReason}
+                    onChange={e => setRecoveryReason(e.target.value)}
+                    style={{ flex: '1 1 180px', padding: '0.4rem 0.6rem', borderRadius: 4, border: '1px solid #fca5a5', fontSize: '0.875rem' }}
+                  />
+                  <button
+                    onClick={() => { void handleRunDraw({ allowRecovery: true, reason: recoveryReason }); }}
+                    disabled={recoveryRunning || !recoveryReason.trim()}
+                    style={{ padding: '0.4rem 1rem', borderRadius: 4, border: 'none',
+                      cursor: recoveryRunning || !recoveryReason.trim() ? 'not-allowed' : 'pointer',
+                      background: '#dc2626', color: '#fff', fontSize: '0.875rem',
+                      opacity: recoveryRunning || !recoveryReason.trim() ? 0.5 : 1 }}
+                  >
+                    {recoveryRunning ? 'Recovering…' : 'Retry with recovery'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {!drawLoading && !drawOk && (
@@ -250,26 +322,65 @@ export function HrOperationsPage() {
             </p>
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div />
-        </div>
-        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            placeholder="Reason (required)"
-            value={drawReason}
-            onChange={e => setDrawReason(e.target.value)}
-            style={{ flex: '1 1 200px', padding: '0.4rem 0.6rem', borderRadius: 4, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
-          />
-          <button
-            onClick={() => { void handleRunDraw(); }}
-            disabled={drawRunning || !drawReason.trim()}
-            style={{ padding: '0.4rem 1rem', borderRadius: 4, border: 'none', cursor: drawRunning || !drawReason.trim() ? 'not-allowed' : 'pointer',
-              background: '#2563eb', color: '#fff', fontSize: '0.875rem', opacity: drawRunning || !drawReason.trim() ? 0.5 : 1 }}
-          >
-            {drawRunning ? 'Running…' : 'Run Draw now'}
-          </button>
-        </div>
+
+        {/* Lifecycle steps — shown when Draw has run or is running */}
+        {showLifecycleSteps && (
+          <div style={{ marginTop: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+            <button
+              onClick={() => setShowLifecycle(v => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: showLifecycle ? '0.5rem' : 0 }}
+            >
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Execution steps
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{showLifecycle ? '▲' : '▼'}</span>
+            </button>
+            {showLifecycle && (
+              <ol style={{ margin: 0, padding: '0 0 0 0.25rem', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                {lifecycleOk!.steps.map((step, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: lifecycleStepStatusColor(step.status), flexShrink: 0, marginTop: 4 }} />
+                    <div>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b' }}>{formatLifecycleStepName(step.name)}</span>
+                      {step.summary && <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.375rem' }}>{step.summary}</span>}
+                      {step.errorMessage && <div style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: 2 }}>{step.errorMessage}</div>}
+                      {step.occurredAt && <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 1 }}>{new Date(step.occurredAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        )}
+
+        {/* Lifecycle unavailable message */}
+        {lifecycleUnavailable && (
+          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#92400e',
+            background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 4, padding: '0.5rem 0.75rem' }}>
+            Lifecycle details are unavailable.
+          </div>
+        )}
+
+        {/* Manual trigger */}
+        {drawOk?.status !== 'Failed' && (
+          <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="Reason (required)"
+              value={drawReason}
+              onChange={e => setDrawReason(e.target.value)}
+              style={{ flex: '1 1 200px', padding: '0.4rem 0.6rem', borderRadius: 4, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+            />
+            <button
+              onClick={() => { void handleRunDraw(); }}
+              disabled={drawRunning || !drawReason.trim()}
+              style={{ padding: '0.4rem 1rem', borderRadius: 4, border: 'none', cursor: drawRunning || !drawReason.trim() ? 'not-allowed' : 'pointer',
+                background: '#2563eb', color: '#fff', fontSize: '0.875rem', opacity: drawRunning || !drawReason.trim() ? 0.5 : 1 }}
+            >
+              {drawRunning ? 'Running…' : 'Run Draw now'}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Status filter */}

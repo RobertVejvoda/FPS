@@ -224,6 +224,73 @@ export async function triggerDraw(
   }
 }
 
+export type DrawLifecycleStep = {
+  name: string;
+  status: string;
+  summary: string | null;
+  occurredAt: string | null;
+  errorMessage?: string | null;
+};
+
+export type DrawLifecycleResult =
+  | {
+      kind: 'ok';
+      drawKey: string;
+      status: string;
+      algorithmVersion: string;
+      requestCount: number;
+      allocatedCount: number;
+      rejectedCount: number;
+      startedAt: string | null;
+      completedAt: string | null;
+      steps: DrawLifecycleStep[];
+    }
+  | { kind: 'unauthenticated' }
+  | { kind: 'notFound' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function fetchDrawLifecycle(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  opts: { date: string; locationId: string; timeSlotStart: string; timeSlotEnd: string },
+): Promise<DrawLifecycleResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const { date, locationId, timeSlotStart, timeSlotEnd } = opts;
+    const params = new URLSearchParams({
+      locationId,
+      timeSlotStart: `${date}T${timeSlotStart}`,
+      timeSlotEnd: `${date}T${timeSlotEnd}`,
+    });
+    const res = await fetch(`${apiBaseUrl}/draws/${date}/lifecycle?${params}`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 404) return { kind: 'notFound' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /draws/lifecycle returned ${res.status}` };
+    const data = (await res.json()) as {
+      drawKey: string; status: string; algorithmVersion: string;
+      requestCount: number | string; allocatedCount: number | string;
+      rejectedCount: number | string; startedAt: string | null; completedAt: string | null;
+      steps: DrawLifecycleStep[];
+    };
+    return {
+      kind: 'ok',
+      drawKey: data.drawKey,
+      status: data.status,
+      algorithmVersion: data.algorithmVersion,
+      requestCount: Number(data.requestCount),
+      allocatedCount: Number(data.allocatedCount),
+      rejectedCount: Number(data.rejectedCount),
+      startedAt: data.startedAt ?? null,
+      completedAt: data.completedAt ?? null,
+      steps: data.steps ?? [],
+    };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export type HrBookingsResult =
   | { kind: 'ok'; items: HrBookingListItem[]; nextCursor: string | null; totalCount: number }
   | { kind: 'unauthenticated' }

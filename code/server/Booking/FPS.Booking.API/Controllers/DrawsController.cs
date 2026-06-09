@@ -58,7 +58,7 @@ public sealed class DrawsController : ControllerBase
     }
 
     [HttpGet("{date}/lifecycle")]
-    [Authorize(Roles = "auditor,admin")]
+    [Authorize(Roles = "auditor,admin,hr_manager")]
     [ProducesResponseType(typeof(DrawLifecycleResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDrawLifecycle(
@@ -77,14 +77,16 @@ public sealed class DrawsController : ControllerBase
 
         if (result is null) return NotFound();
 
+        var isSensitiveViewer = currentUser.IsInRole("admin") || currentUser.IsInRole("auditor");
+
         return Ok(new DrawLifecycleResponse(
             DrawKey: result.DrawKey,
             LocationId: result.LocationId,
             Date: result.Date.ToString("yyyy-MM-dd"),
             Status: result.Status,
             AlgorithmVersion: result.AlgorithmVersion,
-            Seed: result.Seed,
-            AuditReference: result.AuditReference,
+            Seed: isSensitiveViewer ? result.Seed : null,
+            AuditReference: isSensitiveViewer ? result.AuditReference : null,
             RequestCount: result.RequestCount,
             AllocatedCount: result.AllocatedCount,
             RejectedCount: result.RejectedCount,
@@ -92,8 +94,8 @@ public sealed class DrawsController : ControllerBase
             StartedAt: result.StartedAt,
             CompletedAt: result.CompletedAt,
             Steps: result.Steps.Select(s => new DrawLifecycleStepResponse(s.Name, s.Status, s.Summary, s.OccurredAt, s.ErrorMessage)).ToList(),
-            Decisions: result.Decisions.Select(d => new DrawLifecycleDecisionResponse(d.BookingReference, d.Outcome, d.SlotReference, d.Reason)).ToList(),
-            Tier2CandidateSequence: result.Tier2CandidateSequence));
+            Decisions: isSensitiveViewer ? result.Decisions.Select(d => new DrawLifecycleDecisionResponse(d.BookingReference, d.Outcome, d.SlotReference, d.Reason)).ToList() : [],
+            Tier2CandidateSequence: isSensitiveViewer ? result.Tier2CandidateSequence : []));
     }
 
     [HttpGet("{date}/status")]
