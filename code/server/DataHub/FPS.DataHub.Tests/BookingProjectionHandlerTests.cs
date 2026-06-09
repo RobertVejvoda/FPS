@@ -81,7 +81,7 @@ public sealed class BookingProjectionHandlerTests : IDisposable
             Payload: new BookingEventPayload(
                 BookingRequestId: null,
                 RequestorId: null,
-                LocationId: "loc-hq",
+                LocationId: "",
                 Date: "2026-06-11",
                 TimeSlot: "08:00-17:00",
                 PreviousStatus: null,
@@ -129,6 +129,63 @@ public sealed class BookingProjectionHandlerTests : IDisposable
         Assert.Equal(5, projection.RejectedCount);
         Assert.Equal(2, projection.WaitlistedCount);
         Assert.NotNull(projection.CompletedAt);
+    }
+
+    [Fact]
+    public async Task HandleDrawCompleted_LinksUndecidedSubmittedOutcomesAsWaitlisted()
+    {
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-submitted-waitlist",
+            EventType: "booking.requestSubmitted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow.AddMinutes(-10),
+            TenantId: "tenant-a",
+            CorrelationId: "corr-waitlist",
+            CausationId: null,
+            ActorType: "employee",
+            ActorId: "emp-wait",
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: "req-waitlist",
+                RequestorId: "emp-wait",
+                LocationId: "loc-hq",
+                Date: "2026-06-11",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: "Submitted",
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null)), CancellationToken.None);
+
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-completed-waitlist",
+            EventType: "booking.drawCompleted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-a",
+            CorrelationId: "corr-waitlist",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-hq",
+                Date: "2026-06-11",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                DrawAttemptId: "draw:tenant-a:loc-hq:2026-06-11:0800")), CancellationToken.None);
+
+        var outcome = await _db.BookingOutcomes.SingleAsync(b => b.BookingRequestId == "req-waitlist");
+        Assert.Equal("draw:tenant-a:loc-hq:2026-06-11:0800", outcome.DrawAttemptId);
+        Assert.Equal("loc-hq", outcome.LocationId);
+        Assert.Equal("Waitlisted", outcome.FinalStatus);
+        Assert.NotNull(outcome.DecidedAt);
     }
 
     [Fact]

@@ -147,7 +147,38 @@ public sealed class BookingProjectionHandler(
             logger.LogInformation("Updated DrawHistory projection for {DrawAttemptId}", drawAttemptId);
         }
 
+        await LinkUndecidedOutcomesToCompletedDraw(payload, envelope, drawAttemptId, ct);
         await db.SaveChangesAsync(ct);
+    }
+
+    private async Task LinkUndecidedOutcomesToCompletedDraw(
+        BookingEventPayload payload,
+        BookingEventEnvelope envelope,
+        string drawAttemptId,
+        CancellationToken ct)
+    {
+        var date = DateOnly.Parse(payload.Date!);
+        var locationId = payload.LocationId!;
+        var timeSlot = payload.TimeSlot!;
+
+        var undecided = await db.BookingOutcomes
+            .Where(b => b.TenantId == envelope.TenantId
+                        && (b.LocationId == locationId || b.LocationId == "")
+                        && b.Date == date
+                        && b.TimeSlot == timeSlot
+                        && b.DrawAttemptId == null
+                        && b.FinalStatus == "Submitted")
+            .Where(b => b.SubmittedAt == null || b.SubmittedAt <= envelope.OccurredAt)
+            .ToListAsync(ct);
+
+        foreach (var outcome in undecided)
+        {
+            outcome.DrawAttemptId = drawAttemptId;
+            outcome.LocationId = locationId;
+            outcome.FinalStatus = "Waitlisted";
+            outcome.DecidedAt = envelope.OccurredAt;
+            outcome.LastUpdatedAt = DateTimeOffset.UtcNow;
+        }
     }
 
     private async Task HandleRequestSubmitted(BookingEventEnvelope envelope, CancellationToken ct)

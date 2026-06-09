@@ -79,6 +79,18 @@ public sealed class TenantClaimsTransformation(
                 .Select(c => c.Value)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            // JwtBearer can normalize JWT "roles" into ClaimTypes.Role before this
+            // transformation runs. Treat the normalized claim as the configured
+            // source only when the tenant explicitly configured the JWT roles claim.
+            if (roleClaimNames.Any(cn => string.Equals(cn, "roles", StringComparison.OrdinalIgnoreCase) ||
+                                         string.Equals(cn, ClaimTypes.Role, StringComparison.OrdinalIgnoreCase)))
+            {
+                rawRoleValues.AddRange(identity.FindAll(ClaimTypes.Role).Select(c => c.Value));
+                rawRoleValues = rawRoleValues
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
         }
         else
         {

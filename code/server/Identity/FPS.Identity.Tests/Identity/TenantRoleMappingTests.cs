@@ -230,6 +230,28 @@ public sealed class TenantRoleMappingTests
     }
 
     [Fact]
+    public async Task Transform_ConfiguredTenant_UsesNormalizedRolesClaimWhenRolesConfigured()
+    {
+        var store = new InMemoryTenantIdentityConfigStore();
+        store.Register("tenant-1");
+        store.SetClaimConfig("tenant-1", new TenantClaimConfig("tenant_id", "sub", ["roles"]));
+
+        var roleMappingStore = new InMemoryTenantRoleMappingStore(store);
+        roleMappingStore.SetMapping("tenant-1", new Dictionary<string, string> { ["admin"] = "admin" });
+
+        var transform = new TenantClaimsTransformation(roleMappingStore, new InMemoryDeactivatedUserStore(), store);
+
+        // JwtBearer can normalize JWT "roles" into ClaimTypes.Role before transformation.
+        var principal = PrincipalWithClaims(
+            ("tenant_id", "tenant-1"), ("sub", "user-1"), (ClaimTypes.Role, "admin"));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.True(result.HasClaim(ClaimTypes.Role, "admin"));
+        Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
     public async Task Transform_ConfiguredTenant_UsesStoredSubjectClaimName()
     {
         var store = new InMemoryTenantIdentityConfigStore();

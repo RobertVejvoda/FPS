@@ -146,6 +146,31 @@ public sealed class ProjectionControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetDrawOutcomes_IncludesLegacyMatchingOutcomesWithoutDrawAttemptId()
+    {
+        await SeedDraw("draw-a-legacy", "tenant-a");
+        _db.BookingOutcomes.Add(new BookingOutcomeProjection
+        {
+            BookingRequestId = "req-legacy",
+            TenantId = "tenant-a",
+            RequestorId = "alice",
+            LocationId = "loc-1",
+            Date = new DateOnly(2026, 6, 10),
+            TimeSlot = "08:00-17:00",
+            FinalStatus = "Submitted",
+            DrawAttemptId = null
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var result = await ctrl.GetDrawOutcomes("draw-a-legacy", ct: default) as OkObjectResult;
+
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("req-legacy", json);
+        Assert.Contains("Waitlisted", json);
+    }
+
+    [Fact]
     public async Task GetDrawOutcomes_CrossTenant_ReturnsNotFound()
     {
         await SeedDraw("draw-b2", "tenant-b");

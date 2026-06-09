@@ -101,7 +101,13 @@ public sealed class BookingOutcomesController(
             return NotFound(new { Message = "Draw not found or not accessible" });
 
         var query = db.BookingOutcomes
-            .Where(b => b.TenantId == tenantId && b.DrawAttemptId == drawAttemptId);
+            .Where(b => b.TenantId == tenantId &&
+                        (b.DrawAttemptId == drawAttemptId ||
+                         (b.DrawAttemptId == null &&
+                          (b.LocationId == draw.LocationId || b.LocationId == "") &&
+                          b.Date == draw.Date &&
+                          b.TimeSlot == draw.TimeSlot &&
+                          (draw.CompletedAt == null || b.SubmittedAt == null || b.SubmittedAt <= draw.CompletedAt))));
 
         var total = await query.CountAsync(ct);
 
@@ -114,10 +120,10 @@ public sealed class BookingOutcomesController(
             {
                 BookingRequestId = b.BookingRequestId,
                 RequestorId = b.RequestorId,
-                LocationId = b.LocationId,
+                LocationId = string.IsNullOrEmpty(b.LocationId) ? draw.LocationId : b.LocationId,
                 Date = b.Date,
                 TimeSlot = b.TimeSlot,
-                FinalStatus = b.FinalStatus,
+                FinalStatus = b.DrawAttemptId == null && b.FinalStatus == "Submitted" ? "Waitlisted" : b.FinalStatus,
                 ReasonCode = b.ReasonCode,
                 SafeReasonText = b.SafeReasonText,
                 AllocationSource = b.AllocationSource,
