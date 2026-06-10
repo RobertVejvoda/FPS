@@ -49,12 +49,17 @@ export function labelRelativeWorkday(baseDate: Date, date: Date): string {
   const target = new Date(date);
   target.setHours(0, 0, 0, 0);
   const offsetDays = Math.round((target.getTime() - base.getTime()) / 86_400_000);
+  const dateLabel = labelShortDate(target);
 
-  if (offsetDays === 0) return 'Today';
-  if (offsetDays === 1) return 'Tomorrow';
-  return target.toLocaleDateString(undefined, { weekday: 'long' });
+  if (offsetDays === 0) return `Today · ${dateLabel}`;
+  if (offsetDays === 1) return `Tomorrow · ${dateLabel}`;
+  return `${target.toLocaleDateString(undefined, { weekday: 'long' })} · ${dateLabel}`;
 }
 
 export function labelWeekdayDate(date: Date): string {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function labelShortDate(date: Date): string {
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }

@@ -41,6 +41,8 @@ type ListState =
   | { kind: 'ok'; items: HrBookingListItem[]; totalCount: number; nextCursor: string | null }
   | { kind: 'error'; message: string };
 
+type DrawStatusOk = Extract<DrawStatusResult, { kind: 'ok' }>;
+
 function statusColor(status: string): string {
   switch (status) {
     case 'Allocated': return '#22c55e';
@@ -48,6 +50,36 @@ function statusColor(status: string): string {
     case 'Cancelled': return '#6b7280';
     case 'Rejected': return '#ef4444';
     default: return '#6b7280';
+  }
+}
+
+function drawScheduleLabel(draw: DrawStatusOk): string {
+  switch (draw.status) {
+    case 'Completed':
+      return 'Draw completed';
+    case 'InProgress':
+      return 'Draw in progress';
+    case 'Failed':
+      return 'Draw failed';
+    default:
+      return draw.nextDrawAt && isTimestampInPast(draw.nextDrawAt)
+        ? 'Scheduled Draw time passed'
+        : 'Next scheduled Draw';
+  }
+}
+
+function drawScheduleTone(draw: DrawStatusOk): { background: string; border: string } {
+  switch (draw.status) {
+    case 'Completed':
+      return { background: '#f0fdf4', border: '#bbf7d0' };
+    case 'InProgress':
+      return { background: '#eff6ff', border: '#93c5fd' };
+    case 'Failed':
+      return { background: '#fef2f2', border: '#fecaca' };
+    default:
+      return draw.nextDrawAt && isTimestampInPast(draw.nextDrawAt)
+        ? { background: '#fef3c7', border: '#fcd34d' }
+        : { background: '#dbeafe', border: '#93c5fd' };
   }
 }
 
@@ -178,6 +210,7 @@ export function HrOperationsPage() {
   const lifecycleOk = lifecycle?.kind === 'ok' ? lifecycle : null;
   const showLifecycleSteps = lifecycleOk !== null && lifecycleOk.steps.length > 0;
   const lifecycleUnavailable = lifecycle !== null && lifecycle.kind !== 'ok' && lifecycle.kind !== 'notFound';
+  const scheduleTone = drawOk ? drawScheduleTone(drawOk) : null;
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -208,7 +241,6 @@ export function HrOperationsPage() {
             {chip.label}
           </button>
         ))}
-        <span style={{ alignSelf: 'center', fontSize: '0.8rem', color: '#6b7280' }}>{displayDate(selectedDate)}</span>
       </div>
 
       {/* Draw panel */}
@@ -219,10 +251,10 @@ export function HrOperationsPage() {
         {drawLoading && <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Loading schedule…</p>}
         {drawOk && (
           <div style={{ marginBottom: '0.75rem' }}>
-            {drawOk.nextDrawAt && (
-              <div style={{ background: isTimestampInPast(drawOk.nextDrawAt) ? '#fef3c7' : '#dbeafe', border: `1px solid ${isTimestampInPast(drawOk.nextDrawAt) ? '#fcd34d' : '#93c5fd'}`, borderRadius: 6, padding: '0.75rem', marginBottom: '0.75rem' }}>
+            {drawOk.nextDrawAt && scheduleTone && (
+              <div style={{ background: scheduleTone.background, border: `1px solid ${scheduleTone.border}`, borderRadius: 6, padding: '0.75rem', marginBottom: '0.75rem' }}>
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
-                  {isTimestampInPast(drawOk.nextDrawAt) ? 'Scheduled Draw time passed' : 'Next scheduled Draw'}
+                  {drawScheduleLabel(drawOk)}
                 </div>
                 <div style={{ fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
                   {formatDrawTimestamp(drawOk.nextDrawAt, drawOk.timeZone)}
