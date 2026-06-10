@@ -9,7 +9,7 @@ public class DefaultTenantPolicyService : ITenantPolicyService
     public static readonly TenantPolicy Default = new(
         DailyRequestCap: 500,
         DrawCutOffTime: new TimeOnly(18, 0),
-        TimeZoneId: "UTC",
+        TimeZoneId: "Europe/Prague",
         SameDayBookingEnabled: true,
         AllocationLookbackDays: 10,
         LateCancellationPenalty: 1,

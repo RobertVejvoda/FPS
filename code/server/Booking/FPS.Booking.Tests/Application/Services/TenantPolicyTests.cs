@@ -128,6 +128,10 @@ public sealed class TenantPolicyTests
         => Assert.Equal(new TimeOnly(18, 0), DefaultTenantPolicyService.Default.DrawCutOffTime);
 
     [Fact]
+    public void Default_TimeZone_IsPrague()
+        => Assert.Equal("Europe/Prague", DefaultTenantPolicyService.Default.TimeZoneId);
+
+    [Fact]
     public void Default_UsageConfirmationMethods_IsNullOrEmpty()
         => Assert.False(DefaultTenantPolicyService.Default.HasConfirmationMethod);
 
