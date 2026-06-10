@@ -469,6 +469,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/profile/hr/display-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": string[];
+                    "text/json": string[];
+                    "application/*+json": string[];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": {
+                            [key: string]: string;
+                        };
+                        "application/json": {
+                            [key: string]: string;
+                        };
+                        "text/json": {
+                            [key: string]: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile/snapshot": {
         parameters: {
             query?: never;
@@ -508,6 +568,7 @@ export interface components {
             hasCompanyCar: boolean;
             accessibilityEligible: boolean;
             reservedSpaceEligible: boolean;
+            displayName?: null | string;
         };
         DeactivateRequest: {
             externalSubject: null | string;
@@ -535,6 +596,7 @@ export interface components {
             reservedSpaceEligible: boolean;
             vehicles: components["schemas"]["VehicleSnapshot"][];
             snapshotVersion: string;
+            displayName?: null | string;
         };
         ServiceErasureInput: {
             erasureRequestId: string;
@@ -551,6 +613,7 @@ export interface components {
             hasCompanyCar: boolean;
             accessibilityEligible: boolean;
             reservedSpaceEligible: boolean;
+            displayName?: null | string;
         };
         VehicleSnapshot: {
             vehicleId: string;

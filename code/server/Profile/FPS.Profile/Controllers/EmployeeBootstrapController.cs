@@ -44,7 +44,8 @@ public sealed class EmployeeBootstrapController(
             request.IsActive, request.FpsRoles ?? [],
             request.NotificationAddress, request.HomeLocationId,
             request.ParkingEligible, request.HasCompanyCar,
-            request.AccessibilityEligible, request.ReservedSpaceEligible);
+            request.AccessibilityEligible, request.ReservedSpaceEligible,
+            request.DisplayName);
 
         var error = await service.UpdateAsync(currentUser.TenantId, subjectHash, updateReq, ct);
         if (error == "Employee not found.") return NotFound();
@@ -68,7 +69,7 @@ public sealed class EmployeeBootstrapController(
         new(r.ExternalSubject ?? string.Empty, r.EmployeeId, r.IsActive,
             r.FpsRoles ?? [], r.NotificationAddress, r.HomeLocationId,
             r.ParkingEligible, r.HasCompanyCar, r.AccessibilityEligible, r.ReservedSpaceEligible,
-            factSource);
+            factSource, r.DisplayName);
 
     private static object ToResponse(Domain.UserProfile p) => new
     {
@@ -88,11 +89,13 @@ public sealed class EmployeeBootstrapController(
 public sealed record BootstrapRequest(
     string? ExternalSubject, string? EmployeeId, bool IsActive,
     IReadOnlyList<string>? FpsRoles, string? NotificationAddress, string? HomeLocationId,
-    bool ParkingEligible, bool HasCompanyCar, bool AccessibilityEligible, bool ReservedSpaceEligible);
+    bool ParkingEligible, bool HasCompanyCar, bool AccessibilityEligible, bool ReservedSpaceEligible,
+    string? DisplayName = null);
 
 public sealed record ImportRequest(IReadOnlyList<BootstrapRequest>? Employees);
 public sealed record DeactivateRequest(string? ExternalSubject);
 public sealed record UpdateRequest(
     bool IsActive, IReadOnlyList<string>? FpsRoles,
     string? NotificationAddress, string? HomeLocationId,
-    bool ParkingEligible, bool HasCompanyCar, bool AccessibilityEligible, bool ReservedSpaceEligible);
+    bool ParkingEligible, bool HasCompanyCar, bool AccessibilityEligible, bool ReservedSpaceEligible,
+    string? DisplayName = null);

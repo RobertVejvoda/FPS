@@ -32,7 +32,8 @@ public record HrBookingListItem(
     string? Reason,
     string? AllocatedSlotId,
     DateTime CreatedAt,
-    DateTime LastStatusChangedAt);
+    DateTime LastStatusChangedAt,
+    string? RequestorDisplayName = null);
 
 public record HrBookingListResult(
     IReadOnlyList<HrBookingListItem> Items,

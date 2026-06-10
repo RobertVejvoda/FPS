@@ -418,7 +418,7 @@ export function HrOperationsPage() {
                       title={item.requestorRef}
                       style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: 4, color: '#475569' }}
                     >
-                      {displayRequestorRef(item.requestorRef)}
+                      {item.requestorDisplayName ?? displayRequestorRef(item.requestorRef)}
                     </span>
                     <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
                       #{item.requestId.replace(/-/g, '').slice(-6).toUpperCase()}

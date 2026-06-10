@@ -512,6 +512,98 @@
         ]
       }
     },
+    "/profile/hr/display-names": {
+      "post": {
+        "tags": [
+          "ProfileHr"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/profile/snapshot": {
       "get": {
         "tags": [
@@ -662,6 +754,12 @@
           },
           "reservedSpaceEligible": {
             "type": "boolean"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -781,6 +879,12 @@
           },
           "snapshotVersion": {
             "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -857,6 +961,12 @@
           },
           "reservedSpaceEligible": {
             "type": "boolean"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -913,6 +1023,9 @@
     },
     {
       "name": "HrImport"
+    },
+    {
+      "name": "ProfileHr"
     },
     {
       "name": "ProfileSnapshot"

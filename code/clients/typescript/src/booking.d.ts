@@ -1165,6 +1165,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             lastStatusChangedAt: string;
+            requestorDisplayName?: null | string;
         };
         HrCancelRequest: {
             reason: string;

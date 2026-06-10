@@ -156,7 +156,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         }
 
         await repository.CreateBookingRequestAsync(
-            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, sameDaySlot));
+            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, snapshot.DisplayName, sameDaySlot));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
         await queryRepository.AddToTenantOpsIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
         if (request.Status == BookingRequestStatus.Pending)
@@ -194,7 +194,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     }
 
     private static BookingRequestDto ToDto(BookingRequest request, string tenantId, string facilityId,
-        string? locationId, string snapshotVersion, AvailableSlot? slot = null)
+        string? locationId, string snapshotVersion, string? requestorDisplayName, AvailableSlot? slot = null)
         => new()
         {
             RequestId = request.Id.Value,
@@ -208,6 +208,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             RequestedAt = request.SubmittedAt,
             Status = request.Status.ToString(),
             ProfileSnapshotVersion = snapshotVersion,
+            RequestorDisplayName = requestorDisplayName,
             AllocatedSlotId = slot?.SlotId.Value != null
                 ? (Guid.TryParse(slot.SlotId.Value, out var slotGuid) ? slotGuid : (Guid?)null)
                 : null

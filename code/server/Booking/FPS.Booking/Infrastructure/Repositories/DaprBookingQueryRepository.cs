@@ -247,7 +247,8 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         Reason: HrReasonFor(dto),
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
         CreatedAt: dto.RequestedAt,
-        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt,
+        RequestorDisplayName: dto.RequestorDisplayName);
 
     private static string? HrReasonFor(BookingRequestDto dto) =>
         dto.Status switch

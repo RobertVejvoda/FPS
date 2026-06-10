@@ -10,7 +10,10 @@ export interface ProfileSnapshot {
   reservedSpaceEligible: boolean;
   vehicles: VehicleSnapshot[];
   snapshotVersion: string;
+  displayName?: string | null;
 }
+
+export type DisplayNameMap = Record<string, string | null | undefined>;
 
 export interface VehicleSnapshot {
   vehicleId: string;
@@ -83,4 +86,26 @@ export function removeVehicle(cfg: ApiClientConfig, vehicleId: string): Promise<
 
 export function setDefaultVehicle(cfg: ApiClientConfig, vehicleId: string): Promise<VehicleWriteResult> {
   return vehicleRequest(cfg, 'PUT', `/profile/vehicles/${vehicleId}/default`);
+}
+
+export async function fetchProfileDisplayNames(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  userIds: string[],
+): Promise<DisplayNameMap> {
+  if (!apiBaseUrl || !bearerToken || userIds.length === 0) return {};
+  try {
+    const res = await fetch(`${apiBaseUrl}/profile/hr/display-names`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(userIds),
+    });
+    if (!res.ok) return {};
+    return (await res.json()) as DisplayNameMap;
+  } catch {
+    return {};
+  }
 }

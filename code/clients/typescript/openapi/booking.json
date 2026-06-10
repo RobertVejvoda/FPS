@@ -2032,6 +2032,12 @@
           "lastStatusChangedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "requestorDisplayName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

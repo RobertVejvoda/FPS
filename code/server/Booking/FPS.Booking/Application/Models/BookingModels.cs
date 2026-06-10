@@ -21,4 +21,5 @@ public class BookingRequestDto
     public string? ConfirmationSource { get; set; }
     public string? ConfirmationSourceEventId { get; set; }
     public string? ProfileSnapshotVersion { get; set; }
+    public string? RequestorDisplayName { get; set; }
 }

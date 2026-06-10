@@ -9,7 +9,8 @@ public sealed record ProfileSnapshot(
     bool AccessibilityEligible,
     bool ReservedSpaceEligible,
     IReadOnlyList<VehicleSnapshot> Vehicles,
-    string SnapshotVersion);
+    string SnapshotVersion,
+    string? DisplayName = null);
 
 public sealed record VehicleSnapshot(
     string VehicleId,

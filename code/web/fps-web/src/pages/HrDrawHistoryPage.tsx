@@ -9,6 +9,7 @@ import {
   type DrawOutcomeItem,
   type ProjectionHealthResponse,
 } from '../api/dataHub';
+import { fetchProfileDisplayNames, type DisplayNameMap } from '../api/profile';
 import { displayDate, displayDateTime, displayLocation, displayRequestorRef, displaySlot } from '../displayLabels';
 
 function outcomeColor(status: string) {
@@ -35,6 +36,7 @@ export function HrDrawHistoryPage() {
   const [health, setHealth] = useState<ProjectionHealthResponse | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [drilldown, setDrilldown] = useState<Record<string, DrilldownState>>({});
+  const [displayNames, setDisplayNames] = useState<DisplayNameMap>({});
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -64,14 +66,24 @@ export function HrDrawHistoryPage() {
     if (drilldown[drawAttemptId]) return;
 
     setDrilldown(prev => ({ ...prev, [drawAttemptId]: { kind: 'loading' } }));
-    fetchDrawOutcomes({ apiBaseUrl, bearerToken }, drawAttemptId).then(result => {
+    fetchDrawOutcomes({ apiBaseUrl, bearerToken }, drawAttemptId).then(async result => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-      setDrilldown(prev => ({
-        ...prev,
-        [drawAttemptId]: result.kind === 'ok'
-          ? { kind: 'ok', outcomes: result.data.outcomes, total: result.data.total }
-          : { kind: 'error', message: 'message' in result ? result.message : 'Failed to load outcomes.' },
-      }));
+      if (result.kind === 'ok') {
+        setDrilldown(prev => ({
+          ...prev,
+          [drawAttemptId]: { kind: 'ok', outcomes: result.data.outcomes, total: result.data.total },
+        }));
+        const ids = [...new Set(result.data.outcomes.map(o => o.requestorId).filter(Boolean))];
+        if (ids.length > 0) {
+          const names = await fetchProfileDisplayNames({ apiBaseUrl, bearerToken }, ids);
+          setDisplayNames(prev => ({ ...prev, ...names }));
+        }
+      } else {
+        setDrilldown(prev => ({
+          ...prev,
+          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : 'Failed to load outcomes.' },
+        }));
+      }
     });
   }
 
@@ -172,10 +184,10 @@ export function HrDrawHistoryPage() {
                       {dd?.kind === 'ok' && dd.outcomes.map(item => (
                         <div key={item.bookingRequestId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', background: 'var(--surface-muted)', borderRadius: 6 }}>
                           <span
-                            title="Requestor reference"
+                            title={item.requestorId}
                             style={{ fontSize: 13, fontWeight: 600, background: '#f1f5f9', padding: '3px 8px', borderRadius: 4, fontFamily: 'monospace', color: '#1e293b', border: '1px solid var(--border)', letterSpacing: '0.01em' }}
                           >
-                            {displayRequestorRef(item.requestorId)}
+                            {displayNames[item.requestorId] ?? displayRequestorRef(item.requestorId)}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: outcomeColor(item.finalStatus) }}>{item.finalStatus}</span>
