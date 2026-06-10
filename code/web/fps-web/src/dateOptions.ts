@@ -22,24 +22,25 @@ export function isWorkday(date: Date): boolean {
   return day >= 1 && day <= 5;
 }
 
-export function nextWorkdayOptions(baseDate: Date, count: number): DateOption[] {
+export function nextWorkdayOptions(baseDate: Date, count: number, config?: { relativeLabels?: boolean }): DateOption[] {
   const base = new Date(baseDate);
   base.setHours(0, 0, 0, 0);
+  const relativeLabels = config?.relativeLabels ?? true;
 
-  const options: DateOption[] = [];
+  const result: DateOption[] = [];
   let candidate = new Date(base);
 
-  while (options.length < count) {
+  while (result.length < count) {
     if (isWorkday(candidate)) {
-      options.push({
+      result.push({
         date: toLocalDateString(candidate),
-        label: labelRelativeWorkday(base, candidate),
+        label: relativeLabels ? labelRelativeWorkday(base, candidate) : labelWeekdayDate(candidate),
       });
     }
     candidate = addCalendarDays(candidate, 1);
   }
 
-  return options;
+  return result;
 }
 
 export function labelRelativeWorkday(baseDate: Date, date: Date): string {
@@ -52,4 +53,8 @@ export function labelRelativeWorkday(baseDate: Date, date: Date): string {
   if (offsetDays === 0) return 'Today';
   if (offsetDays === 1) return 'Tomorrow';
   return target.toLocaleDateString(undefined, { weekday: 'long' });
+}
+
+export function labelWeekdayDate(date: Date): string {
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }

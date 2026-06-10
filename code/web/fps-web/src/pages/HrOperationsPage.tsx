@@ -27,7 +27,7 @@ import {
 } from '../displayLabels';
 import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
-import { useTenantDateBase } from '../hooks/useTenantDateBase';
+import { useTenantDateContext } from '../hooks/useTenantDateBase';
 
 const LOCATION_ID = 'Prague';
 // No facilities API yet; workday slot boundaries are a known gap (UX008).
@@ -74,8 +74,8 @@ export function HrOperationsPage() {
 
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const dateBase = useTenantDateBase();
-  const dateChips = useMemo(() => nextWorkdayOptions(dateBase, 4), [dateBase]);
+  const { dateBase, simulationActive } = useTenantDateContext();
+  const dateChips = useMemo(() => nextWorkdayOptions(dateBase, 4, { relativeLabels: !simulationActive }), [dateBase, simulationActive]);
 
   const selectedDate = dateChips[selectedChip]?.date ?? dateChips[0].date;
 

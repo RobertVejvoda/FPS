@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { getSimulationStatus, type SimulationStatus } from '../api/simulation';
 
-export function useTenantDateBase(): Date {
+export type TenantDateContext = {
+  dateBase: Date;
+  simulationActive: boolean;
+};
+
+export function useTenantDateContext(): TenantDateContext {
   const { apiBaseUrl, bearerToken, simulationEnabled } = useAuth();
   const [simulationStatus, setSimulationStatus] = useState<SimulationStatus | null>(null);
 
@@ -34,6 +39,13 @@ export function useTenantDateBase(): Date {
     const source = simulationStatus?.simulationActive && simulationStatus.virtualNow
       ? simulationStatus.virtualNow
       : undefined;
-    return source ? new Date(source) : new Date();
+    return {
+      dateBase: source ? new Date(source) : new Date(),
+      simulationActive: simulationStatus?.simulationActive ?? false,
+    };
   }, [simulationStatus]);
+}
+
+export function useTenantDateBase(): Date {
+  return useTenantDateContext().dateBase;
 }

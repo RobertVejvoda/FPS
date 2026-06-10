@@ -6,7 +6,7 @@ import { displaySlot, formatCutOffAt } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
 import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
-import { useTenantDateBase } from '../hooks/useTenantDateBase';
+import { useTenantDateContext } from '../hooks/useTenantDateBase';
 
 const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
@@ -25,8 +25,8 @@ export function BookingsPage() {
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
   const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([null, null, null]);
   const [drawStatusesLoading, setDrawStatusesLoading] = useState(true);
-  const dateBase = useTenantDateBase();
-  const days = useMemo(() => nextWorkdayOptions(dateBase, 3), [dateBase]);
+  const { dateBase, simulationActive } = useTenantDateContext();
+  const days = useMemo(() => nextWorkdayOptions(dateBase, 3, { relativeLabels: !simulationActive }), [dateBase, simulationActive]);
 
   const drawLocationId = loadState.kind === 'ok'
     ? loadState.items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID

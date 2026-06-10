@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchDrawStatus, submitBooking, type DrawStatusResult } from '../api/bookings';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
-import { nextWorkdayOptions, toLocalDateString } from '../dateOptions';
-import { useTenantDateBase } from '../hooks/useTenantDateBase';
+import { isWorkday, nextWorkdayOptions, toLocalDateString } from '../dateOptions';
+import { useTenantDateContext } from '../hooks/useTenantDateBase';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
@@ -83,8 +83,8 @@ export function NewBookingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const dateBase = useTenantDateBase();
-  const quickDates = useMemo(() => nextWorkdayOptions(dateBase, 5), [dateBase]);
+  const { dateBase, simulationActive } = useTenantDateContext();
+  const quickDates = useMemo(() => nextWorkdayOptions(dateBase, 5, { relativeLabels: !simulationActive }), [dateBase, simulationActive]);
   const defaultDateApplied = useRef(false);
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -100,7 +100,7 @@ export function NewBookingPage() {
   useEffect(() => {
     if (defaultDateApplied.current) return;
     if (searchParams.get('date')) return;
-    const defaultDate = quickDates.find(option => option.label === 'Tomorrow')?.date ?? quickDates[0]?.date;
+    const defaultDate = (isWorkday(dateBase) ? quickDates[1] : quickDates[0])?.date;
     if (!defaultDate) return;
     defaultDateApplied.current = true;
     setForm(f => ({
