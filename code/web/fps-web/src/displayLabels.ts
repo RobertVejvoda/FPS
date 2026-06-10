@@ -23,11 +23,11 @@ export function displaySlot(value?: string | null): string | null {
 }
 
 export function displayRequestorRef(value?: string | null): string {
-  if (!value) return 'Employee';
+  if (!value) return 'Requestor';
 
   const compact = value.replace(/-/g, '');
   if (/^[0-9a-f]{32,}$/i.test(compact)) {
-    return `Employee ${compact.slice(0, 6).toUpperCase()}`;
+    return `Requestor ${compact.slice(0, 6).toUpperCase()}`;
   }
 
   return value.length > 18 ? `${value.slice(0, 18)}...` : value;

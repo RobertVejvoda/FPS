@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -11,6 +11,7 @@ import {
   type DrawStatusResult,
   type DrawLifecycleResult,
 } from '../api/bookings';
+import { getSimulationStatus, type SimulationStatus } from '../api/simulation';
 import {
   displayDate,
   displayLocation,
@@ -27,14 +28,14 @@ import {
 } from '../displayLabels';
 import { NotificationBanner } from '../components/NotificationBanner';
 
-function localDate(offsetDays = 0): string {
-  const d = new Date();
+function localDate(baseDate: Date, offsetDays = 0): string {
+  const d = new Date(baseDate);
   d.setDate(d.getDate() + offsetDays);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function weekdayLabel(offsetDays: number): string {
-  const d = new Date();
+function weekdayLabel(baseDate: Date, offsetDays: number): string {
+  const d = new Date(baseDate);
   d.setDate(d.getDate() + offsetDays);
   return d.toLocaleDateString(undefined, { weekday: 'long' });
 }
@@ -43,13 +44,6 @@ const LOCATION_ID = 'Prague';
 // No facilities API yet; workday slot boundaries are a known gap (UX008).
 const WORKDAY_START = '08:00:00';
 const WORKDAY_END = '18:00:00';
-
-const DATE_CHIPS = [
-  { label: 'Today', offset: 0 },
-  { label: 'Tomorrow', offset: 1 },
-  { label: weekdayLabel(2), offset: 2 },
-  { label: weekdayLabel(3), offset: 3 },
-];
 
 const STATUS_FILTERS = ['All', 'Pending', 'Allocated', 'Cancelled', 'Rejected'];
 
@@ -69,10 +63,11 @@ function statusColor(status: string): string {
 }
 
 export function HrOperationsPage() {
-  const { apiBaseUrl, bearerToken, clear } = useAuth();
+  const { apiBaseUrl, bearerToken, clear, simulationEnabled } = useAuth();
   const navigate = useNavigate();
 
   const [selectedChip, setSelectedChip] = useState(0);
+  const [simulationStatus, setSimulationStatus] = useState<SimulationStatus | null>(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [listState, setListState] = useState<ListState>({ kind: 'loading' });
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
@@ -91,7 +86,45 @@ export function HrOperationsPage() {
 
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const selectedDate = localDate(selectedChip);
+  useEffect(() => {
+    if (!simulationEnabled || !bearerToken) {
+      setSimulationStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    const refreshSimulationStatus = () => getSimulationStatus({ apiBaseUrl, bearerToken }).then(result => {
+      if (!cancelled) {
+        setSimulationStatus(result.kind === 'ok' ? result.data : null);
+      }
+    });
+
+    void refreshSimulationStatus();
+    const interval = window.setInterval(() => { void refreshSimulationStatus(); }, 10000);
+    window.addEventListener('focus', refreshSimulationStatus);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshSimulationStatus);
+    };
+  }, [apiBaseUrl, bearerToken, simulationEnabled]);
+
+  const dateBase = useMemo(() => {
+    const source = simulationStatus?.simulationActive && simulationStatus.virtualNow
+      ? simulationStatus.virtualNow
+      : undefined;
+    return source ? new Date(source) : new Date();
+  }, [simulationStatus]);
+
+  const dateChips = useMemo(() => [
+    { label: 'Today', offset: 0 },
+    { label: 'Tomorrow', offset: 1 },
+    { label: weekdayLabel(dateBase, 2), offset: 2 },
+    { label: weekdayLabel(dateBase, 3), offset: 3 },
+  ], [dateBase]);
+
+  const selectedDate = localDate(dateBase, selectedChip);
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });
@@ -211,7 +244,7 @@ export function HrOperationsPage() {
 
       {/* Date picker */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        {DATE_CHIPS.map((chip, i) => (
+        {dateChips.map((chip, i) => (
           <button
             key={chip.offset}
             onClick={() => setSelectedChip(i)}
