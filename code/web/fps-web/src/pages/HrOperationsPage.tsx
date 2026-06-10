@@ -11,7 +11,6 @@ import {
   type DrawStatusResult,
   type DrawLifecycleResult,
 } from '../api/bookings';
-import { getSimulationStatus, type SimulationStatus } from '../api/simulation';
 import {
   displayDate,
   displayLocation,
@@ -27,18 +26,8 @@ import {
   lifecycleStepStatusColor,
 } from '../displayLabels';
 import { NotificationBanner } from '../components/NotificationBanner';
-
-function localDate(baseDate: Date, offsetDays = 0): string {
-  const d = new Date(baseDate);
-  d.setDate(d.getDate() + offsetDays);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function weekdayLabel(baseDate: Date, offsetDays: number): string {
-  const d = new Date(baseDate);
-  d.setDate(d.getDate() + offsetDays);
-  return d.toLocaleDateString(undefined, { weekday: 'long' });
-}
+import { nextWorkdayOptions } from '../dateOptions';
+import { useTenantDateBase } from '../hooks/useTenantDateBase';
 
 const LOCATION_ID = 'Prague';
 // No facilities API yet; workday slot boundaries are a known gap (UX008).
@@ -63,11 +52,10 @@ function statusColor(status: string): string {
 }
 
 export function HrOperationsPage() {
-  const { apiBaseUrl, bearerToken, clear, simulationEnabled } = useAuth();
+  const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
 
   const [selectedChip, setSelectedChip] = useState(0);
-  const [simulationStatus, setSimulationStatus] = useState<SimulationStatus | null>(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [listState, setListState] = useState<ListState>({ kind: 'loading' });
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
@@ -86,45 +74,10 @@ export function HrOperationsPage() {
 
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
-  useEffect(() => {
-    if (!simulationEnabled || !bearerToken) {
-      setSimulationStatus(null);
-      return;
-    }
+  const dateBase = useTenantDateBase();
+  const dateChips = useMemo(() => nextWorkdayOptions(dateBase, 4), [dateBase]);
 
-    let cancelled = false;
-    const refreshSimulationStatus = () => getSimulationStatus({ apiBaseUrl, bearerToken }).then(result => {
-      if (!cancelled) {
-        setSimulationStatus(result.kind === 'ok' ? result.data : null);
-      }
-    });
-
-    void refreshSimulationStatus();
-    const interval = window.setInterval(() => { void refreshSimulationStatus(); }, 10000);
-    window.addEventListener('focus', refreshSimulationStatus);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      window.removeEventListener('focus', refreshSimulationStatus);
-    };
-  }, [apiBaseUrl, bearerToken, simulationEnabled]);
-
-  const dateBase = useMemo(() => {
-    const source = simulationStatus?.simulationActive && simulationStatus.virtualNow
-      ? simulationStatus.virtualNow
-      : undefined;
-    return source ? new Date(source) : new Date();
-  }, [simulationStatus]);
-
-  const dateChips = useMemo(() => [
-    { label: 'Today', offset: 0 },
-    { label: 'Tomorrow', offset: 1 },
-    { label: weekdayLabel(dateBase, 2), offset: 2 },
-    { label: weekdayLabel(dateBase, 3), offset: 3 },
-  ], [dateBase]);
-
-  const selectedDate = localDate(dateBase, selectedChip);
+  const selectedDate = dateChips[selectedChip]?.date ?? dateChips[0].date;
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });
@@ -246,7 +199,7 @@ export function HrOperationsPage() {
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         {dateChips.map((chip, i) => (
           <button
-            key={chip.offset}
+            key={chip.date}
             onClick={() => setSelectedChip(i)}
             style={{ padding: '0.375rem 0.875rem', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.875rem',
               background: selectedChip === i ? '#2563eb' : '#f3f4f6',
