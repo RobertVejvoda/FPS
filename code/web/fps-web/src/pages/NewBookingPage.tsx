@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchDrawStatus, submitBooking, type DrawStatusResult } from '../api/bookings';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '../api/profile';
+import { nextWorkdayOptions, toLocalDateString } from '../dateOptions';
+import { useTenantDateBase } from '../hooks/useTenantDateBase';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
@@ -56,12 +58,6 @@ function dateFromOffset(offsetDays: number): string {
   return datetimeLocalValue(offsetDays, 0).slice(0, 10);
 }
 
-function dateLabel(date: string, offsetDays: number): string {
-  if (offsetDays === 0) return 'Today';
-  if (offsetDays === 1) return 'Tomorrow';
-  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
-}
-
 function dateOffsetFromParam(dateStr: string | null): number {
   if (!dateStr) return 1;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -83,12 +79,13 @@ const initialForm = (offsetDays = 1): Form => ({
   plannedDeparture: datetimeLocalValue(offsetDays, 18),
 });
 
-const DATE_OFFSETS = Array.from({ length: 7 }, (_, offset) => offset);
-
 export function NewBookingPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const dateBase = useTenantDateBase();
+  const quickDates = useMemo(() => nextWorkdayOptions(dateBase, 5), [dateBase]);
+  const defaultDateApplied = useRef(false);
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [form, setForm] = useState<Form>(() => initialForm(dateOffsetFromParam(searchParams.get('date'))));
@@ -99,6 +96,19 @@ export function NewBookingPage() {
   const [drawStatusLoading, setDrawStatusLoading] = useState(false);
   const [dateStatuses, setDateStatuses] = useState<Record<string, DrawStatusResult>>({});
   const [dateStatusesLoading, setDateStatusesLoading] = useState(false);
+
+  useEffect(() => {
+    if (defaultDateApplied.current) return;
+    if (searchParams.get('date')) return;
+    const defaultDate = quickDates.find(option => option.label === 'Tomorrow')?.date ?? quickDates[0]?.date;
+    if (!defaultDate) return;
+    defaultDateApplied.current = true;
+    setForm(f => ({
+      ...f,
+      plannedArrival: withDate(f.plannedArrival, defaultDate),
+      plannedDeparture: withDate(f.plannedDeparture, defaultDate),
+    }));
+  }, [quickDates, searchParams]);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -151,8 +161,8 @@ export function NewBookingPage() {
 
     let cancelled = false;
     setDateStatusesLoading(true);
-    Promise.all(DATE_OFFSETS.map(async (offset) => {
-      const date = dateFromOffset(offset);
+    Promise.all(quickDates.map(async (option) => {
+      const date = option.date;
       const status = await fetchDrawStatus({ apiBaseUrl, bearerToken }, {
         date,
         locationId: form.locationId.trim() || DEMO_LOCATION_ID,
@@ -167,7 +177,7 @@ export function NewBookingPage() {
     });
 
     return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken, form.locationId, form.plannedArrival, form.plannedDeparture]);
+  }, [apiBaseUrl, bearerToken, form.locationId, form.plannedArrival, form.plannedDeparture, quickDates]);
 
   function set<K extends keyof Form>(k: K, v: Form[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -315,23 +325,41 @@ export function NewBookingPage() {
           )}
 
           <Field label="Date *" error={errors.plannedArrival}>
-            <select
-              value={dateFromDateTimeLocal(form.plannedArrival)}
-              onChange={(e) => setRequestDate(e.target.value)}
-              style={inputStyle}
-              disabled={dateStatusesLoading}
-            >
-              {DATE_OFFSETS.map((offset) => {
-                const date = dateFromOffset(offset);
-                const status = dateStatuses[date];
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {quickDates.map((option) => {
+                const status = dateStatuses[option.date];
                 const closed = status?.kind === 'ok' && !status.canRequest;
+                const selected = dateFromDateTimeLocal(form.plannedArrival) === option.date;
                 return (
-                  <option key={date} value={date} disabled={closed}>
-                    {dateLabel(date, offset)}{closed ? ' - closed' : ''}
-                  </option>
+                  <button
+                    key={option.date}
+                    type="button"
+                    onClick={() => setRequestDate(option.date)}
+                    disabled={closed || dateStatusesLoading}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      border: `2px solid ${selected ? '#1d4ed8' : '#e5e7eb'}`,
+                      background: selected ? '#1d4ed8' : '#fff',
+                      color: closed ? '#9ca3af' : selected ? '#fff' : '#374151',
+                      fontWeight: 600,
+                      cursor: closed || dateStatusesLoading ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      opacity: closed ? 0.6 : 1,
+                    }}
+                  >
+                    {option.label}{closed ? ' - closed' : ''}
+                  </button>
                 );
               })}
-            </select>
+            </div>
+            <input
+              type="date"
+              value={dateFromDateTimeLocal(form.plannedArrival)}
+              min={toLocalDateString(dateBase)}
+              onChange={(e) => setRequestDate(e.target.value)}
+              style={{ ...inputStyle, marginTop: 8 }}
+            />
             {dateStatusesLoading ? <span style={{ fontSize: 12, color: '#6b7280' }}>Checking available dates...</span> : null}
           </Field>
           <Field label="Planned arrival *">

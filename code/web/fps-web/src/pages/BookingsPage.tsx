@@ -1,32 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
 import { displaySlot, formatCutOffAt } from '../displayLabels';
 import { StatusBadge } from '../components/StatusBadge';
 import { NotificationBanner } from '../components/NotificationBanner';
-
-function localDate(offsetDays = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function weekdayLabel(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toLocaleDateString(undefined, { weekday: 'long' });
-}
+import { nextWorkdayOptions } from '../dateOptions';
+import { useTenantDateBase } from '../hooks/useTenantDateBase';
 
 const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
 const WORKDAY_END = '18:00:00';
-
-const DAYS = [
-  { label: 'Today', offset: 0 },
-  { label: 'Tomorrow', offset: 1 },
-  { label: weekdayLabel(2), offset: 2 },
-];
 
 type LoadState =
   | { kind: 'loading' }
@@ -41,6 +25,8 @@ export function BookingsPage() {
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
   const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([null, null, null]);
   const [drawStatusesLoading, setDrawStatusesLoading] = useState(true);
+  const dateBase = useTenantDateBase();
+  const days = useMemo(() => nextWorkdayOptions(dateBase, 3), [dateBase]);
 
   const drawLocationId = loadState.kind === 'ok'
     ? loadState.items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID
@@ -62,8 +48,8 @@ export function BookingsPage() {
     setDrawStatusesLoading(true);
     setDrawStatuses([null, null, null]);
     Promise.all(
-      DAYS.map(day => fetchDrawStatus({ apiBaseUrl, bearerToken }, {
-        date: localDate(day.offset),
+      days.map(day => fetchDrawStatus({ apiBaseUrl, bearerToken }, {
+        date: day.date,
         locationId: drawLocationId,
         timeSlotStart: WORKDAY_START,
         timeSlotEnd: WORKDAY_END,
@@ -74,7 +60,7 @@ export function BookingsPage() {
       setDrawStatusesLoading(false);
     });
     return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken, drawLocationId]);
+  }, [apiBaseUrl, bearerToken, drawLocationId, days]);
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });
@@ -127,12 +113,12 @@ export function BookingsPage() {
 
       {/* Three-day tiles */}
       <div className="day-tiles-grid">
-        {DAYS.map((day, i) => {
-          const date = localDate(day.offset);
+        {days.map((day, i) => {
+          const date = day.date;
           const booking = items.find(b => b.requestedDate === date) ?? null;
           return (
             <DayTile
-              key={day.offset}
+              key={day.date}
               label={day.label}
               date={date}
               booking={booking}
