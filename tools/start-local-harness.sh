@@ -25,6 +25,7 @@ set -eu
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_DIR="$REPO_ROOT/logs/local-harness"
 PID_FILE="$LOG_DIR/pids"
+REVISION_FILE="$LOG_DIR/revision"
 SKIP_INFRA=false
 INFRA_HOST="${FPS_INFRA_HOST:-localhost}"
 
@@ -50,6 +51,14 @@ done
 
 mkdir -p "$LOG_DIR"
 : > "$PID_FILE"
+
+current_revision() {
+  if command -v git > /dev/null 2>&1; then
+    git -C "$REPO_ROOT" rev-parse --verify HEAD 2>/dev/null || printf 'unknown\n'
+  else
+    printf 'unknown\n'
+  fi
+}
 
 wait_port() {
   port="$1"
@@ -270,6 +279,7 @@ printf ' Configuration:   http://localhost:5141\n'
 printf ' Customer:        http://localhost:5181\n'
 printf ' DataHub:         http://localhost:5211\n'
 printf ' Logs:            %s/\n' "$LOG_DIR"
+current_revision > "$REVISION_FILE"
 printf '\n'
 printf ' Smoke (run in a new shell):\n'
 printf '   TOKEN=$(./tools/dev-auth.sh employee1)\n'

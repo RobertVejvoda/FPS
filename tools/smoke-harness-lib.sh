@@ -7,6 +7,23 @@ smoke_log() {
   printf '[smoke] %s\n' "$*"
 }
 
+current_smoke_revision() {
+  if command -v git > /dev/null 2>&1; then
+    git -C "$REPO_ROOT" rev-parse --verify HEAD 2>/dev/null || printf 'unknown\n'
+  else
+    printf 'unknown\n'
+  fi
+}
+
+smoke_harness_revision_matches() {
+  revision_file="$REPO_ROOT/logs/local-harness/revision"
+  [ -f "$revision_file" ] || return 1
+
+  started_revision="$(cat "$revision_file" 2>/dev/null || true)"
+  current_revision="$(current_smoke_revision)"
+  [ -n "$started_revision" ] && [ "$started_revision" = "$current_revision" ]
+}
+
 smoke_harness_ready() {
   for port_label in \
     "10000 Gateway" \
@@ -28,14 +45,24 @@ smoke_harness_ready() {
 }
 
 ensure_smoke_harness() {
+  stopped_stale_harness=false
+
   if smoke_harness_ready; then
-    smoke_log "Reusing running backend harness."
-    STARTED_SMOKE_HARNESS=false
-    return 0
+    if smoke_harness_revision_matches; then
+      smoke_log "Reusing running backend harness."
+      STARTED_SMOKE_HARNESS=false
+      return 0
+    fi
+
+    smoke_log "Backend harness was started from a different revision; restarting app services."
+    "$REPO_ROOT/tools/stop-local-harness.sh" --services-only
+    stopped_stale_harness=true
   fi
 
   smoke_log "Starting backend harness for smoke run."
-  "$REPO_ROOT/tools/stop-local-harness.sh" --services-only
+  if [ "$stopped_stale_harness" = false ]; then
+    "$REPO_ROOT/tools/stop-local-harness.sh" --services-only
+  fi
   "$REPO_ROOT/tools/start-local-harness.sh" --skip-infra
   STARTED_SMOKE_HARNESS=true
 }
