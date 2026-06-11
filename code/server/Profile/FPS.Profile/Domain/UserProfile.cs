@@ -12,6 +12,8 @@ public sealed class UserProfile
     public IReadOnlyList<Vehicle> Vehicles { get; init; } = [];
     // Optional staff/employee identifier — only stored when policy or support requires it.
     public string? EmployeeId { get; init; }
+    // Human-readable display name for HR operational views only — never exposed on employee screens, audit payloads, or public APIs.
+    public string? DisplayName { get; init; }
     // Tenant-scoped FPS roles for this user (employee, hr_manager, admin, report_viewer).
     public IReadOnlyList<string> FpsRoles { get; init; } = [];
     // Operational notification email — omit when not needed.

@@ -265,4 +265,52 @@ public sealed class EmployeeBootstrapServiceTests
         await service.RegisterAsync("t1", ValidRequest("sub-1", "EMP-777"), CancellationToken.None);
         Assert.False(await profileRepo.EmployeeIdExistsAsync("t2", "EMP-777", CancellationToken.None));
     }
+
+    // ── DisplayName (UX450) ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Register_WithDisplayName_PersistsDisplayName()
+    {
+        var req = ValidRequest() with { DisplayName = "Alice Smith" };
+        var (profile, _) = await service.RegisterAsync("t1", req, CancellationToken.None);
+
+        var stored = await profileRepo.GetAsync("t1", profile!.UserId, CancellationToken.None);
+        Assert.Equal("Alice Smith", stored!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Update_WithDisplayName_UpdatesDisplayName()
+    {
+        var (profile, _) = await service.RegisterAsync("t1", ValidRequest() with { DisplayName = "Alice Smith" }, CancellationToken.None);
+
+        var updateReq = new UpdateEmployeeRequest(true, ["employee"], null, null, true, false, false, false, "Alice Johnson");
+        await service.UpdateAsync("t1", profile!.UserId, updateReq, CancellationToken.None);
+
+        var stored = await profileRepo.GetAsync("t1", profile.UserId, CancellationToken.None);
+        Assert.Equal("Alice Johnson", stored!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Update_NullDisplayName_PreservesExistingDisplayName()
+    {
+        var (profile, _) = await service.RegisterAsync("t1", ValidRequest() with { DisplayName = "Alice Smith" }, CancellationToken.None);
+
+        var updateReq = new UpdateEmployeeRequest(true, ["employee"], null, null, true, false, false, false, DisplayName: null);
+        await service.UpdateAsync("t1", profile!.UserId, updateReq, CancellationToken.None);
+
+        var stored = await profileRepo.GetAsync("t1", profile.UserId, CancellationToken.None);
+        Assert.Equal("Alice Smith", stored!.DisplayName);
+    }
+
+    [Fact]
+    public async Task Deactivate_PreservesDisplayName()
+    {
+        var req = ValidRequest("sub-deact-name") with { DisplayName = "Bob Jones" };
+        await service.RegisterAsync("t1", req, CancellationToken.None);
+        await service.DeactivateAsync("t1", "sub-deact-name", CancellationToken.None);
+
+        var hash = EmployeeBootstrapService.Hash("sub-deact-name");
+        var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        Assert.Equal("Bob Jones", stored!.DisplayName);
+    }
 }

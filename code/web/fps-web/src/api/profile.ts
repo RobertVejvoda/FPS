@@ -21,6 +21,31 @@ export interface VehicleSnapshot {
   isDefault?: boolean;
 }
 
+export interface DisplayNamesResponse {
+  names: Record<string, string | null>;
+}
+
+export async function fetchHrDisplayNames(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  userIds: string[],
+): Promise<FetchResult<DisplayNamesResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  if (userIds.length === 0) return { kind: 'ok', data: { names: {} } };
+  try {
+    const res = await fetch(`${apiBaseUrl}/profile/hr/display-names`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ userIds }),
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `POST /profile/hr/display-names returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as DisplayNamesResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchProfileSnapshot(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
 ): Promise<FetchResult<ProfileSnapshot>> {

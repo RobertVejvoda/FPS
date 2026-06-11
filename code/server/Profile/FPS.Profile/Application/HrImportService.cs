@@ -169,6 +169,7 @@ public sealed class HrImportService(
 
             var homeLocation = GetField(fields, colIndex, "home_location").Trim().NullIfEmpty();
             var email        = GetField(fields, colIndex, "email").Trim().NullIfEmpty();
+            var displayName  = GetField(fields, colIndex, "display_name").Trim().NullIfEmpty();
             var subjectHash  = EmployeeBootstrapService.Hash(subject);
             var existing     = await profileRepository.GetAsync(tenantId, subjectHash, ct);
 
@@ -176,14 +177,14 @@ public sealed class HrImportService(
             {
                 var createReq = new BootstrapEmployeeRequest(
                     subject, null, isActive, roles, email, homeLocation,
-                    parkingEligible, hasCompanyCar, accessibility, reserved, "hr-import");
+                    parkingEligible, hasCompanyCar, accessibility, reserved, "hr-import", displayName);
                 rows.Add(new ClassifiedRow(lineNo, subject, subjectHash, HrImportRowStatus.Created, null, createReq, null));
             }
             else
             {
                 var updateReq = new UpdateEmployeeRequest(
                     isActive, roles, email, homeLocation,
-                    parkingEligible, hasCompanyCar, accessibility, reserved);
+                    parkingEligible, hasCompanyCar, accessibility, reserved, displayName);
                 var status = IsUnchanged(existing, updateReq) ? HrImportRowStatus.Unchanged : HrImportRowStatus.Updated;
                 rows.Add(new ClassifiedRow(lineNo, subject, subjectHash, status, null, null, updateReq));
             }
@@ -211,7 +212,8 @@ public sealed class HrImportService(
         existing.HasCompanyCar == req.HasCompanyCar &&
         existing.AccessibilityEligible == req.AccessibilityEligible &&
         existing.ReservedSpaceEligible == req.ReservedSpaceEligible &&
-        existing.HomeLocationId == req.HomeLocationId;
+        existing.HomeLocationId == req.HomeLocationId &&
+        (req.DisplayName is null || existing.DisplayName == req.DisplayName);
 
     private static async Task<List<string>> ReadLinesAsync(Stream stream, CancellationToken ct)
     {

@@ -20,7 +20,8 @@ public sealed record BootstrapEmployeeRequest(
     bool HasCompanyCar,
     bool AccessibilityEligible,
     bool ReservedSpaceEligible,
-    string FactSource);
+    string FactSource,
+    string? DisplayName = null);
 
 public sealed record UpdateEmployeeRequest(
     bool IsActive,
@@ -30,7 +31,8 @@ public sealed record UpdateEmployeeRequest(
     bool ParkingEligible,
     bool HasCompanyCar,
     bool AccessibilityEligible,
-    bool ReservedSpaceEligible);
+    bool ReservedSpaceEligible,
+    string? DisplayName = null);
 
 public sealed record ImportSummary(int Accepted, int Rejected, IReadOnlyList<string> Errors);
 public sealed record BootstrapSummary(int Total, int Active, int Inactive, int ActiveAndEligible);
@@ -75,6 +77,7 @@ public sealed class EmployeeBootstrapService(
             TenantId = tenantId,
             UserId = subjectHash,
             EmployeeId = existing.EmployeeId,
+            DisplayName = request.DisplayName ?? existing.DisplayName,
             Status = request.IsActive ? ProfileStatus.Active : ProfileStatus.Inactive,
             FpsRoles = request.FpsRoles,
             NotificationAddress = request.NotificationAddress,
@@ -106,6 +109,7 @@ public sealed class EmployeeBootstrapService(
             TenantId = tenantId, UserId = subjectHash,
             Status = ProfileStatus.Inactive,
             EmployeeId = existing.EmployeeId,
+            DisplayName = existing.DisplayName,
             FpsRoles = existing.FpsRoles,
             NotificationAddress = existing.NotificationAddress,
             HomeLocationId = existing.HomeLocationId,
@@ -185,6 +189,7 @@ public sealed class EmployeeBootstrapService(
             TenantId = tenantId,
             UserId = subjectHash,
             EmployeeId = req.EmployeeId,
+            DisplayName = req.DisplayName,
             Status = req.IsActive ? ProfileStatus.Active : ProfileStatus.Inactive,
             FpsRoles = req.FpsRoles,
             NotificationAddress = req.NotificationAddress,
