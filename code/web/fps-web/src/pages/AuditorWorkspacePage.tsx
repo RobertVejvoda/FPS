@@ -14,7 +14,9 @@ import {
   humanizeActivityCategory,
   humanizeActorType,
   humanizeEntityType,
+  displayActorRef,
 } from '../displayLabels';
+import { useTenantDateContext } from '../hooks/useTenantDateBase';
 
 type State =
   | { kind: 'loading' }
@@ -32,25 +34,106 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
   'ManualCorrections',
 ];
 
+type DateRangeKey = '' | 'Today' | 'Yesterday' | 'ThisWeek' | 'LastWeek' | 'ThisMonth' | 'LastMonth';
+
+const DATE_RANGE_OPTIONS: { key: DateRangeKey; label: string }[] = [
+  { key: '', label: 'All time' },
+  { key: 'Today', label: 'Today' },
+  { key: 'Yesterday', label: 'Yesterday' },
+  { key: 'ThisWeek', label: 'This week' },
+  { key: 'LastWeek', label: 'Last week' },
+  { key: 'ThisMonth', label: 'This month' },
+  { key: 'LastMonth', label: 'Last month' },
+];
+
+function dateRangeToDates(range: DateRangeKey, dateBase: Date): { after?: string; before?: string } {
+  if (!range) return {};
+  const today = new Date(dateBase.getTime());
+  today.setHours(0, 0, 0, 0);
+
+  const startOf = (d: Date): string => {
+    const c = new Date(d.getTime());
+    c.setHours(0, 0, 0, 0);
+    return c.toISOString();
+  };
+  const endOf = (d: Date): string => {
+    const c = new Date(d.getTime());
+    c.setHours(23, 59, 59, 999);
+    return c.toISOString();
+  };
+  const copy = (d: Date): Date => new Date(d.getTime());
+
+  switch (range) {
+    case 'Today':
+      return { after: startOf(today), before: endOf(today) };
+    case 'Yesterday': {
+      const y = copy(today);
+      y.setDate(y.getDate() - 1);
+      return { after: startOf(y), before: endOf(y) };
+    }
+    case 'ThisWeek': {
+      const mon = copy(today);
+      mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+      return { after: startOf(mon), before: endOf(today) };
+    }
+    case 'LastWeek': {
+      const mon = copy(today);
+      mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - 7);
+      const sun = copy(mon);
+      sun.setDate(sun.getDate() + 6);
+      return { after: startOf(mon), before: endOf(sun) };
+    }
+    case 'ThisMonth': {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { after: startOf(first), before: endOf(today) };
+    }
+    case 'LastMonth': {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const last = new Date(today.getFullYear(), today.getMonth(), 0);
+      return { after: startOf(first), before: endOf(last) };
+    }
+    default:
+      return {};
+  }
+}
+
+function buildEmptyStateMessage(
+  category: ActivityCategory,
+  dateRange: DateRangeKey,
+  entityId: string,
+  actorRef: string,
+  result: string,
+): string {
+  const parts: string[] = [];
+  if (category !== 'All') parts.push(humanizeActivityCategory(category).toLowerCase());
+  if (dateRange) parts.push(DATE_RANGE_OPTIONS.find((o) => o.key === dateRange)?.label.toLowerCase() ?? '');
+  if (entityId.trim()) parts.push(`entity ID "${entityId.trim()}"`);
+  if (actorRef.trim()) parts.push(`actor reference "${actorRef.trim()}"`);
+  if (result.trim()) parts.push(`result "${result.trim()}"`);
+  if (parts.length === 0) return 'No records match the current filters.';
+  return `No records found for ${parts.join(', ')}. Try a broader date range or clear some filters.`;
+}
+
 export function AuditorWorkspacePage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
+  const { dateBase } = useTenantDateContext();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [category, setCategory] = useState<ActivityCategory>('All');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateRange, setDateRange] = useState<DateRangeKey>('');
   const [entityId, setEntityId] = useState('');
-  const [actorHash, setActorHash] = useState('');
+  const [actorRef, setActorRef] = useState('');
   const [result, setResult] = useState('');
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
+    const { after, before } = dateRangeToDates(dateRange, dateBase);
     const filters: AuditQueryFilters = {
       category: category === 'All' ? undefined : category,
-      occurredAfter: dateFrom ? new Date(dateFrom).toISOString() : undefined,
-      occurredBefore: dateTo ? new Date(dateTo + 'T23:59:59').toISOString() : undefined,
+      occurredAfter: after,
+      occurredBefore: before,
       entityId: entityId.trim() || undefined,
-      actorHash: actorHash.trim() || undefined,
+      actorRef: actorRef.trim() || undefined,
       result: result.trim() || undefined,
       pageSize: 100,
     };
@@ -72,7 +155,7 @@ export function AuditorWorkspacePage() {
           message: 'message' in res ? res.message : 'Failed to load audit records.',
         });
     });
-  }, [apiBaseUrl, bearerToken, clear, navigate, category, dateFrom, dateTo, entityId, actorHash, result]);
+  }, [apiBaseUrl, bearerToken, clear, navigate, category, dateRange, dateBase, entityId, actorRef, result]);
 
   useEffect(() => {
     load();
@@ -87,7 +170,8 @@ export function AuditorWorkspacePage() {
       'Entity Type',
       'Entity ID',
       'Actor Type',
-      'Actor Hash',
+      'Actor Reference',
+      'Actor Hash (Evidence)',
       'Result',
       'Reason Code',
       'Summary',
@@ -99,6 +183,7 @@ export function AuditorWorkspacePage() {
       humanizeEntityType(r.entityType),
       r.entityId ?? '',
       humanizeActorType(r.actorType),
+      displayActorRef(r.actorHash),
       r.actorHash ?? '',
       humanizeAuditResult(r.result),
       r.reasonCode ?? '',
@@ -113,6 +198,8 @@ export function AuditorWorkspacePage() {
     link.click();
     URL.revokeObjectURL(url);
   }
+
+  const hasActiveFilters = !!(dateRange || entityId.trim() || actorRef.trim() || result.trim() || category !== 'All');
 
   return (
     <div style={page}>
@@ -138,14 +225,28 @@ export function AuditorWorkspacePage() {
             </select>
           </div>
 
-          <div style={filterItem}>
-            <label style={label}>Date From</label>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={input} />
-          </div>
-
-          <div style={filterItem}>
-            <label style={label}>Date To</label>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={input} />
+          <div style={{ ...filterItem, gridColumn: '1 / -1' }}>
+            <label style={label}>Date Range</label>
+            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+              {DATE_RANGE_OPTIONS.map(({ key, label: rangeLabel }) => (
+                <button
+                  key={key}
+                  onClick={() => setDateRange(key)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: 14,
+                    border: `1px solid ${dateRange === key ? '#2563eb' : '#d1d5db'}`,
+                    background: dateRange === key ? '#eff6ff' : '#fff',
+                    color: dateRange === key ? '#2563eb' : '#374151',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: dateRange === key ? 600 : 400,
+                  }}
+                >
+                  {rangeLabel}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div style={filterItem}>
@@ -160,12 +261,12 @@ export function AuditorWorkspacePage() {
           </div>
 
           <div style={filterItem}>
-            <label style={label}>Actor Hash</label>
+            <label style={label}>Actor reference</label>
             <input
               type="text"
-              placeholder="Pseudonymised actor reference"
-              value={actorHash}
-              onChange={(e) => setActorHash(e.target.value)}
+              placeholder="e.g. A3F1B2"
+              value={actorRef}
+              onChange={(e) => setActorRef(e.target.value.toUpperCase())}
               style={input}
             />
           </div>
@@ -223,15 +324,10 @@ export function AuditorWorkspacePage() {
           <div style={emptyBox}>
             <p style={{ margin: '0 0 8px', fontWeight: 500 }}>No activity records found</p>
             <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>
-              {category !== 'All'
-                ? `No ${humanizeActivityCategory(category).toLowerCase()} events match your filter criteria. Try adjusting the filters or selecting a different activity category.`
+              {hasActiveFilters
+                ? buildEmptyStateMessage(category, dateRange, entityId, actorRef, result)
                 : 'No audit records exist in the system yet. Activity evidence will appear here after booking requests, Draw events, policy changes, or other system actions occur.'}
             </p>
-            {(dateFrom || dateTo || entityId || actorHash || result) && (
-              <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
-                Active filters: Date range, entity ID, actor hash, or result may be limiting results.
-              </p>
-            )}
           </div>
         )}
 
@@ -275,8 +371,8 @@ export function AuditorWorkspacePage() {
                       {r.entityId ? r.entityId.slice(0, 8) + '…' : '—'}
                     </td>
                     <td style={td}>{humanizeActorType(r.actorType)}</td>
-                    <td style={{ ...td, fontFamily: 'monospace', fontSize: 10, color: '#9ca3af' }}>
-                      {r.actorHash ? r.actorHash.slice(0, 10) + '…' : '—'}
+                    <td style={{ ...td, fontFamily: 'monospace', fontSize: 12, color: '#374151', letterSpacing: '0.05em' }}>
+                      {displayActorRef(r.actorHash)}
                     </td>
                     <td style={td}>
                       <span style={resultBadge(r.result)}>{humanizeAuditResult(r.result)}</span>

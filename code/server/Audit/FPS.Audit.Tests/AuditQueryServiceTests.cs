@@ -173,6 +173,22 @@ public sealed class AuditQueryServiceTests
         Assert.DoesNotContain("tenantid", props);
     }
 
+    [Fact]
+    public async Task Query_FilterBy_ActorRef_MatchesByPrefix_ReturnsMatchingOnly()
+    {
+        var hash1 = Pseudonymiser.Hash("user-1")!;
+        var hash2 = Pseudonymiser.Hash("user-2")!;
+
+        await AppendRecord("t1", "booking.requestSubmitted", "bookingRequest", "req-1", actorHash: hash1);
+        await AppendRecord("t1", "booking.requestSubmitted", "bookingRequest", "req-2", actorHash: hash2);
+
+        var actorRef = hash1[..6].ToUpperInvariant();
+        var result = await service.QueryAsync(new AuditQueryRequest { ActorRef = actorRef }, "t1");
+
+        Assert.Equal(1, result.TotalCount);
+        Assert.StartsWith(actorRef, result.Items[0].ActorHash!, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Category filter (AUDIT003) ────────────────────────────────────────────
 
     [Fact]

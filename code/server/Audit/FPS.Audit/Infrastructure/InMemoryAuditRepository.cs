@@ -26,6 +26,7 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
             .Where(r => query.EntityId is null || r.EntityId == query.EntityId)
             .Where(r => query.EventType is null || r.EventType == query.EventType)
             .Where(r => query.ActorHash is null || r.ActorHash == query.ActorHash)
+            .Where(r => query.ActorRef is null || r.ActorHash?.StartsWith(query.ActorRef, StringComparison.OrdinalIgnoreCase) == true)
             .Where(r => query.OccurredAfter is null || r.OccurredAt >= query.OccurredAfter)
             .Where(r => query.OccurredBefore is null || r.OccurredAt <= query.OccurredBefore)
             .Where(r => query.Action is null || r.Action == query.Action)

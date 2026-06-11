@@ -20,6 +20,9 @@ public sealed record AuditQueryRequest
     public string? EntityId { get; init; }
     public string? EventType { get; init; }
     public string? ActorHash { get; init; }
+    // Short stable reference prefix — matches the first N chars of ActorHash (case-insensitive).
+    // Auditors search using the displayed short ref (e.g. "A3F1B2") rather than the full hash.
+    public string? ActorRef { get; init; }
     public DateTime? OccurredAfter { get; init; }
     public DateTime? OccurredBefore { get; init; }
     // Business activity filters (AUD006)
