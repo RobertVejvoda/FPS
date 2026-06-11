@@ -27,12 +27,19 @@ public sealed class HrProfileController(
         [FromBody] DisplayNamesRequest request,
         CancellationToken cancellationToken)
     {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        if (request.UserIds is null)
+            return BadRequest("userIds is required.");
+
         if (request.UserIds.Count > MaxBatchSize)
             return BadRequest($"Batch size must not exceed {MaxBatchSize}.");
 
         var names = new Dictionary<string, string?>(request.UserIds.Count);
         foreach (var userId in request.UserIds.Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            if (string.IsNullOrWhiteSpace(userId)) continue;
             var profile = await repository.GetAsync(currentUser.TenantId, userId, cancellationToken);
             names[userId] = profile?.DisplayName;
         }
@@ -41,5 +48,5 @@ public sealed class HrProfileController(
     }
 }
 
-public sealed record DisplayNamesRequest(IReadOnlyList<string> UserIds);
+public sealed record DisplayNamesRequest(IReadOnlyList<string>? UserIds);
 public sealed record DisplayNamesResponse(IReadOnlyDictionary<string, string?> Names);
