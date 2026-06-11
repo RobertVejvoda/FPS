@@ -17,8 +17,8 @@
 # What is seeded:
 #   Profiles:  25 demo employees by default, plus role users
 #   Vehicles:  one regular vehicle for each demo employee
-#   Bookings:  25 same-day Draw requests by default, one per profiled employee
-#   Draw:      runs the +2 demo Draw so the demo immediately shows allocated/waitlisted outcomes
+#   Bookings:  25 future Draw requests by default, one per profiled employee
+#   Draw:      runs the next future workday Draw so the demo immediately shows allocated/waitlisted outcomes
 #   Admin profiles: hr-admin, tenant-admin, report-viewer, auditor (no parking)
 #
 #   Configuration (policy + slots) — seeded automatically by Configuration service on startup
@@ -36,6 +36,7 @@ DEMO_FACILITY_LABEL="${FPS_DEMO_FACILITY_LABEL:-Headquarters}"
 DEMO_LOCATION_ID="${FPS_DEMO_LOCATION_ID:-Prague}"
 DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
 DEMO_BOOKING_COUNT="${FPS_DEMO_BOOKING_COUNT:-$DEMO_EMPLOYEE_COUNT}"
+DEMO_DRAW_MIN_OFFSET="${FPS_DEMO_DRAW_MIN_OFFSET:-2}"
 IDENTITY_URL="${IDENTITY_URL:-http://localhost:5192}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
@@ -98,6 +99,33 @@ future_date() {
   local days="$1"
   # macOS: date -v+Nd   Linux: date -d "+N days"
   date -v+"${days}"d +%Y-%m-%d 2>/dev/null || date -d "+${days} days" +%Y-%m-%d
+}
+
+weekday_for_offset() {
+  python3 - "$1" << 'PYEOF'
+from datetime import date, timedelta
+import sys
+
+print((date.today() + timedelta(days=int(sys.argv[1]))).isoweekday())
+PYEOF
+}
+
+next_workday_offset() {
+  local min_offset="$1"
+  local offset="$min_offset"
+  local max_offset=$((min_offset + 14))
+  local weekday
+
+  while [ "$offset" -le "$max_offset" ]; do
+    weekday=$(weekday_for_offset "$offset")
+    if [ "$weekday" -ge 1 ] && [ "$weekday" -le 5 ]; then
+      echo "$offset"
+      return 0
+    fi
+    offset=$((offset + 1))
+  done
+
+  return 1
 }
 
 seed_profile() {
@@ -343,6 +371,93 @@ PYEOF
   ok "HR display-name lookup resolves seeded employee names"
 }
 
+verify_hr_booking_display_names() {
+  local draw_date="$1"
+  local hr_token
+  hr_token=$(get_token "hr-admin")
+  [ -z "$hr_token" ] && { err "No token for hr-admin"; return 1; }
+
+  local response http_code body requestor_refs_json
+  response=$(curl -s -w "\n%{http_code}" \
+    -H "Authorization: Bearer $hr_token" \
+    "$BOOKING_URL/bookings/operations?locationId=$DEMO_LOCATION_ID&from=$draw_date&to=$draw_date&pageSize=200" 2>/dev/null || true)
+
+  http_code=$(printf '%s' "$response" | tail -n 1)
+  body=$(printf '%s' "$response" | sed '$d')
+  if [ "$http_code" != "200" ]; then
+    err "HR booking lookup HTTP ${http_code:-000}"
+    [ -n "$body" ] && echo "$body"
+    return 1
+  fi
+
+  requestor_refs_json=$(python3 - "$body" << 'PYEOF'
+import json
+import sys
+
+data = json.loads(sys.argv[1])
+items = data.get("items") or data.get("Items") or []
+refs = []
+for item in items:
+    ref = item.get("requestorRef") or item.get("RequestorRef")
+    if ref and ref not in refs:
+        refs.append(ref)
+print(json.dumps(refs))
+PYEOF
+)
+
+  local requestor_count
+  requestor_count=$(python3 - "$requestor_refs_json" << 'PYEOF'
+import json
+import sys
+
+print(len(json.loads(sys.argv[1])))
+PYEOF
+)
+
+  if [ "$requestor_count" -eq 0 ]; then
+    err "No HR booking rows found for $draw_date — demo seed did not create visible HR requests"
+    return 1
+  fi
+
+  local name_response name_http_code name_body payload
+  payload="{\"userIds\": $requestor_refs_json}"
+  name_response=$(curl -s -w "\n%{http_code}" \
+    -X POST "$PROFILE_URL/profile/hr/display-names" \
+    -H "Authorization: Bearer $hr_token" \
+    -H "Content-Type: application/json" \
+    -d "$payload" 2>/dev/null || true)
+
+  name_http_code=$(printf '%s' "$name_response" | tail -n 1)
+  name_body=$(printf '%s' "$name_response" | sed '$d')
+  if [ "$name_http_code" != "200" ]; then
+    err "HR booking display-name lookup HTTP ${name_http_code:-000}"
+    [ -n "$name_body" ] && echo "$name_body"
+    return 1
+  fi
+
+  python3 - "$requestor_refs_json" "$name_body" << 'PYEOF'
+import json
+import sys
+
+refs = json.loads(sys.argv[1])
+body = json.loads(sys.argv[2])
+names = body.get("names") or body.get("Names") or {}
+missing = [ref for ref in refs if not names.get(ref)]
+if missing:
+    print("HR booking rows contain requestors without seeded display names:")
+    for ref in missing[:10]:
+        print(f"  - {ref[:8]}...")
+    if len(missing) > 10:
+        print(f"  - ...and {len(missing) - 10} more")
+    print("This usually means stale Booking state references old Keycloak user IDs.")
+    print("Run: ./tools/stop-local-harness.sh --reset")
+    print("Then: ./tools/start-smoke-web.sh")
+    sys.exit(1)
+PYEOF
+
+  ok "HR Parking Requests rows resolve requestor names ($requestor_count requestors)"
+}
+
 # ── profiles ─────────────────────────────────────────────────────────────────
 
 echo ""
@@ -364,25 +479,31 @@ seed_profile "auditor"       "Martin Cerny" "false" "false" '[]'
 echo ""
 echo "-- Bookings (generates notifications, audit records, and reporting data) --"
 
-# Dates start at +2 to stay clear of the draw cutoff that applies to +1/same-day requests.
+# Dates start at the next workday at least +2 days out to stay clear of the
+# draw cutoff and keep the demo visible in the HR workday navigation.
 # The fairness demo intentionally uses regular employee requests only. Company-car
 # fixed-slot handling is a separate policy path and should not be mixed into this draw.
+DEMO_DRAW_OFFSET=$(next_workday_offset "$DEMO_DRAW_MIN_OFFSET")
+DEMO_DRAW_DATE=$(future_date "$DEMO_DRAW_OFFSET")
+echo "Demo Draw date: $DEMO_DRAW_DATE (+$DEMO_DRAW_OFFSET days, next workday)"
+
 for index in $(seq 1 "$DEMO_BOOKING_COUNT"); do
   if [ "$index" -gt "$DEMO_EMPLOYEE_COUNT" ]; then
     break
   fi
-  seed_booking "employee$index" "$(license_plate_for_index "$index")" "Sedan" "false" "false" "false" "2"
+  seed_booking "employee$index" "$(license_plate_for_index "$index")" "Sedan" "false" "false" "false" "$DEMO_DRAW_OFFSET"
 done
 
 # ── demo Draw ────────────────────────────────────────────────────────────────
 
 echo ""
-echo "-- Demo Draw (+2 days, $DEMO_LOCATION_ID 08:00-18:00) --"
-trigger_demo_draw "2"
+echo "-- Demo Draw ($DEMO_DRAW_DATE, $DEMO_LOCATION_ID 08:00-18:00) --"
+trigger_demo_draw "$DEMO_DRAW_OFFSET"
 
 echo ""
 echo "-- HR display names --"
 verify_hr_display_names
+verify_hr_booking_display_names "$DEMO_DRAW_DATE"
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
@@ -391,7 +512,7 @@ echo "== Seed complete =="
 echo "Profiles: $DEMO_EMPLOYEE_COUNT employees with display names, plus Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
 echo "Facility/location: $DEMO_FACILITY_LABEL / $DEMO_LOCATION_ID"
 echo "Vehicles: one regular vehicle per demo employee"
-echo "Bookings: $DEMO_BOOKING_COUNT regular employee requests; +2 demo Draw has already run and should show 15 numbered slots and visible waitlist pressure"
+echo "Bookings: $DEMO_BOOKING_COUNT regular employee requests; $DEMO_DRAW_DATE demo Draw has already run and should show 15 numbered slots and visible waitlist pressure"
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh employee1)"
@@ -400,7 +521,7 @@ echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/booking
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/notifications/unread-count"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/me"
 echo "  TOKEN=\$(./tools/dev-auth.sh tenant-admin)"
-echo "  DATE=\$(date -v+2d +%Y-%m-%d 2>/dev/null || date -d '+2 days' +%Y-%m-%d)"
+echo "  DATE=$DEMO_DRAW_DATE"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" \"http://localhost:10000/draws/\$DATE/status?locationId=$DEMO_LOCATION_ID&timeSlotStart=\${DATE}T08:00:00&timeSlotEnd=\${DATE}T18:00:00\""
 echo ""
 echo "Admin/reporting:"
