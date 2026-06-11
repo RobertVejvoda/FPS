@@ -18,6 +18,8 @@ DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
 REALM="fps-local"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
+IMPORT_REALM_FILE="$REALM_FILE"
+TMP_REALM_FILE=""
 USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor"
 
 if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
@@ -25,6 +27,13 @@ if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
     USERS="$USERS employee$i"
   done
 fi
+
+cleanup() {
+  if [ -n "$TMP_REALM_FILE" ] && [ -f "$TMP_REALM_FILE" ]; then
+    rm -f "$TMP_REALM_FILE"
+  fi
+}
+trap cleanup EXIT
 
 echo "== FPS local Keycloak setup =="
 echo "Keycloak: $KEYCLOAK_URL"
@@ -46,6 +55,31 @@ keycloak_error_message() {
 
 keycloak_error_code() {
   printf '%s' "$TOKEN_BODY" | grep -o '"error":"[^"]*"' | cut -d'"' -f4 || true
+}
+
+get_user_token() {
+  USER_TOKEN_BODY=$(curl -s \
+    -X POST "$KEYCLOAK_URL/realms/$REALM/protocol/openid-connect/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-urlencode "grant_type=password" \
+    --data-urlencode "client_id=fps-mobile-dev" \
+    --data-urlencode "username=$1" \
+    --data-urlencode "password=$DEV_PASSWORD" || true)
+  printf '%s' "$USER_TOKEN_BODY" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || true
+}
+
+jwt_claim() {
+  python3 - "$1" "$2" << 'PYEOF'
+import base64, json, sys
+token, claim = sys.argv[1], sys.argv[2]
+payload = token.split('.')[1]
+payload += '=' * (-len(payload) % 4)
+value = json.loads(base64.urlsafe_b64decode(payload)).get(claim, "")
+if isinstance(value, list):
+    print(",".join(str(v) for v in value))
+else:
+    print(value)
+PYEOF
 }
 
 # Wait for Keycloak to be ready
@@ -139,109 +173,74 @@ if [ "$EXISTING" = "200" ]; then
     "$KEYCLOAK_URL/admin/realms/$REALM"
 fi
 
+if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
+  TMP_REALM_FILE="$(mktemp)"
+  python3 - "$REALM_FILE" "$TMP_REALM_FILE" "$DEMO_EMPLOYEE_COUNT" << 'PYEOF'
+import json
+import sys
+
+source, target, count_arg = sys.argv[1], sys.argv[2], sys.argv[3]
+count = int(count_arg)
+names = {
+    4: ("Pavel", "Cerny"),
+    5: ("Hana", "Vesela"),
+    6: ("Martin", "Horak"),
+    7: ("Jana", "Kucerova"),
+    8: ("Petr", "Svoboda"),
+    9: ("Lenka", "Maresova"),
+    10: ("Michal", "Prochazka"),
+    11: ("Veronika", "Dvorakova"),
+    12: ("Tomas", "Kral"),
+    13: ("Barbora", "Urbanova"),
+    14: ("Filip", "Sedlak"),
+    15: ("Lucie", "Novakova"),
+    16: ("Jakub", "Sima"),
+    17: ("Alena", "Pokorna"),
+    18: ("Radek", "Fiala"),
+    19: ("Marketa", "Blazkova"),
+    20: ("David", "Vacek"),
+    21: ("Katerina", "Hruba"),
+    22: ("Ondrej", "Marek"),
+    23: ("Zuzana", "Krejci"),
+    24: ("Milan", "Tichy"),
+    25: ("Ivana", "Ruzickova"),
+}
+
+with open(source, encoding="utf-8") as f:
+    realm = json.load(f)
+
+users = realm.setdefault("users", [])
+existing = {u.get("username") for u in users}
+for index in range(4, count + 1):
+    username = f"employee{index}"
+    if username in existing:
+        continue
+    first, last = names.get(index, ("Demo", f"Employee{index}"))
+    users.append({
+        "username": username,
+        "enabled": True,
+        "email": f"{username}@demo-company.local",
+        "firstName": first,
+        "lastName": last,
+        "attributes": {"tenant_id": ["demo"]},
+        "realmRoles": ["employee"],
+        "credentials": []
+    })
+
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(realm, f, indent=2)
+    f.write("\n")
+PYEOF
+  IMPORT_REALM_FILE="$TMP_REALM_FILE"
+fi
+
 echo "Importing realm '$REALM'..."
 curl -sf -X POST \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "@$REALM_FILE" \
+  -d "@$IMPORT_REALM_FILE" \
   "$KEYCLOAK_URL/admin/realms"
 echo "Realm imported."
-
-employee_name_parts() {
-  case "$1" in
-    4) echo "Pavel Cerny" ;;
-    5) echo "Hana Vesela" ;;
-    6) echo "Martin Horak" ;;
-    7) echo "Jana Kucerova" ;;
-    8) echo "Petr Svoboda" ;;
-    9) echo "Lenka Maresova" ;;
-    10) echo "Michal Prochazka" ;;
-    11) echo "Veronika Dvorakova" ;;
-    12) echo "Tomas Kral" ;;
-    13) echo "Barbora Urbanova" ;;
-    14) echo "Filip Sedlak" ;;
-    15) echo "Lucie Novakova" ;;
-    16) echo "Jakub Sima" ;;
-    17) echo "Alena Pokorna" ;;
-    18) echo "Radek Fiala" ;;
-    19) echo "Marketa Blazkova" ;;
-    20) echo "David Vacek" ;;
-    21) echo "Katerina Hruba" ;;
-    22) echo "Ondrej Marek" ;;
-    23) echo "Zuzana Krejci" ;;
-    24) echo "Milan Tichy" ;;
-    25) echo "Ivana Ruzickova" ;;
-    *) echo "Demo Employee$1" ;;
-  esac
-}
-
-create_extra_employee_user() {
-  INDEX="$1"
-  USERNAME="employee$INDEX"
-  set -- $(employee_name_parts "$INDEX")
-  FIRST_NAME="$1"
-  LAST_NAME="$2"
-
-  USER_ID=$(curl -sf \
-    -H "Authorization: Bearer $ADMIN_TOKEN" \
-    "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME&exact=true" \
-    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
-
-  if [ -z "$USER_ID" ]; then
-    curl -sf -X POST \
-      -H "Authorization: Bearer $ADMIN_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"username\":\"$USERNAME\",
-        \"enabled\":true,
-        \"email\":\"$USERNAME@demo-company.local\",
-        \"firstName\":\"$FIRST_NAME\",
-        \"lastName\":\"$LAST_NAME\",
-        \"attributes\":{\"tenant_id\":[\"demo\"]}
-      }" \
-      "$KEYCLOAK_URL/admin/realms/$REALM/users"
-
-    USER_ID=$(curl -sf \
-      -H "Authorization: Bearer $ADMIN_TOKEN" \
-      "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME&exact=true" \
-      | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
-  fi
-
-  if [ -n "$USER_ID" ]; then
-    curl -sf -X PUT \
-      -H "Authorization: Bearer $ADMIN_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"username\":\"$USERNAME\",
-        \"enabled\":true,
-        \"email\":\"$USERNAME@demo-company.local\",
-        \"firstName\":\"$FIRST_NAME\",
-        \"lastName\":\"$LAST_NAME\",
-        \"attributes\":{\"tenant_id\":[\"demo\"]}
-      }" \
-      "$KEYCLOAK_URL/admin/realms/$REALM/users/$USER_ID"
-
-    EMPLOYEE_ROLE=$(curl -sf \
-      -H "Authorization: Bearer $ADMIN_TOKEN" \
-      "$KEYCLOAK_URL/admin/realms/$REALM/roles/employee")
-    curl -sf -X POST \
-      -H "Authorization: Bearer $ADMIN_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d "[$EMPLOYEE_ROLE]" \
-      "$KEYCLOAK_URL/admin/realms/$REALM/users/$USER_ID/role-mappings/realm" \
-      >/dev/null || true
-    echo "Demo user ready: $USERNAME"
-  else
-    echo "WARNING: Could not create '$USERNAME'."
-  fi
-}
-
-if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
-  echo "Creating extra demo employees up to employee$DEMO_EMPLOYEE_COUNT..."
-  for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
-    create_extra_employee_user "$i"
-  done
-fi
 
 # Set dev passwords for demo users
 for USERNAME in $USERS; do
@@ -263,6 +262,21 @@ for USERNAME in $USERS; do
 
   echo "Password set: $USERNAME"
 done
+
+echo "Validating demo token claims..."
+for USERNAME in employee1 employee4; do
+  TOKEN=$(get_user_token "$USERNAME")
+  if [ -z "$TOKEN" ]; then
+    echo "ERROR: Could not get validation token for '$USERNAME'."
+    exit 1
+  fi
+  TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
+  if [ "$TENANT_ID" != "demo" ]; then
+    echo "ERROR: Token for '$USERNAME' has tenant_id='$TENANT_ID' (expected demo)."
+    exit 1
+  fi
+done
+echo "Demo token claims: ok"
 
 echo ""
 echo "== Setup complete =="
