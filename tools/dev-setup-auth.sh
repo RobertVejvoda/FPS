@@ -208,6 +208,19 @@ create_extra_employee_user() {
   fi
 
   if [ -n "$USER_ID" ]; then
+    curl -sf -X PUT \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"username\":\"$USERNAME\",
+        \"enabled\":true,
+        \"email\":\"$USERNAME@demo-company.local\",
+        \"firstName\":\"$FIRST_NAME\",
+        \"lastName\":\"$LAST_NAME\",
+        \"attributes\":{\"tenant_id\":[\"demo\"]}
+      }" \
+      "$KEYCLOAK_URL/admin/realms/$REALM/users/$USER_ID"
+
     EMPLOYEE_ROLE=$(curl -sf \
       -H "Authorization: Bearer $ADMIN_TOKEN" \
       "$KEYCLOAK_URL/admin/realms/$REALM/roles/employee")

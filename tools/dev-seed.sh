@@ -80,6 +80,20 @@ print(json.loads(base64.urlsafe_b64decode(payload))['sub'])
 PYEOF
 }
 
+jwt_claim() {
+  python3 - "$1" "$2" << 'PYEOF'
+import base64, json, sys
+token, claim = sys.argv[1], sys.argv[2]
+payload = token.split('.')[1]
+payload += '=' * (-len(payload) % 4)
+value = json.loads(base64.urlsafe_b64decode(payload)).get(claim, "")
+if isinstance(value, list):
+    print(",".join(str(v) for v in value))
+else:
+    print(value)
+PYEOF
+}
+
 future_date() {
   local days="$1"
   # macOS: date -v+Nd   Linux: date -d "+N days"
@@ -183,6 +197,10 @@ seed_booking() {
   local token booking_date arrival departure
   token=$(get_token "$username")
   [ -z "$token" ] && { err "No token for $username"; return 1; }
+  if [ -z "$(jwt_claim "$token" tenant_id)" ]; then
+    err "Token for $username has no tenant_id claim — rerun ./tools/dev-setup-auth.sh"
+    return 1
+  fi
 
   booking_date=$(future_date "$date_offset")
   arrival="${booking_date}T08:00:00"
