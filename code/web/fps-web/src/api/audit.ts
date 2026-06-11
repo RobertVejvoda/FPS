@@ -43,6 +43,7 @@ export interface AuditQueryFilters {
   entityType?: string;
   entityId?: string;
   actorHash?: string;
+  actorRef?: string; // Short prefix (6 hex chars) — matched case-insensitively on the server
   action?: string;
   result?: string;
   reasonCode?: string;
@@ -63,6 +64,7 @@ export async function fetchAuditRecords(
   if (opts?.entityType) params.set('entityType', opts.entityType);
   if (opts?.entityId) params.set('entityId', opts.entityId);
   if (opts?.actorHash) params.set('actorHash', opts.actorHash);
+  if (opts?.actorRef) params.set('actorRef', opts.actorRef);
   if (opts?.action) params.set('action', opts.action);
   if (opts?.result) params.set('result', opts.result);
   if (opts?.reasonCode) params.set('reasonCode', opts.reasonCode);

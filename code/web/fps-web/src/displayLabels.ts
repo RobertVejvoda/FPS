@@ -294,6 +294,13 @@ export function humanizeActivityCategory(category: string): string {
   return labels[category] ?? category;
 }
 
+export function displayActorRef(hash: string | null): string {
+  if (!hash) return '—';
+  const compact = hash.replace(/-/g, '');
+  if (/^[0-9a-f]{32,}$/i.test(compact)) return compact.slice(0, 6).toUpperCase();
+  return hash.length > 20 ? `${hash.slice(0, 20)}…` : hash;
+}
+
 // Actor type display labels (AUDIT003)
 export function humanizeActorType(actorType: string): string {
   const labels: Record<string, string> = {
