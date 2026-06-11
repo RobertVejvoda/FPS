@@ -271,6 +271,78 @@ trigger_demo_draw() {
   fi
 }
 
+verify_hr_display_names() {
+  local hr_token
+  hr_token=$(get_token "hr-admin")
+  [ -z "$hr_token" ] && { err "No token for hr-admin"; return 1; }
+  if [ -z "$(jwt_claim "$hr_token" tenant_id)" ]; then
+    err "Token for hr-admin has no tenant_id claim — rerun ./tools/dev-setup-auth.sh"
+    return 1
+  fi
+
+  local sample_indices=("1")
+  if [ "$DEMO_EMPLOYEE_COUNT" -ge 4 ]; then
+    sample_indices+=("4")
+  fi
+  if [ "$DEMO_EMPLOYEE_COUNT" -ge 25 ]; then
+    sample_indices+=("25")
+  elif [ "$DEMO_EMPLOYEE_COUNT" -gt 4 ]; then
+    sample_indices+=("$DEMO_EMPLOYEE_COUNT")
+  fi
+
+  local user_ids=()
+  local expected_pairs=()
+  local index username token user_id display_name
+  for index in "${sample_indices[@]}"; do
+    username="employee$index"
+    token=$(get_token "$username")
+    [ -z "$token" ] && { err "No token for $username while verifying display names"; return 1; }
+    user_id=$(jwt_sub "$token")
+    display_name=$(display_name_for_index "$index")
+    user_ids+=("$user_id")
+    expected_pairs+=("$user_id=$display_name")
+  done
+
+  local user_ids_json payload response http_code body
+  user_ids_json=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "${user_ids[@]}")
+  payload="{\"userIds\": $user_ids_json}"
+  response=$(curl -s -w "\n%{http_code}" \
+    -X POST "$PROFILE_URL/profile/hr/display-names" \
+    -H "Authorization: Bearer $hr_token" \
+    -H "Content-Type: application/json" \
+    -d "$payload" 2>/dev/null || true)
+
+  http_code=$(printf '%s' "$response" | tail -n 1)
+  body=$(printf '%s' "$response" | sed '$d')
+  if [ "$http_code" != "200" ]; then
+    err "HR display-name lookup HTTP ${http_code:-000}"
+    [ -n "$body" ] && echo "$body"
+    return 1
+  fi
+
+  python3 - "$body" "${expected_pairs[@]}" << 'PYEOF'
+import json
+import sys
+
+body = json.loads(sys.argv[1])
+names = body.get("names") or body.get("Names") or {}
+missing = []
+for pair in sys.argv[2:]:
+    user_id, expected = pair.split("=", 1)
+    actual = names.get(user_id)
+    if actual != expected:
+        missing.append(f"{user_id[:8]}... expected {expected!r}, got {actual!r}")
+
+if missing:
+    print("Missing or incorrect HR display names:")
+    for item in missing:
+        print(f"  - {item}")
+    sys.exit(1)
+PYEOF
+
+  ok "HR display-name lookup resolves seeded employee names"
+}
+
 # ── profiles ─────────────────────────────────────────────────────────────────
 
 echo ""
@@ -307,6 +379,10 @@ done
 echo ""
 echo "-- Demo Draw (+2 days, $DEMO_LOCATION_ID 08:00-18:00) --"
 trigger_demo_draw "2"
+
+echo ""
+echo "-- HR display names --"
+verify_hr_display_names
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
