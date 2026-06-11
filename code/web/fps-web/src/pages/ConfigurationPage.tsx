@@ -9,6 +9,7 @@ import {
   fetchSlots, saveSlots, fetchSlotHistory,
   type ParkingPolicy, type PolicyHistoryItem, type SlotDto, type SlotHistoryItem,
 } from '../api/configuration';
+import { displayDateTime } from '../displayLabels';
 import { FpsRole, hasRole } from '../auth/roles';
 
 type TenantState =
@@ -146,6 +147,17 @@ export function ConfigurationPage() {
     });
   }
 
+  function reloadLocHistory() {
+    const id = locationId.trim();
+    if (!id) return;
+    setLocHistory({ kind: 'loading' });
+    fetchLocationPolicyHistory(cfg, id).then(r => {
+      if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (r.kind === 'ok') setLocHistory({ kind: 'ok', items: r.data });
+      else setLocHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load location history.' });
+    });
+  }
+
   function patchLoc(field: keyof ParkingPolicy, value: unknown) {
     setLocState(prev => prev.kind === 'ok'
       ? { ...prev, dirty: { ...prev.dirty, [field]: value } }
@@ -194,14 +206,16 @@ export function ConfigurationPage() {
     setTimeout(() => setSlotsSaveMsg(null), 4000);
   }
 
-  function loadTenantHistory() {
+  const loadTenantHistory = useCallback(() => {
     setTenantHistory({ kind: 'loading' });
     fetchPolicyHistory(cfg).then((r) => {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'ok') setTenantHistory({ kind: 'ok', items: r.data });
       else setTenantHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load history.' });
     });
-  }
+  }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { loadTenantHistory(); }, [loadTenantHistory]);
 
   async function runDemoDraw() {
     setDemoDrawBusy(true);
@@ -303,15 +317,19 @@ export function ConfigurationPage() {
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h3 style={{ ...cardTitle, marginBottom: 0 }}>Tenant Policy Version History</h3>
-          {tenantHistory.kind === 'idle' && <button onClick={loadTenantHistory} style={btnSm}>Load history</button>}
           {tenantHistory.kind === 'loading' && <span style={muted}>Loading…</span>}
         </div>
         {tenantHistory.kind === 'ok' && (
-          tenantHistory.items.length === 0 ? <p style={muted}>No history.</p> : (
+          tenantHistory.items.length === 0 ? <p style={muted}>No history yet.</p> : (
             <HistoryTable items={tenantHistory.items} />
           )
         )}
-        {tenantHistory.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{tenantHistory.message}</p>}
+        {tenantHistory.kind === 'error' && (
+          <div>
+            <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 8px' }}>{tenantHistory.message}</p>
+            <button onClick={loadTenantHistory} style={btnSm}>Retry</button>
+          </div>
+        )}
       </section>
 
       <section style={card}>
@@ -350,12 +368,18 @@ export function ConfigurationPage() {
           </div>
         )}
 
-        {(locHistory.kind === 'loading' || (locHistory.kind === 'ok' && locHistory.items.length > 0) || locHistory.kind === 'error') && (
+        {locHistory.kind !== 'idle' && (
           <div style={{ marginTop: 20 }}>
             <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>Location Policy History</h4>
             {locHistory.kind === 'loading' && <p style={muted}>Loading…</p>}
-            {locHistory.kind === 'ok' && <HistoryTable items={locHistory.items} />}
-            {locHistory.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{locHistory.message}</p>}
+            {locHistory.kind === 'ok' && locHistory.items.length === 0 && <p style={muted}>No location policy history yet.</p>}
+            {locHistory.kind === 'ok' && locHistory.items.length > 0 && <HistoryTable items={locHistory.items} />}
+            {locHistory.kind === 'error' && (
+              <div>
+                <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 8px' }}>{locHistory.message}</p>
+                <button onClick={reloadLocHistory} style={btnSm}>Retry</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -477,6 +501,13 @@ function PolicyForm({ policy, onPatch }: { policy: ParkingPolicy; onPatch: (fiel
   );
 }
 
+function displayActorRef(hash: string | null): string {
+  if (!hash) return '—';
+  const compact = hash.replace(/-/g, '');
+  if (/^[0-9a-f]{32,}$/i.test(compact)) return `Admin ·${compact.slice(0, 6).toUpperCase()}`;
+  return hash.length > 20 ? `${hash.slice(0, 20)}…` : hash;
+}
+
 function HistoryTable({ items }: { items: PolicyHistoryItem[] }) {
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -491,9 +522,9 @@ function HistoryTable({ items }: { items: PolicyHistoryItem[] }) {
         <tbody>
           {items.map(item => (
             <tr key={item.version}>
-              <td style={td}>{item.version}</td>
-              <td style={td}>{item.publishedAt}</td>
-              <td style={td}>{item.publishedByHash ?? '—'}</td>
+              <td style={td}><strong>{item.version}</strong></td>
+              <td style={td}>{displayDateTime(item.publishedAt)}</td>
+              <td style={td}>{displayActorRef(item.publishedByHash)}</td>
               <td style={td}>{item.publicationReason ?? '—'}</td>
             </tr>
           ))}
