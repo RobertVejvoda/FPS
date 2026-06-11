@@ -85,7 +85,7 @@ future_date() {
 }
 
 seed_profile() {
-  local username="$1" has_company_car="$2" accessibility="$3" vehicles="$4"
+  local username="$1" display_name="$2" has_company_car="$3" accessibility="$4" vehicles="$5"
 
   local token user_id
   token=$(get_token "$username")
@@ -105,6 +105,7 @@ seed_profile() {
     -d "{
       \"tenantId\": \"$DEMO_TENANT\",
       \"userId\": \"$user_id\",
+      \"displayName\": \"$display_name\",
       \"parkingEligible\": $parking_eligible,
       \"hasCompanyCar\": $has_company_car,
       \"accessibilityEligible\": $accessibility,
@@ -204,24 +205,24 @@ echo ""
 echo "-- Profiles --"
 
 # Jan Novak (employee1): sedan + EV (two vehicles for guided vehicle selection demo)
-seed_profile "employee1" "false" "false" \
+seed_profile "employee1" "Jan Novak" "false" "false" \
   '[{"vehicleId":"VEH-JN-SEDAN","licensePlate":"1AA 2345","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":true},
     {"vehicleId":"VEH-JN-EV","licensePlate":"2AB 3456","vehicleType":"Sedan","isElectric":true,"isActive":true,"isDefault":false}]'
 
 # Petra Svobodova (employee2): company car registered as vehicle so booking plate validation passes
-seed_profile "employee2" "true" "false" \
+seed_profile "employee2" "Petra Svobodova" "true" "false" \
   '[{"vehicleId":"VEH-PS-FLEET","licensePlate":"3AC 4567","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
 # Tomas Dvorak (employee3): accessibility-eligible
-seed_profile "employee3" "false" "true" \
+seed_profile "employee3" "Tomas Dvorak" "false" "true" \
   '[{"vehicleId":"VEH-TD-ACCESS","licensePlate":"4AD 5678","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
 
 # Role users — parking not eligible, no vehicles
 # Lucie Prochazkova (hr-admin), Karel Urban (tenant-admin), Eva Kralova (report-viewer), Martin Cerny (auditor)
-seed_profile "hr-admin"      "false" "false" '[]'
-seed_profile "tenant-admin"  "false" "false" '[]'
-seed_profile "report-viewer" "false" "false" '[]'
-seed_profile "auditor"       "false" "false" '[]'
+seed_profile "hr-admin"      "Lucie Prochazkova" "false" "false" '[]'
+seed_profile "tenant-admin"  "Karel Urban" "false" "false" '[]'
+seed_profile "report-viewer" "Eva Kralova" "false" "false" '[]'
+seed_profile "auditor"       "Martin Cerny" "false" "false" '[]'
 
 # ── bookings ─────────────────────────────────────────────────────────────────
 

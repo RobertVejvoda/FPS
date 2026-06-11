@@ -31,6 +31,7 @@ public sealed class ProfileAdminController(
         {
             TenantId = request.TenantId,
             UserId = request.UserId,
+            DisplayName = request.DisplayName,
             Status = ProfileStatus.Active,
             ParkingEligible = request.ParkingEligible,
             HasCompanyCar = request.HasCompanyCar,
@@ -63,6 +64,7 @@ public sealed class ProfileAdminController(
 public sealed record SeedProfileRequest(
     string TenantId,
     string UserId,
+    string? DisplayName,
     bool ParkingEligible,
     bool HasCompanyCar,
     bool AccessibilityEligible,

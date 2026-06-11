@@ -27,7 +27,7 @@ public sealed class ProfileAdminSeedTests
     }
 
     private static SeedProfileRequest BasicRequest(string userId, bool hasVehicle = false) =>
-        new("tenant-1", userId, true, false, false, false,
+        new("tenant-1", userId, "Jan Novak", true, false, false, false,
             hasVehicle
                 ? [new("VEH-01", "ABC123", "Sedan", false, true)]
                 : []);
@@ -59,6 +59,7 @@ public sealed class ProfileAdminSeedTests
         var profile = await repo.GetAsync("tenant-1", "user-2");
         Assert.NotNull(profile);
         Assert.Equal(ProfileStatus.Active, profile.Status);
+        Assert.Equal("Jan Novak", profile.DisplayName);
         Assert.Single(profile.Vehicles);
         Assert.Equal("ABC123", profile.Vehicles[0].LicensePlate);
     }
@@ -67,7 +68,7 @@ public sealed class ProfileAdminSeedTests
     public async Task SeedSnapshot_MissingUserId_ReturnsBadRequest()
     {
         var controller = MakeController(DevEnv().Object);
-        var request = new SeedProfileRequest("tenant-1", "", true, false, false, false, []);
+        var request = new SeedProfileRequest("tenant-1", "", "Jan Novak", true, false, false, false, []);
         var result = await controller.SeedSnapshot(request);
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -78,7 +79,7 @@ public sealed class ProfileAdminSeedTests
         var repo = new InMemoryProfileRepository();
         var controller = new ProfileAdminController(repo, DevEnv().Object);
 
-        var request = new SeedProfileRequest("tenant-1", "user-def", true, false, false, false,
+        var request = new SeedProfileRequest("tenant-1", "user-def", "Jan Novak", true, false, false, false,
             [new("VEH-01", "ABC123", "Sedan", false, IsActive: true, IsDefault: true)]);
         await controller.SeedSnapshot(request);
 
@@ -92,7 +93,7 @@ public sealed class ProfileAdminSeedTests
         var repo = new InMemoryProfileRepository();
         var controller = new ProfileAdminController(repo, DevEnv().Object);
 
-        var request = new SeedProfileRequest("tenant-1", "user-multi", true, false, false, false,
+        var request = new SeedProfileRequest("tenant-1", "user-multi", "Jan Novak", true, false, false, false,
         [
             new("VEH-01", "AAA111", "Sedan", false, IsActive: true, IsDefault: true),
             new("VEH-02", "BBB222", "Sedan", false, IsActive: true, IsDefault: true),
@@ -111,7 +112,7 @@ public sealed class ProfileAdminSeedTests
         var repo = new InMemoryProfileRepository();
         var controller = new ProfileAdminController(repo, DevEnv().Object);
 
-        var request = new SeedProfileRequest("tenant-1", "user-inactive", true, false, false, false,
+        var request = new SeedProfileRequest("tenant-1", "user-inactive", "Jan Novak", true, false, false, false,
         [
             new("VEH-01", "AAA111", "Sedan", false, IsActive: false, IsDefault: true),
             new("VEH-02", "BBB222", "Sedan", false, IsActive: true, IsDefault: false),
