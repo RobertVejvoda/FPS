@@ -6,6 +6,7 @@ import {
   hrCancelBooking,
   type HrBookingListItem,
 } from '../api/bookings';
+import { fetchHrDisplayNames } from '../api/profile';
 import {
   displayDate,
   displayDateTime,
@@ -40,15 +41,17 @@ interface RequestRowProps {
   item: HrBookingListItem;
   busyId: string | null;
   onCancel: (id: string) => void;
+  displayName?: string | null;
 }
 
-function RequestRow({ item, busyId, onCancel }: RequestRowProps) {
-  const name = displayRequestorRef(item.requestorRef);
+function RequestRow({ item, busyId, onCancel, displayName }: RequestRowProps) {
+  const primaryLabel = displayName ?? displayRequestorRef(item.requestorRef);
+  const secondaryRef = displayName ? displayRequestorRef(item.requestorRef) : null;
   const locationLabel = displayLocation(item.locationId) ?? displayLocation(LOCATION_ID) ?? 'Location not set';
   const timeWindow = item.timeSlotStart && item.timeSlotEnd
     ? `${item.timeSlotStart.slice(0, 5)}–${item.timeSlotEnd.slice(0, 5)}`
     : null;
-  const reasonText = humanizeHrRejection(item.reasonCode, item.reason);
+  const reasonText = (item.reasonCode || item.reason) ? humanizeHrRejection(item.reasonCode, item.reason) : null;
   const canCancel = item.status === 'Pending' || item.status === 'Allocated';
   const shortId = `#${item.requestId.replace(/-/g, '').slice(-6).toUpperCase()}`;
 
@@ -58,7 +61,8 @@ function RequestRow({ item, busyId, onCancel }: RequestRowProps) {
         <div style={{ flex: '1 1 0', minWidth: 0 }}>
           {/* Primary row: name + status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '0.375rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>{name}</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>{primaryLabel}</span>
+            {secondaryRef && <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>{secondaryRef}</span>}
             <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(item.status) }}>
               {item.status}
             </span>
@@ -112,6 +116,7 @@ export function HrOperationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [displayNames, setDisplayNames] = useState<Record<string, string | null>>({});
 
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -127,11 +132,21 @@ export function HrOperationsPage() {
 
   const loadBookings = useCallback(() => {
     setListState({ kind: 'loading' });
+    setDisplayNames({});
     const filter = statusFilter === 'All' ? undefined : statusFilter;
     fetchHrBookings({ apiBaseUrl, bearerToken }, { locationId: LOCATION_ID, from: selectedDate, to: selectedDate, status: filter }).then((result) => {
       if (result.kind === 'unauthenticated' || result.kind === 'forbidden') { clear(); navigate('/session'); return; }
-      if (result.kind === 'ok') setListState({ kind: 'ok', items: result.items, totalCount: result.totalCount, nextCursor: result.nextCursor });
-      else setListState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load parking requests.' });
+      if (result.kind === 'ok') {
+        setListState({ kind: 'ok', items: result.items, totalCount: result.totalCount, nextCursor: result.nextCursor });
+        const uniqueRefs = [...new Set(result.items.map(i => i.requestorRef).filter(Boolean))];
+        if (uniqueRefs.length > 0) {
+          void fetchHrDisplayNames({ apiBaseUrl, bearerToken }, uniqueRefs).then(r => {
+            if (r.kind === 'ok') setDisplayNames(r.data.names);
+          });
+        }
+      } else {
+        setListState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load parking requests.' });
+      }
     });
   }, [apiBaseUrl, bearerToken, clear, navigate, selectedDate, statusFilter]);
 
@@ -225,7 +240,7 @@ export function HrOperationsPage() {
             )}
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {listState.items.map(item => (
-                <RequestRow key={item.requestId} item={item} busyId={busyId} onCancel={setCancelTarget} />
+                <RequestRow key={item.requestId} item={item} busyId={busyId} onCancel={setCancelTarget} displayName={displayNames[item.requestorRef] ?? null} />
               ))}
             </ul>
           </>
