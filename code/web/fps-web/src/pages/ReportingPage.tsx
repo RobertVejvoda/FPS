@@ -9,7 +9,7 @@ import {
   type UtilizationResponse, type ReasonCodeResponse, type EmployeeImpactResponse,
   type OperationalExceptionsResponse,
 } from '../api/reporting';
-import { displayLocation } from '../displayLabels';
+import { displayLocation, displayRequestorRef } from '../displayLabels';
 
 type DashState = { kind: 'loading' } | { kind: 'ok'; data: DashboardResponse } | { kind: 'forbidden' } | { kind: 'error'; message: string };
 type SumState = { kind: 'loading' } | { kind: 'ok'; data: SummaryResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
@@ -282,7 +282,7 @@ export function ReportingPage() {
               <tbody>
                 {fair.data.items.map(row => (
                   <tr key={row.requestorHash}>
-                    <td style={td}>{row.requestorHash}</td>
+                    <td style={td}>{displayRequestorRef(row.requestorHash)}</td>
                     <td style={td}>{row.requestCount}</td>
                     <td style={td}>{row.allocationCount}</td>
                     <td style={td}>{(row.allocationRate * 100).toFixed(1)}%</td>
@@ -307,7 +307,7 @@ export function ReportingPage() {
               <tbody>
                 {empImpact.data.items.map(row => (
                   <tr key={row.requestorHash}>
-                    <td style={td}>{row.requestorHash}</td>
+                    <td style={td}>{displayRequestorRef(row.requestorHash)}</td>
                     <td style={td}>{row.totalRequests}</td>
                     <td style={{ ...td, color: '#dc2626', fontWeight: 600 }}>{row.totalRejections}</td>
                     <td style={td}>{row.totalAllocations}</td>

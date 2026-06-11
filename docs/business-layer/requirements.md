@@ -99,6 +99,20 @@ FairSpot must support multiple customer organizations. Each customer must have i
 
 FairSpot must support customer growth in users, locations, parking spaces, and request volume. The product should adapt to different company parking policies without requiring custom development for every customer.
 
+### BR013: HR Parking Request Support
+
+FairSpot must give authorized HR and facilities users a safe operational support view for parking requests. HR must be able to answer what happened to an employee's request using business-readable data: employee display value or safe request reference, parking day, time slot, location, status or result, allocated space when present, employee-safe reason, last update, notification state where available, and permitted next action.
+
+The support view should help HR find requests by date, employee display value or safe request reference, status, location, reason, and attention category. Attention categories should include failed or delayed Draws, rejected requests grouped by safe reason, requests needing manual follow-up, unusual cancellation or no-show patterns, and capacity mismatches.
+
+HR support views must not expose hidden Draw seeds, candidate order, hidden weights, raw penalties, stack traces, unrelated employee records, or raw technical diagnostics. Privileged actions such as cancellation or manual correction require authorization, reason capture, employee notification when affected, and audit evidence.
+
+### BR014: Parking Map and Capacity Visibility
+
+FairSpot must provide role-safe visibility into parking capacity. HR, facilities, and administrators must be able to see total active and inactive spaces, general availability, company-car-only capacity, reserved capacity, EV charging, accessibility, motorcycle capability, zones, floors, and current or selected-day allocation state where available.
+
+Employees should see a simplified map and capability view that helps them understand available capacity and constraints without exposing reserved-for user IDs, requestor references, booking IDs, or other employees' private data. The map should be based on the tenant's published resource map, slot configuration, zones, and capabilities, and it should tolerate unknown slot ID formats by falling back to configured labels.
+
 ## Business Process Summary
 
 1. Employees submit parking requests for future or current time slots.
@@ -119,9 +133,10 @@ The full allocation description is documented in [Slot Allocation Process](./pro
 - Fair allocation of limited parking capacity.
 - Time-slot, location, zone, space, and vehicle constraints.
 - Resource maps for spaces, zones, capacity pools, and resource capabilities.
+- Role-safe parking map and capacity visibility.
 - Company-car, accessibility, EV, and configured slot-capability policy support.
 - Notifications, cancellations, reallocations, and usage confirmation.
-- Reporting, audit trail, and role-based access.
+- Reporting, audit trail, HR request support, and role-based access.
 - Customer tenant configuration.
 
 ### Future Opportunities
