@@ -14,10 +14,17 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 ADMIN_USER="${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-admin}}"
 ADMIN_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
+DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
 REALM="fps-local"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
 USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor"
+
+if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
+  for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
+    USERS="$USERS employee$i"
+  done
+fi
 
 echo "== FPS local Keycloak setup =="
 echo "Keycloak: $KEYCLOAK_URL"
@@ -139,6 +146,89 @@ curl -sf -X POST \
   -d "@$REALM_FILE" \
   "$KEYCLOAK_URL/admin/realms"
 echo "Realm imported."
+
+employee_name_parts() {
+  case "$1" in
+    4) echo "Pavel Cerny" ;;
+    5) echo "Hana Vesela" ;;
+    6) echo "Martin Horak" ;;
+    7) echo "Jana Kucerova" ;;
+    8) echo "Petr Svoboda" ;;
+    9) echo "Lenka Maresova" ;;
+    10) echo "Michal Prochazka" ;;
+    11) echo "Veronika Dvorakova" ;;
+    12) echo "Tomas Kral" ;;
+    13) echo "Barbora Urbanova" ;;
+    14) echo "Filip Sedlak" ;;
+    15) echo "Lucie Novakova" ;;
+    16) echo "Jakub Sima" ;;
+    17) echo "Alena Pokorna" ;;
+    18) echo "Radek Fiala" ;;
+    19) echo "Marketa Blazkova" ;;
+    20) echo "David Vacek" ;;
+    21) echo "Katerina Hruba" ;;
+    22) echo "Ondrej Marek" ;;
+    23) echo "Zuzana Krejci" ;;
+    24) echo "Milan Tichy" ;;
+    25) echo "Ivana Ruzickova" ;;
+    *) echo "Demo Employee$1" ;;
+  esac
+}
+
+create_extra_employee_user() {
+  INDEX="$1"
+  USERNAME="employee$INDEX"
+  set -- $(employee_name_parts "$INDEX")
+  FIRST_NAME="$1"
+  LAST_NAME="$2"
+
+  USER_ID=$(curl -sf \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME&exact=true" \
+    | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+
+  if [ -z "$USER_ID" ]; then
+    curl -sf -X POST \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"username\":\"$USERNAME\",
+        \"enabled\":true,
+        \"email\":\"$USERNAME@demo-company.local\",
+        \"firstName\":\"$FIRST_NAME\",
+        \"lastName\":\"$LAST_NAME\",
+        \"attributes\":{\"tenant_id\":[\"demo\"]}
+      }" \
+      "$KEYCLOAK_URL/admin/realms/$REALM/users"
+
+    USER_ID=$(curl -sf \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME&exact=true" \
+      | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+  fi
+
+  if [ -n "$USER_ID" ]; then
+    EMPLOYEE_ROLE=$(curl -sf \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      "$KEYCLOAK_URL/admin/realms/$REALM/roles/employee")
+    curl -sf -X POST \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "[$EMPLOYEE_ROLE]" \
+      "$KEYCLOAK_URL/admin/realms/$REALM/users/$USER_ID/role-mappings/realm" \
+      >/dev/null || true
+    echo "Demo user ready: $USERNAME"
+  else
+    echo "WARNING: Could not create '$USERNAME'."
+  fi
+}
+
+if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
+  echo "Creating extra demo employees up to employee$DEMO_EMPLOYEE_COUNT..."
+  for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
+    create_extra_employee_user "$i"
+  done
+fi
 
 # Set dev passwords for demo users
 for USERNAME in $USERS; do

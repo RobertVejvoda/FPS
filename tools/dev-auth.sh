@@ -22,7 +22,7 @@ DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 USERNAME="${1:-}"
 if [ -z "$USERNAME" ]; then
   echo "Usage: $0 <username>" >&2
-  echo "  Available: employee1  employee2  employee3  hr-admin  tenant-admin  report-viewer  auditor" >&2
+  echo "  Available: employee1..employee25  hr-admin  tenant-admin  report-viewer  auditor" >&2
   exit 1
 fi
 

@@ -15,9 +15,9 @@
 #     ./tools/stop-local-harness.sh && ./tools/start-local-harness.sh && ./tools/dev-seed.sh
 #
 # What is seeded:
-#   Profiles:  all 7 Keycloak demo users with parking eligibility, roles, and vehicles
-#   Vehicles:  employee1 (sedan + EV), employee2 (company car), employee3 (accessible)
-#   Bookings:  7 requests across upcoming dates, including a +2 demo Draw with all employees
+#   Profiles:  25 demo employees by default, plus role users
+#   Vehicles:  one regular vehicle for each demo employee
+#   Bookings:  25 same-day Draw requests by default, one per profiled employee
 #   Draw:      runs the +2 demo Draw so the demo immediately shows allocated/waitlisted outcomes
 #   Admin profiles: hr-admin, tenant-admin, report-viewer, auditor (no parking)
 #
@@ -34,6 +34,8 @@ DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
 DEMO_FACILITY_ID="${FPS_DEMO_FACILITY_ID:-00000000-0000-0000-0000-000000000001}"
 DEMO_FACILITY_LABEL="${FPS_DEMO_FACILITY_LABEL:-Headquarters}"
 DEMO_LOCATION_ID="${FPS_DEMO_LOCATION_ID:-Prague}"
+DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
+DEMO_BOOKING_COUNT="${FPS_DEMO_BOOKING_COUNT:-$DEMO_EMPLOYEE_COUNT}"
 IDENTITY_URL="${IDENTITY_URL:-http://localhost:5192}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
@@ -122,6 +124,58 @@ seed_profile() {
   fi
 }
 
+display_name_for_index() {
+  case "$1" in
+    1) echo "Jan Novak" ;;
+    2) echo "Petra Svobodova" ;;
+    3) echo "Tomas Dvorak" ;;
+    4) echo "Pavel Cerny" ;;
+    5) echo "Hana Vesela" ;;
+    6) echo "Martin Horak" ;;
+    7) echo "Jana Kucerova" ;;
+    8) echo "Petr Svoboda" ;;
+    9) echo "Lenka Maresova" ;;
+    10) echo "Michal Prochazka" ;;
+    11) echo "Veronika Dvorakova" ;;
+    12) echo "Tomas Kral" ;;
+    13) echo "Barbora Urbanova" ;;
+    14) echo "Filip Sedlak" ;;
+    15) echo "Lucie Novakova" ;;
+    16) echo "Jakub Sima" ;;
+    17) echo "Alena Pokorna" ;;
+    18) echo "Radek Fiala" ;;
+    19) echo "Marketa Blazkova" ;;
+    20) echo "David Vacek" ;;
+    21) echo "Katerina Hruba" ;;
+    22) echo "Ondrej Marek" ;;
+    23) echo "Zuzana Krejci" ;;
+    24) echo "Milan Tichy" ;;
+    25) echo "Ivana Ruzickova" ;;
+    *) printf 'Demo Employee %02d\n' "$1" ;;
+  esac
+}
+
+license_plate_for_index() {
+  case "$1" in
+    1) echo "1AA 2345" ;;
+    *) printf '1AA %04d\n' "$((1000 + $1))" ;;
+  esac
+}
+
+vehicle_json_for_index() {
+  local index="$1" plate
+  plate=$(license_plate_for_index "$index")
+  printf '[{"vehicleId":"VEH-%03d","licensePlate":"%s","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":true}]' "$index" "$plate"
+}
+
+seed_demo_employee_profile() {
+  local index="$1" username display_name vehicles
+  username="employee$index"
+  display_name=$(display_name_for_index "$index")
+  vehicles=$(vehicle_json_for_index "$index")
+  seed_profile "$username" "$display_name" "false" "false" "$vehicles"
+}
+
 seed_booking() {
   local username="$1" license_plate="$2" vehicle_type="$3" is_electric="$4" \
         is_company_car="$5" requires_accessible="$6" date_offset="$7"
@@ -204,18 +258,9 @@ trigger_demo_draw() {
 echo ""
 echo "-- Profiles --"
 
-# Jan Novak (employee1): sedan + EV (two vehicles for guided vehicle selection demo)
-seed_profile "employee1" "Jan Novak" "false" "false" \
-  '[{"vehicleId":"VEH-JN-SEDAN","licensePlate":"1AA 2345","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":true},
-    {"vehicleId":"VEH-JN-EV","licensePlate":"2AB 3456","vehicleType":"Sedan","isElectric":true,"isActive":true,"isDefault":false}]'
-
-# Petra Svobodova (employee2): company car registered as vehicle so booking plate validation passes
-seed_profile "employee2" "Petra Svobodova" "true" "false" \
-  '[{"vehicleId":"VEH-PS-FLEET","licensePlate":"3AC 4567","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
-
-# Tomas Dvorak (employee3): accessibility-eligible
-seed_profile "employee3" "Tomas Dvorak" "false" "true" \
-  '[{"vehicleId":"VEH-TD-ACCESS","licensePlate":"4AD 5678","vehicleType":"Sedan","isElectric":false,"isActive":true}]'
+for index in $(seq 1 "$DEMO_EMPLOYEE_COUNT"); do
+  seed_demo_employee_profile "$index"
+done
 
 # Role users — parking not eligible, no vehicles
 # Lucie Prochazkova (hr-admin), Karel Urban (tenant-admin), Eva Kralova (report-viewer), Martin Cerny (auditor)
@@ -230,21 +275,14 @@ echo ""
 echo "-- Bookings (generates notifications, audit records, and reporting data) --"
 
 # Dates start at +2 to stay clear of the draw cutoff that applies to +1/same-day requests.
-# The +2 date intentionally has all three employees competing for the demo Draw.
-# Booking's local development AvailableSlots config exposes two Prague slots, so this
-# Draw produces visible allocated/waitlisted outcomes immediately after seeding.
-# Jan Novak: two regular bookings + one EV booking
-seed_booking "employee1" "1AA 2345" "Sedan" "false" "false" "false" "2"
-seed_booking "employee1" "2AB 3456" "Sedan" "true"  "false" "false" "4"
-seed_booking "employee1" "1AA 2345" "Sedan" "false" "false" "false" "6"
-
-# Petra Svobodova: company car bookings
-seed_booking "employee2" "3AC 4567" "Sedan" "false" "true" "false" "2"
-seed_booking "employee2" "3AC 4567" "Sedan" "false" "true" "false" "5"
-
-# Tomas Dvorak: accessible spot requests
-seed_booking "employee3" "4AD 5678" "Sedan" "false" "false" "true" "2"
-seed_booking "employee3" "4AD 5678" "Sedan" "false" "false" "true" "4"
+# The fairness demo intentionally uses regular employee requests only. Company-car
+# fixed-slot handling is a separate policy path and should not be mixed into this draw.
+for index in $(seq 1 "$DEMO_BOOKING_COUNT"); do
+  if [ "$index" -gt "$DEMO_EMPLOYEE_COUNT" ]; then
+    break
+  fi
+  seed_booking "employee$index" "$(license_plate_for_index "$index")" "Sedan" "false" "false" "false" "2"
+done
 
 # ── demo Draw ────────────────────────────────────────────────────────────────
 
@@ -256,10 +294,10 @@ trigger_demo_draw "2"
 
 echo ""
 echo "== Seed complete =="
-echo "Profiles: 7 users — Jan Novak, Petra Svobodova, Tomas Dvorak (employees); Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
+echo "Profiles: $DEMO_EMPLOYEE_COUNT employees with display names, plus Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
 echo "Facility/location: $DEMO_FACILITY_LABEL / $DEMO_LOCATION_ID"
-echo "Vehicles: Jan has sedan + EV (1AA 2345 / 2AB 3456), Petra company fleet (3AC 4567), Tomas accessible (4AD 5678)"
-echo "Bookings: 7 requests across 3 employees; +2 demo Draw has already run and should show allocated/waitlisted results"
+echo "Vehicles: one regular vehicle per demo employee"
+echo "Bookings: $DEMO_BOOKING_COUNT regular employee requests; +2 demo Draw has already run and should show 15 numbered slots and visible waitlist pressure"
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh employee1)"

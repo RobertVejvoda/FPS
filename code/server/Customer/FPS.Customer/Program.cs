@@ -192,7 +192,7 @@ static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
         30,
         "local-seed",
         now));
-    bootstrap.RecordLocation("Prague", activeSlotCount: 10, hasLocationPolicy: false, "local-seed");
+    bootstrap.RecordLocation("Prague", activeSlotCount: 15, hasLocationPolicy: false, "local-seed");
     await parkingRepository.SaveAsync(bootstrap, CancellationToken.None);
 }
 

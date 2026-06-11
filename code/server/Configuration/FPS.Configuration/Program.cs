@@ -69,13 +69,13 @@ if (app.Environment.IsDevelopment())
             PublicationReason = "Local demo seed",
         });
 
-        var slots = Enumerable.Range(1, 10).Select(i => new ParkingSlot
+        var slots = Enumerable.Range(1, 15).Select(i => new ParkingSlot
         {
-            SlotId = $"SLOT-{i:D2}",
+            SlotId = (300 + i).ToString(),
             TenantId = demoTenantId,
             LocationId = "Prague",
             IsActive = true,
-            HasCharger = i <= 2,
+            HasCharger = i <= 3,
             IsAccessible = i == 1,
             IsCompanyCarOnly = false,
             IsMotorcycleCapacity = false,

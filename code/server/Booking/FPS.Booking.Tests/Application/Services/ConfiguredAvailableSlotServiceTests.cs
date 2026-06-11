@@ -70,6 +70,28 @@ public sealed class ConfiguredAvailableSlotServiceTests
         Assert.Empty(slots);
     }
 
+    [Fact]
+    public async Task GetAvailableSlots_WithGeneratedCount_ReturnsNumberedSlots()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:SlotCount"] = "3",
+                ["AvailableSlots:tenant-1:loc-1:FirstSlotNumber"] = "301",
+                ["AvailableSlots:tenant-1:loc-1:ChargerCount"] = "1",
+                ["AvailableSlots:tenant-1:loc-1:AccessibleCount"] = "1",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        Assert.Equal(["301", "302", "303"], slots.Select(s => s.SlotId.Value));
+        Assert.True(slots[0].HasCharger);
+        Assert.True(slots[0].IsAccessible);
+        Assert.False(slots[1].HasCharger);
+    }
+
     private static IConfiguration BuildConfig(
         string tenantId, string locationId,
         IEnumerable<(string SlotId, bool HasCharger, bool IsAccessible, bool IsCompanyCarReserved)> slots)

@@ -43,8 +43,8 @@
     {
       "locationId": "Prague",
       "displayName": "Main Office",
-      "slotCount": 10,
-      "chargerSlots": 2,
+      "slotCount": 15,
+      "chargerSlots": 3,
       "accessibleSlots": 1
     }
   ],
