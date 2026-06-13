@@ -451,6 +451,7 @@ if missing:
         print(f"  - ...and {len(missing) - 10} more")
     print("This usually means stale Booking state references old Keycloak user IDs.")
     print("Run: ./tools/stop-local-harness.sh --reset")
+    print("Then: ./tools/start-local-harness.sh")
     print("Then: ./tools/start-smoke-web.sh")
     sys.exit(1)
 PYEOF
