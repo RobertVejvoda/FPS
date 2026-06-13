@@ -9,10 +9,9 @@
 #   ./tools/dev-seed.sh   — seed all demo data
 #
 # Idempotency:
+#   Local demo runtime state is cleared by default before seeding.
 #   Profile seeding is idempotent (overwrites existing snapshot).
-#   Booking seeding is NOT idempotent — repeated runs create duplicate requests.
-#   To reset bookings, restart the local harness (in-memory store is cleared on restart):
-#     ./tools/stop-local-harness.sh && ./tools/start-local-harness.sh && ./tools/dev-seed.sh
+#   Set FPS_DEV_SEED_RESET_STATE=false to append to existing local state.
 #
 # What is seeded:
 #   Profiles:  25 demo employees by default, plus role users
@@ -28,6 +27,7 @@
 
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROFILE_URL="${PROFILE_URL:-http://localhost:5197}"
 BOOKING_URL="${BOOKING_URL:-http://localhost:5131}"
 DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
@@ -42,6 +42,7 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
 CLIENT_ID="${FPS_LOCAL_CLIENT:-fps-mobile-dev}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
+RESET_DEMO_STATE="${FPS_DEV_SEED_RESET_STATE:-true}"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -61,6 +62,48 @@ for check_url in "$IDENTITY_URL/openapi/v1.json" "$PROFILE_URL/openapi/v1.json" 
 done
 
 # ── helpers ─────────────────────────────────────────────────────────────────
+
+reset_local_demo_state() {
+  if [ "$RESET_DEMO_STATE" != "true" ]; then
+    echo ""
+    echo "-- Reset local demo state --"
+    ok "Skipped (FPS_DEV_SEED_RESET_STATE=$RESET_DEMO_STATE)"
+    return 0
+  fi
+
+  if ! command -v docker > /dev/null 2>&1; then
+    echo ""
+    echo "-- Reset local demo state --"
+    err "docker not found; cannot clear local persisted demo state"
+    echo "Set FPS_DEV_SEED_RESET_STATE=false only when intentionally appending to an existing environment."
+    return 1
+  fi
+
+  echo ""
+  echo "-- Reset local demo state --"
+
+  if ! docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongodb \
+    mongosh -u admin -p admin --authenticationDatabase admin --quiet \
+    --eval '["fps-booking","fps-workflow","fps-notification","fps-reporting","fps-audit"].forEach(dbName => db.getSiblingDB(dbName).dropDatabase());' \
+    > /dev/null; then
+    err "Could not clear Mongo-backed local demo state"
+    echo "Run: ./tools/stop-local-harness.sh --reset"
+    echo "Then: ./tools/start-local-harness.sh"
+    return 1
+  fi
+
+  if ! docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T postgres \
+    psql -U fps -d fps_datahub -v ON_ERROR_STOP=1 \
+    -c 'TRUNCATE TABLE datahub_booking_outcome, datahub_draw_history, datahub_event_inbox, datahub_projection_checkpoint RESTART IDENTITY;' \
+    > /dev/null; then
+    err "Could not clear DataHub local demo projections"
+    echo "Run: ./tools/stop-local-harness.sh --reset"
+    echo "Then: ./tools/start-local-harness.sh"
+    return 1
+  fi
+
+  ok "Cleared Booking, workflow, notification, reporting, audit, and DataHub demo state"
+}
 
 get_token() {
   local username="$1"
@@ -460,6 +503,8 @@ PYEOF
 }
 
 # ── profiles ─────────────────────────────────────────────────────────────────
+
+reset_local_demo_state
 
 echo ""
 echo "-- Profiles --"
