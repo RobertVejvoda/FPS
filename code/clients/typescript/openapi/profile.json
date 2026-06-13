@@ -1130,21 +1130,6 @@
           }
         }
       },
-      "RequestorSummaryNotFound": {
-        "required": [
-          "userId",
-          "shortRef"
-        ],
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string"
-          },
-          "shortRef": {
-            "type": "string"
-          }
-        }
-      },
       "RequestorVehicleSummary": {
         "required": [
           "licensePlate",

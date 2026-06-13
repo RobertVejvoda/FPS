@@ -720,10 +720,6 @@ export interface components {
             activeVehicleCount: number | string;
             defaultVehicle: null | components["schemas"]["RequestorVehicleSummary"];
         };
-        RequestorSummaryNotFound: {
-            userId: string;
-            shortRef: string;
-        };
         RequestorVehicleSummary: {
             licensePlate: string;
             vehicleType: string;
