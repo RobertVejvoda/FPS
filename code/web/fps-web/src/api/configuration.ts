@@ -156,6 +156,33 @@ export async function fetchSlots(
   }
 }
 
+// Public-safe slot map projection. Open to any authenticated tenant user;
+// ReservedForUserId is never returned (only the boolean `isReserved`).
+export interface SlotMapDto {
+  slotId: string;
+  isActive: boolean;
+  hasCharger: boolean;
+  isAccessible: boolean;
+  isCompanyCarOnly: boolean;
+  isMotorcycleCapacity: boolean;
+  isReserved: boolean;
+}
+
+export async function fetchSlotMap(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  locationId: string,
+): Promise<FetchResult<SlotMapDto[]>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/configuration/locations/${encodeURIComponent(locationId)}/slots/map`, { headers: auth(bearerToken) });
+    const early = handle401403<SlotMapDto[]>(res.status); if (early) return early;
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /configuration/locations slots/map returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as SlotMapDto[] };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchSlotHistory(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   locationId: string,
