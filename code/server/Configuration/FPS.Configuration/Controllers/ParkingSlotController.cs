@@ -6,11 +6,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Configuration.Controllers;
 
+// Class-level [Authorize] only requires authentication. Role guards live on
+// each HR/admin action so the public-safe /slots/map endpoint can be reached
+// by any authenticated tenant user (including employees). ASP.NET Core combines
+// [Authorize] attributes additively — a more permissive action-level attribute
+// does *not* relax a stricter class-level one — so the role restriction must
+// be applied per-action rather than at the class level.
 [ApiController]
-[Authorize(Roles = $"{ConfigurationRoles.Admin},{ConfigurationRoles.HrManager}")]
+[Authorize]
 public sealed class ParkingSlotController(ParkingSlotService service, ICurrentUser currentUser) : ControllerBase
 {
+    private const string HrAdminRoles = $"{ConfigurationRoles.Admin},{ConfigurationRoles.HrManager}";
+
     [HttpGet("/configuration/locations/{locationId}/slots")]
+    [Authorize(Roles = HrAdminRoles)]
     public async Task<IActionResult> GetSlots(string locationId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
@@ -21,6 +30,7 @@ public sealed class ParkingSlotController(ParkingSlotService service, ICurrentUs
     }
 
     [HttpPut("/configuration/locations/{locationId}/slots")]
+    [Authorize(Roles = HrAdminRoles)]
     public async Task<IActionResult> PutSlots(string locationId, [FromBody] PutSlotsRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
@@ -35,6 +45,7 @@ public sealed class ParkingSlotController(ParkingSlotService service, ICurrentUs
     }
 
     [HttpGet("/configuration/locations/{locationId}/slots/history")]
+    [Authorize(Roles = HrAdminRoles)]
     public async Task<IActionResult> GetSlotHistory(string locationId, [FromQuery] int limit = 20, CancellationToken ct = default)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
@@ -46,12 +57,12 @@ public sealed class ParkingSlotController(ParkingSlotService service, ICurrentUs
     }
 
     /// <summary>
-    /// Public-safe parking map view of slot capacity. Open to any authenticated user
-    /// in the tenant so employees can see capacity alongside HR. Reservation is
-    /// surfaced as a boolean only — ReservedForUserId is never returned here.
+    /// Public-safe parking map view of slot capacity. Reached via the class-level
+    /// [Authorize] (no role guard), so any authenticated tenant user — including
+    /// employees — can read this projection. Reservation is surfaced as a boolean
+    /// only; ReservedForUserId is never returned here.
     /// </summary>
     [HttpGet("/configuration/locations/{locationId}/slots/map")]
-    [Authorize] // Override the controller-level role guard; any authenticated tenant user can read the public-safe map.
     [ProducesResponseType(typeof(IReadOnlyList<SlotMapDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetSlotsMap(string locationId, CancellationToken ct)

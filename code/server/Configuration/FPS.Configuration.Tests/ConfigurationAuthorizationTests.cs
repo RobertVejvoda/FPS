@@ -198,6 +198,62 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
+    // GET /configuration/locations/{locationId}/slots/map — public-safe Parking Map (MAP001)
+
+    [Fact]
+    public async Task GetSlotsMap_Unauthenticated_Returns401()
+    {
+        var response = await factory.CreateClient().GetAsync("/configuration/locations/loc-1/slots/map");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSlotsMap_EmployeeRole_Returns200()
+    {
+        // The whole point of MAP001: employees must reach the public-safe map.
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.GetAsync("/configuration/locations/loc-1/slots/map");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSlotsMap_HrManagerRole_Returns200()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "hr_manager");
+        var response = await client.GetAsync("/configuration/locations/loc-1/slots/map");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSlotsMap_AdminRole_Returns200()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "admin");
+        var response = await client.GetAsync("/configuration/locations/loc-1/slots/map");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSlots_EmployeeRole_StillReturns403_AfterMapEndpointOpened()
+    {
+        // Regression guard: opening /slots/map to employees must not relax /slots,
+        // which still carries the HR/admin role restriction at the action level.
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.GetAsync("/configuration/locations/loc-1/slots");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSlotsMap_Response_DoesNotContainReservedForUserId()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.GetAsync("/configuration/locations/loc-1/slots/map");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("reservedForUserId", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ReservedForUserId", body);
+    }
+
     // Cross-service ID002 verification: TenantClaimsTransformation applies to Configuration too.
 
     [Fact]
