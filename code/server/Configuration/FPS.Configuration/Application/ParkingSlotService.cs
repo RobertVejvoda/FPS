@@ -39,6 +39,17 @@ public sealed class ParkingSlotService(IParkingSlotRepository repository, ISlotC
                 errors.Add("Each slot must have a non-empty slotId.");
             else if (!seen.Add(slot.SlotId))
                 errors.Add($"Duplicate slotId: {slot.SlotId}.");
+
+            // Reject motorcycleCapacityUnits on non-motorcycle slots so HR doesn't
+            // accidentally save a unit count that has no effect, and bound the value
+            // so a typo cannot spawn a thousand allocation units on Draw.
+            if (slot.MotorcycleCapacityUnits is { } units)
+            {
+                if (!slot.IsMotorcycleCapacity)
+                    errors.Add($"Slot {slot.SlotId}: motorcycleCapacityUnits requires isMotorcycleCapacity=true.");
+                else if (units <= 0 || units > 20)
+                    errors.Add($"Slot {slot.SlotId}: motorcycleCapacityUnits must be between 1 and 20.");
+            }
         }
         return errors;
     }

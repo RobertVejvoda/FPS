@@ -78,6 +78,9 @@ public sealed class ParkingSlotController(ParkingSlotService service, ICurrentUs
             IsAccessible: s.IsAccessible,
             IsCompanyCarOnly: s.IsCompanyCarOnly,
             IsMotorcycleCapacity: s.IsMotorcycleCapacity,
+            // Surface the effective unit count so the Parking Map can show "x 4" badges
+            // for multi-unit motorcycle areas. Returns 1 for non-motorcycle slots.
+            MotorcycleCapacityUnits: s.EffectiveMotorcycleCapacityUnits,
             IsReserved: !string.IsNullOrEmpty(s.ReservedForUserId))).ToList();
 
         return Ok(map);
@@ -97,6 +100,7 @@ public sealed record SlotMapDto(
     bool IsAccessible,
     bool IsCompanyCarOnly,
     bool IsMotorcycleCapacity,
+    int MotorcycleCapacityUnits,
     bool IsReserved);
 
 public sealed record SlotDto(
@@ -106,7 +110,8 @@ public sealed record SlotDto(
     bool IsAccessible,
     bool IsCompanyCarOnly,
     bool IsMotorcycleCapacity,
-    string? ReservedForUserId)
+    string? ReservedForUserId,
+    int? MotorcycleCapacityUnits = null)
 {
     internal ParkingSlot ToDomain(string tenantId, string locationId) =>
         new()
@@ -119,6 +124,7 @@ public sealed record SlotDto(
             IsAccessible = IsAccessible,
             IsCompanyCarOnly = IsCompanyCarOnly,
             IsMotorcycleCapacity = IsMotorcycleCapacity,
+            MotorcycleCapacityUnits = MotorcycleCapacityUnits,
             ReservedForUserId = ReservedForUserId
         };
 }

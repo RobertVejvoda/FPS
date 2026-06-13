@@ -165,6 +165,9 @@ export interface SlotMapDto {
   isAccessible: boolean;
   isCompanyCarOnly: boolean;
   isMotorcycleCapacity: boolean;
+  // Resolved number of motorcycles that fit on a motorcycle-specific slot
+  // (default 4 when isMotorcycleCapacity=true). Always 1 for non-motorcycle slots.
+  motorcycleCapacityUnits: number;
   isReserved: boolean;
 }
 

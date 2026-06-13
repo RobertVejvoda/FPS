@@ -3,11 +3,15 @@ using FPS.Booking.Application.Models;
 namespace FPS.Booking.Application.Workflows;
 
 // Serializable slot data passed between workflow activities.
+// IsMotorcycleCapacity flags a motorcycle-only allocatable unit. Multi-unit
+// motorcycle areas are pre-expanded into individual units by the capacity loader,
+// so allocators continue to treat each SlotData as one allocatable unit.
 public sealed record SlotData(
     string SlotId,
     bool HasCharger,
     bool IsAccessible,
-    bool IsCompanyCarReserved);
+    bool IsCompanyCarReserved,
+    bool IsMotorcycleCapacity = false);
 
 // Serializable employee metrics snapshot passed between workflow activities.
 public sealed record EmployeeMetricsData(

@@ -99,7 +99,11 @@ export function ParkingMapPage() {
       reserved: slots.filter(s => s.isReserved).length,
       ev: slots.filter(s => s.hasCharger).length,
       accessible: slots.filter(s => s.isAccessible).length,
-      motorcycle: slots.filter(s => s.isMotorcycleCapacity).length,
+      // Motorcycle capacity counts motorcycle units (not physical motorcycle slots),
+      // matching the booking-side allocation unit a motorcycle actually consumes.
+      motorcycle: slots
+        .filter(s => s.isMotorcycleCapacity)
+        .reduce((sum, s) => sum + (s.motorcycleCapacityUnits || 0), 0),
     };
   }, [state]);
 
@@ -232,7 +236,9 @@ function SlotTile({
         {slot.hasCharger && <Chip label="EV" />}
         {slot.isAccessible && <Chip label="♿" />}
         {slot.isCompanyCarOnly && <Chip label="Co. car" />}
-        {slot.isMotorcycleCapacity && <Chip label="MC" />}
+        {slot.isMotorcycleCapacity && (
+          <Chip label={slot.motorcycleCapacityUnits > 1 ? `MC × ${slot.motorcycleCapacityUnits}` : 'MC'} />
+        )}
         {slot.isReserved && <Chip label="Res" />}
       </div>
       {isHr && allocation?.displayName && (

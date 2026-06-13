@@ -21,4 +21,11 @@ public class BookingRequestDto
     public string? ConfirmationSource { get; set; }
     public string? ConfirmationSourceEventId { get; set; }
     public string? ProfileSnapshotVersion { get; set; }
+    // Vehicle facts captured at submission time. RunAllocationActivity restores
+    // BookingRequest with these so the Draw can match motorcycle capacity and
+    // charger/accessibility correctly instead of defaulting every pending
+    // request to Sedan.
+    public string? VehicleType { get; set; }
+    public bool VehicleIsElectric { get; set; }
+    public bool RequiresAccessibleSpot { get; set; }
 }

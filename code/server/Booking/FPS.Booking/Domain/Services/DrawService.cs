@@ -38,7 +38,13 @@ public sealed class DrawService
             }
         }
 
-        // Tier 2: weighted lottery — losers due to capacity exhaustion are Waitlisted, not Rejected
+        // Tier 2: weighted lottery — losers due to capacity exhaustion are Waitlisted, not Rejected.
+        // Sort motorcycle-only slots first so motorcycle preference holds: motorcycles take motorcycle
+        // units before competing with cars for ordinary slots. Stable for everything else.
+        remainingSlots = remainingSlots
+            .OrderByDescending(s => s.IsMotorcycleCapacity)
+            .ToList();
+
         var remaining = tier2.ToList();
         while (remaining.Count > 0 && remainingSlots.Count > 0)
         {
@@ -79,6 +85,9 @@ public sealed class DrawService
     {
         var score = 0;
         if (slot.IsCompanyCarReserved && vehicle.IsCompanyCar) score += 4;
+        // Motorcycle requests prefer motorcycle-specific capacity over ordinary slots,
+        // so motorcycle-only units get exhausted first before normal car spaces are used.
+        if (slot.IsMotorcycleCapacity && vehicle.Type == VehicleType.Motorcycle) score += 3;
         if (slot.IsAccessible && vehicle.RequiresAccessibleSpot) score += 2;
         if (slot.HasCharger && vehicle.IsElectric) score += 1;
         return score;
