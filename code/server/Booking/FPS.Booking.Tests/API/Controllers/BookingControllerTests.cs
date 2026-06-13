@@ -309,6 +309,141 @@ public sealed class BookingControllerTests
         Assert.IsType<UnprocessableEntityObjectResult>(result);
     }
 
+    // ── GET /bookings/hr/employees/{userId}/history ───────────────────────────
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_ValidRequest_Returns200WithResult()
+    {
+        var summary = new HrEmployeeHistorySummary(Total: 3, Allocated: 2, Rejected: 1, Cancelled: 0, Pending: 0);
+        var expected = new HrEmployeeHistoryResult("employee-1", summary, [], null, 3);
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrEmployeeHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await controller.GetHrEmployeeHistory(
+            "employee-1", null, null, null, 50, null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<HrEmployeeHistoryResult>(ok.Value);
+        Assert.Equal(2, body.Summary.Allocated);
+        Assert.Equal(3, body.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_MissingTenant_Returns401()
+    {
+        currentUser.Setup(u => u.TenantId).Returns(string.Empty);
+
+        var result = await controller.GetHrEmployeeHistory(
+            "employee-1", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_BlankUserId_Returns400()
+    {
+        var result = await controller.GetHrEmployeeHistory(
+            "   ", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_PassesAuthenticatedTenantToQuery()
+    {
+        currentUser.Setup(u => u.TenantId).Returns("tenant-isolated");
+        GetHrEmployeeHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrEmployeeHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrEmployeeHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrEmployeeHistoryQuery)q)
+            .ReturnsAsync(new HrEmployeeHistoryResult("e-1", new HrEmployeeHistorySummary(0, 0, 0, 0, 0), [], null));
+
+        await controller.GetHrEmployeeHistory("e-1", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal("tenant-isolated", captured.TenantId);
+        Assert.Equal("e-1", captured.RequestorId);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_NoDateRangeProvided_AppliesDefaultLast30Days()
+    {
+        GetHrEmployeeHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrEmployeeHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrEmployeeHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrEmployeeHistoryQuery)q)
+            .ReturnsAsync(new HrEmployeeHistoryResult("e-1", new HrEmployeeHistorySummary(0, 0, 0, 0, 0), [], null));
+
+        await controller.GetHrEmployeeHistory("e-1", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.NotNull(captured.From);
+        Assert.NotNull(captured.To);
+        var span = captured.To!.Value.DayNumber - captured.From!.Value.DayNumber;
+        Assert.Equal(30, span);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_ExplicitDateRange_NotOverriddenWithDefault()
+    {
+        GetHrEmployeeHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrEmployeeHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrEmployeeHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrEmployeeHistoryQuery)q)
+            .ReturnsAsync(new HrEmployeeHistoryResult("e-1", new HrEmployeeHistorySummary(0, 0, 0, 0, 0), [], null));
+
+        var from = new DateOnly(2026, 1, 1);
+        var to = new DateOnly(2026, 1, 31);
+        await controller.GetHrEmployeeHistory("e-1", from, to, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal(from, captured.From);
+        Assert.Equal(to, captured.To);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_OnlyFromProvided_NoDefaultApplied()
+    {
+        GetHrEmployeeHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrEmployeeHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrEmployeeHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrEmployeeHistoryQuery)q)
+            .ReturnsAsync(new HrEmployeeHistoryResult("e-1", new HrEmployeeHistorySummary(0, 0, 0, 0, 0), [], null));
+
+        var from = new DateOnly(2026, 1, 1);
+        await controller.GetHrEmployeeHistory("e-1", from, null, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal(from, captured.From);
+        Assert.Null(captured.To);
+    }
+
+    [Fact]
+    public async Task GetHrEmployeeHistory_PassesStatusFilterToQuery()
+    {
+        GetHrEmployeeHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrEmployeeHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrEmployeeHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrEmployeeHistoryQuery)q)
+            .ReturnsAsync(new HrEmployeeHistoryResult("e-1", new HrEmployeeHistorySummary(0, 0, 0, 0, 0), [], null));
+
+        await controller.GetHrEmployeeHistory(
+            "e-1",
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31),
+            "Rejected", 25, "cursor", CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal("Rejected", captured.StatusFilter);
+        Assert.Equal(25, captured.PageSize);
+        Assert.Equal("cursor", captured.Cursor);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequest ValidSubmitBody() => new(

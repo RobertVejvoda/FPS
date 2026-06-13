@@ -324,6 +324,71 @@ export async function fetchHrBookings(
   }
 }
 
+export type HrEmployeeHistoryItem = components['schemas']['HrEmployeeHistoryItem'];
+export type HrEmployeeHistoryResponse = components['schemas']['HrEmployeeHistoryResult'];
+
+// Local summary type with strict number fields. The OpenAPI generator emits
+// int32 properties as `number | string`; fetchHrEmployeeHistory coerces them
+// at the client boundary so callers can treat counts as numbers.
+export interface HrEmployeeHistorySummary {
+  total: number;
+  allocated: number;
+  rejected: number;
+  cancelled: number;
+  pending: number;
+}
+
+export type HrEmployeeHistoryResult =
+  | { kind: 'ok'; summary: HrEmployeeHistorySummary; items: HrEmployeeHistoryItem[]; nextCursor: string | null; totalCount: number }
+  | { kind: 'unauthenticated' }
+  | { kind: 'forbidden' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function fetchHrEmployeeHistory(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  userId: string,
+  opts?: { from?: string; to?: string; status?: string; pageSize?: number; cursor?: string },
+): Promise<HrEmployeeHistoryResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  if (!userId) return { kind: 'error', status: 400, message: 'userId is required.' };
+  const params = new URLSearchParams();
+  if (opts?.from) params.set('from', opts.from);
+  if (opts?.to) params.set('to', opts.to);
+  if (opts?.status) params.set('status', opts.status);
+  if (opts?.pageSize) params.set('pageSize', String(opts.pageSize));
+  if (opts?.cursor) params.set('cursor', opts.cursor);
+  const query = params.toString();
+  try {
+    const res = await fetch(
+      `${apiBaseUrl}/bookings/hr/employees/${encodeURIComponent(userId)}/history${query ? `?${query}` : ''}`,
+      { headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' } },
+    );
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'forbidden' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET history for ${userId} returned ${res.status}` };
+    const data = (await res.json()) as HrEmployeeHistoryResponse;
+    // OpenAPI int32 fields are typed as `number | string` in the generated client; coerce here so consumers can treat them as numbers.
+    const s = data.summary;
+    const summary: HrEmployeeHistorySummary = {
+      total: Number(s.total ?? 0),
+      allocated: Number(s.allocated ?? 0),
+      rejected: Number(s.rejected ?? 0),
+      cancelled: Number(s.cancelled ?? 0),
+      pending: Number(s.pending ?? 0),
+    };
+    return {
+      kind: 'ok',
+      summary,
+      items: data.items ?? [],
+      nextCursor: data.nextCursor ?? null,
+      totalCount: Number(data.totalCount ?? 0),
+    };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function hrCancelBooking(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   requestId: string,

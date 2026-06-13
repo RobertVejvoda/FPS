@@ -160,6 +160,67 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             filtered.Count);
     }
 
+    public async Task<HrEmployeeHistoryResult> GetEmployeeHistoryAsync(
+        string tenantId,
+        string requestorId,
+        DateOnly? from,
+        DateOnly? to,
+        string? statusFilter,
+        int pageSize,
+        string? cursor,
+        CancellationToken cancellationToken = default)
+    {
+        var index = await daprClient.GetStateAsync<UserRequestIndex>(
+            BookingStore,
+            UserIndexKey(tenantId, requestorId),
+            cancellationToken: cancellationToken);
+
+        var requestIds = index?.RequestIds ?? [];
+
+        var dtos = new List<BookingRequestDto>(requestIds.Count);
+        foreach (var id in requestIds)
+        {
+            var dto = await daprClient.GetStateAsync<BookingRequestDto>(
+                BookingStore, TenantStorageKey.For("request", tenantId, id), cancellationToken: cancellationToken);
+            if (dto is not null)
+                dtos.Add(dto);
+        }
+
+        // Date-range window first — summary counts span the window but ignore
+        // the status filter so HR can read the overall pattern even when
+        // drilling into one status.
+        var inWindow = dtos
+            .Where(d => from is null || DateOnly.FromDateTime(d.PlannedArrivalTime) >= from.Value)
+            .Where(d => to is null || DateOnly.FromDateTime(d.PlannedArrivalTime) <= to.Value)
+            .ToList();
+
+        var summary = new HrEmployeeHistorySummary(
+            Total: inWindow.Count,
+            Allocated: inWindow.Count(d => d.Status == "Allocated"),
+            Rejected: inWindow.Count(d => d.Status == "Rejected"),
+            Cancelled: inWindow.Count(d => d.Status is "Cancelled" or "NoShow" or "Expired"),
+            Pending: inWindow.Count(d => d.Status == "Pending"));
+
+        var filtered = inWindow
+            .Where(d => statusFilter is null || MatchesStatusFilter(d.Status, statusFilter))
+            .OrderByDescending(d => d.PlannedArrivalTime.Date)
+            .ThenByDescending(d => d.RequestedAt)
+            .ToList();
+
+        var offset = DecodeCursor(cursor);
+        var page = filtered.Skip(offset).Take(pageSize).ToList();
+        var nextCursor = offset + page.Count < filtered.Count
+            ? EncodeCursor(offset + page.Count)
+            : null;
+
+        return new HrEmployeeHistoryResult(
+            RequestorRef: requestorId,
+            Summary: summary,
+            Items: page.Select(ToHrEmployeeHistoryItem).ToList(),
+            NextCursor: nextCursor,
+            TotalCount: filtered.Count);
+    }
+
     public async Task AddToUserIndexAsync(
         string tenantId,
         string requestorId,
@@ -248,6 +309,26 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
         CreatedAt: dto.RequestedAt,
         LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+
+    private static HrEmployeeHistoryItem ToHrEmployeeHistoryItem(BookingRequestDto dto) => new(
+        RequestId: dto.RequestId,
+        RequestedDate: DateOnly.FromDateTime(dto.PlannedArrivalTime),
+        TimeSlotStart: TimeOnly.FromDateTime(dto.PlannedArrivalTime),
+        TimeSlotEnd: TimeOnly.FromDateTime(dto.PlannedDepartureTime),
+        LocationId: dto.LocationId,
+        Status: dto.Status,
+        ReasonCode: dto.Status == "Rejected" ? dto.RejectionCode : null,
+        Reason: ReasonFor(dto),
+        AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
+        CreatedAt: dto.RequestedAt,
+        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+
+    // Group "Cancelled" filter with operational no-show/expired equivalents so
+    // HR can see all "did not use" outcomes together.
+    private static bool MatchesStatusFilter(string status, string filter) =>
+        filter.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            ? status is "Cancelled" or "NoShow" or "Expired"
+            : status.Equals(filter, StringComparison.OrdinalIgnoreCase);
 
     private static string? HrReasonFor(BookingRequestDto dto) =>
         dto.Status switch
