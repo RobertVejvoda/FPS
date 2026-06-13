@@ -613,9 +613,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["RequestorSummaryNotFound"];
+                        "application/json": components["schemas"]["RequestorSummaryNotFound"];
+                        "text/json": components["schemas"]["RequestorSummaryNotFound"];
                     };
                 };
             };
@@ -702,6 +702,10 @@ export interface components {
             reservedSpaceEligible: boolean;
             vehicles: components["schemas"]["VehicleSnapshot"][];
             snapshotVersion: string;
+        };
+        RequestorSummaryNotFound: {
+            userId: string;
+            shortRef: string;
         };
         RequestorSummaryResponse: {
             userId: string;
