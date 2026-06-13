@@ -46,6 +46,60 @@ export async function fetchHrDisplayNames(
   }
 }
 
+export interface RequestorVehicleSummary {
+  licensePlate: string;
+  vehicleType: string;
+  isElectric: boolean;
+  isDefault: boolean;
+}
+
+export interface RequestorSummary {
+  userId: string;
+  shortRef: string;
+  displayName: string | null;
+  profileStatus: string;
+  parkingEligible: boolean;
+  hasCompanyCar: boolean;
+  accessibilityEligible: boolean;
+  reservedSpaceEligible: boolean;
+  activeVehicleCount: number;
+  defaultVehicle: RequestorVehicleSummary | null;
+}
+
+export type RequestorSummaryResult =
+  | { kind: 'ok'; data: RequestorSummary }
+  | { kind: 'not-found'; userId: string; shortRef: string }
+  | { kind: 'unauthenticated' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function fetchHrRequestorSummary(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  userId: string,
+): Promise<RequestorSummaryResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  if (!userId) return { kind: 'error', status: 400, message: 'userId is required.' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/profile/hr/requestors/${encodeURIComponent(userId)}`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (res.status === 404) {
+      try {
+        const body = await res.json() as { userId?: string; shortRef?: string };
+        return { kind: 'not-found', userId: body.userId ?? userId, shortRef: body.shortRef ?? '' };
+      } catch {
+        return { kind: 'not-found', userId, shortRef: '' };
+      }
+    }
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /profile/hr/requestors/${userId} returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as RequestorSummary };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchProfileSnapshot(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
 ): Promise<FetchResult<ProfileSnapshot>> {
