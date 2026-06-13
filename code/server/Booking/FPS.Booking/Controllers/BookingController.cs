@@ -209,6 +209,47 @@ public sealed class BookingController : ControllerBase
         return Ok(new GetHrBookingsResponse(result.Items, result.NextCursor, result.TotalCount));
     }
 
+    // Default window for HR employee parking history. Issue #464 calls for
+    // "default recent period, e.g. last 30/45 days" — 30 days matches the
+    // smallest practical window and stays cheap to project later from DataHub.
+    private const int DefaultHistoryWindowDays = 30;
+
+    [HttpGet("hr/employees/{userId}/history")]
+    [Authorize(Roles = "hr_manager,admin")]
+    [ProducesResponseType(typeof(HrEmployeeHistoryResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHrEmployeeHistory(
+        string userId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] string? status,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return BadRequest(new { Message = "userId is required." });
+
+        // Default window: last 30 days through today when caller omits both.
+        if (from is null && to is null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+            from = today.AddDays(-DefaultHistoryWindowDays);
+            to = today;
+        }
+
+        var result = await mediator.Send(
+            new GetHrEmployeeHistoryQuery(currentUser.TenantId, userId, from, to, status, pageSize, cursor),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpDelete("{requestId:guid}/hr-cancel")]
     [Authorize(Roles = "hr_manager,admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]

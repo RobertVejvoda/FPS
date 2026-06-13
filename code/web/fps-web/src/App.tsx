@@ -32,6 +32,7 @@ import { TenantAdminPage } from './pages/TenantAdminPage';
 import { HrImportPage } from './pages/HrImportPage';
 import { HrOperationsPage } from './pages/HrOperationsPage';
 import { HrDrawHistoryPage } from './pages/HrDrawHistoryPage';
+import { HrEmployeeHistoryPage } from './pages/HrEmployeeHistoryPage';
 import { LegalPage } from './pages/LegalPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
@@ -199,6 +200,7 @@ function Shell() {
           <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
           <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
           <Route path="/hr-operations" element={<Guard allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
+          <Route path="/hr-operations/employees/:userId/history" element={<Guard allowed={canAccessHrOperations(roles)}><HrEmployeeHistoryPage /></Guard>} />
           <Route path="/hr-draw-history" element={<Guard allowed={canAccessHrOperations(roles)}><HrDrawHistoryPage /></Guard>} />
           <Route path="/auditor-workspace" element={<Guard allowed={canAccessAudit(roles)}><AuditorWorkspacePage /></Guard>} />
           <Route path="/audit" element={<Guard allowed={canAccessAudit(roles)}><AuditPage /></Guard>} />

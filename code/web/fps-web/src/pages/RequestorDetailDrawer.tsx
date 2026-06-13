@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchHrRequestorSummary,
@@ -115,6 +116,8 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
           )}
 
           <RequestSection request={request} />
+
+          <HistoryLink userId={request.requestorRef} onNavigate={onClose} />
         </div>
       </aside>
     </div>
@@ -186,6 +189,25 @@ function RequestSection({ request }: { request: HrBookingListItem }) {
           {reasonText}
         </div>
       )}
+    </section>
+  );
+}
+
+function HistoryLink({ userId, onNavigate }: { userId: string; onNavigate: () => void }) {
+  if (!userId) return null;
+  return (
+    <section>
+      <SectionHeading>History</SectionHeading>
+      <Link
+        to={`/hr-operations/employees/${encodeURIComponent(userId)}/history`}
+        onClick={onNavigate}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '0.45rem 0.75rem', borderRadius: 6, background: '#eff6ff',
+          color: '#1d4ed8', textDecoration: 'none', fontSize: '0.85rem',
+          fontWeight: 600, border: '1px solid #bfdbfe' }}
+      >
+        View parking history →
+      </Link>
     </section>
   );
 }

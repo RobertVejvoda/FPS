@@ -333,6 +333,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/hr/employees/{userId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                    status?: string;
+                    pageSize?: number | string;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HrEmployeeHistoryResult"];
+                        "application/json": components["schemas"]["HrEmployeeHistoryResult"];
+                        "text/json": components["schemas"]["HrEmployeeHistoryResult"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings/{requestId}/hr-cancel": {
         parameters: {
             query?: never;
@@ -1197,6 +1275,48 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
             outcomes: components["schemas"]["HrDrawOutcomeItemResponse"][];
+        };
+        HrEmployeeHistoryItem: {
+            /** Format: uuid */
+            requestId: string;
+            /** Format: date */
+            requestedDate: string;
+            /** Format: time */
+            timeSlotStart: string;
+            /** Format: time */
+            timeSlotEnd: string;
+            locationId: null | string;
+            status: string;
+            reasonCode: null | string;
+            reason: null | string;
+            allocatedSlotId: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastStatusChangedAt: string;
+        };
+        HrEmployeeHistoryResult: {
+            requestorRef: string;
+            summary: components["schemas"]["HrEmployeeHistorySummary"];
+            items: components["schemas"]["HrEmployeeHistoryItem"][];
+            nextCursor: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            totalCount: number | string;
+        };
+        HrEmployeeHistorySummary: {
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            allocated: number | string;
+            /** Format: int32 */
+            rejected: number | string;
+            /** Format: int32 */
+            cancelled: number | string;
+            /** Format: int32 */
+            pending: number | string;
         };
         ManualCorrectionRequest: {
             correctionType: string;
