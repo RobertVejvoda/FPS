@@ -46,7 +46,81 @@ public sealed class HrProfileController(
 
         return Ok(new DisplayNamesResponse(names));
     }
+
+    /// <summary>
+    /// Returns an HR-safe summary for a single requestor. Used by Parking Requests
+    /// detail panel. Restricted to HR and admin roles; tenant comes from authenticated
+    /// context. Returns 404 when no profile exists so the UI can render an explicit
+    /// "profile not available" state instead of a silent fallback.
+    /// </summary>
+    [HttpGet("requestors/{userId}")]
+    [ProducesResponseType(typeof(RequestorSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(RequestorSummaryNotFound), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRequestorSummary(
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return BadRequest("userId is required.");
+
+        var profile = await repository.GetAsync(currentUser.TenantId, userId, cancellationToken);
+        if (profile is null)
+            return NotFound(new RequestorSummaryNotFound(userId, BuildShortRef(userId)));
+
+        var activeVehicles = profile.ActiveVehicles;
+        var defaultVehicle = activeVehicles.FirstOrDefault(v => v.IsDefault) ?? activeVehicles.FirstOrDefault();
+
+        return Ok(new RequestorSummaryResponse(
+            UserId: userId,
+            ShortRef: BuildShortRef(userId),
+            DisplayName: profile.DisplayName,
+            ProfileStatus: profile.Status.ToString(),
+            ParkingEligible: profile.ParkingEligible,
+            HasCompanyCar: profile.HasCompanyCar,
+            AccessibilityEligible: profile.AccessibilityEligible,
+            ReservedSpaceEligible: profile.ReservedSpaceEligible,
+            ActiveVehicleCount: activeVehicles.Count,
+            DefaultVehicle: defaultVehicle is null ? null : new RequestorVehicleSummary(
+                LicensePlate: defaultVehicle.LicensePlate,
+                VehicleType: defaultVehicle.VehicleType,
+                IsElectric: defaultVehicle.IsElectric,
+                IsDefault: defaultVehicle.IsDefault)));
+    }
+
+    // Last 6 chars of the userId hash, uppercased — matches the short-ref convention
+    // already used as a secondary label on Parking Requests rows.
+    private static string BuildShortRef(string userId)
+    {
+        var clean = userId.Replace("-", string.Empty);
+        return clean.Length <= 6 ? clean.ToUpperInvariant() : clean[^6..].ToUpperInvariant();
+    }
 }
 
 public sealed record DisplayNamesRequest(IReadOnlyList<string>? UserIds);
 public sealed record DisplayNamesResponse(IReadOnlyDictionary<string, string?> Names);
+
+public sealed record RequestorSummaryResponse(
+    string UserId,
+    string ShortRef,
+    string? DisplayName,
+    string ProfileStatus,
+    bool ParkingEligible,
+    bool HasCompanyCar,
+    bool AccessibilityEligible,
+    bool ReservedSpaceEligible,
+    int ActiveVehicleCount,
+    RequestorVehicleSummary? DefaultVehicle);
+
+public sealed record RequestorVehicleSummary(
+    string LicensePlate,
+    string VehicleType,
+    bool IsElectric,
+    bool IsDefault);
+
+public sealed record RequestorSummaryNotFound(string UserId, string ShortRef);

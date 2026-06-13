@@ -545,6 +545,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/profile/hr/requestors/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RequestorSummaryResponse"];
+                        "application/json": components["schemas"]["RequestorSummaryResponse"];
+                        "text/json": components["schemas"]["RequestorSummaryResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RequestorSummaryNotFound"];
+                        "application/json": components["schemas"]["RequestorSummaryNotFound"];
+                        "text/json": components["schemas"]["RequestorSummaryNotFound"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile/snapshot": {
         parameters: {
             query?: never;
@@ -619,6 +702,29 @@ export interface components {
             reservedSpaceEligible: boolean;
             vehicles: components["schemas"]["VehicleSnapshot"][];
             snapshotVersion: string;
+        };
+        RequestorSummaryNotFound: {
+            userId: string;
+            shortRef: string;
+        };
+        RequestorSummaryResponse: {
+            userId: string;
+            shortRef: string;
+            displayName: null | string;
+            profileStatus: string;
+            parkingEligible: boolean;
+            hasCompanyCar: boolean;
+            accessibilityEligible: boolean;
+            reservedSpaceEligible: boolean;
+            /** Format: int32 */
+            activeVehicleCount: number | string;
+            defaultVehicle: null | components["schemas"]["RequestorVehicleSummary"];
+        };
+        RequestorVehicleSummary: {
+            licensePlate: string;
+            vehicleType: string;
+            isElectric: boolean;
+            isDefault: boolean;
         };
         ServiceErasureInput: {
             erasureRequestId: string;

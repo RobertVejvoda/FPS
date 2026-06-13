@@ -18,6 +18,7 @@ import {
 import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
+import { RequestorDetailDrawer } from './RequestorDetailDrawer';
 
 const LOCATION_ID = 'Prague';
 const STATUS_FILTERS = ['All', 'Pending', 'Allocated', 'Cancelled', 'Rejected'];
@@ -41,10 +42,11 @@ interface RequestRowProps {
   item: HrBookingListItem;
   busyId: string | null;
   onCancel: (id: string) => void;
+  onOpenDetail: (item: HrBookingListItem) => void;
   displayName?: string | null;
 }
 
-function RequestRow({ item, busyId, onCancel, displayName }: RequestRowProps) {
+function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: RequestRowProps) {
   const primaryLabel = displayName ?? displayRequestorRef(item.requestorRef);
   const secondaryRef = displayName ? displayRequestorRef(item.requestorRef) : null;
   const locationLabel = displayLocation(item.locationId) ?? displayLocation(LOCATION_ID) ?? 'Location not set';
@@ -61,7 +63,17 @@ function RequestRow({ item, busyId, onCancel, displayName }: RequestRowProps) {
         <div style={{ flex: '1 1 0', minWidth: 0 }}>
           {/* Primary row: name + status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '0.375rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>{primaryLabel}</span>
+            <button
+              type="button"
+              onClick={() => onOpenDetail(item)}
+              title="Open requestor detail"
+              style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1d4ed8', background: 'transparent',
+                border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+                textDecoration: 'underline', textDecorationStyle: 'dotted', textDecorationColor: '#cbd5e1',
+                textUnderlineOffset: 3 }}
+            >
+              {primaryLabel}
+            </button>
             {secondaryRef && <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>{secondaryRef}</span>}
             <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(item.status) }}>
               {item.status}
@@ -117,6 +129,7 @@ export function HrOperationsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string | null>>({});
+  const [detailRequest, setDetailRequest] = useState<HrBookingListItem | null>(null);
 
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -240,12 +253,28 @@ export function HrOperationsPage() {
             )}
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {listState.items.map(item => (
-                <RequestRow key={item.requestId} item={item} busyId={busyId} onCancel={setCancelTarget} displayName={displayNames[item.requestorRef] ?? null} />
+                <RequestRow
+                  key={item.requestId}
+                  item={item}
+                  busyId={busyId}
+                  onCancel={setCancelTarget}
+                  onOpenDetail={setDetailRequest}
+                  displayName={displayNames[item.requestorRef] ?? null}
+                />
               ))}
             </ul>
           </>
         )}
       </div>
+
+      {/* Requestor detail drawer */}
+      {detailRequest && (
+        <RequestorDetailDrawer
+          request={detailRequest}
+          displayName={displayNames[detailRequest.requestorRef] ?? null}
+          onClose={() => setDetailRequest(null)}
+        />
+      )}
 
       {/* Cancel modal */}
       {cancelTarget && (
