@@ -173,11 +173,47 @@ require_port 8180 "Keycloak" 60 "docker compose logs keycloak" "$INFRA_HOST"
 require_port 8200 "Vault"    60 "docker compose logs vault"    "$INFRA_HOST"
 
 log "Ensuring MongoDB single-node replica set is initialized..."
+MONGO_COMPOSE_FILE="$REPO_ROOT/code/infrastructure/docker-compose.yaml"
+mongo_exec() {
+  docker compose -f "$MONGO_COMPOSE_FILE" exec -T mongodb "$@"
+}
+
+# On a fresh Docker volume the compose `command:` override skips the mongo
+# entrypoint that would normally honour MONGO_INITDB_ROOT_USERNAME/PASSWORD,
+# so the admin user does not yet exist. Mongo's localhost exception lets us
+# call rs.initiate() and createUser() without auth — but only until the first
+# user is created. We use that one-shot window to bootstrap both.
 for attempt in $(seq 1 30); do
-  if docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongodb \
-    mongosh -u admin -p admin --authenticationDatabase admin --quiet \
-    --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]}).ok }' 2>/dev/null | grep -qE '^(1|true)$'; then
+  if mongo_exec mongosh -u admin -p admin --authenticationDatabase admin --quiet \
+    --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]}).ok }' \
+    2>/dev/null | grep -qE '^(1|true)$'; then
     break
+  fi
+
+  # Authenticated path failed. If the admin user is genuinely missing
+  # (fresh volume), bootstrap via the localhost exception.
+  if mongo_exec mongosh --quiet --eval 'db.getSiblingDB("admin").system.users.countDocuments({})' \
+    2>/dev/null | grep -qE '^0$'; then
+    log "  MongoDB has no users yet — bootstrapping replica set and admin via localhost exception..."
+    mongo_exec mongosh --quiet --eval '
+      try { rs.status(); }
+      catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]}); }
+    ' >/dev/null 2>&1 || true
+
+    for wait_primary in $(seq 1 15); do
+      if mongo_exec mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | grep -qE '^true$'; then
+        break
+      fi
+      sleep 1
+    done
+
+    mongo_exec mongosh --quiet --eval '
+      db.getSiblingDB("admin").createUser({
+        user: "admin",
+        pwd: "admin",
+        roles: [{ role: "root", db: "admin" }]
+      });
+    ' >/dev/null 2>&1 || true
   fi
 
   if [ "$attempt" -eq 30 ]; then
