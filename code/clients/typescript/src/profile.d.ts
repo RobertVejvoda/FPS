@@ -613,9 +613,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["RequestorSummaryNotFound"];
+                        "application/json": components["schemas"]["RequestorSummaryNotFound"];
+                        "text/json": components["schemas"]["RequestorSummaryNotFound"];
                     };
                 };
             };
@@ -715,6 +715,10 @@ export interface components {
             /** Format: int32 */
             activeVehicleCount: number | string;
             defaultVehicle: null | components["schemas"]["RequestorVehicleSummary"];
+        };
+        RequestorSummaryNotFound: {
+            userId: string;
+            shortRef: string;
         };
         RequestorVehicleSummary: {
             licensePlate: string;
