@@ -40,6 +40,12 @@ export function canAccessHrOperations(roles: string[]): boolean {
   return hasRole(roles, FpsRole.HrManager, FpsRole.Admin);
 }
 
+// Parking Map — read-only capacity view. Open to all FPS users (employees included);
+// the server returns a public-safe projection that omits reservedForUserId.
+export function canAccessParkingMap(roles: string[]): boolean {
+  return hasRole(roles, FpsRole.Employee, FpsRole.HrManager, FpsRole.Admin, FpsRole.ReportViewer, FpsRole.Auditor);
+}
+
 // Audit surfaces.
 export function canAccessAudit(roles: string[]): boolean {
   return hasRole(roles, FpsRole.Auditor, FpsRole.Admin);

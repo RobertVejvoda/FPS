@@ -10,6 +10,7 @@ import {
   canAccessConfiguration,
   canAccessHrOperations,
   canAccessNotifications,
+  canAccessParkingMap,
   canAccessProfile,
   canAccessReporting,
   canAccessTenantAdmin,
@@ -33,6 +34,7 @@ import { HrImportPage } from './pages/HrImportPage';
 import { HrOperationsPage } from './pages/HrOperationsPage';
 import { HrDrawHistoryPage } from './pages/HrDrawHistoryPage';
 import { HrEmployeeHistoryPage } from './pages/HrEmployeeHistoryPage';
+import { ParkingMapPage } from './pages/ParkingMapPage';
 import { LegalPage } from './pages/LegalPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
@@ -147,6 +149,7 @@ function Shell() {
     canAccessBookings(roles) && { to: '/bookings', label: 'My Spots' },
     canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
+    canAccessParkingMap(roles) && { to: '/parking-map', label: 'Parking Map' },
     canAccessHrOperations(roles) && { to: '/hr-operations', label: 'Parking Requests' },
     canAccessHrOperations(roles) && { to: '/hr-draw-history', label: 'Draws' },
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
@@ -199,6 +202,7 @@ function Shell() {
           <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
           <Route path="/configuration" element={<Guard allowed={canAccessConfiguration(roles)}><ConfigurationPage /></Guard>} />
           <Route path="/hr-import" element={<Guard allowed={canAccessConfiguration(roles)}><HrImportPage /></Guard>} />
+          <Route path="/parking-map" element={<Guard allowed={canAccessParkingMap(roles)}><ParkingMapPage /></Guard>} />
           <Route path="/hr-operations" element={<Guard allowed={canAccessHrOperations(roles)}><HrOperationsPage /></Guard>} />
           <Route path="/hr-operations/employees/:userId/history" element={<Guard allowed={canAccessHrOperations(roles)}><HrEmployeeHistoryPage /></Guard>} />
           <Route path="/hr-draw-history" element={<Guard allowed={canAccessHrOperations(roles)}><HrDrawHistoryPage /></Guard>} />

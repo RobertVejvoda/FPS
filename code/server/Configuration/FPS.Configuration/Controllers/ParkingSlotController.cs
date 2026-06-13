@@ -44,9 +44,49 @@ public sealed class ParkingSlotController(ParkingSlotService service, ICurrentUs
         var history = await service.GetChangeHistoryAsync(currentUser.TenantId, locationId, limit, ct);
         return Ok(history);
     }
+
+    /// <summary>
+    /// Public-safe parking map view of slot capacity. Open to any authenticated user
+    /// in the tenant so employees can see capacity alongside HR. Reservation is
+    /// surfaced as a boolean only — ReservedForUserId is never returned here.
+    /// </summary>
+    [HttpGet("/configuration/locations/{locationId}/slots/map")]
+    [Authorize] // Override the controller-level role guard; any authenticated tenant user can read the public-safe map.
+    [ProducesResponseType(typeof(IReadOnlyList<SlotMapDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetSlotsMap(string locationId, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var slots = await service.GetByLocationAsync(currentUser.TenantId, locationId, ct);
+        var map = slots.Select(s => new SlotMapDto(
+            SlotId: s.SlotId,
+            IsActive: s.IsActive,
+            HasCharger: s.HasCharger,
+            IsAccessible: s.IsAccessible,
+            IsCompanyCarOnly: s.IsCompanyCarOnly,
+            IsMotorcycleCapacity: s.IsMotorcycleCapacity,
+            IsReserved: !string.IsNullOrEmpty(s.ReservedForUserId))).ToList();
+
+        return Ok(map);
+    }
 }
 
 public sealed record PutSlotsRequest(IReadOnlyList<SlotDto> Slots, string? ChangeReason = null);
+
+/// <summary>
+/// Public-safe slot projection. ReservedForUserId is intentionally omitted —
+/// only the boolean IsReserved flag is exposed to non-HR callers.
+/// </summary>
+public sealed record SlotMapDto(
+    string SlotId,
+    bool IsActive,
+    bool HasCharger,
+    bool IsAccessible,
+    bool IsCompanyCarOnly,
+    bool IsMotorcycleCapacity,
+    bool IsReserved);
 
 public sealed record SlotDto(
     string SlotId,
