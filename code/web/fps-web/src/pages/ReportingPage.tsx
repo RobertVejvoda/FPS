@@ -9,7 +9,7 @@ import {
   type UtilizationResponse, type ReasonCodeResponse, type EmployeeImpactResponse,
   type OperationalExceptionsResponse,
 } from '../api/reporting';
-import { displayLocation, displayRequestorRef } from '../displayLabels';
+import { displayLocation, displayRequestorRef, shortRequestorRef } from '../displayLabels';
 import { fetchHrDisplayNames } from '../api/profile';
 
 type DashState = { kind: 'loading' } | { kind: 'ok'; data: DashboardResponse } | { kind: 'forbidden' } | { kind: 'error'; message: string };
@@ -38,6 +38,10 @@ export function ReportingPage() {
   // names instead of `Requestor <hash-prefix>` — and the short ref remains
   // available as a fallback when the lookup misses.
   const [displayNames, setDisplayNames] = useState<Record<string, string | null>>({});
+  // True after the display-name lookup has completed (or failed) for the
+  // current refs. Until then the rows render the regular short ref so the
+  // brief in-flight moment doesn't flash "Unknown requestor" at the user.
+  const [displayNamesLoaded, setDisplayNamesLoaded] = useState(false);
 
   const load = useCallback(() => {
     setDash({ kind: 'loading' });
@@ -112,13 +116,32 @@ export function ReportingPage() {
     if (fair.kind === 'ok') for (const row of fair.data.items) if (row.requestorRef) refs.add(row.requestorRef);
     if (empImpact.kind === 'ok') for (const row of empImpact.data.items) if (row.requestorRef) refs.add(row.requestorRef);
     if (refs.size === 0) return;
+    setDisplayNamesLoaded(false);
     let cancelled = false;
     void fetchHrDisplayNames({ apiBaseUrl, bearerToken }, [...refs]).then(r => {
-      if (cancelled || r.kind !== 'ok') return;
-      setDisplayNames(prev => ({ ...prev, ...r.data.names }));
+      if (cancelled) return;
+      // Flip the loaded flag regardless of result so the page commits to the
+      // explicit "Unknown requestor · short-ref" fallback even when the lookup
+      // fails (e.g. transient 5xx) — instead of leaving rows on the more
+      // ambiguous bare short-ref render.
+      if (r.kind === 'ok') setDisplayNames(prev => ({ ...prev, ...r.data.names }));
+      setDisplayNamesLoaded(true);
     });
     return () => { cancelled = true; };
   }, [fair, empImpact, apiBaseUrl, bearerToken]);
+
+  // Resolve a row's display label per #480 acceptance criteria:
+  //   1. employee display name if Profile knows it,
+  //   2. explicit "Unknown requestor · <short ref>" once the lookup completed
+  //      and returned no name for this ref,
+  //   3. plain short ref while the lookup is still in flight (prevents the
+  //      "Unknown" flash on first paint).
+  function rowLabel(ref: string): string {
+    const name = displayNames[ref];
+    if (name) return name;
+    if (displayNamesLoaded) return `Unknown requestor · ${shortRequestorRef(ref)}`;
+    return displayRequestorRef(ref);
+  }
 
   async function triggerDownload(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
@@ -308,7 +331,7 @@ export function ReportingPage() {
               <tbody>
                 {fair.data.items.map(row => (
                   <tr key={row.requestorRef}>
-                    <td style={td}>{displayNames[row.requestorRef] ?? displayRequestorRef(row.requestorRef)}</td>
+                    <td style={td}>{rowLabel(row.requestorRef)}</td>
                     <td style={td}>{row.requestCount}</td>
                     <td style={td}>{row.allocationCount}</td>
                     <td style={td}>{(row.allocationRate * 100).toFixed(1)}%</td>
@@ -333,7 +356,7 @@ export function ReportingPage() {
               <tbody>
                 {empImpact.data.items.map(row => (
                   <tr key={row.requestorRef}>
-                    <td style={td}>{displayNames[row.requestorRef] ?? displayRequestorRef(row.requestorRef)}</td>
+                    <td style={td}>{rowLabel(row.requestorRef)}</td>
                     <td style={td}>{row.totalRequests}</td>
                     <td style={{ ...td, color: '#dc2626', fontWeight: 600 }}>{row.totalRejections}</td>
                     <td style={td}>{row.totalAllocations}</td>

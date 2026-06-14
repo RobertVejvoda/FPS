@@ -33,6 +33,21 @@ export function displayRequestorRef(value?: string | null): string {
   return value.length > 18 ? `${value.slice(0, 18)}...` : value;
 }
 
+// Short, label-free form of a requestor ref — just the 6-char support id with
+// no "Requestor" prefix. Useful when the caller wants to compose its own
+// explicit fallback (e.g. "Unknown requestor · 585624" on the Reports surface,
+// per #480 acceptance criteria) without the prefix getting in the way.
+export function shortRequestorRef(value?: string | null): string {
+  if (!value) return '';
+
+  const compact = value.replace(/-/g, '');
+  if (/^[0-9a-f]{32,}$/i.test(compact)) {
+    return compact.slice(0, 6).toUpperCase();
+  }
+
+  return value.length > 18 ? `${value.slice(0, 18)}...` : value;
+}
+
 export function displayDate(value?: string | null): string {
   if (!value) return '-';
   try {
