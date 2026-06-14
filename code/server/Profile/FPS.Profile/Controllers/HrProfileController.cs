@@ -5,20 +5,31 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Profile.Controllers;
 
+// Class-level [Authorize] only requires authentication. Per-action role
+// guards keep the privacy posture sharp: display-name lookup is allowed for
+// report_viewer too (issue #474 — HR reports must surface employee names,
+// not opaque hashes), but the requestor-summary view stays HR/admin because
+// it carries parking eligibility and vehicle facts that are not part of the
+// report_viewer surface. Same lesson as MAP001 (#467) — controller-level
+// role attributes are additive, so the relaxation has to be per-action.
 [ApiController]
 [Route("profile/hr")]
-[Authorize(Roles = "hr_manager,admin")]
+[Authorize]
 public sealed class HrProfileController(
     IProfileRepository repository,
     ICurrentUser currentUser) : ControllerBase
 {
     private const int MaxBatchSize = 200;
+    private const string HrAndReportingRoles = "hr_manager,admin,report_viewer";
+    private const string HrAdminOnlyRoles = "hr_manager,admin";
 
     /// <summary>
-    /// Returns display names for a batch of subject hashes.
-    /// Restricted to HR and admin roles. Names are never exposed on employee screens or audit payloads.
+    /// Returns display names for a batch of subject hashes. Allowed for HR,
+    /// admin, AND report_viewer — the role that owns the Reports surface.
+    /// Names are never exposed on employee screens or audit payloads.
     /// </summary>
     [HttpPost("display-names")]
+    [Authorize(Roles = HrAndReportingRoles)]
     [ProducesResponseType(typeof(DisplayNamesResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -54,6 +65,7 @@ public sealed class HrProfileController(
     /// "profile not available" state instead of a silent fallback.
     /// </summary>
     [HttpGet("requestors/{userId}")]
+    [Authorize(Roles = HrAdminOnlyRoles)]
     [ProducesResponseType(typeof(RequestorSummaryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

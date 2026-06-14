@@ -119,9 +119,9 @@ public sealed class ReportingQueryService(IReportingQueryRepository repository)
         var impactedEmployees = fairnessRecords
             .Where(f => f.RejectionCount >= minRejections)
             .OrderByDescending(f => f.RejectionCount)
-            .ThenBy(f => f.RequestorHash)
+            .ThenBy(f => f.RequestorRef)
             .Select(f => new EmployeeImpactEntry(
-                f.RequestorHash,
+                f.RequestorRef,
                 f.RequestCount,
                 f.RejectionCount,
                 f.AllocationCount))
@@ -191,10 +191,10 @@ public sealed record ParkingMetricsSummary(
 
 public sealed record ParkingSummaryResponse(IReadOnlyList<ParkingMetricsSummary> Items);
 
-public sealed record FairnessEntry(string RequestorHash, int RequestCount, int AllocationCount, double AllocationRate)
+public sealed record FairnessEntry(string RequestorRef, int RequestCount, int AllocationCount, double AllocationRate)
 {
     public static FairnessEntry From(FairnessRecord r) =>
-        new(r.RequestorHash, r.RequestCount, r.AllocationCount, r.AllocationRate);
+        new(r.RequestorRef, r.RequestCount, r.AllocationCount, r.AllocationRate);
 }
 
 public sealed record FairnessResponse(IReadOnlyList<FairnessEntry> Items);
@@ -228,7 +228,7 @@ public sealed record ReasonCodeEntry(string ReasonCode, int Count, double RateOf
 public sealed record ReasonCodeResponse(IReadOnlyList<ReasonCodeEntry> Items, int TotalDemand);
 
 public sealed record EmployeeImpactEntry(
-    string RequestorHash,
+    string RequestorRef,
     int TotalRequests,
     int TotalRejections,
     int TotalAllocations);
