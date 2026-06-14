@@ -15,7 +15,10 @@ public class BookingRequestDto
     public string? RejectionCode { get; set; }
     public string? RejectionReason { get; set; }
     public string? CancellationReason { get; set; }
-    public Guid? AllocatedSlotId { get; set; }
+    // Allocated slot reference — stored as a string so multi-unit motorcycle
+    // ids like "M1-1" / "M1-2" round-trip intact. Older Dapr state with GUID
+    // slot ids deserialises as a string transparently.
+    public string? AllocatedSlotId { get; set; }
     public DateTime LastStatusChangedAt { get; set; }
     public DateTime? UsageConfirmedAt { get; set; }
     public string? ConfirmationSource { get; set; }

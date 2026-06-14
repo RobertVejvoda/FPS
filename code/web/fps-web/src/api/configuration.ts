@@ -36,6 +36,9 @@ export interface SlotDto {
   isAccessible: boolean;
   isCompanyCarOnly: boolean;
   isMotorcycleCapacity: boolean;
+  // Configurable per-slot motorcycle capacity. Null means "use the default"
+  // (4 in v1) when the slot is motorcycle-specific. Ignored otherwise.
+  motorcycleCapacityUnits: number | null;
   reservedForUserId: string | null;
 }
 

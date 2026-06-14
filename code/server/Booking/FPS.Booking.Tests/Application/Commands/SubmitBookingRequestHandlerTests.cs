@@ -358,7 +358,10 @@ public sealed class SubmitBookingRequestHandlerTests
     public async Task Handle_SameDay_Motorcycle_PrefersMotorcycleCapacityOverNormalSlot()
     {
         // Even when the normal slot is returned first, the handler picks the
-        // motorcycle-specific unit for a motorcycle request.
+        // motorcycle-specific unit for a motorcycle request. Also asserts the
+        // string motorcycle-unit id round-trips into BookingRequestDto.AllocatedSlotId —
+        // this was a Codex review finding on PR #469 (Guid.TryParse silently dropped
+        // non-Guid slot ids).
         profileService
             .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(MotorcycleProfile);
@@ -377,11 +380,9 @@ public sealed class SubmitBookingRequestHandlerTests
         var result = await handler.Handle(MotorcycleSameDayCommand(), CancellationToken.None);
 
         Assert.Equal("Allocated", result.Status);
-        // AllocatedSlotId on the dto is only populated when the slot id is a guid;
-        // motorcycle-unit ids are non-guid by design, so we assert the request
-        // was allocated and persisted with motorcycle vehicle type for the Draw path.
         Assert.NotNull(saved);
         Assert.Equal("Motorcycle", saved!.VehicleType);
+        Assert.Equal("M1-1", saved.AllocatedSlotId);
     }
 
     [Fact]

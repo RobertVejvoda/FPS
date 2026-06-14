@@ -41,7 +41,7 @@ public sealed class PersistDecisionsActivityTests
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(),
-            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         metricsService.Verify(m => m.IncrementRecentAllocationAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
             It.IsAny<CancellationToken>()), Times.Never);
@@ -58,7 +58,7 @@ public sealed class PersistDecisionsActivityTests
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(),
-            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Pending request is updated on first run ───────────────────────────────
@@ -74,7 +74,7 @@ public sealed class PersistDecisionsActivityTests
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             TenantId, requestId, "Allocated",
-            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         metricsService.Verify(m => m.IncrementRecentAllocationAsync(
             TenantId, "requestor-1", DrawDate, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -98,9 +98,44 @@ public sealed class PersistDecisionsActivityTests
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             TenantId, requestId, "Allocated",
-            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         metricsService.Verify(m => m.IncrementRecentAllocationAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── CAP-468: allocated slot id persists back to the booking ───────────────
+
+    [Fact]
+    public async Task RunAsync_PendingAllocated_PersistsAllocatedSlotIdToBookingRequest()
+    {
+        // Regression test for the Codex review finding on PR #469: the Draw's
+        // decision.SlotId (e.g. "M1-2" for a motorcycle unit) must flow back to
+        // the booking, so HR/employee/map projections and cancel/reallocate can
+        // see which capacity unit was assigned. Discovered when motorcycle units
+        // were added because their string ids surfaced the gap immediately;
+        // ordinary slot ids had silently fallen through the cracks as well.
+        var requestId = Guid.NewGuid();
+        bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
+            .ReturnsAsync(new BookingRequestDto { Status = "Pending" });
+
+        var input = new PersistDecisionsInput(DrawKey, TenantId, "2026-06-02",
+            [new DrawDecisionDto
+            {
+                RequestId = requestId.ToString(),
+                RequestorId = "requestor-1",
+                Outcome = "Allocated",
+                SlotId = "M1-2",
+            }],
+            []);
+
+        await activity.RunAsync(null!, input);
+
+        bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
+            TenantId, requestId, "Allocated",
+            It.IsAny<string?>(),
+            It.IsAny<string?>(),
+            "M1-2",
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

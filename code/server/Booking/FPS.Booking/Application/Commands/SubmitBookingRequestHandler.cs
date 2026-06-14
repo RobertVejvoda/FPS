@@ -218,8 +218,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             VehicleType = vehicle.Type.ToString(),
             VehicleIsElectric = vehicle.IsElectric,
             RequiresAccessibleSpot = vehicle.RequiresAccessibleSpot,
-            AllocatedSlotId = slot?.SlotId.Value != null
-                ? (Guid.TryParse(slot.SlotId.Value, out var slotGuid) ? slotGuid : (Guid?)null)
-                : null
+            // Slot id is a free-form string (e.g. "M1-1" for motorcycle units), not a Guid.
+            AllocatedSlotId = slot?.SlotId.Value
         };
 }

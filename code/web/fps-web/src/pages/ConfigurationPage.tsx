@@ -409,7 +409,7 @@ export function ConfigurationPage() {
                 <table style={tbl}>
                   <thead>
                     <tr>
-                      {['Slot ID', 'Active', 'Charger', 'Accessible', 'Company car', 'Moto', 'Reserved for'].map(h => (
+                      {['Slot ID', 'Active', 'Charger', 'Accessible', 'Company car', 'Moto', 'Moto units', 'Reserved for'].map(h => (
                         <th key={h} style={th}>{h}</th>
                       ))}
                     </tr>
@@ -426,6 +426,19 @@ export function ConfigurationPage() {
                           <td style={td}><input type="checkbox" checked={v.isAccessible} onChange={e => patchSlot(s.slotId, 'isAccessible', e.target.checked)} /></td>
                           <td style={td}><input type="checkbox" checked={v.isCompanyCarOnly} onChange={e => patchSlot(s.slotId, 'isCompanyCarOnly', e.target.checked)} /></td>
                           <td style={td}><input type="checkbox" checked={v.isMotorcycleCapacity} onChange={e => patchSlot(s.slotId, 'isMotorcycleCapacity', e.target.checked)} /></td>
+                          <td style={td}>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              disabled={!v.isMotorcycleCapacity}
+                              value={v.motorcycleCapacityUnits ?? ''}
+                              onChange={e => patchSlot(s.slotId, 'motorcycleCapacityUnits', e.target.value === '' ? null : Number(e.target.value))}
+                              placeholder={v.isMotorcycleCapacity ? '4' : '—'}
+                              title={v.isMotorcycleCapacity ? 'Defaults to 4 when blank' : 'Only used for motorcycle-specific slots'}
+                              style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: '3px 6px', fontSize: 12, width: 60, outline: 'none' }}
+                            />
+                          </td>
                           <td style={td}>
                             <input
                               value={v.reservedForUserId ?? ''}

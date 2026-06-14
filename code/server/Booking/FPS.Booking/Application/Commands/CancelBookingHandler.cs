@@ -129,8 +129,8 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
 
         if (candidates.Count == 0) return;
 
-        var releasedSlot = cancelledDto.AllocatedSlotId.HasValue
-            ? AvailableSlot.Create(ParkingSlotId.FromString(cancelledDto.AllocatedSlotId.Value.ToString()))
+        var releasedSlot = cancelledDto.AllocatedSlotId is { } releasedSlotId
+            ? AvailableSlot.Create(ParkingSlotId.FromString(releasedSlotId))
             : null;
 
         if (releasedSlot is null) return;
