@@ -176,9 +176,12 @@ function RangeFilter({ value, onChange, dateBase, label }: RangeProps) {
   }, [activePresetKey, dateBase]);
 
   // Custom inputs use YYYY-MM-DD strings; convert to ISO on emit so the
-  // consumer always sees the unified ISO-timestamp shape.
-  const customFrom = value.after ? value.after.slice(0, 10) : '';
-  const customTo   = value.before ? value.before.slice(0, 10) : '';
+  // consumer always sees the unified ISO-timestamp shape, and back to a
+  // LOCAL YYYY-MM-DD when reading — `.slice(0, 10)` would return the UTC
+  // date, which shifts the picker one day earlier east of UTC (Prague
+  // local midnight is 22:00 UTC the day before). Codex review on PR #485.
+  const customFrom = value.after ? toLocalDateString(new Date(value.after)) : '';
+  const customTo   = value.before ? toLocalDateString(new Date(value.before)) : '';
 
   function emitCustom(fromStr: string, toStr: string) {
     const after = fromStr ? new Date(`${fromStr}T00:00:00`).toISOString() : undefined;
