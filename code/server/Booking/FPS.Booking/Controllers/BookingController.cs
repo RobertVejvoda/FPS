@@ -250,6 +250,44 @@ public sealed class BookingController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("operations/slots/{slotId}/history")]
+    [Authorize(Roles = "hr_manager,admin")]
+    [ProducesResponseType(typeof(HrSlotHistoryResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHrSlotHistory(
+        string slotId,
+        [FromQuery] string? locationId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(slotId))
+            return BadRequest(new { Message = "slotId is required." });
+
+        // Default window: last 30 days through today when caller omits both.
+        // Matches the employee-history default and keeps the drawer fast on
+        // tenants with long-running ops indices.
+        if (from is null && to is null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+            from = today.AddDays(-DefaultHistoryWindowDays);
+            to = today;
+        }
+
+        var result = await mediator.Send(
+            new GetHrSlotHistoryQuery(currentUser.TenantId, locationId, slotId, from, to, pageSize, cursor),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpDelete("{requestId:guid}/hr-cancel")]
     [Authorize(Roles = "hr_manager,admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]

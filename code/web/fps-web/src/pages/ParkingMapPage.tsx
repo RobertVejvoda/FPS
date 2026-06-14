@@ -7,6 +7,7 @@ import { fetchHrBookings, type HrBookingListItem } from '../api/bookings';
 import { fetchHrDisplayNames } from '../api/profile';
 import { displayLocation, displayDate } from '../displayLabels';
 import { compareSlotLabels, parseSlotLabel, type SlotLabel } from '../slotLabel';
+import { SlotDetailDrawer } from './SlotDetailDrawer';
 
 const LOCATION_ID = 'Prague';
 
@@ -30,6 +31,7 @@ export function ParkingMapPage() {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [allocations, setAllocations] = useState<AllocationMap>({});
   const [selectedDate, setSelectedDate] = useState<string>(todayIso());
+  const [detailSlot, setDetailSlot] = useState<SlotMapDto | null>(null);
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -165,6 +167,7 @@ export function ParkingMapPage() {
                   items={items}
                   allocations={allocations}
                   isHr={isHr}
+                  onSelectSlot={setDetailSlot}
                 />
               ))}
             </div>
@@ -174,17 +177,31 @@ export function ParkingMapPage() {
           </>
         )}
       </div>
+
+      {/* HR-only slot detail drawer (issue #471). Backend role guard means
+          non-HR users would 403 anyway, but the click is also gated client-side
+          so the affordance never appears for employees. */}
+      {detailSlot && (
+        <SlotDetailDrawer
+          slot={detailSlot}
+          locationId={LOCATION_ID}
+          selectedDate={isHr ? selectedDate : null}
+          selectedDayOccupant={allocations[detailSlot.slotId]}
+          onClose={() => setDetailSlot(null)}
+        />
+      )}
     </div>
   );
 }
 
 function FloorSection({
-  floorLabel, items, allocations, isHr,
+  floorLabel, items, allocations, isHr, onSelectSlot,
 }: {
   floorLabel: string;
   items: Array<{ slot: SlotMapDto; label: SlotLabel }>;
   allocations: AllocationMap;
   isHr: boolean;
+  onSelectSlot: (slot: SlotMapDto) => void;
 }) {
   return (
     <section>
@@ -197,7 +214,14 @@ function FloorSection({
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem' }}>
         {items.map(({ slot, label }) => (
-          <SlotTile key={slot.slotId} slot={slot} label={label} allocation={allocations[slot.slotId]} isHr={isHr} />
+          <SlotTile
+            key={slot.slotId}
+            slot={slot}
+            label={label}
+            allocation={allocations[slot.slotId]}
+            isHr={isHr}
+            onSelect={isHr ? () => onSelectSlot(slot) : undefined}
+          />
         ))}
       </div>
     </section>
@@ -213,19 +237,31 @@ function tileStatus(slot: SlotMapDto, allocation: AllocationMap[string] | undefi
 }
 
 function SlotTile({
-  slot, label, allocation, isHr,
+  slot, label, allocation, isHr, onSelect,
 }: {
   slot: SlotMapDto;
   label: SlotLabel;
   allocation: AllocationMap[string] | undefined;
   isHr: boolean;
+  onSelect?: () => void;
 }) {
   const status = tileStatus(slot, allocation);
+  // HR tiles are interactive (button); employee tiles stay as plain divs so the
+  // history endpoint is unreachable from the employee surface (no role guard
+  // bypass via tile click).
+  const Tag: 'button' | 'div' = onSelect ? 'button' : 'div';
+  const interactiveProps = onSelect
+    ? { onClick: onSelect, type: 'button' as const, 'aria-label': `Open ${label.longLabel} history` }
+    : {};
   return (
-    <div title={label.longLabel} style={{
-      borderRadius: 8, border: `1px solid ${status.border}`, background: status.bg,
-      color: status.color, padding: '0.5rem 0.625rem', display: 'flex', flexDirection: 'column', gap: 4, minHeight: 64,
-    }}>
+    <Tag
+      title={label.longLabel}
+      {...interactiveProps}
+      style={{
+        borderRadius: 8, border: `1px solid ${status.border}`, background: status.bg,
+        color: status.color, padding: '0.5rem 0.625rem', display: 'flex', flexDirection: 'column', gap: 4, minHeight: 64,
+        textAlign: 'left', cursor: onSelect ? 'pointer' : 'default', font: 'inherit',
+      }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 4 }}>
         <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>{label.shortLabel}</span>
         <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', opacity: 0.85 }}>
@@ -246,7 +282,7 @@ function SlotTile({
           {allocation.displayName}
         </div>
       )}
-    </div>
+    </Tag>
   );
 }
 

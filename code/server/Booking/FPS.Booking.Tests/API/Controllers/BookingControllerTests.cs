@@ -444,6 +444,119 @@ public sealed class BookingControllerTests
         Assert.Equal("cursor", captured.Cursor);
     }
 
+    // ── GET /bookings/operations/slots/{slotId}/history (issue #471) ─────────
+
+    [Fact]
+    public async Task GetHrSlotHistory_ValidRequest_Returns200WithResult()
+    {
+        var expected = new HrSlotHistoryResult("M1-1", [], null, 0);
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await controller.GetHrSlotHistory(
+            "M1-1", null, null, null, 50, null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<HrSlotHistoryResult>(ok.Value);
+        Assert.Equal("M1-1", body.SlotId);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_MissingTenant_Returns401()
+    {
+        currentUser.Setup(u => u.TenantId).Returns(string.Empty);
+
+        var result = await controller.GetHrSlotHistory(
+            "M1-1", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_BlankSlotId_Returns400()
+    {
+        var result = await controller.GetHrSlotHistory(
+            "   ", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_PassesAuthenticatedTenantAndLocationToQuery()
+    {
+        currentUser.Setup(u => u.TenantId).Returns("tenant-isolated");
+        GetHrSlotHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrSlotHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrSlotHistoryQuery)q)
+            .ReturnsAsync(new HrSlotHistoryResult("M1-1", [], null));
+
+        await controller.GetHrSlotHistory("M1-1", "Prague", null, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal("tenant-isolated", captured.TenantId);
+        Assert.Equal("Prague", captured.LocationId);
+        Assert.Equal("M1-1", captured.SlotId);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_NoDateRangeProvided_AppliesDefaultLast30Days()
+    {
+        GetHrSlotHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrSlotHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrSlotHistoryQuery)q)
+            .ReturnsAsync(new HrSlotHistoryResult("M1-1", [], null));
+
+        await controller.GetHrSlotHistory("M1-1", null, null, null, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.NotNull(captured.From);
+        Assert.NotNull(captured.To);
+        var span = captured.To!.Value.DayNumber - captured.From!.Value.DayNumber;
+        Assert.Equal(30, span);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_ExplicitDateRange_NotOverridden()
+    {
+        GetHrSlotHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrSlotHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrSlotHistoryQuery)q)
+            .ReturnsAsync(new HrSlotHistoryResult("M1-1", [], null));
+
+        var from = new DateOnly(2026, 1, 1);
+        var to = new DateOnly(2026, 1, 31);
+        await controller.GetHrSlotHistory("M1-1", null, from, to, 50, null, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal(from, captured.From);
+        Assert.Equal(to, captured.To);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_PassesPagingToQuery()
+    {
+        GetHrSlotHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrSlotHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrSlotHistoryQuery)q)
+            .ReturnsAsync(new HrSlotHistoryResult("M1-1", [], null));
+
+        await controller.GetHrSlotHistory(
+            "M1-1", null, new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31), 25, "cursor", CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal(25, captured.PageSize);
+        Assert.Equal("cursor", captured.Cursor);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequest ValidSubmitBody() => new(
