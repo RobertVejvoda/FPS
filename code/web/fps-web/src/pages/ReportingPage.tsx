@@ -102,10 +102,11 @@ export function ReportingPage() {
   useEffect(() => { load(); }, [load]);
 
   // Re-run the display-name lookup whenever Fairness or Employee Impact data
-  // changes. Both endpoints are HR/admin-gated, and the lookup endpoint itself
-  // requires hr_manager/admin too — employees with the report-viewer role would
-  // get 403 here and the page silently falls back to short refs, which is
-  // the documented behaviour in #474.
+  // changes. The lookup endpoint is allowed for hr_manager, admin AND
+  // report_viewer (issue #474 — relaxed in the same PR so the Reports
+  // surface always resolves names, not just for HR). If the lookup ever
+  // does fail — e.g. a future tenant carves a narrower role — the rows
+  // gracefully fall back to `displayRequestorRef(ref)`.
   useEffect(() => {
     const refs = new Set<string>();
     if (fair.kind === 'ok') for (const row of fair.data.items) if (row.requestorRef) refs.add(row.requestorRef);
