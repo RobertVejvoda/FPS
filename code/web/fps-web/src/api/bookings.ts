@@ -389,6 +389,52 @@ export async function fetchHrEmployeeHistory(
   }
 }
 
+// Slot allocation history (issue #471) — HR-only drawer on the Parking Map.
+export type HrSlotHistoryItem = components['schemas']['HrSlotHistoryItem'];
+export type HrSlotHistoryResponse = components['schemas']['HrSlotHistoryResult'];
+
+export type HrSlotHistoryResult =
+  | { kind: 'ok'; slotId: string; items: HrSlotHistoryItem[]; nextCursor: string | null; totalCount: number }
+  | { kind: 'unauthenticated' }
+  | { kind: 'forbidden' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function fetchHrSlotHistory(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  slotId: string,
+  opts?: { locationId?: string; from?: string; to?: string; pageSize?: number; cursor?: string },
+): Promise<HrSlotHistoryResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  if (!slotId) return { kind: 'error', status: 400, message: 'slotId is required.' };
+  const params = new URLSearchParams();
+  if (opts?.locationId) params.set('locationId', opts.locationId);
+  if (opts?.from) params.set('from', opts.from);
+  if (opts?.to) params.set('to', opts.to);
+  if (opts?.pageSize) params.set('pageSize', String(opts.pageSize));
+  if (opts?.cursor) params.set('cursor', opts.cursor);
+  const query = params.toString();
+  try {
+    const res = await fetch(
+      `${apiBaseUrl}/bookings/operations/slots/${encodeURIComponent(slotId)}/history${query ? `?${query}` : ''}`,
+      { headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' } },
+    );
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'forbidden' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET history for ${slotId} returned ${res.status}` };
+    const data = (await res.json()) as HrSlotHistoryResponse;
+    return {
+      kind: 'ok',
+      slotId: data.slotId,
+      items: data.items ?? [],
+      nextCursor: data.nextCursor ?? null,
+      totalCount: Number(data.totalCount ?? 0),
+    };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function hrCancelBooking(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   requestId: string,

@@ -250,6 +250,54 @@ public sealed class BookingController : ControllerBase
         return Ok(result);
     }
 
+    // Slot-history page size is clamped at the controller boundary so a
+    // caller can't pass a negative size (Take throws and the endpoint 500s)
+    // or a huge value (leaks the full tenant ops history in one response).
+    // 100 matches the existing ParkingSlotController.GetSlotHistory cap.
+    private const int MaxSlotHistoryPageSize = 100;
+
+    [HttpGet("operations/slots/{slotId}/history")]
+    [Authorize(Roles = "hr_manager,admin")]
+    [ProducesResponseType(typeof(HrSlotHistoryResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHrSlotHistory(
+        string slotId,
+        [FromQuery] string? locationId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(slotId))
+            return BadRequest(new { Message = "slotId is required." });
+
+        // Default window: last 30 days through today when caller omits both.
+        // Matches the employee-history default and keeps the drawer fast on
+        // tenants with long-running ops indices.
+        if (from is null && to is null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+            from = today.AddDays(-DefaultHistoryWindowDays);
+            to = today;
+        }
+
+        // Clamp before the query so the repository's Take(pageSize) never
+        // sees a negative or wildly large value (Codex review on #473).
+        var clampedPageSize = Math.Clamp(pageSize, 1, MaxSlotHistoryPageSize);
+
+        var result = await mediator.Send(
+            new GetHrSlotHistoryQuery(currentUser.TenantId, locationId, slotId, from, to, clampedPageSize, cursor),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpDelete("{requestId:guid}/hr-cancel")]
     [Authorize(Roles = "hr_manager,admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]

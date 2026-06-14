@@ -70,3 +70,27 @@ public record HrEmployeeHistoryResult(
     IReadOnlyList<HrEmployeeHistoryItem> Items,
     string? NextCursor,
     int TotalCount = 0);
+
+// HR-safe slot allocation history item (issue #471). Same field shape as
+// HrBookingListItem so the existing HR display labels and reason helpers
+// can render rows unchanged; SlotId lives on the result envelope, not on
+// every row, to keep the drawer table narrow.
+public record HrSlotHistoryItem(
+    Guid RequestId,
+    string RequestorRef,
+    DateOnly RequestedDate,
+    TimeOnly TimeSlotStart,
+    TimeOnly TimeSlotEnd,
+    string? LocationId,
+    string Status,
+    string? ReasonCode,
+    string? Reason,
+    string? AllocatedSlotId,
+    DateTime CreatedAt,
+    DateTime LastStatusChangedAt);
+
+public record HrSlotHistoryResult(
+    string SlotId,
+    IReadOnlyList<HrSlotHistoryItem> Items,
+    string? NextCursor,
+    int TotalCount = 0);

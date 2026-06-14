@@ -50,6 +50,16 @@ public interface IBookingQueryRepository
         string? cursor,
         CancellationToken cancellationToken = default);
 
+    Task<HrSlotHistoryResult> GetSlotHistoryAsync(
+        string tenantId,
+        string? locationId,
+        string slotId,
+        DateOnly? from,
+        DateOnly? to,
+        int pageSize,
+        string? cursor,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<BookingRequestDto>> GetAllocatedRequestsForDrawAsync(
         string tenantId,
         string locationId,

@@ -221,6 +221,56 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             TotalCount: filtered.Count);
     }
 
+    public async Task<HrSlotHistoryResult> GetSlotHistoryAsync(
+        string tenantId,
+        string? locationId,
+        string slotId,
+        DateOnly? from,
+        DateOnly? to,
+        int pageSize,
+        string? cursor,
+        CancellationToken cancellationToken = default)
+    {
+        // Read the tenant ops index — the same source the HR Parking Requests
+        // list uses — and filter to bookings allocated to this specific slot.
+        // Stays HR-safe: we project to HrSlotHistoryItem only, never expose
+        // lottery internals, candidate sequences, or penalty scores.
+        var index = await daprClient.GetStateAsync<TenantOpsIndex>(
+            BookingStore, OpsIndexKey(tenantId), cancellationToken: cancellationToken);
+
+        var requestIds = index?.RequestIds ?? [];
+
+        var dtos = new List<BookingRequestDto>(requestIds.Count);
+        foreach (var id in requestIds)
+        {
+            var dto = await daprClient.GetStateAsync<BookingRequestDto>(
+                BookingStore, TenantStorageKey.For("request", tenantId, id), cancellationToken: cancellationToken);
+            if (dto is not null)
+                dtos.Add(dto);
+        }
+
+        var filtered = dtos
+            .Where(d => string.Equals(d.AllocatedSlotId, slotId, StringComparison.OrdinalIgnoreCase))
+            .Where(d => locationId is null || d.LocationId == locationId)
+            .Where(d => from is null || DateOnly.FromDateTime(d.PlannedArrivalTime) >= from.Value)
+            .Where(d => to is null || DateOnly.FromDateTime(d.PlannedArrivalTime) <= to.Value)
+            .OrderByDescending(d => d.PlannedArrivalTime.Date)
+            .ThenByDescending(d => d.LastStatusChangedAt)
+            .ToList();
+
+        var offset = DecodeCursor(cursor);
+        var page = filtered.Skip(offset).Take(pageSize).ToList();
+        var nextCursor = offset + page.Count < filtered.Count
+            ? EncodeCursor(offset + page.Count)
+            : null;
+
+        return new HrSlotHistoryResult(
+            SlotId: slotId,
+            Items: page.Select(ToHrSlotHistoryItem).ToList(),
+            NextCursor: nextCursor,
+            TotalCount: filtered.Count);
+    }
+
     public async Task AddToUserIndexAsync(
         string tenantId,
         string requestorId,
@@ -307,6 +357,20 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         ReasonCode: dto.Status == "Rejected" ? dto.RejectionCode : null,
         Reason: HrReasonFor(dto),
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
+        CreatedAt: dto.RequestedAt,
+        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+
+    private static HrSlotHistoryItem ToHrSlotHistoryItem(BookingRequestDto dto) => new(
+        RequestId: dto.RequestId,
+        RequestorRef: dto.RequestedBy,
+        RequestedDate: DateOnly.FromDateTime(dto.PlannedArrivalTime),
+        TimeSlotStart: TimeOnly.FromDateTime(dto.PlannedArrivalTime),
+        TimeSlotEnd: TimeOnly.FromDateTime(dto.PlannedDepartureTime),
+        LocationId: dto.LocationId,
+        Status: dto.Status,
+        ReasonCode: dto.Status == "Rejected" ? dto.RejectionCode : null,
+        Reason: HrReasonFor(dto),
+        AllocatedSlotId: dto.AllocatedSlotId,
         CreatedAt: dto.RequestedAt,
         LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
 
