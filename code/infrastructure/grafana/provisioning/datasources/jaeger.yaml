@@ -25,4 +25,8 @@ datasources:
             value: service
         filterByTraceID: true
         customQuery: true
-        query: '{service="$${__tags}"} |= "TraceId=$${__trace.traceId}"'
+        # `$${__tags}` expands to the full label matcher string Grafana built
+        # from the tag mapping (e.g. `service="identity"`), so it must sit
+        # inside the LogQL stream selector braces directly, NOT inside
+        # `service="…"` (which would double-wrap and break the selector).
+        query: '{$${__tags}} |= "TraceId=$${__trace.traceId}"'
