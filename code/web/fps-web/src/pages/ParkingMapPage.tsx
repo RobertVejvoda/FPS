@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { canAccessHrOperations } from '../auth/roles';
 import { fetchSlotMap, type SlotMapDto } from '../api/configuration';
 import { fetchHrBookings, type HrBookingListItem } from '../api/bookings';
 import { fetchHrDisplayNames } from '../api/profile';
-import { displayLocation, displayDate } from '../displayLabels';
+import { displayLocation } from '../displayLabels';
+import { useTenantDateContext } from '../hooks/useTenantDateBase';
+import { DateFilter } from '../components/DateFilter';
+import { toLocalDateString } from '../dateOptions';
 import { compareSlotLabels, parseSlotLabel, type SlotLabel } from '../slotLabel';
 import { SlotDetailDrawer } from './SlotDetailDrawer';
 
@@ -21,19 +24,29 @@ type LoadState =
 // matching the recent-allocation rows (Codex review #1 on PR #473).
 type AllocationMap = Record<string, { displayName: string | null; status: string; requestorRef: string }>;
 
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 export function ParkingMapPage() {
   const { apiBaseUrl, bearerToken, roles, clear } = useAuth();
   const navigate = useNavigate();
   const isHr = canAccessHrOperations(roles);
 
+  const { dateBase, simulationActive } = useTenantDateContext();
+
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [allocations, setAllocations] = useState<AllocationMap>({});
-  const [selectedDate, setSelectedDate] = useState<string>(todayIso());
+  // Initial date comes from `dateBase` so simulation mode opens the map on
+  // the virtual day matching the chip presets — not on real wall time (Codex
+  // review on PR #485). userPickedDate tracks whether the user has explicitly
+  // chosen a date so we don't overwrite their selection when dateBase moves.
+  const [selectedDate, setSelectedDateRaw] = useState<string>(() => toLocalDateString(dateBase));
+  const userPickedDate = useRef(false);
+  function setSelectedDate(next: string) {
+    userPickedDate.current = true;
+    setSelectedDateRaw(next);
+  }
+  useEffect(() => {
+    if (userPickedDate.current) return;
+    setSelectedDateRaw(toLocalDateString(dateBase));
+  }, [dateBase]);
   const [detailSlot, setDetailSlot] = useState<SlotMapDto | null>(null);
 
   const load = useCallback(() => {
@@ -145,19 +158,18 @@ export function ParkingMapPage() {
               <CapacityCard label="Inactive" value={summary.inactive} tone="muted" />
             </div>
 
-            {/* HR-only allocation date filter */}
+            {/* HR-only allocation date filter — shared component (issue #476) */}
             {isHr && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.8rem', color: '#475569' }}>
-                  Allocations for
-                </label>
-                <input
-                  type="date"
+              <div style={{ marginBottom: '1rem' }}>
+                <DateFilter
+                  mode="day"
+                  label="Allocations for"
                   value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value || todayIso())}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', border: '1px solid #d1d5db', borderRadius: 4 }}
+                  onChange={setSelectedDate}
+                  dateBase={dateBase}
+                  simulationActive={simulationActive}
+                  presetCount={4}
                 />
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{displayDate(selectedDate)}</span>
               </div>
             )}
 
