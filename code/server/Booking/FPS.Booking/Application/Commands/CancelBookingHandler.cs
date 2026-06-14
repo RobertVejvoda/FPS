@@ -22,6 +22,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
     private readonly ITenantPolicyService policyService;
     private readonly IBookingEventPublisher eventPublisher;
     private readonly DrawService drawService;
+    private readonly IAvailableSlotService slotService;
     private readonly ISystemClock clock;
 
     public CancelBookingHandler(
@@ -32,6 +33,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         ITenantPolicyService policyService,
         IBookingEventPublisher eventPublisher,
         DrawService drawService,
+        IAvailableSlotService slotService,
         ISystemClock clock)
     {
         ArgumentNullException.ThrowIfNull(repository);
@@ -41,6 +43,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         ArgumentNullException.ThrowIfNull(policyService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
         ArgumentNullException.ThrowIfNull(drawService);
+        ArgumentNullException.ThrowIfNull(slotService);
         ArgumentNullException.ThrowIfNull(clock);
         this.repository = repository;
         this.queryRepository = queryRepository;
@@ -48,6 +51,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         this.drawRepository = drawRepository;
         this.policyService = policyService;
         this.eventPublisher = eventPublisher;
+        this.slotService = slotService;
         this.drawService = drawService;
         this.clock = clock;
     }
@@ -123,20 +127,26 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
     {
         var date = DateOnly.FromDateTime(cancelledDto.PlannedArrivalTime);
         var timeSlot = TimeSlot.Create(cancelledDto.PlannedArrivalTime, cancelledDto.PlannedDepartureTime);
+        var locationId = cancelledDto.LocationId ?? string.Empty;
 
         var candidates = await queryRepository.GetPendingRequestsForDrawAsync(
-            command.TenantId, cancelledDto.LocationId ?? string.Empty, date, cancellationToken);
+            command.TenantId, locationId, date, cancellationToken);
 
         if (candidates.Count == 0) return;
+        if (cancelledDto.AllocatedSlotId is not { } releasedSlotId) return;
 
-        var releasedSlot = cancelledDto.AllocatedSlotId is { } releasedSlotId
-            ? AvailableSlot.Create(ParkingSlotId.FromString(releasedSlotId))
-            : null;
-
-        if (releasedSlot is null) return;
+        // Re-resolve the released slot's full capabilities (IsMotorcycleCapacity,
+        // HasCharger, IsAccessible, IsCompanyCarReserved) by looking it up from
+        // the slot service. Reconstructing from the id alone would lose those
+        // flags and let, e.g., a cancelled motorcycle unit ("M1-1") be
+        // reallocated to a sedan — violating the v1 motorcycle-only rule.
+        var allSlots = await slotService.GetAvailableSlotsAsync(
+            command.TenantId, locationId, date, timeSlot, cancellationToken);
+        var releasedSlot = allSlots.FirstOrDefault(s => s.SlotId.Value == releasedSlotId)
+            ?? AvailableSlot.Create(ParkingSlotId.FromString(releasedSlotId));
 
         // Use original Draw ordering when available
-        var drawKey = DrawKey.Create(command.TenantId, cancelledDto.LocationId ?? string.Empty, date, timeSlot);
+        var drawKey = DrawKey.Create(command.TenantId, locationId, date, timeSlot);
         var drawAttempt = await drawRepository.GetByKeyAsync(drawKey.ToStoreKey(), cancellationToken);
 
         BookingRequestDto? winner = null;
@@ -145,14 +155,11 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
         {
             winner = drawAttempt.Tier2CandidateSequence
                 .Select(id => candidates.FirstOrDefault(c => c.RequestId.ToString() == id))
-                .FirstOrDefault(c => c is not null && releasedSlot.CanAccommodate(
-                    VehicleInformation.Create("X", VehicleType.Sedan, false, false, false)));
+                .FirstOrDefault(c => c is not null && releasedSlot.CanAccommodate(VehicleFromDto(c)));
         }
 
-        // Fallback: pick first compatible candidate
-        winner ??= candidates.FirstOrDefault(c =>
-            releasedSlot.CanAccommodate(
-                VehicleInformation.Create("X", VehicleType.Sedan, false, false, false)));
+        // Fallback: pick first compatible candidate using each candidate's persisted vehicle facts.
+        winner ??= candidates.FirstOrDefault(c => releasedSlot.CanAccommodate(VehicleFromDto(c)));
 
         if (winner is null) return;
 
@@ -163,7 +170,13 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             AllocationSource: "reallocation"));
         winnerRequest.Allocate(reallocationPublisher);
 
-        await repository.UpdateBookingRequestStatusAsync(command.TenantId, winner.RequestId, "Allocated", cancellationToken: cancellationToken);
+        // Persist the actual released slot reference (e.g. "M1-1") onto the winner —
+        // without this, the reallocated booking would lose its capacity link, same
+        // bug class as the previous Codex finding on PersistDecisionsActivity.
+        await repository.UpdateBookingRequestStatusAsync(
+            command.TenantId, winner.RequestId, "Allocated",
+            allocatedSlotId: releasedSlot.SlotId.Value,
+            cancellationToken: cancellationToken);
 
         _ = reallocationPublisher.PublishAsync(new FPS.Booking.Domain.Events.BookingRequestReallocatedEvent(
             BookingRequestId.FromGuid(winner.RequestId),
@@ -172,11 +185,22 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             BookingRequestId.FromGuid(cancelledDto.RequestId)));
     }
 
+    // Build VehicleInformation from the candidate's persisted facts so reallocation
+    // honours motorcycle-only / EV-charger / accessibility constraints. Falls back
+    // to Sedan for older dtos that predate the VehicleType persistence change.
+    private static VehicleInformation VehicleFromDto(BookingRequestDto dto)
+        => VehicleInformation.Create(
+            "REALLOC",
+            Enum.TryParse<VehicleType>(dto.VehicleType, ignoreCase: true, out var vt) ? vt : VehicleType.Sedan,
+            dto.VehicleIsElectric,
+            dto.RequiresAccessibleSpot,
+            isCompanyCar: false);
+
     private static BookingRequest RestoreRequest(BookingRequestDto dto)
         => BookingRequest.Restore(
             BookingRequestId.FromGuid(dto.RequestId),
             UserId.FromString(dto.RequestedBy),
-            VehicleInformation.Create("UNKNOWN", VehicleType.Sedan, false, false, false),
+            VehicleFromDto(dto),
             TimeSlot.Create(dto.PlannedArrivalTime, dto.PlannedDepartureTime),
             Enum.Parse<BookingRequestStatus>(dto.Status),
             dto.RequestedAt);
