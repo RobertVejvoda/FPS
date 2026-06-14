@@ -109,8 +109,9 @@ export function ReportingPage() {
   // changes. The lookup endpoint is allowed for hr_manager, admin AND
   // report_viewer (issue #474 — relaxed in the same PR so the Reports
   // surface always resolves names, not just for HR). If the lookup ever
-  // does fail — e.g. a future tenant carves a narrower role — the rows
-  // gracefully fall back to `displayRequestorRef(ref)`.
+  // does fail — e.g. a future tenant carves a narrower role — rowLabel
+  // commits to the explicit "Unknown requestor · <short ref>" fallback
+  // (issue #480).
   useEffect(() => {
     const refs = new Set<string>();
     if (fair.kind === 'ok') for (const row of fair.data.items) if (row.requestorRef) refs.add(row.requestorRef);
