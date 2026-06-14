@@ -90,7 +90,7 @@ function DayFilter({ value, onChange, dateBase, simulationActive, presetCount = 
             type="date"
             aria-label="Custom date"
             value={value}
-            onChange={e => onChange(e.target.value || toLocalDateString(new Date()))}
+            onChange={e => onChange(e.target.value || toLocalDateString(dateBase))}
             style={inputStyle}
           />
         </div>
