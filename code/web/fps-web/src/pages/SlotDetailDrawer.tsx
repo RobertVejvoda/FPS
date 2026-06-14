@@ -16,7 +16,7 @@ interface Props {
   slot: SlotMapDto;
   locationId: string;
   selectedDate: string | null;
-  selectedDayOccupant: { displayName: string | null; status: string } | undefined;
+  selectedDayOccupant: { displayName: string | null; status: string; requestorRef: string } | undefined;
   onClose: () => void;
 }
 
@@ -158,7 +158,7 @@ function SelectedDaySection({
   date, occupant, slotInactive, slotReserved,
 }: {
   date: string;
-  occupant: { displayName: string | null; status: string } | undefined;
+  occupant: { displayName: string | null; status: string; requestorRef: string } | undefined;
   slotInactive: boolean;
   slotReserved: boolean;
 }) {
@@ -168,7 +168,10 @@ function SelectedDaySection({
       {occupant ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
-            {occupant.displayName ?? 'Allocated'}
+            {/* Fall back to the short requestor ref when display-name lookup
+                misses or fails — matches the recent-allocation row behaviour
+                and avoids the bare "Allocated" label on seeded/stale refs. */}
+            {occupant.displayName ?? displayRequestorRef(occupant.requestorRef)}
           </span>
           <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(occupant.status) }}>
             {occupant.status}

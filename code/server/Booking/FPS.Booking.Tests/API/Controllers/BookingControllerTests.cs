@@ -540,6 +540,46 @@ public sealed class BookingControllerTests
     }
 
     [Fact]
+    public async Task GetHrSlotHistory_NegativePageSize_IsClampedToOne()
+    {
+        // Regression test for Codex review #2 on PR #473: a negative pageSize
+        // would have flowed through to Take(...) and 500'd the endpoint.
+        GetHrSlotHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrSlotHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrSlotHistoryQuery)q)
+            .ReturnsAsync(new HrSlotHistoryResult("M1-1", [], null));
+
+        var result = await controller.GetHrSlotHistory(
+            "M1-1", null, null, null, -5, null, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(captured);
+        Assert.Equal(1, captured.PageSize);
+    }
+
+    [Fact]
+    public async Task GetHrSlotHistory_ExcessivePageSize_IsClampedToMax()
+    {
+        // Same Codex finding from the other end: a caller passing pageSize=10000
+        // must not be able to drain the full tenant ops history in one response.
+        GetHrSlotHistoryQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetHrSlotHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<HrSlotHistoryResult>, CancellationToken>(
+                (q, _) => captured = (GetHrSlotHistoryQuery)q)
+            .ReturnsAsync(new HrSlotHistoryResult("M1-1", [], null));
+
+        var result = await controller.GetHrSlotHistory(
+            "M1-1", null, null, null, 10000, null, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(captured);
+        Assert.Equal(100, captured.PageSize);
+    }
+
+    [Fact]
     public async Task GetHrSlotHistory_PassesPagingToQuery()
     {
         GetHrSlotHistoryQuery? captured = null;

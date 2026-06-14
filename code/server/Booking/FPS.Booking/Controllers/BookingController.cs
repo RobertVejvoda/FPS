@@ -250,6 +250,12 @@ public sealed class BookingController : ControllerBase
         return Ok(result);
     }
 
+    // Slot-history page size is clamped at the controller boundary so a
+    // caller can't pass a negative size (Take throws and the endpoint 500s)
+    // or a huge value (leaks the full tenant ops history in one response).
+    // 100 matches the existing ParkingSlotController.GetSlotHistory cap.
+    private const int MaxSlotHistoryPageSize = 100;
+
     [HttpGet("operations/slots/{slotId}/history")]
     [Authorize(Roles = "hr_manager,admin")]
     [ProducesResponseType(typeof(HrSlotHistoryResult), StatusCodes.Status200OK)]
@@ -281,8 +287,12 @@ public sealed class BookingController : ControllerBase
             to = today;
         }
 
+        // Clamp before the query so the repository's Take(pageSize) never
+        // sees a negative or wildly large value (Codex review on #473).
+        var clampedPageSize = Math.Clamp(pageSize, 1, MaxSlotHistoryPageSize);
+
         var result = await mediator.Send(
-            new GetHrSlotHistoryQuery(currentUser.TenantId, locationId, slotId, from, to, pageSize, cursor),
+            new GetHrSlotHistoryQuery(currentUser.TenantId, locationId, slotId, from, to, clampedPageSize, cursor),
             cancellationToken);
 
         return Ok(result);

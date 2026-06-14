@@ -16,7 +16,10 @@ type LoadState =
   | { kind: 'ok'; slots: SlotMapDto[] }
   | { kind: 'error'; message: string };
 
-type AllocationMap = Record<string, { displayName: string | null; status: string }>;
+// Keep the requestorRef on each allocation so the slot detail drawer can
+// fall back to a short ref when the display-name lookup misses or fails —
+// matching the recent-allocation rows (Codex review #1 on PR #473).
+type AllocationMap = Record<string, { displayName: string | null; status: string; requestorRef: string }>;
 
 function todayIso(): string {
   const d = new Date();
@@ -56,7 +59,7 @@ export function ParkingMapPage() {
       const map: AllocationMap = {};
       for (const item of allocated) {
         if (item.allocatedSlotId) {
-          map[item.allocatedSlotId] = { displayName: null, status: item.status };
+          map[item.allocatedSlotId] = { displayName: null, status: item.status, requestorRef: item.requestorRef };
         }
       }
       const refs = [...new Set(allocated.map(i => i.requestorRef).filter(Boolean))];
