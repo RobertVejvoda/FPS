@@ -33,14 +33,14 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
         return Task.CompletedTask;
     }
 
-    public Task ApplyFairnessAsync(string tenantId, string requestorHash, string date, string locationId,
+    public Task ApplyFairnessAsync(string tenantId, string requestorRef, string date, string locationId,
         Action<FairnessRecord> apply, CancellationToken cancellationToken = default)
     {
-        var key = $"{tenantId}:{requestorHash}:{date}:{locationId}";
+        var key = $"{tenantId}:{requestorRef}:{date}:{locationId}";
         var record = _fairness.GetOrAdd(key, _ => new FairnessRecord
         {
             TenantId = tenantId,
-            RequestorHash = requestorHash,
+            RequestorRef = requestorRef,
             Date = date,
             LocationId = locationId
         });
@@ -71,7 +71,7 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
             .Where(f => request.DateFrom == null || string.Compare(f.Date, request.DateFrom, StringComparison.Ordinal) >= 0)
             .Where(f => request.DateTo == null || string.Compare(f.Date, request.DateTo, StringComparison.Ordinal) <= 0)
             .Where(f => request.LocationId == null || f.LocationId == request.LocationId)
-            .GroupBy(f => f.RequestorHash)
+            .GroupBy(f => f.RequestorRef)
             .Select(g => FairnessRecord.Aggregate(tenantId, g.Key, g.Sum(f => f.RequestCount), g.Sum(f => f.AllocationCount), g.Sum(f => f.RejectionCount)))
             .OrderByDescending(f => f.AllocationRate)
             .ToList();
@@ -79,10 +79,10 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
         return Task.FromResult<IReadOnlyList<FairnessRecord>>(results);
     }
 
-    public Task<int> AnonymiseFairnessByActorHashAsync(string tenantId, string actorHash, CancellationToken cancellationToken = default)
+    public Task<int> AnonymiseFairnessByRequestorRefAsync(string tenantId, string requestorRef, CancellationToken cancellationToken = default)
     {
         var keys = _fairness
-            .Where(kv => kv.Value.TenantId == tenantId && kv.Value.RequestorHash == actorHash)
+            .Where(kv => kv.Value.TenantId == tenantId && kv.Value.RequestorRef == requestorRef)
             .Select(kv => kv.Key)
             .ToList();
         foreach (var key in keys)

@@ -30,7 +30,10 @@ export interface SummaryResponse {
 }
 
 export interface FairnessEntry {
-  requestorHash: string;
+  // Raw requestor reference — the same id Profile uses as its user key.
+  // Pass this to /profile/hr/display-names to resolve a display name; fall
+  // back to displayRequestorRef(...) when no name is available (issue #474).
+  requestorRef: string;
   requestCount: number;
   allocationCount: number;
   allocationRate: number;
@@ -66,7 +69,7 @@ export interface ReasonCodeResponse {
 }
 
 export interface EmployeeImpactEntry {
-  requestorHash: string;
+  requestorRef: string;
   totalRequests: number;
   totalRejections: number;
   totalAllocations: number;

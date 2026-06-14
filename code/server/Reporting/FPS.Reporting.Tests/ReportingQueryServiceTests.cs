@@ -75,15 +75,19 @@ public sealed class ReportingQueryServiceTests
     }
 
     [Fact]
-    public async Task GetFairness_ReturnsHashedReferences_NotRawIds()
+    public async Task GetFairness_ReturnsResolvableRequestorRef_NotHash()
     {
+        // Issue #474: Fairness rows must carry the raw requestor reference so
+        // HR can resolve display names via /profile/hr/display-names. Asserting
+        // the explicit raw id roundtrip here pins the contract — a future hash
+        // re-introduction would fail this test loudly.
         await handler.HandleAsync(Envelope("e1", "booking.requestSubmitted", "t1", "raw-user-id", "loc-1", "2026-06-01", "09:00-17:00"));
 
         var result = await service.GetFairnessAsync(new(), "t1");
 
         Assert.Single(result.Items);
-        Assert.DoesNotContain(result.Items, f => f.RequestorHash == "raw-user-id");
-        Assert.Equal(BookingEventReportingHandler.Hash("raw-user-id"), result.Items[0].RequestorHash);
+        Assert.Equal("raw-user-id", result.Items[0].RequestorRef);
+        Assert.NotEqual(BookingEventReportingHandler.Hash("raw-user-id"), result.Items[0].RequestorRef);
     }
 
     [Fact]

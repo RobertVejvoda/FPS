@@ -98,9 +98,9 @@ public sealed class ReportingControllerTests
     [Fact]
     public async Task GetFairness_ReturnsTenantScopedResults()
     {
-        await repository.ApplyFairnessAsync("tenant-1", "hash-u1", "2026-06-01", "loc-1",
+        await repository.ApplyFairnessAsync("tenant-1", "user-1", "2026-06-01", "loc-1",
             f => f.IncrementRequest());
-        await repository.ApplyFairnessAsync("tenant-2", "hash-u2", "2026-06-01", "loc-1",
+        await repository.ApplyFairnessAsync("tenant-2", "user-2", "2026-06-01", "loc-1",
             f => f.IncrementRequest());
 
         var result = await controller.GetFairness(new FairnessQueryRequest(), CancellationToken.None);
@@ -108,6 +108,6 @@ public sealed class ReportingControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<FairnessResponse>(ok.Value);
         Assert.Single(response.Items);
-        Assert.Equal("hash-u1", response.Items[0].RequestorHash);
+        Assert.Equal("user-1", response.Items[0].RequestorRef);
     }
 }

@@ -10,6 +10,7 @@ import {
   type OperationalExceptionsResponse,
 } from '../api/reporting';
 import { displayLocation, displayRequestorRef } from '../displayLabels';
+import { fetchHrDisplayNames } from '../api/profile';
 
 type DashState = { kind: 'loading' } | { kind: 'ok'; data: DashboardResponse } | { kind: 'forbidden' } | { kind: 'error'; message: string };
 type SumState = { kind: 'loading' } | { kind: 'ok'; data: SummaryResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
@@ -31,6 +32,12 @@ export function ReportingPage() {
   const [ops, setOps] = useState<OpsState>({ kind: 'loading' });
   const [csvBusy, setCsvBusy] = useState(false);
   const [outcomesBusy, setOutcomesBusy] = useState(false);
+  // Display-name lookup for Fairness + Employee Impact rows (issue #474).
+  // Single fetch keyed off the union of refs in both tables; the rows then
+  // render `displayName ?? displayRequestorRef(ref)`, so HR sees employee
+  // names instead of `Requestor <hash-prefix>` — and the short ref remains
+  // available as a fallback when the lookup misses.
+  const [displayNames, setDisplayNames] = useState<Record<string, string | null>>({});
 
   const load = useCallback(() => {
     setDash({ kind: 'loading' });
@@ -93,6 +100,24 @@ export function ReportingPage() {
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Re-run the display-name lookup whenever Fairness or Employee Impact data
+  // changes. Both endpoints are HR/admin-gated, and the lookup endpoint itself
+  // requires hr_manager/admin too — employees with the report-viewer role would
+  // get 403 here and the page silently falls back to short refs, which is
+  // the documented behaviour in #474.
+  useEffect(() => {
+    const refs = new Set<string>();
+    if (fair.kind === 'ok') for (const row of fair.data.items) if (row.requestorRef) refs.add(row.requestorRef);
+    if (empImpact.kind === 'ok') for (const row of empImpact.data.items) if (row.requestorRef) refs.add(row.requestorRef);
+    if (refs.size === 0) return;
+    let cancelled = false;
+    void fetchHrDisplayNames({ apiBaseUrl, bearerToken }, [...refs]).then(r => {
+      if (cancelled || r.kind !== 'ok') return;
+      setDisplayNames(prev => ({ ...prev, ...r.data.names }));
+    });
+    return () => { cancelled = true; };
+  }, [fair, empImpact, apiBaseUrl, bearerToken]);
 
   async function triggerDownload(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
@@ -281,8 +306,8 @@ export function ReportingPage() {
               <thead><tr>{['Requestor', 'Requests', 'Allocations', 'Rate'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {fair.data.items.map(row => (
-                  <tr key={row.requestorHash}>
-                    <td style={td}>{displayRequestorRef(row.requestorHash)}</td>
+                  <tr key={row.requestorRef}>
+                    <td style={td}>{displayNames[row.requestorRef] ?? displayRequestorRef(row.requestorRef)}</td>
                     <td style={td}>{row.requestCount}</td>
                     <td style={td}>{row.allocationCount}</td>
                     <td style={td}>{(row.allocationRate * 100).toFixed(1)}%</td>
@@ -306,8 +331,8 @@ export function ReportingPage() {
               <thead><tr>{['Requestor', 'Total Requests', 'Rejections', 'Allocations'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {empImpact.data.items.map(row => (
-                  <tr key={row.requestorHash}>
-                    <td style={td}>{displayRequestorRef(row.requestorHash)}</td>
+                  <tr key={row.requestorRef}>
+                    <td style={td}>{displayNames[row.requestorRef] ?? displayRequestorRef(row.requestorRef)}</td>
                     <td style={td}>{row.totalRequests}</td>
                     <td style={{ ...td, color: '#dc2626', fontWeight: 600 }}>{row.totalRejections}</td>
                     <td style={td}>{row.totalAllocations}</td>

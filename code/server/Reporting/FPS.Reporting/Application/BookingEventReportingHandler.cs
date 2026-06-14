@@ -34,19 +34,19 @@ public sealed class BookingEventReportingHandler(IReportingRepository repository
             case "booking.requestSubmitted":
                 await repository.ApplyMetricsAsync(tenantId, date, locationId, timeSlot, m => m.IncrementDemand(), cancellationToken);
                 if (!string.IsNullOrEmpty(payload.RequestorId))
-                    await repository.ApplyFairnessAsync(tenantId, Hash(payload.RequestorId), date, locationId, f => f.IncrementRequest(), cancellationToken);
+                    await repository.ApplyFairnessAsync(tenantId, payload.RequestorId, date, locationId, f => f.IncrementRequest(), cancellationToken);
                 break;
 
             case "booking.slotAllocated":
                 await repository.ApplyMetricsAsync(tenantId, date, locationId, timeSlot, m => m.IncrementAllocation(), cancellationToken);
                 if (!string.IsNullOrEmpty(payload.RequestorId))
-                    await repository.ApplyFairnessAsync(tenantId, Hash(payload.RequestorId), date, locationId, f => f.IncrementAllocation(), cancellationToken);
+                    await repository.ApplyFairnessAsync(tenantId, payload.RequestorId, date, locationId, f => f.IncrementAllocation(), cancellationToken);
                 break;
 
             case "booking.requestRejected":
                 await repository.ApplyMetricsAsync(tenantId, date, locationId, timeSlot, m => m.IncrementRejection(payload.ReasonCode), cancellationToken);
                 if (!string.IsNullOrEmpty(payload.RequestorId))
-                    await repository.ApplyFairnessAsync(tenantId, Hash(payload.RequestorId), date, locationId, f => f.IncrementRejection(), cancellationToken);
+                    await repository.ApplyFairnessAsync(tenantId, payload.RequestorId, date, locationId, f => f.IncrementRejection(), cancellationToken);
                 break;
 
             case "booking.requestCancelled":
