@@ -1,0 +1,32 @@
+apiVersion: 1
+
+# Jaeger trace datasource for Grafana Drilldown / Traces.
+# Resolves the "datasource not found" error when opening the Drilldown
+# Traces explore view — the local stack runs Jaeger all-in-one but its
+# query API was not previously wired into Grafana provisioning.
+datasources:
+  - name: Jaeger
+    uid: fps-jaeger
+    type: jaeger
+    access: proxy
+    # Container DNS on the shared `web` Docker network.
+    url: http://jaeger:16686
+    isDefault: false
+    editable: false
+    jsonData:
+      # Link traces back to Loki logs by TraceId so the user can jump from
+      # a span to the surrounding application logs in one click.
+      tracesToLogsV2:
+        datasourceUid: fps-loki
+        spanStartTimeShift: -1m
+        spanEndTimeShift: 1m
+        tags:
+          - key: service.name
+            value: service
+        filterByTraceID: true
+        customQuery: true
+        # `$${__tags}` expands to the full label matcher string Grafana built
+        # from the tag mapping (e.g. `service="identity"`), so it must sit
+        # inside the LogQL stream selector braces directly, NOT inside
+        # `service="…"` (which would double-wrap and break the selector).
+        query: '{$${__tags}} |= "TraceId=$${__trace.traceId}"'
