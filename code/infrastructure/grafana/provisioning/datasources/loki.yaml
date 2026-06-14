@@ -8,3 +8,16 @@ datasources:
     url: http://loki:3100
     isDefault: false
     editable: false
+    jsonData:
+      # When Loki log lines mention TraceId=<hex> (the shape FPS.Request emits
+      # under the OTel span context), expose a click-through link that opens
+      # the trace in the provisioned Jaeger datasource — powers the log →
+      # trace half of Grafana Drilldown.
+      derivedFields:
+        - name: TraceId
+          # Match 16/32-hex W3C trace ids only, so unrelated hex strings
+          # (request ids, etc.) don't get a stray link.
+          matcherRegex: 'TraceId=([0-9a-f]{16,32})'
+          url: '$${__value.raw}'
+          datasourceUid: fps-jaeger
+          urlDisplayLabel: 'View trace'
