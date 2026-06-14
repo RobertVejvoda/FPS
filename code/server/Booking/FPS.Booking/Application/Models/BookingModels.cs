@@ -15,10 +15,20 @@ public class BookingRequestDto
     public string? RejectionCode { get; set; }
     public string? RejectionReason { get; set; }
     public string? CancellationReason { get; set; }
-    public Guid? AllocatedSlotId { get; set; }
+    // Allocated slot reference — stored as a string so multi-unit motorcycle
+    // ids like "M1-1" / "M1-2" round-trip intact. Older Dapr state with GUID
+    // slot ids deserialises as a string transparently.
+    public string? AllocatedSlotId { get; set; }
     public DateTime LastStatusChangedAt { get; set; }
     public DateTime? UsageConfirmedAt { get; set; }
     public string? ConfirmationSource { get; set; }
     public string? ConfirmationSourceEventId { get; set; }
     public string? ProfileSnapshotVersion { get; set; }
+    // Vehicle facts captured at submission time. RunAllocationActivity restores
+    // BookingRequest with these so the Draw can match motorcycle capacity and
+    // charger/accessibility correctly instead of defaulting every pending
+    // request to Sedan.
+    public string? VehicleType { get; set; }
+    public bool VehicleIsElectric { get; set; }
+    public bool RequiresAccessibleSpot { get; set; }
 }

@@ -31,14 +31,24 @@ public sealed class RunAllocationActivity(
         var requests = input.PendingRequests.Select(d => BookingRequest.Restore(
             BookingRequestId.FromGuid(d.RequestId),
             UserId.FromString(d.RequestedBy),
-            VehicleInformation.Create("UNKNOWN", VehicleType.Sedan, false, false, false),
+            VehicleInformation.Create(
+                "UNKNOWN",
+                // Restore the persisted VehicleType so motorcycles match motorcycle-only
+                // capacity instead of being treated as Sedan. Older dtos without a
+                // VehicleType default to Sedan for backward compatibility.
+                Enum.TryParse<VehicleType>(d.VehicleType, ignoreCase: true, out var vt)
+                    ? vt
+                    : VehicleType.Sedan,
+                d.VehicleIsElectric,
+                d.RequiresAccessibleSpot,
+                isCompanyCar: false),
             TimeSlot.Create(d.PlannedArrivalTime, d.PlannedDepartureTime),
             BookingRequestStatus.Pending,
             d.RequestedAt)).ToList();
 
         var slots = input.AvailableSlots.Select(s => AvailableSlot.Create(
             ParkingSlotId.FromString(s.SlotId),
-            s.HasCharger, s.IsAccessible, s.IsCompanyCarReserved)).ToList();
+            s.HasCharger, s.IsAccessible, s.IsCompanyCarReserved, s.IsMotorcycleCapacity)).ToList();
 
         var metricsMap = input.Metrics.ToDictionary(
             m => m.RequestorId,

@@ -12,15 +12,21 @@ public sealed class CancelBookingHandlerTests
     private readonly Mock<IDrawRepository> drawRepository = new();
     private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly Mock<IBookingEventPublisher> eventPublisher = new();
+    private readonly Mock<IAvailableSlotService> slotService = new();
     private readonly CancelBookingHandler handler;
 
     private static readonly TenantPolicy DefaultPolicy = new(500, new TimeOnly(18, 0), "UTC", true, 10, 1, 2);
 
     public CancelBookingHandlerTests()
     {
+        slotService.Setup(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot>());
+
         handler = new CancelBookingHandler(
             repository.Object, queryRepository.Object, penaltyRepository.Object,
-            drawRepository.Object, policyService.Object, eventPublisher.Object, new DrawService(), new SystemClock());
+            drawRepository.Object, policyService.Object, eventPublisher.Object,
+            new DrawService(), slotService.Object, new SystemClock());
 
         policyService.Setup(s => s.GetEffectivePolicyAsync(
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
@@ -43,7 +49,7 @@ public sealed class CancelBookingHandlerTests
             .ReturnsAsync(new List<BookingRequestDto>());
 
         repository.Setup(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>())).Returns(eventPublisher.Object);
@@ -135,7 +141,7 @@ public sealed class CancelBookingHandlerTests
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
         repository.Verify(r => r.UpdateBookingRequestStatusAsync(
-            It.IsAny<string>(), It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<Guid>(), "Allocated", It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -159,6 +165,87 @@ public sealed class CancelBookingHandlerTests
         eventPublisher.Verify(p => p.PublishAsync(
             It.IsAny<FPS.Booking.Domain.Events.BookingRequestReallocatedEvent>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── CAP-468 reallocation honours motorcycle-only + persists slot id ───────
+
+    [Fact]
+    public async Task Handle_AllocatedMotorcycleUnit_Reallocated_PersistsSlotId()
+    {
+        // Regression for Codex finding on PR #469 review #2: the reallocated
+        // winner used to be saved with AllocatedSlotId = null because the
+        // CancelBookingHandler called UpdateBookingRequestStatusAsync without
+        // passing the released slot id.
+        var dto = MotorcycleAllocatedDto("M1-1");
+        SetupRequest(dto);
+        var motorcyclePending = MotorcyclePendingDto();
+        queryRepository.Setup(r => r.GetPendingRequestsForDrawAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([motorcyclePending]);
+        slotService.Setup(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot>
+            {
+                AvailableSlot.Create(ParkingSlotId.FromString("M1-1"), isMotorcycleCapacity: true)
+            });
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        repository.Verify(r => r.UpdateBookingRequestStatusAsync(
+            It.IsAny<string>(), motorcyclePending.RequestId, "Allocated",
+            It.IsAny<string?>(), It.IsAny<string?>(),
+            "M1-1",  // ← the assertion: motorcycle unit id is persisted onto the winner
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AllocatedMotorcycleUnit_Reallocated_DoesNotAssignSedan()
+    {
+        // The released slot must keep its IsMotorcycleCapacity flag so a sedan
+        // candidate can't win a motorcycle-only unit. Setup: cancel a motorcycle
+        // allocated to "M1-1"; pending list has [sedan, motorcycle]; slot service
+        // returns the motorcycle-only unit. Only the motorcycle should win.
+        var dto = MotorcycleAllocatedDto("M1-1");
+        SetupRequest(dto);
+        var pendingSedan = PendingDto();
+        var pendingMotorcycle = MotorcyclePendingDto();
+        queryRepository.Setup(r => r.GetPendingRequestsForDrawAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([pendingSedan, pendingMotorcycle]);
+        slotService.Setup(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot>
+            {
+                AvailableSlot.Create(ParkingSlotId.FromString("M1-1"), isMotorcycleCapacity: true)
+            });
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        // Sedan must not be updated to Allocated for this motorcycle-only unit.
+        repository.Verify(r => r.UpdateBookingRequestStatusAsync(
+            It.IsAny<string>(), pendingSedan.RequestId, "Allocated",
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Motorcycle should win.
+        repository.Verify(r => r.UpdateBookingRequestStatusAsync(
+            It.IsAny<string>(), pendingMotorcycle.RequestId, "Allocated",
+            It.IsAny<string?>(), It.IsAny<string?>(), "M1-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static BookingRequestDto MotorcycleAllocatedDto(string slotId)
+    {
+        var dto = DtoWithStatus("Allocated");
+        dto.AllocatedSlotId = slotId;
+        dto.LocationId = "loc-1";
+        dto.VehicleType = "Motorcycle";
+        return dto;
+    }
+
+    private static BookingRequestDto MotorcyclePendingDto()
+    {
+        var dto = DtoWithStatus("Pending");
+        dto.VehicleType = "Motorcycle";
+        dto.LocationId = "loc-1";
+        return dto;
     }
 
     // ── Error paths ───────────────────────────────────────────────────────────
@@ -238,7 +325,7 @@ public sealed class CancelBookingHandlerTests
     private static BookingRequestDto AllocatedDto()
     {
         var dto = DtoWithStatus("Allocated");
-        dto.AllocatedSlotId = Guid.NewGuid();
+        dto.AllocatedSlotId = Guid.NewGuid().ToString();
         dto.LocationId = "loc-1";
         return dto;
     }

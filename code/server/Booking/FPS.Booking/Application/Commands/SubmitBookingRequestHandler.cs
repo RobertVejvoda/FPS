@@ -121,7 +121,14 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                     cmd.TenantId, cmd.LocationId ?? cmd.FacilityId, DateOnly.FromDateTime(requestedPeriod.Start),
                     requestedPeriod, cancellationToken);
 
-                sameDaySlot = slots.FirstOrDefault(s => s.CanAccommodate(vehicle));
+                // Apply the same motorcycle preference rule as the Draw: a motorcycle
+                // request takes a motorcycle-specific unit before falling back to an
+                // ordinary slot. For non-motorcycle vehicles, motorcycle units are
+                // already filtered out by CanAccommodate.
+                sameDaySlot = slots
+                    .Where(s => s.CanAccommodate(vehicle))
+                    .OrderByDescending(s => s.IsMotorcycleCapacity && vehicle.Type == VehicleType.Motorcycle)
+                    .FirstOrDefault();
             }
 
             context = SubmissionContext.CreateSameDay(
@@ -156,7 +163,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         }
 
         await repository.CreateBookingRequestAsync(
-            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, sameDaySlot));
+            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, vehicle, sameDaySlot));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
         await queryRepository.AddToTenantOpsIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
         if (request.Status == BookingRequestStatus.Pending)
@@ -194,7 +201,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     }
 
     private static BookingRequestDto ToDto(BookingRequest request, string tenantId, string facilityId,
-        string? locationId, string snapshotVersion, AvailableSlot? slot = null)
+        string? locationId, string snapshotVersion, VehicleInformation vehicle, AvailableSlot? slot = null)
         => new()
         {
             RequestId = request.Id.Value,
@@ -208,8 +215,10 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             RequestedAt = request.SubmittedAt,
             Status = request.Status.ToString(),
             ProfileSnapshotVersion = snapshotVersion,
-            AllocatedSlotId = slot?.SlotId.Value != null
-                ? (Guid.TryParse(slot.SlotId.Value, out var slotGuid) ? slotGuid : (Guid?)null)
-                : null
+            VehicleType = vehicle.Type.ToString(),
+            VehicleIsElectric = vehicle.IsElectric,
+            RequiresAccessibleSpot = vehicle.RequiresAccessibleSpot,
+            // Slot id is a free-form string (e.g. "M1-1" for motorcycle units), not a Guid.
+            AllocatedSlotId = slot?.SlotId.Value
         };
 }

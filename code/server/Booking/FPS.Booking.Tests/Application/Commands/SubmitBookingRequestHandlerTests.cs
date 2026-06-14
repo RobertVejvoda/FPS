@@ -334,6 +334,131 @@ public sealed class SubmitBookingRequestHandlerTests
             It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // ── CAP-468 motorcycle capacity ───────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_SameDay_Motorcycle_AllocatedToNormalSlotWhenNoMotorcycleCapacity()
+    {
+        // No motorcycle-specific capacity — same-day must still allocate the motorcycle
+        // to an ordinary slot (it consumes the whole slot as one vehicle).
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MotorcycleProfile);
+
+        var normal = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
+        slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { normal });
+
+        var result = await handler.Handle(MotorcycleSameDayCommand(), CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_SameDay_Motorcycle_PrefersMotorcycleCapacityOverNormalSlot()
+    {
+        // Even when the normal slot is returned first, the handler picks the
+        // motorcycle-specific unit for a motorcycle request. Also asserts the
+        // string motorcycle-unit id round-trips into BookingRequestDto.AllocatedSlotId —
+        // this was a Codex review finding on PR #469 (Guid.TryParse silently dropped
+        // non-Guid slot ids).
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MotorcycleProfile);
+
+        BookingRequestDto? saved = null;
+        repository
+            .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(dto => saved = dto)
+            .Returns(Task.CompletedTask);
+
+        var normal = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
+        var mcUnit = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("M1-1"), isMotorcycleCapacity: true);
+        slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { normal, mcUnit });
+
+        var result = await handler.Handle(MotorcycleSameDayCommand(), CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        Assert.NotNull(saved);
+        Assert.Equal("Motorcycle", saved!.VehicleType);
+        Assert.Equal("M1-1", saved.AllocatedSlotId);
+    }
+
+    [Fact]
+    public async Task Handle_SameDay_Sedan_NotAllocatedToMotorcycleOnlyCapacity()
+    {
+        // The motorcycle-only unit must reject a sedan request — the sedan should
+        // be Pending (no compatible same-day slot), not Allocated.
+        var mcUnit = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("M1-1"), isMotorcycleCapacity: true);
+        slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { mcUnit });
+
+        var result = await handler.Handle(SameDayCommand(), CancellationToken.None);
+
+        // Default sedan profile + motorcycle-only capacity = no same-day allocation.
+        Assert.NotEqual("Allocated", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_VehicleTypePersisted_IntoBookingRequestDto()
+    {
+        // The Draw restores BookingRequest from BookingRequestDto. The dto must
+        // carry the original VehicleType so motorcycles match motorcycle capacity
+        // during the Draw instead of being treated as Sedan.
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MotorcycleProfile);
+
+        BookingRequestDto? saved = null;
+        repository
+            .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(dto => saved = dto)
+            .Returns(Task.CompletedTask);
+
+        await handler.Handle(MotorcycleFutureCommand(), CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.Equal("Motorcycle", saved!.VehicleType);
+    }
+
+    private static readonly ProfileSnapshot MotorcycleProfile = new(
+        TenantId: "tenant-1",
+        UserId: "user-1",
+        ProfileStatus: "Active",
+        ParkingEligible: true,
+        HasCompanyCar: false,
+        AccessibilityEligible: false,
+        ReservedSpaceEligible: false,
+        Vehicles: [new VehicleSnapshot("v-1", "MC-001", "Motorcycle", false, true)],
+        SnapshotVersion: "v1");
+
+    private static SubmitBookingRequestCommand MotorcycleSameDayCommand() => new(
+        TenantId: "tenant-1",
+        RequestorId: Guid.NewGuid().ToString(),
+        FacilityId: Guid.NewGuid().ToString(),
+        LocationId: null,
+        LicensePlate: "MC-001",
+        VehicleType: "Motorcycle",
+        IsElectric: false,
+        RequiresAccessibleSpot: false,
+        IsCompanyCar: false,
+        PlannedArrivalTime: DateTime.UtcNow.Date.AddHours(9),
+        PlannedDepartureTime: DateTime.UtcNow.Date.AddHours(17));
+
+    private static SubmitBookingRequestCommand MotorcycleFutureCommand() => new(
+        TenantId: "tenant-1",
+        RequestorId: Guid.NewGuid().ToString(),
+        FacilityId: Guid.NewGuid().ToString(),
+        LocationId: null,
+        LicensePlate: "MC-001",
+        VehicleType: "Motorcycle",
+        IsElectric: false,
+        RequiresAccessibleSpot: false,
+        IsCompanyCar: false,
+        PlannedArrivalTime: DateTime.UtcNow.AddDays(1).Date.AddHours(9),
+        PlannedDepartureTime: DateTime.UtcNow.AddDays(1).Date.AddHours(17));
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequestCommand FutureCommand() => new(

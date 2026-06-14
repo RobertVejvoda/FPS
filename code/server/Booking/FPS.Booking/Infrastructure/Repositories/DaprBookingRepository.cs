@@ -26,7 +26,8 @@ public sealed class DaprBookingRepository : IBookingRepository
         => await daprClient.GetStateAsync<BookingRequestDto>(BookingStore, RequestKey(tenantId, requestId));
 
     public async Task UpdateBookingRequestStatusAsync(
-        string tenantId, Guid requestId, string status, string? reason = null, string? rejectionCode = null, CancellationToken cancellationToken = default)
+        string tenantId, Guid requestId, string status, string? reason = null, string? rejectionCode = null,
+        string? allocatedSlotId = null, CancellationToken cancellationToken = default)
     {
         var dto = await GetBookingRequestAsync(tenantId, requestId);
         if (dto is null) return;
@@ -36,6 +37,7 @@ public sealed class DaprBookingRepository : IBookingRepository
 
         if (status == "Cancelled") dto.CancellationReason = reason;
         else if (status == "Rejected") { dto.RejectionReason = reason; dto.RejectionCode = rejectionCode; }
+        else if (status == "Allocated" && allocatedSlotId is not null) dto.AllocatedSlotId = allocatedSlotId;
 
         await daprClient.SaveStateAsync(BookingStore, RequestKey(tenantId, requestId), dto, cancellationToken: cancellationToken);
     }

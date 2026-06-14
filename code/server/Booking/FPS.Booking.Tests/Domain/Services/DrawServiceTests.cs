@@ -262,6 +262,110 @@ public sealed class DrawServiceTests
         Assert.NotEmpty(result.AlgorithmVersion);
     }
 
+    // ── Motorcycle capacity (CAP-468) ─────────────────────────────────────────
+
+    [Fact]
+    public void RunDraw_Motorcycle_NoMotorcycleSlot_AllocatesToNormalSlot()
+    {
+        // No motorcycle-specific capacity exists — the motorcycle takes a normal slot.
+        // It consumes the whole slot as one vehicle.
+        var motorcycle = MakeRequest(vehicleType: VehicleType.Motorcycle);
+        var result = Run([motorcycle], [Slot("A1")]);
+
+        Assert.Equal(DrawOutcome.Allocated, Decision(result, motorcycle.Id).Outcome);
+    }
+
+    [Fact]
+    public void RunDraw_Motorcycle_PrefersMotorcycleSlot_OverNormalSlot()
+    {
+        // Preference rule: motorcycle-specific capacity should be consumed first.
+        var motorcycle = MakeRequest(vehicleType: VehicleType.Motorcycle);
+        var normal = AvailableSlot.Create(Slot("A1"));
+        var mcSlot = AvailableSlot.Create(Slot("M1"), isMotorcycleCapacity: true);
+
+        // Order normal first to prove the algorithm reorders to motorcycle-first.
+        var result = Run([motorcycle], slotObjects: [normal, mcSlot]);
+
+        var decision = Decision(result, motorcycle.Id);
+        Assert.Equal(DrawOutcome.Allocated, decision.Outcome);
+        Assert.Equal("M1", decision.SlotId!.Value);
+    }
+
+    [Fact]
+    public void RunDraw_Sedan_DoesNotConsumeMotorcycleSlot()
+    {
+        // Sedan can't use a motorcycle-only slot — it should be waitlisted when that's all there is.
+        var sedan = MakeRequest(vehicleType: VehicleType.Sedan);
+        var mcSlot = AvailableSlot.Create(Slot("M1"), isMotorcycleCapacity: true);
+
+        var result = Run([sedan], slotObjects: [mcSlot]);
+
+        Assert.Equal(DrawOutcome.Waitlisted, Decision(result, sedan.Id).Outcome);
+    }
+
+    [Fact]
+    public void RunDraw_FourMotorcyclesOnMultiUnitArea_AllAllocatedSeparately()
+    {
+        // The capacity loader expands a 4-unit motorcycle area into four AvailableSlot
+        // instances with suffixed IDs. The Draw treats each unit as a normal allocatable
+        // slot — four motorcycles fill the area, a fifth is waitlisted.
+        var motorcycles = Enumerable.Range(0, 5)
+            .Select(_ => MakeRequest(vehicleType: VehicleType.Motorcycle))
+            .ToArray();
+        var unitSlots = Enumerable.Range(1, 4)
+            .Select(unit => AvailableSlot.Create(Slot($"M1-{unit}"), isMotorcycleCapacity: true))
+            .ToList();
+
+        var result = Run(motorcycles, slotObjects: unitSlots);
+
+        Assert.Equal(4, result.Decisions.Count(d => d.Outcome == DrawOutcome.Allocated));
+        Assert.Equal(1, result.Decisions.Count(d => d.Outcome == DrawOutcome.Waitlisted));
+    }
+
+    [Fact]
+    public void RunDraw_MotorcycleOverflow_FallsBackToNormalSlot()
+    {
+        // 3 motorcycles, motorcycle-area has only 2 units → the overflow motorcycle
+        // takes a normal slot (motorcycles can use ordinary slots).
+        var motorcycles = Enumerable.Range(0, 3)
+            .Select(_ => MakeRequest(vehicleType: VehicleType.Motorcycle))
+            .ToArray();
+        var mcUnits = new[]
+        {
+            AvailableSlot.Create(Slot("M1-1"), isMotorcycleCapacity: true),
+            AvailableSlot.Create(Slot("M1-2"), isMotorcycleCapacity: true),
+        };
+        var normal = AvailableSlot.Create(Slot("A1"));
+
+        var result = Run(motorcycles, slotObjects: [.. mcUnits, normal]);
+
+        Assert.Equal(3, result.Decisions.Count(d => d.Outcome == DrawOutcome.Allocated));
+        var allocatedSlots = result.Decisions
+            .Where(d => d.Outcome == DrawOutcome.Allocated)
+            .Select(d => d.SlotId!.Value)
+            .ToHashSet();
+        Assert.Contains("M1-1", allocatedSlots);
+        Assert.Contains("M1-2", allocatedSlots);
+        Assert.Contains("A1", allocatedSlots);
+    }
+
+    [Fact]
+    public void RunDraw_MotorcyclesAndCars_CarsDoNotConsumeMotorcycleUnits()
+    {
+        // 1 motorcycle, 1 sedan; one motorcycle-unit and one normal slot.
+        // Motorcycle takes the motorcycle unit, sedan takes the normal slot.
+        // The motorcycle unit must not be allocated to the sedan.
+        var motorcycle = MakeRequest(vehicleType: VehicleType.Motorcycle);
+        var sedan = MakeRequest(vehicleType: VehicleType.Sedan);
+        var mcUnit = AvailableSlot.Create(Slot("M1-1"), isMotorcycleCapacity: true);
+        var normal = AvailableSlot.Create(Slot("A1"));
+
+        var result = Run([motorcycle, sedan], slotObjects: [mcUnit, normal]);
+
+        Assert.Equal("M1-1", Decision(result, motorcycle.Id).SlotId!.Value);
+        Assert.Equal("A1", Decision(result, sedan.Id).SlotId!.Value);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private DrawResult Run(
@@ -283,12 +387,13 @@ public sealed class DrawServiceTests
         UserId? userId = null,
         bool isCompanyCar = false,
         bool isElectric = false,
-        bool requiresAccessible = false)
+        bool requiresAccessible = false,
+        VehicleType vehicleType = VehicleType.Sedan)
     {
         var period = TimeSlot.Create(drawDate.AddHours(1), drawDate.AddHours(9));
         var vehicle = VehicleInformation.Create(
             "X" + Guid.NewGuid().ToString("N")[..6],
-            VehicleType.Sedan, isElectric, requiresAccessible, isCompanyCar);
+            vehicleType, isElectric, requiresAccessible, isCompanyCar);
         return BookingRequest.Submit(userId ?? UserId.New(), period, vehicle,
             SubmissionContext.Create(500, 0, false, false), publisher.Object);
     }

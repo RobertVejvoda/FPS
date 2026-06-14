@@ -37,8 +37,13 @@ public sealed class PersistDecisionsActivity(
             switch (decision.Outcome)
             {
                 case "Allocated":
+                    // Persist the allocated slot id back to the booking — without this
+                    // HR/employee/map projections can't show which motorcycle unit (or
+                    // ordinary slot) was assigned, and cancel/reallocate can't release
+                    // capacity by reference.
                     await bookingRepository.UpdateBookingRequestStatusAsync(
-                        input.TenantId, requestGuid, "Allocated");
+                        input.TenantId, requestGuid, "Allocated",
+                        allocatedSlotId: decision.SlotId);
                     await metricsService.IncrementRecentAllocationAsync(
                         input.TenantId, decision.RequestorId, date);
                     break;

@@ -92,6 +92,117 @@ public sealed class ConfiguredAvailableSlotServiceTests
         Assert.False(slots[1].HasCharger);
     }
 
+    // ── Motorcycle multi-unit expansion (CAP-468) ─────────────────────────────
+
+    [Fact]
+    public async Task GetAvailableSlots_MotorcycleSlot_DefaultsToFourUnits()
+    {
+        // A motorcycle-marked slot with no explicit unit count expands to 4 logical
+        // AvailableSlot instances with the documented "{slotId}-{n}" id suffix.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:0:SlotId"] = "M1",
+                ["AvailableSlots:tenant-1:loc-1:0:IsMotorcycleCapacity"] = "true",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        Assert.Equal(4, slots.Count);
+        Assert.All(slots, s => Assert.True(s.IsMotorcycleCapacity));
+        Assert.Equal(["M1-1", "M1-2", "M1-3", "M1-4"], slots.Select(s => s.SlotId.Value));
+    }
+
+    [Fact]
+    public async Task GetAvailableSlots_MotorcycleSlot_RespectsConfiguredUnitCount()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:0:SlotId"] = "M1",
+                ["AvailableSlots:tenant-1:loc-1:0:IsMotorcycleCapacity"] = "true",
+                ["AvailableSlots:tenant-1:loc-1:0:MotorcycleCapacityUnits"] = "2",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        Assert.Equal(2, slots.Count);
+        Assert.Equal(["M1-1", "M1-2"], slots.Select(s => s.SlotId.Value));
+    }
+
+    [Fact]
+    public async Task GetAvailableSlots_NonMotorcycleSlot_NotExpanded()
+    {
+        // Even if MotorcycleCapacityUnits is set on a non-motorcycle slot, it must
+        // not be expanded — the flag is ignored when isMotorcycleCapacity=false.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:0:SlotId"] = "A1",
+                ["AvailableSlots:tenant-1:loc-1:0:MotorcycleCapacityUnits"] = "5",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        Assert.Single(slots);
+        Assert.Equal("A1", slots[0].SlotId.Value);
+        Assert.False(slots[0].IsMotorcycleCapacity);
+    }
+
+    [Fact]
+    public async Task GetAvailableSlots_SingleUnitMotorcycleSlot_KeepsOriginalSlotId()
+    {
+        // MotorcycleCapacityUnits=1 stays as one AvailableSlot with the original id —
+        // no "-1" suffix when there's only one unit, so single-bike areas don't get
+        // a confusing suffix in allocation records.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:0:SlotId"] = "M1",
+                ["AvailableSlots:tenant-1:loc-1:0:IsMotorcycleCapacity"] = "true",
+                ["AvailableSlots:tenant-1:loc-1:0:MotorcycleCapacityUnits"] = "1",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        Assert.Single(slots);
+        Assert.Equal("M1", slots[0].SlotId.Value);
+        Assert.True(slots[0].IsMotorcycleCapacity);
+    }
+
+    [Fact]
+    public async Task GetAvailableSlots_GeneratedCount_ExpandsMotorcycleSlots()
+    {
+        // SlotCount with MotorcycleCount + MotorcycleCapacityUnits expands the
+        // first N slots into motorcycle units.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:SlotCount"] = "3",
+                ["AvailableSlots:tenant-1:loc-1:FirstSlotNumber"] = "501",
+                ["AvailableSlots:tenant-1:loc-1:MotorcycleCount"] = "1",
+                ["AvailableSlots:tenant-1:loc-1:MotorcycleCapacityUnits"] = "3",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        // 1 motorcycle slot × 3 units + 2 normal slots = 5 logical AvailableSlots
+        Assert.Equal(5, slots.Count);
+        Assert.Equal(["501-1", "501-2", "501-3", "502", "503"], slots.Select(s => s.SlotId.Value));
+        Assert.True(slots[0].IsMotorcycleCapacity);
+        Assert.False(slots[3].IsMotorcycleCapacity);
+    }
+
     private static IConfiguration BuildConfig(
         string tenantId, string locationId,
         IEnumerable<(string SlotId, bool HasCharger, bool IsAccessible, bool IsCompanyCarReserved)> slots)
