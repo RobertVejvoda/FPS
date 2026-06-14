@@ -24,7 +24,15 @@ type DayProps = {
   label?: string;               // optional leading label, e.g. "Allocations for".
 };
 
-export type RangeFilterValue = { after?: string; before?: string };  // ISO timestamps (UTC); both undefined == All time.
+// Range filter value. When a preset (Today, This week, etc.) is active,
+// `presetKey` is set and the component re-emits with fresh bounds whenever
+// `dateBase` changes — so simulation/real clock ticks don't freeze the
+// semantic window into a stale absolute date (Codex review on PR #485
+// flagged this regression vs. the previous Auditor implementation that
+// kept the preset key). When the user types a custom range, `presetKey`
+// is omitted.
+export type RangePresetKey = 'All' | 'Today' | 'Yesterday' | 'ThisWeek' | 'LastWeek' | 'ThisMonth' | 'LastMonth';
+export type RangeFilterValue = { after?: string; before?: string; presetKey?: RangePresetKey };
 
 type RangeProps = {
   mode: 'range';
@@ -93,8 +101,6 @@ function DayFilter({ value, onChange, dateBase, simulationActive, presetCount = 
 
 // ── Range mode ───────────────────────────────────────────────────────────
 
-type RangePresetKey = 'All' | 'Today' | 'Yesterday' | 'ThisWeek' | 'LastWeek' | 'ThisMonth' | 'LastMonth';
-
 const RANGE_PRESETS: Array<{ key: RangePresetKey; label: string }> = [
   { key: 'All', label: 'All time' },
   { key: 'Today', label: 'Today' },
@@ -107,11 +113,13 @@ const RANGE_PRESETS: Array<{ key: RangePresetKey; label: string }> = [
 
 /**
  * Resolve a preset key into ISO-timestamp after/before bounds in the
- * tenant's business time. Exposed for tests and for the Auditor page
- * which already needs the same window math.
+ * tenant's business time, tagged with the preset key so callers can keep
+ * the semantic identity (Codex review on PR #485). Exposed for callers
+ * that need to seed initial state from a preset before mounting the
+ * component.
  */
 export function rangePresetToBounds(key: RangePresetKey, dateBase: Date): RangeFilterValue {
-  if (key === 'All') return {};
+  if (key === 'All') return { presetKey: 'All' };
   const today = new Date(dateBase.getTime());
   today.setHours(0, 0, 0, 0);
 
@@ -121,42 +129,51 @@ export function rangePresetToBounds(key: RangePresetKey, dateBase: Date): RangeF
 
   switch (key) {
     case 'Today':
-      return { after: startOf(today), before: endOf(today) };
+      return { presetKey: key, after: startOf(today), before: endOf(today) };
     case 'Yesterday': {
       const y = copy(today); y.setDate(y.getDate() - 1);
-      return { after: startOf(y), before: endOf(y) };
+      return { presetKey: key, after: startOf(y), before: endOf(y) };
     }
     case 'ThisWeek': {
       const mon = copy(today); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-      return { after: startOf(mon), before: endOf(today) };
+      return { presetKey: key, after: startOf(mon), before: endOf(today) };
     }
     case 'LastWeek': {
       const mon = copy(today); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - 7);
       const sun = copy(mon); sun.setDate(sun.getDate() + 6);
-      return { after: startOf(mon), before: endOf(sun) };
+      return { presetKey: key, after: startOf(mon), before: endOf(sun) };
     }
     case 'ThisMonth': {
       const first = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { after: startOf(first), before: endOf(today) };
+      return { presetKey: key, after: startOf(first), before: endOf(today) };
     }
     case 'LastMonth': {
       const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const last = new Date(today.getFullYear(), today.getMonth(), 0);
-      return { after: startOf(first), before: endOf(last) };
+      return { presetKey: key, after: startOf(first), before: endOf(last) };
     }
   }
 }
 
-function valueMatchesPreset(value: RangeFilterValue, key: RangePresetKey, dateBase: Date): boolean {
-  const expected = rangePresetToBounds(key, dateBase);
-  return value.after === expected.after && value.before === expected.before;
-}
-
 function RangeFilter({ value, onChange, dateBase, label }: RangeProps) {
-  const activePreset = RANGE_PRESETS.find(p => valueMatchesPreset(value, p.key, dateBase));
-  const [customOpen, setCustomOpen] = useState(!activePreset);
+  const activePresetKey = value.presetKey;
+  const [customOpen, setCustomOpen] = useState(!activePresetKey);
 
-  useEffect(() => { if (!activePreset) setCustomOpen(true); }, [activePreset]);
+  useEffect(() => { if (!activePresetKey) setCustomOpen(true); }, [activePresetKey]);
+
+  // When a preset is active, recompute its bounds whenever dateBase changes
+  // (simulation tick, real day rollover, …) so "Today" stays today instead
+  // of freezing to the first absolute day the user clicked.
+  useEffect(() => {
+    if (!activePresetKey) return;
+    const fresh = rangePresetToBounds(activePresetKey, dateBase);
+    if (fresh.after !== value.after || fresh.before !== value.before) {
+      onChange(fresh);
+    }
+    // onChange is deliberately omitted — most consumers pass a fresh
+    // arrow on every render and would otherwise loop forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePresetKey, dateBase]);
 
   // Custom inputs use YYYY-MM-DD strings; convert to ISO on emit so the
   // consumer always sees the unified ISO-timestamp shape.
@@ -166,7 +183,7 @@ function RangeFilter({ value, onChange, dateBase, label }: RangeProps) {
   function emitCustom(fromStr: string, toStr: string) {
     const after = fromStr ? new Date(`${fromStr}T00:00:00`).toISOString() : undefined;
     const before = toStr ? new Date(`${toStr}T23:59:59.999`).toISOString() : undefined;
-    onChange({ after, before });
+    onChange({ after, before });   // no presetKey → custom mode
   }
 
   return (
@@ -176,13 +193,13 @@ function RangeFilter({ value, onChange, dateBase, label }: RangeProps) {
         {RANGE_PRESETS.map(p => (
           <ChipButton
             key={p.key}
-            active={activePreset?.key === p.key}
+            active={activePresetKey === p.key}
             onClick={() => onChange(rangePresetToBounds(p.key, dateBase))}
             label={p.label}
           />
         ))}
         <ChipButton
-          active={customOpen && !activePreset}
+          active={customOpen && !activePresetKey}
           onClick={() => setCustomOpen(o => !o)}
           label={customOpen ? 'Hide custom' : 'Custom range'}
           subdued

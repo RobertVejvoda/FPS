@@ -73,7 +73,10 @@ export function AuditorWorkspacePage() {
   const { dateBase } = useTenantDateContext();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [category, setCategory] = useState<ActivityCategory>('All');
-  const [dateRange, setDateRange] = useState<RangeFilterValue>({});
+  // Initial state is the "All time" preset (not bare `{}`), so the chip
+  // is visibly highlighted from first render — matching the previous
+  // page behaviour where dateRange === '' selected the "All time" button.
+  const [dateRange, setDateRange] = useState<RangeFilterValue>({ presetKey: 'All' });
   const [entityId, setEntityId] = useState('');
   const [actorRef, setActorRef] = useState('');
   const [result, setResult] = useState('');

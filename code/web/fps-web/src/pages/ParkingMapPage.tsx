@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { canAccessHrOperations } from '../auth/roles';
@@ -8,6 +8,7 @@ import { fetchHrDisplayNames } from '../api/profile';
 import { displayLocation } from '../displayLabels';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { DateFilter } from '../components/DateFilter';
+import { toLocalDateString } from '../dateOptions';
 import { compareSlotLabels, parseSlotLabel, type SlotLabel } from '../slotLabel';
 import { SlotDetailDrawer } from './SlotDetailDrawer';
 
@@ -23,21 +24,30 @@ type LoadState =
 // matching the recent-allocation rows (Codex review #1 on PR #473).
 type AllocationMap = Record<string, { displayName: string | null; status: string; requestorRef: string }>;
 
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 export function ParkingMapPage() {
   const { apiBaseUrl, bearerToken, roles, clear } = useAuth();
   const navigate = useNavigate();
   const isHr = canAccessHrOperations(roles);
 
+  const { dateBase, simulationActive } = useTenantDateContext();
+
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [allocations, setAllocations] = useState<AllocationMap>({});
-  const [selectedDate, setSelectedDate] = useState<string>(todayIso());
+  // Initial date comes from `dateBase` so simulation mode opens the map on
+  // the virtual day matching the chip presets — not on real wall time (Codex
+  // review on PR #485). userPickedDate tracks whether the user has explicitly
+  // chosen a date so we don't overwrite their selection when dateBase moves.
+  const [selectedDate, setSelectedDateRaw] = useState<string>(() => toLocalDateString(dateBase));
+  const userPickedDate = useRef(false);
+  function setSelectedDate(next: string) {
+    userPickedDate.current = true;
+    setSelectedDateRaw(next);
+  }
+  useEffect(() => {
+    if (userPickedDate.current) return;
+    setSelectedDateRaw(toLocalDateString(dateBase));
+  }, [dateBase]);
   const [detailSlot, setDetailSlot] = useState<SlotMapDto | null>(null);
-  const { dateBase, simulationActive } = useTenantDateContext();
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
