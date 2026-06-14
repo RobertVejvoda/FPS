@@ -5,7 +5,9 @@ import { canAccessHrOperations } from '../auth/roles';
 import { fetchSlotMap, type SlotMapDto } from '../api/configuration';
 import { fetchHrBookings, type HrBookingListItem } from '../api/bookings';
 import { fetchHrDisplayNames } from '../api/profile';
-import { displayLocation, displayDate } from '../displayLabels';
+import { displayLocation } from '../displayLabels';
+import { useTenantDateContext } from '../hooks/useTenantDateBase';
+import { DateFilter } from '../components/DateFilter';
 import { compareSlotLabels, parseSlotLabel, type SlotLabel } from '../slotLabel';
 import { SlotDetailDrawer } from './SlotDetailDrawer';
 
@@ -35,6 +37,7 @@ export function ParkingMapPage() {
   const [allocations, setAllocations] = useState<AllocationMap>({});
   const [selectedDate, setSelectedDate] = useState<string>(todayIso());
   const [detailSlot, setDetailSlot] = useState<SlotMapDto | null>(null);
+  const { dateBase, simulationActive } = useTenantDateContext();
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -145,19 +148,18 @@ export function ParkingMapPage() {
               <CapacityCard label="Inactive" value={summary.inactive} tone="muted" />
             </div>
 
-            {/* HR-only allocation date filter */}
+            {/* HR-only allocation date filter — shared component (issue #476) */}
             {isHr && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.8rem', color: '#475569' }}>
-                  Allocations for
-                </label>
-                <input
-                  type="date"
+              <div style={{ marginBottom: '1rem' }}>
+                <DateFilter
+                  mode="day"
+                  label="Allocations for"
                   value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value || todayIso())}
-                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', border: '1px solid #d1d5db', borderRadius: 4 }}
+                  onChange={setSelectedDate}
+                  dateBase={dateBase}
+                  simulationActive={simulationActive}
+                  presetCount={4}
                 />
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{displayDate(selectedDate)}</span>
               </div>
             )}
 

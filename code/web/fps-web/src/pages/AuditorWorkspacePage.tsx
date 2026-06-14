@@ -17,6 +17,7 @@ import {
   displayActorRef,
 } from '../displayLabels';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
+import { DateFilter, type RangeFilterValue } from '../components/DateFilter';
 
 type State =
   | { kind: 'loading' }
@@ -34,79 +35,31 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
   'ManualCorrections',
 ];
 
-type DateRangeKey = '' | 'Today' | 'Yesterday' | 'ThisWeek' | 'LastWeek' | 'ThisMonth' | 'LastMonth';
+// Date-range presets and bound math live in the shared <DateFilter /> now
+// (issue #476). The page just keeps the resolved { after, before } and
+// derives a friendly label from it for the empty-state message below.
 
-const DATE_RANGE_OPTIONS: { key: DateRangeKey; label: string }[] = [
-  { key: '', label: 'All time' },
-  { key: 'Today', label: 'Today' },
-  { key: 'Yesterday', label: 'Yesterday' },
-  { key: 'ThisWeek', label: 'This week' },
-  { key: 'LastWeek', label: 'Last week' },
-  { key: 'ThisMonth', label: 'This month' },
-  { key: 'LastMonth', label: 'Last month' },
-];
-
-function dateRangeToDates(range: DateRangeKey, dateBase: Date): { after?: string; before?: string } {
-  if (!range) return {};
-  const today = new Date(dateBase.getTime());
-  today.setHours(0, 0, 0, 0);
-
-  const startOf = (d: Date): string => {
-    const c = new Date(d.getTime());
-    c.setHours(0, 0, 0, 0);
-    return c.toISOString();
-  };
-  const endOf = (d: Date): string => {
-    const c = new Date(d.getTime());
-    c.setHours(23, 59, 59, 999);
-    return c.toISOString();
-  };
-  const copy = (d: Date): Date => new Date(d.getTime());
-
-  switch (range) {
-    case 'Today':
-      return { after: startOf(today), before: endOf(today) };
-    case 'Yesterday': {
-      const y = copy(today);
-      y.setDate(y.getDate() - 1);
-      return { after: startOf(y), before: endOf(y) };
-    }
-    case 'ThisWeek': {
-      const mon = copy(today);
-      mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-      return { after: startOf(mon), before: endOf(today) };
-    }
-    case 'LastWeek': {
-      const mon = copy(today);
-      mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - 7);
-      const sun = copy(mon);
-      sun.setDate(sun.getDate() + 6);
-      return { after: startOf(mon), before: endOf(sun) };
-    }
-    case 'ThisMonth': {
-      const first = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { after: startOf(first), before: endOf(today) };
-    }
-    case 'LastMonth': {
-      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const last = new Date(today.getFullYear(), today.getMonth(), 0);
-      return { after: startOf(first), before: endOf(last) };
-    }
-    default:
-      return {};
+function describeDateRange(range: RangeFilterValue): string | null {
+  if (!range.after && !range.before) return null;
+  const fmt = (iso?: string) => iso ? new Date(iso).toLocaleDateString() : '…';
+  if (range.after && range.before) {
+    if (range.after.slice(0, 10) === range.before.slice(0, 10)) return fmt(range.after);
+    return `${fmt(range.after)} – ${fmt(range.before)}`;
   }
+  return range.after ? `from ${fmt(range.after)}` : `until ${fmt(range.before)}`;
 }
 
 function buildEmptyStateMessage(
   category: ActivityCategory,
-  dateRange: DateRangeKey,
+  range: RangeFilterValue,
   entityId: string,
   actorRef: string,
   result: string,
 ): string {
   const parts: string[] = [];
   if (category !== 'All') parts.push(humanizeActivityCategory(category).toLowerCase());
-  if (dateRange) parts.push(DATE_RANGE_OPTIONS.find((o) => o.key === dateRange)?.label.toLowerCase() ?? '');
+  const rangeLabel = describeDateRange(range);
+  if (rangeLabel) parts.push(rangeLabel);
   if (entityId.trim()) parts.push(`entity ID "${entityId.trim()}"`);
   if (actorRef.trim()) parts.push(`actor reference "${actorRef.trim()}"`);
   if (result.trim()) parts.push(`result "${result.trim()}"`);
@@ -120,18 +73,17 @@ export function AuditorWorkspacePage() {
   const { dateBase } = useTenantDateContext();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [category, setCategory] = useState<ActivityCategory>('All');
-  const [dateRange, setDateRange] = useState<DateRangeKey>('');
+  const [dateRange, setDateRange] = useState<RangeFilterValue>({});
   const [entityId, setEntityId] = useState('');
   const [actorRef, setActorRef] = useState('');
   const [result, setResult] = useState('');
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
-    const { after, before } = dateRangeToDates(dateRange, dateBase);
     const filters: AuditQueryFilters = {
       category: category === 'All' ? undefined : category,
-      occurredAfter: after,
-      occurredBefore: before,
+      occurredAfter: dateRange.after,
+      occurredBefore: dateRange.before,
       entityId: entityId.trim() || undefined,
       actorRef: actorRef.trim() || undefined,
       result: result.trim() || undefined,
@@ -199,7 +151,7 @@ export function AuditorWorkspacePage() {
     URL.revokeObjectURL(url);
   }
 
-  const hasActiveFilters = !!(dateRange || entityId.trim() || actorRef.trim() || result.trim() || category !== 'All');
+  const hasActiveFilters = !!(dateRange.after || dateRange.before || entityId.trim() || actorRef.trim() || result.trim() || category !== 'All');
 
   return (
     <div style={page}>
@@ -227,26 +179,12 @@ export function AuditorWorkspacePage() {
 
           <div style={{ ...filterItem, gridColumn: '1 / -1' }}>
             <label style={label}>Date Range</label>
-            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-              {DATE_RANGE_OPTIONS.map(({ key, label: rangeLabel }) => (
-                <button
-                  key={key}
-                  onClick={() => setDateRange(key)}
-                  style={{
-                    padding: '0.3rem 0.75rem',
-                    borderRadius: 14,
-                    border: `1px solid ${dateRange === key ? '#2563eb' : '#d1d5db'}`,
-                    background: dateRange === key ? '#eff6ff' : '#fff',
-                    color: dateRange === key ? '#2563eb' : '#374151',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    fontWeight: dateRange === key ? 600 : 400,
-                  }}
-                >
-                  {rangeLabel}
-                </button>
-              ))}
-            </div>
+            <DateFilter
+              mode="range"
+              value={dateRange}
+              onChange={setDateRange}
+              dateBase={dateBase}
+            />
           </div>
 
           <div style={filterItem}>
