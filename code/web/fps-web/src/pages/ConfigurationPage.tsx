@@ -9,8 +9,10 @@ import {
   fetchSlots, saveSlots, fetchSlotHistory,
   type ParkingPolicy, type PolicyHistoryItem, type SlotDto, type SlotHistoryItem,
 } from '../api/configuration';
-import { displayDateTime } from '../displayLabels';
+import { displayDateTime, displayLocation } from '../displayLabels';
 import { FpsRole, hasRole } from '../auth/roles';
+import { fetchTenantParkingBootstrap, type TenantBootstrapLocationDto } from '../api/customer';
+import { fetchMe } from '../api/client';
 
 type TenantState =
   | { kind: 'loading' }
@@ -67,6 +69,11 @@ export function ConfigurationPage() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Known locations come from the tenant parking bootstrap (issue #477).
+  // Single-location tenants auto-load without any picker; multi-location
+  // tenants get a tab strip at the top of the location section. The Prague
+  // fallback only kicks in when the bootstrap call fails — local demo only.
+  const [knownLocations, setKnownLocations] = useState<TenantBootstrapLocationDto[]>([]);
   const [locationId, setLocationId] = useState('');
   const [locState, setLocState] = useState<LocState>({ kind: 'idle' });
   const [locSaving, setLocSaving] = useState(false);
@@ -94,6 +101,39 @@ export function ConfigurationPage() {
 
   useEffect(() => { loadTenant(); }, [loadTenant]);
 
+  // Discover known locations from the tenant bootstrap. Auto-pick the only
+  // one if there is exactly one; otherwise keep the picker visible. Falls
+  // back to a Prague default for the local demo when the bootstrap fails.
+  useEffect(() => {
+    let cancelled = false;
+    async function discoverLocations() {
+      const me = await fetchMe({ apiBaseUrl, bearerToken });
+      if (cancelled || me.kind !== 'ok') return;
+      const bootstrap = await fetchTenantParkingBootstrap({ apiBaseUrl, bearerToken }, me.data.tenantId);
+      if (cancelled) return;
+      if (bootstrap.kind === 'ok' && bootstrap.data.locations.length > 0) {
+        setKnownLocations(bootstrap.data.locations);
+        if (bootstrap.data.locations.length === 1) {
+          setLocationId(bootstrap.data.locations[0].locationId);
+        }
+        return;
+      }
+      // Safe fallback for local demo — Configuration never lands on an
+      // empty selector even when the bootstrap endpoint isn't reachable.
+      setKnownLocations([{
+        locationId: 'Prague',
+        activeSlotCount: 0,
+        hasLocationPolicy: false,
+        isUsable: false,
+        recordedByHash: null,
+        recordedAt: null,
+      }]);
+      setLocationId('Prague');
+    }
+    void discoverLocations();
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken]);
+
   function patchTenant(field: keyof ParkingPolicy, value: unknown) {
     setTenant(prev => prev.kind === 'ok'
       ? { ...prev, dirty: { ...prev.dirty, [field]: value }, saved: false }
@@ -115,6 +155,16 @@ export function ConfigurationPage() {
     }
     setTimeout(() => setSaveMsg(null), 4000);
   }
+
+  // Auto-load location data whenever the selected location changes.
+  // Replaces the old manual Load button (issue #477) — HR no longer has
+  // to type-and-click to see the only known location.
+  useEffect(() => {
+    if (locationId.trim()) loadLocation();
+    // loadLocation is intentionally not in deps — it would change on every
+    // render and we only want to re-run when the location identifier moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationId]);
 
   function loadLocation() {
     const id = locationId.trim();
@@ -333,19 +383,44 @@ export function ConfigurationPage() {
       </section>
 
       <section style={card}>
-        <h3 style={cardTitle}>Location Configuration</h3>
-        <p style={{ ...muted, margin: '0 0 8px' }}>Enter a location identifier to view and edit its parking policy and slot configuration.</p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <input
-            value={locationId}
-            onChange={e => setLocationId(e.target.value)}
-            placeholder="Location identifier (e.g. Prague)"
-            style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none' }}
-          />
-          <button onClick={loadLocation} disabled={!locationId.trim()} style={{ ...btn, opacity: !locationId.trim() ? 0.5 : 1 }}>
-            Load
-          </button>
-        </div>
+        <h3 style={cardTitle}>
+          Location Configuration
+          {locationId && knownLocations.length === 1 && (
+            <span style={{ ...muted, marginLeft: 8, fontSize: 13, fontWeight: 400 }}>
+              · {displayLocation(locationId) ?? locationId}
+            </span>
+          )}
+        </h3>
+
+        {/* Single-location tenants skip the picker entirely (issue #477).
+            Multi-location tenants get a tab strip; the active tab also
+            triggers an auto-load via the useEffect on locationId. */}
+        {knownLocations.length > 1 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, borderBottom: '1px solid #e5e7eb', paddingBottom: 8 }}>
+            {knownLocations.map(loc => {
+              const active = loc.locationId === locationId;
+              return (
+                <button
+                  key={loc.locationId}
+                  type="button"
+                  onClick={() => setLocationId(loc.locationId)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
+                    border: `1px solid ${active ? '#1d4ed8' : '#d1d5db'}`,
+                    background: active ? '#1d4ed8' : '#fff',
+                    color: active ? '#fff' : '#374151',
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  {displayLocation(loc.locationId) ?? loc.locationId}
+                  {loc.activeSlotCount > 0 && (
+                    <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.75 }}>· {loc.activeSlotCount} slots</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {locState.kind === 'loading' && <p style={muted}>Loading location policy…</p>}
         {locState.kind === 'forbidden' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Insufficient permissions for this location.</p>}
@@ -355,7 +430,7 @@ export function ConfigurationPage() {
           <div>
             {locSaveMsg && <SaveBanner ok={locSaveMsg.ok} text={locSaveMsg.text} />}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={muted}>Location: {locationId.trim()} · Version: {locState.policy.version}</span>
+              <span style={muted}>Location: {displayLocation(locationId) ?? locationId} · Version: {locState.policy.version}</span>
               <button
                 onClick={handleSaveLocation}
                 disabled={locSaving || Object.keys(locState.dirty).length === 0}
