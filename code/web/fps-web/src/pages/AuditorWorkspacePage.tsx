@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchAuditRecords,
+  resolveAuditActorReferences,
   type AuditRecord,
   type ActivityCategory,
   type AuditQueryFilters,
 } from '../api/audit';
+import { fetchHrDisplayNames } from '../api/profile';
 import {
   humanizeAuditEventType,
   humanizeAuditAction,
@@ -67,6 +69,16 @@ function buildEmptyStateMessage(
   return `No records found for ${parts.join(', ')}. Try a broader date range or clear some filters.`;
 }
 
+// Actor-resolution map used to surface names instead of opaque hashes.
+// Built in two hops: audit hash → userId via /audit/actor-references, then
+// userId → display name via /profile/hr/display-names. Either hop can come
+// back empty; in those cases the table falls back to the short ref alone.
+interface ActorDetails {
+  shortRef: string;
+  userId: string | null;
+  displayName: string | null;
+}
+
 export function AuditorWorkspacePage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
@@ -80,6 +92,8 @@ export function AuditorWorkspacePage() {
   const [entityId, setEntityId] = useState('');
   const [actorRef, setActorRef] = useState('');
   const [result, setResult] = useState('');
+  const [actorDetails, setActorDetails] = useState<Record<string, ActorDetails>>({});
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -116,6 +130,48 @@ export function AuditorWorkspacePage() {
     load();
   }, [load]);
 
+  // Resolve actor refs → userIds → display names after the table loads.
+  // Audit records never carry the raw userId (pseudonymisation is the whole
+  // point), so the auditor sees "Name · A3F1B2" instead of an opaque hash.
+  // Both lookups are best-effort: an unresolved hash falls back to short
+  // ref only (issue #482).
+  useEffect(() => {
+    if (state.kind !== 'ok') return;
+    const hashes = Array.from(new Set(
+      state.records.map(r => r.actorHash).filter((h): h is string => !!h && !(h in actorDetails))
+    ));
+    if (hashes.length === 0) return;
+
+    void (async () => {
+      const refsRes = await resolveAuditActorReferences({ apiBaseUrl, bearerToken }, hashes);
+      const refs = refsRes.kind === 'ok' ? refsRes.data.items : {};
+
+      const userIds = Object.values(refs).map(r => r.userId);
+      const namesRes = userIds.length > 0
+        ? await fetchHrDisplayNames({ apiBaseUrl, bearerToken }, userIds)
+        : null;
+      const names = namesRes && namesRes.kind === 'ok' ? namesRes.data.names : {};
+
+      setActorDetails(prev => {
+        const next = { ...prev };
+        for (const hash of hashes) {
+          const ref = refs[hash];
+          next[hash] = {
+            shortRef: ref?.shortRef ?? displayActorRef(hash),
+            userId: ref?.userId ?? null,
+            displayName: ref ? (names[ref.userId] ?? null) : null,
+          };
+        }
+        return next;
+      });
+    })();
+  }, [state, apiBaseUrl, bearerToken, actorDetails]);
+
+  const totalDisplayed = useMemo(
+    () => state.kind === 'ok' ? state.records.length : 0,
+    [state],
+  );
+
   function exportCsv() {
     if (state.kind !== 'ok' || state.records.length === 0) return;
     const headers = [
@@ -125,25 +181,30 @@ export function AuditorWorkspacePage() {
       'Entity Type',
       'Entity ID',
       'Actor Type',
+      'Actor Name',
       'Actor Reference',
       'Actor Hash (Evidence)',
       'Result',
       'Reason Code',
       'Summary',
     ];
-    const rows = state.records.map((r) => [
-      new Date(r.occurredAt).toLocaleString(),
-      humanizeAuditEventType(r.eventType),
-      humanizeAuditAction(r.action),
-      humanizeEntityType(r.entityType),
-      r.entityId ?? '',
-      humanizeActorType(r.actorType),
-      displayActorRef(r.actorHash),
-      r.actorHash ?? '',
-      humanizeAuditResult(r.result),
-      r.reasonCode ?? '',
-      r.summary ?? '',
-    ]);
+    const rows = state.records.map((r) => {
+      const details = r.actorHash ? actorDetails[r.actorHash] : undefined;
+      return [
+        new Date(r.occurredAt).toLocaleString(),
+        humanizeAuditEventType(r.eventType),
+        humanizeAuditAction(r.action),
+        humanizeEntityType(r.entityType),
+        r.entityId ?? '',
+        humanizeActorType(r.actorType),
+        details?.displayName ?? '',
+        details?.shortRef ?? displayActorRef(r.actorHash),
+        r.actorHash ?? '',
+        humanizeAuditResult(r.result),
+        r.reasonCode ?? '',
+        r.summary ?? '',
+      ];
+    });
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -194,22 +255,24 @@ export function AuditorWorkspacePage() {
             <label style={label}>Entity ID</label>
             <input
               type="text"
-              placeholder="e.g. booking ID, draw ID"
+              placeholder="Paste from the Entity column"
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
               style={input}
             />
+            <span style={hint}>Booking ID, draw attempt ID, etc.</span>
           </div>
 
           <div style={filterItem}>
-            <label style={label}>Actor reference</label>
+            <label style={label}>Actor short ref</label>
             <input
               type="text"
-              placeholder="e.g. A3F1B2"
+              placeholder="Paste from the Who column (e.g. A3F1B2)"
               value={actorRef}
               onChange={(e) => setActorRef(e.target.value.toUpperCase())}
               style={input}
             />
+            <span style={hint}>6-character ref shown next to each actor.</span>
           </div>
 
           <div style={filterItem}>
@@ -274,6 +337,9 @@ export function AuditorWorkspacePage() {
 
         {state.kind === 'ok' && state.records.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
+            <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
+              Showing {totalDisplayed} of {state.totalCount}. Click a row to see the full actor and entity reference.
+            </p>
             <table style={table}>
               <thead>
                 <tr>
@@ -284,7 +350,6 @@ export function AuditorWorkspacePage() {
                     'Entity',
                     'Entity ID',
                     'Who',
-                    'Actor Ref',
                     'Result',
                     'Reason',
                   ].map((h) => (
@@ -295,38 +360,155 @@ export function AuditorWorkspacePage() {
                 </tr>
               </thead>
               <tbody>
-                {state.records.map((r) => (
-                  <tr key={r.auditRecordId} style={tr}>
-                    <td style={td}>
-                      <div style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-                        {new Date(r.occurredAt).toLocaleDateString()}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                        {new Date(r.occurredAt).toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td style={td}>{humanizeAuditEventType(r.eventType)}</td>
-                    <td style={td}>{humanizeAuditAction(r.action)}</td>
-                    <td style={td}>{humanizeEntityType(r.entityType)}</td>
-                    <td style={{ ...td, fontFamily: 'monospace', fontSize: 11, color: '#6b7280' }}>
-                      {r.entityId ? r.entityId.slice(0, 8) + '…' : '—'}
-                    </td>
-                    <td style={td}>{humanizeActorType(r.actorType)}</td>
-                    <td style={{ ...td, fontFamily: 'monospace', fontSize: 12, color: '#374151', letterSpacing: '0.05em' }}>
-                      {displayActorRef(r.actorHash)}
-                    </td>
-                    <td style={td}>
-                      <span style={resultBadge(r.result)}>{humanizeAuditResult(r.result)}</span>
-                    </td>
-                    <td style={{ ...td, color: '#6b7280', fontSize: 12 }}>{r.reasonCode ?? '—'}</td>
-                  </tr>
-                ))}
+                {state.records.map((r) => {
+                  const isExpanded = expandedRowId === r.auditRecordId;
+                  const details = r.actorHash ? actorDetails[r.actorHash] : undefined;
+                  return (
+                  <React.Fragment key={r.auditRecordId}>
+                    <tr style={{ ...tr, cursor: 'pointer', background: isExpanded ? '#f9fafb' : undefined }}
+                        onClick={() => setExpandedRowId(isExpanded ? null : r.auditRecordId)}>
+                      <td style={td}>
+                        <div style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                          {new Date(r.occurredAt).toLocaleDateString()}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                          {new Date(r.occurredAt).toLocaleTimeString()}
+                        </div>
+                      </td>
+                      <td style={td}>{humanizeAuditEventType(r.eventType)}</td>
+                      <td style={td}>{humanizeAuditAction(r.action)}</td>
+                      <td style={td}>{humanizeEntityType(r.entityType)}</td>
+                      <td style={td}>{renderEntityLabel(r.entityId)}</td>
+                      <td style={td}>{renderActorLabel(r.actorType, r.actorHash, details)}</td>
+                      <td style={td}>
+                        <span style={resultBadge(r.result)}>{humanizeAuditResult(r.result)}</span>
+                      </td>
+                      <td style={{ ...td, color: '#6b7280', fontSize: 12 }}>{r.reasonCode ?? '—'}</td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={8} style={{ ...td, padding: '14px 18px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                          <ExpandedDetail record={r} actor={details} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );})}
               </tbody>
             </table>
           </div>
         )}
       </section>
     </div>
+  );
+}
+
+// Actor cell: name first when the Profile lookup succeeded, short ref
+// second. Falls back to short ref alone when no profile data exists or
+// resolution hasn't completed yet. The actor type label ("Employee",
+// "HR Manager", …) prefixes the value so the auditor sees role context
+// without needing to expand the row.
+function renderActorLabel(actorType: string, actorHash: string | null, details: ActorDetails | undefined): React.ReactNode {
+  const typeLabel = humanizeActorType(actorType);
+  if (!actorHash) return <span style={{ color: '#9ca3af' }}>{typeLabel} · —</span>;
+  const ref = details?.shortRef ?? displayActorRef(actorHash);
+  if (details?.displayName) {
+    return (
+      <span>
+        <span style={{ color: '#6b7280', fontSize: 12 }}>{typeLabel} ·</span>{' '}
+        <span style={{ fontWeight: 500 }}>{details.displayName}</span>{' '}
+        <span style={{ color: '#9ca3af', fontSize: 11, fontFamily: 'monospace' }}>{ref}</span>
+      </span>
+    );
+  }
+  return (
+    <span>
+      <span style={{ color: '#6b7280', fontSize: 12 }}>{typeLabel} ·</span>{' '}
+      <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#374151', letterSpacing: '0.05em' }}>{ref}</span>
+    </span>
+  );
+}
+
+// Entity ID cell: keep a tight 8-character preview in the table so the
+// row stays readable; the full ID lives in the expand panel below.
+function renderEntityLabel(entityId: string | null): React.ReactNode {
+  if (!entityId) return <span style={{ color: '#9ca3af' }}>—</span>;
+  const short = entityId.length > 8 ? entityId.slice(0, 8) + '…' : entityId;
+  return <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#374151' }}>{short}</span>;
+}
+
+// Inline expansion: shown when the auditor clicks a row. Surfaces the full
+// actor and entity references plus copy buttons so the values can be moved
+// into the search fields without retyping. Intentionally keeps PII to a
+// minimum — only what is needed to answer "who did this?" and "to what?".
+function ExpandedDetail({ record, actor }: { record: AuditRecord; actor: ActorDetails | undefined }): React.ReactElement {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+      <div>
+        <div style={detailLabel}>Actor</div>
+        {actor?.displayName ? (
+          <div style={{ fontWeight: 500, marginBottom: 2 }}>{actor.displayName}</div>
+        ) : (
+          <div style={{ color: '#9ca3af', marginBottom: 2 }}>No profile data available</div>
+        )}
+        <div style={{ ...muted, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
+          Short ref:
+          <span style={detailValueChip}>{actor?.shortRef ?? displayActorRef(record.actorHash)}</span>
+          {actor?.shortRef && <CopyButton value={actor.shortRef} label="copy short ref" />}
+        </div>
+        <div style={{ ...muted, fontSize: 11, marginTop: 4 }}>{humanizeActorType(record.actorType)}</div>
+      </div>
+      <div>
+        <div style={detailLabel}>Entity</div>
+        <div style={{ marginBottom: 2 }}>{humanizeEntityType(record.entityType)}</div>
+        {record.entityId ? (
+          <div style={{ ...muted, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            ID:
+            <span style={detailValueChip}>{record.entityId}</span>
+            <CopyButton value={record.entityId} label="copy entity id" />
+          </div>
+        ) : (
+          <div style={{ ...muted }}>Not available for this event</div>
+        )}
+      </div>
+      {record.summary && (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <div style={detailLabel}>Summary</div>
+          <div>{record.summary}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CopyButton({ value, label }: { value: string; label: string }): React.ReactElement {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          /* clipboard unavailable; ignore */
+        }
+      }}
+      aria-label={label}
+      style={{
+        fontSize: 11,
+        padding: '2px 8px',
+        borderRadius: 4,
+        border: '1px solid #d1d5db',
+        background: '#fff',
+        color: '#374151',
+        cursor: 'pointer',
+      }}
+    >
+      {copied ? 'Copied' : 'Copy'}
+    </button>
   );
 }
 
@@ -436,3 +618,19 @@ const th: React.CSSProperties = {
 };
 const tr: React.CSSProperties = { borderBottom: '1px solid #f3f4f6' };
 const td: React.CSSProperties = { padding: '10px 10px', verticalAlign: 'top' };
+const hint: React.CSSProperties = { fontSize: 11, color: '#6b7280', marginTop: 3 };
+const detailLabel: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: '#6b7280',
+  marginBottom: 4,
+};
+const detailValueChip: React.CSSProperties = {
+  background: '#fff',
+  padding: '2px 8px',
+  border: '1px solid #e5e7eb',
+  borderRadius: 4,
+  fontSize: 12,
+};

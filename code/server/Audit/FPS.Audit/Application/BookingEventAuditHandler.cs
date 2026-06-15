@@ -4,7 +4,10 @@ using Microsoft.Extensions.Logging;
 
 namespace FPS.Audit.Application;
 
-public sealed class BookingEventAuditHandler(IAuditRepository repository, ILogger<BookingEventAuditHandler> logger)
+public sealed class BookingEventAuditHandler(
+    IAuditRepository repository,
+    IPiiMappingRepository piiMappingRepository,
+    ILogger<BookingEventAuditHandler> logger)
 {
     private static readonly IReadOnlyDictionary<string, (string entityType, Func<BookingEventPayload, string?> entityId)> EntityMap =
         new Dictionary<string, (string, Func<BookingEventPayload, string?>)>
@@ -70,6 +73,21 @@ public sealed class BookingEventAuditHandler(IAuditRepository repository, ILogge
         };
 
         await repository.AppendAsync(record, cancellationToken);
+
+        // Persist the actorHash → userId mapping so the auditor workspace
+        // can resolve "Who was that?" without ever exposing the raw userId
+        // in audit records (issue #482). Name/Email stay null here — the
+        // event envelope doesn't carry them; the frontend joins with
+        // /profile/hr/display-names by userId to surface human names.
+        if (!string.IsNullOrEmpty(envelope.ActorId) && !string.IsNullOrEmpty(record.ActorHash))
+        {
+            await piiMappingRepository.SaveAsync(new PiiMapping
+            {
+                TenantId = envelope.TenantId,
+                ActorHash = record.ActorHash,
+                UserId = envelope.ActorId,
+            }, cancellationToken);
+        }
 
         logger.LogInformation(
             "Audit event ingested. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId} EntityType={EntityType}",

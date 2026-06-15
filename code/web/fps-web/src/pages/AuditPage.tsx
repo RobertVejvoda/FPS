@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchAuditRecords, erasePiiMapping, type AuditRecord } from '../api/audit';
+import { displayActorRef, humanizeActorType, humanizeEntityType } from '../displayLabels';
 
 type State =
   | { kind: 'loading' }
@@ -93,7 +94,7 @@ export function AuditPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Occurred', 'Event type', 'Entity type', 'Entity ID', 'Actor type', 'Actor (pseudonymised)'].map(h => (
+                  {['Occurred', 'Event type', 'Entity type', 'Entity ID', 'Actor type', 'Actor short ref'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '7px 10px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -103,10 +104,14 @@ export function AuditPage() {
                   <tr key={r.auditRecordId} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={td}>{new Date(r.occurredAt).toLocaleString()}</td>
                     <td style={td}>{r.eventType}</td>
-                    <td style={td}>{r.entityType}</td>
-                    <td style={{ ...td, color: '#6b7280' }}>{r.entityId ?? '—'}</td>
-                    <td style={td}>{r.actorType}</td>
-                    <td style={{ ...td, color: '#6b7280', fontFamily: 'monospace', fontSize: 11 }}>{r.actorHash ? r.actorHash.slice(0, 12) + '…' : '—'}</td>
+                    <td style={td}>{humanizeEntityType(r.entityType)}</td>
+                    <td style={{ ...td, color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>
+                      {r.entityId ? (r.entityId.length > 12 ? r.entityId.slice(0, 12) + '…' : r.entityId) : '—'}
+                    </td>
+                    <td style={td}>{humanizeActorType(r.actorType)}</td>
+                    <td style={{ ...td, color: '#374151', fontFamily: 'monospace', fontSize: 12, letterSpacing: '0.05em' }}>
+                      {r.actorHash ? displayActorRef(r.actorHash) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

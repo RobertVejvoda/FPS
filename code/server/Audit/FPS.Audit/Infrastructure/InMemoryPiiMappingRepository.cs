@@ -32,4 +32,22 @@ public sealed class InMemoryPiiMappingRepository : IPiiMappingRepository
 
     public Task<bool> ExistsAsync(string userId, string tenantId, CancellationToken cancellationToken = default) =>
         Task.FromResult(store.ContainsKey((tenantId, userId)));
+
+    public Task<IReadOnlyDictionary<string, PiiMapping>> GetByActorHashesAsync(
+        string tenantId, IReadOnlyList<string> actorHashes, CancellationToken cancellationToken = default)
+    {
+        if (actorHashes.Count == 0)
+            return Task.FromResult<IReadOnlyDictionary<string, PiiMapping>>(
+                new Dictionary<string, PiiMapping>(StringComparer.OrdinalIgnoreCase));
+
+        var wanted = new HashSet<string>(actorHashes, StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, PiiMapping>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, mapping) in store)
+        {
+            if (!string.Equals(key.tenantId, tenantId, StringComparison.Ordinal)) continue;
+            if (wanted.Contains(mapping.ActorHash))
+                result[mapping.ActorHash] = mapping;
+        }
+        return Task.FromResult<IReadOnlyDictionary<string, PiiMapping>>(result);
+    }
 }
