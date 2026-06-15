@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchHrRequestorSummary,
+  updateRequestorEligibility,
   type RequestorSummary,
   type RequestorSummaryResult,
 } from '../api/profile';
@@ -110,7 +111,14 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
 
           {state.kind === 'ok' && (
             <>
-              <ProfileFactsSection summary={state.summary} />
+              <ProfileFactsSection
+                summary={state.summary}
+                userId={request.requestorRef}
+                onEligibilityChanged={(hasCompanyCar, accessibilityEligible) =>
+                  setState(prev => prev.kind === 'ok'
+                    ? { kind: 'ok', summary: { ...prev.summary, hasCompanyCar, accessibilityEligible } }
+                    : prev)}
+              />
               <VehicleSection summary={state.summary} />
             </>
           )}
@@ -124,16 +132,135 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
   );
 }
 
-function ProfileFactsSection({ summary }: { summary: RequestorSummary }) {
+// HR-controlled eligibility row. Click "Edit" to toggle company car or
+// accessibility eligibility for this requestor. Only HR/admin can call
+// the backend, so the controls are silently disabled for any role that
+// hits a 403 (we treat that as "not your switch to flip"). Issue #481.
+function ProfileFactsSection({
+  summary, userId, onEligibilityChanged,
+}: {
+  summary: RequestorSummary;
+  userId: string;
+  onEligibilityChanged: (hasCompanyCar: boolean, accessibilityEligible: boolean) => void;
+}) {
+  const { apiBaseUrl, bearerToken } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [draftCompanyCar, setDraftCompanyCar] = useState(summary.hasCompanyCar);
+  const [draftAccessibility, setDraftAccessibility] = useState(summary.accessibilityEligible);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    setDraftCompanyCar(summary.hasCompanyCar);
+    setDraftAccessibility(summary.accessibilityEligible);
+    setError(null);
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setError(null);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const result = await updateRequestorEligibility({ apiBaseUrl, bearerToken }, userId, {
+      hasCompanyCar: draftCompanyCar,
+      accessibilityEligible: draftAccessibility,
+    });
+    setBusy(false);
+    if (result.kind === 'ok') {
+      onEligibilityChanged(result.data.hasCompanyCar, result.data.accessibilityEligible);
+      setEditing(false);
+      return;
+    }
+    if (result.kind === 'error' && result.status === 403) {
+      setError('Only HR or admin can change eligibility.');
+      return;
+    }
+    setError('message' in result ? result.message : 'Could not save eligibility.');
+  }
+
+  const unchanged = draftCompanyCar === summary.hasCompanyCar
+    && draftAccessibility === summary.accessibilityEligible;
+
   return (
     <section>
-      <SectionHeading>Parking facts</SectionHeading>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <SectionHeading>Parking facts</SectionHeading>
+        {!editing && (
+          <button onClick={startEdit} style={editLinkBtn} type="button">Edit</button>
+        )}
+      </div>
       <FactRow label="Profile status" value={summary.profileStatus} muted={summary.profileStatus !== 'Active'} />
       <FactRow label="Parking eligible" value={summary.parkingEligible ? 'Yes' : 'No'} />
-      <FactRow label="Company car" value={summary.hasCompanyCar ? 'Yes' : 'No'} />
-      <FactRow label="Accessibility eligible" value={summary.accessibilityEligible ? 'Yes' : 'No'} />
+      {editing ? (
+        <>
+          <EditableToggleRow
+            label="Company car"
+            value={draftCompanyCar}
+            onChange={setDraftCompanyCar}
+            disabled={busy}
+          />
+          <EditableToggleRow
+            label="Accessibility eligible"
+            value={draftAccessibility}
+            onChange={setDraftAccessibility}
+            disabled={busy}
+          />
+        </>
+      ) : (
+        <>
+          <FactRow label="Company car" value={summary.hasCompanyCar ? 'Yes' : 'No'} />
+          <FactRow label="Accessibility eligible" value={summary.accessibilityEligible ? 'Yes' : 'No'} />
+        </>
+      )}
       <FactRow label="Reserved space" value={summary.reservedSpaceEligible ? 'Yes' : 'No'} />
+      {editing && (
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            onClick={save}
+            disabled={busy || unchanged}
+            type="button"
+            style={{ ...primaryBtn, opacity: busy || unchanged ? 0.5 : 1 }}
+          >
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+          <button onClick={cancelEdit} disabled={busy} type="button" style={ghostBtn}>
+            Cancel
+          </button>
+          {error && <span style={{ color: '#b91c1c', fontSize: '0.78rem' }}>{error}</span>}
+        </div>
+      )}
     </section>
+  );
+}
+
+function EditableToggleRow({
+  label, value, onChange, disabled,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (next: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '0.3rem 0', borderBottom: '1px solid #f1f5f9', gap: '0.75rem' }}>
+      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{label}</span>
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: disabled ? 'default' : 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={value}
+          disabled={disabled}
+          onChange={e => onChange(e.target.checked)}
+        />
+        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+          {value ? 'Yes' : 'No'}
+        </span>
+      </label>
+    </div>
   );
 }
 
@@ -220,6 +347,39 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
     </h3>
   );
 }
+
+const editLinkBtn: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  padding: 0,
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  color: '#1d4ed8',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+};
+
+const primaryBtn: React.CSSProperties = {
+  background: '#1d4ed8',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 6,
+  padding: '5px 12px',
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: 'pointer',
+};
+
+const ghostBtn: React.CSSProperties = {
+  background: '#fff',
+  color: '#374151',
+  border: '1px solid #e5e7eb',
+  borderRadius: 6,
+  padding: '5px 12px',
+  fontSize: 13,
+  fontWeight: 500,
+  cursor: 'pointer',
+};
 
 function FactRow({ label, value, muted, badge }: { label: string; value: string; muted?: boolean; badge?: string }) {
   return (

@@ -100,6 +100,47 @@ export async function fetchHrRequestorSummary(
   }
 }
 
+// HR/admin-only eligibility update for allocation-impacting flags.
+// Issue #481: company-car and accessibility eligibility must not be
+// employee self-service. Either field may be omitted to leave it
+// untouched; the server returns the resulting state so the drawer can
+// reflect the change without a full reload.
+export interface EligibilityUpdateRequest {
+  hasCompanyCar?: boolean;
+  accessibilityEligible?: boolean;
+}
+
+export interface EligibilityUpdateResponse {
+  userId: string;
+  shortRef: string;
+  hasCompanyCar: boolean;
+  accessibilityEligible: boolean;
+  snapshotVersion: string;
+  updatedAt: string;
+}
+
+export async function updateRequestorEligibility(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  userId: string,
+  patch: EligibilityUpdateRequest,
+): Promise<FetchResult<EligibilityUpdateResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/profile/hr/requestors/${encodeURIComponent(userId)}/eligibility`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (res.status === 404) return { kind: 'error', status: 404, message: 'Employee not found.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `PATCH eligibility returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as EligibilityUpdateResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchProfileSnapshot(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
 ): Promise<FetchResult<ProfileSnapshot>> {

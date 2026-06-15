@@ -313,4 +313,93 @@ public sealed class EmployeeBootstrapServiceTests
         var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         Assert.Equal("Bob Jones", stored!.DisplayName);
     }
+
+    // ── UpdateEligibility (issue #481) ───────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateEligibility_FlipsBothFlags_LeavesEverythingElseUntouched()
+    {
+        // Issue #481: the scoped eligibility update must not clobber roles,
+        // home location, notification address, or other fields the HR drawer
+        // doesn't expose. The full UpdateAsync path is too easy to misuse.
+        var (profile, _) = await service.RegisterAsync("t1", ValidRequest("sub-elig-1",
+            employeeId: "EMP-100", notif: "alice@corp.com", home: "loc-HQ") with
+            {
+                FpsRoles = ["employee", "hr_manager"],
+                ParkingEligible = true,
+                HasCompanyCar = false,
+                AccessibilityEligible = false,
+                ReservedSpaceEligible = true,
+            }, CancellationToken.None);
+
+        var (updated, error) = await service.UpdateEligibilityAsync(
+            "t1", profile!.UserId, hasCompanyCar: true, accessibilityEligible: true, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(updated);
+        Assert.True(updated!.HasCompanyCar);
+        Assert.True(updated.AccessibilityEligible);
+        // Everything else must be byte-identical.
+        Assert.Equal("EMP-100", updated.EmployeeId);
+        Assert.Equal("alice@corp.com", updated.NotificationAddress);
+        Assert.Equal("loc-HQ", updated.HomeLocationId);
+        Assert.Equal(profile.FpsRoles, updated.FpsRoles);
+        Assert.True(updated.ParkingEligible);
+        Assert.True(updated.ReservedSpaceEligible);
+        Assert.Equal(profile.Status, updated.Status);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_NullField_KeepsExistingValue()
+    {
+        var (profile, _) = await service.RegisterAsync("t1", ValidRequest("sub-elig-2") with
+            {
+                HasCompanyCar = true,
+                AccessibilityEligible = false,
+            }, CancellationToken.None);
+
+        var (updated, error) = await service.UpdateEligibilityAsync(
+            "t1", profile!.UserId, hasCompanyCar: null, accessibilityEligible: true, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.True(updated!.HasCompanyCar);          // unchanged
+        Assert.True(updated.AccessibilityEligible);    // flipped
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_BothNull_ReturnsValidationError()
+    {
+        var (profile, _) = await service.RegisterAsync("t1", ValidRequest("sub-elig-3"), CancellationToken.None);
+
+        var (updated, error) = await service.UpdateEligibilityAsync(
+            "t1", profile!.UserId, hasCompanyCar: null, accessibilityEligible: null, CancellationToken.None);
+
+        Assert.Null(updated);
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_UnknownEmployee_ReturnsNotFound()
+    {
+        var (updated, error) = await service.UpdateEligibilityAsync(
+            "t1", "missing-hash", hasCompanyCar: true, accessibilityEligible: null, CancellationToken.None);
+
+        Assert.Null(updated);
+        Assert.Equal("Employee not found.", error);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_RotatesSnapshotVersion()
+    {
+        // Snapshot version rolling is the existing convention for any field
+        // mutation — without it, downstream caches can't tell whether a
+        // change happened.
+        var (profile, _) = await service.RegisterAsync("t1", ValidRequest("sub-elig-4"), CancellationToken.None);
+        var beforeVersion = profile!.SnapshotVersion;
+
+        var (updated, _) = await service.UpdateEligibilityAsync(
+            "t1", profile.UserId, hasCompanyCar: true, accessibilityEligible: null, CancellationToken.None);
+
+        Assert.NotEqual(beforeVersion, updated!.SnapshotVersion);
+    }
 }

@@ -152,6 +152,75 @@ public sealed class HrProfileAuthorizationTests : IClassFixture<WebApplicationFa
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // ── PATCH /profile/hr/requestors/{userId}/eligibility (issue #481) ───────
+
+    [Fact]
+    public async Task UpdateEligibility_Unauthenticated_Returns401()
+    {
+        var response = await factory.CreateClient().PatchAsync(
+            "/profile/hr/requestors/some-user/eligibility",
+            JsonBody("""{"hasCompanyCar":true}"""));
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_EmployeeRole_Returns403_NoSelfService()
+    {
+        // The core acceptance criterion: an employee must not be able to
+        // self-enable company car or accessibility eligibility, even by
+        // calling the HR endpoint directly.
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.PatchAsync(
+            "/profile/hr/requestors/user-1/eligibility",
+            JsonBody("""{"hasCompanyCar":true,"accessibilityEligible":true}"""));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_AuditorRole_Returns403_StillHrAdminOnly()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "auditor");
+        var response = await client.PatchAsync(
+            "/profile/hr/requestors/some-user/eligibility",
+            JsonBody("""{"hasCompanyCar":true}"""));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_ReportViewerRole_Returns403_StillHrAdminOnly()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "report_viewer");
+        var response = await client.PatchAsync(
+            "/profile/hr/requestors/some-user/eligibility",
+            JsonBody("""{"hasCompanyCar":true}"""));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_HrManagerRole_PassesAuthGate()
+    {
+        // 404 (no seeded profile) is acceptable — the auth gate is the
+        // contract under test here. End-to-end behaviour is covered by
+        // EmployeeBootstrapServiceTests.UpdateEligibility_*.
+        var client = ClientWithToken("user-1", "tenant-1", "hr_manager");
+        var response = await client.PatchAsync(
+            "/profile/hr/requestors/some-user/eligibility",
+            JsonBody("""{"hasCompanyCar":true}"""));
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEligibility_AdminRole_PassesAuthGate()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "admin");
+        var response = await client.PatchAsync(
+            "/profile/hr/requestors/some-user/eligibility",
+            JsonBody("""{"hasCompanyCar":true}"""));
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     private HttpClient ClientWithToken(string userId, string tenantId, string role)
     {
         var client = factory.CreateClient();
