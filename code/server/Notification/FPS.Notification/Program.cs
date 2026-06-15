@@ -17,6 +17,7 @@ builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroa
 builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
 builder.Services.AddSingleton<IHrRosterStore, InMemoryHrRosterStore>();
 builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
+builder.Services.AddSingleton<HrRosterConfigurationSeeder>();
 builder.Services.AddScoped<BookingEventNotificationHandler>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
@@ -62,6 +63,11 @@ builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
+
+// Populate the HR roster from configuration before the app starts
+// serving traffic so the first event arriving after restart fans out
+// correctly. Empty / missing config is a no-op (logged).
+app.Services.GetRequiredService<HrRosterConfigurationSeeder>().Seed();
 
 app.MapOpenApi();
 app.MapScalarApiReference(options => options.WithTitle("Notification API"));
