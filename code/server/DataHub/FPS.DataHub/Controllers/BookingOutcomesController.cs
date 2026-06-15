@@ -60,6 +60,11 @@ public sealed class BookingOutcomesController(
                 ReasonCode = b.ReasonCode,
                 SafeReasonText = b.SafeReasonText,
                 AllocationSource = b.AllocationSource,
+                // Employees see the slot for their own allocated bookings —
+                // issue #483 acceptance criterion. Cross-employee privacy is
+                // already enforced by the RequestorId == userId filter above,
+                // so this only ever surfaces the caller's own assignments.
+                SlotId = b.SlotId,
                 SubmittedAt = b.SubmittedAt,
                 DecidedAt = b.DecidedAt
             })
@@ -164,6 +169,7 @@ public class BookingOutcomeDto
     public string? ReasonCode { get; set; }
     public string? SafeReasonText { get; set; }
     public string? AllocationSource { get; set; }
+    public string? SlotId { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public DateTime? DecidedAt { get; set; }
 }
@@ -171,5 +177,4 @@ public class BookingOutcomeDto
 public sealed class BookingOutcomeWithRequestorDto : BookingOutcomeDto
 {
     public string RequestorId { get; set; } = "";
-    public string? SlotId { get; set; }
 }

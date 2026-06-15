@@ -114,6 +114,35 @@ public sealed class ProjectionControllerTests : IDisposable
         Assert.DoesNotContain("req-t2-1", json);
     }
 
+    [Fact]
+    public async Task GetMyOutcomes_IncludesAllocatedSlot()
+    {
+        // Issue #483: employees should see their own assigned slot in
+        // history so they can recognise past allocations at a glance.
+        _db.BookingOutcomes.Add(new BookingOutcomeProjection
+        {
+            BookingRequestId = "req-with-slot",
+            TenantId = "tenant-a",
+            RequestorId = "alice",
+            LocationId = "loc-1",
+            Date = new DateOnly(2026, 6, 10),
+            TimeSlot = "08:00-17:00",
+            FinalStatus = "Allocated",
+            SlotId = "Prague-A12",
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "alice"));
+        var result = await ctrl.GetMyOutcomes(ct: default) as OkObjectResult;
+
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        // System.Text.Json with default options serialises as PascalCase
+        // here (no MVC pipeline transforming). The wire format under MVC
+        // is camelCase per ASP.NET Core defaults — covered indirectly by
+        // the existing /datahub/my-outcomes integration tests.
+        Assert.Contains("\"SlotId\":\"Prague-A12\"", json);
+    }
+
     // ── HR Draw history tenant isolation ─────────────────────────────────────
 
     [Fact]

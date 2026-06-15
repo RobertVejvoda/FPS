@@ -9,6 +9,7 @@ export interface BookingOutcomeItem {
   reasonCode: string | null;
   safeReasonText: string | null;
   allocationSource: string | null;
+  slotId: string | null;
   submittedAt: string | null;
   decidedAt: string | null;
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchMyOutcomes, type BookingOutcomeItem } from '../api/dataHub';
-import { displayLocation } from '../displayLabels';
+import { displayLocation, displaySlot } from '../displayLabels';
 
 type ListState =
   | { kind: 'loading' }
@@ -83,6 +83,7 @@ export function BookingHistoryPage() {
                   <th style={thStyle}>Date</th>
                   <th style={thStyle}>Time slot</th>
                   <th style={thStyle}>Location</th>
+                  <th style={thStyle}>Spot</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Reason</th>
                   <th style={thStyle}>Decided</th>
@@ -94,6 +95,7 @@ export function BookingHistoryPage() {
                     <td style={tdStyle}>{new Date(b.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
                     <td style={tdStyle}>{b.timeSlot}</td>
                     <td style={tdStyle}>{displayLocation(b.locationId) ?? '–'}</td>
+                    <td style={tdStyle}>{displaySlot(b.slotId) ?? '–'}</td>
                     <td style={tdStyle}><StatusChip status={b.finalStatus} /></td>
                     <td style={tdStyle}>{b.safeReasonText ?? '–'}</td>
                     <td style={tdStyle}>{b.decidedAt ? new Date(b.decidedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
