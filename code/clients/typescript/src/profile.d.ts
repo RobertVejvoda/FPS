@@ -628,6 +628,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/profile/hr/requestors/{userId}/eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EligibilityUpdateRequest"];
+                    "text/json": components["schemas"]["EligibilityUpdateRequest"];
+                    "application/*+json": components["schemas"]["EligibilityUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EligibilityUpdateResponse"];
+                        "application/json": components["schemas"]["EligibilityUpdateResponse"];
+                        "text/json": components["schemas"]["EligibilityUpdateResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/profile/snapshot": {
         parameters: {
             query?: never;
@@ -678,6 +767,19 @@ export interface components {
             names: {
                 [key: string]: string;
             };
+        };
+        EligibilityUpdateRequest: {
+            hasCompanyCar: null | boolean;
+            accessibilityEligible: null | boolean;
+        };
+        EligibilityUpdateResponse: {
+            userId: string;
+            shortRef: string;
+            hasCompanyCar: boolean;
+            accessibilityEligible: boolean;
+            snapshotVersion: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         /** Format: binary */
         IFormFile: string;
