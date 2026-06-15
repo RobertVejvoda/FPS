@@ -17,6 +17,7 @@ namespace FPS.Profile.Controllers;
 [Authorize]
 public sealed class HrProfileController(
     IProfileRepository repository,
+    EmployeeBootstrapService bootstrapService,
     ICurrentUser currentUser) : ControllerBase
 {
     private const int MaxBatchSize = 200;
@@ -111,6 +112,54 @@ public sealed class HrProfileController(
                 IsDefault: defaultVehicle.IsDefault)));
     }
 
+    /// <summary>
+    /// Update allocation-impacting eligibility flags (company car, accessibility)
+    /// for a single requestor. HR/admin only. Issue #481: these flags must not
+    /// be self-service for employees because they influence draw priority and
+    /// slot eligibility; the existing employee endpoints (/profile/vehicles,
+    /// /profile/snapshot) never expose them as writable. A null field on the
+    /// request body leaves that flag untouched, so the caller can flip one
+    /// without round-tripping the other.
+    ///
+    /// AUDIT GAP: Profile service does not currently emit domain events, so
+    /// this change is not surfaced in the audit timeline. Adding event
+    /// publication is out of scope for this slice and should follow the
+    /// booking-event pattern once the Profile bus binding lands.
+    /// </summary>
+    [HttpPatch("requestors/{userId}/eligibility")]
+    [Authorize(Roles = HrAdminOnlyRoles)]
+    [ProducesResponseType(typeof(EligibilityUpdateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateEligibility(
+        string userId,
+        [FromBody] EligibilityUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return BadRequest("userId is required.");
+
+        var (profile, error) = await bootstrapService.UpdateEligibilityAsync(
+            currentUser.TenantId, userId,
+            request.HasCompanyCar, request.AccessibilityEligible, cancellationToken);
+
+        if (error == "Employee not found.") return NotFound();
+        if (error is not null) return BadRequest(new { error });
+
+        return Ok(new EligibilityUpdateResponse(
+            UserId: profile!.UserId,
+            ShortRef: BuildShortRef(profile.UserId),
+            HasCompanyCar: profile.HasCompanyCar,
+            AccessibilityEligible: profile.AccessibilityEligible,
+            SnapshotVersion: profile.SnapshotVersion,
+            UpdatedAt: profile.UpdatedAt));
+    }
+
     // Last 6 chars of the userId hash, uppercased — matches the short-ref convention
     // already used as a secondary label on Parking Requests rows.
     private static string BuildShortRef(string userId)
@@ -140,5 +189,17 @@ public sealed record RequestorVehicleSummary(
     string VehicleType,
     bool IsElectric,
     bool IsDefault);
+
+public sealed record EligibilityUpdateRequest(
+    bool? HasCompanyCar,
+    bool? AccessibilityEligible);
+
+public sealed record EligibilityUpdateResponse(
+    string UserId,
+    string ShortRef,
+    bool HasCompanyCar,
+    bool AccessibilityEligible,
+    string SnapshotVersion,
+    DateTimeOffset UpdatedAt);
 
 public sealed record RequestorSummaryNotFound(string UserId, string ShortRef);

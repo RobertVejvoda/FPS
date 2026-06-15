@@ -1,6 +1,7 @@
 using FPS.Profile.Application;
 using FPS.Profile.Controllers;
 using FPS.Profile.Domain;
+using FPS.Profile.Infrastructure;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -19,7 +20,9 @@ public sealed class HrProfileControllerTests
         currentUser.Setup(u => u.UserId).Returns("hr-1");
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
 
-        controller = new HrProfileController(repository.Object, currentUser.Object);
+        var bootstrapService = new EmployeeBootstrapService(
+            repository.Object, new InMemoryDeactivatedUserStore());
+        controller = new HrProfileController(repository.Object, bootstrapService, currentUser.Object);
     }
 
     [Fact]

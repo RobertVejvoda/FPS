@@ -63,6 +63,45 @@ public sealed class EmployeeBootstrapService(
         return (profile, null);
     }
 
+    // Scoped HR/admin update for allocation-impacting eligibility flags only.
+    // Issue #481: separated from the full UpdateAsync so the HR Operations
+    // requestor drawer can flip company-car / accessibility without
+    // accidentally clobbering home location, roles, or notification address.
+    // A null flag leaves the existing value untouched.
+    public async Task<(UserProfile? profile, string? error)> UpdateEligibilityAsync(
+        string tenantId, string subjectHash,
+        bool? hasCompanyCar, bool? accessibilityEligible, CancellationToken ct)
+    {
+        if (hasCompanyCar is null && accessibilityEligible is null)
+            return (null, "At least one eligibility field must be specified.");
+
+        var existing = await profileRepository.GetAsync(tenantId, subjectHash, ct);
+        if (existing is null) return (null, "Employee not found.");
+
+        var updated = new UserProfile
+        {
+            TenantId = existing.TenantId,
+            UserId = existing.UserId,
+            EmployeeId = existing.EmployeeId,
+            DisplayName = existing.DisplayName,
+            Status = existing.Status,
+            FpsRoles = existing.FpsRoles,
+            NotificationAddress = existing.NotificationAddress,
+            HomeLocationId = existing.HomeLocationId,
+            ParkingEligible = existing.ParkingEligible,
+            HasCompanyCar = hasCompanyCar ?? existing.HasCompanyCar,
+            AccessibilityEligible = accessibilityEligible ?? existing.AccessibilityEligible,
+            ReservedSpaceEligible = existing.ReservedSpaceEligible,
+            Vehicles = existing.Vehicles,
+            SnapshotVersion = Guid.NewGuid().ToString(),
+            UpdatedAt = DateTimeOffset.UtcNow,
+            FactSource = existing.FactSource,
+        };
+
+        await profileRepository.SaveAsync(updated, ct);
+        return (updated, null);
+    }
+
     public async Task<string?> UpdateAsync(
         string tenantId, string subjectHash, UpdateEmployeeRequest request, CancellationToken ct)
     {
