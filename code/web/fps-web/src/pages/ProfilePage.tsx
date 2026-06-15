@@ -11,6 +11,14 @@ import {
   type VehicleSnapshot,
 } from '../api/profile';
 import { fetchMe, type MeResponse } from '../api/client';
+import { displayLocation } from '../displayLabels';
+
+// Local-demo defaults. Until Profile/ProfileSnapshot carries a home
+// location/facility per user (out of scope for #477), HR/admin and
+// employees alike share the demo facility "Headquarters" — so the
+// Profile page no longer reads as if facility data is simply missing.
+const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
+const DEMO_LOCATION_ID = 'Prague';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 
@@ -115,6 +123,11 @@ export function ProfilePage() {
       <section style={card}>
         <h3 style={cardTitle}>Account</h3>
         <Row label="Roles" value={formatRoles(me.roles)} />
+        {/* Issue #477: surface known facility/location labels so the page
+            stops looking as if facility data is missing. Pulled from the
+            demo defaults until the snapshot carries per-user values. */}
+        <Row label="Facility" value={displayLocation(DEMO_FACILITY_ID) ?? 'Headquarters'} />
+        <Row label="Location" value={displayLocation(DEMO_LOCATION_ID) ?? DEMO_LOCATION_ID} />
       </section>
 
       <section style={card}>

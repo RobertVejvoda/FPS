@@ -51,6 +51,45 @@ export async function fetchTenant(
   }
 }
 
+// Tenant-level parking bootstrap — used by the Configuration page (#477)
+// to auto-discover known locations instead of asking HR to type a Location
+// id into a free-text box.
+export interface TenantBootstrapLocationDto {
+  locationId: string;
+  activeSlotCount: number;
+  hasLocationPolicy: boolean;
+  isUsable: boolean;
+  recordedByHash: string | null;
+  recordedAt: string | null;
+}
+
+export interface TenantBootstrapResponse {
+  tenantId: string;
+  defaultPolicyConfigured: boolean;
+  hasUsableLocation: boolean;
+  isComplete: boolean;
+  locations: TenantBootstrapLocationDto[];
+}
+
+export async function fetchTenantParkingBootstrap(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  tenantId: string,
+): Promise<FetchResult<TenantBootstrapResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/tenants/${encodeURIComponent(tenantId)}/parking-bootstrap`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (res.status === 404) return { kind: 'error', status: 404, message: 'Tenant not found.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants/{tenantId}/parking-bootstrap returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as TenantBootstrapResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchTenantReadiness(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   tenantId: string,
