@@ -8,8 +8,26 @@ public sealed class BookingEventNotificationHandler(
     INotificationBroadcaster broadcaster,
     IEmailNotificationSender emailSender,
     INotificationPreferencesRepository preferencesRepository,
+    INotificationAudienceResolver audienceResolver,
     ILogger<BookingEventNotificationHandler> logger)
 {
+    // HR-variant notification types. The handler appends ".hr" to the
+    // source event type when fanning out to HR users so the dedup key,
+    // message switch and frontend filters can distinguish the two
+    // recipients of the same source event without collisions.
+    public const string HrSuffix = ".hr";
+
+    // Event types where HR has a business interest in addition to the
+    // requestor. For booking.requestCancelled we only fan out when the
+    // actor is an employee — HR-initiated cancellations don't need to
+    // notify HR back.
+    private static readonly HashSet<string> HrFanoutEventTypes = new(StringComparer.Ordinal)
+    {
+        "booking.requestSubmitted",
+        "booking.requestCancelled",
+        "booking.drawCompleted",
+    };
+
     // Maps ReasonCode values to employee-safe human-readable text.
     // Codes correspond to BookingRejectionCode enum values.
     private static readonly IReadOnlyDictionary<string, string> SafeRejectionReasons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -33,22 +51,23 @@ public sealed class BookingEventNotificationHandler(
             "Notification event received. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",
             envelope.TenantId, envelope.EventType, envelope.EventId);
 
-        var notificationClass = NotificationClassifier.Classify(envelope.EventType);
+        var deliveries = await ResolveDeliveriesAsync(envelope, cancellationToken);
 
         var recipientCount = 0;
-        foreach (var recipientId in ResolveRecipients(envelope))
+        foreach (var delivery in deliveries)
         {
-            var prefs = await preferencesRepository.GetOrDefaultAsync(envelope.TenantId, recipientId, cancellationToken);
+            var notificationClass = NotificationClassifier.Classify(delivery.EffectiveType);
+            var prefs = await preferencesRepository.GetOrDefaultAsync(envelope.TenantId, delivery.RecipientId, cancellationToken);
             if (!prefs.AllowsDelivery(notificationClass))
             {
                 logger.LogDebug(
                     "Notification suppressed by user preference. TenantId={TenantId} NotificationType={NotificationType} Class={Class}",
-                    envelope.TenantId, envelope.EventType, notificationClass);
+                    envelope.TenantId, delivery.EffectiveType, notificationClass);
                 continue;
             }
 
-            await HandleInAppAsync(envelope, recipientId, cancellationToken);
-            await HandleEmailAsync(envelope, recipientId, cancellationToken);
+            await HandleInAppAsync(envelope, delivery, cancellationToken);
+            await HandleEmailAsync(envelope, delivery, cancellationToken);
             recipientCount++;
         }
 
@@ -57,25 +76,25 @@ public sealed class BookingEventNotificationHandler(
             envelope.TenantId, envelope.EventType, envelope.EventId, recipientCount);
     }
 
-    private async Task HandleInAppAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
+    private async Task HandleInAppAsync(BookingEventEnvelope envelope, DeliveryTarget delivery, CancellationToken cancellationToken)
     {
-        var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType, NotificationChannel.InApp);
+        var dedupKey = DeduplicationKey(envelope.EventId, delivery.RecipientId, delivery.EffectiveType, NotificationChannel.InApp);
         if (await repository.ExistsAsync(dedupKey, cancellationToken))
             return;
 
-        var record = CreateRecord(envelope, recipientId, NotificationChannel.InApp, dedupKey);
+        var record = CreateRecord(envelope, delivery, NotificationChannel.InApp, dedupKey);
         await repository.SaveAsync(record, cancellationToken);
         // Best-effort — broadcaster failure must not affect persistence
         try { await broadcaster.BroadcastAsync(record, cancellationToken); } catch { }
     }
 
-    private async Task HandleEmailAsync(BookingEventEnvelope envelope, string recipientId, CancellationToken cancellationToken)
+    private async Task HandleEmailAsync(BookingEventEnvelope envelope, DeliveryTarget delivery, CancellationToken cancellationToken)
     {
-        var dedupKey = DeduplicationKey(envelope.EventId, recipientId, envelope.EventType, NotificationChannel.Email);
+        var dedupKey = DeduplicationKey(envelope.EventId, delivery.RecipientId, delivery.EffectiveType, NotificationChannel.Email);
         if (await repository.ExistsAsync(dedupKey, cancellationToken))
             return;
 
-        var record = CreateRecord(envelope, recipientId, NotificationChannel.Email, dedupKey);
+        var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey);
 
         EmailSendResult result;
         try { result = await emailSender.SendAsync(record, cancellationToken); }
@@ -98,51 +117,78 @@ public sealed class BookingEventNotificationHandler(
     }
 
     private static NotificationRecord CreateRecord(
-        BookingEventEnvelope envelope, string recipientId, string channel, string dedupKey) => new()
+        BookingEventEnvelope envelope, DeliveryTarget delivery, string channel, string dedupKey) => new()
     {
         Id = Guid.NewGuid(),
         DeduplicationKey = dedupKey,
         TenantId = envelope.TenantId,
-        RecipientId = recipientId,
-        NotificationType = envelope.EventType,
+        RecipientId = delivery.RecipientId,
+        NotificationType = delivery.EffectiveType,
         Channel = channel,
-        MessageText = ResolveMessage(envelope),
+        MessageText = ResolveMessage(envelope, delivery.EffectiveType),
         RelatedRequestId = envelope.Payload.BookingRequestId,
         RelatedDate = envelope.Payload.Date,
         RelatedTimeSlot = envelope.Payload.TimeSlot,
         LocationId = envelope.Payload.LocationId,
-        NextAction = ResolveNextAction(envelope.EventType),
+        NextAction = ResolveNextAction(delivery.EffectiveType),
         SourceEventId = envelope.EventId,
         CreatedAt = DateTime.UtcNow
     };
 
-    private static IEnumerable<string> ResolveRecipients(BookingEventEnvelope envelope)
+    private async Task<IReadOnlyList<DeliveryTarget>> ResolveDeliveriesAsync(
+        BookingEventEnvelope envelope, CancellationToken cancellationToken)
     {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var deliveries = new List<DeliveryTarget>();
+        var seen = new HashSet<(string Recipient, string Type)>(EqualityComparer<(string, string)>.Default);
 
-        if (!string.IsNullOrEmpty(envelope.Payload.RequestorId) &&
-            seen.Add(envelope.Payload.RequestorId))
-            yield return envelope.Payload.RequestorId;
+        void TryAdd(string? recipientId, string effectiveType)
+        {
+            if (string.IsNullOrEmpty(recipientId)) return;
+            if (seen.Add((recipientId, effectiveType)))
+                deliveries.Add(new DeliveryTarget(recipientId, effectiveType));
+        }
+
+        // Requestor-targeted notification keeps the source event type.
+        TryAdd(envelope.Payload.RequestorId, envelope.EventType);
 
         if (envelope.Payload.AffectedRecipientIds is { Count: > 0 })
         {
             foreach (var id in envelope.Payload.AffectedRecipientIds)
-            {
-                if (!string.IsNullOrEmpty(id) && seen.Add(id))
-                    yield return id;
-            }
+                TryAdd(id, envelope.EventType);
         }
+
+        // HR fan-out. Skipped when the actor is HR/admin so that, e.g., an
+        // HR cancellation does not page the rest of the HR team about an
+        // action they just performed.
+        if (HrFanoutEventTypes.Contains(envelope.EventType) &&
+            !IsHrActor(envelope.ActorType))
+        {
+            var hrRecipients = await audienceResolver.GetHrRecipientsAsync(envelope.TenantId, cancellationToken);
+            var hrType = envelope.EventType + HrSuffix;
+            foreach (var hrUser in hrRecipients)
+                TryAdd(hrUser, hrType);
+        }
+
+        return deliveries;
     }
 
-    private static string ResolveMessage(BookingEventEnvelope envelope)
+    private static bool IsHrActor(string actorType) =>
+        actorType is "hr_manager" or "admin";
+
+    private sealed record DeliveryTarget(string RecipientId, string EffectiveType);
+
+    private static string ResolveMessage(BookingEventEnvelope envelope, string effectiveType)
     {
         var p = envelope.Payload;
         var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
 
-        return envelope.EventType switch
+        return effectiveType switch
         {
             "booking.requestSubmitted" =>
                 $"Your parking request{ctx} has been submitted and is waiting for draw allocation.",
+
+            "booking.requestSubmitted" + HrSuffix =>
+                $"A new parking request{ctx} has been submitted and is awaiting allocation.",
 
             "booking.requestRejected" =>
                 BuildRejectionMessage(p, ctx),
@@ -155,8 +201,14 @@ public sealed class BookingEventNotificationHandler(
             "booking.requestCancelled" =>
                 BuildCancelledMessage(p, envelope.ActorType),
 
+            "booking.requestCancelled" + HrSuffix =>
+                BuildHrCancellationMessage(p, ctx),
+
             "booking.drawCompleted" =>
-                BuildDrawCompletedMessage(p),
+                BuildDrawCompletedMessage(p, ctx, hrAudience: false),
+
+            "booking.drawCompleted" + HrSuffix =>
+                BuildDrawCompletedMessage(p, ctx, hrAudience: true),
 
             "booking.noShowRecorded" =>
                 $"Your parking spot{ctx} was recorded as a no-show. This may affect your future allocation priority.",
@@ -175,7 +227,7 @@ public sealed class BookingEventNotificationHandler(
                     ? "Your parking request was updated by an authorized administrator."
                     : $"Your parking request was updated by an authorized administrator. Reason: {p.ReasonText}",
 
-            _ => $"A booking event occurred: {envelope.EventType}."
+            _ => $"A booking event occurred: {effectiveType}."
         };
     }
 
@@ -219,15 +271,25 @@ public sealed class BookingEventNotificationHandler(
         return $"Your parking request{ctx} has been cancelled.";
     }
 
-    private static string BuildDrawCompletedMessage(BookingEventPayload p)
+    private static string BuildDrawCompletedMessage(BookingEventPayload p, string ctx, bool hrAudience)
     {
-        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
         if (p.AllocatedCount.HasValue && p.RejectedCount.HasValue)
         {
             var total = p.AllocatedCount.Value + p.RejectedCount.Value + (p.WaitlistedCount ?? 0);
-            return $"Parking allocation{ctx} is complete: {p.AllocatedCount} of {total} requests allocated.";
+            return hrAudience
+                ? $"The parking draw{ctx} has completed: {p.AllocatedCount} of {total} requests allocated."
+                : $"Parking allocation{ctx} is complete: {p.AllocatedCount} of {total} requests allocated.";
         }
-        return $"Parking allocation{ctx} is complete.";
+        return hrAudience
+            ? $"The parking draw{ctx} has completed."
+            : $"Parking allocation{ctx} is complete.";
+    }
+
+    private static string BuildHrCancellationMessage(BookingEventPayload p, string ctx)
+    {
+        return string.IsNullOrEmpty(p.ReasonText)
+            ? $"An employee has cancelled their parking request{ctx}."
+            : $"An employee has cancelled their parking request{ctx}. Reason: {p.ReasonText}";
     }
 
     private static string BuildPenaltyMessage(BookingEventPayload p)

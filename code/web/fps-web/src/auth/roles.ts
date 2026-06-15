@@ -21,8 +21,12 @@ export function canAccessProfile(roles: string[]): boolean {
   return hasRole(roles, FpsRole.Employee);
 }
 
+// HR managers and admins can now receive HR-targeted notification variants
+// (NOTIF #478: booking.requestSubmitted.hr, .requestCancelled.hr, .drawCompleted.hr).
+// Without HR/admin here the banner can show, but the nav item disappears
+// and the /notifications route 403s — issue #478 Codex review on PR #487.
 export function canAccessNotifications(roles: string[]): boolean {
-  return hasRole(roles, FpsRole.Employee);
+  return hasRole(roles, FpsRole.Employee, FpsRole.HrManager, FpsRole.Admin);
 }
 
 // Reporting surfaces.

@@ -16,10 +16,16 @@ const TYPE_LABELS: Record<string, string> = {
   'booking.usageConfirmed': 'Usage confirmed',
   'booking.requestExpired': 'Request expired',
   'booking.manualCorrectionApplied': 'Request updated',
+  // HR-targeted variants (NOTIF #478). The `.hr` suffix distinguishes the
+  // audience: same source event, different label and recipient set.
+  'booking.requestSubmitted.hr': 'New parking request',
+  'booking.requestCancelled.hr': 'Request cancelled by employee',
+  'booking.drawCompleted.hr': 'Draw run completed',
 };
 
 function typeLabel(notificationType: string): string {
-  return TYPE_LABELS[notificationType] ?? notificationType.replace(/^booking\./, '').replace(/([A-Z])/g, ' $1').trim();
+  return TYPE_LABELS[notificationType]
+    ?? notificationType.replace(/^booking\./, '').replace(/\.hr$/, '').replace(/([A-Z])/g, ' $1').trim();
 }
 
 type State =

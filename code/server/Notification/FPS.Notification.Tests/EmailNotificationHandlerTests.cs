@@ -19,6 +19,7 @@ public sealed class EmailNotificationHandlerTests
     {
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
             new InMemoryNotificationPreferencesRepository(),
+            new RosterBackedAudienceResolver(new InMemoryHrRosterStore()),
             logger.Object);
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
