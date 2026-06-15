@@ -5,13 +5,25 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Customer.Controllers;
 
+// Class-level [Authorize] only requires authentication. The read-only GET
+// is open to both admin and hr_manager so HR can discover the tenant's
+// known locations from the Configuration page (issue #477) — same role
+// policy the Configuration location/slot endpoints already use. The
+// mutating POSTs stay admin-only because they record tenant-wide
+// bootstrap state. Same lesson as MAP001 (#467) and HR display-names
+// (#475) — controller-level role attributes are additive, so the
+// per-action relaxation has to live on the methods.
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize]
 public sealed class TenantParkingBootstrapController(
     TenantParkingBootstrapService service,
     ICurrentUser currentUser) : ControllerBase
 {
+    private const string DiscoveryRoles = "admin,hr_manager";
+    private const string MutatingRoles = "admin";
+
     [HttpGet("/tenants/{tenantId}/parking-bootstrap")]
+    [Authorize(Roles = DiscoveryRoles)]
     public async Task<IActionResult> Get(string tenantId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -46,6 +58,7 @@ public sealed class TenantParkingBootstrapController(
     }
 
     [HttpPost("/tenants/{tenantId}/parking-bootstrap/policy")]
+    [Authorize(Roles = MutatingRoles)]
     public async Task<IActionResult> RecordPolicy(
         string tenantId, [FromBody] RecordPolicyRequest request, CancellationToken ct)
     {
@@ -65,6 +78,7 @@ public sealed class TenantParkingBootstrapController(
     }
 
     [HttpPost("/tenants/{tenantId}/parking-bootstrap/locations")]
+    [Authorize(Roles = MutatingRoles)]
     public async Task<IActionResult> RecordLocation(
         string tenantId, [FromBody] RecordLocationRequest request, CancellationToken ct)
     {
