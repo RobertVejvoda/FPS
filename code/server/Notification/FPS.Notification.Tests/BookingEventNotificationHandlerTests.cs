@@ -11,12 +11,14 @@ public sealed class BookingEventNotificationHandlerTests
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly Mock<IEmailNotificationSender> emailSender = new();
+    private readonly InMemoryHrRosterStore roster = new();
     private readonly BookingEventNotificationHandler handler;
 
     public BookingEventNotificationHandlerTests()
     {
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
             new InMemoryNotificationPreferencesRepository(),
+            new RosterBackedAudienceResolver(roster),
             NullLogger<BookingEventNotificationHandler>.Instance);
         emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
@@ -295,6 +297,181 @@ public sealed class BookingEventNotificationHandlerTests
                 n.MessageText.Contains("complete") &&
                 n.Channel == NotificationChannel.InApp),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── HR fan-out (NOTIF #478) ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_RequestSubmitted_FansOutToHrRecipients()
+    {
+        // New submission must reach HR so they can plan around the upcoming
+        // draw; the employee keeps their own confirmation notification.
+        roster.Set("tenant-1", ["hr-1", "hr-2"]);
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "user-1" &&
+                n.NotificationType == "booking.requestSubmitted" &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "hr-1" &&
+                n.NotificationType == "booking.requestSubmitted.hr" &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "hr-2" &&
+                n.NotificationType == "booking.requestSubmitted.hr" &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_HrTargetedNotification_UsesAudienceLanguage()
+    {
+        // HR copy uses third-person business framing — never "your request".
+        roster.Set("tenant-1", ["hr-1"]);
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "hr-1" &&
+                n.Channel == NotificationChannel.InApp &&
+                n.MessageText.Contains("new parking request") &&
+                !n.MessageText.Contains("Your")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NoHrRoster_OnlyNotifiesRequestor()
+    {
+        // Empty roster: degrade gracefully — no extra notifications, no
+        // exception. Important because tenants without registered HR users
+        // must still see employee notifications.
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.RecipientId == "user-1" && n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.NotificationType.EndsWith(".hr")),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_EmployeeNotInHrRoster_DoesNotReceiveHrVariant()
+    {
+        // Role isolation: an employee not on the HR roster only gets the
+        // requestor-facing notification, never the HR variant.
+        roster.Set("tenant-1", ["hr-1"]);
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "user-1" &&
+                n.NotificationType == "booking.requestSubmitted.hr"),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_EmployeeCancellation_NotifiesHr()
+    {
+        // HR must know when an employee cancels so they can manage capacity.
+        roster.Set("tenant-1", ["hr-1"]);
+
+        await handler.HandleAsync(BuildEnvelopeFull("booking.requestCancelled", "user-1", actorType: "employee"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "hr-1" &&
+                n.Channel == NotificationChannel.InApp &&
+                n.NotificationType == "booking.requestCancelled.hr" &&
+                n.MessageText.Contains("employee has cancelled")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_HrCancellation_DoesNotNotifyHrAudience()
+    {
+        // When HR cancels, they already know — don't echo back to the HR
+        // roster. The affected employee still gets their notification.
+        roster.Set("tenant-1", ["hr-1"]);
+
+        await handler.HandleAsync(BuildEnvelopeFull("booking.requestCancelled", "user-1", actorType: "hr_manager"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.NotificationType.EndsWith(".hr")),
+            It.IsAny<CancellationToken>()), Times.Never);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "user-1" &&
+                n.Channel == NotificationChannel.InApp &&
+                n.MessageText.Contains("HR")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DrawCompleted_NotifiesHrAudience()
+    {
+        // Draw completion is a key business signal for HR oversight.
+        roster.Set("tenant-1", ["hr-1"]);
+
+        await handler.HandleAsync(BuildEnvelopeFull("booking.drawCompleted",
+            requestorId: "user-1", allocatedCount: 5, rejectedCount: 2, waitlistedCount: 1, actorType: "system"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "hr-1" &&
+                n.Channel == NotificationChannel.InApp &&
+                n.NotificationType == "booking.drawCompleted.hr" &&
+                n.MessageText.Contains("parking draw") &&
+                n.MessageText.Contains("5") &&
+                n.MessageText.Contains("8")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_RequestorIsAlsoHr_GetsBothVariants()
+    {
+        // Edge case: a user with HR role who submits a personal request gets
+        // both the requestor-facing and HR-facing notifications. They are
+        // distinct deduplication keys so this isn't a duplicate.
+        roster.Set("tenant-1", ["user-1"]);
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "user-1" &&
+                n.NotificationType == "booking.requestSubmitted" &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.RecipientId == "user-1" &&
+                n.NotificationType == "booking.requestSubmitted.hr" &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_HrFanOutEventOnOtherTenant_DoesNotLeakAcrossTenants()
+    {
+        // Roster lookup is keyed by tenantId — events for tenant-1 must not
+        // pick up HR users registered under tenant-2.
+        roster.Set("tenant-2", ["hr-other"]);
+
+        await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n => n.RecipientId == "hr-other"),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static BookingEventEnvelope BuildEnvelope(

@@ -15,6 +15,8 @@ builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepos
 builder.Services.AddSingleton<INotificationPreferencesRepository, InMemoryNotificationPreferencesRepository>();
 builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroadcaster>();
 builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
+builder.Services.AddSingleton<IHrRosterStore, InMemoryHrRosterStore>();
+builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
 builder.Services.AddScoped<BookingEventNotificationHandler>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 

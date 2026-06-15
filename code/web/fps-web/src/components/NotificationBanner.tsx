@@ -15,6 +15,11 @@ function isImportantNotification(type: string): boolean {
     'booking.manualCorrectionApplied',
     'booking.noShowRecorded',
     'booking.penaltyApplied',
+    // HR-audience variants (NOTIF #478) — surface as banners on relevant
+    // pages so HR doesn't miss a new request or a draw completing.
+    'booking.requestSubmitted.hr',
+    'booking.requestCancelled.hr',
+    'booking.drawCompleted.hr',
   ];
   return importantTypes.includes(type);
 }
