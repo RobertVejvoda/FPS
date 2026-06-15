@@ -104,6 +104,28 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetBootstrap_HrManagerOtherTenant_Returns403()
+    {
+        // Codex re-review on PR #486: opening the GET to hr_manager must
+        // not let an HR user read another tenant's bootstrap data. Token
+        // carries tenant_id=tenant-a; request goes to /tenants/tenant-b/...
+        var client = ClientWithToken("user-1", "tenant-a", "hr_manager");
+        var response = await client.GetAsync("/tenants/tenant-b/parking-bootstrap");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBootstrap_AdminOtherTenant_PassesAuthGate()
+    {
+        // Admin is intentionally cross-tenant — matches the rest of the
+        // Customer admin surface. Tenant isolation only applies to HR.
+        var client = ClientWithToken("user-1", "tenant-a", "admin");
+        var response = await client.GetAsync("/tenants/tenant-b/parking-bootstrap");
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     // ── POST /tenants/{tenantId}/parking-bootstrap/policy (mutating) ──────────
 
     [Fact]

@@ -28,6 +28,17 @@ public sealed class TenantParkingBootstrapController(
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
 
+        // Tenant isolation (Codex review on PR #486): hr_manager is now
+        // allowed onto this endpoint so the Configuration page can discover
+        // locations, but HR is tenant-scoped — they must only read their
+        // own tenant's bootstrap. Admin keeps cross-tenant capability
+        // intentionally, matching the rest of the Customer admin surface.
+        if (!currentUser.IsInRole("admin")
+            && !string.Equals(tenantId, currentUser.TenantId, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
         var bootstrap = await service.GetAsync(tenantId, ct);
         var snap = bootstrap.PolicySnapshot;
         return Ok(new
