@@ -44,10 +44,13 @@ export function canAccessHrOperations(roles: string[]): boolean {
   return hasRole(roles, FpsRole.HrManager, FpsRole.Admin);
 }
 
-// Parking Map — read-only capacity view. Open to all FPS users (employees included);
-// the server returns a public-safe projection that omits reservedForUserId.
+// Parking Map — operational capacity view restricted to HR/admin (issue #483).
+// Employees moved to their personal assignment history on BookingHistoryPage;
+// the general site map carries no employee-relevant information. Auditor /
+// report_viewer also lose access because their workflows live elsewhere
+// (auditor workspace, reports) — the map's value is purely operational.
 export function canAccessParkingMap(roles: string[]): boolean {
-  return hasRole(roles, FpsRole.Employee, FpsRole.HrManager, FpsRole.Admin, FpsRole.ReportViewer, FpsRole.Auditor);
+  return hasRole(roles, FpsRole.HrManager, FpsRole.Admin);
 }
 
 // Audit surfaces.
