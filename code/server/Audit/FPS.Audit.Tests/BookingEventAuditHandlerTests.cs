@@ -11,11 +11,12 @@ namespace FPS.Audit.Tests;
 public sealed class BookingEventAuditHandlerTests
 {
     private readonly Mock<IAuditRepository> repository = new();
+    private readonly InMemoryPiiMappingRepository piiMappingRepository = new();
     private readonly BookingEventAuditHandler handler;
 
     public BookingEventAuditHandlerTests()
     {
-        handler = new BookingEventAuditHandler(repository.Object, NullLogger<BookingEventAuditHandler>.Instance);
+        handler = new BookingEventAuditHandler(repository.Object, piiMappingRepository, NullLogger<BookingEventAuditHandler>.Instance);
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.AppendAsync(It.IsAny<AuditRecord>(), It.IsAny<CancellationToken>()))
@@ -364,7 +365,7 @@ public sealed class BookingEventAuditHandlerTests
     public async Task Query_FilterByResult_ReturnsMatchingRecords()
     {
         var repo = new InMemoryAuditRepository();
-        var h = new BookingEventAuditHandler(repo, NullLogger<BookingEventAuditHandler>.Instance);
+        var h = new BookingEventAuditHandler(repo, new InMemoryPiiMappingRepository(), NullLogger<BookingEventAuditHandler>.Instance);
 
         await h.HandleAsync(BuildEnvelope("booking.requestSubmitted"));
         await h.HandleAsync(BuildEnvelope("booking.requestRejected") with { EventId = "event-2" });
@@ -380,7 +381,7 @@ public sealed class BookingEventAuditHandlerTests
     public async Task Query_FilterByAction_ReturnsMatchingRecords()
     {
         var repo = new InMemoryAuditRepository();
-        var h = new BookingEventAuditHandler(repo, NullLogger<BookingEventAuditHandler>.Instance);
+        var h = new BookingEventAuditHandler(repo, new InMemoryPiiMappingRepository(), NullLogger<BookingEventAuditHandler>.Instance);
 
         await h.HandleAsync(BuildEnvelope("booking.requestSubmitted"));
         await h.HandleAsync(BuildEnvelope("booking.slotAllocated") with { EventId = "event-2" });
@@ -396,7 +397,7 @@ public sealed class BookingEventAuditHandlerTests
     public async Task Query_FilterByReasonCode_ReturnsMatchingRecords()
     {
         var repo = new InMemoryAuditRepository();
-        var h = new BookingEventAuditHandler(repo, NullLogger<BookingEventAuditHandler>.Instance);
+        var h = new BookingEventAuditHandler(repo, new InMemoryPiiMappingRepository(), NullLogger<BookingEventAuditHandler>.Instance);
 
         var withReason = BuildEnvelope("booking.requestRejected") with
         {

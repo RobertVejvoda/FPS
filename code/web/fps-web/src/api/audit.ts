@@ -87,6 +87,40 @@ export async function fetchAuditRecords(
   }
 }
 
+// Maps a batch of actor hashes from the audit table back to user IDs and
+// the short ref the table is showing. Returns only hashes with a stored
+// mapping — unknown hashes are simply absent from the result (issue #482).
+export interface ActorReferenceItem {
+  actorHash: string;
+  userId: string;
+  shortRef: string;
+}
+
+export interface ActorReferencesResponse {
+  items: Record<string, ActorReferenceItem>;
+}
+
+export async function resolveAuditActorReferences(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  actorHashes: string[],
+): Promise<FetchResult<ActorReferencesResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  if (actorHashes.length === 0) return { kind: 'ok', data: { items: {} } };
+  try {
+    const res = await fetch(`${apiBaseUrl}/audit/actor-references`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ actorHashes }),
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `POST /audit/actor-references returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as ActorReferencesResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function erasePiiMapping(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   userId: string,

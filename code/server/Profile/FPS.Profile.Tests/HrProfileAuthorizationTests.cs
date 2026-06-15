@@ -98,6 +98,17 @@ public sealed class HrProfileAuthorizationTests : IClassFixture<WebApplicationFa
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Fact]
+    public async Task DisplayNames_AuditorRole_Returns200()
+    {
+        // Regression test for Codex review on PR #488 (#482): auditor must be
+        // able to resolve display names so the auditor workspace can render
+        // actor names instead of silently degrading to the short-ref fallback.
+        var client = ClientWithToken("user-1", "tenant-1", "auditor");
+        var response = await client.PostAsync("/profile/hr/display-names", JsonBody("""{"userIds":["u1"]}"""));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     // ── GET /profile/hr/requestors/{userId} ──────────────────────────────────
 
     [Fact]
@@ -116,6 +127,17 @@ public sealed class HrProfileAuthorizationTests : IClassFixture<WebApplicationFa
     public async Task RequestorSummary_EmployeeRole_Returns403()
     {
         var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.GetAsync("/profile/hr/requestors/some-user");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestorSummary_AuditorRole_Returns403_StillHrAdminOnly()
+    {
+        // Privacy boundary (issue #482): opening display-names to auditor
+        // must not also expose parking eligibility / vehicle / home-location
+        // facts on the requestor summary — that stays HR/admin-only.
+        var client = ClientWithToken("user-1", "tenant-1", "auditor");
         var response = await client.GetAsync("/profile/hr/requestors/some-user");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

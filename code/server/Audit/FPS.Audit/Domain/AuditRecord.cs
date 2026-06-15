@@ -52,4 +52,12 @@ public interface IPiiMappingRepository
     Task DeleteByUserIdAsync(string userId, string tenantId, CancellationToken cancellationToken = default);
     Task DeleteByActorHashAsync(string actorHash, string tenantId, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(string userId, string tenantId, CancellationToken cancellationToken = default);
+
+    // Returns hash → mapping for the requested actor hashes within the
+    // tenant. Hashes without a stored mapping are simply omitted from the
+    // result. Used by the auditor workspace to resolve "Who was that?"
+    // (issue #482) — auditor never sees the raw userId in the table, only
+    // a short hash prefix, and this lookup unlocks the drill-down.
+    Task<IReadOnlyDictionary<string, PiiMapping>> GetByActorHashesAsync(
+        string tenantId, IReadOnlyList<string> actorHashes, CancellationToken cancellationToken = default);
 }
