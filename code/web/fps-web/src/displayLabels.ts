@@ -316,11 +316,14 @@ export function displayActorRef(hash: string | null): string {
   return hash.length > 20 ? `${hash.slice(0, 20)}…` : hash;
 }
 
-// Actor type display labels (AUDIT003)
+// Actor type display labels (AUDIT003). HR cancellation and HR operations
+// emit actorType=hr_manager (#482 review); the older 'hr' value is kept for
+// backwards compatibility with any historical audit rows in the store.
 export function humanizeActorType(actorType: string): string {
   const labels: Record<string, string> = {
     employee: 'Employee',
     hr: 'HR Manager',
+    hr_manager: 'HR Manager',
     admin: 'Administrator',
     system: 'System',
     integration: 'Integration',

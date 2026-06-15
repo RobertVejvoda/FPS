@@ -20,13 +20,19 @@ public sealed class HrProfileController(
     ICurrentUser currentUser) : ControllerBase
 {
     private const int MaxBatchSize = 200;
-    private const string HrAndReportingRoles = "hr_manager,admin,report_viewer";
+    // Issue #482 added auditor: the auditor workspace resolves actor hashes
+    // back to user ids and then to names. Without auditor here the workspace
+    // silently falls back to short-ref-only labels, missing the "auditor can
+    // understand who performed the action" acceptance criterion. Pinned
+    // end-to-end by HrProfileAuthorizationTests.DisplayNames_AuditorRole_Returns200.
+    private const string HrAndReportingRoles = "hr_manager,admin,report_viewer,auditor";
     private const string HrAdminOnlyRoles = "hr_manager,admin";
 
     /// <summary>
     /// Returns display names for a batch of subject hashes. Allowed for HR,
-    /// admin, AND report_viewer — the role that owns the Reports surface.
-    /// Names are never exposed on employee screens or audit payloads.
+    /// admin, report_viewer, AND auditor. Names are never exposed on employee
+    /// screens or audit payloads themselves — this endpoint is the seam that
+    /// lets the auditor workspace join opaque actor hashes back to people.
     /// </summary>
     [HttpPost("display-names")]
     [Authorize(Roles = HrAndReportingRoles)]
