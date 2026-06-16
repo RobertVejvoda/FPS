@@ -78,6 +78,27 @@ public sealed class DaprInternalOnlyTests
     }
 
     [Fact]
+    public void NoHostEnvironment_NoTokenConfigured_Returns503()
+    {
+        // Codex review on PR #497: a broken / custom DI setup without
+        // IHostEnvironment must be treated as unknown environment and
+        // fail closed. The previous "env is null OR Development" branch
+        // would have silently reopened every internal-only endpoint.
+        var config = new ConfigurationBuilder().Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(config);
+        // Intentionally do NOT register IHostEnvironment.
+        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        var actionContext = new ActionContext(httpContext, new RouteData(), new Microsoft.AspNetCore.Mvc.Abstractions.ActionDescriptor());
+        var ctx = new ResourceExecutingContext(actionContext, [], []);
+
+        new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
+
+        var result = Assert.IsType<ObjectResult>(ctx.Result);
+        Assert.Equal(503, result.StatusCode);
+    }
+
+    [Fact]
     public void CorrectTokenPresent_AllowsThrough()
     {
         // Token configured + matching header: pass regardless of environment.

@@ -37,17 +37,19 @@ public sealed class DaprInternalOnlyAttribute : Attribute, IResourceFilter
 
         if (string.IsNullOrEmpty(expectedToken))
         {
-            // No token configured: only permitted in Development. Anywhere
-            // else (Staging, Production, hosted profiles, Test) we refuse
-            // the request rather than silently allowing it through. SEC002.
-            if (env is null || env.IsDevelopment())
+            // No token configured: only permitted in an explicitly resolved
+            // Development environment. A missing IHostEnvironment (broken
+            // or custom DI setup) is treated as unknown and fails closed —
+            // the previous "env is null OR Development" branch silently
+            // reopened every internal-only endpoint (Codex review on PR #497).
+            if (env?.IsDevelopment() == true)
                 return;
 
             (services.GetService(typeof(ILoggerFactory)) as ILoggerFactory)?
                 .CreateLogger("FPS.DaprInternalGuard")
                 .LogWarning(
                     "Refusing internal-only request because APP_API_TOKEN is not configured. Path={Path} Env={Environment}",
-                    context.HttpContext.Request.Path, env.EnvironmentName);
+                    context.HttpContext.Request.Path, env?.EnvironmentName ?? "unknown");
 
             context.Result = new ObjectResult("Internal Dapr token not configured for this environment.")
                 { StatusCode = StatusCodes.Status503ServiceUnavailable };
