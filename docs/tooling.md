@@ -171,7 +171,7 @@ Also leave a short PR or issue comment saying what changed and what validation r
 Required setup:
 
 - `PROJECT_SYNC_TOKEN` repository secret with access to the user-owned FPS Delivery Kanban Project.
-- Copilot coding agent enabled for the repository/account.
+- Copilot coding agent enabled for the repository/account. Copilot Pro+ can be used for broader controlled implementation experiments only when Codex marks the handoff as a `Copilot Pro+ controlled route`.
 
 Safety notes:
 
@@ -179,6 +179,7 @@ Safety notes:
 - Closed issues and closed pull requests remove stale routing labels as a backstop; attribution labels such as `implemented-by: claude` are preserved.
 - `active-coordination` is not an implementation trigger.
 - Copilot assignment is manual unless GitHub's own Copilot assignment flow is used directly.
+- Broader Copilot Pro+ routes must have one active implementer only, explicit non-goals, expected files, and validation evidence in the issue or handoff comment.
 - Claude routing is handoff plus Robert notification. Manual Claude invocation through the GitHub UI remains required when the prepared prompt is worth the token cost.
 - `claude-ready` is legacy and should not be used for new routing.
 - Implementers should comment `/fps-route codex-review` when they finish. If the workflow cannot run, set `Status = In review`, `Owner = Codex` manually and remove stale temporary routing labels when permitted.

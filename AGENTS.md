@@ -47,8 +47,9 @@ When requesting Claude validation, ask for a focused review of gaps, contradicti
 See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperation reference. The sections below record which parts of that guide are in effect for FPS today; treat any guidance in the file that contradicts this list as background context, not policy.
 
 **In effect**
-- Roles: Codex is Product Owner (writes specs, validates, reviews). Claude is Implementer.
-- Default model for routine implementation: `claude-sonnet-4-6`. Escalate to Opus only for hard problems.
+- Roles: Codex is Product Owner (writes specs, validates, reviews). Claude and GitHub Copilot agent are Implementers.
+- Default Claude model for routine implementation: `claude-sonnet-4-6`. Escalate to Opus only for hard problems.
+- GitHub Copilot Pro+ may be used as an implementation route for controlled experiments and broader slices when Codex prepares tight scope, acceptance criteria, expected files, and validation evidence.
 - Architectural decisions go to `docs/versions-and-decisions.md` and require human approval (neither agent decides alone).
 - Cost-management tips: keep agent-facing docs lean, scope tasks tightly to files expected to change, compact long sessions.
 - Cross-agent validation: Claude may be used as a second reviewer for high-impact Codex-authored architecture/security/spec work, but not for routine low-risk updates.
@@ -93,8 +94,11 @@ There are two implementer agents available: **Claude** (Anthropic) and **GitHub 
 
 - **Copilot candidate** — slice is mechanical and file-bounded: pattern-following implementation that mirrors an existing example, test-coverage additions, mechanical refactors (renames, extracts, lint cleanup), dependency bumps with a clear repro. Codex's spec is tight (clear acceptance criteria + explicit "files expected to change").
 - **Claude candidate** — slice touches architecture, cross-service flow, or design judgment; spec might be wrong and needs an implementer who can push back; cross-cutting refactors; anything where reading the diff isn't enough to validate.
+- **Copilot Pro+ controlled candidate** — a broader slice may be assigned to Copilot when the goal is to evaluate Pro+ behavior or to preserve Claude quota. Codex must make the scope unusually explicit, name non-goals, list expected files, require validation evidence, and call out safety constraints. Treat the first PR as an implementation proposal that needs strict Codex review, not as automatically equivalent to a Claude implementation.
 
-When Claude picks up a Codex-assigned slice, the first step is a routing self-check: if the slice looks Copilot-shaped, flag it back to Codex/Robert before starting rather than absorbing it silently. If a Copilot PR is already open on a slice, do not start a parallel implementation — review the Copilot PR or wait.
+When Claude or Copilot picks up a Codex-assigned slice, the first step is a routing self-check: if the slice looks better suited to the other implementer, flag it back to Codex/Robert before starting rather than absorbing it silently. If a PR is already open on a slice, do not start a parallel implementation — review the existing PR or wait.
+
+Only one implementer owns an issue at a time. If a slice moves from Claude to Copilot, or from Copilot to Claude, update `Owner`, `Implementer`, and the handoff comment before work starts.
 
 ### Implementer Ready-For-Review Gate
 
@@ -133,6 +137,8 @@ Allowed workflow:
 - `Done`: terminal closed/merged/accepted state.
 
 Claude-ready work has `Owner = Claude` plus a direct handoff comment. GitHub Web UI agent assignment may still be needed to invoke Claude, but the board fields remain the durable state. Copilot work has `Owner = Copilot` plus Copilot assignment where available. Codex review work has `Status = In review`, `Owner = Codex`.
+
+For Copilot Pro+ experiments, the issue or handoff comment must say `Copilot Pro+ controlled route` and include the extra review expectations. This makes it clear that broader Copilot usage is deliberate and measured.
 
 Reverse handoff from implementers should look like normal human workflow: leave a concise comment with the exact blocker or review request, then update Project fields. Use `Status = Blocked`, `Owner = Robert` only when a real human product/architecture decision is needed. Use `Status = In review`, `Owner = Codex` when Codex should review or validate next. Use `Status = Needs changes`, `Owner = Implementer` when Codex has requested fixes.
 
