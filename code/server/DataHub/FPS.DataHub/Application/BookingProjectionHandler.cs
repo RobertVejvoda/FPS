@@ -189,6 +189,8 @@ public sealed class BookingProjectionHandler(
         }
 
         var drawAttemptId = payload.DrawAttemptId ?? envelope.CausationId ?? envelope.EventId;
+        // Sanitise before logging to prevent log-forging via user-controlled event IDs.
+        var safeDrawAttemptId = drawAttemptId.Replace('\n', '_').Replace('\r', '_');
         var lifecycleStepsJson = SerialiseSteps(payload.LifecycleSteps);
 
         var projection = await db.DrawHistory.FirstOrDefaultAsync(
@@ -215,7 +217,7 @@ public sealed class BookingProjectionHandler(
                 LastUpdatedAt = DateTimeOffset.UtcNow
             };
             db.DrawHistory.Add(projection);
-            logger.LogInformation("Created DrawHistory projection from failed event for {DrawAttemptId}", drawAttemptId);
+            logger.LogInformation("Created DrawHistory projection from failed event for {DrawAttemptId}", safeDrawAttemptId);
         }
         else
         {
@@ -229,7 +231,7 @@ public sealed class BookingProjectionHandler(
             if (lifecycleStepsJson is not null)
                 projection.LifecycleStepsJson = lifecycleStepsJson;
             projection.LastUpdatedAt = DateTimeOffset.UtcNow;
-            logger.LogInformation("Updated DrawHistory projection to Failed for {DrawAttemptId}", drawAttemptId);
+            logger.LogInformation("Updated DrawHistory projection to Failed for {DrawAttemptId}", safeDrawAttemptId);
         }
 
         await db.SaveChangesAsync(ct);

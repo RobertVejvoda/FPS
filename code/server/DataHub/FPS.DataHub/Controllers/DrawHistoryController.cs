@@ -5,6 +5,7 @@ using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace FPS.DataHub.Controllers;
@@ -13,8 +14,12 @@ namespace FPS.DataHub.Controllers;
 [Authorize]
 public sealed class DrawHistoryController(
     DataHubDbContext db,
-    ICurrentUser currentUser) : ControllerBase
+    ICurrentUser currentUser,
+    ILogger<DrawHistoryController> logger) : ControllerBase
 {
+    // Safe status value constants used for in-progress detection.
+    private const string StatusRunning = "Running";
+    private const string StatusInProgress = "InProgress";
     /// <summary>
     /// Get HR Draw History for the authenticated tenant.
     /// Returns completed Draws with allocation/rejection/waitlist counts.
@@ -127,12 +132,13 @@ public sealed class DrawHistoryController(
                     })
                     .ToList();
             }
-            catch
+            catch (Exception ex)
             {
+                logger.LogWarning(ex, "Failed to deserialise LifecycleStepsJson for draw {DrawAttemptId}", draw.DrawAttemptId);
                 stepsNote = "Lifecycle steps could not be deserialised; projection may be stale.";
             }
         }
-        else if (draw.Status == "Running" || draw.Status == "InProgress")
+        else if (draw.Status == StatusRunning || draw.Status == StatusInProgress)
         {
             stepsNote = "Draw is in progress. Lifecycle steps are projected after the Draw completes.";
         }

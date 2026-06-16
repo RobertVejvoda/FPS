@@ -151,7 +151,7 @@ public sealed class ProjectionControllerTests : IDisposable
         await SeedDraw("draw-a1", "tenant-a");
         await SeedDraw("draw-b1", "tenant-b");
 
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
         var result = await ctrl.GetDrawHistory(ct: default) as OkObjectResult;
 
         var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
@@ -237,7 +237,7 @@ public sealed class ProjectionControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
 
         // Act
         var result = await ctrl.GetDrawProgress("draw-progress-1", default) as OkObjectResult;
@@ -269,7 +269,7 @@ public sealed class ProjectionControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
 
         // Act
         var result = await ctrl.GetDrawProgress("draw-progress-nosteps", default) as OkObjectResult;
@@ -287,7 +287,7 @@ public sealed class ProjectionControllerTests : IDisposable
     {
         await SeedDraw("draw-progress-other-tenant", "tenant-b");
 
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
         var result = await ctrl.GetDrawProgress("draw-progress-other-tenant", default);
 
         Assert.IsType<NotFoundObjectResult>(result);
@@ -296,7 +296,7 @@ public sealed class ProjectionControllerTests : IDisposable
     [Fact]
     public async Task GetDrawProgress_UnknownId_ReturnsNotFound()
     {
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
         var result = await ctrl.GetDrawProgress("no-such-draw", default);
 
         Assert.IsType<NotFoundObjectResult>(result);
@@ -318,7 +318,7 @@ public sealed class ProjectionControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
         var result = await ctrl.GetDrawProgress("draw-progress-failed", default) as OkObjectResult;
 
         Assert.NotNull(result);

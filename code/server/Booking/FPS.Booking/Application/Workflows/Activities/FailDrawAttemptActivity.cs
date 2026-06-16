@@ -46,10 +46,11 @@ public sealed class FailDrawAttemptActivity(
             DrawKey = input.DrawKey,
             TenantId = input.TenantId,
             LocationId = input.LocationId,
-            Date = DateOnly.Parse(input.Date),
+            Date = DateOnly.TryParse(input.Date, out var attemptDate) ? attemptDate : DateOnly.FromDateTime(failedAt),
             Status = "Failed",
             Seed = input.Seed,
-            StartedAt = DateTime.Parse(input.StartedAt, null, System.Globalization.DateTimeStyles.RoundtripKind),
+            StartedAt = DateTime.TryParse(input.StartedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var attemptStarted)
+                ? attemptStarted : failedAt,
             CompletedAt = failedAt,
             Decisions = existing?.Decisions ?? [],
             LifecycleSteps = steps,
@@ -58,13 +59,16 @@ public sealed class FailDrawAttemptActivity(
 
         // DRAW009: publish drawFailed event so DataHub can project the failure status
         // and safe failure reason without requiring a direct query back to Booking.
-        var date = DateOnly.Parse(input.Date);
-        var slotStart = input.TimeSlotStart is not null
-            ? DateTime.Parse(input.TimeSlotStart, null, System.Globalization.DateTimeStyles.RoundtripKind)
-            : failedAt.Date;
-        var slotEnd = input.TimeSlotEnd is not null
-            ? DateTime.Parse(input.TimeSlotEnd, null, System.Globalization.DateTimeStyles.RoundtripKind)
-            : failedAt.Date.AddHours(1);
+        if (!DateOnly.TryParse(input.Date, out var date))
+            date = DateOnly.FromDateTime(failedAt);
+
+        if (!DateTime.TryParse(input.StartedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var startedAt))
+            startedAt = failedAt;
+
+        var slotStart = DateTime.TryParse(input.TimeSlotStart, null, System.Globalization.DateTimeStyles.RoundtripKind, out var ts)
+            ? ts : failedAt.Date;
+        var slotEnd = DateTime.TryParse(input.TimeSlotEnd, null, System.Globalization.DateTimeStyles.RoundtripKind, out var te)
+            ? te : failedAt.Date.AddHours(1);
         var drawKey = DrawKey.Create(input.TenantId, input.LocationId, date,
             TimeSlot.Create(slotStart, slotEnd));
 
