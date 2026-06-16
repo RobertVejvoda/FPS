@@ -22,7 +22,8 @@ public sealed class DrawWorkflow : Workflow<DrawWorkflowInput, DrawWorkflowOutpu
             new AcquireDrawAttemptInput(
                 resolved.DrawKey, input.TenantId, input.LocationId,
                 input.Date, input.TimeSlotStart, input.TimeSlotEnd,
-                resolved.Seed, input.TriggerSource, input.TriggeredBy));
+                resolved.Seed, input.TriggerSource, input.TriggeredBy,
+                Reason: input.Reason));
 
         try
         {
@@ -70,7 +71,10 @@ public sealed class DrawWorkflow : Workflow<DrawWorkflowInput, DrawWorkflowOutpu
                     resolved.DrawKey, input.TenantId, input.LocationId, input.Date,
                     resolved.Seed, input.TimeSlotStart, input.TimeSlotEnd,
                     allocation.AllocatedCount, allocation.RejectedCount, allocation.WaitlistedCount,
-                    allocation.Decisions, pending.Requests));
+                    allocation.Decisions, pending.Requests,
+                    TriggerSource: input.TriggerSource,
+                    Reason: input.Reason,
+                    TriggeredBy: input.TriggeredBy));
 
             // Step 10: Finalize the draw attempt.
             await context.CallActivityAsync<bool>(

@@ -61,6 +61,8 @@ public sealed class DrawHistoryController(
                 TimeSlot = d.TimeSlot,
                 Status = d.Status,
                 TriggerSource = d.TriggerSource,
+                RunReason = d.RunReason,
+                TriggeredBy = d.TriggeredBy,
                 StartedAt = d.StartedAt,
                 CompletedAt = d.CompletedAt,
                 AllocatedCount = d.AllocatedCount,
@@ -148,6 +150,10 @@ public sealed class DrawHistoryDto
     public string TimeSlot { get; set; } = "";
     public string Status { get; set; } = "";
     public string? TriggerSource { get; set; }
+    // HR-supplied reason for manual / recovery runs (issue #472).
+    public string? RunReason { get; set; }
+    // Operator-safe identifier of the actor that triggered the run.
+    public string? TriggeredBy { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public int AllocatedCount { get; set; }

@@ -91,7 +91,14 @@ public record DrawAttemptStartedEvent(
     DrawKey DrawKey,
     long Seed,
     DateTime StartedAt,
-    string? DrawAttemptId = null) : DomainEvent;
+    string? DrawAttemptId = null,
+    // #472: HR-supplied reason and trigger source carried onto draw
+    // events so DataHub's draw-history projection can surface them on
+    // the Past Draws table. Existing consumers ignore the optional
+    // fields, so the change is additive.
+    string? TriggerSource = null,
+    string? RunReason = null,
+    string? TriggeredBy = null) : DomainEvent;
 
 public record DrawAttemptCompletedEvent(
     DrawKey DrawKey,
@@ -100,7 +107,10 @@ public record DrawAttemptCompletedEvent(
     int RejectedCount,
     int WaitlistedCount,
     DateTime CompletedAt,
-    string? DrawAttemptId = null) : DomainEvent;
+    string? DrawAttemptId = null,
+    string? TriggerSource = null,
+    string? RunReason = null,
+    string? TriggeredBy = null) : DomainEvent;
 
 // kept for backwards compat with existing workflow
 public record DrawRunEvent(

@@ -103,9 +103,81 @@ public sealed class AcquireDrawAttemptActivityTests
         drawRepo.Verify(r => r.SaveAsync(It.IsAny<DrawAttemptDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Issue #472 / PR #492 review: runner identity on operator-triggered runs ──
+
+    [Fact]
+    public async Task RunAsync_ManualRun_PublishesEventWithHrActorAndReason()
+    {
+        BookingPublishContext? capturedCtx = null;
+        DrawAttemptStartedEvent? capturedEvent = null;
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>()))
+            .Callback<BookingPublishContext>(ctx => capturedCtx = ctx)
+            .Returns(eventPublisher.Object);
+        eventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<IDomainEvent, CancellationToken>((e, _) => capturedEvent = e as DrawAttemptStartedEvent)
+            .Returns(Task.CompletedTask);
+        drawRepo.Setup(r => r.GetByKeyAsync(DrawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        await activity.RunAsync(null!, MakeInput(triggerSource: "manual", reason: "Cut-off reached early"));
+
+        Assert.NotNull(capturedCtx);
+        Assert.Equal("hr_manager", capturedCtx!.ActorType);
+        Assert.Equal("hr-admin", capturedCtx.ActorId);
+        Assert.NotNull(capturedEvent);
+        Assert.Equal("manual", capturedEvent!.TriggerSource);
+        Assert.Equal("Cut-off reached early", capturedEvent.RunReason);
+        Assert.Equal("hr-admin", capturedEvent.TriggeredBy);
+    }
+
+    [Fact]
+    public async Task RunAsync_RecoveryRun_PublishesEventWithHrActorAndReason()
+    {
+        // The Codex finding: recovery used to lose the runner because the
+        // activity only treated "manual" as operator-triggered. Now any
+        // non-scheduled source surfaces the actor.
+        BookingPublishContext? capturedCtx = null;
+        DrawAttemptStartedEvent? capturedEvent = null;
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>()))
+            .Callback<BookingPublishContext>(ctx => capturedCtx = ctx)
+            .Returns(eventPublisher.Object);
+        eventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<IDomainEvent, CancellationToken>((e, _) => capturedEvent = e as DrawAttemptStartedEvent)
+            .Returns(Task.CompletedTask);
+        drawRepo.Setup(r => r.GetByKeyAsync(DrawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        await activity.RunAsync(null!, MakeInput(triggerSource: "recovery", reason: "Retry after allocator failure"));
+
+        Assert.Equal("hr_manager", capturedCtx?.ActorType);
+        Assert.Equal("hr-admin", capturedCtx?.ActorId);
+        Assert.Equal("recovery", capturedEvent?.TriggerSource);
+        Assert.Equal("Retry after allocator failure", capturedEvent?.RunReason);
+        Assert.Equal("hr-admin", capturedEvent?.TriggeredBy);
+    }
+
+    [Fact]
+    public async Task RunAsync_ScheduledRun_PublishesEventWithSystemActor()
+    {
+        // Scheduled runs must keep the system actor — they don't have a
+        // real user behind them, and the scheduler identity is not exposed
+        // beyond the source label.
+        BookingPublishContext? capturedCtx = null;
+        eventPublisher.Setup(p => p.WithContext(It.IsAny<BookingPublishContext>()))
+            .Callback<BookingPublishContext>(ctx => capturedCtx = ctx)
+            .Returns(eventPublisher.Object);
+        drawRepo.Setup(r => r.GetByKeyAsync(DrawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        await activity.RunAsync(null!, MakeInput(triggerSource: "scheduled"));
+
+        Assert.Equal("system", capturedCtx?.ActorType);
+        Assert.Null(capturedCtx?.ActorId);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static AcquireDrawAttemptInput MakeInput(string triggerSource = "manual") => new(
+    private static AcquireDrawAttemptInput MakeInput(string triggerSource = "manual", string? reason = null) => new(
         DrawKey: DrawKey,
         TenantId: "tenant-1",
         LocationId: "loc-1",
@@ -114,5 +186,6 @@ public sealed class AcquireDrawAttemptActivityTests
         TimeSlotEnd: new DateTime(2026, 6, 2, 17, 0, 0, DateTimeKind.Utc).ToString("O"),
         Seed: 42L,
         TriggerSource: triggerSource,
-        TriggeredBy: "hr-admin");
+        TriggeredBy: "hr-admin",
+        Reason: reason);
 }

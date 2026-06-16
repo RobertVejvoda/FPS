@@ -86,7 +86,13 @@ public sealed class BookingProjectionHandler(
                 Date = DateOnly.Parse(payload.Date),
                 TimeSlot = payload.TimeSlot,
                 Status = "Running",
-                TriggerSource = envelope.ActorType == "system" ? "scheduled" : "manual",
+                // Booking publishes the trigger source on payload.ReasonCode
+                // and the HR-supplied reason on payload.ReasonText (#472).
+                // Fall back to the legacy actor-derived value for old
+                // events that pre-date the schema change.
+                TriggerSource = payload.ReasonCode ?? (envelope.ActorType == "system" ? "scheduled" : "manual"),
+                RunReason = payload.ReasonText,
+                TriggeredBy = envelope.ActorType == "system" ? null : envelope.ActorId,
                 StartedAt = envelope.OccurredAt,
                 LastUpdatedAt = DateTimeOffset.UtcNow
             };
@@ -125,7 +131,9 @@ public sealed class BookingProjectionHandler(
                 Date = DateOnly.Parse(payload.Date),
                 TimeSlot = payload.TimeSlot,
                 Status = "Completed",
-                TriggerSource = envelope.ActorType == "system" ? "scheduled" : "manual",
+                TriggerSource = payload.ReasonCode ?? (envelope.ActorType == "system" ? "scheduled" : "manual"),
+                RunReason = payload.ReasonText,
+                TriggeredBy = envelope.ActorType == "system" ? null : envelope.ActorId,
                 StartedAt = envelope.OccurredAt.AddSeconds(-1), // Approximate
                 CompletedAt = envelope.OccurredAt,
                 AllocatedCount = payload.AllocatedCount ?? 0,
@@ -143,6 +151,16 @@ public sealed class BookingProjectionHandler(
             projection.AllocatedCount = payload.AllocatedCount ?? 0;
             projection.RejectedCount = payload.RejectedCount ?? 0;
             projection.WaitlistedCount = payload.WaitlistedCount ?? 0;
+            // Backfill metadata on update — drawStarted may have missed it
+            // if Booking deployed before this schema change. Never overwrite
+            // an existing value with null. The completed event's explicit
+            // ReasonCode wins over the started event's actor-derived
+            // fallback, since the completed payload is the more
+            // authoritative source for what actually happened.
+            projection.RunReason ??= payload.ReasonText;
+            projection.TriggeredBy ??= envelope.ActorType == "system" ? null : envelope.ActorId;
+            if (payload.ReasonCode is not null)
+                projection.TriggerSource = payload.ReasonCode;
             projection.LastUpdatedAt = DateTimeOffset.UtcNow;
             logger.LogInformation("Updated DrawHistory projection for {DrawAttemptId}", drawAttemptId);
         }

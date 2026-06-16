@@ -232,5 +232,6 @@ public sealed class TriggerDrawHandlerTests
         Date: DrawDate,
         TimeSlotStart: SlotStart,
         TimeSlotEnd: SlotEnd,
-        Reason: "Scheduled draw");
+        Reason: "Scheduled draw",
+        TriggeredBy: "hr-test-user");
 }

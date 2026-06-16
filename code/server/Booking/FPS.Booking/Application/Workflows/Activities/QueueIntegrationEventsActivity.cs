@@ -19,7 +19,13 @@ public sealed record QueueIntegrationEventsInput(
     int RejectedCount,
     int WaitlistedCount,
     List<DrawDecisionDto> Decisions,
-    List<BookingRequestDto> PendingRequests);
+    List<BookingRequestDto> PendingRequests,
+    // #472: HR-supplied metadata mirrored onto the completed event so
+    // DataHub's projection still has the trigger context when the
+    // started event is missed or rebuilt.
+    string? TriggerSource = null,
+    string? Reason = null,
+    string? TriggeredBy = null);
 
 public sealed class QueueIntegrationEventsActivity(
     IBookingEventPublisher eventPublisher,
@@ -64,13 +70,22 @@ public sealed class QueueIntegrationEventsActivity(
             }
         }
 
+        // #472 / PR #492 review: mirror the actor/trigger context applied
+        // on draw start. Any non-scheduled trigger is operator-initiated
+        // (manual + recovery) and surfaces the authenticated runner.
+        var operatorTriggered = input.TriggerSource != "scheduled";
+        var actorType = operatorTriggered ? "hr_manager" : "system";
+        var actorId = operatorTriggered ? input.TriggeredBy : null;
         var completedPublisher = eventPublisher.WithContext(
-            new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), "system", null));
+            new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), actorType, actorId));
         await completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(
             drawKey, input.Seed,
             input.AllocatedCount, input.RejectedCount, input.WaitlistedCount,
             DateTime.UtcNow,
-            DrawAttemptId: input.DrawKey));
+            DrawAttemptId: input.DrawKey,
+            TriggerSource: input.TriggerSource,
+            RunReason: input.Reason,
+            TriggeredBy: input.TriggeredBy));
 
         await ActivityLifecycleHelper.AppendStepAsync(
             drawRepository, input.DrawKey,

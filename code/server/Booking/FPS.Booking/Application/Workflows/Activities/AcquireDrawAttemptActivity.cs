@@ -15,7 +15,10 @@ public sealed record AcquireDrawAttemptInput(
     string TimeSlotEnd,
     long Seed,
     string TriggerSource,
-    string TriggeredBy);
+    string TriggeredBy,
+    // #472: HR-supplied run reason. Plumbed through so DraftAttemptStarted
+    // can carry it onto the integration event for DataHub's draw history.
+    string? Reason = null);
 
 public sealed record AcquireDrawAttemptOutput(bool WasAlreadyRunning, string StartedAt);
 
@@ -65,8 +68,17 @@ public sealed class AcquireDrawAttemptActivity(
 
         var slotStart = DateTime.Parse(input.TimeSlotStart, null, System.Globalization.DateTimeStyles.RoundtripKind);
         var slotEnd = DateTime.Parse(input.TimeSlotEnd, null, System.Globalization.DateTimeStyles.RoundtripKind);
+        // #472: actor information used to be hardcoded to system on every
+        // draw event, hiding manual runs from downstream consumers. Any
+        // non-scheduled trigger (manual, recovery) is operator-initiated
+        // and must surface the authenticated HR/admin as the actor —
+        // recovery without a real runner was Codex's review finding on
+        // PR #492.
+        var operatorTriggered = input.TriggerSource != "scheduled";
+        var actorType = operatorTriggered ? "hr_manager" : "system";
+        var actorId = operatorTriggered ? input.TriggeredBy : null;
         var publisher = eventPublisher.WithContext(
-            new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), "system", null));
+            new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), actorType, actorId));
         await publisher.PublishAsync(new DrawAttemptStartedEvent(
             Domain.ValueObjects.DrawKey.Create(
                 input.TenantId,
@@ -75,7 +87,10 @@ public sealed class AcquireDrawAttemptActivity(
                 Domain.ValueObjects.TimeSlot.Create(slotStart, slotEnd)),
             input.Seed,
             startedAt,
-            DrawAttemptId: input.DrawKey));
+            DrawAttemptId: input.DrawKey,
+            TriggerSource: input.TriggerSource,
+            RunReason: input.Reason,
+            TriggeredBy: input.TriggeredBy));
 
         return new AcquireDrawAttemptOutput(WasAlreadyRunning: false, startedAt.ToString("O"));
     }

@@ -24,6 +24,7 @@ public sealed class DrawsControllerTests
     public DrawsControllerTests()
     {
         currentUser.Setup(u => u.TenantId).Returns("tenant-1");
+        currentUser.Setup(u => u.UserId).Returns("hr-user-1");
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
 
         controller = new DrawsController(mediator.Object, currentUser.Object);
@@ -94,6 +95,36 @@ public sealed class DrawsControllerTests
         await controller.TriggerDraw(body, CancellationToken.None);
 
         Assert.True(captured?.AllowRecovery);
+    }
+
+    [Fact]
+    public async Task TriggerDraw_PassesAuthenticatedUserAsTriggeredBy()
+    {
+        // Codex review on PR #492: the runner identity must come from the
+        // authenticated HR/admin, not the misleading "hr-admin" default
+        // that used to ship on every manual run.
+        currentUser.Setup(u => u.UserId).Returns("hr-alice-real");
+
+        TriggerDrawCommand? captured = null;
+        mediator.Setup(m => m.Send(It.IsAny<TriggerDrawCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<TriggerDrawResult>, CancellationToken>((cmd, _) => captured = (TriggerDrawCommand)cmd)
+            .ReturnsAsync(new TriggerDrawResult("k", "InProgress", 0, 0, 0, WasAlreadyCompleted: false));
+
+        await controller.TriggerDraw(ValidBody(), CancellationToken.None);
+
+        Assert.Equal("hr-alice-real", captured?.TriggeredBy);
+    }
+
+    [Fact]
+    public async Task TriggerDraw_UnauthenticatedUserId_Returns401()
+    {
+        // Defence in depth: even if the role gate is somehow bypassed,
+        // we never publish a draw event without a real runner identity.
+        currentUser.Setup(u => u.UserId).Returns(string.Empty);
+
+        var result = await controller.TriggerDraw(ValidBody(), CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
     }
 
     // ── GET /draws/{date}/status ──────────────────────────────────────────────

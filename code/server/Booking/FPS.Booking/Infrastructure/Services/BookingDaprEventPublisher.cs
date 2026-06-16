@@ -111,7 +111,12 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     Date: e.DrawKey.Date.ToString("yyyy-MM-dd"),
                     TimeSlot: $"{e.DrawKey.TimeSlot.Start:HH:mm}-{e.DrawKey.TimeSlot.End:HH:mm}",
                     PreviousStatus: null, NewStatus: null,
-                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    // #472: trigger source and HR-supplied reason are carried
+                    // on the existing payload fields so consumers can read
+                    // them without an additive schema change.
+                    ReasonCode: e.TriggerSource,
+                    ReasonText: e.RunReason,
+                    AffectedRecipientIds: null,
                     DrawAttemptId: e.DrawAttemptId),
 
                 DrawAttemptCompletedEvent e => new(
@@ -121,7 +126,9 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     Date: e.DrawKey.Date.ToString("yyyy-MM-dd"),
                     TimeSlot: $"{e.DrawKey.TimeSlot.Start:HH:mm}-{e.DrawKey.TimeSlot.End:HH:mm}",
                     PreviousStatus: null, NewStatus: null,
-                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    ReasonCode: e.TriggerSource,
+                    ReasonText: e.RunReason,
+                    AffectedRecipientIds: null,
                     DrawAttemptId: e.DrawAttemptId,
                     AllocatedCount: e.AllocatedCount,
                     RejectedCount: e.RejectedCount,

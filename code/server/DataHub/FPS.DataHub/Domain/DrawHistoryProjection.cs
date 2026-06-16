@@ -27,8 +27,14 @@ public sealed class DrawHistoryProjection
     /// <summary>Draw status: Scheduled, Running, Completed, Failed</summary>
     public string Status { get; set; } = "Scheduled";
 
-    /// <summary>Trigger source: scheduled, manual, simulation</summary>
+    /// <summary>Trigger source: scheduled, manual, simulation, recovery</summary>
     public string? TriggerSource { get; set; }
+
+    /// <summary>HR-supplied reason for manual / recovery runs (issue #472).</summary>
+    public string? RunReason { get; set; }
+
+    /// <summary>Identifier of the actor that triggered the run — operator-safe.</summary>
+    public string? TriggeredBy { get; set; }
 
     /// <summary>When the Draw started</summary>
     public DateTime? StartedAt { get; set; }
