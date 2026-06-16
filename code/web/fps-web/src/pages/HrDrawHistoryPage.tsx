@@ -161,13 +161,21 @@ export function HrDrawHistoryPage() {
     return history.draws.filter(d => isPastStatus(d.status));
   }, [history]);
 
-  const selectedStatus = drawStatus?.kind === 'ok' ? drawStatus.status : null;
+  // Effective status used by the Run gate. DataHub's projected history is
+  // the source of truth for terminal state: even if /draws/status is stale
+  // (or briefly disagrees), a Completed/Failed historical entry must lock
+  // the Run button. Codex review on PR #491.
+  const historyStatus = upcomingHistoryMatch?.status ?? null;
+  const liveStatus = drawStatus?.kind === 'ok' ? drawStatus.status : null;
+  const effectiveStatus = isPastStatus(historyStatus ?? '') ? historyStatus : liveStatus;
+
   // Recovery on Failed is the only "run" action permitted on a row that
   // already reached a terminal state. Completed must never offer Run.
-  const canRun = selectedStatus !== null
-    && selectedStatus !== 'Completed'
-    && selectedStatus !== 'InProgress';
-  const runLabel = selectedStatus === 'Failed' ? 'Retry Draw' : 'Run Draw';
+  // Anything terminal in DataHub overrides a possibly stale live status.
+  const canRun = effectiveStatus !== null
+    && effectiveStatus !== 'Completed'
+    && effectiveStatus !== 'InProgress';
+  const runLabel = effectiveStatus === 'Failed' ? 'Retry Draw' : 'Run Draw';
 
   return (
     <div className="page-stack">
@@ -221,6 +229,7 @@ export function HrDrawHistoryPage() {
         {!drawLoading && drawStatus?.kind === 'ok' && (
           <UpcomingDrawCard
             status={drawStatus}
+            effectiveStatus={effectiveStatus ?? drawStatus.status}
             historyMatch={upcomingHistoryMatch}
             selectedDate={selectedDate}
             canRun={canRun}
@@ -293,9 +302,14 @@ export function HrDrawHistoryPage() {
 }
 
 function UpcomingDrawCard({
-  status, historyMatch, selectedDate, canRun, runLabel, drawReason, onReasonChange, drawRunning, onRun,
+  status, effectiveStatus, historyMatch, selectedDate, canRun, runLabel, drawReason, onReasonChange, drawRunning, onRun,
 }: {
   status: DrawStatusOk;
+  // Effective status drives the badge + the no-run explanation. Prefer the
+  // terminal DataHub history row over the live /draws/status if both
+  // disagree — Codex review on PR #491. Without this, a stale live status
+  // could still render a Run button next to a Completed draw.
+  effectiveStatus: string;
   historyMatch: DrawHistoryItem | undefined;
   selectedDate: string;
   canRun: boolean;
@@ -317,7 +331,7 @@ function UpcomingDrawCard({
         <Fact label="Date" value={displayDate(selectedDate)} />
         <Fact label="Time" value={scheduledTimeSlot()} />
         <Fact label="Location" value={displayLocation(LOCATION_ID) ?? 'Location not set'} />
-        <Fact label="Status" value={formatDrawStatus(status.status)} valueColor={statusColor(status.status)} />
+        <Fact label="Status" value={formatDrawStatus(effectiveStatus)} valueColor={statusColor(effectiveStatus)} />
         <Fact label="Requests" value={requestSummary} />
         <Fact label="Schedule" value={schedule} />
         {historyMatch && (
@@ -357,9 +371,9 @@ function UpcomingDrawCard({
         </div>
       ) : (
         <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--muted)' }}>
-          {status.status === 'Completed'
+          {effectiveStatus === 'Completed'
             ? 'This draw is already complete — see Past Draws below for the outcome.'
-            : status.status === 'InProgress'
+            : effectiveStatus === 'InProgress'
               ? 'A draw run is already in progress for this date.'
               : 'No run action is available right now.'}
         </p>
