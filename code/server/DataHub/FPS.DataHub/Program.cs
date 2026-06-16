@@ -83,8 +83,12 @@ if (app.Environment.IsDevelopment())
     await db.Database.MigrateAsync();
 }
 
-app.MapOpenApi();
-app.MapScalarApiReference(options => options.WithTitle("DataHub API"));
+// SEC003 (#495): docs are gated to Development to reduce hosted recon surface.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options.WithTitle("DataHub API"));
+}
 app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();

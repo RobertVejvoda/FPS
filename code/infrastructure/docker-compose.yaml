@@ -1,5 +1,4 @@
 services:
-  
   envoy-proxy:
     image: envoyproxy/envoy:v1.33.1  # Use a recent Envoy version
     ports:
@@ -8,37 +7,6 @@ services:
       - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml  # Mount Envoy configuration
     networks:
       - web
-
-  whoami:
-    # A container that exposes an API to show its IP address
-    image: traefik/whoami
-    networks:
-      - web
-
-  whoami-dapr:
-    image: "daprio/daprd:1.14.4"
-    restart: unless-stopped
-    command: [
-      "./daprd",
-      "-app-id", "whoami",
-      "-app-port", "80", # whoami's HTTP port
-      "-dapr-http-port", "3500", # Dapr's HTTP port
-      "-components-path", "/components", 
-      "-config", "/configuration/fps-config.yaml",
-      "--log-level", "debug" # Enable debug logs
-    ]
-    volumes:
-      - "./dapr/components/local:/components"
-      - "./dapr/configuration/:/configuration"
-    depends_on:
-      whoami:
-        condition: service_started
-      vault:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    network_mode: "service:whoami"
-
 
   vault:
     image: hashicorp/vault:latest

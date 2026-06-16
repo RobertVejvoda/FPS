@@ -15,6 +15,6 @@
 | MongoDB        | 4.4.6   | Various  | Docker image        | SSPL    | NoSQL database for high volume data storage | [Docker Hub](https://hub.docker.com/_/mongo) |
 | RabbitMQ       | 3.8.16  | Various  | Docker image        | MPL 1.1 | Message broker for asynchronous communication | [Docker Hub](https://hub.docker.com/_/rabbitmq) |
 | Redis          | 6.2.5   | Various  | Docker image        | BSD 3-Clause | In-memory data structure store, used as a database, cache, and message broker | [Docker Hub](https://hub.docker.com/_/redis) |
-| Traefik        | 2.4.8   | Go       | Docker image        | MIT     | Edge router for managing microservices and APIs | [Docker Hub](https://hub.docker.com/_/traefik) |
+| Envoy          | 1.33.1  | C++      | Docker image        | Apache 2.0 | Local and hosted HTTP gateway for FairSpot APIs | [Docker Hub](https://hub.docker.com/r/envoyproxy/envoy) |
 | MinIO          | 2023-10-10 | Go       | Docker image        | AGPL 3.0 | High-performance, S3 compatible object storage | [Docker Hub](https://hub.docker.com/r/minio/minio) |
 | Vault          | 1.7.0   | N/A      | Docker image           | MPL 2.0 | Secret management and data protection tool | [Docker Hub](https://hub.docker.com/r/hashicorp/vault) |

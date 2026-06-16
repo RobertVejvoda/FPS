@@ -23,6 +23,54 @@ static_resources:
                         expose_headers: "content-disposition"
                         max_age: "86400"
                       routes:
+                        # Local-only gateway health probes. These replace the
+                        # old whoami/Dapr sample route with checks against
+                        # real FairSpot services.
+                        - match:
+                            prefix: "/health/identity"
+                          route:
+                            cluster: fps-identity
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/booking"
+                          route:
+                            cluster: fps-booking
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/notification"
+                          route:
+                            cluster: fps-notification
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/profile"
+                          route:
+                            cluster: fps-profile
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/audit"
+                          route:
+                            cluster: fps-audit
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/reporting"
+                          route:
+                            cluster: fps-reporting
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/configuration"
+                          route:
+                            cluster: fps-configuration
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/customer"
+                          route:
+                            cluster: fps-customer
+                            prefix_rewrite: "/health"
+                        - match:
+                            prefix: "/health/datahub"
+                          route:
+                            cluster: fps-datahub
+                            prefix_rewrite: "/health"
                         # Employee mobile API surface — routes to host-run services.
                         # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
                         # On Linux: add --add-host=host.docker.internal:host-gateway to the envoy
@@ -71,12 +119,6 @@ static_resources:
                             path: "/me"
                           route:
                             cluster: fps-identity
-                        # Existing whoami/Dapr sample route — preserved unchanged.
-                        - match:
-                            prefix: "/api/whoami/"
-                          route:
-                            cluster: dapr
-                            prefix_rewrite: "/v1.0/invoke/whoami/method/"
                 http_filters:
                   - name: envoy.filters.http.cors
                     typed_config:
@@ -202,22 +244,3 @@ static_resources:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5211 }
-
-    - name: dapr
-      connect_timeout: 0.25s
-      type: STRICT_DNS
-      lb_policy: ROUND_ROBIN
-      load_assignment:
-        cluster_name: dapr
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address: { address: whoami, port_value: 3500 }
-      health_checks:
-        - timeout: 1s
-          interval: 5s
-          unhealthy_threshold: 2
-          healthy_threshold: 1
-          http_health_check:
-            path: "/v1.0/healthz"

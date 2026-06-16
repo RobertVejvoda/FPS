@@ -90,8 +90,15 @@ builder.Services.AddFpsAuthorization();
 
 var app = builder.Build();
 
-app.MapOpenApi();
-app.MapScalarApiReference(options => options.WithTitle("Booking API"));
+// SEC003 (#495): OpenAPI + Scalar docs only mount in Development. Hosted
+// profiles must not advertise the API surface for reconnaissance. The
+// dev-time API client generator runs services with Development env, so
+// /openapi/v1.json stays available there.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options.WithTitle("Booking API"));
+}
 
 app.UseFpsMetrics();
 app.UseAuthentication();
