@@ -227,7 +227,7 @@ Role interests are intentionally separated:
 | Auditor | Yes | Audit query, evidence, erasure/integrity support where implemented. |
 | Operator/SRE | Usually no app role | Grafana, Prometheus, Zipkin/Jaeger, logs, Dapr/RabbitMQ/Vault/container health. |
 
-Current smoke result from `2026-05-20`: Docker infrastructure is healthy, including Vault, RabbitMQ, and `whoami-dapr`. The service port collision has been narrowed to missing launch profiles on Configuration, Audit, and Reporting; those services now have stable local HTTP ports.
+Current local smoke direction: Docker infrastructure provides Vault, RabbitMQ, data stores, observability shells, and Envoy. The old `whoami-dapr` sample service has been removed; use `./tools/smoke-gateway-health.sh` to verify the local gateway against real FairSpot service health endpoints.
 
 Stop shared infrastructure:
 

@@ -15,12 +15,6 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'dapr'
-    static_configs:
-      # whoami-dapr uses network_mode: service:whoami, so its metrics endpoint
-      # is reachable through the whoami service name inside the Compose network.
-      - targets: ['whoami:9090']
-
   # FPS .NET services — each exposes GET /metrics via prometheus-net
   - job_name: 'fps-identity'
     static_configs:

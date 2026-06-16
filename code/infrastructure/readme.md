@@ -198,7 +198,9 @@ See `../../docs/production/local-test-harness.md` for:
   docker logs <container-id>
   ```
 
-  The `whoami-dapr` sidecar is only a local Dapr smoke service. Application components such as `fps-pubsub` and `s3store` are scoped to the real FPS service app IDs so the sample sidecar does not require RabbitMQ or MinIO credentials.
+  The old `whoami-dapr` sample sidecar has been removed. Use `./tools/smoke-gateway-health.sh`
+  from the repository root to verify the local Envoy gateway against real FairSpot
+  service `/health` endpoints.
 
 - **RabbitMQ Connection Issues**:
   Verify that the RabbitMQ container is running and accessible at `http://localhost:15672`.
