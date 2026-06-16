@@ -48,7 +48,7 @@ See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperat
 
 **In effect**
 - Roles: Codex is Product Owner (writes specs, validates, reviews). Claude and GitHub Copilot agent are Implementers.
-- Default Claude model for routine implementation: `claude-sonnet-4-6`. Escalate to Opus only for hard problems.
+- Default Claude model for routine implementation: `claude-sonnet-4.6`. Escalate to Opus only for hard problems.
 - GitHub Copilot Pro+ may be used as an implementation route for controlled experiments and broader slices when Codex prepares tight scope, acceptance criteria, expected files, and validation evidence.
 - Architectural decisions go to `docs/versions-and-decisions.md` and require human approval (neither agent decides alone).
 - Cost-management tips: keep agent-facing docs lean, scope tasks tightly to files expected to change, compact long sessions.
