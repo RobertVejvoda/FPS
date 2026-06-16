@@ -46,7 +46,7 @@ What the local harness already provides, from `local-test-harness.md` and the re
 | Alertmanager | `prom/alertmanager` | Alert routing |
 | Loki | `grafana/loki` | Log aggregation |
 | Grafana | `grafana/grafana` | Dashboards |
-| Dapr sidecar | `daprio/daprd:1.14.4` | Service mesh, pub/sub, state, secrets |
+| Dapr sidecar | `daprio/daprd:1.18.4` | Service mesh, pub/sub, state, secrets |
 
 ### 1.3 Dapr Component Contracts
 
