@@ -4,12 +4,13 @@ FPS is documentation-first unless the assigned issue explicitly asks for impleme
 
 ## Role
 
-GitHub Copilot agent is an implementer for mechanical, file-bounded slices. Use the issue body as the immediate assignment and the referenced documentation as the source of truth.
+GitHub Copilot agent is an implementer. By default, use it for mechanical, file-bounded slices. It may also be used for a broader **Copilot Pro+ controlled route** when the issue or Codex handoff explicitly says so. Use the issue body as the immediate assignment and the referenced documentation as the source of truth.
 
 ## Scope Control
 
 - Stay inside the assigned issue scope.
 - Do not implement adjacent future slices, even when they appear nearby in the codebase.
+- For a Copilot Pro+ controlled route, treat the issue as a strict experiment: implement only the named slice, preserve all non-goals, and report any architecture ambiguity instead of widening scope.
 - Do not make architectural decisions. If the issue requires a new durable architecture decision, stop and ask for clarification.
 - Do not edit secrets, tokens, private keys, `.env` files, or unrelated generated artifacts.
 - Do not remove tests or validation scripts.
@@ -48,6 +49,7 @@ GitHub Copilot agent is an implementer for mechanical, file-bounded slices. Use 
 
 - Run `./tools/validate.sh` before reporting the PR ready when feasible.
 - If validation cannot be run, state why and list the narrower checks that were run.
+- For cross-service, DataHub, Dapr, audit, security, or workflow slices, include smoke evidence that proves the changed runtime path, not only build/unit-test output.
 - In the PR body, include a concise summary, test results, and any skipped validation.
 
 ## Completion Handoff

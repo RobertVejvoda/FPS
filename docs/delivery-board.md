@@ -110,7 +110,7 @@ If any of these are missing, keep the issue in `Backlog` or `Blocked` rather tha
 | --- | --- |
 | Codex | Owns issue preparation, state-machine hygiene, tracker updates, and PR review. Act when `Owner = Codex`. |
 | Claude | Acts when `Owner = Claude` and a direct handoff comment is present. GitHub Web UI agent assignment may still be needed to invoke Claude, but the board fields are the durable state. |
-| Copilot | Acts when `Owner = Copilot`, ideally with GitHub Copilot coding-agent assignment where available. Copilot candidates should be mechanical, file-bounded, and explicit about expected files and validation. |
+| Copilot | Acts when `Owner = Copilot`, ideally with GitHub Copilot coding-agent assignment where available. Default Copilot candidates are mechanical, file-bounded, and explicit about expected files and validation. Copilot Pro+ may also be used for controlled broader slices when Codex marks the issue or handoff as a `Copilot Pro+ controlled route` and requires stricter review evidence. |
 | Robert | Acts only when `Owner = Robert`, usually with `Status = Blocked` for a real product, architecture, or operational decision. |
 
 ## Reviewer Independence
