@@ -66,7 +66,7 @@ This package is referenced by all services — it must remain stable and have no
 |---|---|---|
 | Backend | **.NET 10** | Upgrade from .NET 9 documented in wiki — .NET 10 released Nov 2025 |
 | API | ASP.NET Core Web API | Minimal APIs for simple endpoints |
-| Distributed runtime | **Dapr 1.14+** | ⚠️ Docs said 1.4.0 — updated; Workflows require 1.10+ |
+| Distributed runtime | **Dapr 1.18+** | Upgraded from 1.14+; Workflows require 1.10+ |
 | Workflows | **Dapr Workflow** | .NET SDK `Dapr.Workflow` |
 | CQRS | MediatR | Commands and queries dispatched per service |
 | Write side (CQRS) | **Dapr state store / persistence adapter** | Aggregate persistence by ID; tenant isolated by tenant-safe collections, partitions, or keys |
@@ -136,7 +136,7 @@ This section tracks historical gaps that were found while planning and the remai
 ### Resolved
 
 **1. Dapr version was outdated** ✅ *Resolved*
-FairSpot targets **Dapr 1.14+**. Dapr Workflows require at least 1.10, and the current architecture treats durable workflow adoption as a future hardening step where needed.
+FairSpot targets **Dapr 1.18+**. Dapr Workflows require at least 1.10. The .NET SDK packages and runtime baseline were upgraded to 1.18.4 in OPS014.
 
 **2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved, revised 14.5.2026*
 The current decision is tenant-scoped storage inside service-owned stores. The current implementation direction uses collection-per-tenant where the selected store supports it, but the durable architecture rule is that services resolve tenant-specific storage names, partitions, or keys from authenticated/service context.

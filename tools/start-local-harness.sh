@@ -7,7 +7,7 @@
 #
 # Prerequisites:
 #   - Docker Desktop running
-#   - Dapr CLI >= 1.12 installed and initialised (dapr init)
+#   - Dapr CLI >= 1.18 installed and initialised (dapr init)
 #   - .NET 10.0.203 SDK from $HOME/.dotnet/dotnet on PATH
 #
 # Usage (from repo root):

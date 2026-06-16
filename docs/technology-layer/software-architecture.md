@@ -137,6 +137,6 @@ This section provides a list of tools and frameworks used in the project, along 
 | Expo          | 54.0.33 | VSCode | TypeScript | npm package         | MIT     | Managed React Native workflow — no native build tooling required |
 | .NET 10        | 10.0    | VSCode | C#        | NuGet package       | MIT     | Framework for building various types of applications |
 | Docker         | Current supported local/CI version | VSCode | N/A | Docker image | Apache 2.0 | Platform for developing, shipping, and running applications in containers |
-| Dapr           | 1.14+   | VSCode | Various  | Docker image        | Apache 2.0  | Runtime for building distributed applications (Workflows require 1.10+) |
+| Dapr           | 1.18+   | VSCode | Various  | Docker image        | Apache 2.0  | Runtime for building distributed applications (Workflows require 1.10+) |
 | Infrastructure as code | Profile-specific | VSCode | Profile-specific | Profile-specific | Profile-specific | Deployment automation for the selected local, demo, or client production profile |
 | Git            | Current contributor version | VSCode | N/A | Binary | GPL 2.0 | Version control system |

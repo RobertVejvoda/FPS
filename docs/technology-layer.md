@@ -14,7 +14,7 @@ Production operation is also a top-level architecture section. See [Production](
 - **React**: Frontend library for web user interfaces.
 - **React Native + Expo**: Mobile platform.
 - **Docker / containers**: Packaging and local runtime baseline.
-- **Dapr 1.14+**: Provider-neutral runtime boundary for state, pub/sub, service invocation, sidecars, secrets, and future workflows.
+- **Dapr 1.18+**: Provider-neutral runtime boundary for state, pub/sub, service invocation, sidecars, secrets, and future workflows.
 - **Dapr pub/sub**: Event bus contract for Booking events consumed by Notification, Audit, Reporting, and future read models. The concrete broker is selected by deployment profile.
 - **Dapr state store / persistence adapters**: Persistence boundary for service-owned state and read models. The concrete operational/document store is selected by deployment profile.
 - **OIDC/OAuth 2.0 identity provider**: Identity boundary for JWT issuer, tenant/user claims, roles, and SSO. The concrete IdP is selected by local, demo, or client production profile.
