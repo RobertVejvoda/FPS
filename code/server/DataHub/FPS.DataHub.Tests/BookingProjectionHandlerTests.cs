@@ -64,6 +64,149 @@ public sealed class BookingProjectionHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleDrawStarted_ManualRun_CapturesReasonAndTriggeredBy()
+    {
+        // Issue #472: the draw history projection must record the HR-supplied
+        // reason and the runner so the Past Draws table can surface them.
+        var envelope = new BookingEventEnvelope(
+            EventId: "evt-draw-manual-1",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-a",
+            CorrelationId: "corr-manual-1",
+            CausationId: null,
+            ActorType: "hr_manager",
+            ActorId: "hr-alice-hash",
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-hq",
+                Date: "2026-06-16",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: "manual",
+                ReasonText: "Cut-off reached early — running now",
+                AffectedRecipientIds: null,
+                DrawAttemptId: "draw-manual-1"));
+
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "draw-manual-1");
+        Assert.NotNull(projection);
+        Assert.Equal("manual", projection.TriggerSource);
+        Assert.Equal("Cut-off reached early — running now", projection.RunReason);
+        Assert.Equal("hr-alice-hash", projection.TriggeredBy);
+    }
+
+    [Fact]
+    public async Task HandleDrawStarted_ScheduledRun_DoesNotExposeTriggeredBy()
+    {
+        // Scheduled runs must identify the source without leaking an actor id;
+        // TriggeredBy stays null and TriggerSource defaults to "scheduled" when
+        // no ReasonCode is present (legacy event compatibility).
+        var envelope = new BookingEventEnvelope(
+            EventId: "evt-draw-scheduled-1",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-a",
+            CorrelationId: "corr-sched-1",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-hq",
+                Date: "2026-06-16",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: "scheduled",
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                DrawAttemptId: "draw-sched-1"));
+
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "draw-sched-1");
+        Assert.NotNull(projection);
+        Assert.Equal("scheduled", projection.TriggerSource);
+        Assert.Null(projection.RunReason);
+        Assert.Null(projection.TriggeredBy);
+    }
+
+    [Fact]
+    public async Task HandleDrawCompleted_BackfillsMetadataWhenStartedMissedIt()
+    {
+        // If drawStarted was processed before the schema change (no
+        // ReasonCode/ReasonText), drawCompleted should backfill — never
+        // overwriting an existing value.
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-draw-backfill-start",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow.AddMinutes(-5),
+            TenantId: "tenant-a",
+            CorrelationId: "corr-bf",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-hq",
+                Date: "2026-06-16",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                DrawAttemptId: "draw-bf-1")),
+            CancellationToken.None);
+
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-draw-backfill-complete",
+            EventType: "booking.drawCompleted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-a",
+            CorrelationId: "corr-bf",
+            CausationId: "evt-draw-backfill-start",
+            ActorType: "hr_manager",
+            ActorId: "hr-bob-hash",
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-hq",
+                Date: "2026-06-16",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: "recovery",
+                ReasonText: "Retry after partial allocator failure",
+                AffectedRecipientIds: null,
+                DrawAttemptId: "draw-bf-1",
+                AllocatedCount: 3,
+                RejectedCount: 1,
+                WaitlistedCount: 0)),
+            CancellationToken.None);
+
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "draw-bf-1");
+        Assert.NotNull(projection);
+        Assert.Equal("recovery", projection.TriggerSource);
+        Assert.Equal("Retry after partial allocator failure", projection.RunReason);
+        Assert.Equal("hr-bob-hash", projection.TriggeredBy);
+    }
+
+    [Fact]
     public async Task HandleDrawCompleted_UpdatesDrawHistoryProjection()
     {
         // Arrange - create started projection first

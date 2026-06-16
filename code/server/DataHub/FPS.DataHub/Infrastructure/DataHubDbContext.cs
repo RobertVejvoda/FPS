@@ -54,6 +54,8 @@ public sealed class DataHubDbContext(DbContextOptions<DataHubDbContext> options)
             e.Property(x => x.TimeSlot).IsRequired().HasMaxLength(50);
             e.Property(x => x.Status).IsRequired().HasMaxLength(50);
             e.Property(x => x.TriggerSource).HasMaxLength(50);
+            e.Property(x => x.RunReason).HasMaxLength(500);
+            e.Property(x => x.TriggeredBy).HasMaxLength(200);
             e.Property(x => x.SafeFailureReason).HasMaxLength(500);
             e.Property(x => x.AlgorithmVersion).HasMaxLength(50);
             e.HasIndex(x => x.DrawAttemptId).IsUnique().HasDatabaseName("ux_draw_history_attempt_id");

@@ -28,6 +28,10 @@ export interface DrawHistoryItem {
   timeSlot: string;
   status: string;
   triggerSource: string | null;
+  // HR-supplied reason for manual / recovery runs (issue #472).
+  runReason: string | null;
+  // Operator-safe identifier of the actor that triggered the run.
+  triggeredBy: string | null;
   startedAt: string | null;
   completedAt: string | null;
   allocatedCount: number;

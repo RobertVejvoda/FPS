@@ -277,7 +277,7 @@ export function HrDrawHistoryPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Note'].map(header => (
+                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Run details'].map(header => (
                   <th key={header} style={th}>{header}</th>
                 ))}
               </tr>
@@ -297,7 +297,7 @@ export function HrDrawHistoryPage() {
                   <td style={{ ...td, color: statusColor(draw.status), fontWeight: 700 }}>{formatDrawStatus(draw.status)}</td>
                   <td style={td}>{outcomeText(draw)}</td>
                   <td style={td}>{draw.completedAt ? displayDateTime(draw.completedAt) : draw.startedAt ? displayDateTime(draw.startedAt) : '-'}</td>
-                  <td style={{ ...td, color: 'var(--muted)' }}>{draw.safeFailureReason ?? (draw.triggerSource ? `Triggered by ${draw.triggerSource}` : '-')}</td>
+                  <td style={td}><RunDetailsCell draw={draw} /></td>
                 </tr>
               ))}
             </tbody>
@@ -306,6 +306,56 @@ export function HrDrawHistoryPage() {
       </section>
     </div>
   );
+}
+
+// Issue #472: render the trigger source, runner short ref, and HR-supplied
+// reason on Past Draws rows. Falls back gracefully when the projection
+// pre-dates the field (legacy rows show "—" instead of an empty cell).
+function RunDetailsCell({ draw }: { draw: DrawHistoryItem }): React.ReactElement {
+  const source = draw.triggerSource ? humanizeTriggerSource(draw.triggerSource) : null;
+  const runnerRef = shortTriggeredByRef(draw.triggeredBy);
+  const headline = source && runnerRef
+    ? `${source} · ${runnerRef}`
+    : source ?? (runnerRef ? `Run by ${runnerRef}` : null);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {headline
+        ? <span style={{ fontSize: '0.85rem' }}>{headline}</span>
+        : <span style={{ color: 'var(--muted)' }}>—</span>}
+      {draw.runReason && (
+        <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+          “{draw.runReason}”
+        </span>
+      )}
+      {draw.safeFailureReason && (
+        <span style={{ fontSize: '0.8rem', color: '#b91c1c' }}>
+          {draw.safeFailureReason}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function humanizeTriggerSource(source: string): string {
+  const label: Record<string, string> = {
+    manual: 'Manual',
+    scheduled: 'Scheduled',
+    recovery: 'Recovery',
+    simulation: 'Simulation',
+  };
+  return label[source] ?? source;
+}
+
+// Operator-safe short ref derived from the TriggeredBy value. For long
+// hex hashes we surface the first 6 chars uppercased — matches the audit
+// workspace convention so an HR user can correlate by short ref. For
+// short identifiers (e.g. "dapr-cron") we render them verbatim.
+function shortTriggeredByRef(value: string | null): string | null {
+  if (!value) return null;
+  const compact = value.replace(/-/g, '');
+  if (/^[0-9a-f]{32,}$/i.test(compact)) return compact.slice(0, 6).toUpperCase();
+  return value;
 }
 
 function UpcomingDrawCard({
