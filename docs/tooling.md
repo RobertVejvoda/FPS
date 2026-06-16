@@ -149,6 +149,16 @@ When Codex requests Claude changes, prefer a PR comment:
 gh pr comment PR_NUMBER --body "/fps-state needs-changes Claude"
 ```
 
+For multi-line issue or PR comments, use `tools/github-comment.sh` with a Markdown
+body file instead of inline `--body` strings. This preserves real Markdown newlines
+and avoids posting literal `\n` sequences in the GitHub UI:
+
+```sh
+tools/github-comment.sh issue 500 /tmp/handoff.md
+tools/github-comment.sh pr 506 /tmp/review.md
+tools/github-comment.sh update COMMENT_ID /tmp/revised-comment.md
+```
+
 Manual fallback when the state command is unavailable:
 
 ```sh
