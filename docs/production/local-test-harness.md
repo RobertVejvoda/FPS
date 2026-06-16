@@ -255,7 +255,7 @@ dotnet run --project code/server/Identity/FPS.Identity/FPS.Identity.csproj &
 # or directly: dapr run -f dapr.yaml
 ```
 
-`./tools/start-with-dapr.sh` requires the Dapr CLI (>= 1.14). Install once:
+`./tools/start-with-dapr.sh` requires the Dapr CLI (>= 1.18). Install once:
 
 ```sh
 # macOS / Linux
@@ -478,7 +478,7 @@ All three should return `200`.
 Prerequisites (install once):
 
 - Docker Desktop running.
-- Dapr CLI >= 1.14 installed and initialised: `curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | /bin/bash && dapr init`
+- Dapr CLI >= 1.18 installed and initialised: `curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | /bin/bash && dapr init`
 - .NET 10.0.203 SDK from `$HOME/.dotnet/dotnet` first on `PATH`.
 
 Start:

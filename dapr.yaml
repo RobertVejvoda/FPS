@@ -10,7 +10,7 @@
 # Uses in-memory state/pubsub so no Vault or MongoDB credentials are needed.
 # For durable local state use: --resources-path code/infrastructure/dapr/components/local
 #
-# Requires: Dapr CLI >= 1.14  (https://docs.dapr.io/getting-started/install-dapr-cli/)
+# Requires: Dapr CLI >= 1.18  (https://docs.dapr.io/getting-started/install-dapr-cli/)
 
 version: 1
 common:

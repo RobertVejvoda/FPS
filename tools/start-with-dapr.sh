@@ -13,7 +13,7 @@
 #   ./tools/start-with-dapr.sh       # start seven FPS services with Dapr sidecars
 #
 # Requirements:
-#   - Dapr CLI >= 1.14 installed and initialised (dapr init)
+#   - Dapr CLI >= 1.18 installed and initialised (dapr init)
 #     https://docs.dapr.io/getting-started/install-dapr-cli/
 #   - Docker Compose infrastructure running:
 #       docker compose -f code/infrastructure/docker-compose.yaml up -d
