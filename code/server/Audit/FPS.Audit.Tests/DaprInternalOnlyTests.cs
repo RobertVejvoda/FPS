@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace FPS.Audit.Tests;
 
@@ -14,7 +15,8 @@ public sealed class DaprInternalOnlyTests
     private const string TokenHeader = "dapr-api-token";
     private const string ConfigKey = "APP_API_TOKEN";
 
-    private static ResourceExecutingContext MakeContext(string? configuredToken, string? incomingHeader)
+    private static ResourceExecutingContext MakeContext(
+        string? configuredToken, string? incomingHeader, string environmentName = "Development")
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(configuredToken is null
@@ -24,6 +26,7 @@ public sealed class DaprInternalOnlyTests
 
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(config);
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment(environmentName));
 
         var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
         if (incomingHeader is not null)
@@ -34,17 +37,51 @@ public sealed class DaprInternalOnlyTests
     }
 
     [Fact]
-    public void NoTokenConfigured_AllowsThrough()
+    public void NoTokenConfigured_Development_AllowsThrough()
     {
-        var ctx = MakeContext(configuredToken: null, incomingHeader: null);
+        // Local harness convenience: ASPNETCORE_ENVIRONMENT=Development keeps
+        // the no-token path open so smoke tests don't require ceremony.
+        var ctx = MakeContext(configuredToken: null, incomingHeader: null, environmentName: "Development");
         new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
         Assert.Null(ctx.Result);
     }
 
     [Fact]
+    public void NoTokenConfigured_Production_Returns503()
+    {
+        // SEC002 (#494): a forgotten APP_API_TOKEN in a hosted profile must
+        // not silently open the door. Outside Development the filter fails
+        // closed with 503 so the misconfig is loud.
+        var ctx = MakeContext(configuredToken: null, incomingHeader: null, environmentName: "Production");
+        new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
+        var result = Assert.IsType<ObjectResult>(ctx.Result);
+        Assert.Equal(503, result.StatusCode);
+    }
+
+    [Fact]
+    public void NoTokenConfigured_StagingOrHosted_Returns503()
+    {
+        var ctx = MakeContext(configuredToken: null, incomingHeader: null, environmentName: "Staging");
+        new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
+        var result = Assert.IsType<ObjectResult>(ctx.Result);
+        Assert.Equal(503, result.StatusCode);
+    }
+
+    [Fact]
+    public void NoTokenConfigured_TestEnvironment_Returns503()
+    {
+        // The Test environment is not Development either — tests that need
+        // pass-through must configure the token, just like production does.
+        var ctx = MakeContext(configuredToken: null, incomingHeader: null, environmentName: "Test");
+        new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
+        Assert.IsType<ObjectResult>(ctx.Result);
+    }
+
+    [Fact]
     public void CorrectTokenPresent_AllowsThrough()
     {
-        var ctx = MakeContext("secret-token", "secret-token");
+        // Token configured + matching header: pass regardless of environment.
+        var ctx = MakeContext("secret-token", "secret-token", environmentName: "Production");
         new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
         Assert.Null(ctx.Result);
     }
@@ -74,6 +111,14 @@ public sealed class DaprInternalOnlyTests
         new DaprInternalOnlyAttribute().OnResourceExecuting(ctx);
         var result = Assert.IsType<ObjectResult>(ctx.Result);
         Assert.Equal(403, result.StatusCode);
+    }
+
+    private sealed class TestHostEnvironment(string envName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = envName;
+        public string ApplicationName { get; set; } = "Tests";
+        public string ContentRootPath { get; set; } = string.Empty;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 
     // ── LegalBasis validation ────────────────────────────────────────────────
