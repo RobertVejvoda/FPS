@@ -70,10 +70,12 @@ public sealed class QueueIntegrationEventsActivity(
             }
         }
 
-        // #472: mirror the actor/trigger context applied on draw start so
-        // the completed event carries the same identity downstream.
-        var actorType = input.TriggerSource == "manual" ? "hr_manager" : "system";
-        var actorId = input.TriggerSource == "manual" ? input.TriggeredBy : null;
+        // #472 / PR #492 review: mirror the actor/trigger context applied
+        // on draw start. Any non-scheduled trigger is operator-initiated
+        // (manual + recovery) and surfaces the authenticated runner.
+        var operatorTriggered = input.TriggerSource != "scheduled";
+        var actorType = operatorTriggered ? "hr_manager" : "system";
+        var actorId = operatorTriggered ? input.TriggeredBy : null;
         var completedPublisher = eventPublisher.WithContext(
             new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), actorType, actorId));
         await completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(

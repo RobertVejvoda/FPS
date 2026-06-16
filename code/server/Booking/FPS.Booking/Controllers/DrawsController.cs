@@ -37,6 +37,9 @@ public sealed class DrawsController : ControllerBase
         if (string.IsNullOrEmpty(currentUser.TenantId))
             return Unauthorized();
 
+        if (string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
         var result = await mediator.Send(new TriggerDrawCommand(
             TenantId: currentUser.TenantId,
             LocationId: body.LocationId,
@@ -44,6 +47,10 @@ public sealed class DrawsController : ControllerBase
             TimeSlotStart: body.TimeSlotStart,
             TimeSlotEnd: body.TimeSlotEnd,
             Reason: body.Reason,
+            // Use the authenticated HR/admin's id as the runner so DataHub's
+            // draw history reflects who actually triggered the run, not a
+            // static "hr-admin" placeholder. Codex review on PR #492.
+            TriggeredBy: currentUser.UserId,
             AllowRecovery: body.AllowRecovery),
             cancellationToken);
 
