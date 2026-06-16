@@ -19,7 +19,7 @@ import {
   formatDrawTimestamp,
   formatScheduleSummary,
 } from '../displayLabels';
-import { nextWorkdayOptions } from '../dateOptions';
+import { nextWorkdayOptions, toLocalDateString } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { DateFilter, type RangeFilterValue } from '../components/DateFilter';
 
@@ -99,11 +99,18 @@ export function HrDrawHistoryPage() {
 
   const loadHistory = useCallback(() => {
     setHistory({ kind: 'loading' });
+    // Convert the ISO timestamps the range filter emits back to local
+    // DateOnly strings. A naive .slice(0,10) shifts to the previous UTC
+    // day for any tenant east of UTC (e.g. Europe/Prague at midnight
+    // local serialises to 22:00 UTC of the previous day). Codex review
+    // on PR #491 — same lesson as the /reports tz fix in #480.
+    const fromDate = pastRange.after ? toLocalDateString(new Date(pastRange.after)) : undefined;
+    const toDate = pastRange.before ? toLocalDateString(new Date(pastRange.before)) : undefined;
     fetchDrawHistory({ apiBaseUrl, bearerToken }, {
       locationId: LOCATION_ID,
       pageSize: 50,
-      fromDate: pastRange.after?.slice(0, 10),
-      toDate: pastRange.before?.slice(0, 10),
+      fromDate,
+      toDate,
     }).then(result => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') {
