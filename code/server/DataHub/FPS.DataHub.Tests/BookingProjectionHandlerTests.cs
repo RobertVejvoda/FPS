@@ -367,6 +367,302 @@ public sealed class BookingProjectionHandlerTests : IDisposable
         Assert.Single(projections);
     }
 
+    // DRAW009 tests: lifecycle steps + drawFailed event handling
+
+    [Fact]
+    public async Task HandleDrawCompleted_PersistsLifecycleStepsJson()
+    {
+        // Arrange - create a started projection first
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-steps-started",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow.AddMinutes(-5),
+            TenantId: "tenant-steps",
+            CorrelationId: "corr-steps",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-a",
+                Date: "2026-06-15",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null)),
+            CancellationToken.None);
+
+        var steps = new List<DrawProgressStepEnvelope>
+        {
+            new("Scheduled", "Completed", "Draw acquired lock", DateTime.UtcNow.AddMinutes(-4)),
+            new("RequestsLoaded", "Completed", "12 requests loaded", DateTime.UtcNow.AddMinutes(-3)),
+            new("DecisionsPersisted", "Completed", "Decisions saved", DateTime.UtcNow.AddMinutes(-1)),
+        };
+
+        // Act
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-steps-completed",
+            EventType: "booking.drawCompleted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-steps",
+            CorrelationId: "corr-steps",
+            CausationId: "evt-steps-started",
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-a",
+                Date: "2026-06-15",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                AllocatedCount: 10,
+                RejectedCount: 2,
+                WaitlistedCount: 0,
+                LifecycleSteps: steps)),
+            CancellationToken.None);
+
+        // Assert - LifecycleStepsJson is persisted and deserialises to expected steps
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "evt-steps-started");
+        Assert.NotNull(projection);
+        Assert.Equal("Completed", projection.Status);
+        Assert.NotNull(projection.LifecycleStepsJson);
+
+        var deserialized = System.Text.Json.JsonSerializer.Deserialize<List<FPS.DataHub.Domain.DrawProgressStepProjection>>(
+            projection.LifecycleStepsJson!,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.NotNull(deserialized);
+        Assert.Equal(3, deserialized!.Count);
+        Assert.Equal("Scheduled", deserialized[0].StepName);
+        Assert.Equal("Completed", deserialized[0].Status);
+        Assert.Equal("12 requests loaded", deserialized[1].Summary);
+        Assert.Equal("DecisionsPersisted", deserialized[2].StepName);
+    }
+
+    [Fact]
+    public async Task HandleDrawFailed_CreatesProjectionWithFailedStatusAndSafeReason()
+    {
+        // Arrange - start envelope so we have a projection to update
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-fail-started",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow.AddMinutes(-2),
+            TenantId: "tenant-fail",
+            CorrelationId: "corr-fail",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-b",
+                Date: "2026-06-16",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null)),
+            CancellationToken.None);
+
+        var failSteps = new List<DrawProgressStepEnvelope>
+        {
+            new("Scheduled", "Completed", null, DateTime.UtcNow.AddMinutes(-1)),
+            new("DrawFailed", "Failed", "Allocation engine error", DateTime.UtcNow),
+        };
+
+        // Act - handle drawFailed event
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-fail-failed",
+            EventType: "booking.drawFailed",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-fail",
+            CorrelationId: "corr-fail",
+            CausationId: "evt-fail-started",
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-b",
+                Date: "2026-06-16",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                LifecycleSteps: failSteps,
+                SafeFailureReason: "Draw failed due to an internal error. Please retry.")),
+            CancellationToken.None);
+
+        // Assert
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "evt-fail-started");
+        Assert.NotNull(projection);
+        Assert.Equal("Failed", projection.Status);
+        Assert.Equal("Draw failed due to an internal error. Please retry.", projection.SafeFailureReason);
+        Assert.NotNull(projection.LifecycleStepsJson);
+        Assert.NotNull(projection.CompletedAt);
+
+        var deserialized = System.Text.Json.JsonSerializer.Deserialize<List<FPS.DataHub.Domain.DrawProgressStepProjection>>(
+            projection.LifecycleStepsJson!,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.Equal(2, deserialized!.Count);
+        Assert.Equal("DrawFailed", deserialized[1].StepName);
+        Assert.Equal("Failed", deserialized[1].Status);
+    }
+
+    [Fact]
+    public async Task HandleDrawFailed_WithoutPriorStarted_CreatesNewProjection()
+    {
+        // Act - drawFailed can arrive without a preceding drawStarted (e.g. startup race)
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-fail-nostart",
+            EventType: "booking.drawFailed",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-nostart",
+            CorrelationId: "corr-nostart",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-c",
+                Date: "2026-06-17",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                SafeFailureReason: "Workflow could not be started.")),
+            CancellationToken.None);
+
+        // Assert - projection is created with Failed status
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "evt-fail-nostart");
+        Assert.NotNull(projection);
+        Assert.Equal("Failed", projection.Status);
+        Assert.Equal("Workflow could not be started.", projection.SafeFailureReason);
+        Assert.Null(projection.LifecycleStepsJson);
+    }
+
+    [Fact]
+    public async Task HandleDrawFailed_IdempotentOnDuplicate()
+    {
+        // Arrange
+        var envelope = new BookingEventEnvelope(
+            EventId: "evt-fail-dup",
+            EventType: "booking.drawFailed",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-idem",
+            CorrelationId: "corr-idem",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-d",
+                Date: "2026-06-18",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                SafeFailureReason: "Retry exceeded."));
+
+        // Act - handle twice
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+
+        // Assert - exactly one projection with Failed status
+        var projections = await _db.DrawHistory.Where(d => d.DrawAttemptId == "evt-fail-dup").ToListAsync();
+        Assert.Single(projections);
+        Assert.Equal("Failed", projections[0].Status);
+    }
+
+    [Fact]
+    public async Task HandleDrawCompleted_LifecycleStepsNull_DoesNotSetStepsJson()
+    {
+        // Arrange
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-nosteps-started",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow.AddMinutes(-2),
+            TenantId: "tenant-nosteps",
+            CorrelationId: "corr-nosteps",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-e",
+                Date: "2026-06-19",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null)),
+            CancellationToken.None);
+
+        // Act - drawCompleted with no lifecycle steps (pre-DRAW009 event)
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-nosteps-completed",
+            EventType: "booking.drawCompleted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-nosteps",
+            CorrelationId: "corr-nosteps",
+            CausationId: "evt-nosteps-started",
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null,
+                RequestorId: null,
+                LocationId: "loc-e",
+                Date: "2026-06-19",
+                TimeSlot: "08:00-17:00",
+                PreviousStatus: null,
+                NewStatus: null,
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                AllocatedCount: 5)),
+            CancellationToken.None);
+
+        // Assert - status is Completed but LifecycleStepsJson stays null
+        var projection = await _db.DrawHistory.FirstOrDefaultAsync(d => d.DrawAttemptId == "evt-nosteps-started");
+        Assert.NotNull(projection);
+        Assert.Equal("Completed", projection.Status);
+        Assert.Null(projection.LifecycleStepsJson);
+    }
+
     [Fact]
     public async Task HandleRequestSubmitted_CreatesBookingOutcomeProjection()
     {

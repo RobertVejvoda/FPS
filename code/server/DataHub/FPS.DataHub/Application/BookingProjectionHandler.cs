@@ -2,6 +2,7 @@ using FPS.DataHub.Domain;
 using FPS.DataHub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace FPS.DataHub.Application;
 
@@ -17,6 +18,7 @@ public sealed class BookingProjectionHandler(
     {
         "booking.drawStarted" => true,
         "booking.drawCompleted" => true,
+        "booking.drawFailed" => true,
         "booking.requestSubmitted" => true,
         "booking.requestAllocated" or "booking.slotAllocated" => true,
         "booking.requestRejected" => true,
@@ -38,6 +40,9 @@ public sealed class BookingProjectionHandler(
                 break;
             case "booking.drawCompleted":
                 await HandleDrawCompleted(envelope, ct);
+                break;
+            case "booking.drawFailed":
+                await HandleDrawFailed(envelope, ct);
                 break;
             case "booking.requestSubmitted":
                 await HandleRequestSubmitted(envelope, ct);
@@ -116,6 +121,7 @@ public sealed class BookingProjectionHandler(
         }
 
         var drawAttemptId = payload.DrawAttemptId ?? envelope.CausationId ?? envelope.EventId;
+        var lifecycleStepsJson = SerialiseSteps(payload.LifecycleSteps);
 
         var projection = await db.DrawHistory.FirstOrDefaultAsync(
             d => d.DrawAttemptId == drawAttemptId, ct);
@@ -139,6 +145,7 @@ public sealed class BookingProjectionHandler(
                 AllocatedCount = payload.AllocatedCount ?? 0,
                 RejectedCount = payload.RejectedCount ?? 0,
                 WaitlistedCount = payload.WaitlistedCount ?? 0,
+                LifecycleStepsJson = lifecycleStepsJson,
                 LastUpdatedAt = DateTimeOffset.UtcNow
             };
             db.DrawHistory.Add(projection);
@@ -161,12 +168,87 @@ public sealed class BookingProjectionHandler(
             projection.TriggeredBy ??= envelope.ActorType == "system" ? null : envelope.ActorId;
             if (payload.ReasonCode is not null)
                 projection.TriggerSource = payload.ReasonCode;
+            // DRAW009: store lifecycle steps; only overwrite if the new event provides them.
+            if (lifecycleStepsJson is not null)
+                projection.LifecycleStepsJson = lifecycleStepsJson;
             projection.LastUpdatedAt = DateTimeOffset.UtcNow;
             logger.LogInformation("Updated DrawHistory projection for {DrawAttemptId}", drawAttemptId);
         }
 
         await LinkUndecidedOutcomesToCompletedDraw(payload, envelope, drawAttemptId, ct);
         await db.SaveChangesAsync(ct);
+    }
+
+    private async Task HandleDrawFailed(BookingEventEnvelope envelope, CancellationToken ct)
+    {
+        var payload = envelope.Payload;
+        if (string.IsNullOrEmpty(payload.LocationId) || string.IsNullOrEmpty(payload.Date) || string.IsNullOrEmpty(payload.TimeSlot))
+        {
+            logger.LogWarning("DrawFailed event missing required fields: {EventId}", envelope.EventId);
+            return;
+        }
+
+        var drawAttemptId = payload.DrawAttemptId ?? envelope.CausationId ?? envelope.EventId;
+        var lifecycleStepsJson = SerialiseSteps(payload.LifecycleSteps);
+
+        var projection = await db.DrawHistory.FirstOrDefaultAsync(
+            d => d.DrawAttemptId == drawAttemptId, ct);
+
+        if (projection is null)
+        {
+            // Create projection from failed event when no started event was processed.
+            projection = new DrawHistoryProjection
+            {
+                DrawAttemptId = drawAttemptId,
+                TenantId = envelope.TenantId,
+                LocationId = payload.LocationId,
+                Date = DateOnly.Parse(payload.Date),
+                TimeSlot = payload.TimeSlot,
+                Status = "Failed",
+                TriggerSource = payload.ReasonCode ?? (envelope.ActorType == "system" ? "scheduled" : "manual"),
+                RunReason = payload.ReasonText,
+                TriggeredBy = envelope.ActorType == "system" ? null : envelope.ActorId,
+                StartedAt = envelope.OccurredAt.AddSeconds(-1), // Approximate
+                CompletedAt = envelope.OccurredAt,
+                SafeFailureReason = payload.SafeFailureReason,
+                LifecycleStepsJson = lifecycleStepsJson,
+                LastUpdatedAt = DateTimeOffset.UtcNow
+            };
+            db.DrawHistory.Add(projection);
+            logger.LogInformation("Created DrawHistory projection from failed event for {DrawAttemptId}", drawAttemptId);
+        }
+        else
+        {
+            projection.Status = "Failed";
+            projection.CompletedAt = envelope.OccurredAt;
+            projection.SafeFailureReason = payload.SafeFailureReason;
+            projection.RunReason ??= payload.ReasonText;
+            projection.TriggeredBy ??= envelope.ActorType == "system" ? null : envelope.ActorId;
+            if (payload.ReasonCode is not null)
+                projection.TriggerSource = payload.ReasonCode;
+            if (lifecycleStepsJson is not null)
+                projection.LifecycleStepsJson = lifecycleStepsJson;
+            projection.LastUpdatedAt = DateTimeOffset.UtcNow;
+            logger.LogInformation("Updated DrawHistory projection to Failed for {DrawAttemptId}", drawAttemptId);
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Serialises safe lifecycle steps to JSON for storage. Returns null if steps is null or empty.
+    /// </summary>
+    private static string? SerialiseSteps(IReadOnlyList<DrawProgressStepEnvelope>? steps)
+    {
+        if (steps is null || steps.Count == 0) return null;
+        var projections = steps.Select(s => new DrawProgressStepProjection
+        {
+            StepName = s.StepName,
+            Status = s.Status,
+            Summary = s.Summary,
+            OccurredAt = s.OccurredAt,
+        }).ToList();
+        return JsonSerializer.Serialize(projections);
     }
 
     private async Task LinkUndecidedOutcomesToCompletedDraw(

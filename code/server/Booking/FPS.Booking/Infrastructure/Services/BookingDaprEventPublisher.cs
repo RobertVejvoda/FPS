@@ -132,7 +132,22 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     DrawAttemptId: e.DrawAttemptId,
                     AllocatedCount: e.AllocatedCount,
                     RejectedCount: e.RejectedCount,
-                    WaitlistedCount: e.WaitlistedCount),
+                    WaitlistedCount: e.WaitlistedCount,
+                    LifecycleSteps: ToPayloadSteps(e.LifecycleSteps)),
+
+                DrawAttemptFailedEvent e => new(
+                    BookingRequestId: null,
+                    RequestorId: null,
+                    LocationId: e.DrawKey.LocationId,
+                    Date: e.DrawKey.Date.ToString("yyyy-MM-dd"),
+                    TimeSlot: $"{e.DrawKey.TimeSlot.Start:HH:mm}-{e.DrawKey.TimeSlot.End:HH:mm}",
+                    PreviousStatus: null, NewStatus: null,
+                    ReasonCode: e.TriggerSource,
+                    ReasonText: e.RunReason,
+                    AffectedRecipientIds: null,
+                    DrawAttemptId: e.DrawAttemptId,
+                    LifecycleSteps: ToPayloadSteps(e.LifecycleSteps),
+                    SafeFailureReason: e.SafeFailureReason),
 
                 PenaltyAppliedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
@@ -192,6 +207,7 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                 BookingRequestReallocatedEvent => "booking.slotAllocated",
                 DrawAttemptStartedEvent => "booking.drawStarted",
                 DrawAttemptCompletedEvent => "booking.drawCompleted",
+                DrawAttemptFailedEvent => "booking.drawFailed",
                 PenaltyAppliedEvent => "booking.penaltyApplied",
                 BookingRequestNoShowEvent => "booking.noShowRecorded",
                 BookingRequestUsedEvent => "booking.usageConfirmed",
@@ -214,5 +230,10 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                 Source: "booking",
                 Payload: payload);
         }
+
+        private static IReadOnlyList<DrawProgressStepPayload>? ToPayloadSteps(
+            IReadOnlyList<DrawProgressStepRecord>? steps) =>
+            steps?.Select(s => new DrawProgressStepPayload(s.StepName, s.Status, s.Summary, s.OccurredAt))
+                  .ToList();
     }
 }

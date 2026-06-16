@@ -1,6 +1,9 @@
 using Dapr.Workflow;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
+using FPS.Booking.Application.Services;
+using FPS.Booking.Domain.Events;
+using FPS.Booking.Domain.ValueObjects;
 
 namespace FPS.Booking.Application.Workflows.Activities;
 
@@ -11,9 +14,16 @@ public sealed record FailDrawAttemptInput(
     string Date,
     long Seed,
     string StartedAt,
-    string SafeErrorMessage);
+    string SafeErrorMessage,
+    string? TimeSlotStart = null,
+    string? TimeSlotEnd = null,
+    string? TriggerSource = null,
+    string? TriggeredBy = null,
+    string? Reason = null);
 
-public sealed class FailDrawAttemptActivity(IDrawRepository drawRepository)
+public sealed class FailDrawAttemptActivity(
+    IDrawRepository drawRepository,
+    IBookingEventPublisher eventPublisher)
     : WorkflowActivity<FailDrawAttemptInput, bool>
 {
     public override async Task<bool> RunAsync(
@@ -45,6 +55,39 @@ public sealed class FailDrawAttemptActivity(IDrawRepository drawRepository)
             LifecycleSteps = steps,
         };
         await drawRepository.SaveAsync(attempt);
+
+        // DRAW009: publish drawFailed event so DataHub can project the failure status
+        // and safe failure reason without requiring a direct query back to Booking.
+        var date = DateOnly.Parse(input.Date);
+        var slotStart = input.TimeSlotStart is not null
+            ? DateTime.Parse(input.TimeSlotStart, null, System.Globalization.DateTimeStyles.RoundtripKind)
+            : failedAt.Date;
+        var slotEnd = input.TimeSlotEnd is not null
+            ? DateTime.Parse(input.TimeSlotEnd, null, System.Globalization.DateTimeStyles.RoundtripKind)
+            : failedAt.Date.AddHours(1);
+        var drawKey = DrawKey.Create(input.TenantId, input.LocationId, date,
+            TimeSlot.Create(slotStart, slotEnd));
+
+        var safeSteps = steps
+            .Select(s => new DrawProgressStepRecord(s.StepName, s.Status, s.Summary, s.StartedAt))
+            .ToList();
+
+        var operatorTriggered = input.TriggerSource != "scheduled";
+        var actorType = operatorTriggered ? "hr_manager" : "system";
+        var actorId = operatorTriggered ? input.TriggeredBy : null;
+        var publisher = eventPublisher.WithContext(
+            new BookingPublishContext(input.TenantId, Guid.NewGuid().ToString(), actorType, actorId));
+        await publisher.PublishAsync(new DrawAttemptFailedEvent(
+            DrawKey: drawKey,
+            Seed: input.Seed,
+            SafeFailureReason: input.SafeErrorMessage,
+            FailedAt: failedAt,
+            DrawAttemptId: input.DrawKey,
+            TriggerSource: input.TriggerSource,
+            RunReason: input.Reason,
+            TriggeredBy: input.TriggeredBy,
+            LifecycleSteps: safeSteps));
+
         return true;
     }
 }

@@ -98,7 +98,12 @@ public sealed class DrawWorkflow : Workflow<DrawWorkflowInput, DrawWorkflowOutpu
                 nameof(FailDrawAttemptActivity),
                 new FailDrawAttemptInput(
                     resolved.DrawKey, input.TenantId, input.LocationId,
-                    input.Date, resolved.Seed, acquired.StartedAt, safeMessage));
+                    input.Date, resolved.Seed, acquired.StartedAt, safeMessage,
+                    TimeSlotStart: input.TimeSlotStart,
+                    TimeSlotEnd: input.TimeSlotEnd,
+                    TriggerSource: input.TriggerSource,
+                    TriggeredBy: input.TriggeredBy,
+                    Reason: input.Reason));
 
             return new DrawWorkflowOutput(
                 resolved.DrawKey, "Failed", 0, 0, 0, safeMessage);

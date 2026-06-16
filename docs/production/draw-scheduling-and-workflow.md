@@ -221,6 +221,64 @@ Minimum states:
 
 Employee views should stay safe and simple: next Draw time, whether requests can still be submitted, running/completed status, and final employee-safe outcome. HR/admin views can show operational counts and step progress. Auditor views can show lifecycle details, seed, algorithm version, and evidence references where authorized.
 
+## DRAW009: Draw Progress API
+
+DRAW009 exposes Draw workflow progress as a safe, DataHub-backed product read model. The goal is to give HR managers and auditors a stable view of Draw lifecycle steps without exposing raw Dapr internals, allocation seeds, candidate order, stack traces, or employee-private data.
+
+### Events Published (Booking → DataHub)
+
+| Event type | Published by | Payload additions |
+| --- | --- | --- |
+| `booking.drawCompleted` | `QueueIntegrationEventsActivity` | `LifecycleSteps` (ordered safe steps up to `DecisionsPersisted`) |
+| `booking.drawFailed` | `FailDrawAttemptActivity` | `LifecycleSteps` (steps up to the failure point) + `SafeFailureReason` |
+
+`booking.drawFailed` was not published before DRAW009. DataHub will now move a `Running` projection to `Failed` when this event arrives, preventing stale `Running` rows in Draw history.
+
+### DataHub Projection
+
+`DrawHistoryProjection` now includes a `LifecycleStepsJson` column (text) that stores the ordered lifecycle steps serialised as JSON. Steps are projected when `booking.drawCompleted` or `booking.drawFailed` is processed. Pre-DRAW009 rows have `LifecycleStepsJson = null`; the API explains this via `StepsNote`.
+
+### Progress API
+
+`GET /datahub/draw-history/{drawAttemptId}/progress` — requires `hr_manager`, `admin`, or `auditor` role.
+
+Returns one `DrawProgressResponse` per Draw attempt:
+
+| Field | Description |
+| --- | --- |
+| `drawAttemptId` | Stable Draw attempt identifier. |
+| `locationId` | Location the Draw ran for. |
+| `date` / `timeSlot` | Parking date and time slot. |
+| `status` | `Running`, `Completed`, or `Failed`. |
+| `triggerSource` | `manual`, `scheduled`, or `recovery`. |
+| `runReason` | HR-supplied reason (manual/recovery runs only). |
+| `triggeredBy` | Safe operator label; never a raw employee ID. |
+| `startedAt` / `completedAt` | Wall-clock timestamps. |
+| `allocatedCount` / `rejectedCount` / `waitlistedCount` | Final allocation counts. |
+| `safeFailureReason` | Business-readable failure reason; no stack traces. |
+| `lastProjectedAt` | When DataHub last updated this row — staleness indicator. |
+| `steps` | Ordered `DrawProgressStep[]` or `null` when not yet projected. |
+| `stepsNote` | Explains why `steps` may be null (in-progress, pre-DRAW009, etc.). |
+
+Each `DrawProgressStep` contains: `stepName`, `status`, `summary`, `occurredAt`. No seeds, raw Dapr keys, penalties, or employee identifiers are included.
+
+### Safe Failure Reason
+
+`FailDrawAttemptActivity` constructs a business-readable `SafeFailureReason` from the workflow exception type. The text is safe for HR/auditor display: no stack traces, no internal Dapr keys, no employee data.
+
+### Empty State Semantics
+
+| Condition | API response |
+| --- | --- |
+| Draw attempt not found for this tenant | `404 Not Found` |
+| Draw in progress | `steps: null`, `stepsNote` explains projection lag |
+| Draw completed before DRAW009 deployment | `steps: null`, `stepsNote` explains pre-DRAW009 gap |
+| Draw completed after DRAW009 | `steps: [...]`, `stepsNote: null` |
+
+### Duplicate Draw Trigger
+
+Duplicate triggers return the existing `DrawHistoryProjection` row. `booking.drawStarted` is idempotent by `DrawAttemptId`; subsequent `drawFailed`/`drawCompleted` events update the existing row. The progress endpoint always returns one row per `drawAttemptId`.
+
 ## Diagrid Consideration
 
 FairSpot should remain implementable with Dapr open source. The code should use Dapr Workflow APIs and Dapr building blocks directly so it can run self-hosted on the NAS/local profile.
