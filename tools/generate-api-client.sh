@@ -35,7 +35,10 @@ capture_openapi() {
     echo "[generate] ERROR: port $port already in use — kill the process before re-running" >&2
     exit 1
   fi
-  ASPNETCORE_ENVIRONMENT=Production dotnet run \
+  # SEC003 (#495): MapOpenApi is gated to the Development environment so
+  # hosted profiles don't advertise the API surface. The generator must
+  # therefore run services as Development to scrape /openapi/v1.json.
+  ASPNETCORE_ENVIRONMENT=Development dotnet run \
     --project "$REPO_ROOT/$project_path" \
     --no-build \
     -c Release \

@@ -69,8 +69,12 @@ var app = builder.Build();
 // correctly. Empty / missing config is a no-op (logged).
 app.Services.GetRequiredService<HrRosterConfigurationSeeder>().Seed();
 
-app.MapOpenApi();
-app.MapScalarApiReference(options => options.WithTitle("Notification API"));
+// SEC003 (#495): docs are gated to Development to reduce hosted recon surface.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options.WithTitle("Notification API"));
+}
 app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();

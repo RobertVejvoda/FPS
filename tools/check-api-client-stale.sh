@@ -45,7 +45,10 @@ while IFS=: read -r name path port; do
     exit 1
   fi
 
-  ASPNETCORE_ENVIRONMENT=Production dotnet run \
+  # SEC003 (#495): /openapi/v1.json is gated to Development. Match the
+  # environment used by generate-api-client.sh so the stale check can scrape
+  # the same artefact the generator produces.
+  ASPNETCORE_ENVIRONMENT=Development dotnet run \
     --project "$REPO_ROOT/$path" \
     --no-build \
     -c Release \
