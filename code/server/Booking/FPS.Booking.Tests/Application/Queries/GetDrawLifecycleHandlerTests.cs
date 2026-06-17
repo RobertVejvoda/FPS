@@ -256,6 +256,10 @@ public sealed class GetDrawLifecycleHandlerTests
 // Additional coverage: persisted steps on a failed draw
 public sealed class GetDrawLifecycleHandlerFailedPersistedTests
 {
+    private const string SafeFailureMessage = "Draw workflow execution failed.";
+    // Represents internal exception detail that must never be stored or returned to callers.
+    private const string RawDiagnostic = "NullReferenceException at FPS.Booking.Allocator.Run()";
+
     private readonly Mock<IDrawRepository> drawRepository = new();
     private readonly GetDrawLifecycleHandler handler;
 
@@ -271,6 +275,7 @@ public sealed class GetDrawLifecycleHandlerFailedPersistedTests
     [Fact]
     public async Task Handle_FailedDraw_WithPersistedSteps_ReturnsPersistedEvidenceNotDerived()
     {
+        // DrawFailed step stores the generic safe message — never raw exception text.
         var attempt = new DrawAttemptDto
         {
             DrawKey = "draw:tenant-1:loc-1:2026-06-02:0900",
@@ -287,7 +292,7 @@ public sealed class GetDrawLifecycleHandlerFailedPersistedTests
             [
                 new DrawLifecycleStepRecord { StepName = "PolicyResolved", Status = "Completed", StartedAt = DateTime.UtcNow },
                 new DrawLifecycleStepRecord { StepName = "RequestsLoaded", Status = "Completed", StartedAt = DateTime.UtcNow },
-                new DrawLifecycleStepRecord { StepName = "DrawFailed", Status = "Failed", StartedAt = DateTime.UtcNow, ErrorMessage = "Capacity service timeout" },
+                new DrawLifecycleStepRecord { StepName = "DrawFailed", Status = "Failed", StartedAt = DateTime.UtcNow, ErrorMessage = SafeFailureMessage },
             ]
         };
         drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -302,6 +307,48 @@ public sealed class GetDrawLifecycleHandlerFailedPersistedTests
         Assert.Equal(3, result.Steps.Count);
         Assert.Equal("DrawFailed", result.Steps[2].Name);
         Assert.Equal("Failed", result.Steps[2].Status);
-        Assert.Equal("Capacity service timeout", result.Steps[2].ErrorMessage);
+        Assert.Equal(SafeFailureMessage, result.Steps[2].ErrorMessage);
+    }
+
+    /// <summary>
+    /// Regression test: GET /draws/{date}/lifecycle must never expose raw exception
+    /// or diagnostic text to hr_manager/admin/auditor callers.
+    /// FailDrawAttemptActivity is responsible for writing only SafeErrorMessage into
+    /// DrawLifecycleStepRecord.ErrorMessage; this test proves the handler faithfully
+    /// reflects only what was stored and that raw diagnostic text is not present.
+    /// </summary>
+    [Fact]
+    public async Task Handle_FailedDraw_LifecycleResponse_DoesNotExposeRawDiagnosticText()
+    {
+        // Simulate state as written by FailDrawAttemptActivity: safe message only.
+        var attempt = new DrawAttemptDto
+        {
+            DrawKey = "draw:tenant-1:loc-1:2026-06-02:0900",
+            TenantId = "tenant-1",
+            LocationId = "loc-1",
+            Date = DrawDate,
+            Status = "Failed",
+            Seed = 12,
+            AlgorithmVersion = string.Empty,
+            StartedAt = new DateTime(2026, 6, 2, 8, 0, 0, DateTimeKind.Utc),
+            Decisions = [],
+            LifecycleSteps =
+            [
+                new DrawLifecycleStepRecord { StepName = "DrawFailed", Status = "Failed", StartedAt = DateTime.UtcNow, ErrorMessage = SafeFailureMessage },
+            ]
+        };
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attempt);
+
+        var result = await handler.Handle(
+            new GetDrawLifecycleQuery("tenant-1", "loc-1", DrawDate, SlotStart, SlotEnd),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        var failStep = result!.Steps.Single(s => s.Name == "DrawFailed");
+        // The safe message is returned.
+        Assert.Equal(SafeFailureMessage, failStep.ErrorMessage);
+        // Raw diagnostic text must not appear anywhere in the step's ErrorMessage.
+        Assert.DoesNotContain(RawDiagnostic, failStep.ErrorMessage ?? string.Empty);
     }
 }

@@ -58,6 +58,8 @@ public sealed class DataHubDbContext(DbContextOptions<DataHubDbContext> options)
             e.Property(x => x.TriggeredBy).HasMaxLength(200);
             e.Property(x => x.SafeFailureReason).HasMaxLength(500);
             e.Property(x => x.AlgorithmVersion).HasMaxLength(50);
+            // DRAW009: lifecycle steps stored as JSON text for DataHub progress read model.
+            e.Property(x => x.LifecycleStepsJson).HasColumnType("text");
             e.HasIndex(x => x.DrawAttemptId).IsUnique().HasDatabaseName("ux_draw_history_attempt_id");
             e.HasIndex(x => new { x.TenantId, x.LocationId, x.Date, x.TimeSlot }).HasDatabaseName("ix_draw_history_tenant_location_date");
             e.HasIndex(x => new { x.TenantId, x.CompletedAt }).HasDatabaseName("ix_draw_history_tenant_completed");

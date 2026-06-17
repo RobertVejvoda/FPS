@@ -2,7 +2,7 @@ namespace FPS.DataHub.Domain;
 
 /// <summary>
 /// Draw history projection for HR operational views and reporting.
-/// Populated from booking.drawStarted and booking.drawCompleted events.
+/// Populated from booking.drawStarted, booking.drawCompleted, and booking.drawFailed events.
 /// </summary>
 public sealed class DrawHistoryProjection
 {
@@ -57,6 +57,26 @@ public sealed class DrawHistoryProjection
     /// <summary>Algorithm version used</summary>
     public string? AlgorithmVersion { get; set; }
 
+    /// <summary>
+    /// DRAW009: Ordered Draw workflow lifecycle steps as projected from the
+    /// booking.drawCompleted or booking.drawFailed event payload.
+    /// Null until a completed/failed event is processed; check Status for
+    /// in-progress draws that have not yet produced a progress snapshot.
+    /// </summary>
+    public string? LifecycleStepsJson { get; set; }
+
     /// <summary>Last updated timestamp for projection freshness</summary>
     public DateTimeOffset LastUpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>
+/// Safe Draw workflow lifecycle step stored inside DrawHistoryProjection.LifecycleStepsJson.
+/// No seeds, stack traces, or employee-private data.
+/// </summary>
+public sealed class DrawProgressStepProjection
+{
+    public string StepName { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string? Summary { get; set; }
+    public DateTime? OccurredAt { get; set; }
 }

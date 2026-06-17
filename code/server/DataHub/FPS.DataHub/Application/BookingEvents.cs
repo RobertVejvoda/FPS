@@ -35,8 +35,21 @@ public sealed record BookingEventPayload(
     string? DrawAttemptId = null,
     int? AllocatedCount = null,
     int? RejectedCount = null,
-    int? WaitlistedCount = null)
+    int? WaitlistedCount = null,
+    // DRAW009: safe lifecycle steps from booking.drawCompleted / booking.drawFailed events.
+    IReadOnlyList<DrawProgressStepEnvelope>? LifecycleSteps = null,
+    string? SafeFailureReason = null)
 {
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? AdditionalData { get; init; }
 }
+
+/// <summary>
+/// Safe Draw lifecycle step as received in the event envelope from Booking.
+/// No seeds, stack traces, or employee-private data.
+/// </summary>
+public sealed record DrawProgressStepEnvelope(
+    string StepName,
+    string Status,
+    string? Summary,
+    DateTime? OccurredAt);

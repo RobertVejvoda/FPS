@@ -47,6 +47,41 @@ export interface DrawHistoryResponse {
   total: number;
 }
 
+/** DRAW009: one ordered lifecycle step within the Draw progress read model. */
+export interface DrawProgressStep {
+  stepName: string;
+  status: string;
+  summary: string | null;
+  occurredAt: string | null;
+}
+
+/**
+ * DRAW009: Safe Draw workflow progress read model returned by
+ * GET /datahub/draw-history/{drawAttemptId}/progress.
+ * HR and auditor roles can see lifecycle steps once the Draw has completed.
+ */
+export interface DrawProgressResponse {
+  drawAttemptId: string;
+  locationId: string;
+  date: string;
+  timeSlot: string;
+  status: string;
+  triggerSource: string | null;
+  runReason: string | null;
+  triggeredBy: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  allocatedCount: number;
+  rejectedCount: number;
+  waitlistedCount: number;
+  safeFailureReason: string | null;
+  lastProjectedAt: string;
+  /** Ordered lifecycle steps, or null when not yet available. See stepsNote. */
+  steps: DrawProgressStep[] | null;
+  /** Explains why steps may be null or incomplete. Null when steps are present. */
+  stepsNote: string | null;
+}
+
 export interface DrawOutcomeItem {
   bookingRequestId: string;
   requestorId: string;
@@ -175,6 +210,33 @@ export async function fetchProjectionHealth(
     if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/projection-health returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as ProjectionHealthResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+/**
+ * DRAW009: Fetch Draw workflow progress (lifecycle steps) for a specific Draw attempt.
+ * Returns one row with current status, counts, and ordered lifecycle steps.
+ * Requires HR manager, admin, or auditor role.
+ * Steps are available only after the Draw completes or fails; in-progress Draws return
+ * status only with a stepsNote explaining the current state.
+ */
+export async function fetchDrawProgress(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  drawAttemptId: string,
+): Promise<FetchResult<DrawProgressResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const url = `${apiBaseUrl}/datahub/draw-history/${encodeURIComponent(drawAttemptId)}/progress`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (res.status === 404) return { kind: 'error', status: 404, message: 'Draw attempt not found.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/draw-history/.../progress returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as DrawProgressResponse };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }

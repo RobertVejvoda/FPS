@@ -110,7 +110,31 @@ public record DrawAttemptCompletedEvent(
     string? DrawAttemptId = null,
     string? TriggerSource = null,
     string? RunReason = null,
-    string? TriggeredBy = null) : DomainEvent;
+    string? TriggeredBy = null,
+    // DRAW009: safe lifecycle steps for DataHub projection. Never includes seeds or private data.
+    IReadOnlyList<DrawProgressStepRecord>? LifecycleSteps = null) : DomainEvent;
+
+public record DrawAttemptFailedEvent(
+    DrawKey DrawKey,
+    long Seed,
+    string SafeFailureReason,
+    DateTime FailedAt,
+    string? DrawAttemptId = null,
+    string? TriggerSource = null,
+    string? RunReason = null,
+    string? TriggeredBy = null,
+    // DRAW009: safe lifecycle steps for DataHub projection.
+    IReadOnlyList<DrawProgressStepRecord>? LifecycleSteps = null) : DomainEvent;
+
+/// <summary>
+/// Safe, serialisable lifecycle step for inclusion in draw integration events.
+/// No seeds, stack traces, or employee-private data.
+/// </summary>
+public record DrawProgressStepRecord(
+    string StepName,
+    string Status,
+    string? Summary,
+    DateTime? OccurredAt);
 
 // kept for backwards compat with existing workflow
 public record DrawRunEvent(

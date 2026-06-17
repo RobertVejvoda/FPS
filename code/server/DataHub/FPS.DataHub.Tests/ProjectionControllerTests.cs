@@ -151,7 +151,7 @@ public sealed class ProjectionControllerTests : IDisposable
         await SeedDraw("draw-a1", "tenant-a");
         await SeedDraw("draw-b1", "tenant-b");
 
-        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"));
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
         var result = await ctrl.GetDrawHistory(ct: default) as OkObjectResult;
 
         var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
@@ -208,6 +208,123 @@ public sealed class ProjectionControllerTests : IDisposable
         var result = await ctrl.GetDrawOutcomes("draw-b2", ct: default);
 
         Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    // ── DRAW009: Draw progress endpoint ──────────────────────────────────────
+
+    [Fact]
+    public async Task GetDrawProgress_ReturnsProgressWithSteps_WhenStepsProjected()
+    {
+        // Arrange - seed a draw with lifecycle steps
+        var stepsJson = System.Text.Json.JsonSerializer.Serialize(new[]
+        {
+            new { StepName = "Scheduled", Status = "Completed", Summary = (string?)null, OccurredAt = (DateTime?)DateTime.UtcNow.AddMinutes(-5) },
+            new { StepName = "DecisionsPersisted", Status = "Completed", Summary = (string?)"All decisions saved", OccurredAt = (DateTime?)DateTime.UtcNow.AddMinutes(-1) },
+        });
+
+        _db.DrawHistory.Add(new DrawHistoryProjection
+        {
+            DrawAttemptId = "draw-progress-1",
+            TenantId = "tenant-a",
+            LocationId = "loc-1",
+            Date = new DateOnly(2026, 6, 20),
+            TimeSlot = "08:00-17:00",
+            Status = "Completed",
+            AllocatedCount = 8,
+            RejectedCount = 2,
+            WaitlistedCount = 1,
+            LifecycleStepsJson = stepsJson
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
+
+        // Act
+        var result = await ctrl.GetDrawProgress("draw-progress-1", default) as OkObjectResult;
+
+        // Assert
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("draw-progress-1", json);
+        Assert.Contains("Completed", json);
+        Assert.Contains("Scheduled", json);
+        Assert.Contains("DecisionsPersisted", json);
+        Assert.DoesNotContain("StepsNote", json.Replace("\"stepsNote\":null", "").Replace("\"StepsNote\":null", ""));
+    }
+
+    [Fact]
+    public async Task GetDrawProgress_ReturnsStepsNote_WhenNoStepsProjected()
+    {
+        // Arrange - seed a draw without lifecycle steps (pre-DRAW009)
+        _db.DrawHistory.Add(new DrawHistoryProjection
+        {
+            DrawAttemptId = "draw-progress-nosteps",
+            TenantId = "tenant-a",
+            LocationId = "loc-1",
+            Date = new DateOnly(2026, 6, 21),
+            TimeSlot = "08:00-17:00",
+            Status = "Completed",
+            AllocatedCount = 3,
+            LifecycleStepsJson = null
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
+
+        // Act
+        var result = await ctrl.GetDrawProgress("draw-progress-nosteps", default) as OkObjectResult;
+
+        // Assert
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("draw-progress-nosteps", json);
+        // Steps should be null but stepsNote should explain why
+        Assert.DoesNotContain("\"Steps\":[", json);
+    }
+
+    [Fact]
+    public async Task GetDrawProgress_CrossTenant_ReturnsNotFound()
+    {
+        await SeedDraw("draw-progress-other-tenant", "tenant-b");
+
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
+        var result = await ctrl.GetDrawProgress("draw-progress-other-tenant", default);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetDrawProgress_UnknownId_ReturnsNotFound()
+    {
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
+        var result = await ctrl.GetDrawProgress("no-such-draw", default);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetDrawProgress_FailedDraw_ReturnsSafeFailureReason()
+    {
+        _db.DrawHistory.Add(new DrawHistoryProjection
+        {
+            DrawAttemptId = "draw-progress-failed",
+            TenantId = "tenant-a",
+            LocationId = "loc-1",
+            Date = new DateOnly(2026, 6, 22),
+            TimeSlot = "08:00-17:00",
+            Status = "Failed",
+            SafeFailureReason = "Draw failed due to an internal error. Please retry.",
+            LifecycleStepsJson = null
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new DrawHistoryController(_db, new FakeCurrentUser("tenant-a", "hr-user"), NullLogger<DrawHistoryController>.Instance);
+        var result = await ctrl.GetDrawProgress("draw-progress-failed", default) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("Failed", json);
+        Assert.Contains("Draw failed due to an internal error", json);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
