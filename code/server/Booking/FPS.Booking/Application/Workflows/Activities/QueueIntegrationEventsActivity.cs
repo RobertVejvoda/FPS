@@ -81,13 +81,26 @@ public sealed class QueueIntegrationEventsActivity(
 
         // DRAW009: read the persisted lifecycle steps before publishing so DataHub
         // can project them as an ordered progress record. Steps are appended by
-        // each workflow activity; at this point they include everything up to
-        // EventsQueued (added below). The completed event itself adds the final
-        // Completed step on the DataHub side from the event timestamp.
+        // each workflow activity up to this point. We also append the terminal
+        // EventsQueued and Completed steps here so DataHub receives a complete
+        // lifecycle snapshot (both steps are persisted by subsequent operations).
         var drawAttempt = await drawRepository.GetByKeyAsync(input.DrawKey);
-        var safeSteps = drawAttempt?.LifecycleSteps
-            ?.Select(s => new DrawProgressStepRecord(s.StepName, s.Status, s.Summary, s.StartedAt))
-            .ToList();
+        List<DrawProgressStepRecord>? safeSteps = null;
+        if (drawAttempt?.LifecycleSteps is not null)
+        {
+            var now = DateTime.UtcNow;
+            safeSteps = drawAttempt.LifecycleSteps
+                .Select(s => new DrawProgressStepRecord(s.StepName, s.Status, s.Summary, s.StartedAt))
+                .ToList();
+            // Append the terminal steps that will be persisted after publishing.
+            safeSteps.Add(new DrawProgressStepRecord(
+                "EventsQueued", "Completed",
+                $"DrawAttemptCompleted + {input.Decisions.Count} decision event(s) published", now));
+            safeSteps.Add(new DrawProgressStepRecord(
+                "Completed", "Completed",
+                $"{input.AllocatedCount} allocated, {input.RejectedCount} rejected, {input.WaitlistedCount} waitlisted",
+                now));
+        }
 
         await completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(
             drawKey, input.Seed,

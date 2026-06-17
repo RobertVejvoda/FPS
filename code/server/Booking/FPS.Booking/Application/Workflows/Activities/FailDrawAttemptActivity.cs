@@ -4,6 +4,7 @@ using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.Events;
 using FPS.Booking.Domain.ValueObjects;
+using Microsoft.Extensions.Logging;
 
 namespace FPS.Booking.Application.Workflows.Activities;
 
@@ -19,16 +20,26 @@ public sealed record FailDrawAttemptInput(
     string? TimeSlotEnd = null,
     string? TriggerSource = null,
     string? TriggeredBy = null,
-    string? Reason = null);
+    string? Reason = null,
+    // Internal diagnostic detail — logged and stored in Dapr state only; never published to DataHub.
+    string? DiagnosticMessage = null);
 
 public sealed class FailDrawAttemptActivity(
     IDrawRepository drawRepository,
-    IBookingEventPublisher eventPublisher)
+    IBookingEventPublisher eventPublisher,
+    ILogger<FailDrawAttemptActivity> logger)
     : WorkflowActivity<FailDrawAttemptInput, bool>
 {
     public override async Task<bool> RunAsync(
         WorkflowActivityContext context, FailDrawAttemptInput input)
     {
+        // Log the diagnostic detail for technical troubleshooting.
+        // DiagnosticMessage contains the raw exception text and is never published to DataHub.
+        var diagnostic = input.DiagnosticMessage ?? input.SafeErrorMessage;
+        logger.LogWarning(
+            "Draw workflow failed for {DrawKey}. Diagnostic: {DiagnosticMessage}",
+            input.DrawKey, diagnostic);
+
         var existing = await drawRepository.GetByKeyAsync(input.DrawKey);
         var steps = existing?.LifecycleSteps ?? [];
         var failedAt = DateTime.UtcNow;
@@ -38,7 +49,8 @@ public sealed class FailDrawAttemptActivity(
             Status = "Failed",
             StartedAt = failedAt,
             CompletedAt = failedAt,
-            ErrorMessage = input.SafeErrorMessage,
+            // Store full diagnostic in Dapr state (internal only, not surfaced to DataHub).
+            ErrorMessage = diagnostic,
         });
 
         var attempt = new DrawAttemptDto

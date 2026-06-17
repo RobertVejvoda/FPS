@@ -92,8 +92,11 @@ public sealed class DrawWorkflow : Workflow<DrawWorkflowInput, DrawWorkflowOutpu
         }
         catch (Exception ex)
         {
-            // Step 11: Record failure — safe error message only, no stack trace.
-            var safeMessage = ex.Message.Length > 200 ? ex.Message[..200] : ex.Message;
+            // Step 11: Record failure.
+            // SafeErrorMessage is a generic HR/auditor-safe string — no exception internals.
+            // DiagnosticMessage carries the raw exception text for logs and Dapr state only.
+            const string safeMessage = "Draw workflow execution failed.";
+            var diagnosticMessage = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
             await context.CallActivityAsync<bool>(
                 nameof(FailDrawAttemptActivity),
                 new FailDrawAttemptInput(
@@ -103,7 +106,8 @@ public sealed class DrawWorkflow : Workflow<DrawWorkflowInput, DrawWorkflowOutpu
                     TimeSlotEnd: input.TimeSlotEnd,
                     TriggerSource: input.TriggerSource,
                     TriggeredBy: input.TriggeredBy,
-                    Reason: input.Reason));
+                    Reason: input.Reason,
+                    DiagnosticMessage: diagnosticMessage));
 
             return new DrawWorkflowOutput(
                 resolved.DrawKey, "Failed", 0, 0, 0, safeMessage);
