@@ -33,6 +33,7 @@ GitHub Copilot agent is an implementer. By default, use it for mechanical, file-
 ## Ready Signals
 
 - Start only when the issue is assigned to Copilot and has a clear implementation scope.
+- Create implementation branches from the latest `origin/master`, never from an arbitrary current branch.
 - Treat Project `Status = Ready` as the preferred readiness signal; `ready-to-implement` is optional and secondary.
 - If `blocked-question` is present, do not implement; comment with the unresolved question if needed.
 - If a PR already exists for the same slice, do not start parallel work.
@@ -61,7 +62,7 @@ When implementation is ready for review:
 - Add `implemented-by: copilot` and `needs-codex-review` labels when permitted.
 - Leave a PR comment with `/fps-route codex-review` so the Delivery Kanban moves to `Status = In review`, `Owner = Codex`.
 - Do not merge the PR.
-- Do not keep the PR as draft unless blocked.
+- Do not keep the PR as draft unless blocked. When implementation and validation are complete, mark the PR ready for review.
 - If blocked, comment with the concrete blocker and do not widen scope.
 - If Codex comments on the PR, address only that PR feedback and keep the existing PR scope.
 

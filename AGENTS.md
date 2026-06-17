@@ -23,6 +23,7 @@ This repository is documentation-first unless the user explicitly asks for code 
 - For documentation-only changes, review the changed Markdown for clarity and internal consistency.
 - For code changes, run `./tools/validate.sh` when feasible and report the result.
 - Keep pull requests focused on one logical unit of work.
+- Start every implementation branch from the latest `origin/master`, not from whatever branch is currently checked out. Fetch first, then branch from `origin/master` or switch to updated `master` before creating the work branch.
 
 ### Cross-Agent Validation
 
@@ -150,6 +151,7 @@ When Codex signals work to an implementer, include a short comment with:
 - whether to implement, revise, pause, or only answer a blocker.
 
 When an implementer finishes, it should set `Status = In review`, `Owner = Codex`, remove stale temporary routing labels when permitted, and leave a concise summary with validation results.
+If the PR is a draft, the implementer must mark it ready for review when the requested implementation and validation evidence are complete. Do not leave a completed PR in draft state.
 
 ### PR Monitoring Loops
 

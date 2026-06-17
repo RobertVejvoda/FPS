@@ -121,6 +121,7 @@ When Claude or Copilot finishes implementation, the correct handoff is:
 
 - leave a concise PR comment with scope summary, validation results, and any known gaps;
 - ensure the PR links its owning issue with `Closes #N`, `Fixes #N`, or equivalent;
+- if the PR is a draft, mark it ready for review once the implementation and validation evidence are complete;
 - set or request `Status = In review`, `Owner = Codex`;
 - wait for Codex or a human reviewer to approve, request changes, merge, or close the issue.
 

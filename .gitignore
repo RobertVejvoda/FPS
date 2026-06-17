@@ -36,6 +36,7 @@ logs/
 # Codex — exclude local config, keep shared hooks
 .codex/**
 !.codex/hooks.json
+memory/
 
 # Node
 node_modules/
