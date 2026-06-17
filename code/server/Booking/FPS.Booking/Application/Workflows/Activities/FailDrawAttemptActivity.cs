@@ -21,7 +21,7 @@ public sealed record FailDrawAttemptInput(
     string? TriggerSource = null,
     string? TriggeredBy = null,
     string? Reason = null,
-    // Internal diagnostic detail — logged and stored in Dapr state only; never published to DataHub.
+    // Internal diagnostic detail — logged for technical troubleshooting only; never stored in state or published.
     string? DiagnosticMessage = null);
 
 public sealed class FailDrawAttemptActivity(
@@ -49,8 +49,9 @@ public sealed class FailDrawAttemptActivity(
             Status = "Failed",
             StartedAt = failedAt,
             CompletedAt = failedAt,
-            // Store full diagnostic in Dapr state (internal only, not surfaced to DataHub).
-            ErrorMessage = diagnostic,
+            // Store only the safe message — ErrorMessage is surfaced by GetDrawLifecycleHandler
+            // to hr_manager/admin/auditor callers and must not contain raw exception details.
+            ErrorMessage = input.SafeErrorMessage,
         });
 
         var attempt = new DrawAttemptDto
