@@ -179,4 +179,4 @@ GitHub actions may technically run under Robert's account unless a separate agen
 - `implemented-by: claude` — Claude implemented the PR.
 - `implemented-by: copilot` — GitHub Copilot agent implemented the PR.
 
-Copilot-specific behavior is documented in `.github/copilot-instructions.md`.
+Copilot-specific behavior is documented in `.github/copilot-instructions.md`. The accepted PR review and merge workflow for Copilot CLI—including how Codex reviews and merges under the same-account constraint—is documented in `docs/delivery-board.md` under **Copilot CLI Identity and PR Merge Workflow**.

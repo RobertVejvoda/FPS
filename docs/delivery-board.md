@@ -127,6 +127,20 @@ When Claude or Copilot finishes implementation, the correct handoff is:
 
 Implementer validation is evidence, not acceptance. Acceptance requires an independent reviewer.
 
+## Copilot CLI Identity and PR Merge Workflow
+
+GitHub Copilot CLI currently runs under Robert's GitHub identity in this repository. This creates a constraint: GitHub may block a formal `APPROVED` review record when the reviewer and PR author share the same account.
+
+The accepted workflow for Copilot CLI PRs is:
+
+- **Copilot CLI opens the PR** and leaves a concise handoff comment with scope, validation results, and `/fps-route codex-review`.
+- **Codex reviews the diff** and records findings through PR comments, `/fps-state needs-changes`, or a final summary comment. Codex does not submit a formal GitHub review to avoid the same-account block; the comment record is the review evidence.
+- **Low-risk, mechanical PRs** (documentation, pattern-following implementation, lint cleanup, dependency bumps): Codex may merge after review even if GitHub blocks a formal approval record. The review comment or `/fps-state` command is sufficient evidence.
+- **Higher-risk PRs** (architecture, cross-service, security, production, or any slice where the diff alone is not enough to validate): Codex should request Robert manual review, or route to Claude for independent validation before merging.
+- **A separate bot identity or GitHub App token** is only needed if branch protection policy or audit requirements demand a formal approval from a distinct GitHub account. Record that decision in `docs/versions-and-decisions.md` when it is made.
+
+This workflow preserves reviewer independence through recorded Codex commentary, without requiring a separate GitHub App or token for routine Copilot CLI work. See `AGENTS.md` for the full reviewer independence policy.
+
 ## Reverse Handoff
 
 When Claude, Copilot, or a human implementer needs Codex/Robert action, use the same durable GitHub state a human would use:
