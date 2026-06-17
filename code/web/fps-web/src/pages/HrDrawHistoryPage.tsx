@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchDrawHistory,
+  fetchDrawProgress,
   type DrawHistoryItem,
 } from '../api/dataHub';
 import {
@@ -22,6 +23,12 @@ import {
 import { nextWorkdayOptions, toLocalDateString } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { DateFilter, type RangeFilterValue } from '../components/DateFilter';
+import {
+  DrawProgressPanel,
+  type ProgressState,
+  humanizeTriggerSource,
+  shortTriggeredByRef,
+} from '../components/DrawProgressPanel';
 
 const LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
@@ -71,6 +78,10 @@ export function HrDrawHistoryPage() {
   const [history, setHistory] = useState<HistoryState>({ kind: 'loading' });
   // Past Draws date-range filter — reuses the shared component from #476.
   const [pastRange, setPastRange] = useState<RangeFilterValue>({ presetKey: 'All' });
+  // Progress expansion: one row may be expanded at a time;
+  // progress data is cached by drawAttemptId to avoid re-fetching.
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [progressCache, setProgressCache] = useState<Record<string, ProgressState>>({});
 
   const { dateBase, simulationActive } = useTenantDateContext();
   const dateChips = useMemo(
@@ -184,6 +195,31 @@ export function HrDrawHistoryPage() {
     && effectiveStatus !== 'InProgress';
   const runLabel = effectiveStatus === 'Failed' ? 'Retry Draw' : 'Run Draw';
 
+  // Toggle the expanded progress row for a Past Draw. Fetches and caches
+  // the DrawProgressResponse on first expand; subsequent expands reuse the
+  // cache so no redundant requests are made.
+  function toggleProgress(drawAttemptId: string) {
+    if (expandedRowId === drawAttemptId) {
+      setExpandedRowId(null);
+      return;
+    }
+    setExpandedRowId(drawAttemptId);
+    if (progressCache[drawAttemptId]) return; // already cached
+
+    setProgressCache(prev => ({ ...prev, [drawAttemptId]: { kind: 'loading' } }));
+    fetchDrawProgress({ apiBaseUrl, bearerToken }, drawAttemptId).then(result => {
+      if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (result.kind === 'ok') {
+        setProgressCache(prev => ({ ...prev, [drawAttemptId]: { kind: 'ok', data: result.data } }));
+      } else {
+        setProgressCache(prev => ({
+          ...prev,
+          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : 'Failed to load progress.' },
+        }));
+      }
+    });
+  }
+
   return (
     <div className="page-stack">
       <div className="page-hero">
@@ -245,6 +281,9 @@ export function HrDrawHistoryPage() {
             onReasonChange={setDrawReason}
             drawRunning={drawRunning}
             onRun={() => { void handleRunDraw(); }}
+            expandedProgressId={expandedRowId}
+            progressCache={progressCache}
+            onToggleProgress={toggleProgress}
           />
         )}
 
@@ -277,29 +316,60 @@ export function HrDrawHistoryPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Run details'].map(header => (
-                  <th key={header} style={th}>{header}</th>
+                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Run details', ''].map((header, i) => (
+                  <th key={i} style={th}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {history.kind === 'loading' && (
-                <tr><td colSpan={7} style={tdMuted}>Loading past draws…</td></tr>
+                <tr><td colSpan={8} style={tdMuted}>Loading past draws…</td></tr>
               )}
               {history.kind === 'ok' && pastDraws.length === 0 && (
-                <tr><td colSpan={7} style={tdMuted}>No completed draws match the current filter.</td></tr>
+                <tr><td colSpan={8} style={tdMuted}>No completed draws match the current filter.</td></tr>
               )}
-              {pastDraws.map(draw => (
-                <tr key={draw.drawAttemptId}>
-                  <td style={tdStrong}>{displayDate(draw.date)}</td>
-                  <td style={td}>{draw.timeSlot}</td>
-                  <td style={td}>{displayLocation(draw.locationId) ?? 'Location not set'}</td>
-                  <td style={{ ...td, color: statusColor(draw.status), fontWeight: 700 }}>{formatDrawStatus(draw.status)}</td>
-                  <td style={td}>{outcomeText(draw)}</td>
-                  <td style={td}>{draw.completedAt ? displayDateTime(draw.completedAt) : draw.startedAt ? displayDateTime(draw.startedAt) : '-'}</td>
-                  <td style={td}><RunDetailsCell draw={draw} /></td>
-                </tr>
-              ))}
+              {pastDraws.map(draw => {
+                const isExpanded = expandedRowId === draw.drawAttemptId;
+                const progress = progressCache[draw.drawAttemptId];
+                return (
+                  <React.Fragment key={draw.drawAttemptId}>
+                    <tr style={{ background: isExpanded ? '#f9fafb' : undefined }}>
+                      <td style={tdStrong}>{displayDate(draw.date)}</td>
+                      <td style={td}>{draw.timeSlot}</td>
+                      <td style={td}>{displayLocation(draw.locationId) ?? 'Location not set'}</td>
+                      <td style={{ ...td, color: statusColor(draw.status), fontWeight: 700 }}>{formatDrawStatus(draw.status)}</td>
+                      <td style={td}>{outcomeText(draw)}</td>
+                      <td style={td}>{draw.completedAt ? displayDateTime(draw.completedAt) : draw.startedAt ? displayDateTime(draw.startedAt) : '-'}</td>
+                      <td style={td}><RunDetailsCell draw={draw} /></td>
+                      <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                        <button
+                          onClick={() => toggleProgress(draw.drawAttemptId)}
+                          style={{
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.75rem',
+                            borderRadius: 4,
+                            border: '1px solid #d1d5db',
+                            background: isExpanded ? '#e0e7ff' : '#f9fafb',
+                            color: isExpanded ? '#3730a3' : '#374151',
+                            cursor: 'pointer',
+                            fontWeight: isExpanded ? 600 : 400,
+                          }}
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? 'Hide progress' : 'Progress'}
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '1rem 1.25rem', background: '#f9fafb', borderBottom: '1px solid var(--border)' }}>
+                          <DrawProgressPanel progress={progress} drawAttemptId={draw.drawAttemptId} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -337,29 +407,9 @@ function RunDetailsCell({ draw }: { draw: DrawHistoryItem }): React.ReactElement
   );
 }
 
-function humanizeTriggerSource(source: string): string {
-  const label: Record<string, string> = {
-    manual: 'Manual',
-    scheduled: 'Scheduled',
-    recovery: 'Recovery',
-    simulation: 'Simulation',
-  };
-  return label[source] ?? source;
-}
-
-// Operator-safe short ref derived from the TriggeredBy value. For long
-// hex hashes we surface the first 6 chars uppercased — matches the audit
-// workspace convention so an HR user can correlate by short ref. For
-// short identifiers (e.g. "dapr-cron") we render them verbatim.
-function shortTriggeredByRef(value: string | null): string | null {
-  if (!value) return null;
-  const compact = value.replace(/-/g, '');
-  if (/^[0-9a-f]{32,}$/i.test(compact)) return compact.slice(0, 6).toUpperCase();
-  return value;
-}
-
 function UpcomingDrawCard({
   status, effectiveStatus, historyMatch, selectedDate, canRun, runLabel, drawReason, onReasonChange, drawRunning, onRun,
+  expandedProgressId, progressCache, onToggleProgress,
 }: {
   status: DrawStatusOk;
   // Effective status drives the badge + the no-run explanation. Prefer the
@@ -375,12 +425,19 @@ function UpcomingDrawCard({
   onReasonChange: (v: string) => void;
   drawRunning: boolean;
   onRun: () => void;
+  // Progress panel — shared with the Past Draws table so HR can also see
+  // lifecycle steps while a draw is InProgress (issue UX499 review #1).
+  expandedProgressId: string | null;
+  progressCache: Record<string, ProgressState>;
+  onToggleProgress: (id: string) => void;
 }) {
   const requestSummary = formatDrawRequestSummary(status.requestCount, status.demandLevel);
   const schedule = status.nextDrawAt
     ? formatDrawTimestamp(status.nextDrawAt, status.timeZone)
     : formatScheduleSummary(status.scheduleStatus, status.scheduleSource);
   const reason = status.safeMessage || status.cannotRequestReason;
+  const inProgressAttemptId = effectiveStatus === 'InProgress' ? historyMatch?.drawAttemptId : undefined;
+  const inProgressExpanded = inProgressAttemptId ? expandedProgressId === inProgressAttemptId : false;
 
   return (
     <div style={upcomingCard}>
@@ -435,6 +492,38 @@ function UpcomingDrawCard({
               : 'No run action is available right now.'}
         </p>
       )}
+
+      {/* Progress button/panel for in-progress draws — lets HR track live workflow
+          state without waiting for DataHub to project a completed row. Only rendered
+          when DataHub has projected the in-progress attempt (gives us a drawAttemptId). */}
+      {inProgressAttemptId && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <button
+            onClick={() => onToggleProgress(inProgressAttemptId)}
+            style={{
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.75rem',
+              borderRadius: 4,
+              border: '1px solid #d1d5db',
+              background: inProgressExpanded ? '#e0e7ff' : '#f9fafb',
+              color: inProgressExpanded ? '#3730a3' : '#374151',
+              cursor: 'pointer',
+              fontWeight: inProgressExpanded ? 600 : 400,
+            }}
+            aria-expanded={inProgressExpanded}
+          >
+            {inProgressExpanded ? 'Hide progress' : 'Progress'}
+          </button>
+          {inProgressExpanded && (
+            <div style={{ marginTop: '0.75rem', padding: '1rem', background: '#fff', borderRadius: 6, border: '1px solid var(--border)' }}>
+              <DrawProgressPanel
+                progress={progressCache[inProgressAttemptId]}
+                drawAttemptId={inProgressAttemptId}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -447,6 +536,7 @@ function Fact({ label, value, valueColor }: { label: string; value: string; valu
     </div>
   );
 }
+
 
 const sectionTitle: React.CSSProperties = { margin: 0, fontSize: '1rem', fontWeight: 700 };
 const sectionLead: React.CSSProperties = { margin: '0.25rem 0 1rem', fontSize: '0.85rem', color: 'var(--muted)' };
