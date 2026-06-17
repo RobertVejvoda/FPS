@@ -56,7 +56,8 @@ export default function LoginRoute() {
   const configured = isOidcConfigured(oidcConfig);
   const [status, setStatus] = useState<LoginStatus>({ kind: 'idle' });
   // One-time flag set by explicit sign-out; forces interactive OIDC login instead of silent SSO reuse.
-  const [forcePrompt, setForcePrompt] = useState(false);
+  // null means not yet loaded from AsyncStorage; button stays disabled until it resolves.
+  const [forcePrompt, setForcePrompt] = useState<boolean | null>(null);
 
   useEffect(() => {
     loadForcePromptLogin().then(flag => setForcePrompt(flag));
@@ -77,7 +78,7 @@ export default function LoginRoute() {
       // Supported by Keycloak, Azure AD, Auth0, and most OIDC-compliant providers.
       // If the provider ignores this parameter, the user may still see silent login;
       // clearing local credentials (done by signOut) remains the reliable part.
-      prompt: forcePrompt ? AuthSession.Prompt.Login : undefined,
+      prompt: forcePrompt === true ? AuthSession.Prompt.Login : undefined,
     },
     discovery,
   );
@@ -112,19 +113,21 @@ export default function LoginRoute() {
       { tokenEndpoint: discovery.tokenEndpoint },
     ).then(async (tokenResponse) => {
       const { accessToken } = tokenResponse;
-      // Clear the one-time force-prompt flag before persisting the new session.
-      await clearForcePromptLogin();
-      setForcePrompt(false);
       await setSession(accessToken);
 
       const meResult = await fetchMe({ apiBaseUrl: oidcConfig.apiBaseUrl, bearerToken: accessToken });
 
       if (meResult.kind === 'ok' || meResult.kind === 'unreachable') {
+        // Session accepted — clear the force-prompt flag only now so a rejected retry
+        // still requires interactive login on the next attempt.
+        await clearForcePromptLogin();
+        setForcePrompt(false);
         // Enter the shell — unreachable backend is surfaced there
         router.replace('/(tabs)');
         return;
       }
-      // 401/403 or server error means the token is not accepted
+      // 401/403 or server error means the token is not accepted; keep the force-prompt flag
+      // so the next sign-in attempt remains interactive.
       await clearSession();
       setStatus({
         kind: 'error',
@@ -133,6 +136,7 @@ export default function LoginRoute() {
           : `Server error (${meResult.status}). Please try again.`,
       });
     }).catch(async (err: unknown) => {
+      // Token exchange failed; keep the force-prompt flag set for the next attempt.
       await clearSession();
       setStatus({
         kind: 'error',
@@ -143,7 +147,8 @@ export default function LoginRoute() {
   }, [response]);
 
   const isLoading = status.kind === 'loading';
-  const canSignIn = configured && !!request && !isLoading;
+  // forcePrompt === null means the AsyncStorage load is still pending; keep Sign in disabled.
+  const canSignIn = configured && !!request && !isLoading && forcePrompt !== null;
 
   return (
     <SafeAreaView style={styles.safe}>
