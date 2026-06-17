@@ -6,6 +6,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { getOidcConfig, isOidcConfigured } from '@/auth/oidcConfig';
+import { loadForcePromptLogin, clearForcePromptLogin } from '@/auth/authStorage';
 import { fetchMe } from '@/api/client';
 import { colors, radius, spacing } from '@/theme';
 
@@ -54,6 +55,12 @@ export default function LoginRoute() {
   const oidcConfig = getOidcConfig();
   const configured = isOidcConfigured(oidcConfig);
   const [status, setStatus] = useState<LoginStatus>({ kind: 'idle' });
+  // One-time flag set by explicit sign-out; forces interactive OIDC login instead of silent SSO reuse.
+  const [forcePrompt, setForcePrompt] = useState(false);
+
+  useEffect(() => {
+    loadForcePromptLogin().then(flag => setForcePrompt(flag));
+  }, []);
 
   const redirectUri = AuthSession.makeRedirectUri({ path: 'login-callback' });
 
@@ -65,6 +72,12 @@ export default function LoginRoute() {
       scopes: oidcConfig.scopes.length > 0 ? oidcConfig.scopes : ['openid', 'profile', 'email'],
       redirectUri,
       usePKCE: true,
+      // When force-prompt is set (after explicit sign-out), request an interactive login step.
+      // This passes prompt=login to the IdP, preventing silent SSO session reuse.
+      // Supported by Keycloak, Azure AD, Auth0, and most OIDC-compliant providers.
+      // If the provider ignores this parameter, the user may still see silent login;
+      // clearing local credentials (done by signOut) remains the reliable part.
+      prompt: forcePrompt ? AuthSession.Prompt.Login : undefined,
     },
     discovery,
   );
@@ -99,6 +112,9 @@ export default function LoginRoute() {
       { tokenEndpoint: discovery.tokenEndpoint },
     ).then(async (tokenResponse) => {
       const { accessToken } = tokenResponse;
+      // Clear the one-time force-prompt flag before persisting the new session.
+      await clearForcePromptLogin();
+      setForcePrompt(false);
       await setSession(accessToken);
 
       const meResult = await fetchMe({ apiBaseUrl: oidcConfig.apiBaseUrl, bearerToken: accessToken });
