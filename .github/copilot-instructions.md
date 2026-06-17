@@ -72,6 +72,20 @@ When the next action belongs to another actor, use a route comment instead of as
 - `/fps-route robert-decision` when a product, architecture, or operational decision is required.
 - `/fps-route blocked Codex` when the spec or acceptance criteria need Codex clarification.
 
+## Copilot CLI Usage
+
+When using GitHub Copilot CLI for local agent work:
+
+- Run from the repository root.
+- Read and follow `AGENTS.md` before editing any file.
+- Create implementation branches from the latest `origin/master`; never branch from an arbitrary current branch.
+- Implement only the assigned issue; do not absorb adjacent or future slices.
+- Prefer focused file reads and searches over broad repository scans.
+- Run `./tools/validate.sh` before reporting ready when feasible; if not feasible, state why and list the narrower checks run.
+- Open or update one focused PR per issue; reference the issue with `Closes #NN` or `Refs #NN`.
+- Mark the PR ready for review when implementation and validation are complete; do not leave it in draft unless blocked.
+- Never merge your own PR.
+
 ## Attribution
 
 - PRs opened by Copilot should clearly say they were implemented by GitHub Copilot agent.
