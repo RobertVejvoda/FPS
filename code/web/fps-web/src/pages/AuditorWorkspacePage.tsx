@@ -470,6 +470,12 @@ function ExpandedDetail({ record, actor }: { record: AuditRecord; actor: ActorDe
         ) : (
           <div style={{ ...muted }}>Not available for this event</div>
         )}
+        {record.entityType === 'drawAttempt' && record.entityId && (
+          <div style={{ marginTop: 6, fontSize: 12, color: '#4b5563' }}>
+            HR managers can view the full lifecycle progress for this Draw in the{' '}
+            <strong>Draws</strong> page → Past Draws → Progress.
+          </div>
+        )}
       </div>
       {record.summary && (
         <div style={{ gridColumn: '1 / -1' }}>

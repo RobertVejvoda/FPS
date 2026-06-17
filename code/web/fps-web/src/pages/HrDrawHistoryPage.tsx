@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchDrawHistory,
+  fetchDrawProgress,
   type DrawHistoryItem,
+  type DrawProgressResponse,
 } from '../api/dataHub';
 import {
   fetchDrawStatus,
@@ -18,6 +20,8 @@ import {
   formatDrawRequestSummary,
   formatDrawTimestamp,
   formatScheduleSummary,
+  formatLifecycleStepName,
+  lifecycleStepStatusColor,
 } from '../displayLabels';
 import { nextWorkdayOptions, toLocalDateString } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
@@ -32,6 +36,11 @@ type DrawStatusOk = Extract<DrawStatusResult, { kind: 'ok' }>;
 type HistoryState =
   | { kind: 'loading' }
   | { kind: 'ok'; draws: DrawHistoryItem[]; total: number }
+  | { kind: 'error'; message: string };
+
+type ProgressState =
+  | { kind: 'loading' }
+  | { kind: 'ok'; data: DrawProgressResponse }
   | { kind: 'error'; message: string };
 
 // "Upcoming" covers anything still actionable for the auditor: a future
@@ -71,6 +80,10 @@ export function HrDrawHistoryPage() {
   const [history, setHistory] = useState<HistoryState>({ kind: 'loading' });
   // Past Draws date-range filter — reuses the shared component from #476.
   const [pastRange, setPastRange] = useState<RangeFilterValue>({ presetKey: 'All' });
+  // Progress expansion: one row may be expanded at a time;
+  // progress data is cached by drawAttemptId to avoid re-fetching.
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [progressCache, setProgressCache] = useState<Record<string, ProgressState>>({});
 
   const { dateBase, simulationActive } = useTenantDateContext();
   const dateChips = useMemo(
@@ -184,6 +197,31 @@ export function HrDrawHistoryPage() {
     && effectiveStatus !== 'InProgress';
   const runLabel = effectiveStatus === 'Failed' ? 'Retry Draw' : 'Run Draw';
 
+  // Toggle the expanded progress row for a Past Draw. Fetches and caches
+  // the DrawProgressResponse on first expand; subsequent expands reuse the
+  // cache so no redundant requests are made.
+  function toggleProgress(drawAttemptId: string) {
+    if (expandedRowId === drawAttemptId) {
+      setExpandedRowId(null);
+      return;
+    }
+    setExpandedRowId(drawAttemptId);
+    if (progressCache[drawAttemptId]) return; // already cached
+
+    setProgressCache(prev => ({ ...prev, [drawAttemptId]: { kind: 'loading' } }));
+    fetchDrawProgress({ apiBaseUrl, bearerToken }, drawAttemptId).then(result => {
+      if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (result.kind === 'ok') {
+        setProgressCache(prev => ({ ...prev, [drawAttemptId]: { kind: 'ok', data: result.data } }));
+      } else {
+        setProgressCache(prev => ({
+          ...prev,
+          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : 'Failed to load progress.' },
+        }));
+      }
+    });
+  }
+
   return (
     <div className="page-stack">
       <div className="page-hero">
@@ -277,29 +315,60 @@ export function HrDrawHistoryPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Run details'].map(header => (
-                  <th key={header} style={th}>{header}</th>
+                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Run details', ''].map((header, i) => (
+                  <th key={i} style={th}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {history.kind === 'loading' && (
-                <tr><td colSpan={7} style={tdMuted}>Loading past draws…</td></tr>
+                <tr><td colSpan={8} style={tdMuted}>Loading past draws…</td></tr>
               )}
               {history.kind === 'ok' && pastDraws.length === 0 && (
-                <tr><td colSpan={7} style={tdMuted}>No completed draws match the current filter.</td></tr>
+                <tr><td colSpan={8} style={tdMuted}>No completed draws match the current filter.</td></tr>
               )}
-              {pastDraws.map(draw => (
-                <tr key={draw.drawAttemptId}>
-                  <td style={tdStrong}>{displayDate(draw.date)}</td>
-                  <td style={td}>{draw.timeSlot}</td>
-                  <td style={td}>{displayLocation(draw.locationId) ?? 'Location not set'}</td>
-                  <td style={{ ...td, color: statusColor(draw.status), fontWeight: 700 }}>{formatDrawStatus(draw.status)}</td>
-                  <td style={td}>{outcomeText(draw)}</td>
-                  <td style={td}>{draw.completedAt ? displayDateTime(draw.completedAt) : draw.startedAt ? displayDateTime(draw.startedAt) : '-'}</td>
-                  <td style={td}><RunDetailsCell draw={draw} /></td>
-                </tr>
-              ))}
+              {pastDraws.map(draw => {
+                const isExpanded = expandedRowId === draw.drawAttemptId;
+                const progress = progressCache[draw.drawAttemptId];
+                return (
+                  <React.Fragment key={draw.drawAttemptId}>
+                    <tr style={{ background: isExpanded ? '#f9fafb' : undefined }}>
+                      <td style={tdStrong}>{displayDate(draw.date)}</td>
+                      <td style={td}>{draw.timeSlot}</td>
+                      <td style={td}>{displayLocation(draw.locationId) ?? 'Location not set'}</td>
+                      <td style={{ ...td, color: statusColor(draw.status), fontWeight: 700 }}>{formatDrawStatus(draw.status)}</td>
+                      <td style={td}>{outcomeText(draw)}</td>
+                      <td style={td}>{draw.completedAt ? displayDateTime(draw.completedAt) : draw.startedAt ? displayDateTime(draw.startedAt) : '-'}</td>
+                      <td style={td}><RunDetailsCell draw={draw} /></td>
+                      <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                        <button
+                          onClick={() => toggleProgress(draw.drawAttemptId)}
+                          style={{
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.75rem',
+                            borderRadius: 4,
+                            border: '1px solid #d1d5db',
+                            background: isExpanded ? '#e0e7ff' : '#f9fafb',
+                            color: isExpanded ? '#3730a3' : '#374151',
+                            cursor: 'pointer',
+                            fontWeight: isExpanded ? 600 : 400,
+                          }}
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? 'Hide progress' : 'Progress'}
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '1rem 1.25rem', background: '#f9fafb', borderBottom: '1px solid var(--border)' }}>
+                          <DrawProgressPanel progress={progress} draw={draw} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -444,6 +513,115 @@ function Fact({ label, value, valueColor }: { label: string; value: string; valu
     <div>
       <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
       <div style={{ fontSize: '0.9rem', fontWeight: 600, color: valueColor ?? '#0f172a' }}>{value}</div>
+    </div>
+  );
+}
+
+// DrawProgressPanel renders lifecycle steps for a Past Draw row.
+// The `progress` value comes from the parent's progressCache; it may be
+// undefined (never fetched), loading, ok, or error.
+function DrawProgressPanel({
+  progress,
+  draw,
+}: {
+  progress: ProgressState | undefined;
+  draw: DrawHistoryItem;
+}): React.ReactElement {
+  if (!progress || progress.kind === 'loading') {
+    return <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.85rem' }}>Loading progress…</p>;
+  }
+
+  if (progress.kind === 'error') {
+    return <p style={{ margin: 0, color: 'var(--danger)', fontSize: '0.85rem' }}>{progress.message}</p>;
+  }
+
+  const { data } = progress;
+
+  return (
+    <div>
+      {/* Summary row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.5rem 1.25rem', marginBottom: '1rem' }}>
+        <ProgressFact label="Trigger" value={data.triggerSource ? humanizeTriggerSource(data.triggerSource) : '—'} />
+        {data.triggeredBy && <ProgressFact label="Run by" value={shortTriggeredByRef(data.triggeredBy) ?? data.triggeredBy} />}
+        {data.runReason && <ProgressFact label="Reason" value={`"${data.runReason}"`} />}
+        <ProgressFact label="Started" value={data.startedAt ? displayDateTime(data.startedAt) : '—'} />
+        {data.completedAt && <ProgressFact label="Completed" value={displayDateTime(data.completedAt)} />}
+      </div>
+
+      {/* Safe failure reason + guidance */}
+      {draw.status === 'Failed' && draw.safeFailureReason && (
+        <div style={{
+          padding: '0.6rem 0.8rem',
+          borderRadius: 6,
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          marginBottom: '0.75rem',
+        }}>
+          <p style={{ margin: '0 0 0.3rem', fontSize: '0.85rem', color: '#991b1b', fontWeight: 600 }}>
+            Draw failed: {draw.safeFailureReason}
+          </p>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#b91c1c' }}>
+            You may retry this Draw using the "Retry Draw" action in Upcoming Draws. If the failure
+            persists, contact your system administrator with the Draw attempt ID below.
+          </p>
+        </div>
+      )}
+
+      {/* Lifecycle steps */}
+      {data.steps && data.steps.length > 0 ? (
+        <div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+            Lifecycle progress
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {data.steps.map((step, i) => {
+              const color = lifecycleStepStatusColor(step.status);
+              const icon = step.status === 'Completed' ? '✓'
+                : step.status === 'Failed' ? '✗'
+                : step.status === 'InProgress' ? '…'
+                : '○';
+              return (
+                <div key={i} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '0.8rem', color, fontWeight: 700, minWidth: 14, marginTop: 1 }}>{icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+                      {formatLifecycleStepName(step.stepName)}
+                    </span>
+                    {step.summary && (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)', marginLeft: '0.5rem' }}>
+                        — {step.summary}
+                      </span>
+                    )}
+                    {step.occurredAt && (
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.5rem' }}>
+                        {displayDateTime(step.occurredAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          {data.stepsNote ?? 'Lifecycle steps are not available for this Draw.'}
+        </p>
+      )}
+
+      {/* Draw attempt ID for support/audit reference */}
+      <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#94a3b8' }}>
+        Draw attempt ID: <span style={{ fontFamily: 'monospace' }}>{draw.drawAttemptId}</span>
+      </div>
+    </div>
+  );
+}
+
+function ProgressFact({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <div>
+      <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>{value}</div>
     </div>
   );
 }

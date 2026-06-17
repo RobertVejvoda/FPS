@@ -215,16 +215,25 @@ export function humanizeHrRejection(reasonCode: string | null, reason: string | 
   return '—';
 }
 
-// Draw lifecycle step labels (DRAW004)
+// Draw lifecycle step labels (DRAW004/DRAW009).
+// Names match the StepName values emitted by Booking workflow activities.
 const LIFECYCLE_STEP_LABELS: Record<string, string> = {
   Scheduled: 'Draw scheduled',
+  RecoveryInitiated: 'Recovery initiated',
+  RequestWindowClosed: 'Request window closed',
+  RequestsLoaded: 'Requests loaded',
+  CapacityLoaded: 'Capacity loaded',
+  MetricsLoaded: 'Metrics loaded',
+  WeightedAllocationCompleted: 'Allocation completed',
+  DecisionsPersisted: 'Decisions saved',
+  EventsQueued: 'Notifications queued',
+  Completed: 'Completed',
+  DrawFailed: 'Draw failed',
+  // Legacy labels kept for pre-DRAW009 rows or other callers.
   DrawInputReady: 'Input data ready',
   DrawExecuted: 'Draw executed',
-  DecisionsPersisted: 'Decisions saved',
   NotificationsSent: 'Notifications sent',
   DrawCompleted: 'Draw completed',
-  DrawFailed: 'Draw failed',
-  RecoveryInitiated: 'Recovery initiated',
 };
 
 export function formatLifecycleStepName(name: string): string {
