@@ -82,7 +82,7 @@ export function DrawProgressPanel({
             Draw failed: {data.safeFailureReason}
           </p>
           <p style={{ margin: 0, fontSize: '0.8rem', color: '#b91c1c' }}>
-            To retry this Draw, use the Retry Draw action in Upcoming Draws (HR Draws page). If the
+            HR managers may retry this Draw using the Retry Draw action in Upcoming Draws. If the
             failure persists, contact your system administrator with the Draw attempt ID below.
           </p>
         </div>

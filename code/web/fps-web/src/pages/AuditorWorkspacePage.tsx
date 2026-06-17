@@ -148,7 +148,7 @@ export function AuditorWorkspacePage() {
       } else {
         setDrawProgressCache(prev => ({
           ...prev,
-          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : 'Failed to load draw progress.' },
+          [drawAttemptId]: { kind: 'error', message: result.message },
         }));
       }
     });
