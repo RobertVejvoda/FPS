@@ -13,7 +13,7 @@ import { colors, radius, spacing } from '@/theme';
 
 export default function MoreRoute() {
   const router = useRouter();
-  const { clearSession } = useAuth();
+  const { clearSession, signOut } = useAuth();
   const { state: sessionState } = useSession();
   const { state: profileState, refresh } = useProfileSnapshot();
 
@@ -81,7 +81,7 @@ export default function MoreRoute() {
         accessibilityRole="button"
         accessibilityLabel="Sign out"
         onPress={async () => {
-          await clearSession();
+          await signOut();
           router.replace('/login');
         }}
         style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}

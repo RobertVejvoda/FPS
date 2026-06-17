@@ -6,6 +6,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
 import { getOidcConfig, isOidcConfigured } from '@/auth/oidcConfig';
+import { loadForcePromptLogin, clearForcePromptLogin } from '@/auth/authStorage';
 import { fetchMe } from '@/api/client';
 import { colors, radius, spacing } from '@/theme';
 
@@ -54,6 +55,13 @@ export default function LoginRoute() {
   const oidcConfig = getOidcConfig();
   const configured = isOidcConfigured(oidcConfig);
   const [status, setStatus] = useState<LoginStatus>({ kind: 'idle' });
+  // One-time flag set by explicit sign-out; forces interactive OIDC login instead of silent SSO reuse.
+  // null means not yet loaded from AsyncStorage; button stays disabled until it resolves.
+  const [forcePrompt, setForcePrompt] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    loadForcePromptLogin().then(flag => setForcePrompt(flag));
+  }, []);
 
   const redirectUri = AuthSession.makeRedirectUri({ path: 'login-callback' });
 
@@ -65,6 +73,12 @@ export default function LoginRoute() {
       scopes: oidcConfig.scopes.length > 0 ? oidcConfig.scopes : ['openid', 'profile', 'email'],
       redirectUri,
       usePKCE: true,
+      // When force-prompt is set (after explicit sign-out), request an interactive login step.
+      // This passes prompt=login to the IdP, preventing silent SSO session reuse.
+      // Supported by Keycloak, Azure AD, Auth0, and most OIDC-compliant providers.
+      // If the provider ignores this parameter, the user may still see silent login;
+      // clearing local credentials (done by signOut) remains the reliable part.
+      prompt: forcePrompt === true ? AuthSession.Prompt.Login : undefined,
     },
     discovery,
   );
@@ -104,11 +118,16 @@ export default function LoginRoute() {
       const meResult = await fetchMe({ apiBaseUrl: oidcConfig.apiBaseUrl, bearerToken: accessToken });
 
       if (meResult.kind === 'ok' || meResult.kind === 'unreachable') {
+        // Session accepted — clear the force-prompt flag only now so a rejected retry
+        // still requires interactive login on the next attempt.
+        await clearForcePromptLogin();
+        setForcePrompt(false);
         // Enter the shell — unreachable backend is surfaced there
         router.replace('/(tabs)');
         return;
       }
-      // 401/403 or server error means the token is not accepted
+      // 401/403 or server error means the token is not accepted; keep the force-prompt flag
+      // so the next sign-in attempt remains interactive.
       await clearSession();
       setStatus({
         kind: 'error',
@@ -117,6 +136,7 @@ export default function LoginRoute() {
           : `Server error (${meResult.status}). Please try again.`,
       });
     }).catch(async (err: unknown) => {
+      // Token exchange failed; keep the force-prompt flag set for the next attempt.
       await clearSession();
       setStatus({
         kind: 'error',
@@ -127,7 +147,8 @@ export default function LoginRoute() {
   }, [response]);
 
   const isLoading = status.kind === 'loading';
-  const canSignIn = configured && !!request && !isLoading;
+  // forcePrompt === null means the AsyncStorage load is still pending; keep Sign in disabled.
+  const canSignIn = configured && !!request && !isLoading && forcePrompt !== null;
 
   return (
     <SafeAreaView style={styles.safe}>

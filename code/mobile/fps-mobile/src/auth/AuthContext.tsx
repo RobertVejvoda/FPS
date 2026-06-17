@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { fetchMe } from '@/api/client';
 import { getOidcConfig } from './oidcConfig';
-import { clearAccessToken, loadAccessToken, saveAccessToken } from './authStorage';
+import { clearAccessToken, loadAccessToken, saveAccessToken, saveForcePromptLogin } from './authStorage';
 
 const DEV_TOKEN_KEY = 'fps.devBearerToken';
 const DEV_BASE_URL_KEY = 'fps.apiBaseUrl';
@@ -15,6 +15,8 @@ export type AuthState = {
   isConfigured: boolean;
   setSession: (accessToken: string) => Promise<void>;
   clearSession: () => Promise<void>;
+  /** Explicit user sign-out: clears session and marks that the next OIDC sign-in must be interactive. */
+  signOut: () => Promise<void>;
   // Development only - preserved for the debug-session screen
   saveCredentials: (apiBaseUrl: string, bearerToken: string) => Promise<void>;
   clearCredentials: () => Promise<void>;
@@ -97,6 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   }, []);
 
+  const signOut = useCallback(async () => {
+    await clearSession();
+    await saveForcePromptLogin();
+  }, [clearSession]);
+
   const saveCredentials = useCallback(async (nextBaseUrl: string, nextToken: string) => {
     const trimmedBaseUrl = nextBaseUrl.trim().replace(/\/+$/, '');
     const trimmedToken = nextToken.trim();
@@ -130,10 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isConfigured: ready && apiBaseUrl.length > 0 && bearerToken.length > 0,
       setSession,
       clearSession,
+      signOut,
       saveCredentials,
       clearCredentials,
     }),
-    [ready, apiBaseUrl, bearerToken, roles, setSession, clearSession, saveCredentials, clearCredentials],
+    [ready, apiBaseUrl, bearerToken, roles, setSession, clearSession, signOut, saveCredentials, clearCredentials],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

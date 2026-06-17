@@ -3,6 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const KEY = 'fps.accessToken';
+// Non-sensitive flag: set after explicit sign-out to force interactive OIDC login next time.
+const FORCE_PROMPT_KEY = 'fps.forcePromptLogin';
 
 const isWeb = Platform.OS === 'web';
 
@@ -25,4 +27,18 @@ export async function clearAccessToken(): Promise<void> {
     return;
   }
   await SecureStore.deleteItemAsync(KEY);
+}
+
+// Force-prompt flag: not sensitive, always stored in AsyncStorage.
+export async function loadForcePromptLogin(): Promise<boolean> {
+  const value = await AsyncStorage.getItem(FORCE_PROMPT_KEY);
+  return value === '1';
+}
+
+export async function saveForcePromptLogin(): Promise<void> {
+  await AsyncStorage.setItem(FORCE_PROMPT_KEY, '1');
+}
+
+export async function clearForcePromptLogin(): Promise<void> {
+  await AsyncStorage.removeItem(FORCE_PROMPT_KEY);
 }
