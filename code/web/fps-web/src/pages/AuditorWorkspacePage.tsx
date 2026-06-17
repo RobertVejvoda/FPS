@@ -9,6 +9,7 @@ import {
   type AuditQueryFilters,
 } from '../api/audit';
 import { fetchHrDisplayNames } from '../api/profile';
+import { fetchDrawProgress } from '../api/dataHub';
 import {
   humanizeAuditEventType,
   humanizeAuditAction,
@@ -20,6 +21,7 @@ import {
 } from '../displayLabels';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { DateFilter, type RangeFilterValue } from '../components/DateFilter';
+import { DrawProgressPanel, type ProgressState } from '../components/DrawProgressPanel';
 
 type State =
   | { kind: 'loading' }
@@ -94,6 +96,9 @@ export function AuditorWorkspacePage() {
   const [result, setResult] = useState('');
   const [actorDetails, setActorDetails] = useState<Record<string, ActorDetails>>({});
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  // Draw lifecycle progress cache — keyed by drawAttemptId (entityId).
+  // Loaded on demand when the auditor expands a drawAttempt entity row.
+  const [drawProgressCache, setDrawProgressCache] = useState<Record<string, ProgressState>>({});
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -129,6 +134,25 @@ export function AuditorWorkspacePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Load Draw lifecycle progress for a drawAttempt entity on demand.
+  // Cached per drawAttemptId; subsequent calls for the same ID are no-ops.
+  function loadDrawProgress(drawAttemptId: string) {
+    const cached = drawProgressCache[drawAttemptId];
+    if (cached?.kind === 'ok' || cached?.kind === 'loading') return;
+    setDrawProgressCache(prev => ({ ...prev, [drawAttemptId]: { kind: 'loading' } }));
+    void fetchDrawProgress({ apiBaseUrl, bearerToken }, drawAttemptId).then(result => {
+      if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (result.kind === 'ok') {
+        setDrawProgressCache(prev => ({ ...prev, [drawAttemptId]: { kind: 'ok', data: result.data } }));
+      } else {
+        setDrawProgressCache(prev => ({
+          ...prev,
+          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : 'Failed to load draw progress.' },
+        }));
+      }
+    });
+  }
 
   // Resolve actor refs → userIds → display names after the table loads.
   // Audit records never carry the raw userId (pseudonymisation is the whole
@@ -388,7 +412,12 @@ export function AuditorWorkspacePage() {
                     {isExpanded && (
                       <tr>
                         <td colSpan={8} style={{ ...td, padding: '14px 18px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                          <ExpandedDetail record={r} actor={details} />
+                          <ExpandedDetail
+                            record={r}
+                            actor={details}
+                            drawProgress={r.entityType === 'drawAttempt' && r.entityId ? drawProgressCache[r.entityId] : undefined}
+                            onLoadDrawProgress={r.entityType === 'drawAttempt' && r.entityId ? () => loadDrawProgress(r.entityId!) : undefined}
+                          />
                         </td>
                       </tr>
                     )}
@@ -441,7 +470,19 @@ function renderEntityLabel(entityId: string | null): React.ReactNode {
 // actor and entity references plus copy buttons so the values can be moved
 // into the search fields without retyping. Intentionally keeps PII to a
 // minimum — only what is needed to answer "who did this?" and "to what?".
-function ExpandedDetail({ record, actor }: { record: AuditRecord; actor: ActorDetails | undefined }): React.ReactElement {
+// For drawAttempt entities, shows an inline lifecycle progress panel so
+// auditors can review Draw evidence without leaving this workspace.
+function ExpandedDetail({
+  record,
+  actor,
+  drawProgress,
+  onLoadDrawProgress,
+}: {
+  record: AuditRecord;
+  actor: ActorDetails | undefined;
+  drawProgress?: ProgressState;
+  onLoadDrawProgress?: () => void;
+}): React.ReactElement {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
       <div>
@@ -470,17 +511,38 @@ function ExpandedDetail({ record, actor }: { record: AuditRecord; actor: ActorDe
         ) : (
           <div style={{ ...muted }}>Not available for this event</div>
         )}
-        {record.entityType === 'drawAttempt' && record.entityId && (
-          <div style={{ marginTop: 6, fontSize: 12, color: '#4b5563' }}>
-            HR managers can view the full lifecycle progress for this Draw in the{' '}
-            <strong>Draws</strong> page → Past Draws → Progress.
-          </div>
-        )}
       </div>
       {record.summary && (
         <div style={{ gridColumn: '1 / -1' }}>
           <div style={detailLabel}>Summary</div>
           <div>{record.summary}</div>
+        </div>
+      )}
+      {record.entityType === 'drawAttempt' && record.entityId && (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <div style={detailLabel}>Draw Lifecycle Progress</div>
+          {!drawProgress ? (
+            <button
+              type="button"
+              onClick={onLoadDrawProgress}
+              style={{
+                marginTop: 6,
+                fontSize: 12,
+                padding: '3px 10px',
+                borderRadius: 4,
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#374151',
+                cursor: 'pointer',
+              }}
+            >
+              View lifecycle progress
+            </button>
+          ) : (
+            <div style={{ marginTop: 8 }}>
+              <DrawProgressPanel progress={drawProgress} drawAttemptId={record.entityId} />
+            </div>
+          )}
         </div>
       )}
     </div>
