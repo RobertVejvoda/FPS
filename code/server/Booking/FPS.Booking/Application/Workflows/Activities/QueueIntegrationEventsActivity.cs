@@ -93,13 +93,15 @@ public sealed class QueueIntegrationEventsActivity(
                 .Select(s => new DrawProgressStepRecord(s.StepName, s.Status, s.Summary, s.StartedAt))
                 .ToList();
             // Append the terminal steps that will be persisted after publishing.
+            // EventsQueued and Completed are sequential; offset by 1 ms so their
+            // OccurredAt values are strictly ordered in the DataHub progress view.
             safeSteps.Add(new DrawProgressStepRecord(
                 "EventsQueued", "Completed",
                 $"DrawAttemptCompleted + {input.Decisions.Count} decision event(s) published", now));
             safeSteps.Add(new DrawProgressStepRecord(
                 "Completed", "Completed",
                 $"{input.AllocatedCount} allocated, {input.RejectedCount} rejected, {input.WaitlistedCount} waitlisted",
-                now));
+                now.AddMilliseconds(1)));
         }
 
         await completedPublisher.PublishAsync(new DrawAttemptCompletedEvent(
