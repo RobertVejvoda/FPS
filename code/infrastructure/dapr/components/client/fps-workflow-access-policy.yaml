@@ -1,0 +1,10 @@
+# Client profile mirrors local hardening: deny cross-app workflow scheduling by default.
+apiVersion: dapr.io/v1alpha1
+kind: WorkflowAccessPolicy
+metadata:
+  name: fps-workflow-default-deny
+scopes:
+  - fps-booking
+  - fps-audit
+spec:
+  rules: []

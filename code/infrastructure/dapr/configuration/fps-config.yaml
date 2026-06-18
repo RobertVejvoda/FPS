@@ -19,3 +19,6 @@ spec:
     # Demo / client production: enable mTLS when Dapr sidecar injection is managed by
     # the platform (ACA Dapr, AKS Dapr extension, or self-hosted Placement+Sentry).
     # enabled: true
+    # WorkflowHistorySigning remains off until the deployment profile has mTLS
+    # enabled and a documented CA/root-key lifecycle. Do not enable it in local
+    # smoke or any profile that cannot preserve signed workflow verification.
