@@ -47,16 +47,21 @@ public sealed class ConfiguredAvailableSlotService : IAvailableSlotService
     private static IEnumerable<AvailableSlot> CreateSlots(IConfigurationSection section)
     {
         var rawSlotId = section["SlotId"] ?? section.Key;
+        var isActive = !bool.TryParse(section["IsActive"], out var active) || active;
         var hasCharger = bool.TryParse(section["HasCharger"], out var c) && c;
         var isAccessible = bool.TryParse(section["IsAccessible"], out var a) && a;
-        var isCompanyCarReserved = bool.TryParse(section["IsCompanyCarReserved"], out var r) && r;
+        var legacyCompanyCarReserved = bool.TryParse(section["IsCompanyCarReserved"], out var legacyReserved) && legacyReserved;
+        var isCompanyCarOnly = bool.TryParse(section["IsCompanyCarOnly"], out var companyCarOnly) && companyCarOnly;
+        var reservedForUserId = section["ReservedForUserId"];
+        var hasReservedOwner = !string.IsNullOrWhiteSpace(reservedForUserId);
+        var isCompanyCarReserved = legacyCompanyCarReserved || isCompanyCarOnly || hasReservedOwner;
         var isMotorcycleCapacity = bool.TryParse(section["IsMotorcycleCapacity"], out var m) && m;
         var configuredUnits = int.TryParse(section["MotorcycleCapacityUnits"], out var u) && u > 0
             ? u
             : (int?)null;
 
-        return ExpandToUnits(rawSlotId, hasCharger, isAccessible, isCompanyCarReserved,
-            isMotorcycleCapacity, configuredUnits);
+        return ExpandToUnits(rawSlotId, isActive, hasCharger, isAccessible, isCompanyCarReserved,
+            reservedForUserId, isMotorcycleCapacity, configuredUnits);
     }
 
     private static List<AvailableSlot> GenerateSlots(IConfigurationSection section)
@@ -79,9 +84,11 @@ public sealed class ConfiguredAvailableSlotService : IAvailableSlotService
                 var rawSlotId = (firstSlotNumber + i - 1).ToString();
                 return ExpandToUnits(
                     rawSlotId,
+                    isActive: true,
                     hasCharger: i <= chargerCount,
                     isAccessible: i <= accessibleCount,
                     isCompanyCarReserved: i <= companyCarReservedCount,
+                    reservedForUserId: null,
                     isMotorcycleCapacity: i <= motorcycleCount,
                     configuredUnits: motorcycleUnitsPerSlot);
             })
@@ -95,9 +102,11 @@ public sealed class ConfiguredAvailableSlotService : IAvailableSlotService
     // allocation references stay stable.
     private static IEnumerable<AvailableSlot> ExpandToUnits(
         string rawSlotId,
+        bool isActive,
         bool hasCharger,
         bool isAccessible,
         bool isCompanyCarReserved,
+        string? reservedForUserId,
         bool isMotorcycleCapacity,
         int? configuredUnits)
     {
@@ -108,7 +117,7 @@ public sealed class ConfiguredAvailableSlotService : IAvailableSlotService
         {
             yield return AvailableSlot.Create(
                 ParkingSlotId.FromString(rawSlotId),
-                hasCharger, isAccessible, isCompanyCarReserved, isMotorcycleCapacity);
+                isActive, hasCharger, isAccessible, isCompanyCarReserved, reservedForUserId, isMotorcycleCapacity);
             yield break;
         }
 
@@ -116,7 +125,7 @@ public sealed class ConfiguredAvailableSlotService : IAvailableSlotService
         {
             yield return AvailableSlot.Create(
                 ParkingSlotId.FromString($"{rawSlotId}-{unit}"),
-                hasCharger, isAccessible, isCompanyCarReserved, isMotorcycleCapacity);
+                isActive, hasCharger, isAccessible, isCompanyCarReserved, reservedForUserId, isMotorcycleCapacity);
         }
     }
 

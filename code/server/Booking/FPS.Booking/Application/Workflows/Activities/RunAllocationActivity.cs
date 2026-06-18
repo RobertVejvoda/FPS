@@ -41,14 +41,19 @@ public sealed class RunAllocationActivity(
                     : VehicleType.Sedan,
                 d.VehicleIsElectric,
                 d.RequiresAccessibleSpot,
-                isCompanyCar: false),
+                d.VehicleIsCompanyCar),
             TimeSlot.Create(d.PlannedArrivalTime, d.PlannedDepartureTime),
             BookingRequestStatus.Pending,
             d.RequestedAt)).ToList();
 
         var slots = input.AvailableSlots.Select(s => AvailableSlot.Create(
             ParkingSlotId.FromString(s.SlotId),
-            s.HasCharger, s.IsAccessible, s.IsCompanyCarReserved, s.IsMotorcycleCapacity)).ToList();
+            s.IsActive,
+            s.HasCharger,
+            s.IsAccessible,
+            s.IsCompanyCarReserved,
+            s.ReservedForUserId,
+            s.IsMotorcycleCapacity)).ToList();
 
         var metricsMap = input.Metrics.ToDictionary(
             m => m.RequestorId,

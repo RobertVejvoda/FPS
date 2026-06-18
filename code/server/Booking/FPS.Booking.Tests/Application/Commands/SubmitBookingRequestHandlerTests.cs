@@ -244,14 +244,43 @@ public sealed class SubmitBookingRequestHandlerTests
     [Fact]
     public async Task Handle_SameDay_CompanyCar_DoesNotIncrementMetrics()
     {
-        var slot = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("C1"), isCompanyCarReserved: true);
+        var cmd = SameDayCommand(isCompanyCar: true);
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var slot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("C1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
         slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<AvailableSlot> { slot });
 
-        await handler.Handle(SameDayCommand(isCompanyCar: true), CancellationToken.None);
+        var result = await handler.Handle(cmd, CancellationToken.None);
 
+        Assert.Equal("Allocated", result.Status);
         metricsService.Verify(m => m.IncrementRecentAllocationAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_SameDay_CompanyCar_MissingReservedSlot_ReturnsFixedSlotReason()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = SameDayCommand(isCompanyCar: true);
+        var unassignedCompanyCarSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true);
+        slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { unassignedCompanyCarSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Rejected", result.Status);
+        Assert.Equal(CompanyCarReservedSlotRules.MissingReservedSlotReason, result.Reason);
     }
 
     [Fact]
@@ -431,6 +460,17 @@ public sealed class SubmitBookingRequestHandlerTests
         AccessibilityEligible: false,
         ReservedSpaceEligible: false,
         Vehicles: [new VehicleSnapshot("v-1", "MC-001", "Motorcycle", false, true)],
+        SnapshotVersion: "v1");
+
+    private static readonly ProfileSnapshot CompanyCarProfile = new(
+        TenantId: "tenant-1",
+        UserId: "user-1",
+        ProfileStatus: "Active",
+        ParkingEligible: true,
+        HasCompanyCar: true,
+        AccessibilityEligible: false,
+        ReservedSpaceEligible: false,
+        Vehicles: [new VehicleSnapshot("v-2", "XYZ-999", "Sedan", false, true)],
         SnapshotVersion: "v1");
 
     private static SubmitBookingRequestCommand MotorcycleSameDayCommand() => new(

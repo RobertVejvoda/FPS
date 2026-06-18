@@ -9,44 +9,106 @@ public sealed class DrawServiceTests
     // ── Tier 1: company-car ───────────────────────────────────────────────────
 
     [Fact]
-    public void RunDraw_CompanyCar_AllocatedBeforeTier2()
+    public void RunDraw_CompanyCar_WithOwnedReservedSlot_AllocatesExactSlot()
     {
-        var companyCar = MakeRequest(isCompanyCar: true);
+        var owner = UserId.New();
+        var companyCar = MakeRequest(userId: owner, isCompanyCar: true);
         var regular = MakeRequest();
-        var slots = new[] { Slot("A1") }; // one slot only
+        var reserved = AvailableSlot.Create(
+            Slot("C1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: owner.Value.ToString());
+        var regularSlot = AvailableSlot.Create(Slot("A1"));
 
-        var result = Run([companyCar, regular], slots);
+        var result = Run([companyCar, regular], slotObjects: [regularSlot, reserved]);
 
-        Assert.Equal(DrawOutcome.Allocated, Decision(result, companyCar.Id).Outcome);
+        var companyDecision = Decision(result, companyCar.Id);
+        var regularDecision = Decision(result, regular.Id);
+        Assert.Equal(DrawOutcome.Allocated, companyDecision.Outcome);
+        Assert.Equal("C1", companyDecision.SlotId!.Value);
+        Assert.Equal(DrawOutcome.Allocated, regularDecision.Outcome);
+        Assert.Equal("A1", regularDecision.SlotId!.Value);
+    }
+
+    [Fact]
+    public void RunDraw_CompanyCar_MissingReservedSlot_RejectsWithReason()
+    {
+        var car = MakeRequest(isCompanyCar: true);
+        var unassignedCompanyCapacity = AvailableSlot.Create(Slot("CC1"), isCompanyCarReserved: true);
+
+        var result = Run([car], slotObjects: [unassignedCompanyCapacity]);
+
+        var rejected = result.Decisions.Single();
+        Assert.Equal(DrawOutcome.Rejected, rejected.Outcome);
+        Assert.Equal(CompanyCarReservedSlotRules.MissingReservedSlotReason, rejected.Reason);
+    }
+
+    [Fact]
+    public void RunDraw_CompanyCar_InactiveReservedSlot_RejectsWithReason()
+    {
+        var owner = UserId.New();
+        var car = MakeRequest(userId: owner, isCompanyCar: true);
+        var inactiveReserved = AvailableSlot.Create(
+            Slot("C1"),
+            isActive: false,
+            isCompanyCarReserved: true,
+            reservedForUserId: owner.Value.ToString());
+
+        var result = Run([car], slotObjects: [inactiveReserved]);
+
+        var decision = result.Decisions.Single();
+        Assert.Equal(DrawOutcome.Rejected, decision.Outcome);
+        Assert.Equal(CompanyCarReservedSlotRules.InactiveReservedSlotReason, decision.Reason);
+    }
+
+    [Fact]
+    public void RunDraw_CompanyCar_IncompatibleReservedSlot_RejectsWithReason()
+    {
+        var owner = UserId.New();
+        var evCompanyCar = MakeRequest(userId: owner, isCompanyCar: true, isElectric: true);
+        var reservedWithoutCharger = AvailableSlot.Create(
+            Slot("C1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: owner.Value.ToString());
+
+        var result = Run([evCompanyCar], slotObjects: [reservedWithoutCharger]);
+
+        var decision = result.Decisions.Single();
+        Assert.Equal(DrawOutcome.Rejected, decision.Outcome);
+        Assert.Equal(CompanyCarReservedSlotRules.IncompatibleReservedSlotReason, decision.Reason);
+    }
+
+    [Fact]
+    public void RunDraw_Tier2_DoesNotConsumeReservedSlots()
+    {
+        var regular = MakeRequest();
+        var reserved = AvailableSlot.Create(
+            Slot("C1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: UserId.New().Value.ToString());
+
+        var result = Run([regular], slotObjects: [reserved]);
+
         Assert.Equal(DrawOutcome.Waitlisted, Decision(result, regular.Id).Outcome);
     }
 
     [Fact]
-    public void RunDraw_CompanyCarOverflow_RejectsExcess()
+    public void RunDraw_CompanyCar_SameOwnerSecondRequest_RejectsReservedSlotConflict()
     {
-        var car1 = MakeRequest(isCompanyCar: true);
-        var car2 = MakeRequest(isCompanyCar: true);
-        var reservedSlot = AvailableSlot.Create(Slot("C1"), isCompanyCarReserved: true);
+        var owner = UserId.New();
+        var first = MakeRequest(userId: owner, isCompanyCar: true);
+        var second = MakeRequest(userId: owner, isCompanyCar: true);
+        var reserved = AvailableSlot.Create(
+            Slot("C1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: owner.Value.ToString());
 
-        var result = Run([car1, car2], slotObjects: [reservedSlot]);
+        var result = Run([first, second], slotObjects: [reserved]);
 
-        var outcomes = result.Decisions.Select(d => d.Outcome).ToList();
-        Assert.Contains(DrawOutcome.Allocated, outcomes);
-        Assert.Contains(DrawOutcome.Rejected, outcomes);
-    }
-
-    [Fact]
-    public void RunDraw_CompanyCarOverflow_RejectionReasonExplainsConfigurationDrift()
-    {
-        var car1 = MakeRequest(isCompanyCar: true);
-        var car2 = MakeRequest(isCompanyCar: true);
-        var reservedSlot = AvailableSlot.Create(Slot("C1"), isCompanyCarReserved: true);
-
-        var result = Run([car1, car2], slotObjects: [reservedSlot]);
-
-        var rejected = result.Decisions.Single(d => d.Outcome == DrawOutcome.Rejected);
-        Assert.NotNull(rejected.Reason);
-        Assert.NotEmpty(rejected.Reason!);
+        Assert.Equal(DrawOutcome.Allocated, Decision(result, first.Id).Outcome);
+        var rejected = Decision(result, second.Id);
+        Assert.Equal(DrawOutcome.Rejected, rejected.Outcome);
+        Assert.Equal(CompanyCarReservedSlotRules.ReservedSlotAlreadyConsumedReason, rejected.Reason);
     }
 
     // ── Tier 2: weighted lottery ──────────────────────────────────────────────
@@ -379,9 +441,13 @@ public sealed class DrawServiceTests
     }
 
     private static Dictionary<string, EmployeeMetrics> EmptyMetrics(BookingRequest[] requests)
-        => requests.ToDictionary(
-            r => r.RequestorId.Value.ToString(),
-            r => new EmployeeMetrics(r.RequestorId.Value.ToString(), 0, 0));
+        => requests
+            .Select(r => r.RequestorId.Value.ToString())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                requestorId => requestorId,
+                requestorId => new EmployeeMetrics(requestorId, 0, 0),
+                StringComparer.OrdinalIgnoreCase);
 
     private BookingRequest MakeRequest(
         UserId? userId = null,

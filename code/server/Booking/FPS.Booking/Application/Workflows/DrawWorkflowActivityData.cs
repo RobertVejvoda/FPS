@@ -8,9 +8,11 @@ namespace FPS.Booking.Application.Workflows;
 // so allocators continue to treat each SlotData as one allocatable unit.
 public sealed record SlotData(
     string SlotId,
+    bool IsActive,
     bool HasCharger,
     bool IsAccessible,
     bool IsCompanyCarReserved,
+    string? ReservedForUserId = null,
     bool IsMotorcycleCapacity = false);
 
 // Serializable employee metrics snapshot passed between workflow activities.

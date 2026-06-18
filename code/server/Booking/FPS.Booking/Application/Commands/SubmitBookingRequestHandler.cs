@@ -2,6 +2,7 @@ using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
 using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
+using FPS.Booking.Domain.Services;
 using FPS.Booking.Domain.ValueObjects;
 using FPS.SharedKernel.DomainEvents;
 using FPS.SharedKernel.Profile;
@@ -112,6 +113,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         SubmissionContext context;
         AvailableSlot? sameDaySlot = null;
+        string? sameDayRejectionReason = null;
 
         if (isSameDay)
         {
@@ -121,14 +123,25 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                     cmd.TenantId, cmd.LocationId ?? cmd.FacilityId, DateOnly.FromDateTime(requestedPeriod.Start),
                     requestedPeriod, cancellationToken);
 
-                // Apply the same motorcycle preference rule as the Draw: a motorcycle
-                // request takes a motorcycle-specific unit before falling back to an
-                // ordinary slot. For non-motorcycle vehicles, motorcycle units are
-                // already filtered out by CanAccommodate.
-                sameDaySlot = slots
-                    .Where(s => s.CanAccommodate(vehicle))
-                    .OrderByDescending(s => s.IsMotorcycleCapacity && vehicle.Type == VehicleType.Motorcycle)
-                    .FirstOrDefault();
+                if (vehicle.IsCompanyCar)
+                {
+                    var fixedSlot = CompanyCarReservedSlotRules.Resolve(requestorId, vehicle, slots);
+                    sameDaySlot = fixedSlot.Slot;
+                    sameDayRejectionReason = fixedSlot.RejectionReason;
+                }
+                else
+                {
+                    // Apply the same motorcycle preference rule as the Draw: a motorcycle
+                    // request takes a motorcycle-specific unit before falling back to an
+                    // ordinary slot. For non-motorcycle vehicles, motorcycle units are
+                    // already filtered out by CanAccommodate. Reserved-for-user capacity
+                    // never enters non-company same-day allocation.
+                    sameDaySlot = slots
+                        .Where(s => string.IsNullOrWhiteSpace(s.ReservedForUserId))
+                        .Where(s => s.CanAccommodate(vehicle))
+                        .OrderByDescending(s => s.IsMotorcycleCapacity && vehicle.Type == VehicleType.Motorcycle)
+                        .FirstOrDefault();
+                }
             }
 
             context = SubmissionContext.CreateSameDay(
@@ -149,6 +162,14 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         var publisher = eventPublisher.WithContext(publishCtx);
 
         var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, publisher);
+        var effectiveRejectionReason =
+            isSameDay
+            && request.Status == BookingRequestStatus.Rejected
+            && request.RejectionCode == BookingRejectionCode.NoCapacityForSameDay
+            && vehicle.IsCompanyCar
+            && !string.IsNullOrWhiteSpace(sameDayRejectionReason)
+                ? sameDayRejectionReason
+                : request.RejectionReason;
 
         if (isSameDay && request.Status == BookingRequestStatus.Pending && sameDaySlot is not null)
         {
@@ -163,7 +184,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         }
 
         await repository.CreateBookingRequestAsync(
-            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, vehicle, sameDaySlot));
+            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, vehicle, sameDaySlot,
+                effectiveRejectionReason));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
         await queryRepository.AddToTenantOpsIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
         if (request.Status == BookingRequestStatus.Pending)
@@ -179,7 +201,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             request.Id.Value,
             request.Status.ToString(),
             request.RejectionCode?.ToString(),
-            request.RejectionReason);
+            effectiveRejectionReason);
     }
 
     private static bool IsSameDay(TenantPolicy policy, DateTime requestedStart, DateTimeOffset now)
@@ -201,7 +223,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     }
 
     private static BookingRequestDto ToDto(BookingRequest request, string tenantId, string facilityId,
-        string? locationId, string snapshotVersion, VehicleInformation vehicle, AvailableSlot? slot = null)
+        string? locationId, string snapshotVersion, VehicleInformation vehicle, AvailableSlot? slot = null,
+        string? rejectionReason = null)
         => new()
         {
             RequestId = request.Id.Value,
@@ -214,10 +237,13 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             RequestedBy = request.RequestorId.Value.ToString(),
             RequestedAt = request.SubmittedAt,
             Status = request.Status.ToString(),
+            RejectionCode = request.RejectionCode?.ToString(),
+            RejectionReason = rejectionReason ?? request.RejectionReason,
             ProfileSnapshotVersion = snapshotVersion,
             VehicleType = vehicle.Type.ToString(),
             VehicleIsElectric = vehicle.IsElectric,
             RequiresAccessibleSpot = vehicle.RequiresAccessibleSpot,
+            VehicleIsCompanyCar = vehicle.IsCompanyCar,
             // Slot id is a free-form string (e.g. "M1-1" for motorcycle units), not a Guid.
             AllocatedSlotId = slot?.SlotId.Value
         };

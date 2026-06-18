@@ -24,6 +24,7 @@ public sealed class PersistDecisionsActivity(
         WorkflowActivityContext context, PersistDecisionsInput input)
     {
         var date = DateOnly.Parse(input.Date);
+        var requestVehicleMap = input.PendingRequests.ToDictionary(p => p.RequestId, p => p.VehicleIsCompanyCar);
 
         foreach (var decision in input.Decisions)
         {
@@ -44,8 +45,11 @@ public sealed class PersistDecisionsActivity(
                     await bookingRepository.UpdateBookingRequestStatusAsync(
                         input.TenantId, requestGuid, "Allocated",
                         allocatedSlotId: decision.SlotId);
-                    await metricsService.IncrementRecentAllocationAsync(
-                        input.TenantId, decision.RequestorId, date);
+                    if (!requestVehicleMap.TryGetValue(requestGuid, out var isCompanyCar) || !isCompanyCar)
+                    {
+                        await metricsService.IncrementRecentAllocationAsync(
+                            input.TenantId, decision.RequestorId, date);
+                    }
                     break;
 
                 case "Rejected":

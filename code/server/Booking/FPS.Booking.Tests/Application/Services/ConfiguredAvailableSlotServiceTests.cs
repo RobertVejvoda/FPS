@@ -49,6 +49,42 @@ public sealed class ConfiguredAvailableSlotServiceTests
     }
 
     [Fact]
+    public async Task GetAvailableSlots_ReservedForUserId_IsCarriedToAvailableSlot()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:0:SlotId"] = "CC1",
+                ["AvailableSlots:tenant-1:loc-1:0:ReservedForUserId"] = "user-123",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        var slot = Assert.Single(slots);
+        Assert.Equal("user-123", slot.ReservedForUserId);
+        Assert.True(slot.IsCompanyCarReserved);
+    }
+
+    [Fact]
+    public async Task GetAvailableSlots_IsActive_False_ParsedCorrectly()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AvailableSlots:tenant-1:loc-1:0:SlotId"] = "A1",
+                ["AvailableSlots:tenant-1:loc-1:0:IsActive"] = "false",
+            })
+            .Build();
+        var sut = new ConfiguredAvailableSlotService(config);
+
+        var slots = await sut.GetAvailableSlotsAsync("tenant-1", "loc-1", Date, Slot9To17);
+
+        Assert.False(slots.Single().IsActive);
+    }
+
+    [Fact]
     public async Task GetAvailableSlots_NoConfig_ReturnsEmpty()
     {
         var config = new ConfigurationBuilder().Build();
