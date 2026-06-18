@@ -37,7 +37,7 @@ public sealed class PersistDecisionsActivityTests
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Allocated" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Allocated"));
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", vehicleIsCompanyCar: false));
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(),
@@ -54,7 +54,7 @@ public sealed class PersistDecisionsActivityTests
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Rejected" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Rejected"));
+        await activity.RunAsync(null!, MakeInput(requestId, "Rejected", vehicleIsCompanyCar: false));
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(),
@@ -70,7 +70,7 @@ public sealed class PersistDecisionsActivityTests
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Pending" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Allocated"));
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", vehicleIsCompanyCar: false));
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             TenantId, requestId, "Allocated",
@@ -91,7 +91,7 @@ public sealed class PersistDecisionsActivityTests
             .ReturnsAsync(new BookingRequestDto { Status = "Pending" })
             .ReturnsAsync(new BookingRequestDto { Status = "Allocated" });
 
-        var input = MakeInput(requestId, "Allocated");
+        var input = MakeInput(requestId, "Allocated", vehicleIsCompanyCar: false);
 
         await activity.RunAsync(null!, input);  // first execution
         await activity.RunAsync(null!, input);  // retry
@@ -127,7 +127,12 @@ public sealed class PersistDecisionsActivityTests
                 Outcome = "Allocated",
                 SlotId = "M1-2",
             }],
-            []);
+            [new BookingRequestDto
+            {
+                RequestId = requestId,
+                RequestedBy = "requestor-1",
+                VehicleIsCompanyCar = false
+            }]);
 
         await activity.RunAsync(null!, input);
 
@@ -139,10 +144,29 @@ public sealed class PersistDecisionsActivityTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task RunAsync_CompanyCarFixedAllocation_DoesNotIncrementMetrics()
+    {
+        var requestId = Guid.NewGuid();
+        bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
+            .ReturnsAsync(new BookingRequestDto { Status = "Pending" });
+
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", vehicleIsCompanyCar: true));
+
+        metricsService.Verify(m => m.IncrementRecentAllocationAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static PersistDecisionsInput MakeInput(Guid requestId, string outcome) =>
+    private static PersistDecisionsInput MakeInput(Guid requestId, string outcome, bool vehicleIsCompanyCar) =>
         new(DrawKey, TenantId, "2026-06-02",
             [new DrawDecisionDto { RequestId = requestId.ToString(), RequestorId = "requestor-1", Outcome = outcome }],
-            []);
+            [new BookingRequestDto
+            {
+                RequestId = requestId,
+                RequestedBy = "requestor-1",
+                VehicleIsCompanyCar = vehicleIsCompanyCar
+            }]);
 }

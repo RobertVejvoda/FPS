@@ -30,7 +30,13 @@ public sealed class LoadCapacityActivity(
             input.TenantId, input.LocationId, date, timeSlot);
 
         var slotData = slots.Select(s => new SlotData(
-            s.SlotId.Value, s.HasCharger, s.IsAccessible, s.IsCompanyCarReserved, s.IsMotorcycleCapacity)).ToList();
+            s.SlotId.Value,
+            s.IsActive,
+            s.HasCharger,
+            s.IsAccessible,
+            s.IsCompanyCarReserved,
+            s.ReservedForUserId,
+            s.IsMotorcycleCapacity)).ToList();
 
         await ActivityLifecycleHelper.AppendStepAsync(
             drawRepository, input.DrawKey,

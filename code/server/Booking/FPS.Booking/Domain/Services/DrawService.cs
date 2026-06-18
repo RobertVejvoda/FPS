@@ -25,16 +25,21 @@ public sealed class DrawService
 
         foreach (var request in tier1)
         {
-            var slot = FindBestSlot(request.Vehicle, remainingSlots);
-            if (slot is not null)
+            var fixedSlotResult = CompanyCarReservedSlotRules.Resolve(
+                request.RequestorId,
+                request.Vehicle,
+                availableSlots,
+                slot => remainingSlots.Any(s => s.SlotId == slot.SlotId));
+
+            if (fixedSlotResult.Slot is not null)
             {
-                decisions.Add(DrawDecision.Allocated(request.Id, request.RequestorId, slot.SlotId));
-                remainingSlots.Remove(slot);
+                decisions.Add(DrawDecision.Allocated(request.Id, request.RequestorId, fixedSlotResult.Slot.SlotId));
+                remainingSlots.RemoveAll(s => s.SlotId == fixedSlotResult.Slot.SlotId);
             }
             else
             {
                 decisions.Add(DrawDecision.Rejected(request.Id, request.RequestorId,
-                    "Company-car capacity is full for this time slot."));
+                    fixedSlotResult.RejectionReason ?? CompanyCarReservedSlotRules.MissingReservedSlotReason));
             }
         }
 
@@ -49,7 +54,9 @@ public sealed class DrawService
         while (remaining.Count > 0 && remainingSlots.Count > 0)
         {
             var slot = remainingSlots[0];
-            var compatible = remaining.Where(r => slot.CanAccommodate(r.Vehicle)).ToList();
+            var compatible = string.IsNullOrWhiteSpace(slot.ReservedForUserId)
+                ? remaining.Where(r => slot.CanAccommodate(r.Vehicle)).ToList()
+                : [];
 
             if (compatible.Count == 0)
             {
@@ -73,24 +80,6 @@ public sealed class DrawService
             decisions,
             // Preserve ordered Tier 2 candidate sequence for B005 reallocation
             tier2.Select(r => r.Id).ToList());
-    }
-
-    private static AvailableSlot? FindBestSlot(VehicleInformation vehicle, List<AvailableSlot> slots)
-        => slots
-            .Where(s => s.CanAccommodate(vehicle))
-            .OrderByDescending(s => SpecificityScore(s, vehicle))
-            .FirstOrDefault();
-
-    private static int SpecificityScore(AvailableSlot slot, VehicleInformation vehicle)
-    {
-        var score = 0;
-        if (slot.IsCompanyCarReserved && vehicle.IsCompanyCar) score += 4;
-        // Motorcycle requests prefer motorcycle-specific capacity over ordinary slots,
-        // so motorcycle-only units get exhausted first before normal car spaces are used.
-        if (slot.IsMotorcycleCapacity && vehicle.Type == VehicleType.Motorcycle) score += 3;
-        if (slot.IsAccessible && vehicle.RequiresAccessibleSpot) score += 2;
-        if (slot.HasCharger && vehicle.IsElectric) score += 1;
-        return score;
     }
 
     private static BookingRequest PickWeightedWinner(

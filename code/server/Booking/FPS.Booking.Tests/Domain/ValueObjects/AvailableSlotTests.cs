@@ -44,6 +44,17 @@ public sealed class AvailableSlotTests
     }
 
     [Fact]
+    public void CanAccommodate_CompanyCar_EVOnNonChargerReservedSlot_IsFalse()
+    {
+        var slot = AvailableSlot.Create(
+            ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: "owner-1");
+        var companyEv = VehicleInformation.Create("CC-EV-1", VehicleType.Sedan, isElectric: true, false, isCompanyCar: true);
+        Assert.False(slot.CanAccommodate(companyEv));
+    }
+
+    [Fact]
     public void CanAccommodate_ElectricMotorcycle_OnMotorcycleSlotWithoutCharger_IsFalse()
     {
         // Existing charger rule still applies to motorcycle requests.

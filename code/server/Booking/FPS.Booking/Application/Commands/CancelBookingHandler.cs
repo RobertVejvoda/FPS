@@ -194,7 +194,7 @@ public sealed class CancelBookingHandler : IRequestHandler<CancelBookingCommand,
             Enum.TryParse<VehicleType>(dto.VehicleType, ignoreCase: true, out var vt) ? vt : VehicleType.Sedan,
             dto.VehicleIsElectric,
             dto.RequiresAccessibleSpot,
-            isCompanyCar: false);
+            dto.VehicleIsCompanyCar);
 
     private static BookingRequest RestoreRequest(BookingRequestDto dto)
         => BookingRequest.Restore(

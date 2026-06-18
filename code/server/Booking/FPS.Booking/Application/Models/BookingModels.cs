@@ -31,4 +31,5 @@ public class BookingRequestDto
     public string? VehicleType { get; set; }
     public bool VehicleIsElectric { get; set; }
     public bool RequiresAccessibleSpot { get; set; }
+    public bool VehicleIsCompanyCar { get; set; }
 }
