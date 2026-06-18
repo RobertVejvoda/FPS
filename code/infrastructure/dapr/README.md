@@ -100,6 +100,22 @@ is shared because it backs the Dapr actor runtime used by Dapr Workflow. Pub/sub
 and secret-store components may also be shared when multiple apps need them. App IDs follow
 the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
 
+## Workflow Access Policies
+
+Workflow access policies are resource files, not components. Keep them beside the
+profile's other Dapr YAML so the same resources path loads them with the matching
+components.
+
+- Smoke, local, demo, and client profiles can load `WorkflowAccessPolicy` resources
+  from their profile-specific `components/<profile>/` directory.
+- FairSpot uses a deny-by-default policy for workflow-hosting app IDs (`fps-booking`
+  and `fps-audit`) so unrelated app IDs cannot schedule their workflows.
+- Same-app workflow calls remain allowed; the policy is a Dapr runtime perimeter
+  and does not replace application authorization.
+- Workflow history signing is intentionally not enabled in local smoke because the
+  smoke config keeps mTLS off. Enable signing only in profiles that can preserve a
+  stable CA/root-key lifecycle.
+
 ---
 
 ## Observability

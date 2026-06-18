@@ -225,6 +225,8 @@ Employee views should stay safe and simple: next Draw time, whether requests can
 
 DRAW009 exposes Draw workflow progress as a safe, DataHub-backed product read model. The goal is to give HR managers and auditors a stable view of Draw lifecycle steps without exposing raw Dapr internals, allocation seeds, candidate order, stack traces, or employee-private data.
 
+The product UI should continue to read these safe projections; raw Dapr workflow history stays an internal runtime artifact for recovery and tamper detection.
+
 ### Events Published (Booking → DataHub)
 
 | Event type | Published by | Payload additions |
@@ -261,6 +263,8 @@ Returns one `DrawProgressResponse` per Draw attempt:
 | `stepsNote` | Explains why `steps` may be null (in-progress, pre-DRAW009, etc.). |
 
 Each `DrawProgressStep` contains: `stepName`, `status`, `summary`, `occurredAt`. No seeds, raw Dapr keys, penalties, or employee identifiers are included.
+
+Do not expose workflow history events, signatures, or inbox entries directly to employee-facing UI.
 
 ### Safe Failure Reason
 

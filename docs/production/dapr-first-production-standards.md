@@ -85,6 +85,9 @@ Production profiles should use:
 - Dapr mTLS/Sentry for service-to-service identity and encrypted sidecar traffic;
 - Dapr secret stores with component secret references, not inline secrets;
 - Dapr secret and component scopes so services can access only their required runtime dependencies;
+- Dapr `WorkflowAccessPolicy` for any target app that accepts cross-app workflow/activity scheduling; use deny-by-default scopes and explicit allow-lists;
+- Only `schedule` is enforced cross-app today; `get`, `terminate`, `purge`, `pause`, `resume`, and `rerun` still route as self-calls and need application-layer authorization if they are exposed.
+- Dapr workflow history signing only when the deployment profile has mTLS enabled and a documented CA/root-key lifecycle; keep it off in local smoke;
 - Dapr API token and app API token hardening where the deployment profile exposes sidecar/app endpoints;
 - Dapr resiliency policies for state stores, pub/sub, service invocation, and workflow dependencies;
 - Dapr state encryption where supported, in addition to infrastructure encryption at rest;

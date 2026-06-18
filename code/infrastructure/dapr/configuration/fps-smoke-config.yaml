@@ -7,3 +7,4 @@ spec:
     actorStateStore: workflowstore
   mtls:
     enabled: false
+    # Local smoke keeps mTLS off, so workflow history signing must stay disabled.
