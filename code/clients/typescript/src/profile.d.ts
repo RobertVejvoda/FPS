@@ -411,6 +411,8 @@ export interface paths {
                 content: {
                     "multipart/form-data": {
                         employees?: components["schemas"]["IFormFile"];
+                    } & {
+                        vehicles?: components["schemas"]["IFormFile"];
                     };
                 };
             };
@@ -450,6 +452,8 @@ export interface paths {
                 content: {
                     "multipart/form-data": {
                         employees?: components["schemas"]["IFormFile"];
+                    } & {
+                        vehicles?: components["schemas"]["IFormFile"];
                     };
                 };
             };

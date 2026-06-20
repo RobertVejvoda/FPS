@@ -180,12 +180,24 @@ public sealed class HrImportService(
                 applied++;
         }
 
+        // If any employee apply errors occurred, stop before touching vehicles —
+        // partial employee state must not be mixed with vehicle writes.
+        if (applyErrors.Count > 0)
+        {
+            logger.LogWarning(
+                "HR import aborted vehicle phase: tenantId={TenantId} actor={Actor} applyErrors={ApplyErrors}",
+                tenantId, currentUser.UserId, applyErrors.Count);
+            return (new HrImportCommitResult(
+                applied, applyErrors.Count, applyErrors,
+                0, 0, []), null);
+        }
+
         // Phase 3: apply vehicle rows after employees are persisted.
         var (vehiclesApplied, vehiclesRejected, vehicleApplyErrors) = await ApplyVehicleRowsAsync(tenantId, vehicleRows, ct);
 
         logger.LogInformation(
-            "HR import committed: tenantId={TenantId} actor={Actor} applied={Applied} applyErrors={ApplyErrors} vehiclesApplied={VehiclesApplied} vehicleErrors={VehicleErrors}",
-            tenantId, currentUser.UserId, applied, applyErrors.Count, vehiclesApplied, vehicleApplyErrors.Count);
+            "HR import committed: tenantId={TenantId} actor={Actor} applied={Applied} vehiclesApplied={VehiclesApplied} vehicleErrors={VehicleErrors}",
+            tenantId, currentUser.UserId, applied, vehiclesApplied, vehicleApplyErrors.Count);
 
         return (new HrImportCommitResult(
             applied, applyErrors.Count, applyErrors,
@@ -376,15 +388,16 @@ public sealed class HrImportService(
 
                 if (existing is not null)
                 {
-                    if (existing.IsActive == row.IsActive)
-                    {
-                        // Already in desired state — idempotent skip.
-                        applied++;
-                        continue;
-                    }
-                    // Toggle active state on existing vehicle.
+                    // Update all imported facts (alias, type, electric, active) while
+                    // preserving VehicleId and default-slot semantics.
                     var idx = updatedVehicles.IndexOf(existing);
-                    updatedVehicles[idx] = existing with { IsActive = row.IsActive, Alias = row.Alias ?? existing.Alias };
+                    updatedVehicles[idx] = existing with
+                    {
+                        Alias = row.Alias ?? existing.Alias,
+                        VehicleType = row.VehicleType,
+                        IsElectric = row.IsElectric,
+                        IsActive = row.IsActive,
+                    };
                     applied++;
                 }
                 else

@@ -458,11 +458,24 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "employees": {
-                    "$ref": "#/components/schemas/IFormFile"
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "employees": {
+                        "$ref": "#/components/schemas/IFormFile"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "vehicles": {
+                        "$ref": "#/components/schemas/IFormFile"
+                      }
+                    }
                   }
-                }
+                ]
               }
             }
           },
@@ -490,11 +503,24 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "employees": {
-                    "$ref": "#/components/schemas/IFormFile"
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "employees": {
+                        "$ref": "#/components/schemas/IFormFile"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "vehicles": {
+                        "$ref": "#/components/schemas/IFormFile"
+                      }
+                    }
                   }
-                }
+                ]
               }
             }
           },

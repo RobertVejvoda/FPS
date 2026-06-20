@@ -1,4 +1,5 @@
 using FPS.Profile.Application;
+using FPS.Profile.Domain;
 using FPS.Profile.Infrastructure;
 using FPS.SharedKernel.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -439,6 +440,72 @@ public sealed class HrImportServiceTests
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.True(vehicle.IsElectric);
     }
+
+    // ── Service-level employee error stops vehicle apply ───────────────────────
+
+    [Fact]
+    public async Task Commit_EmployeeServiceError_VehiclesNotApplied()
+    {
+        // Pre-register emp1 so ClassifyAllAsync marks it as Updated.
+        var inner = new InMemoryProfileRepository();
+        var deactivated = new InMemoryDeactivatedUserStore();
+        var bootstrapService = new EmployeeBootstrapService(inner, deactivated);
+        await bootstrapService.RegisterAsync("t1", new BootstrapEmployeeRequest(
+            "emp1", null, true, ["employee"], null, null, true, false, false, false, "seed"),
+            CancellationToken.None);
+
+        // The 2nd GetAsync for emp1 (inside UpdateAsync) returns null, simulating a
+        // race-condition delete between classify and apply.
+        var emp1Hash = EmployeeBootstrapService.Hash("emp1");
+        var failingRepo = new NthCallNullRepository(inner, emp1Hash, failOnCallN: 2);
+        var svc = new HrImportService(
+            failingRepo, deactivated, new StaticCurrentUser("actor-1", "t1"),
+            NullLogger<HrImportService>.Instance);
+
+        var emp = CsvStream(
+            EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh = CsvStream(
+            VehicleHeader,
+            "emp1,,AA 0001,car,false,true");
+
+        var (result, error) = await svc.CommitAsync("t1", emp, veh, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(result);
+        // Employee apply failed — service returned an error string.
+        Assert.Equal(1, result!.Rejected);
+        // Vehicles must not be applied when any employee had a service error.
+        Assert.Equal(0, result.VehiclesApplied);
+    }
+
+    // ── Re-import updates all vehicle facts ────────────────────────────────────
+
+    [Fact]
+    public async Task Commit_ReImportWithChangedFacts_UpdatesTypeElectricAndAlias()
+    {
+        // First import: car, non-electric, alias "OldName".
+        var emp1 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh1 = CsvStream(VehicleHeader, "emp1,OldName,VV 0001,car,false,true");
+        await service.CommitAsync("t1", emp1, veh1, CancellationToken.None);
+
+        // Second import: same plate, but van + electric + updated alias.
+        var emp2 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh2 = CsvStream(VehicleHeader, "emp1,NewName,VV 0001,van,true,true");
+        var (result, error) = await service.CommitAsync("t1", emp2, veh2, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.Equal(1, result!.VehiclesApplied);
+
+        var hash = EmployeeBootstrapService.Hash("emp1");
+        var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        var vehicle = Assert.Single(profile!.Vehicles);
+        Assert.Equal("van", vehicle.VehicleType);
+        Assert.True(vehicle.IsElectric);
+        Assert.Equal("NewName", vehicle.Alias);
+    }
 }
 
 /// <summary>Minimal ICurrentUser for unit tests.</summary>
@@ -449,4 +516,33 @@ file sealed class StaticCurrentUser(string userId, string tenantId) : ICurrentUs
     public string TenantId => tenantId;
     public IReadOnlyList<string> Roles => [];
     public bool IsInRole(string role) => false;
+}
+
+/// <summary>
+/// Wraps an <see cref="InMemoryProfileRepository"/> and returns <c>null</c> on the
+/// Nth <see cref="GetAsync"/> call for a specific user, simulating a race-condition
+/// profile deletion between the classify and apply phases.
+/// </summary>
+file sealed class NthCallNullRepository(
+    InMemoryProfileRepository inner,
+    string failUserId,
+    int failOnCallN) : IProfileRepository
+{
+    private int _callCount;
+
+    public Task<UserProfile?> GetAsync(string tenantId, string userId, CancellationToken ct)
+    {
+        if (string.Equals(userId, failUserId, StringComparison.Ordinal))
+        {
+            if (Interlocked.Increment(ref _callCount) == failOnCallN)
+                return Task.FromResult<UserProfile?>(null);
+        }
+        return inner.GetAsync(tenantId, userId, ct);
+    }
+
+    public Task<bool> EmployeeIdExistsAsync(string tenantId, string employeeId, CancellationToken ct) =>
+        inner.EmployeeIdExistsAsync(tenantId, employeeId, ct);
+
+    public Task SaveAsync(UserProfile profile, CancellationToken ct) =>
+        inner.SaveAsync(profile, ct);
 }
