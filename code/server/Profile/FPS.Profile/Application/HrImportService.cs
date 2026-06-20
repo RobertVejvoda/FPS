@@ -383,15 +383,23 @@ public sealed class HrImportService(
             var updatedVehicles = profile.Vehicles.ToList();
             foreach (var row in group)
             {
-                var existing = updatedVehicles.FirstOrDefault(v =>
-                    string.Equals(v.LicensePlate, row.LicensePlate, StringComparison.OrdinalIgnoreCase));
+                // Single O(n) pass: find existing vehicle by plate and track its index.
+                var existingIdx = -1;
+                for (var k = 0; k < updatedVehicles.Count; k++)
+                {
+                    if (string.Equals(updatedVehicles[k].LicensePlate, row.LicensePlate, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingIdx = k;
+                        break;
+                    }
+                }
 
-                if (existing is not null)
+                if (existingIdx >= 0)
                 {
                     // Update all imported facts (alias, type, electric, active) while
                     // preserving VehicleId and default-slot semantics.
-                    var idx = updatedVehicles.IndexOf(existing);
-                    updatedVehicles[idx] = existing with
+                    var existing = updatedVehicles[existingIdx];
+                    updatedVehicles[existingIdx] = existing with
                     {
                         Alias = row.Alias ?? existing.Alias,
                         VehicleType = row.VehicleType,

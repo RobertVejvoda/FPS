@@ -534,7 +534,8 @@ file sealed class NthCallNullRepository(
     {
         if (string.Equals(userId, failUserId, StringComparison.Ordinal))
         {
-            if (Interlocked.Increment(ref _callCount) == failOnCallN)
+            var count = Interlocked.Increment(ref _callCount);
+            if (count == failOnCallN)
                 return Task.FromResult<UserProfile?>(null);
         }
         return inner.GetAsync(tenantId, userId, ct);
