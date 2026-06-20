@@ -478,12 +478,13 @@ export function AuditorWorkspacePage() {
         />
       )}
       {entityPanel && (() => {
-        const isDrawAttemptWithId = entityPanel.entityType === 'drawAttempt' && !!entityPanel.entityId;
+        const entityId = entityPanel.entityId;
+        const isDrawAttemptWithId = entityPanel.entityType === 'drawAttempt' && entityId !== null;
         return (
           <EntityDetailPanel
             record={entityPanel}
-            drawProgress={isDrawAttemptWithId ? drawProgressCache[entityPanel.entityId!] : undefined}
-            onLoadDrawProgress={isDrawAttemptWithId ? () => loadDrawProgress(entityPanel.entityId!) : undefined}
+            drawProgress={isDrawAttemptWithId ? drawProgressCache[entityId as string] : undefined}
+            onLoadDrawProgress={isDrawAttemptWithId ? () => loadDrawProgress(entityId as string) : undefined}
             onClose={() => setEntityPanel(null)}
           />
         );
@@ -696,7 +697,7 @@ function EntityDetailPanel({
             <div>
               <div style={detailLabel}>Entity ID</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ ...detailValueChip, fontFamily: 'monospace', fontSize: 11, overflowWrap: 'break-word' }}>
+                <span style={entityIdChip}>
                   {record.entityId}
                 </span>
                 <CopyButton value={record.entityId} label="copy entity id" />
@@ -897,6 +898,13 @@ const detailValueChip: React.CSSProperties = {
   border: '1px solid #e5e7eb',
   borderRadius: 4,
   fontSize: 12,
+};
+// Entity ID chip: monospace font and word-wrap for long IDs in the entity detail panel.
+const entityIdChip: React.CSSProperties = {
+  ...detailValueChip,
+  fontFamily: 'monospace',
+  fontSize: 11,
+  overflowWrap: 'break-word',
 };
 const panelOverlay: React.CSSProperties = {
   position: 'fixed',
