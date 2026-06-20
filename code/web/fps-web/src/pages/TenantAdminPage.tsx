@@ -37,22 +37,22 @@ const CHECK_META: Record<string, CheckMeta> = {
   LifecycleState: {
     label: 'Tenant lifecycle',
     purpose: 'Tenant must be in an active lifecycle state before employees can book.',
-    nextAction: 'Contact your FairSpot administrator to advance the tenant lifecycle to Configured or Ready.',
+    nextAction: 'Contact your FairSpot operator to advance the tenant lifecycle to Configured or Ready.',
   },
   IdentityConfig: {
     label: 'Identity & login',
     purpose: 'SSO login must be configured so employees can sign in.',
-    nextAction: 'Configure a trusted identity provider (issuer and audience) via the Customer API.',
+    nextAction: 'Configure your identity provider in the tenant settings, or contact your operator.',
   },
   ActiveAdmin: {
     label: 'Administrator account',
     purpose: 'At least one active admin must exist to manage the tenant.',
-    nextAction: 'Register an SSO-mapped or local administrator via the Customer API.',
+    nextAction: 'Add an administrator account, or contact your operator to register the first admin.',
   },
   RoleMapping: {
     label: 'Role configuration',
     purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager).',
-    nextAction: 'Fix the role mapping in your identity configuration.',
+    nextAction: 'Fix the role mapping in your identity configuration, or contact your operator.',
   },
   ParkingPolicy: {
     label: 'Parking policy',
@@ -71,27 +71,29 @@ const CHECK_META: Record<string, CheckMeta> = {
   ProfileFacts: {
     label: 'Employee data',
     purpose: 'Employee profiles must be loaded so staff can participate in draws.',
-    nextAction: 'Load employee data via the Profile bootstrap API.',
+    nextAction: 'Import your employee list in HR Import.',
+    link: '/hr-import',
+    linkLabel: 'HR Import',
   },
   BookingSmokeTest: {
     label: 'Booking service',
-    purpose: 'The booking service must be reachable to run draws and accept spot requests.',
-    nextAction: 'Ensure the booking service is running and the readiness probe is wired correctly.',
+    purpose: 'The booking service must be available to run draws and accept spot requests.',
+    nextAction: 'Check that the booking service is running. If the issue persists, contact your operator.',
   },
   NotificationReachable: {
     label: 'Notifications',
-    purpose: 'The notification service must be reachable to inform employees of draw outcomes.',
-    nextAction: 'Ensure the notification service is running and the readiness probe is wired correctly.',
+    purpose: 'The notification service must be available to inform employees of draw outcomes.',
+    nextAction: 'Check that the notification service is running. If the issue persists, contact your operator.',
   },
   AuditEvidence: {
     label: 'Audit trail',
-    purpose: 'The audit service must be reachable to record draw evidence and fairness logs.',
-    nextAction: 'Ensure the audit service is running and the readiness probe is wired correctly.',
+    purpose: 'The audit service must be available to record draw evidence and fairness logs.',
+    nextAction: 'Check that the audit service is running. If the issue persists, contact your operator.',
   },
   ReportingEvidence: {
     label: 'Reporting',
-    purpose: 'The reporting service must be reachable for management and compliance reports.',
-    nextAction: 'Ensure the reporting service is running and the readiness probe is wired correctly.',
+    purpose: 'The reporting service must be available for management and compliance reports.',
+    nextAction: 'Check that the reporting service is running. If the issue persists, contact your operator.',
   },
 };
 
