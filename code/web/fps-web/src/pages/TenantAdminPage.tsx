@@ -23,80 +23,106 @@ type ReadinessState =
   | { kind: 'ok'; report: ReadinessReportResponse }
   | { kind: 'error'; message: string };
 
+// ── check metadata ────────────────────────────────────────────────────────────
+
+interface CheckMeta {
+  label: string;
+  purpose: string;
+  nextAction: string;
+  link?: string;
+  linkLabel?: string;
+}
+
+const CHECK_META: Record<string, CheckMeta> = {
+  LifecycleState: {
+    label: 'Tenant lifecycle',
+    purpose: 'Tenant must be in an active lifecycle state before employees can book.',
+    nextAction: 'Contact your FairSpot administrator to advance the tenant lifecycle to Configured or Ready.',
+  },
+  IdentityConfig: {
+    label: 'Identity & login',
+    purpose: 'SSO login must be configured so employees can sign in.',
+    nextAction: 'Configure a trusted identity provider (issuer and audience) via the Customer API.',
+  },
+  ActiveAdmin: {
+    label: 'Administrator account',
+    purpose: 'At least one active admin must exist to manage the tenant.',
+    nextAction: 'Register an SSO-mapped or local administrator via the Customer API.',
+  },
+  RoleMapping: {
+    label: 'Role configuration',
+    purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager).',
+    nextAction: 'Fix the role mapping in your identity configuration.',
+  },
+  ParkingPolicy: {
+    label: 'Parking policy',
+    purpose: 'A default parking policy defines the draw schedule and booking rules for your employees.',
+    nextAction: 'Set up a default parking policy in Configuration.',
+    link: '/configuration',
+    linkLabel: 'Configuration',
+  },
+  ParkingLocation: {
+    label: 'Parking locations & capacity',
+    purpose: 'At least one location with active parking slots is required for draws to run.',
+    nextAction: 'Add a location with at least one active slot in Configuration.',
+    link: '/configuration',
+    linkLabel: 'Configuration',
+  },
+  ProfileFacts: {
+    label: 'Employee data',
+    purpose: 'Employee profiles must be loaded so staff can participate in draws.',
+    nextAction: 'Load employee data via the Profile bootstrap API.',
+  },
+  BookingSmokeTest: {
+    label: 'Booking service',
+    purpose: 'The booking service must be reachable to run draws and accept spot requests.',
+    nextAction: 'Ensure the booking service is running and the readiness probe is wired correctly.',
+  },
+  NotificationReachable: {
+    label: 'Notifications',
+    purpose: 'The notification service must be reachable to inform employees of draw outcomes.',
+    nextAction: 'Ensure the notification service is running and the readiness probe is wired correctly.',
+  },
+  AuditEvidence: {
+    label: 'Audit trail',
+    purpose: 'The audit service must be reachable to record draw evidence and fairness logs.',
+    nextAction: 'Ensure the audit service is running and the readiness probe is wired correctly.',
+  },
+  ReportingEvidence: {
+    label: 'Reporting',
+    purpose: 'The reporting service must be reachable for management and compliance reports.',
+    nextAction: 'Ensure the reporting service is running and the readiness probe is wired correctly.',
+  },
+};
+
+function getCheckMeta(name: string): CheckMeta {
+  return CHECK_META[name] ?? {
+    label: name,
+    purpose: '',
+    nextAction: 'Investigate and resolve the failing check.',
+  };
+}
+
 // ── next-action derivation ────────────────────────────────────────────────────
 
 interface NextAction {
   label: string;
   detail: string;
   link?: string;
+  linkLabel?: string;
 }
 
 function deriveNextAction(checks: ReadinessCheckDto[]): NextAction | null {
   const failedCheck = checks.find(c => c.status === 'Failed');
   if (!failedCheck) return null;
 
-  const name = failedCheck.name;
-  switch (name) {
-    case 'LifecycleState':
-      return {
-        label: 'Advance lifecycle state',
-        detail: 'Tenant is in a state that does not allow live use. Transition to Configured or Seeded.',
-      };
-    case 'IdentityConfig':
-      return {
-        label: 'Configure identity',
-        detail: 'No trusted issuer or audience has been configured for this tenant. Use the Customer API to set up identity.',
-      };
-    case 'ActiveAdmin':
-      return {
-        label: 'Add a first administrator',
-        detail: 'No active admin is registered. Register an SSO-mapped or local administrator via the Customer API.',
-      };
-    case 'RoleMapping':
-      return {
-        label: 'Fix role mapping',
-        detail: failedCheck.reason ?? 'Role mapping references unknown FairSpot roles. Update identity configuration.',
-      };
-    case 'ParkingPolicy':
-      return {
-        label: 'Bootstrap parking policy',
-        detail: 'No default parking policy has been set. Use the Customer API to record a bootstrap policy.',
-        link: '/configuration',
-      };
-    case 'ParkingLocation':
-      return {
-        label: 'Add a location with slots',
-        detail: 'No location with active slots is configured. Add at least one location via the Customer API.',
-        link: '/configuration',
-      };
-    case 'ProfileFacts':
-      return {
-        label: 'Load employee/profile facts',
-        detail: 'Profile service probe is not connected or reports no pilot user facts. Use the Profile bootstrap API to load required employee data.',
-      };
-    case 'BookingSmokeTest':
-      return {
-        label: 'Connect booking service probe',
-        detail: 'Booking readiness probe is not connected. Wire the probe before marking this tenant Ready.',
-      };
-    case 'NotificationReachable':
-      return {
-        label: 'Connect notification service probe',
-        detail: 'Notification readiness probe is not connected. Wire the probe before marking this tenant Ready.',
-      };
-    case 'AuditEvidence':
-      return {
-        label: 'Connect audit service probe',
-        detail: 'Audit readiness probe is not connected. Wire the probe before marking this tenant Ready.',
-      };
-    case 'ReportingEvidence':
-      return {
-        label: 'Connect reporting service probe',
-        detail: 'Reporting readiness probe is not connected. Wire the probe before marking this tenant Ready.',
-      };
-    default:
-      return { label: `Resolve ${name}`, detail: failedCheck.reason ?? 'Check failed.' };
-  }
+  const meta = getCheckMeta(failedCheck.name);
+  return {
+    label: meta.label,
+    detail: failedCheck.reason ? `${meta.nextAction} (${failedCheck.reason})` : meta.nextAction,
+    link: meta.link,
+    linkLabel: meta.linkLabel,
+  };
 }
 
 // ── page ──────────────────────────────────────────────────────────────────────
@@ -188,12 +214,15 @@ export function TenantAdminPage() {
 
       {/* Readiness */}
       <section style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <h3 style={{ ...cardTitle, marginBottom: 0 }}>Readiness</h3>
           {readinessState.kind === 'ok' && (
             <ReadinessBadge isReady={readinessState.report.isReady} />
           )}
         </div>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280' }}>
+          Ready means the tenant is fully configured for employees to request spots, participate in draws, and receive notifications.
+        </p>
 
         {readinessState.kind === 'loading' && <p style={muted}>Loading…</p>}
         {readinessState.kind === 'error' && readinessState.message && (
@@ -211,12 +240,11 @@ export function TenantAdminPage() {
       {/* Next action */}
       {nextAction && (
         <section style={{ ...card, background: '#fffbeb', borderColor: '#fcd34d' }}>
-          <h3 style={{ ...cardTitle, color: '#92400e' }}>Next required action</h3>
-          <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 14 }}>{nextAction.label}</p>
+          <h3 style={{ ...cardTitle, color: '#92400e' }}>Action required: {nextAction.label}</h3>
           <p style={{ margin: '0 0 8px', fontSize: 13, color: '#78350f' }}>{nextAction.detail}</p>
           {nextAction.link && (
             <Link to={nextAction.link} style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 500 }}>
-              Go to {nextAction.link === '/configuration' ? 'Configuration' : nextAction.link} →
+              Go to {nextAction.linkLabel ?? nextAction.link} →
             </Link>
           )}
         </section>
@@ -282,15 +310,27 @@ function CheckRow({ check }: { check: ReadinessCheckDto }) {
   const icon = status === 'Passed' ? '✓' : status === 'Failed' ? '✗' : '–';
   const color = status === 'Passed' ? '#166534' : status === 'Failed' ? '#b91c1c' : '#6b7280';
   const bg = status === 'Passed' ? '#f0fdf4' : status === 'Failed' ? '#fef2f2' : '#f9fafb';
+  const meta = getCheckMeta(check.name);
+  const showNextAction = status !== 'Passed';
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
-      <span style={{ color, fontWeight: 700, width: 16, flexShrink: 0, paddingTop: 1 }}>{icon}</span>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+      <span style={{ color, fontWeight: 700, width: 16, flexShrink: 0, paddingTop: 2 }}>{icon}</span>
       <div style={{ flex: 1 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, background: bg, color, borderRadius: 4, padding: '1px 6px' }}>
-          {check.name}
-        </span>
-        {check.reason && (
-          <p style={{ margin: '4px 0 0', fontSize: 12, color: '#374151' }}>{check.reason}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, background: bg, color, borderRadius: 4, padding: '1px 6px' }}>
+            {meta.label}
+          </span>
+          {meta.purpose && (
+            <span style={{ fontSize: 12, color: '#6b7280' }}>{meta.purpose}</span>
+          )}
+        </div>
+        {showNextAction && (
+          <p style={{ margin: '4px 0 0', fontSize: 12, color: status === 'Failed' ? '#991b1b' : '#6b7280' }}>
+            {check.reason ? `${meta.nextAction} (${check.reason})` : meta.nextAction}
+            {meta.link && (
+              <> — <Link to={meta.link} style={{ color: '#1d4ed8', fontWeight: 500 }}>Go to {meta.linkLabel ?? meta.link} →</Link></>
+            )}
+          </p>
         )}
       </div>
     </div>
