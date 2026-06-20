@@ -214,6 +214,12 @@ export function AuditorWorkspacePage() {
     }
   }
 
+  // Open actor detail panel for the given audit record.
+  function openActorPanel(record: AuditRecord, details: ActorDetails | undefined) {
+    if (!record.actorHash) return;
+    setActorPanel({ actorHash: record.actorHash, actorType: record.actorType, details });
+  }
+
   const totalDisplayed = useMemo(
     () => state.kind === 'ok' ? state.records.length : 0,
     [state],
@@ -435,7 +441,7 @@ export function AuditorWorkspacePage() {
                       <td
                         style={{ ...td, cursor: r.actorHash ? 'pointer' : undefined }}
                         title={r.actorHash ? 'Click for actor details' : undefined}
-                        onClick={(e) => { if (r.actorHash) { e.stopPropagation(); setActorPanel({ actorHash: r.actorHash, actorType: r.actorType, details }); } }}
+                        onClick={(e) => { if (r.actorHash) { e.stopPropagation(); openActorPanel(r, details); } }}
                       >
                         {renderActorLabel(r.actorType, r.actorHash, details)}
                       </td>
@@ -471,14 +477,17 @@ export function AuditorWorkspacePage() {
           onClose={() => setActorPanel(null)}
         />
       )}
-      {entityPanel && (
-        <EntityDetailPanel
-          record={entityPanel}
-          drawProgress={entityPanel.entityType === 'drawAttempt' && entityPanel.entityId ? drawProgressCache[entityPanel.entityId] : undefined}
-          onLoadDrawProgress={entityPanel.entityType === 'drawAttempt' && entityPanel.entityId ? () => loadDrawProgress(entityPanel.entityId!) : undefined}
-          onClose={() => setEntityPanel(null)}
-        />
-      )}
+      {entityPanel && (() => {
+        const isDrawAttemptWithId = entityPanel.entityType === 'drawAttempt' && !!entityPanel.entityId;
+        return (
+          <EntityDetailPanel
+            record={entityPanel}
+            drawProgress={isDrawAttemptWithId ? drawProgressCache[entityPanel.entityId!] : undefined}
+            onLoadDrawProgress={isDrawAttemptWithId ? () => loadDrawProgress(entityPanel.entityId!) : undefined}
+            onClose={() => setEntityPanel(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -687,7 +696,7 @@ function EntityDetailPanel({
             <div>
               <div style={detailLabel}>Entity ID</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ ...detailValueChip, fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all' }}>
+                <span style={{ ...detailValueChip, fontFamily: 'monospace', fontSize: 11, overflowWrap: 'break-word' }}>
                   {record.entityId}
                 </span>
                 <CopyButton value={record.entityId} label="copy entity id" />
