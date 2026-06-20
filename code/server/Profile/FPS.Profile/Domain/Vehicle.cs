@@ -6,4 +6,5 @@ public sealed record Vehicle(
     string VehicleType,
     bool IsElectric,
     bool IsActive,
-    bool IsDefault = false);
+    bool IsDefault = false,
+    string? Alias = null);

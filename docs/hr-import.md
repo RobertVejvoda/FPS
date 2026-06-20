@@ -18,15 +18,10 @@ FairSpot never requests or stores: passwords, national IDs, employee numbers, sa
 
 ## File format
 
-The current web HR Import page imports the employee/profile file. Vehicle import is documented as the target contract and is already supported by the local validation script, but the web upload does not yet commit `vehicles.csv`.
-
 Both files use comma separators and support comment lines starting with `#`.
 
-Recommended v1 flow:
-
-1. Import employees and profile facts through the HR Import page.
-2. Add employee-maintained vehicles through Profile, or load demo/development vehicles through `dev-seed.sh`.
-3. Use `vehicles.csv` only as a validated pilot contract until the web/API vehicle import slice is implemented.
+The web HR Import page supports both `employees.csv` (required) and `vehicles.csv` (optional) in a single
+preview-and-commit flow.
 
 ### employees.csv
 
