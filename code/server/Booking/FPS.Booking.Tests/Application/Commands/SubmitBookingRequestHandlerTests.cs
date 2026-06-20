@@ -606,12 +606,12 @@ public sealed class SubmitBookingRequestHandlerTests
             .ReturnsAsync(CompanyCarProfile);
 
         var cmd = CompanyCarFutureCommand();
-        var otherSlot = AvailableSlot.Create(
+        var slotReservedForDifferentUser = AvailableSlot.Create(
             FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC2"),
             isCompanyCarReserved: true);
         slotService
             .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<AvailableSlot> { otherSlot });
+            .ReturnsAsync(new List<AvailableSlot> { slotReservedForDifferentUser });
 
         var result = await handler.Handle(cmd, CancellationToken.None);
 

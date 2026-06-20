@@ -203,6 +203,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         {
             // Tier 1 guaranteed fixed-slot allocation for scheduled company-car requests.
             // Allocate immediately; do not increment Tier 2 fairness metrics.
+            // The slot is passed to ToDto() below (same pattern as same-day allocation);
+            // AllocatedSlotId lives in the DTO layer, not the domain aggregate.
             request.Allocate(publisher);
         }
 
