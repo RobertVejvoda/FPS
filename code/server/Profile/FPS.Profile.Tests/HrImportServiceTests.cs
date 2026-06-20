@@ -506,6 +506,58 @@ public sealed class HrImportServiceTests
         Assert.True(vehicle.IsElectric);
         Assert.Equal("NewName", vehicle.Alias);
     }
+
+    // ── Vehicle default normalization ─────────────────────────────────────────
+
+    [Fact]
+    public async Task Commit_DeactivatingDefaultVehicle_ClearsDefault()
+    {
+        // First import: active vehicle — becomes default.
+        var emp1 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh1 = CsvStream(VehicleHeader, "emp1,,AA 1111,car,false,true");
+        await service.CommitAsync("t1", emp1, veh1, CancellationToken.None);
+
+        // Second import: deactivate the same vehicle.
+        var emp2 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh2 = CsvStream(VehicleHeader, "emp1,,AA 1111,car,false,false");
+        await service.CommitAsync("t1", emp2, veh2, CancellationToken.None);
+
+        var hash = EmployeeBootstrapService.Hash("emp1");
+        var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        var vehicle = Assert.Single(profile!.Vehicles);
+        Assert.False(vehicle.IsActive);
+        Assert.False(vehicle.IsDefault);
+    }
+
+    [Fact]
+    public async Task Commit_ReactivatingOnlyActiveVehicle_BecomesDefault()
+    {
+        // First import: active vehicle (becomes default).
+        var emp1 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh1 = CsvStream(VehicleHeader, "emp1,,BB 2222,car,false,true");
+        await service.CommitAsync("t1", emp1, veh1, CancellationToken.None);
+
+        // Second import: deactivate it (default cleared).
+        var emp2 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh2 = CsvStream(VehicleHeader, "emp1,,BB 2222,car,false,false");
+        await service.CommitAsync("t1", emp2, veh2, CancellationToken.None);
+
+        // Third import: reactivate it — must be promoted to default.
+        var emp3 = CsvStream(EmployeeHeader,
+            "emp1,Alice,alice@c.com,employee,Prague,A,true,false,false,false,true");
+        var veh3 = CsvStream(VehicleHeader, "emp1,,BB 2222,car,false,true");
+        await service.CommitAsync("t1", emp3, veh3, CancellationToken.None);
+
+        var hash = EmployeeBootstrapService.Hash("emp1");
+        var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        var vehicle = Assert.Single(profile!.Vehicles);
+        Assert.True(vehicle.IsActive);
+        Assert.True(vehicle.IsDefault);
+    }
 }
 
 /// <summary>Minimal ICurrentUser for unit tests.</summary>

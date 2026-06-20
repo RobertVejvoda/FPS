@@ -424,10 +424,55 @@ public sealed class HrImportService(
                 }
             }
 
+            NormalizeVehicleDefaults(updatedVehicles);
             await profileRepository.SaveAsync(ProfileWithVehicles(profile, updatedVehicles), ct);
         }
 
         return (applied, rejected, errors);
+    }
+
+    /// <summary>
+    /// Enforces default invariants after all vehicle rows for a profile have been applied:
+    /// <list type="bullet">
+    ///   <item>Inactive vehicles must not be the default.</item>
+    ///   <item>Exactly one active vehicle has <c>IsDefault = true</c> (when active vehicles exist).</item>
+    ///   <item>If active vehicles exist but none is default, the first active vehicle is promoted.</item>
+    /// </list>
+    /// </summary>
+    private static void NormalizeVehicleDefaults(List<Vehicle> vehicles)
+    {
+        // Step 1: Determine which active vehicle should be the sole default.
+        // Preserve the first existing active default; if none, pick the first active vehicle.
+        var defaultIdx = -1;
+        for (var i = 0; i < vehicles.Count; i++)
+        {
+            if (vehicles[i].IsActive && vehicles[i].IsDefault)
+            {
+                defaultIdx = i;
+                break;
+            }
+        }
+        if (defaultIdx < 0)
+        {
+            for (var i = 0; i < vehicles.Count; i++)
+            {
+                if (vehicles[i].IsActive)
+                {
+                    defaultIdx = i;
+                    break;
+                }
+            }
+        }
+
+        // Step 2: Enforce invariants on every vehicle:
+        //   - inactive vehicles get IsDefault = false
+        //   - among active vehicles, exactly the chosen index gets IsDefault = true
+        for (var i = 0; i < vehicles.Count; i++)
+        {
+            var shouldBeDefault = vehicles[i].IsActive && i == defaultIdx;
+            if (vehicles[i].IsDefault != shouldBeDefault)
+                vehicles[i] = vehicles[i] with { IsDefault = shouldBeDefault };
+        }
     }
 
     private static HrImportPreview ToPreview(List<ClassifiedRow> rows, List<ClassifiedVehicleRow> vehicleRows)
