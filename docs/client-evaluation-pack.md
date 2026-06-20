@@ -33,7 +33,7 @@ Use synthetic demo data only unless a customer-approved pilot explicitly changes
 | --- | --- | --- | --- |
 | 1 | Employee | Log in through demo OIDC and open the mobile shell. | `GET /me` resolves tenant/user context; no tenant/user is entered manually. |
 | 2 | Employee | Submit a parking request for a constrained date/location. | Booking request appears with safe status and employee-visible reason where applicable. |
-| 3 | Company-car employee | Submit a request that demonstrates priority policy. | Company-car priority is explainable through policy, not manual favoritism. |
+| 3 | Company-car employee | Submit an on-time request for an HR-assigned company car. | The fixed company-car slot is allocated before the fairness Draw; the employee cannot self-assign company-car status. |
 | 4 | HR / facilities | Show tenant policy, location override, slots, and capacity. | The allocation behavior maps to configured policy and capacity. |
 | 5 | Tenant admin / operator | Run the admin-only Demo Draw for seeded requests, or show an already completed Draw result. | Scarce spaces are allocated by documented rules; the same Draw key is idempotent; hidden lottery internals stay out of employee views. |
 | 6 | Employee | View booking result and notification state. | Notification history/unread behavior reflects the booking event. |
@@ -88,6 +88,7 @@ The demo environment baseline is documented in [Demo Environment Baseline](./pro
 | GDPR erasure | PII mapping erasure can remove identity mapping while preserving anonymous audit history. |
 | Secrets | Tokens, keys, client secrets, connection strings, credential verifiers, and integration credentials are Secret data and must not appear in docs, logs, issues, or manifests. |
 | Demo data | Demo uses synthetic data unless a customer-approved pilot explicitly allows otherwise. |
+| Demo credentials | Demo credentials and seed/reset actions must be available only to approved evaluators or authenticated tenant admins, never as anonymous public functionality. |
 
 ## Cost And Hosting Assumptions
 

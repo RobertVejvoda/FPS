@@ -25,7 +25,7 @@ These rules cover:
 | Zone | Customer-defined grouping inside a location, such as a parking section, floor, desk neighborhood, team area, accessibility area, or charger area. |
 | Preferred zone | Employee-selected zone for a request. The allocation process should try it first when policy allows, but it is not a hard requirement by default. |
 | Team default zone | Zone normally associated with a team, department, or internal group. It is preferred before general fallback, but not reserved unless policy marks it as reserved. |
-| Tier 1 | Company-car allocation tier. |
+| Tier 1 | HR-assigned company-car fixed-slot allocation tier. |
 | Tier 2 | Weighted lottery tier for remaining eligible non-company-car requests. |
 | RecentAllocationCount | Successful non-company-car allocations in the tenant lookback window, including same-day allocations. |
 | ActivePenaltyScore | Active penalty points that affect allocation probability. |
@@ -51,8 +51,8 @@ The Draw applies rules in this order:
 2. Exclude invalid, duplicate, late, and ineligible requests.
 3. Resolve the active resource map, zones, resource capabilities, and reserved-space constraints.
 4. Resolve preferred zone and team default zone preferences for each eligible request.
-5. Allocate Tier 1 company-car requests.
-6. Reject Tier 1 overflow when company-car requests exceed available matching capacity.
+5. Allocate Tier 1 company-car requests to their HR-assigned fixed spaces.
+6. Reject Tier 1 configuration drift when the assigned fixed space is missing, inactive, already consumed, or incompatible.
 7. Allocate remaining eligible requests through Tier 2 weighted lottery.
 8. Assign each winner to the best compatible resource using zone preference and fallback rules.
 9. Persist allocations, rejections, and pending waitlist outcomes.
@@ -61,20 +61,21 @@ The Draw applies rules in this order:
 
 ## Tier 1 Company-Car Allocation
 
-Company-car requests are allocated before the Tier 2 lottery.
+Company-car requests are allocated before the Tier 2 lottery, but they are not lottery winners. A company car is a customer obligation controlled by HR/facilities. When the employee has a company-car entitlement and an assigned fixed compatible slot, an on-time request for that company car should be allocated to that assigned slot without entering the fairness Draw.
 
 Rules:
 
-- `HasCompanyCar = true` places the request in Tier 1.
+- `HasCompanyCar = true` places the request in Tier 1 only when the fact comes from the Profile snapshot or another HR-controlled source.
+- Employees must not be able to self-set `HasCompanyCar`, assign a fixed company-car slot, or reserve a company-car-only space for themselves.
+- A Tier 1 request must resolve to the requestor's HR-assigned fixed slot for the tenant, location, date, and time slot.
 - Tier 1 requests do not participate in the weighted lottery.
 - Tier 1 allocations do not increment `RecentAllocationCount`.
 - Tier 1 requestors do not receive penalties for company-car allocations.
-- If matching capacity is insufficient, FairSpot rejects overflow requests for now.
-- Company-car overflow means Tier 1 demand exceeds matching company-car-eligible capacity for the Draw key after tenant, location, time slot, slot capability, reserved-space, and active/inactive slot constraints are applied.
-- Company-car overflow is determined before Tier 2 starts.
-- Company-car overflow requests become `Rejected`, not `Pending`, because the overflow is treated as tenant configuration drift rather than normal scarce-capacity lottery loss.
+- If the assigned fixed slot is missing, inactive, already consumed for the same time slot, or incompatible with vehicle requirements such as EV charging or accessibility, FairSpot rejects the request with a business-readable HR reason.
+- Tier 1 configuration drift is determined before Tier 2 starts.
+- Rejected Tier 1 requests become `Rejected`, not `Pending`, because the condition is treated as tenant configuration drift rather than normal scarce-capacity lottery loss.
 
-Overflow is expected to indicate tenant configuration drift, not normal business demand. The rejection reason must make that visible to HR.
+Tier 1 rejection is expected to indicate tenant configuration drift, not normal business demand. The rejection reason must make that visible to HR.
 
 ## Tier 2 Weighted Lottery
 

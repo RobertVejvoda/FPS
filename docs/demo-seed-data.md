@@ -18,7 +18,7 @@ Profile re-seeding is safe. Booking request seeding is not idempotent; restart t
 | Username | Roles | Parking | Vehicles | Demo purpose |
 |----------|-------|---------|----------|-------------|
 | `employee1` | Jan Novak | employee | ✅ eligible | Daily Driver (`1AA 2345`), EV Commuter (`2AB 3456`) | Standard employee — booking, vehicle selection, notifications |
-| `employee2` | Petra Svobodova | employee | ✅ eligible | Company Fleet (`3AC 4567`) | Company-car priority policy demonstration |
+| `employee2` | Petra Svobodova | employee | ✅ eligible + company car | Company Fleet (`3AC 4567`) | Company-car fixed-slot policy demonstration |
 | `employee3` | Tomas Dvorak | employee | ✅ eligible + accessible | Accessible (`4AD 5678`) | Accessibility-eligible booking path |
 | `hr-admin` | Lucie Prochazkova | employee, hr_manager | ❌ | — | Reports, configuration, HR import |
 | `tenant-admin` | Karel Urban | admin | ❌ | — | Tenant admin console, readiness, guided setup |
@@ -36,7 +36,7 @@ After running `dev-seed.sh`, 7 booking requests exist for the `Headquarters` fac
 | Employee | Vehicle | Days ahead | Expected after seed |
 |----------|---------|-----------|-------|
 | Jan Novak | 1AA 2345 (Daily Driver) | +2 | Demo Draw participant |
-| Petra Svobodova | 3AC 4567 (Company Fleet) | +2 | Demo Draw participant |
+| Petra Svobodova | 3AC 4567 (Company Fleet) | +2 | Fixed company-car allocation when the assigned slot is configured |
 | Tomas Dvorak | 4AD 5678 (Accessible) | +2 | Demo Draw participant |
 | Jan Novak | 2AB 3456 (EV Commuter) | +4 | Pending EV request |
 | Jan Novak | 1AA 2345 (Daily Driver) | +6 | Additional booking |
@@ -45,7 +45,9 @@ After running `dev-seed.sh`, 7 booking requests exist for the `Headquarters` fac
 
 All bookings use dates ≥+2 days to stay clear of the draw cutoff that applies to same-day/+1 requests, ensuring they land as `Pending` regardless of time of day.
 
-For the local development demo, Booking has two configured `AvailableSlots` for `demo` / `Prague`. The +2 Draw therefore has three requests competing for two slots, so the demo immediately shows allocated and waitlisted outcomes. The exact winning employee can vary with the deterministic Draw key seed when the date changes.
+For the local development demo, the seed must include both company-car and non-company-car employees. Company-car requests demonstrate the fixed HR-assigned slot rule and do not participate in the Tier 2 fairness lottery. Non-company-car requests demonstrate scarce-capacity fairness and may be allocated, pending, waitlisted, or rejected according to the configured slots and Draw key.
+
+When a company-car employee is shown in the demo, explain the business rule explicitly: the employee cannot mark their own vehicle as a company car, and their fixed company-car slot is assigned by HR/facilities. If they submit the request on time and the assigned slot is active and compatible, the space is ready for them before the fairness Draw runs for remaining spaces.
 
 These bookings trigger Dapr pub/sub events (when sidecars are running), which populate:
 - **Notifications**: each booking creates an in-app notification for the requestor
@@ -115,5 +117,6 @@ Configuration (policy + slots at `Prague`) is re-seeded automatically by the Con
 |------|---------|
 | `./tools/dev-seed.sh` | Local development and demo smoke testing — uses internal admin endpoints, deterministic, dev-only |
 | `tools/validate-hr-import.sh` + `POST /profile/bootstrap` | Pilot/production bootstrap — uses the HR CSV import contract, respects tenant scoping and auth |
+| Tenant-admin demo seed action | Future controlled self-test path for a synthetic sandbox tenant only; must require tenant-admin authorization and must not expose public anonymous seeding |
 
 Never run `dev-seed.sh` against a production or pilot environment.

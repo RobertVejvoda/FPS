@@ -11,7 +11,7 @@ The demo should prove that FairSpot is more than a booking form. It should show 
 | Role | What They Should See | Success Signal |
 | --- | --- | --- |
 | Employee | Login, view own bookings, submit a parking request, cancel, confirm usage, receive status notification. | Employee understands request status and next action without seeing hidden lottery details. |
-| Company-car employee | Priority handling when policy requires company-car allocation first. | The reason for priority is explainable and does not look arbitrary. |
+| Company-car employee | HR-assigned company-car handling with a fixed compatible parking slot. | The employee sees that the space is ready when the request is on time, and the priority is explainable as an HR/facilities-controlled obligation rather than lottery preference. |
 | HR / facilities | Tenant policy, location override, slots/capacity, Draw outcome, operational reporting. | HR can manage parking rules without code changes and can explain outcomes. |
 | Tenant admin | User roles, tenant/location setup, policy configuration, slot setup. | Admin can see which setup is required before go-live. |
 | Auditor / compliance | Audit query, pseudonymised actor references, GDPR PII mapping erasure behavior. | Audit evidence exists without exposing unnecessary personal data. |
@@ -24,7 +24,7 @@ The demo should prove that FairSpot is more than a booking form. It should show 
 | --- | --- |
 | Tenant with one office location | Keeps the story simple for first demo. |
 | Employees with normal parking needs | Shows regular request and allocation behavior. |
-| Company-car employees | Shows Tier 1 allocation and capacity pressure. |
+| Company-car employees | Shows HR-assigned fixed-slot allocation outside the Tier 2 fairness lottery. |
 | HR/admin users | Shows policy and slot configuration. |
 | Auditor user | Shows audit query and erasure workflow. |
 | Enough requests to exceed capacity | Shows why fairness and Draw are needed. |
@@ -61,6 +61,8 @@ The first version of these materials is collected in the [Client Evaluation Pack
 - Each demo role has a known login and a scripted path.
 - Data is fake and safe to share.
 - Demo can be reset without manual database editing.
+- Any evaluator-facing seed/reset action is authenticated, rate-limited where practical, and limited to synthetic sandbox tenants.
+- Demo credentials are shared only with approved evaluators or issued through a controlled request flow.
 - Expected notifications, audit records, and reporting results are predictable.
 - Local observability shows metrics/logs/traces for the demo flow.
 - Client-facing materials are linked from this page and updated before external sharing.

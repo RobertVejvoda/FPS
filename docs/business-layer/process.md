@@ -103,8 +103,10 @@ Business rules:
 - Reserved users may keep priority access to assigned spaces.
 - Reserved users should still declare when they need or do not need the space.
 - Released reserved spaces can be offered to other eligible employees.
+- Company-car entitlement and fixed slot assignment are HR/facilities-controlled facts, not employee-editable preferences.
+- When a company-car employee submits an on-time request, their assigned compatible company-car space is ready for them and should be allocated before the fairness Draw for remaining spaces.
 - Company-car requests may be exempt from penalties where customer policy requires it.
-- If company-car requests exceed available matching capacity, FairSpot rejects the overflow requests for now. This is expected to be rare and keeps the first implementation simple.
+- If the assigned company-car space is missing, inactive, already consumed, or incompatible, FairSpot rejects the request with an HR-readable configuration reason. This is expected to be rare and should be treated as tenant configuration drift.
 - All reserved-space decisions should be visible in reports and audit history.
 
 ## Cancellations and Reallocation

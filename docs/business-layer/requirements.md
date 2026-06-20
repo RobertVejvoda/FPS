@@ -45,6 +45,8 @@ Employees must be able to submit parking requests through FairSpot instead of em
 
 FairSpot must allocate limited parking capacity using transparent and configurable fairness rules. The process must avoid persistent favoritism and should improve the chance of allocation for employees who have received fewer recent spaces.
 
+Company-car allocation is not part of the employee fairness lottery. When HR has assigned an employee a company car and a compatible fixed company-car parking space, an on-time request for that company car should be allocated to that fixed space before any fairness Draw runs for the remaining capacity. If the assigned fixed space is missing, inactive, already consumed for the same time slot, or incompatible with the vehicle requirement, the request is rejected with a business-readable HR reason because that indicates configuration drift, not normal lottery loss.
+
 ### BR003: Configurable Parking Policies
 
 Customers must be able to configure parking rules for their organization, including locations, spaces, time slots, eligibility, company-car handling, EV charging, accessibility needs, and penalties. Motorcycle-specific capacity and recurring reserved-space release are not v1 requirements; they may be added later if a customer need justifies the added policy and capacity complexity.
@@ -87,6 +89,8 @@ FairSpot must provide reports for HR, facility managers, and leadership. Reports
 
 FairSpot must separate employee, manager, administrator, support, audit, and finance responsibilities. Users should only access the actions and data required for their role.
 
+Employees may maintain normal vehicle facts where tenant policy allows it, but they must not be able to mark themselves as company-car users, assign a company-car entitlement, assign an accessibility entitlement, or reserve a fixed slot for themselves. Company-car entitlement and fixed-slot assignment are HR/facilities-controlled facts and must be visible as read-only facts to employees.
+
 ### BR010: Auditability and Compliance
 
 FairSpot must keep an audit trail of important business actions, including request creation, allocation decisions, cancellations, manual overrides, penalty changes, and configuration changes.
@@ -117,11 +121,12 @@ Employees should see a simplified map and capability view that helps them unders
 
 1. Employees submit parking requests for future or current time slots.
 2. FairSpot validates eligibility, duplicate requests, time slot availability, vehicle constraints, and local policy.
-3. The allocation process assigns available spaces using the configured fairness rules, zone preferences, team defaults, and fallback policy.
-4. Employees receive allocation results and reminders.
-5. Employees cancel or confirm usage when needed.
-6. Released or unused spaces are reallocated according to policy.
-7. HR and management review reports, exceptions, and usage patterns.
+3. Company-car requests with HR-assigned fixed spaces are allocated first when submitted on time and the assigned space is compatible.
+4. The allocation process assigns remaining scarce spaces using the configured fairness rules, zone preferences, team defaults, and fallback policy.
+5. Employees receive allocation results and reminders.
+6. Employees cancel or confirm usage when needed.
+7. Released or unused spaces are reallocated according to policy.
+8. HR and management review reports, exceptions, and usage patterns.
 
 The full allocation description is documented in [Slot Allocation Process](./process).
 
