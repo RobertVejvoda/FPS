@@ -75,6 +75,7 @@
 * [Roadmap](./roadmap)
 * [Demo and Evaluation](./demo-and-evaluation)
 * [Client Evaluation Pack](./client-evaluation-pack)
+* [HR Import Contract](./hr-import)
 * [Solution Assessment](./solution-assessment)
 * [Versions and Decisions](./versions-and-decisions)
 * [Glossary](./glossary)

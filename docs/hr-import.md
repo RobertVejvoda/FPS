@@ -18,7 +18,15 @@ FairSpot never requests or stores: passwords, national IDs, employee numbers, sa
 
 ## File format
 
-Two CSV files are used: one for employees, one for vehicles. Both use comma separators and support comment lines starting with `#`.
+The current web HR Import page imports the employee/profile file. Vehicle import is documented as the target contract and is already supported by the local validation script, but the web upload does not yet commit `vehicles.csv`.
+
+Both files use comma separators and support comment lines starting with `#`.
+
+Recommended v1 flow:
+
+1. Import employees and profile facts through the HR Import page.
+2. Add employee-maintained vehicles through Profile, or load demo/development vehicles through `dev-seed.sh`.
+3. Use `vehicles.csv` only as a validated pilot contract until the web/API vehicle import slice is implemented.
 
 ### employees.csv
 
@@ -36,6 +44,21 @@ Two CSV files are used: one for employees, one for vehicles. Both use comma sepa
 | `reserved_space_eligible` | Yes | `true`/`false` | |
 | `active` | Yes | `true`/`false` | `false` disables the account. |
 
+Exact employee header:
+
+```csv
+external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active
+```
+
+Minimal employee example:
+
+```csv
+external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active
+employee1,Jan Novak,jan.novak@example.invalid,employee,Prague,A,true,false,false,false,true
+employee2,Petra Svobodova,petra.svobodova@example.invalid,employee,Prague,,true,true,false,false,true
+hr-admin,Lucie Prochazkova,lucie.prochazkova@example.invalid,employee;hr_manager,Prague,,false,false,false,false,true
+```
+
 ### vehicles.csv
 
 | Column | Required | Values | Notes |
@@ -48,6 +71,23 @@ Two CSV files are used: one for employees, one for vehicles. Both use comma sepa
 | `active` | Yes | `true`/`false` | |
 
 One user may have zero, one, or multiple vehicle rows.
+
+Exact vehicle header:
+
+```csv
+external_subject,vehicle_alias,vehicle_license_plate,vehicle_type,vehicle_is_electric,active
+```
+
+Minimal vehicle example:
+
+```csv
+external_subject,vehicle_alias,vehicle_license_plate,vehicle_type,vehicle_is_electric,active
+employee1,Daily Driver,1AA 2345,car,false,true
+employee1,EV Commuter,2AB 3456,car,true,true
+employee2,Company Fleet,3AC 4567,car,false,true
+```
+
+Company-car note: `has_company_car` is an HR/fleet-controlled employee/profile fact. Employees must not be able to mark themselves as company-car users through self-service. Fixed company-car slot assignment is controlled separately by HR/facilities capacity configuration.
 
 ## Valid roles
 

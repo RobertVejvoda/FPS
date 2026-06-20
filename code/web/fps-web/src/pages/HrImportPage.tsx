@@ -7,6 +7,15 @@ import {
   type HrImportPreview,
 } from '../api/hrImport';
 
+const HR_IMPORT_DOC_URL = 'https://github.com/RobertVejvoda/fairspot/blob/master/docs/hr-import.md';
+const EMPLOYEE_HEADER = 'external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active';
+const EMPLOYEE_EXAMPLE = [
+  EMPLOYEE_HEADER,
+  'employee1,Jan Novak,jan.novak@example.invalid,employee,Prague,A,true,false,false,false,true',
+  'employee2,Petra Svobodova,petra.svobodova@example.invalid,employee,Prague,,true,true,false,false,true',
+  'hr-admin,Lucie Prochazkova,lucie.prochazkova@example.invalid,employee;hr_manager,Prague,,false,false,false,false,true',
+].join('\n');
+
 type Phase =
   | { kind: 'idle' }
   | { kind: 'loading'; action: 'preview' | 'commit' }
@@ -53,10 +62,23 @@ export function HrImportPage() {
     <div>
       <h2 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>HR Employee Import</h2>
       <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-        Upload an employees CSV file matching the{' '}
-        <a href="/docs/hr-import.md" style={{ color: '#1d4ed8' }}>DATA001 import contract</a>.
-        Preview before committing.
+        Upload an employees CSV file, preview row-level changes, then commit. The current screen imports employee/profile facts only.
+        Vehicle import is a separate contract for validation and future upload support.
+        {' '}
+        <a href={HR_IMPORT_DOC_URL} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8' }}>Open import contract</a>.
       </p>
+
+      <section style={helpPanel}>
+        <h3 style={helpTitle}>Expected employees.csv format</h3>
+        <p style={helpText}>
+          Use comma-separated columns exactly as shown. Roles are separated with semicolons, for example <code>employee;hr_manager</code>.
+          Do not include passwords, employee numbers, national IDs, salaries, tokens, or manager notes.
+        </p>
+        <pre style={codeBlock}>{EMPLOYEE_EXAMPLE}</pre>
+        <p style={helpText}>
+          Company-car and accessibility flags are HR-controlled facts. Employees cannot set these for themselves.
+        </p>
+      </section>
 
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.5rem' }}>
         <input ref={fileRef} type="file" accept=".csv" style={{ fontSize: '0.875rem' }} />
@@ -138,3 +160,23 @@ export function HrImportPage() {
 
 const th: React.CSSProperties = { padding: '6px 10px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid #e5e7eb' };
 const td: React.CSSProperties = { padding: '5px 10px', borderBottom: '1px solid #f3f4f6' };
+const helpPanel: React.CSSProperties = {
+  border: '1px solid #e5e7eb',
+  borderRadius: 8,
+  background: '#f9fafb',
+  padding: '0.875rem 1rem',
+  marginBottom: '1.5rem',
+};
+const helpTitle: React.CSSProperties = { margin: '0 0 0.5rem', fontSize: '0.9rem', fontWeight: 700 };
+const helpText: React.CSSProperties = { margin: '0.5rem 0', color: '#4b5563', fontSize: '0.8125rem', lineHeight: 1.45 };
+const codeBlock: React.CSSProperties = {
+  margin: '0.75rem 0',
+  overflowX: 'auto',
+  border: '1px solid #e5e7eb',
+  borderRadius: 6,
+  background: '#fff',
+  padding: '0.75rem',
+  color: '#111827',
+  fontSize: '0.75rem',
+  lineHeight: 1.5,
+};
