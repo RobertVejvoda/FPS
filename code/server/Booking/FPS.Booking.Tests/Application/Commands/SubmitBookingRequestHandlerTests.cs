@@ -499,7 +499,238 @@ public sealed class SubmitBookingRequestHandlerTests
         PlannedArrivalTime: DateTime.UtcNow.AddDays(1).Date.AddHours(9),
         PlannedDepartureTime: DateTime.UtcNow.AddDays(1).Date.AddHours(17));
 
+    // ── B522: company-car fixed-slot scheduled allocation ─────────────────────
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_WithReservedSlot_ReturnsAllocated()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = CompanyCarFutureCommand();
+        var reservedSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { reservedSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_WithReservedSlot_PersistsAllocatedSlotId()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        BookingRequestDto? saved = null;
+        repository
+            .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(dto => saved = dto)
+            .Returns(Task.CompletedTask);
+
+        var cmd = CompanyCarFutureCommand();
+        var reservedSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { reservedSlot });
+
+        await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.Equal("Allocated", saved!.Status);
+        Assert.Equal("CC1", saved.AllocatedSlotId);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_WithReservedSlot_DoesNotIncrementMetrics()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = CompanyCarFutureCommand();
+        var reservedSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { reservedSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        metricsService.Verify(m => m.IncrementRecentAllocationAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_WithReservedSlot_DoesNotAddToPendingIndex()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = CompanyCarFutureCommand();
+        var reservedSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { reservedSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        queryRepository.Verify(r => r.AddToTenantPendingIndexAsync(
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_MissingReservedSlot_ReturnsPending()
+    {
+        // No reserved slot for this user → request stays Pending for normal Draw
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = CompanyCarFutureCommand();
+        var otherSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC2"),
+            isCompanyCarReserved: true);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { otherSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Pending", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_InactiveReservedSlot_ReturnsPending()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = CompanyCarFutureCommand();
+        var inactiveSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isActive: false,
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { inactiveSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Pending", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_NoSlotsAtAll_ReturnsPending()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        // slotService already defaults to returning an empty list
+
+        var result = await handler.Handle(CompanyCarFutureCommand(), CancellationToken.None);
+
+        Assert.Equal("Pending", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_CutOffPassed_ReturnsRejected_NoSlotLookup()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        // DrawCutOffTime at 00:00 means cut-off is always passed for D+1 requests
+        policyService
+            .Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultPolicy with { DrawCutOffTime = new TimeOnly(0, 0) });
+
+        var result = await handler.Handle(CompanyCarFutureCommand(), CancellationToken.None);
+
+        Assert.Equal("Rejected", result.Status);
+        Assert.Equal("CutOffPassed", result.RejectionCode);
+        // Slot service must not be queried when cut-off has already passed
+        slotService.Verify(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_DuplicateRequest_ReturnsRejected()
+    {
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        repository
+            .Setup(r => r.HasOverlappingRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var cmd = CompanyCarFutureCommand();
+        var reservedSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { reservedSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Rejected", result.Status);
+        Assert.Equal("DuplicateRequest", result.RejectionCode);
+    }
+
+    [Fact]
+    public async Task Handle_Scheduled_NonCompanyCar_DoesNotQuerySlotsForImmediateAllocation()
+    {
+        // Non-company-car employees must not get any immediate fixed-slot allocation path
+        var result = await handler.Handle(FutureCommand(), CancellationToken.None);
+
+        Assert.Equal("Pending", result.Status);
+        // Slot service is never called for scheduled non-company-car requests
+        slotService.Verify(s => s.GetAvailableSlotsAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
+            It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // Command for a scheduled (D+1) company-car request.
+    // Uses XYZ-999 which matches CompanyCarProfile's registered vehicle.
+    private static SubmitBookingRequestCommand CompanyCarFutureCommand() => new(
+        TenantId: "tenant-1",
+        RequestorId: Guid.NewGuid().ToString(),
+        FacilityId: Guid.NewGuid().ToString(),
+        LocationId: null,
+        LicensePlate: "XYZ-999",
+        VehicleType: "Sedan",
+        IsElectric: false,
+        RequiresAccessibleSpot: false,
+        IsCompanyCar: true,
+        PlannedArrivalTime: DateTime.UtcNow.AddDays(1).Date.AddHours(9),
+        PlannedDepartureTime: DateTime.UtcNow.AddDays(1).Date.AddHours(17));
 
     private static SubmitBookingRequestCommand FutureCommand() => new(
         TenantId: "tenant-1",

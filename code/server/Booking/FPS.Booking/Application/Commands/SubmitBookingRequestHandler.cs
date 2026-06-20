@@ -114,6 +114,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         SubmissionContext context;
         AvailableSlot? sameDaySlot = null;
         string? sameDayRejectionReason = null;
+        // For scheduled (non-same-day) company-car requests: resolved fixed slot for immediate Tier 1 allocation.
+        AvailableSlot? scheduledCompanyCarSlot = null;
 
         if (isSameDay)
         {
@@ -152,6 +154,21 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         else
         {
             var isCutOffPassed = IsCutOffPassed(policy, requestedPeriod.Start, now);
+
+            // For company-car employees submitting a scheduled request before cut-off,
+            // resolve the HR-assigned fixed slot for immediate Tier 1 allocation.
+            // If the slot is missing, inactive, incompatible, or already consumed the
+            // request stays Pending and goes through the normal Draw (Tier 1 there may
+            // still reject it for configuration drift).
+            if (vehicle.IsCompanyCar && !isCutOffPassed)
+            {
+                var slots = await slotService.GetAvailableSlotsAsync(
+                    cmd.TenantId, cmd.LocationId ?? cmd.FacilityId,
+                    DateOnly.FromDateTime(requestedPeriod.Start), requestedPeriod, cancellationToken);
+                var fixedSlot = CompanyCarReservedSlotRules.Resolve(requestorId, vehicle, slots);
+                scheduledCompanyCarSlot = fixedSlot.Slot;
+            }
+
             context = SubmissionContext.Create(policy.DailyRequestCap, existingCount, hasOverlap, isCutOffPassed);
         }
 
@@ -182,10 +199,16 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                     DateOnly.FromDateTime(requestedPeriod.Start), cancellationToken);
             }
         }
+        else if (!isSameDay && request.Status == BookingRequestStatus.Pending && scheduledCompanyCarSlot is not null)
+        {
+            // Tier 1 guaranteed fixed-slot allocation for scheduled company-car requests.
+            // Allocate immediately; do not increment Tier 2 fairness metrics.
+            request.Allocate(publisher);
+        }
 
         await repository.CreateBookingRequestAsync(
-            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, vehicle, sameDaySlot,
-                effectiveRejectionReason));
+            ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, vehicle,
+                sameDaySlot ?? scheduledCompanyCarSlot, effectiveRejectionReason));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
         await queryRepository.AddToTenantOpsIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
         if (request.Status == BookingRequestStatus.Pending)
