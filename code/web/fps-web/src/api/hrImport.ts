@@ -1,11 +1,20 @@
 import type { ApiClientConfig } from './client';
 
 export type HrImportRowStatus = 'Created' | 'Updated' | 'Unchanged' | 'Rejected';
+export type HrVehicleImportStatus = 'Valid' | 'Rejected';
 
 export type HrImportRow = {
   lineNumber: number;
   externalSubject: string;
   status: HrImportRowStatus;
+  reason: string | null;
+};
+
+export type HrVehicleImportRow = {
+  lineNumber: number;
+  externalSubject: string;
+  licensePlate: string;
+  status: HrVehicleImportStatus;
   reason: string | null;
 };
 
@@ -15,12 +24,18 @@ export type HrImportPreview = {
   updated: number;
   unchanged: number;
   rejected: number;
+  vehicleRows: HrVehicleImportRow[];
+  vehiclesValid: number;
+  vehiclesRejected: number;
 };
 
 export type HrImportCommitResult = {
   applied: number;
   rejected: number;
   errors: string[];
+  vehiclesApplied: number;
+  vehiclesRejected: number;
+  vehicleErrors: string[];
 };
 
 export type HrImportResult<T> =
@@ -32,10 +47,12 @@ export type HrImportResult<T> =
 async function postImport<T>(
   url: string,
   { apiBaseUrl, bearerToken }: ApiClientConfig,
-  file: File,
+  employees: File,
+  vehicles?: File,
 ): Promise<HrImportResult<T>> {
   const form = new FormData();
-  form.append('employees', file);
+  form.append('employees', employees);
+  if (vehicles) form.append('vehicles', vehicles);
   try {
     const res = await fetch(`${apiBaseUrl}${url}`, {
       method: 'POST',
@@ -53,14 +70,16 @@ async function postImport<T>(
 
 export function previewHrImport(
   config: ApiClientConfig,
-  file: File,
+  employees: File,
+  vehicles?: File,
 ): Promise<HrImportResult<HrImportPreview>> {
-  return postImport('/profile/admin/hr-import/preview', config, file);
+  return postImport('/profile/admin/hr-import/preview', config, employees, vehicles);
 }
 
 export function commitHrImport(
   config: ApiClientConfig,
-  file: File,
+  employees: File,
+  vehicles?: File,
 ): Promise<HrImportResult<HrImportCommitResult>> {
-  return postImport('/profile/admin/hr-import/commit', config, file);
+  return postImport('/profile/admin/hr-import/commit', config, employees, vehicles);
 }
