@@ -13,6 +13,7 @@ import { displayDateTime, displayLocation } from '../displayLabels';
 import { FpsRole, hasRole } from '../auth/roles';
 import { fetchTenantParkingBootstrap, type TenantBootstrapLocationDto } from '../api/customer';
 import { fetchMe } from '../api/client';
+import { fetchCompanyCarLocationSummary, type CompanyCarLocationSummary } from '../api/profile';
 
 type TenantState =
   | { kind: 'loading' }
@@ -85,6 +86,10 @@ export function ConfigurationPage() {
   const [slotsSaving, setSlotsSaving] = useState(false);
   const [slotsSaveMsg, setSlotsSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [slotsChangeReason, setSlotsChangeReason] = useState('');
+  // Issue #533: per-tenant snapshot of company-car employees grouped by their
+  // home location. Loaded once because it does not depend on which location
+  // tab is active; the warning component itself is rendered per-location.
+  const [companyCarSummary, setCompanyCarSummary] = useState<CompanyCarLocationSummary | null>(null);
   const [demoDraw, setDemoDraw] = useState<DemoDrawForm>(() => initialDemoDrawForm());
   const [demoDrawBusy, setDemoDrawBusy] = useState(false);
   const [demoDrawMsg, setDemoDrawMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -266,6 +271,19 @@ export function ConfigurationPage() {
   }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadTenantHistory(); }, [loadTenantHistory]);
+
+  // Issue #533: load the company-car-by-location summary once per session.
+  // Failure is non-fatal — the warning simply does not render when the
+  // tenant has no company-car employees or the call returns an error.
+  useEffect(() => {
+    if (!apiBaseUrl || !bearerToken) return;
+    let cancelled = false;
+    fetchCompanyCarLocationSummary(cfg).then(r => {
+      if (cancelled) return;
+      if (r.kind === 'ok') setCompanyCarSummary(r.data);
+    });
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function runDemoDraw() {
     setDemoDrawBusy(true);
@@ -479,6 +497,11 @@ export function ConfigurationPage() {
               )}
             </div>
             {slotsSaveMsg && <SaveBanner ok={slotsSaveMsg.ok} text={slotsSaveMsg.text} />}
+            <CompanyCarCapacityBanner
+              locationId={locationId.trim()}
+              slots={slots.slots.map(s => ({ ...s, ...(slots.dirty[s.slotId] ?? {}) }))}
+              summary={companyCarSummary}
+            />
             {slots.slots.length === 0 ? <p style={muted}>No slots configured.</p> : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={tbl}>
@@ -626,6 +649,99 @@ function SaveBanner({ ok, text }: { ok: boolean; text: string }) {
   return (
     <div style={{ padding: '10px 16px', borderRadius: 8, background: ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}`, color: ok ? '#166534' : '#b91c1c', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>
       {text}
+    </div>
+  );
+}
+
+// Issue #533: HR/admin warning shown when the number of company-car employees
+// assigned to this location exceeds the number of active fixed slots reserved
+// for those employees. The "guaranteed slot" definition mirrors
+// CompanyCarReservedSlotRules.Resolve + AvailableSlot.CanAccommodate in
+// Booking (PR #529): any active slot reserved for the employee that the
+// vehicle can use is immediately allocated. Motorcycle-only bays are
+// excluded (they always reject company cars); EV employees with no ICE
+// option require a charger; accessibility-eligible employees require an
+// accessible slot. User-id comparison is case-insensitive + trimmed to
+// match AvailableSlot.IsReservedFor.
+function CompanyCarCapacityBanner({
+  locationId,
+  slots,
+  summary,
+}: {
+  locationId: string;
+  slots: SlotDto[];
+  summary: CompanyCarLocationSummary | null;
+}) {
+  if (!summary || !locationId) return null;
+  const row = summary.locations.find(r => r.locationId === locationId);
+  // Normalise reserved user ids the same way the backend does
+  // (AvailableSlot.NormalizeReservedForUserId + IsReservedFor): trim
+  // surrounding whitespace and compare case-insensitively. Otherwise a
+  // slot reserved for "ABC123" would not match an employee user id "abc123"
+  // even though the allocator would honor it.
+  const normaliseUserId = (uid: string | null | undefined): string | null => {
+    if (uid === null || uid === undefined) return null;
+    const trimmed = uid.trim();
+    return trimmed.length === 0 ? null : trimmed.toLowerCase();
+  };
+  const eligibleSlots = slots
+    .filter(s => s.isActive && !s.isMotorcycleCapacity && normaliseUserId(s.reservedForUserId) !== null)
+    .map(s => ({
+      reservedForUserId: normaliseUserId(s.reservedForUserId) as string,
+      hasCharger: s.hasCharger,
+      isAccessible: s.isAccessible,
+    }));
+  // Distinct reserved user ids on active non-motorcycle slots — the count
+  // of "configured guarantees" at this location regardless of whether each
+  // user is currently an active company-car employee. Mirrors the backend's
+  // ActiveCompatibleFixedSlotCount.
+  const guaranteedSlotCount = new Set(eligibleSlots.map(s => s.reservedForUserId)).size;
+  const users = row?.companyCarUsers ?? [];
+  const employeeCount = row?.companyCarEmployeeCount ?? 0;
+  // A user is "guaranteed" iff there is at least one eligible slot reserved
+  // for them whose traits are compatible with their request profile
+  // (charger when EV-only, accessible when accessibility-eligible).
+  const unreservedEmployees = users.filter(user => {
+    const normalisedUser = normaliseUserId(user.userId);
+    if (normalisedUser === null) return false;
+    return !eligibleSlots.some(s =>
+      s.reservedForUserId === normalisedUser
+      && (!user.requiresChargerForEveryRequest || s.hasCharger)
+      && (!user.requiresAccessibleSpot || s.isAccessible),
+    );
+  }).length;
+
+  // Skip rendering when this location is neither relevant to the warning
+  // (no company-car employees) nor configured for fixed reserved slots.
+  if (employeeCount === 0 && guaranteedSlotCount === 0) return null;
+
+  const ok = unreservedEmployees === 0;
+  const palette = ok
+    ? { bg: '#ecfdf5', border: '#bbf7d0', text: '#166534' }
+    : { bg: '#fef3c7', border: '#fcd34d', text: '#92400e' };
+
+  return (
+    <div
+      role={ok ? undefined : 'alert'}
+      style={{
+        padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+        background: palette.bg, border: `1px solid ${palette.border}`, color: palette.text,
+        fontSize: 13, lineHeight: 1.5,
+      }}
+    >
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        {ok
+          ? 'Company-car capacity covered'
+          : 'Company-car capacity exceeded'}
+      </div>
+      <div>
+        {employeeCount} company-car employee{employeeCount === 1 ? '' : 's'} assigned to this location;
+        {' '}{guaranteedSlotCount} active fixed slot{guaranteedSlotCount === 1 ? '' : 's'} reserved for a specific user.
+        {' '}
+        {ok
+          ? 'Every assigned employee has a guaranteed slot.'
+          : `${unreservedEmployees} employee${unreservedEmployees === 1 ? ' has' : 's have'} no guaranteed slot and will rely on the normal draw.`}
+      </div>
     </div>
   );
 }

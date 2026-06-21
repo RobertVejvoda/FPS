@@ -141,6 +141,45 @@ export async function updateRequestorEligibility(
   }
 }
 
+// Issue #533: per-location company-car employee counts used by the
+// Configuration page to compute the company-car fixed-slot capacity warning
+// against the existing slot list. HR/admin only on the server. Each user
+// row carries the vehicle/accessibility traits the warning needs to mirror
+// AvailableSlot.CanAccommodate (charger required when every active vehicle
+// is electric; accessible required when accessibility-eligible).
+export interface CompanyCarUserRow {
+  userId: string;
+  requiresChargerForEveryRequest: boolean;
+  requiresAccessibleSpot: boolean;
+}
+
+export interface CompanyCarLocationRow {
+  locationId: string;
+  companyCarEmployeeCount: number;
+  companyCarUsers: CompanyCarUserRow[];
+}
+
+export interface CompanyCarLocationSummary {
+  locations: CompanyCarLocationRow[];
+}
+
+export async function fetchCompanyCarLocationSummary(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+): Promise<FetchResult<CompanyCarLocationSummary>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/profile/hr/company-car-locations`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /profile/hr/company-car-locations returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as CompanyCarLocationSummary };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchProfileSnapshot(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
 ): Promise<FetchResult<ProfileSnapshot>> {
