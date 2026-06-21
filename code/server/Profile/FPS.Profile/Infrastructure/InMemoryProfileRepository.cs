@@ -28,6 +28,17 @@ public sealed class InMemoryProfileRepository : IProfileRepository
         return Task.CompletedTask;
     }
 
+    public Task<IReadOnlyList<UserProfile>> ListByTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        // Snapshot-style scan: ConcurrentDictionary.Values is a safe enumerable.
+        // Phase 1 store size is bounded by employee count per tenant; will be
+        // replaced by a tenant-partitioned query when the persistent store lands.
+        IReadOnlyList<UserProfile> list = store.Values
+            .Where(p => string.Equals(p.TenantId, tenantId, StringComparison.Ordinal))
+            .ToList();
+        return Task.FromResult(list);
+    }
+
     private static string ProfileKey(string tenantId, string userId) => $"{tenantId}:{userId}";
     private static string EmpKey(string tenantId, string employeeId) => $"{tenantId}:{employeeId}";
 }

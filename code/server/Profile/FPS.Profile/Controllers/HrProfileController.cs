@@ -167,6 +167,50 @@ public sealed class HrProfileController(
         var clean = userId.Replace("-", string.Empty);
         return clean.Length <= 6 ? clean.ToUpperInvariant() : clean[^6..].ToUpperInvariant();
     }
+
+    /// <summary>
+    /// Returns per-location company-car employee counts for the tenant, so the
+    /// Configuration UI can compare against active compatible fixed company-car
+    /// slot capacity and warn HR/admin when entitlements exceed capacity.
+    ///
+    /// Issue #533: only counts ACTIVE profiles with HasCompanyCar = true. Each
+    /// row carries the count of employees whose HomeLocationId matches the
+    /// location, plus the distinct user ids so the UI can subtract guaranteed
+    /// users (those reserved on an active company-car-only slot) from the count
+    /// and surface the residual as "without guaranteed slot". Employees with no
+    /// HomeLocationId are reported under the synthetic "unassigned" bucket so
+    /// HR sees them but they do not inflate any specific location's warning.
+    ///
+    /// PRIVACY: the response only contains userId hashes already known to the
+    /// HR/admin role (HR can already look up requestor summaries by hash);
+    /// names and notification addresses are NOT included.
+    /// </summary>
+    [HttpGet("company-car-locations")]
+    [Authorize(Roles = HrAdminOnlyRoles)]
+    [ProducesResponseType(typeof(CompanyCarLocationSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetCompanyCarLocationSummary(CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
+            return Unauthorized();
+
+        var profiles = await repository.ListByTenantAsync(currentUser.TenantId, cancellationToken);
+
+        // Group active company-car employees by HomeLocationId. The synthetic
+        // null bucket surfaces as locationId="" so HR can still see the count.
+        var grouped = profiles
+            .Where(p => p.HasCompanyCar && p.IsActive)
+            .GroupBy(p => p.HomeLocationId ?? string.Empty, StringComparer.Ordinal)
+            .Select(g => new CompanyCarLocationRow(
+                LocationId: g.Key,
+                CompanyCarEmployeeCount: g.Count(),
+                CompanyCarUserIds: g.Select(p => p.UserId).Distinct(StringComparer.Ordinal).ToList()))
+            .OrderBy(r => r.LocationId, StringComparer.Ordinal)
+            .ToList();
+
+        return Ok(new CompanyCarLocationSummaryResponse(grouped));
+    }
 }
 
 public sealed record DisplayNamesRequest(IReadOnlyList<string>? UserIds);
@@ -203,3 +247,15 @@ public sealed record EligibilityUpdateResponse(
     DateTimeOffset UpdatedAt);
 
 public sealed record RequestorSummaryNotFound(string UserId, string ShortRef);
+
+// Issue #533: per-location company-car summary used by the Configuration UI
+// to detect when entitlements exceed active compatible fixed company-car
+// capacity. The Configuration UI joins this with slot data to compute the
+// warning client-side, keeping Profile and Configuration services decoupled.
+public sealed record CompanyCarLocationRow(
+    string LocationId,
+    int CompanyCarEmployeeCount,
+    IReadOnlyList<string> CompanyCarUserIds);
+
+public sealed record CompanyCarLocationSummaryResponse(
+    IReadOnlyList<CompanyCarLocationRow> Locations);

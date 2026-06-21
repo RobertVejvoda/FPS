@@ -13,6 +13,7 @@ import { displayDateTime, displayLocation } from '../displayLabels';
 import { FpsRole, hasRole } from '../auth/roles';
 import { fetchTenantParkingBootstrap, type TenantBootstrapLocationDto } from '../api/customer';
 import { fetchMe } from '../api/client';
+import { fetchCompanyCarLocationSummary, type CompanyCarLocationSummary } from '../api/profile';
 
 type TenantState =
   | { kind: 'loading' }
@@ -85,6 +86,10 @@ export function ConfigurationPage() {
   const [slotsSaving, setSlotsSaving] = useState(false);
   const [slotsSaveMsg, setSlotsSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [slotsChangeReason, setSlotsChangeReason] = useState('');
+  // Issue #533: per-tenant snapshot of company-car employees grouped by their
+  // home location. Loaded once because it does not depend on which location
+  // tab is active; the warning component itself is rendered per-location.
+  const [companyCarSummary, setCompanyCarSummary] = useState<CompanyCarLocationSummary | null>(null);
   const [demoDraw, setDemoDraw] = useState<DemoDrawForm>(() => initialDemoDrawForm());
   const [demoDrawBusy, setDemoDrawBusy] = useState(false);
   const [demoDrawMsg, setDemoDrawMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -266,6 +271,19 @@ export function ConfigurationPage() {
   }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadTenantHistory(); }, [loadTenantHistory]);
+
+  // Issue #533: load the company-car-by-location summary once per session.
+  // Failure is non-fatal — the warning simply does not render when the
+  // tenant has no company-car employees or the call returns an error.
+  useEffect(() => {
+    if (!apiBaseUrl || !bearerToken) return;
+    let cancelled = false;
+    fetchCompanyCarLocationSummary(cfg).then(r => {
+      if (cancelled) return;
+      if (r.kind === 'ok') setCompanyCarSummary(r.data);
+    });
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function runDemoDraw() {
     setDemoDrawBusy(true);
@@ -479,6 +497,11 @@ export function ConfigurationPage() {
               )}
             </div>
             {slotsSaveMsg && <SaveBanner ok={slotsSaveMsg.ok} text={slotsSaveMsg.text} />}
+            <CompanyCarCapacityBanner
+              locationId={locationId.trim()}
+              slots={slots.slots.map(s => ({ ...s, ...(slots.dirty[s.slotId] ?? {}) }))}
+              summary={companyCarSummary}
+            />
             {slots.slots.length === 0 ? <p style={muted}>No slots configured.</p> : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={tbl}>
@@ -626,6 +649,69 @@ function SaveBanner({ ok, text }: { ok: boolean; text: string }) {
   return (
     <div style={{ padding: '10px 16px', borderRadius: 8, background: ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}`, color: ok ? '#166534' : '#b91c1c', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>
       {text}
+    </div>
+  );
+}
+
+// Issue #533: HR/admin warning shown when the number of company-car employees
+// assigned to this location exceeds the number of active company-car fixed
+// slots reserved for specific users. The "guaranteed slot" definition mirrors
+// CompanyCarReservedSlotRules.Resolve in Booking (PR #529) so we never
+// over-promise capacity that the allocator won't honor.
+function CompanyCarCapacityBanner({
+  locationId,
+  slots,
+  summary,
+}: {
+  locationId: string;
+  slots: SlotDto[];
+  summary: CompanyCarLocationSummary | null;
+}) {
+  if (!summary || !locationId) return null;
+  const row = summary.locations.find(r => r.locationId === locationId);
+  // Distinct reserved user ids among active company-car-only slots — the
+  // single source of "guaranteed" capacity at this location.
+  const guaranteedUserIds = new Set(
+    slots
+      .filter(s => s.isActive && s.isCompanyCarOnly && s.reservedForUserId)
+      .map(s => s.reservedForUserId as string),
+  );
+  const employeeIds = row?.companyCarUserIds ?? [];
+  const employeeCount = row?.companyCarEmployeeCount ?? 0;
+  const guaranteedSlotCount = guaranteedUserIds.size;
+  const unreservedEmployees = employeeIds.filter(uid => !guaranteedUserIds.has(uid)).length;
+
+  // Skip rendering when this location is neither relevant to the warning
+  // (no company-car employees) nor configured for fixed company-car slots.
+  if (employeeCount === 0 && guaranteedSlotCount === 0) return null;
+
+  const ok = unreservedEmployees === 0;
+  const palette = ok
+    ? { bg: '#ecfdf5', border: '#bbf7d0', text: '#166534' }
+    : { bg: '#fef3c7', border: '#fcd34d', text: '#92400e' };
+
+  return (
+    <div
+      role={ok ? undefined : 'alert'}
+      style={{
+        padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+        background: palette.bg, border: `1px solid ${palette.border}`, color: palette.text,
+        fontSize: 13, lineHeight: 1.5,
+      }}
+    >
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        {ok
+          ? 'Company-car capacity covered'
+          : 'Company-car capacity exceeded'}
+      </div>
+      <div>
+        {employeeCount} company-car employee{employeeCount === 1 ? '' : 's'} assigned to this location;
+        {' '}{guaranteedSlotCount} active company-car fixed slot{guaranteedSlotCount === 1 ? '' : 's'} reserved for a specific user.
+        {' '}
+        {ok
+          ? 'Every assigned employee has a guaranteed slot.'
+          : `${unreservedEmployees} employee${unreservedEmployees === 1 ? ' has' : 's have'} no guaranteed slot and will rely on the normal draw.`}
+      </div>
     </div>
   );
 }

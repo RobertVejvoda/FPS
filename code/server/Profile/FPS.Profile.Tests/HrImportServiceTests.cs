@@ -598,4 +598,7 @@ file sealed class NthCallNullRepository(
 
     public Task SaveAsync(UserProfile profile, CancellationToken ct) =>
         inner.SaveAsync(profile, ct);
+
+    public Task<IReadOnlyList<UserProfile>> ListByTenantAsync(string tenantId, CancellationToken ct) =>
+        inner.ListByTenantAsync(tenantId, ct);
 }
