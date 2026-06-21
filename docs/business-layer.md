@@ -29,6 +29,8 @@ FairSpot helps companies manage scarce parking capacity without turning HR into 
 - [Executable Allocation Rules](./business-layer/allocation-rules)
 - [Parking Policy Configuration](./business-layer/parking-policy-configuration)
 - [SSO-First Customer Integration](./business-layer/customer-data-import)
+- [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes)
+- [Tenant Onboarding](./business-layer/tenant-onboarding)
 - [Business Strategy](./business-layer/strategy)
 - [Functional Architecture](./business-layer/functional-architecture)
 - [DataHub Application](./application-layer/datahub)

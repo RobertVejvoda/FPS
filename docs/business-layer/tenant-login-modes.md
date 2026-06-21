@@ -28,10 +28,10 @@ Before showing the SSO path, FairSpot can help the user find the right tenant an
 ### Discovery flow
 
 ```
-User types: alice@green-logistics.com
+User types: alice@greenlogistics.example
                         │
                         ▼
-          Extract domain: green-logistics.com
+          Extract domain: greenlogistics.example
                         │
                         ▼
      Look up configured tenant by email-domain mapping
@@ -132,9 +132,9 @@ See [Customer Integration](./customer-data-import.md) → *Local Account Fallbac
 | Aspect | Detail |
 |---|---|
 | Tenant name | Green Logistics |
-| Email domain | `green-logistics.com` (demo placeholder) |
+| Email domain | `greenlogistics.example` (reserved `.example` domain for demo) |
 | Login path | Company SSO (external IdP broker) for the main demo; FairSpot-local fallback for demo users |
-| Demo users | `employee1@green-logistics.com`, `employee2@green-logistics.com`, `hr-admin@green-logistics.com` (exact usernames set at seed time — see AUTH003) |
+| Demo users | `employee1@greenlogistics.example`, `employee2@greenlogistics.example`, `hr-admin@greenlogistics.example` (exact usernames set at seed time — see AUTH003) |
 | Seeding | Tracked in AUTH003 (issue #541) |
 
 For local/demo use, Green Logistics users may log in through FairSpot-local accounts seeded by `tools/dev-seed.sh`. The SSO broker path requires a configured external IdP; local demo runs without one use the FairSpot account path instead.
