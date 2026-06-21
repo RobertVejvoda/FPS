@@ -125,6 +125,33 @@ export interface ProjectionHealthResponse {
   status: string;
 }
 
+/**
+ * AUD008: Auditor-safe booking-request detail read model returned by
+ * GET /datahub/booking-requests/{bookingRequestId}/detail.
+ * Contains only business-visible fields. No raw actor hashes, secrets,
+ * algorithm seeds, candidate ordering, or scoring weights.
+ */
+export interface AuditorBookingRequestDetail {
+  bookingRequestId: string;
+  locationId: string;
+  date: string;
+  timeSlot: string;
+  /** Current lifecycle status: Submitted, Allocated, Rejected, Cancelled, Used, NoShow, Expired, Waitlisted */
+  status: string;
+  reasonCode: string | null;
+  safeReasonText: string | null;
+  /** Allocation source when allocated: draw, sameDay, reallocation, manualCorrection */
+  allocationSource: string | null;
+  /** Allocated slot reference when request is allocated */
+  slotId: string | null;
+  /** Draw attempt ID when the request was decided via a Draw */
+  drawAttemptId: string | null;
+  submittedAt: string | null;
+  decidedAt: string | null;
+  /** When DataHub last updated this projection row */
+  lastProjectedAt: string;
+}
+
 export async function fetchMyOutcomes(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   params: { fromDate?: string; toDate?: string; page?: number; pageSize?: number } = {},
@@ -237,6 +264,31 @@ export async function fetchDrawProgress(
     if (res.status === 404) return { kind: 'error', status: 404, message: 'Draw attempt not found.' };
     if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/draw-history/.../progress returned ${res.status}` };
     return { kind: 'ok', data: (await res.json()) as DrawProgressResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+/**
+ * AUD008: Fetch auditor-safe booking-request detail by booking request ID.
+ * Returns business-safe fields scoped to the authenticated tenant.
+ * Requires auditor or admin role.
+ */
+export async function fetchBookingRequestDetail(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  bookingRequestId: string,
+): Promise<FetchResult<AuditorBookingRequestDetail>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const url = `${apiBaseUrl}/datahub/booking-requests/${encodeURIComponent(bookingRequestId)}/detail`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (res.status === 404) return { kind: 'error', status: 404, message: 'Booking request not found.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/booking-requests/${encodeURIComponent(bookingRequestId)}/detail returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as AuditorBookingRequestDetail };
   } catch (e) {
     return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
   }

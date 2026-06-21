@@ -9,7 +9,7 @@ import {
   type AuditQueryFilters,
 } from '../api/audit';
 import { fetchHrDisplayNames } from '../api/profile';
-import { fetchDrawProgress } from '../api/dataHub';
+import { fetchDrawProgress, fetchBookingRequestDetail, type AuditorBookingRequestDetail } from '../api/dataHub';
 import {
   humanizeAuditEventType,
   humanizeAuditAction,
@@ -18,6 +18,11 @@ import {
   humanizeActorType,
   humanizeEntityType,
   displayActorRef,
+  displayLocation,
+  displayDate,
+  displayDateTime,
+  displaySlot,
+  humanizeHrRejection,
 } from '../displayLabels';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { DateFilter, type RangeFilterValue } from '../components/DateFilter';
@@ -81,6 +86,12 @@ interface ActorDetails {
   displayName: string | null;
 }
 
+type BookingRequestDetailState =
+  | { kind: 'loading' }
+  | { kind: 'ok'; data: AuditorBookingRequestDetail }
+  | { kind: 'notFound' }
+  | { kind: 'error'; message: string };
+
 export function AuditorWorkspacePage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
@@ -99,6 +110,9 @@ export function AuditorWorkspacePage() {
   // Draw lifecycle progress cache — keyed by drawAttemptId (entityId).
   // Loaded on demand when the auditor expands a drawAttempt entity row.
   const [drawProgressCache, setDrawProgressCache] = useState<Record<string, ProgressState>>({});
+  // Booking request detail cache — keyed by bookingRequestId (entityId).
+  // Loaded on demand when the auditor opens a bookingRequest entity panel.
+  const [bookingRequestDetailCache, setBookingRequestDetailCache] = useState<Record<string, BookingRequestDetailState>>({});
   // Actor detail panel: opened by clicking the "Who" cell.
   const [actorPanel, setActorPanel] = useState<{ actorHash: string; actorType: string; details: ActorDetails | undefined } | null>(null);
   // Entity detail panel: opened by clicking the "Entity ID" cell.
@@ -158,6 +172,27 @@ export function AuditorWorkspacePage() {
     });
   }
 
+  // Load booking request detail for a bookingRequest entity on demand.
+  // Cached per bookingRequestId; subsequent calls for the same ID are no-ops.
+  function loadBookingRequestDetail(bookingRequestId: string) {
+    const cached = bookingRequestDetailCache[bookingRequestId];
+    if (cached?.kind === 'ok' || cached?.kind === 'loading') return;
+    setBookingRequestDetailCache(prev => ({ ...prev, [bookingRequestId]: { kind: 'loading' } }));
+    void fetchBookingRequestDetail({ apiBaseUrl, bearerToken }, bookingRequestId).then(res => {
+      if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (res.kind === 'error' && res.status === 404) {
+        setBookingRequestDetailCache(prev => ({ ...prev, [bookingRequestId]: { kind: 'notFound' } }));
+      } else if (res.kind === 'ok') {
+        setBookingRequestDetailCache(prev => ({ ...prev, [bookingRequestId]: { kind: 'ok', data: res.data } }));
+      } else {
+        setBookingRequestDetailCache(prev => ({
+          ...prev,
+          [bookingRequestId]: { kind: 'error', message: res.message },
+        }));
+      }
+    });
+  }
+
   // Resolve actor refs → userIds → display names after the table loads.
   // Audit records never carry the raw userId (pseudonymisation is the whole
   // point), so the auditor sees "Name · A3F1B2" instead of an opaque hash.
@@ -211,6 +246,9 @@ export function AuditorWorkspacePage() {
     setEntityPanel(record);
     if (record.entityType === 'drawAttempt' && record.entityId) {
       loadDrawProgress(record.entityId);
+    }
+    if (record.entityType === 'bookingRequest' && record.entityId) {
+      loadBookingRequestDetail(record.entityId);
     }
   }
 
@@ -480,11 +518,14 @@ export function AuditorWorkspacePage() {
       {entityPanel && (() => {
         const entityId = entityPanel.entityId;
         const isDrawAttemptWithId = entityPanel.entityType === 'drawAttempt' && entityId !== null;
+        const isBookingRequestWithId = entityPanel.entityType === 'bookingRequest' && entityId !== null;
         return (
           <EntityDetailPanel
             record={entityPanel}
             drawProgress={isDrawAttemptWithId ? drawProgressCache[entityId as string] : undefined}
             onLoadDrawProgress={isDrawAttemptWithId ? () => loadDrawProgress(entityId as string) : undefined}
+            bookingRequestDetail={isBookingRequestWithId ? bookingRequestDetailCache[entityId as string] : undefined}
+            onLoadBookingRequestDetail={isBookingRequestWithId ? () => loadBookingRequestDetail(entityId as string) : undefined}
             onClose={() => setEntityPanel(null)}
           />
         );
@@ -670,20 +711,24 @@ function EntityDetailPanel({
   record,
   drawProgress,
   onLoadDrawProgress,
+  bookingRequestDetail,
+  onLoadBookingRequestDetail,
   onClose,
 }: {
   record: AuditRecord;
   drawProgress?: ProgressState;
   onLoadDrawProgress?: () => void;
+  bookingRequestDetail?: BookingRequestDetailState;
+  onLoadBookingRequestDetail?: () => void;
   onClose: () => void;
 }): React.ReactElement {
   const entityTypeName = humanizeEntityType(record.entityType);
   const isDrawAttempt = record.entityType === 'drawAttempt';
   const isBookingRequest = record.entityType === 'bookingRequest';
-  const hasDetailView = isDrawAttempt;
+  const hasDetailView = isDrawAttempt || isBookingRequest;
   return (
     <div style={panelOverlay} onClick={onClose}>
-      <div style={isDrawAttempt ? panelBoxLg : panelBoxSm} onClick={(e) => e.stopPropagation()}>
+      <div style={(isDrawAttempt || isBookingRequest) ? panelBoxLg : panelBoxSm} onClick={(e) => e.stopPropagation()}>
         <div style={panelHeader}>
           <span style={{ fontWeight: 600, fontSize: 14 }}>{entityTypeName} Detail</span>
           <button type="button" onClick={onClose} style={panelCloseBtn} aria-label="Close entity detail">✕</button>
@@ -724,24 +769,153 @@ function EntityDetailPanel({
             </div>
           )}
 
+          {isBookingRequest && record.entityId && (
+            <div>
+              <div style={detailLabel}>Booking Request Details</div>
+              <div style={{ marginTop: 8 }}>
+                <BookingRequestDetailPanel
+                  detail={bookingRequestDetail}
+                  bookingRequestId={record.entityId}
+                  onLoad={onLoadBookingRequestDetail}
+                />
+              </div>
+            </div>
+          )}
+
           {!hasDetailView && (
             <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
               <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 13 }}>No detail view available yet</p>
-              {isBookingRequest ? (
-                <p style={{ ...muted, margin: 0, fontSize: 12 }}>
-                  A dedicated auditor booking-request endpoint is needed to show request details here.
-                  The entity ID above is available for investigation and cross-referencing.
-                </p>
-              ) : (
-                <p style={{ ...muted, margin: 0, fontSize: 12 }}>
-                  No detail view is available for <strong>{entityTypeName}</strong> entities.
-                  The entity type and ID above are available for investigation.
-                </p>
-              )}
+              <p style={{ ...muted, margin: 0, fontSize: 12 }}>
+                No detail view is available for <strong>{entityTypeName}</strong> entities.
+                The entity type and ID above are available for investigation.
+              </p>
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// AUD008: Auditor-safe booking request detail panel.
+// Shows business-context fields from the DataHub BookingOutcome projection.
+// Auto-loads on first open; shows a load button when detail is undefined.
+function BookingRequestDetailPanel({
+  detail,
+  bookingRequestId,
+  onLoad,
+}: {
+  detail?: BookingRequestDetailState;
+  bookingRequestId: string;
+  onLoad?: () => void;
+}): React.ReactElement {
+  if (!detail) {
+    return (
+      <button
+        type="button"
+        onClick={onLoad}
+        style={{ fontSize: 12, padding: '3px 10px', borderRadius: 4, border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer' }}
+      >
+        View request details
+      </button>
+    );
+  }
+  if (detail.kind === 'loading') {
+    return <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.85rem' }}>Loading request details…</p>;
+  }
+  if (detail.kind === 'notFound') {
+    return (
+      <div style={{ padding: '8px 10px', background: '#fefce8', borderRadius: 5, border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>
+        No DataHub projection found for this booking request yet. The projection updates asynchronously — if this is a recent request, wait a moment and reopen the panel.
+      </div>
+    );
+  }
+  if (detail.kind === 'error') {
+    return <p style={{ margin: 0, color: 'var(--danger)', fontSize: '0.85rem' }}>{detail.message}</p>;
+  }
+
+  const { data } = detail;
+
+  const statusColors: Record<string, { bg: string; color: string; border: string }> = {
+    Allocated: { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+    Rejected: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
+    Cancelled: { bg: '#f9fafb', color: '#374151', border: '#e5e7eb' },
+    Submitted: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    Used: { bg: '#f0fdf4', color: '#14532d', border: '#86efac' },
+    NoShow: { bg: '#fff7ed', color: '#9a3412', border: '#fed7aa' },
+    Waitlisted: { bg: '#fefce8', color: '#854d0e', border: '#fde68a' },
+    Expired: { bg: '#f9fafb', color: '#6b7280', border: '#e5e7eb' },
+  };
+  const statusStyle = statusColors[data.status] ?? statusColors.Submitted;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Status badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <span style={{
+          display: 'inline-block',
+          padding: '2px 10px',
+          borderRadius: 12,
+          fontSize: 12,
+          fontWeight: 600,
+          background: statusStyle.bg,
+          color: statusStyle.color,
+          border: `1px solid ${statusStyle.border}`,
+        }}>
+          {data.status}
+        </span>
+      </div>
+
+      {/* Core facts grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
+        <RequestFact label="Location / Facility" value={displayLocation(data.locationId) ?? data.locationId} />
+        <RequestFact label="Date" value={displayDate(data.date)} />
+        <RequestFact label="Time Slot" value={data.timeSlot} />
+        {data.slotId && (
+          <RequestFact label="Assigned Space" value={displaySlot(data.slotId) ?? data.slotId} />
+        )}
+        {data.allocationSource && (
+          <RequestFact label="Allocation Source" value={data.allocationSource} />
+        )}
+      </div>
+
+      {/* Rejection / allocation reason */}
+      {(data.reasonCode || data.safeReasonText) && (
+        <div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Reason</div>
+          <div style={{ fontSize: '0.85rem', color: '#374151' }}>
+            {humanizeHrRejection(data.reasonCode, data.safeReasonText)}
+          </div>
+        </div>
+      )}
+
+      {/* Lifecycle timestamps */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
+        {data.submittedAt && <RequestFact label="Submitted" value={displayDateTime(data.submittedAt)} />}
+        {data.decidedAt && <RequestFact label="Decided" value={displayDateTime(data.decidedAt)} />}
+      </div>
+
+      {/* Draw link if available */}
+      {data.drawAttemptId && (
+        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+          Draw: <span style={{ fontFamily: 'monospace' }}>{data.drawAttemptId}</span>
+        </div>
+      )}
+
+      {/* Support footer */}
+      <div style={{ fontSize: '0.7rem', color: '#94a3b8', borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem' }}>
+        Request ID: <span style={{ fontFamily: 'monospace' }}>{bookingRequestId}</span>
+        {' · '}Projected: {displayDateTime(data.lastProjectedAt)}
+      </div>
+    </div>
+  );
+}
+
+function RequestFact({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <div>
+      <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>{value}</div>
     </div>
   );
 }

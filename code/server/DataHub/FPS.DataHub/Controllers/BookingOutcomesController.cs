@@ -80,6 +80,51 @@ public sealed class BookingOutcomesController(
     }
 
     /// <summary>
+    /// AUD008: Get auditor-safe booking-request detail by booking request ID.
+    /// Returns business-safe fields scoped to the authenticated tenant.
+    /// Does not expose raw actor hashes, secrets, tokens, stack traces, algorithm seeds,
+    /// candidate ordering, or scoring weights.
+    /// Requires auditor or admin role.
+    /// </summary>
+    [HttpGet("/datahub/booking-requests/{bookingRequestId}/detail")]
+    [Authorize(Roles = "auditor,admin")]
+    public async Task<IActionResult> GetBookingRequestDetail(
+        string bookingRequestId,
+        CancellationToken ct = default)
+    {
+        var tenantId = currentUser.TenantId;
+        if (string.IsNullOrEmpty(tenantId))
+            return Unauthorized();
+
+        var outcome = await db.BookingOutcomes.FirstOrDefaultAsync(
+            b => b.TenantId == tenantId && b.BookingRequestId == bookingRequestId, ct);
+
+        if (outcome is null)
+            return NotFound(new { Message = "Booking request not found or does not belong to this tenant." });
+
+        return Ok(new AuditorBookingRequestDetailResponse
+        {
+            BookingRequestId = outcome.BookingRequestId,
+            LocationId = outcome.LocationId,
+            Date = outcome.Date,
+            TimeSlot = outcome.TimeSlot,
+            Status = outcome.FinalStatus,
+            ReasonCode = outcome.ReasonCode,
+            SafeReasonText = outcome.SafeReasonText,
+            AllocationSource = outcome.AllocationSource,
+            SlotId = outcome.SlotId,
+            DrawAttemptId = outcome.DrawAttemptId,
+            SubmittedAt = outcome.SubmittedAt.HasValue
+                ? new DateTimeOffset(DateTime.SpecifyKind(outcome.SubmittedAt.Value, DateTimeKind.Utc))
+                : null,
+            DecidedAt = outcome.DecidedAt.HasValue
+                ? new DateTimeOffset(DateTime.SpecifyKind(outcome.DecidedAt.Value, DateTimeKind.Utc))
+                : null,
+            LastProjectedAt = outcome.LastUpdatedAt,
+        });
+    }
+
+    /// <summary>
     /// Get booking outcomes for a specific Draw (HR/admin only).
     /// Shows safe per-request outcomes without exposing lottery internals.
     /// </summary>
@@ -177,4 +222,31 @@ public class BookingOutcomeDto
 public sealed class BookingOutcomeWithRequestorDto : BookingOutcomeDto
 {
     public string RequestorId { get; set; } = "";
+}
+
+/// <summary>
+/// AUD008: Auditor-safe booking-request detail read model.
+/// Contains only business-visible fields. No raw actor hashes, secrets,
+/// algorithm seeds, candidate ordering, or scoring weights.
+/// </summary>
+public sealed class AuditorBookingRequestDetailResponse
+{
+    public string BookingRequestId { get; set; } = "";
+    public string LocationId { get; set; } = "";
+    public DateOnly Date { get; set; }
+    public string TimeSlot { get; set; } = "";
+    /// <summary>Current lifecycle status: Submitted, Allocated, Rejected, Cancelled, Used, NoShow, Expired, Waitlisted</summary>
+    public string Status { get; set; } = "";
+    public string? ReasonCode { get; set; }
+    public string? SafeReasonText { get; set; }
+    /// <summary>Allocation source when allocated: draw, sameDay, reallocation, manualCorrection</summary>
+    public string? AllocationSource { get; set; }
+    /// <summary>Allocated slot reference when request is allocated</summary>
+    public string? SlotId { get; set; }
+    /// <summary>Draw attempt ID when the request was decided via a Draw</summary>
+    public string? DrawAttemptId { get; set; }
+    public DateTimeOffset? SubmittedAt { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    /// <summary>When DataHub last updated this projection row</summary>
+    public DateTimeOffset LastProjectedAt { get; set; }
 }

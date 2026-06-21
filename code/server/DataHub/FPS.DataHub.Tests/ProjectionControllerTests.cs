@@ -327,6 +327,109 @@ public sealed class ProjectionControllerTests : IDisposable
         Assert.Contains("Draw failed due to an internal error", json);
     }
 
+    // ── AUD008: Booking request detail endpoint ───────────────────────────────
+
+    [Fact]
+    public async Task GetBookingRequestDetail_ReturnsDetail_WhenFound()
+    {
+        await SeedOutcome("req-detail-1", "tenant-a", "alice");
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "alice"));
+        var result = await ctrl.GetBookingRequestDetail("req-detail-1", ct: default) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("req-detail-1", json);
+        Assert.Contains("loc-1", json);
+    }
+
+    [Fact]
+    public async Task GetBookingRequestDetail_CrossTenant_ReturnsNotFound()
+    {
+        await SeedOutcome("req-cross-1", "tenant-b", "alice");
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "alice"));
+        var result = await ctrl.GetBookingRequestDetail("req-cross-1", ct: default);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetBookingRequestDetail_UnknownId_ReturnsNotFound()
+    {
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "alice"));
+        var result = await ctrl.GetBookingRequestDetail("no-such-req", ct: default);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetBookingRequestDetail_ProjectsSafeFields_Allocated()
+    {
+        // Seed an allocated outcome with all optional fields
+        _db.BookingOutcomes.Add(new BookingOutcomeProjection
+        {
+            BookingRequestId = "req-alloc-aud",
+            TenantId = "tenant-a",
+            RequestorId = "emp-secret-hash",
+            LocationId = "loc-hq",
+            Date = new DateOnly(2026, 6, 20),
+            TimeSlot = "08:00-17:00",
+            FinalStatus = "Allocated",
+            AllocationSource = "draw",
+            SlotId = "Prague-A10",
+            AllocationId = "alloc-internal",
+            DrawAttemptId = "draw:tenant-a:loc-hq:2026-06-20:0800-1700",
+            SubmittedAt = DateTime.UtcNow.AddHours(-2),
+            DecidedAt = DateTime.UtcNow.AddHours(-1),
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "auditor-user"));
+        var result = await ctrl.GetBookingRequestDetail("req-alloc-aud", ct: default) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("\"BookingRequestId\":\"req-alloc-aud\"", json);
+        Assert.Contains("\"Status\":\"Allocated\"", json);
+        Assert.Contains("\"SlotId\":\"Prague-A10\"", json);
+        Assert.Contains("\"AllocationSource\":\"draw\"", json);
+        Assert.Contains("draw:tenant-a:loc-hq:2026-06-20:0800-1700", json);
+        // AllocationId (internal) must not be exposed
+        Assert.DoesNotContain("alloc-internal", json);
+        // Raw requestor hash must not be exposed
+        Assert.DoesNotContain("emp-secret-hash", json);
+    }
+
+    [Fact]
+    public async Task GetBookingRequestDetail_ProjectsSafeFields_Rejected()
+    {
+        _db.BookingOutcomes.Add(new BookingOutcomeProjection
+        {
+            BookingRequestId = "req-rej-aud",
+            TenantId = "tenant-a",
+            RequestorId = "emp-hash-xyz",
+            LocationId = "loc-hq",
+            Date = new DateOnly(2026, 6, 21),
+            TimeSlot = "08:00-17:00",
+            FinalStatus = "Rejected",
+            ReasonCode = "InsufficientCapacity",
+            SafeReasonText = "All slots were allocated to other requests",
+        });
+        await _db.SaveChangesAsync();
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "auditor-user"));
+        var result = await ctrl.GetBookingRequestDetail("req-rej-aud", ct: default) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("\"Status\":\"Rejected\"", json);
+        Assert.Contains("\"ReasonCode\":\"InsufficientCapacity\"", json);
+        Assert.Contains("All slots were allocated to other requests", json);
+        // Raw requestor hash not exposed
+        Assert.DoesNotContain("emp-hash-xyz", json);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private async Task SeedOutcome(string requestId, string tenantId, string requestorId)
