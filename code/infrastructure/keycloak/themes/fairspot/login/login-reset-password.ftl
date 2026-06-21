@@ -1,6 +1,6 @@
 <#-- FairSpot: forgot-password / reset-password page -->
 <!DOCTYPE html>
-<html lang="${locale}">
+<html lang="${locale.currentLanguageTag!'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
