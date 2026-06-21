@@ -356,6 +356,12 @@ jobs:
               --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
               && echo "::notice::Issue #$ISSUE_NUM Owner -> ${IMPLEMENTER_NAME:-None}" \
               || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+
+            if [ "$IMPLEMENTER_NAME" = "Claude" ]; then
+              gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label "needs-claude-action" \
+                && echo "::notice::PR #$PR_NUMBER labelled needs-claude-action for Claude handoff" \
+                || echo "::warning::Failed to label PR #$PR_NUMBER"
+            fi
           done
 
   pr-comment-state-command:
