@@ -113,6 +113,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         SubmissionContext context;
         AvailableSlot? sameDaySlot = null;
+        bool sameDayIsFixedSlot = false;
         // For scheduled (non-same-day) company-car requests: resolved fixed slot for immediate Tier 1 allocation.
         AvailableSlot? scheduledCompanyCarSlot = null;
 
@@ -128,6 +129,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                 {
                     var fixedSlot = CompanyCarReservedSlotRules.Resolve(requestorId, vehicle, slots);
                     sameDaySlot = fixedSlot.Slot;
+                    sameDayIsFixedSlot = fixedSlot.Slot is not null;
                 }
 
                 // When no fixed slot was found (or not a company-car), fall through to normal slot lookup.
@@ -181,7 +183,10 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         {
             request.Allocate(publisher);
 
-            if (!snapshot.HasCompanyCar)
+            // Skip metrics only for genuine Tier 1 fixed-slot allocations.
+            // Company-car employees allocated through normal same-day lookup (no fixed slot found)
+            // are not Tier 1 guaranteed and must increment fairness history like other same-day wins.
+            if (!sameDayIsFixedSlot)
             {
                 await metricsService.IncrementRecentAllocationAsync(
                     cmd.TenantId, cmd.RequestorId,

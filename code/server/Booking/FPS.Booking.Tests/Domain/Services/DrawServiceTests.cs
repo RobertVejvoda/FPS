@@ -112,6 +112,43 @@ public sealed class DrawServiceTests
         Assert.Equal(DrawOutcome.Waitlisted, Decision(result, second.Id).Outcome);
     }
 
+    [Fact]
+    public void RunDraw_CompanyCar_Tier1FixedSlotAllocation_IsTier1Guaranteed()
+    {
+        var owner = UserId.New();
+        var companyCar = MakeRequest(userId: owner, isCompanyCar: true);
+        var reserved = AvailableSlot.Create(Slot("C1"), isCompanyCarReserved: true, reservedForUserId: owner.Value.ToString());
+
+        var result = Run([companyCar], slotObjects: [reserved]);
+
+        var decision = result.Decisions.Single();
+        Assert.Equal(DrawOutcome.Allocated, decision.Outcome);
+        Assert.True(decision.IsTier1Guaranteed);
+    }
+
+    [Fact]
+    public void RunDraw_CompanyCar_FallbackTier2Allocation_IsNotTier1Guaranteed()
+    {
+        // No fixed slot for this user; they enter the Tier 2 lottery and win.
+        var car = MakeRequest(isCompanyCar: true);
+        var normalSlot = AvailableSlot.Create(Slot("A1"));
+
+        var result = Run([car], slotObjects: [normalSlot]);
+
+        var decision = result.Decisions.Single();
+        Assert.Equal(DrawOutcome.Allocated, decision.Outcome);
+        Assert.False(decision.IsTier1Guaranteed);
+    }
+
+    [Fact]
+    public void RunDraw_RegularTier2Allocation_IsNotTier1Guaranteed()
+    {
+        var regular = MakeRequest();
+        var result = Run([regular], [Slot("A1")]);
+
+        Assert.False(result.Decisions.Single().IsTier1Guaranteed);
+    }
+
     // ── Tier 2: weighted lottery ──────────────────────────────────────────────
 
     [Fact]

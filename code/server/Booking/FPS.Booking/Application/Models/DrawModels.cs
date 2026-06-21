@@ -51,6 +51,13 @@ public class DrawDecisionDto
     /// and HR operational views, not just internal Draw decisions.
     /// </summary>
     public string? AllocatedSlotReference { get; set; }
+
+    /// <summary>
+    /// True when this allocation was a guaranteed Tier 1 company-car fixed-slot win.
+    /// False for all Tier 2 lottery wins, including company-car fallbacks without an assigned fixed slot.
+    /// Used by PersistDecisionsActivity to skip fairness-metric increments only for genuine Tier 1 allocations.
+    /// </summary>
+    public bool IsTier1Guaranteed { get; set; }
 }
 
 public record TriggerDrawResult(

@@ -302,6 +302,27 @@ public sealed class SubmitBookingRequestHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SameDay_CompanyCar_FallbackNormalAllocation_IncrementsMetrics()
+    {
+        // Company-car employee without a fixed slot gets a normal slot via fallback.
+        // This is not a Tier 1 guaranteed allocation, so RecentAllocationCount must increment.
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var cmd = SameDayCommand(isCompanyCar: true);
+        var normalSlot = AvailableSlot.Create(FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("A1"));
+        slotService.Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { normalSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        metricsService.Verify(m => m.IncrementRecentAllocationAsync(
+            cmd.TenantId, cmd.RequestorId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_SameDay_Rejected_DoesNotIncrementMetrics()
     {
         var result = await handler.Handle(SameDayCommand(), CancellationToken.None);

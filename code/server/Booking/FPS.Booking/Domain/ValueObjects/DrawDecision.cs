@@ -8,17 +8,25 @@ public sealed class DrawDecision : ValueObject
     public ParkingSlotId? SlotId { get; }
     public string? Reason { get; }
 
-    private DrawDecision(BookingRequestId requestId, UserId requestorId, DrawOutcome outcome, ParkingSlotId? slotId, string? reason)
+    // True only for company-car requests whose HR-assigned fixed slot was found and consumed in Tier 1.
+    // False for all Tier 2 lottery wins, including company-car fallbacks without an assigned fixed slot.
+    public bool IsTier1Guaranteed { get; }
+
+    private DrawDecision(BookingRequestId requestId, UserId requestorId, DrawOutcome outcome, ParkingSlotId? slotId, string? reason, bool isTier1Guaranteed = false)
     {
         RequestId = requestId;
         RequestorId = requestorId;
         Outcome = outcome;
         SlotId = slotId;
         Reason = reason;
+        IsTier1Guaranteed = isTier1Guaranteed;
     }
 
     public static DrawDecision Allocated(BookingRequestId requestId, UserId requestorId, ParkingSlotId slotId)
         => new(requestId, requestorId, DrawOutcome.Allocated, slotId, null);
+
+    public static DrawDecision AllocatedTier1Guaranteed(BookingRequestId requestId, UserId requestorId, ParkingSlotId slotId)
+        => new(requestId, requestorId, DrawOutcome.Allocated, slotId, null, isTier1Guaranteed: true);
 
     public static DrawDecision Rejected(BookingRequestId requestId, UserId requestorId, string reason)
         => new(requestId, requestorId, DrawOutcome.Rejected, null, reason);
@@ -31,5 +39,6 @@ public sealed class DrawDecision : ValueObject
         yield return RequestId;
         yield return Outcome;
         yield return SlotId ?? (object)"null";
+        yield return IsTier1Guaranteed;
     }
 }

@@ -35,7 +35,7 @@ public sealed class DrawService
 
             if (fixedSlotResult.Slot is not null)
             {
-                decisions.Add(DrawDecision.Allocated(request.Id, request.RequestorId, fixedSlotResult.Slot.SlotId));
+                decisions.Add(DrawDecision.AllocatedTier1Guaranteed(request.Id, request.RequestorId, fixedSlotResult.Slot.SlotId));
                 remainingSlots.RemoveAll(s => s.SlotId == fixedSlotResult.Slot.SlotId);
             }
             else

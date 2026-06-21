@@ -68,10 +68,10 @@ public sealed class RunAllocationActivity(
             Outcome = d.Outcome.ToString(),
             SlotId = d.SlotId?.Value,
             Reason = d.Reason,
-            // Populate allocated slot reference for HR/employee views
             AllocatedSlotReference = d.Outcome == DrawOutcome.Allocated && d.SlotId != null
                 ? $"Slot-{d.SlotId.Value}"
                 : null,
+            IsTier1Guaranteed = d.IsTier1Guaranteed,
         }).ToList();
 
         var tier2 = drawResult.Tier2CandidateSequence.Select(id => id.Value.ToString()).ToList();

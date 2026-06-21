@@ -24,7 +24,6 @@ public sealed class PersistDecisionsActivity(
         WorkflowActivityContext context, PersistDecisionsInput input)
     {
         var date = DateOnly.Parse(input.Date);
-        var requestVehicleMap = input.PendingRequests.ToDictionary(p => p.RequestId, p => p.VehicleIsCompanyCar);
 
         foreach (var decision in input.Decisions)
         {
@@ -45,7 +44,10 @@ public sealed class PersistDecisionsActivity(
                     await bookingRepository.UpdateBookingRequestStatusAsync(
                         input.TenantId, requestGuid, "Allocated",
                         allocatedSlotId: decision.SlotId);
-                    if (!requestVehicleMap.TryGetValue(requestGuid, out var isCompanyCar) || !isCompanyCar)
+                    // Skip fairness metrics only for genuine Tier 1 guaranteed allocations.
+                    // Company-car fallbacks that win through the normal Tier 2 lottery must
+                    // increment RecentAllocationCount like any other Tier 2 winner.
+                    if (!decision.IsTier1Guaranteed)
                     {
                         await metricsService.IncrementRecentAllocationAsync(
                             input.TenantId, decision.RequestorId, date);
