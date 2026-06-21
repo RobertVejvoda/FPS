@@ -154,13 +154,14 @@ Rules:
 
 Default company-car policy:
 
-- company-car requests use Tier 1 allocation;
+- company-car requests use Tier 1 allocation only when the requestor has an HR/facilities-assigned compatible fixed company-car slot;
 - Tier 1 allocation happens before Tier 2 lottery;
 - Tier 1 allocations do not affect `RecentAllocationCount`;
 - Tier 1 allocations do not create penalties;
-- company-car overflow is rejected for now.
+- company-car entitlements may exceed fixed company-car slots, but that must be visible as a configuration warning because the guarantee cannot be honored for every company car;
+- company-car employees without an active compatible fixed slot remain eligible for normal allocation when policy allows it, but their parking is not guaranteed.
 
-The default overflow rejection reason should indicate configuration drift: company-car demand exceeded matching capacity.
+The default warning should indicate configuration pressure: company-car entitlements exceed active compatible fixed company-car capacity.
 
 ## Penalty Policy
 

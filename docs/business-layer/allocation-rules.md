@@ -52,7 +52,7 @@ The Draw applies rules in this order:
 3. Resolve the active resource map, zones, resource capabilities, and reserved-space constraints.
 4. Resolve preferred zone and team default zone preferences for each eligible request.
 5. Allocate Tier 1 company-car requests to their HR-assigned fixed spaces.
-6. Reject Tier 1 configuration drift when the assigned fixed space is missing, inactive, already consumed, or incompatible.
+6. Classify company-car requests without an active compatible assigned fixed space as not guaranteed, then keep them eligible for normal allocation when policy allows it.
 7. Allocate remaining eligible requests through Tier 2 weighted lottery.
 8. Assign each winner to the best compatible resource using zone preference and fallback rules.
 9. Persist allocations, rejections, and pending waitlist outcomes.
@@ -61,7 +61,7 @@ The Draw applies rules in this order:
 
 ## Tier 1 Company-Car Allocation
 
-Company-car requests are allocated before the Tier 2 lottery, but they are not lottery winners. A company car is a customer obligation controlled by HR/facilities. When the employee has a company-car entitlement and an assigned fixed compatible slot, an on-time request for that company car should be allocated to that assigned slot without entering the fairness Draw.
+Company-car fixed-slot requests are allocated before the Tier 2 lottery, but they are not lottery winners. A company car is a customer obligation controlled by HR/facilities. When the employee has a company-car entitlement and an assigned fixed compatible slot, an on-time request for that company car should be allocated to that assigned slot without entering the fairness Draw.
 
 Rules:
 
@@ -71,11 +71,12 @@ Rules:
 - Tier 1 requests do not participate in the weighted lottery.
 - Tier 1 allocations do not increment `RecentAllocationCount`.
 - Tier 1 requestors do not receive penalties for company-car allocations.
-- If the assigned fixed slot is missing, inactive, already consumed for the same time slot, or incompatible with vehicle requirements such as EV charging or accessibility, FairSpot rejects the request with a business-readable HR reason.
-- Tier 1 configuration drift is determined before Tier 2 starts.
-- Rejected Tier 1 requests become `Rejected`, not `Pending`, because the condition is treated as tenant configuration drift rather than normal scarce-capacity lottery loss.
+- If the assigned fixed slot is missing, inactive, already consumed for the same time slot, or incompatible with vehicle requirements such as EV charging or accessibility, FairSpot must not present the request as guaranteed.
+- Company-car employees without an active compatible fixed slot remain eligible for normal allocation when policy allows it, but they are not Tier 1 guaranteed.
+- Configuration should warn when company-car entitlements exceed active compatible fixed company-car slots, because the tenant has more company cars than guaranteed capacity.
+- Tier 1 eligibility and any capacity warning are determined before Tier 2 starts.
 
-Tier 1 rejection is expected to indicate tenant configuration drift, not normal business demand. The rejection reason must make that visible to HR.
+Company-car capacity warnings indicate tenant configuration pressure, not employee error. The warning must be visible to HR/facilities and tenant administrators before they rely on the guarantee.
 
 ## Tier 2 Weighted Lottery
 

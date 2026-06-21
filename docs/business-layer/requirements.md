@@ -45,7 +45,9 @@ Employees must be able to submit parking requests through FairSpot instead of em
 
 FairSpot must allocate limited parking capacity using transparent and configurable fairness rules. The process must avoid persistent favoritism and should improve the chance of allocation for employees who have received fewer recent spaces.
 
-Company-car allocation is not part of the employee fairness lottery. When HR has assigned an employee a company car and a compatible fixed company-car parking space, an on-time request for that company car should be allocated to that fixed space before any fairness Draw runs for the remaining capacity. If the assigned fixed space is missing, inactive, already consumed for the same time slot, or incompatible with the vehicle requirement, the request is rejected with a business-readable HR reason because that indicates configuration drift, not normal lottery loss.
+Company-car allocation is not part of the employee fairness lottery when HR/facilities has assigned both a company-car entitlement and a compatible fixed company-car parking space to the employee. In that case, an on-time request for that company car should be allocated to the fixed space before any fairness Draw runs for the remaining capacity.
+
+Customers may have more company-car entitlements than fixed company-car spaces, but FairSpot must make that visible as a capacity warning because the fixed-space guarantee cannot be honored for every company car. Only employees with an active compatible HR-assigned fixed space receive the Tier 1 guarantee. Company-car employees without such an assignment remain eligible for normal allocation, but the UI and configuration views must not imply that their parking is guaranteed.
 
 ### BR003: Configurable Parking Policies
 
@@ -89,7 +91,7 @@ FairSpot must provide reports for HR, facility managers, and leadership. Reports
 
 FairSpot must separate employee, manager, administrator, support, audit, and finance responsibilities. Users should only access the actions and data required for their role.
 
-Employees may maintain normal vehicle facts where tenant policy allows it, but they must not be able to mark themselves as company-car users, assign a company-car entitlement, assign an accessibility entitlement, or reserve a fixed slot for themselves. Company-car entitlement and fixed-slot assignment are HR/facilities-controlled facts and must be visible as read-only facts to employees.
+Employees may maintain normal vehicle facts where tenant policy allows it, but they must not be able to mark themselves as company-car users, assign a company-car entitlement, assign an accessibility entitlement, or reserve a fixed slot for themselves. Company-car entitlement, company vehicle assignment, and fixed-slot assignment are HR/facilities-controlled facts and must be visible as read-only facts to employees.
 
 ### BR010: Auditability and Compliance
 
