@@ -199,11 +199,12 @@ public sealed class HrProfileControllerTests
 
         var rowA = payload.Locations.Single(r => r.LocationId == "loc-a");
         Assert.Equal(2, rowA.CompanyCarEmployeeCount);
-        Assert.Equal(new[] { "u-a1", "u-a2" }.OrderBy(x => x), rowA.CompanyCarUserIds.OrderBy(x => x));
+        Assert.Equal(new[] { "u-a1", "u-a2" }.OrderBy(x => x),
+            rowA.CompanyCarUsers.Select(u => u.UserId).OrderBy(x => x));
 
         var rowB = payload.Locations.Single(r => r.LocationId == "loc-b");
         Assert.Equal(1, rowB.CompanyCarEmployeeCount);
-        Assert.Equal(new[] { "u-b1" }, rowB.CompanyCarUserIds);
+        Assert.Equal(new[] { "u-b1" }, rowB.CompanyCarUsers.Select(u => u.UserId).ToArray());
     }
 
     [Fact]
@@ -223,7 +224,7 @@ public sealed class HrProfileControllerTests
 
         var row = Assert.Single(payload.Locations);
         Assert.Equal(1, row.CompanyCarEmployeeCount);
-        Assert.Equal(new[] { "u-1" }, row.CompanyCarUserIds);
+        Assert.Equal(new[] { "u-1" }, row.CompanyCarUsers.Select(u => u.UserId).ToArray());
     }
 
     [Fact]
@@ -242,7 +243,7 @@ public sealed class HrProfileControllerTests
 
         var row = Assert.Single(payload.Locations);
         Assert.Equal(1, row.CompanyCarEmployeeCount);
-        Assert.Equal(new[] { "u-cc" }, row.CompanyCarUserIds);
+        Assert.Equal(new[] { "u-cc" }, row.CompanyCarUsers.Select(u => u.UserId).ToArray());
     }
 
     [Fact]
@@ -262,7 +263,96 @@ public sealed class HrProfileControllerTests
         Assert.Equal(2, payload.Locations.Count);
         var unassigned = payload.Locations.Single(r => r.LocationId == string.Empty);
         Assert.Equal(1, unassigned.CompanyCarEmployeeCount);
-        Assert.Equal(new[] { "u-1" }, unassigned.CompanyCarUserIds);
+        Assert.Equal(new[] { "u-1" }, unassigned.CompanyCarUsers.Select(u => u.UserId).ToArray());
+    }
+
+    [Fact]
+    public async Task GetCompanyCarLocationSummary_AllElectricVehicles_RequiresChargerForEveryRequest()
+    {
+        // Issue #533 follow-up: the warning must know which employees need
+        // a charger on EVERY request so a non-charger reserved slot does not
+        // count as a guarantee. Mirrors AvailableSlot.CanAccommodate.
+        repository.Setup(r => r.ListByTenantAsync("tenant-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserProfile>
+            {
+                BuildCompanyCarProfile("u-ev", homeLocationId: "loc-a", vehicles:
+                [
+                    new Vehicle("v1", "EV-1", "Sedan", IsElectric: true, IsActive: true),
+                    new Vehicle("v2", "EV-2", "Sedan", IsElectric: true, IsActive: true),
+                ]),
+            });
+
+        var ok = Assert.IsType<OkObjectResult>(
+            await controller.GetCompanyCarLocationSummary(CancellationToken.None));
+        var payload = Assert.IsType<CompanyCarLocationSummaryResponse>(ok.Value);
+
+        var user = Assert.Single(payload.Locations).CompanyCarUsers.Single();
+        Assert.Equal("u-ev", user.UserId);
+        Assert.True(user.RequiresChargerForEveryRequest);
+        Assert.False(user.RequiresAccessibleSpot);
+    }
+
+    [Fact]
+    public async Task GetCompanyCarLocationSummary_MixedFleet_DoesNotRequireChargerForEveryRequest()
+    {
+        // Any ICE option lets the employee request without the charger
+        // constraint, so requiresChargerForEveryRequest must be false.
+        repository.Setup(r => r.ListByTenantAsync("tenant-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserProfile>
+            {
+                BuildCompanyCarProfile("u-mix", homeLocationId: "loc-a", vehicles:
+                [
+                    new Vehicle("v1", "ICE-1", "Sedan", IsElectric: false, IsActive: true),
+                    new Vehicle("v2", "EV-1", "Sedan", IsElectric: true, IsActive: true),
+                ]),
+            });
+
+        var ok = Assert.IsType<OkObjectResult>(
+            await controller.GetCompanyCarLocationSummary(CancellationToken.None));
+        var payload = Assert.IsType<CompanyCarLocationSummaryResponse>(ok.Value);
+
+        var user = Assert.Single(payload.Locations).CompanyCarUsers.Single();
+        Assert.False(user.RequiresChargerForEveryRequest);
+    }
+
+    [Fact]
+    public async Task GetCompanyCarLocationSummary_NoActiveVehicles_DoesNotRequireCharger()
+    {
+        // Without active vehicles the employee has no fixed EV constraint —
+        // license-plate is chosen at request time. Treat as non-EV-only.
+        repository.Setup(r => r.ListByTenantAsync("tenant-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserProfile>
+            {
+                BuildCompanyCarProfile("u-none", homeLocationId: "loc-a", vehicles:
+                [
+                    new Vehicle("v1", "OLD-EV", "Sedan", IsElectric: true, IsActive: false),
+                ]),
+            });
+
+        var ok = Assert.IsType<OkObjectResult>(
+            await controller.GetCompanyCarLocationSummary(CancellationToken.None));
+        var payload = Assert.IsType<CompanyCarLocationSummaryResponse>(ok.Value);
+
+        var user = Assert.Single(payload.Locations).CompanyCarUsers.Single();
+        Assert.False(user.RequiresChargerForEveryRequest);
+    }
+
+    [Fact]
+    public async Task GetCompanyCarLocationSummary_AccessibilityEligible_FlagsRequiresAccessibleSpot()
+    {
+        repository.Setup(r => r.ListByTenantAsync("tenant-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserProfile>
+            {
+                BuildCompanyCarProfile(
+                    "u-acc", homeLocationId: "loc-a", accessibilityEligible: true),
+            });
+
+        var ok = Assert.IsType<OkObjectResult>(
+            await controller.GetCompanyCarLocationSummary(CancellationToken.None));
+        var payload = Assert.IsType<CompanyCarLocationSummaryResponse>(ok.Value);
+
+        var user = Assert.Single(payload.Locations).CompanyCarUsers.Single();
+        Assert.True(user.RequiresAccessibleSpot);
     }
 
     [Fact]
@@ -315,7 +405,9 @@ public sealed class HrProfileControllerTests
         string userId,
         string? homeLocationId,
         bool hasCompanyCar = true,
-        ProfileStatus status = ProfileStatus.Active)
+        ProfileStatus status = ProfileStatus.Active,
+        bool accessibilityEligible = false,
+        IReadOnlyList<Vehicle>? vehicles = null)
         => new()
         {
             TenantId = "tenant-1",
@@ -323,7 +415,9 @@ public sealed class HrProfileControllerTests
             Status = status,
             ParkingEligible = true,
             HasCompanyCar = hasCompanyCar,
+            AccessibilityEligible = accessibilityEligible,
             HomeLocationId = homeLocationId,
+            Vehicles = vehicles ?? [],
             SnapshotVersion = "v1",
             FactSource = "admin-seed",
             UpdatedAt = DateTimeOffset.UtcNow,

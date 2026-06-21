@@ -143,11 +143,20 @@ export async function updateRequestorEligibility(
 
 // Issue #533: per-location company-car employee counts used by the
 // Configuration page to compute the company-car fixed-slot capacity warning
-// against the existing slot list. HR/admin only on the server.
+// against the existing slot list. HR/admin only on the server. Each user
+// row carries the vehicle/accessibility traits the warning needs to mirror
+// AvailableSlot.CanAccommodate (charger required when every active vehicle
+// is electric; accessible required when accessibility-eligible).
+export interface CompanyCarUserRow {
+  userId: string;
+  requiresChargerForEveryRequest: boolean;
+  requiresAccessibleSpot: boolean;
+}
+
 export interface CompanyCarLocationRow {
   locationId: string;
   companyCarEmployeeCount: number;
-  companyCarUserIds: string[];
+  companyCarUsers: CompanyCarUserRow[];
 }
 
 export interface CompanyCarLocationSummary {

@@ -1,4 +1,5 @@
 using FPS.Profile.Application;
+using FPS.Profile.Domain;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -199,17 +200,49 @@ public sealed class HrProfileController(
 
         // Group active company-car employees by HomeLocationId. The synthetic
         // null bucket surfaces as locationId="" so HR can still see the count.
+        // Each employee is projected with the vehicle/accessibility traits the
+        // Configuration warning needs to mirror AvailableSlot.CanAccommodate:
+        // requiresChargerForEveryRequest is true only when EVERY active
+        // vehicle is electric (any ICE option lets the employee request
+        // without a charger). requiresAccessibleSpot reflects the profile
+        // flag the allocator promotes to VehicleInformation at request time.
+        // User ids are deduplicated case-insensitively to match
+        // AvailableSlot.IsReservedFor semantics.
         var grouped = profiles
             .Where(p => p.HasCompanyCar && p.IsActive)
             .GroupBy(p => p.HomeLocationId ?? string.Empty, StringComparer.Ordinal)
             .Select(g => new CompanyCarLocationRow(
                 LocationId: g.Key,
-                CompanyCarEmployeeCount: g.Count(),
-                CompanyCarUserIds: g.Select(p => p.UserId).Distinct(StringComparer.Ordinal).ToList()))
+                CompanyCarEmployeeCount: g
+                    .Select(p => p.UserId)
+                    .Where(uid => !string.IsNullOrWhiteSpace(uid))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count(),
+                CompanyCarUsers: g
+                    .Where(p => !string.IsNullOrWhiteSpace(p.UserId))
+                    .GroupBy(p => p.UserId, StringComparer.OrdinalIgnoreCase)
+                    .Select(byUser => BuildCompanyCarUser(byUser.First()))
+                    .OrderBy(u => u.UserId, StringComparer.OrdinalIgnoreCase)
+                    .ToList()))
             .OrderBy(r => r.LocationId, StringComparer.Ordinal)
             .ToList();
 
         return Ok(new CompanyCarLocationSummaryResponse(grouped));
+    }
+
+    private static CompanyCarUserRow BuildCompanyCarUser(Domain.UserProfile profile)
+    {
+        var activeVehicles = profile.ActiveVehicles;
+        // "Requires a charger on EVERY request" only when the employee has at
+        // least one active vehicle AND all of them are electric. If the
+        // profile has any ICE option, the employee can request without the
+        // charger constraint, so we must not flag the slot as incompatible.
+        var requiresChargerForEveryRequest =
+            activeVehicles.Count > 0 && activeVehicles.All(v => v.IsElectric);
+        return new CompanyCarUserRow(
+            UserId: profile.UserId,
+            RequiresChargerForEveryRequest: requiresChargerForEveryRequest,
+            RequiresAccessibleSpot: profile.AccessibilityEligible);
     }
 }
 
@@ -252,10 +285,18 @@ public sealed record RequestorSummaryNotFound(string UserId, string ShortRef);
 // to detect when entitlements exceed active compatible fixed company-car
 // capacity. The Configuration UI joins this with slot data to compute the
 // warning client-side, keeping Profile and Configuration services decoupled.
+// Each user row carries the vehicle/accessibility traits the warning needs
+// to mirror AvailableSlot.CanAccommodate so the UI does not have to refetch
+// individual profiles.
 public sealed record CompanyCarLocationRow(
     string LocationId,
     int CompanyCarEmployeeCount,
-    IReadOnlyList<string> CompanyCarUserIds);
+    IReadOnlyList<CompanyCarUserRow> CompanyCarUsers);
+
+public sealed record CompanyCarUserRow(
+    string UserId,
+    bool RequiresChargerForEveryRequest,
+    bool RequiresAccessibleSpot);
 
 public sealed record CompanyCarLocationSummaryResponse(
     IReadOnlyList<CompanyCarLocationRow> Locations);

@@ -656,10 +656,13 @@ function SaveBanner({ ok, text }: { ok: boolean; text: string }) {
 // Issue #533: HR/admin warning shown when the number of company-car employees
 // assigned to this location exceeds the number of active fixed slots reserved
 // for those employees. The "guaranteed slot" definition mirrors
-// CompanyCarReservedSlotRules.Resolve in Booking (PR #529): any active slot
-// reserved for the employee that the vehicle can use is immediately allocated.
-// Motorcycle-only bays are the one compatibility gate that always rejects a
-// company-car vehicle, so they are excluded as guarantees here.
+// CompanyCarReservedSlotRules.Resolve + AvailableSlot.CanAccommodate in
+// Booking (PR #529): any active slot reserved for the employee that the
+// vehicle can use is immediately allocated. Motorcycle-only bays are
+// excluded (they always reject company cars); EV employees with no ICE
+// option require a charger; accessibility-eligible employees require an
+// accessible slot. User-id comparison is case-insensitive + trimmed to
+// match AvailableSlot.IsReservedFor.
 function CompanyCarCapacityBanner({
   locationId,
   slots,
@@ -671,18 +674,42 @@ function CompanyCarCapacityBanner({
 }) {
   if (!summary || !locationId) return null;
   const row = summary.locations.find(r => r.locationId === locationId);
-  // Distinct reserved user ids among active reserved slots that a company-car
-  // vehicle can use — the single source of "guaranteed" capacity at this
-  // location. Mirrors CompanyCarCapacityCalculator in FPS.SharedKernel.
-  const guaranteedUserIds = new Set(
-    slots
-      .filter(s => s.isActive && !s.isMotorcycleCapacity && s.reservedForUserId)
-      .map(s => s.reservedForUserId as string),
-  );
-  const employeeIds = row?.companyCarUserIds ?? [];
+  // Normalise reserved user ids the same way the backend does
+  // (AvailableSlot.NormalizeReservedForUserId + IsReservedFor): trim
+  // surrounding whitespace and compare case-insensitively. Otherwise a
+  // slot reserved for "ABC123" would not match an employee user id "abc123"
+  // even though the allocator would honor it.
+  const normaliseUserId = (uid: string | null | undefined): string | null => {
+    if (uid === null || uid === undefined) return null;
+    const trimmed = uid.trim();
+    return trimmed.length === 0 ? null : trimmed.toLowerCase();
+  };
+  const eligibleSlots = slots
+    .filter(s => s.isActive && !s.isMotorcycleCapacity && normaliseUserId(s.reservedForUserId) !== null)
+    .map(s => ({
+      reservedForUserId: normaliseUserId(s.reservedForUserId) as string,
+      hasCharger: s.hasCharger,
+      isAccessible: s.isAccessible,
+    }));
+  // Distinct reserved user ids on active non-motorcycle slots — the count
+  // of "configured guarantees" at this location regardless of whether each
+  // user is currently an active company-car employee. Mirrors the backend's
+  // ActiveCompatibleFixedSlotCount.
+  const guaranteedSlotCount = new Set(eligibleSlots.map(s => s.reservedForUserId)).size;
+  const users = row?.companyCarUsers ?? [];
   const employeeCount = row?.companyCarEmployeeCount ?? 0;
-  const guaranteedSlotCount = guaranteedUserIds.size;
-  const unreservedEmployees = employeeIds.filter(uid => !guaranteedUserIds.has(uid)).length;
+  // A user is "guaranteed" iff there is at least one eligible slot reserved
+  // for them whose traits are compatible with their request profile
+  // (charger when EV-only, accessible when accessibility-eligible).
+  const unreservedEmployees = users.filter(user => {
+    const normalisedUser = normaliseUserId(user.userId);
+    if (normalisedUser === null) return false;
+    return !eligibleSlots.some(s =>
+      s.reservedForUserId === normalisedUser
+      && (!user.requiresChargerForEveryRequest || s.hasCharger)
+      && (!user.requiresAccessibleSpot || s.isAccessible),
+    );
+  }).length;
 
   // Skip rendering when this location is neither relevant to the warning
   // (no company-car employees) nor configured for fixed reserved slots.
