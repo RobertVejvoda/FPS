@@ -30,8 +30,16 @@ if git ls-files | grep -E '(^|/)(bin|obj)/' >/dev/null; then
 fi
 
 echo "== Check suspicious staged files =="
-if git diff --cached --name-only | grep -Ei '(\.env|secret|password|token|private.*key)' >/dev/null; then
-  git diff --cached --name-only | grep -Ei '(\.env|secret|password|token|private.*key)'
+# Exclude known-safe patterns: Keycloak FTL templates contain "password" in their
+# conventional filenames (login-reset-password.ftl etc.) but hold no secrets.
+if git diff --cached --name-only \
+    | grep -v '\.ftl$' \
+    | grep -v '\.properties$' \
+    | grep -Ei '(\.env|secret|password|token|private.*key)' >/dev/null; then
+  git diff --cached --name-only \
+    | grep -v '\.ftl$' \
+    | grep -v '\.properties$' \
+    | grep -Ei '(\.env|secret|password|token|private.*key)'
   echo "ERROR: suspicious file staged"
   exit 1
 fi

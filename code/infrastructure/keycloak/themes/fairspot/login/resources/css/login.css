@@ -1,0 +1,366 @@
+/* FairSpot Keycloak Login Theme
+   Brand tokens: primary #2563eb, accent #16a34a
+   Compatible with Keycloak 24+
+*/
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --brand-primary:  #2563eb;
+  --brand-accent:   #16a34a;
+  --brand-hover:    #1d4ed8;
+  --surface:        #ffffff;
+  --surface-muted:  #f8fafc;
+  --border:         #e5e7eb;
+  --text:           #111827;
+  --text-muted:     #6b7280;
+  --danger:         #dc2626;
+  --danger-bg:      #fef2f2;
+  --danger-border:  #fecaca;
+  --radius:         8px;
+  --shadow:         0 4px 24px rgba(0,0,0,0.09);
+  --font:           Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html, body {
+  min-height: 100vh;
+  background: var(--surface-muted);
+  font-family: var(--font);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── Page layout ─────────────────────────────── */
+
+.fps-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background:
+    linear-gradient(160deg, #eef7ef 0%, var(--surface-muted) 340px),
+    var(--surface-muted);
+}
+
+.fps-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 40px 40px 32px;
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (max-width: 480px) {
+  .fps-card {
+    padding: 28px 20px 24px;
+  }
+}
+
+/* ── Brand header ────────────────────────────── */
+
+.fps-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.fps-logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+.fps-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.fps-brand-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+.fps-brand-tagline {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Page title ──────────────────────────────── */
+
+.fps-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  margin-bottom: 24px;
+}
+
+/* ── Alert / flash messages ──────────────────── */
+
+.fps-alert {
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+}
+
+.fps-alert-error {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: #991b1b;
+}
+
+.fps-alert-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.fps-alert-success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.fps-alert-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+/* ── Form fields ─────────────────────────────── */
+
+.fps-field {
+  margin-bottom: 18px;
+}
+
+.fps-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.fps-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.fps-label-row .fps-label {
+  margin-bottom: 0;
+}
+
+.fps-input {
+  display: block;
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 13px;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none;
+}
+
+.fps-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+.fps-input.fps-input-error {
+  border-color: var(--danger);
+}
+
+.fps-input.fps-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.15);
+}
+
+.fps-field-error {
+  display: block;
+  font-size: 13px;
+  color: var(--danger);
+  margin-top: 5px;
+}
+
+/* ── Forgot password link ────────────────────── */
+
+.fps-forgot {
+  font-size: 13px;
+}
+
+/* ── Remember me ─────────────────────────────── */
+
+.fps-remember {
+  margin-bottom: 20px;
+}
+
+.fps-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.fps-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
+}
+
+/* ── Primary action button ───────────────────── */
+
+.fps-btn {
+  display: block;
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--brand-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, box-shadow 0.15s;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+.fps-btn:hover {
+  background: var(--brand-hover);
+}
+
+.fps-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.fps-btn:active {
+  background: #1e40af;
+}
+
+/* ── Secondary / ghost button ────────────────── */
+
+.fps-btn-secondary {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--surface-muted);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+  text-decoration: none;
+  margin-bottom: 20px;
+}
+
+.fps-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+/* ── Links ───────────────────────────────────── */
+
+.fps-link {
+  color: var(--brand-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.fps-link:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+}
+
+.fps-link:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── Register / info text ────────────────────── */
+
+.fps-register-hint {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.fps-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 24px 0 20px;
+}
+
+/* ── Page footer ─────────────────────────────── */
+
+.fps-footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ── Error / info pages ──────────────────────── */
+
+.fps-error-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+  text-align: center;
+}
+
+.fps-back-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+/* ── Accessibility ───────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+  }
+}
+
+/* Ensure sufficient contrast for placeholder text */
+.fps-input::placeholder {
+  color: #9ca3af;
+}

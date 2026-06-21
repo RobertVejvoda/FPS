@@ -55,6 +55,8 @@ services:
       - KC_HOSTNAME_STRICT=false
     ports:
       - "8180:8080"
+    volumes:
+      - ./keycloak/themes:/opt/keycloak/themes:ro
     networks:
       - web
     command: start-dev --http-enabled=true
