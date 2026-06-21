@@ -1,6 +1,6 @@
 <#-- FairSpot: update-password / set-new-password page -->
 <!DOCTYPE html>
-<html lang="${locale.currentLanguageTag!'en'}">
+<html lang="${(locale.currentLanguageTag)!'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,7 +32,7 @@
 
       <#-- Hidden username for accessibility / password managers -->
       <#if auth.showUsername??>
-        <input type="hidden" id="username" name="username" value="${(login.username!'')?html}"
+        <input type="hidden" id="username" name="username" value="${login.username!''}"
                autocomplete="username" readonly />
       </#if>
 

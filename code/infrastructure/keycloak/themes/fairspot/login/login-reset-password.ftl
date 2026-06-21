@@ -1,6 +1,6 @@
 <#-- FairSpot: forgot-password / reset-password page -->
 <!DOCTYPE html>
-<html lang="${locale.currentLanguageTag!'en'}">
+<html lang="${(locale.currentLanguageTag)!'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -40,7 +40,7 @@
                type="text"
                id="username"
                name="username"
-               value="${(auth.attemptedUsername!'')?html}"
+               value="${auth.attemptedUsername!''}"
                tabindex="1"
                autocomplete="username"
                autocapitalize="off"
