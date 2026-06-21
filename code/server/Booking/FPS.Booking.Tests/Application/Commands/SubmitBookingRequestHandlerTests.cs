@@ -754,6 +754,38 @@ public sealed class SubmitBookingRequestHandlerTests
             It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_Scheduled_CompanyCar_FixedSlotAllocation_PublishesCompanyCarFixedSlotSource()
+    {
+        // Regression: scheduled company-car fixed-slot allocations must publish
+        // AllocationSource = "companyCarFixedSlot", never "sameDay" (which is reserved
+        // for same-day immediate allocations).
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        var capturedContexts = new List<BookingPublishContext>();
+        publisher
+            .Setup(p => p.WithContext(It.IsAny<BookingPublishContext>()))
+            .Callback<BookingPublishContext>(ctx => capturedContexts.Add(ctx))
+            .Returns(publisher.Object);
+
+        var cmd = CompanyCarFutureCommand();
+        var reservedSlot = AvailableSlot.Create(
+            FPS.Booking.Domain.ValueObjects.ParkingSlotId.FromString("CC1"),
+            isCompanyCarReserved: true,
+            reservedForUserId: cmd.RequestorId);
+        slotService
+            .Setup(s => s.GetAvailableSlotsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeSlot>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AvailableSlot> { reservedSlot });
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Allocated", result.Status);
+        Assert.Contains(capturedContexts, ctx => ctx.AllocationSource == "companyCarFixedSlot");
+        Assert.DoesNotContain(capturedContexts, ctx => ctx.AllocationSource == "sameDay");
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     // Command for a scheduled (D+1) company-car request.

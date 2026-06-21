@@ -172,8 +172,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         var publishCtx = new BookingPublishContext(
             cmd.TenantId, Guid.NewGuid().ToString(), "employee", cmd.RequestorId,
-            SubjectRequestorId: cmd.RequestorId,
-            AllocationSource: "sameDay");
+            SubjectRequestorId: cmd.RequestorId);
         var publisher = eventPublisher.WithContext(publishCtx);
 
         var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, publisher);
@@ -181,7 +180,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         if (isSameDay && request.Status == BookingRequestStatus.Pending && sameDaySlot is not null)
         {
-            request.Allocate(publisher);
+            request.Allocate(eventPublisher.WithContext(publishCtx with { AllocationSource = "sameDay" }));
 
             // Skip metrics only for genuine Tier 1 fixed-slot allocations.
             // Company-car employees allocated through normal same-day lookup (no fixed slot found)
@@ -197,9 +196,8 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         {
             // Tier 1 guaranteed fixed-slot allocation for scheduled company-car requests.
             // Allocate immediately; do not increment Tier 2 fairness metrics.
-            // The slot is passed to ToDto() below (same pattern as same-day allocation);
-            // AllocatedSlotId lives in the DTO layer, not the domain aggregate.
-            request.Allocate(publisher);
+            // AllocationSource distinguishes this from same-day allocations in DataHub/audit.
+            request.Allocate(eventPublisher.WithContext(publishCtx with { AllocationSource = "companyCarFixedSlot" }));
         }
 
         await repository.CreateBookingRequestAsync(
