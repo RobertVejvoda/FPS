@@ -19,9 +19,11 @@ public sealed class DrawService
         var decisions = new List<DrawDecision>(pendingRequests.Count);
         var remainingSlots = availableSlots.ToList();
 
-        // Tier 1: company-car requests — guaranteed or rejected on overflow
+        // Tier 1: company-car requests — guaranteed allocation when a fixed slot is found;
+        // otherwise fall through to normal Tier 2 allocation (not guaranteed, not rejected).
         var tier1 = pendingRequests.Where(r => r.Vehicle.IsCompanyCar).ToList();
         var tier2 = pendingRequests.Where(r => !r.Vehicle.IsCompanyCar).ToList();
+        var tier1Fallback = new List<BookingRequest>();
 
         foreach (var request in tier1)
         {
@@ -33,13 +35,13 @@ public sealed class DrawService
 
             if (fixedSlotResult.Slot is not null)
             {
-                decisions.Add(DrawDecision.Allocated(request.Id, request.RequestorId, fixedSlotResult.Slot.SlotId));
+                decisions.Add(DrawDecision.AllocatedTier1Guaranteed(request.Id, request.RequestorId, fixedSlotResult.Slot.SlotId));
                 remainingSlots.RemoveAll(s => s.SlotId == fixedSlotResult.Slot.SlotId);
             }
             else
             {
-                decisions.Add(DrawDecision.Rejected(request.Id, request.RequestorId,
-                    fixedSlotResult.RejectionReason ?? CompanyCarReservedSlotRules.MissingReservedSlotReason));
+                // No compatible fixed slot assigned: eligible for normal allocation, not guaranteed.
+                tier1Fallback.Add(request);
             }
         }
 
@@ -50,7 +52,7 @@ public sealed class DrawService
             .OrderByDescending(s => s.IsMotorcycleCapacity)
             .ToList();
 
-        var remaining = tier2.ToList();
+        var remaining = tier2.Concat(tier1Fallback).ToList();
         while (remaining.Count > 0 && remainingSlots.Count > 0)
         {
             var slot = remainingSlots[0];
@@ -79,7 +81,7 @@ public sealed class DrawService
             seed,
             decisions,
             // Preserve ordered Tier 2 candidate sequence for B005 reallocation
-            tier2.Select(r => r.Id).ToList());
+            tier2.Concat(tier1Fallback).Select(r => r.Id).ToList());
     }
 
     private static BookingRequest PickWeightedWinner(

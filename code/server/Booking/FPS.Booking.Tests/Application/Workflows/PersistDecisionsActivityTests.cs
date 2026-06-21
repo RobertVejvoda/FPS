@@ -37,7 +37,7 @@ public sealed class PersistDecisionsActivityTests
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Allocated" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", vehicleIsCompanyCar: false));
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", isTier1Guaranteed: false));
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(),
@@ -54,7 +54,7 @@ public sealed class PersistDecisionsActivityTests
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Rejected" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Rejected", vehicleIsCompanyCar: false));
+        await activity.RunAsync(null!, MakeInput(requestId, "Rejected", isTier1Guaranteed: false));
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(),
@@ -70,7 +70,7 @@ public sealed class PersistDecisionsActivityTests
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Pending" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", vehicleIsCompanyCar: false));
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", isTier1Guaranteed: false));
 
         bookingRepo.Verify(r => r.UpdateBookingRequestStatusAsync(
             TenantId, requestId, "Allocated",
@@ -91,7 +91,7 @@ public sealed class PersistDecisionsActivityTests
             .ReturnsAsync(new BookingRequestDto { Status = "Pending" })
             .ReturnsAsync(new BookingRequestDto { Status = "Allocated" });
 
-        var input = MakeInput(requestId, "Allocated", vehicleIsCompanyCar: false);
+        var input = MakeInput(requestId, "Allocated", isTier1Guaranteed: false);
 
         await activity.RunAsync(null!, input);  // first execution
         await activity.RunAsync(null!, input);  // retry
@@ -145,28 +145,42 @@ public sealed class PersistDecisionsActivityTests
     }
 
     [Fact]
-    public async Task RunAsync_CompanyCarFixedAllocation_DoesNotIncrementMetrics()
+    public async Task RunAsync_CompanyCarTier1GuaranteedAllocation_DoesNotIncrementMetrics()
     {
         var requestId = Guid.NewGuid();
         bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
             .ReturnsAsync(new BookingRequestDto { Status = "Pending" });
 
-        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", vehicleIsCompanyCar: true));
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", isTier1Guaranteed: true));
 
         metricsService.Verify(m => m.IncrementRecentAllocationAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateOnly>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task RunAsync_CompanyCarFallbackAllocation_IncrementsMetrics()
+    {
+        // Company-car employee without a fixed slot won through normal Tier 2 lottery.
+        // IsTier1Guaranteed is false → metrics must be incremented.
+        var requestId = Guid.NewGuid();
+        bookingRepo.Setup(r => r.GetBookingRequestAsync(TenantId, requestId))
+            .ReturnsAsync(new BookingRequestDto { Status = "Pending" });
+
+        await activity.RunAsync(null!, MakeInput(requestId, "Allocated", isTier1Guaranteed: false));
+
+        metricsService.Verify(m => m.IncrementRecentAllocationAsync(
+            TenantId, "requestor-1", DrawDate, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static PersistDecisionsInput MakeInput(Guid requestId, string outcome, bool vehicleIsCompanyCar) =>
+    private static PersistDecisionsInput MakeInput(Guid requestId, string outcome, bool isTier1Guaranteed = false) =>
         new(DrawKey, TenantId, "2026-06-02",
-            [new DrawDecisionDto { RequestId = requestId.ToString(), RequestorId = "requestor-1", Outcome = outcome }],
+            [new DrawDecisionDto { RequestId = requestId.ToString(), RequestorId = "requestor-1", Outcome = outcome, IsTier1Guaranteed = isTier1Guaranteed }],
             [new BookingRequestDto
             {
                 RequestId = requestId,
                 RequestedBy = "requestor-1",
-                VehicleIsCompanyCar = vehicleIsCompanyCar
             }]);
 }
