@@ -99,6 +99,10 @@ export function AuditorWorkspacePage() {
   // Draw lifecycle progress cache — keyed by drawAttemptId (entityId).
   // Loaded on demand when the auditor expands a drawAttempt entity row.
   const [drawProgressCache, setDrawProgressCache] = useState<Record<string, ProgressState>>({});
+  // Actor detail panel: opened by clicking the "Who" cell.
+  const [actorPanel, setActorPanel] = useState<{ actorHash: string; actorType: string; details: ActorDetails | undefined } | null>(null);
+  // Entity detail panel: opened by clicking the "Entity ID" cell.
+  const [entityPanel, setEntityPanel] = useState<AuditRecord | null>(null);
 
   const load = useCallback(() => {
     setState({ kind: 'loading' });
@@ -190,6 +194,31 @@ export function AuditorWorkspacePage() {
       });
     })();
   }, [state, apiBaseUrl, bearerToken, actorDetails]);
+
+  // Close any open detail panels when Escape is pressed.
+  useEffect(() => {
+    if (!actorPanel && !entityPanel) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setActorPanel(null); setEntityPanel(null); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [actorPanel, entityPanel]);
+
+  // Open entity detail panel and auto-trigger draw progress load for
+  // drawAttempt entities so the panel shows lifecycle context immediately.
+  function openEntityPanel(record: AuditRecord) {
+    setEntityPanel(record);
+    if (record.entityType === 'drawAttempt' && record.entityId) {
+      loadDrawProgress(record.entityId);
+    }
+  }
+
+  // Open actor detail panel for the given audit record.
+  function openActorPanel(record: AuditRecord, details: ActorDetails | undefined) {
+    if (!record.actorHash) return;
+    setActorPanel({ actorHash: record.actorHash, actorType: record.actorType, details });
+  }
 
   const totalDisplayed = useMemo(
     () => state.kind === 'ok' ? state.records.length : 0,
@@ -402,8 +431,20 @@ export function AuditorWorkspacePage() {
                       <td style={td}>{humanizeAuditEventType(r.eventType)}</td>
                       <td style={td}>{humanizeAuditAction(r.action)}</td>
                       <td style={td}>{humanizeEntityType(r.entityType)}</td>
-                      <td style={td}>{renderEntityLabel(r.entityId)}</td>
-                      <td style={td}>{renderActorLabel(r.actorType, r.actorHash, details)}</td>
+                      <td
+                        style={{ ...td, cursor: r.entityId ? 'pointer' : undefined }}
+                        title={r.entityId ? 'Click for entity details' : undefined}
+                        onClick={(e) => { if (r.entityId) { e.stopPropagation(); openEntityPanel(r); } }}
+                      >
+                        {renderEntityLabel(r.entityId)}
+                      </td>
+                      <td
+                        style={{ ...td, cursor: r.actorHash ? 'pointer' : undefined }}
+                        title={r.actorHash ? 'Click for actor details' : undefined}
+                        onClick={(e) => { if (r.actorHash) { e.stopPropagation(); openActorPanel(r, details); } }}
+                      >
+                        {renderActorLabel(r.actorType, r.actorHash, details)}
+                      </td>
                       <td style={td}>
                         <span style={resultBadge(r.result)}>{humanizeAuditResult(r.result)}</span>
                       </td>
@@ -428,6 +469,26 @@ export function AuditorWorkspacePage() {
           </div>
         )}
       </section>
+      {actorPanel && (
+        <ActorDetailPanel
+          actorHash={actorPanel.actorHash}
+          actorType={actorPanel.actorType}
+          details={actorPanel.details}
+          onClose={() => setActorPanel(null)}
+        />
+      )}
+      {entityPanel && (() => {
+        const entityId = entityPanel.entityId;
+        const isDrawAttemptWithId = entityPanel.entityType === 'drawAttempt' && entityId !== null;
+        return (
+          <EntityDetailPanel
+            record={entityPanel}
+            drawProgress={isDrawAttemptWithId ? drawProgressCache[entityId as string] : undefined}
+            onLoadDrawProgress={isDrawAttemptWithId ? () => loadDrawProgress(entityId as string) : undefined}
+            onClose={() => setEntityPanel(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -545,6 +606,142 @@ function ExpandedDetail({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Actor detail panel — fixed-position overlay showing safe actor info
+// (display name, classification, short ref, copy). No raw hash or PII.
+function ActorDetailPanel({
+  actorHash,
+  actorType,
+  details,
+  onClose,
+}: {
+  actorHash: string;
+  actorType: string;
+  details: ActorDetails | undefined;
+  onClose: () => void;
+}): React.ReactElement {
+  const shortRef = details?.shortRef ?? displayActorRef(actorHash);
+  return (
+    <div style={panelOverlay} onClick={onClose}>
+      <div style={panelBoxSm} onClick={(e) => e.stopPropagation()}>
+        <div style={panelHeader}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Actor Detail</span>
+          <button type="button" onClick={onClose} style={panelCloseBtn} aria-label="Close actor detail">✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
+          <div>
+            <div style={detailLabel}>Classification</div>
+            <div style={{ fontSize: 14 }}>{humanizeActorType(actorType)}</div>
+          </div>
+          <div>
+            <div style={detailLabel}>Display Name</div>
+            {details?.displayName ? (
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{details.displayName}</div>
+            ) : (
+              <div style={{ ...muted, fontStyle: 'italic' }}>Not available</div>
+            )}
+          </div>
+          <div>
+            <div style={detailLabel}>Short Ref</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ ...detailValueChip, fontFamily: 'monospace', fontWeight: 600, fontSize: 13 }}>{shortRef}</span>
+              <CopyButton value={shortRef} label="copy actor short ref" />
+            </div>
+            <div style={{ ...muted, fontSize: 11, marginTop: 4 }}>
+              Use this ref in the Actor short ref filter to find all activity by this actor.
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #e5e7eb', fontSize: 11, color: '#9ca3af' }}>
+          Actor details are pseudonymised. No raw identifiers are exposed.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Entity detail panel — fixed-position overlay routing to appropriate
+// context by entity type. Unsupported types show a graceful fallback with
+// the entity type, copyable ID, and "No detail view available yet".
+function EntityDetailPanel({
+  record,
+  drawProgress,
+  onLoadDrawProgress,
+  onClose,
+}: {
+  record: AuditRecord;
+  drawProgress?: ProgressState;
+  onLoadDrawProgress?: () => void;
+  onClose: () => void;
+}): React.ReactElement {
+  const entityTypeName = humanizeEntityType(record.entityType);
+  const isDrawAttempt = record.entityType === 'drawAttempt';
+  const isBookingRequest = record.entityType === 'bookingRequest';
+  const hasDetailView = isDrawAttempt;
+  return (
+    <div style={panelOverlay} onClick={onClose}>
+      <div style={isDrawAttempt ? panelBoxLg : panelBoxSm} onClick={(e) => e.stopPropagation()}>
+        <div style={panelHeader}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{entityTypeName} Detail</span>
+          <button type="button" onClick={onClose} style={panelCloseBtn} aria-label="Close entity detail">✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
+          <div>
+            <div style={detailLabel}>Entity Type</div>
+            <div style={{ fontSize: 14 }}>{entityTypeName}</div>
+          </div>
+          {record.entityId && (
+            <div>
+              <div style={detailLabel}>Entity ID</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={entityIdChip}>
+                  {record.entityId}
+                </span>
+                <CopyButton value={record.entityId} label="copy entity id" />
+              </div>
+            </div>
+          )}
+
+          {isDrawAttempt && record.entityId && (
+            <div>
+              <div style={detailLabel}>Draw Lifecycle Progress</div>
+              {drawProgress ? (
+                <div style={{ marginTop: 8 }}>
+                  <DrawProgressPanel progress={drawProgress} drawAttemptId={record.entityId} />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onLoadDrawProgress}
+                  style={{ marginTop: 6, fontSize: 12, padding: '3px 10px', borderRadius: 4, border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer' }}
+                >
+                  View lifecycle progress
+                </button>
+              )}
+            </div>
+          )}
+
+          {!hasDetailView && (
+            <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+              <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 13 }}>No detail view available yet</p>
+              {isBookingRequest ? (
+                <p style={{ ...muted, margin: 0, fontSize: 12 }}>
+                  A dedicated auditor booking-request endpoint is needed to show request details here.
+                  The entity ID above is available for investigation and cross-referencing.
+                </p>
+              ) : (
+                <p style={{ ...muted, margin: 0, fontSize: 12 }}>
+                  No detail view is available for <strong>{entityTypeName}</strong> entities.
+                  The entity type and ID above are available for investigation.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -701,4 +898,57 @@ const detailValueChip: React.CSSProperties = {
   border: '1px solid #e5e7eb',
   borderRadius: 4,
   fontSize: 12,
+};
+// Entity ID chip: monospace font and word-wrap for long IDs in the entity detail panel.
+const entityIdChip: React.CSSProperties = {
+  ...detailValueChip,
+  fontFamily: 'monospace',
+  fontSize: 11,
+  overflowWrap: 'break-word',
+};
+const panelOverlay: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.35)',
+  zIndex: 1000,
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'flex-end',
+  padding: '20px',
+};
+const panelBoxSm: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 10,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+  padding: '20px 24px',
+  width: 340,
+  maxWidth: '90vw',
+  maxHeight: '80vh',
+  overflowY: 'auto',
+};
+const panelBoxLg: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 10,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+  padding: '20px 24px',
+  width: 520,
+  maxWidth: '90vw',
+  maxHeight: '80vh',
+  overflowY: 'auto',
+};
+const panelHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  borderBottom: '1px solid #e5e7eb',
+  paddingBottom: 10,
+};
+const panelCloseBtn: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: 16,
+  color: '#6b7280',
+  padding: '2px 6px',
+  borderRadius: 4,
 };
