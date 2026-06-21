@@ -49,12 +49,15 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                 BookingRequestSubmittedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
                     RequestorId: e.RequestorId.Value.ToString(),
-                    LocationId: null,
+                    LocationId: ctx.LocationId,
                     Date: e.RequestedPeriod.Start.ToString("yyyy-MM-dd"),
                     TimeSlot: $"{e.RequestedPeriod.Start:HH:mm}-{e.RequestedPeriod.End:HH:mm}",
                     PreviousStatus: null,
                     NewStatus: "Submitted",
-                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null),
+                    ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
+                    VehicleLicensePlate: ctx.VehicleLicensePlate,
+                    VehicleType: ctx.VehicleType,
+                    VehicleIsElectric: ctx.VehicleIsElectric),
 
                 BookingRequestRejectedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),

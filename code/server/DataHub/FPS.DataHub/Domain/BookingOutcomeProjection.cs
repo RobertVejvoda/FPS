@@ -56,4 +56,10 @@ public sealed class BookingOutcomeProjection
 
     /// <summary>Last updated timestamp for projection freshness</summary>
     public DateTimeOffset LastUpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    // AUD008: vehicle facts captured from the booking.requestSubmitted event.
+    // Null for rows projected before this field was added.
+    public string? VehicleLicensePlate { get; set; }
+    public string? VehicleType { get; set; }
+    public bool? VehicleIsElectric { get; set; }
 }

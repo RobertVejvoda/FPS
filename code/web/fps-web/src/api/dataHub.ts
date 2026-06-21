@@ -133,6 +133,8 @@ export interface ProjectionHealthResponse {
  */
 export interface AuditorBookingRequestDetail {
   bookingRequestId: string;
+  /** Auditor-safe short ref for the requestor (last 6 chars of userId, uppercased). No raw userId exposed. */
+  requestorShortRef: string;
   locationId: string;
   date: string;
   timeSlot: string;
@@ -146,6 +148,12 @@ export interface AuditorBookingRequestDetail {
   slotId: string | null;
   /** Draw attempt ID when the request was decided via a Draw */
   drawAttemptId: string | null;
+  /** Vehicle license plate captured at submission time. Null for pre-AUD008 rows. */
+  vehicleLicensePlate: string | null;
+  /** Vehicle type captured at submission time (e.g. Car, Motorcycle). Null for pre-AUD008 rows. */
+  vehicleType: string | null;
+  /** Whether the vehicle is electric. Null for pre-AUD008 rows. */
+  vehicleIsElectric: boolean | null;
   submittedAt: string | null;
   decidedAt: string | null;
   /** When DataHub last updated this projection row */

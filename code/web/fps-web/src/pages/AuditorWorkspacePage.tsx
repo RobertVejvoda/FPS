@@ -866,6 +866,14 @@ function BookingRequestDetailPanel({
         </span>
       </div>
 
+      {/* Requestor identity (safe short ref only — no raw userId) */}
+      <div>
+        <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Requestor</div>
+        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, letterSpacing: '0.05em', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
+          {data.requestorShortRef || '—'}
+        </span>
+      </div>
+
       {/* Core facts grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
         <RequestFact label="Location / Facility" value={displayLocation(data.locationId) ?? data.locationId} />
@@ -878,6 +886,21 @@ function BookingRequestDetailPanel({
           <RequestFact label="Allocation Source" value={data.allocationSource} />
         )}
       </div>
+
+      {/* Vehicle facts */}
+      {(data.vehicleLicensePlate || data.vehicleType) && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
+          {data.vehicleLicensePlate && (
+            <RequestFact label="License Plate" value={data.vehicleLicensePlate} />
+          )}
+          {data.vehicleType && (
+            <RequestFact
+              label="Vehicle Type"
+              value={data.vehicleIsElectric === true ? `${data.vehicleType} (Electric)` : data.vehicleIsElectric === false ? `${data.vehicleType} (Combustion)` : data.vehicleType}
+            />
+          )}
+        </div>
+      )}
 
       {/* Rejection / allocation reason */}
       {(data.reasonCode || data.safeReasonText) && (

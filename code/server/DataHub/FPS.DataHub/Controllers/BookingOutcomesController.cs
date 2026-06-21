@@ -105,6 +105,7 @@ public sealed class BookingOutcomesController(
         return Ok(new AuditorBookingRequestDetailResponse
         {
             BookingRequestId = outcome.BookingRequestId,
+            RequestorShortRef = BuildShortRef(outcome.RequestorId),
             LocationId = outcome.LocationId,
             Date = outcome.Date,
             TimeSlot = outcome.TimeSlot,
@@ -114,6 +115,9 @@ public sealed class BookingOutcomesController(
             AllocationSource = outcome.AllocationSource,
             SlotId = outcome.SlotId,
             DrawAttemptId = outcome.DrawAttemptId,
+            VehicleLicensePlate = outcome.VehicleLicensePlate,
+            VehicleType = outcome.VehicleType,
+            VehicleIsElectric = outcome.VehicleIsElectric,
             SubmittedAt = outcome.SubmittedAt.HasValue
                 ? new DateTimeOffset(DateTime.SpecifyKind(outcome.SubmittedAt.Value, DateTimeKind.Utc))
                 : null,
@@ -202,6 +206,12 @@ public sealed class BookingOutcomesController(
             Total = total
         });
     }
+
+    private static string BuildShortRef(string userId)
+    {
+        var clean = userId.Replace("-", string.Empty);
+        return clean.Length <= 6 ? clean.ToUpperInvariant() : clean[^6..].ToUpperInvariant();
+    }
 }
 
 public class BookingOutcomeDto
@@ -232,6 +242,8 @@ public sealed class BookingOutcomeWithRequestorDto : BookingOutcomeDto
 public sealed class AuditorBookingRequestDetailResponse
 {
     public string BookingRequestId { get; set; } = "";
+    /// <summary>Auditor-safe short ref for the requestor (last 6 chars of userId, uppercased). No raw userId exposed.</summary>
+    public string RequestorShortRef { get; set; } = "";
     public string LocationId { get; set; } = "";
     public DateOnly Date { get; set; }
     public string TimeSlot { get; set; } = "";
@@ -245,6 +257,12 @@ public sealed class AuditorBookingRequestDetailResponse
     public string? SlotId { get; set; }
     /// <summary>Draw attempt ID when the request was decided via a Draw</summary>
     public string? DrawAttemptId { get; set; }
+    /// <summary>Vehicle license plate captured at submission time. Null for pre-AUD008 rows.</summary>
+    public string? VehicleLicensePlate { get; set; }
+    /// <summary>Vehicle type captured at submission time (e.g. Car, Motorcycle). Null for pre-AUD008 rows.</summary>
+    public string? VehicleType { get; set; }
+    /// <summary>Whether the vehicle is electric. Null for pre-AUD008 rows.</summary>
+    public bool? VehicleIsElectric { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
     public DateTimeOffset? DecidedAt { get; set; }
     /// <summary>When DataHub last updated this projection row</summary>

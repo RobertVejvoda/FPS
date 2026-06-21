@@ -308,7 +308,10 @@ public sealed class BookingProjectionHandler(
                 FinalStatus = "Submitted",
                 SubmittedAt = envelope.OccurredAt,
                 DecidedAt = envelope.OccurredAt,
-                LastUpdatedAt = DateTimeOffset.UtcNow
+                LastUpdatedAt = DateTimeOffset.UtcNow,
+                VehicleLicensePlate = payload.VehicleLicensePlate,
+                VehicleType = payload.VehicleType,
+                VehicleIsElectric = payload.VehicleIsElectric,
             };
             db.BookingOutcomes.Add(projection);
             await db.SaveChangesAsync(ct);

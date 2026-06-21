@@ -371,7 +371,7 @@ public sealed class ProjectionControllerTests : IDisposable
         {
             BookingRequestId = "req-alloc-aud",
             TenantId = "tenant-a",
-            RequestorId = "emp-secret-hash",
+            RequestorId = "emp-secret-hash-abcdef",
             LocationId = "loc-hq",
             Date = new DateOnly(2026, 6, 20),
             TimeSlot = "08:00-17:00",
@@ -382,6 +382,9 @@ public sealed class ProjectionControllerTests : IDisposable
             DrawAttemptId = "draw:tenant-a:loc-hq:2026-06-20:0800-1700",
             SubmittedAt = DateTime.UtcNow.AddHours(-2),
             DecidedAt = DateTime.UtcNow.AddHours(-1),
+            VehicleLicensePlate = "1AB2345",
+            VehicleType = "Car",
+            VehicleIsElectric = true,
         });
         await _db.SaveChangesAsync();
 
@@ -395,10 +398,16 @@ public sealed class ProjectionControllerTests : IDisposable
         Assert.Contains("\"SlotId\":\"Prague-A10\"", json);
         Assert.Contains("\"AllocationSource\":\"draw\"", json);
         Assert.Contains("draw:tenant-a:loc-hq:2026-06-20:0800-1700", json);
+        // RequestorShortRef: last 6 chars of "empsecrethashabcdef" uppercased → "ABCDEF"
+        Assert.Contains("\"RequestorShortRef\":\"ABCDEF\"", json);
+        // Vehicle facts must be present
+        Assert.Contains("\"VehicleLicensePlate\":\"1AB2345\"", json);
+        Assert.Contains("\"VehicleType\":\"Car\"", json);
+        Assert.Contains("\"VehicleIsElectric\":true", json);
         // AllocationId (internal) must not be exposed
         Assert.DoesNotContain("alloc-internal", json);
         // Raw requestor hash must not be exposed
-        Assert.DoesNotContain("emp-secret-hash", json);
+        Assert.DoesNotContain("emp-secret-hash-abcdef", json);
     }
 
     [Fact]
@@ -408,7 +417,7 @@ public sealed class ProjectionControllerTests : IDisposable
         {
             BookingRequestId = "req-rej-aud",
             TenantId = "tenant-a",
-            RequestorId = "emp-hash-xyz",
+            RequestorId = "emp-hash-xyz123",
             LocationId = "loc-hq",
             Date = new DateOnly(2026, 6, 21),
             TimeSlot = "08:00-17:00",
@@ -426,8 +435,28 @@ public sealed class ProjectionControllerTests : IDisposable
         Assert.Contains("\"Status\":\"Rejected\"", json);
         Assert.Contains("\"ReasonCode\":\"InsufficientCapacity\"", json);
         Assert.Contains("All slots were allocated to other requests", json);
+        // "emp-hash-xyz123" → remove dashes → "emphashxyz123" → last 6 → "XYZ123"
+        Assert.Contains("\"RequestorShortRef\":\"XYZ123\"", json);
         // Raw requestor hash not exposed
-        Assert.DoesNotContain("emp-hash-xyz", json);
+        Assert.DoesNotContain("emp-hash-xyz123", json);
+    }
+
+    [Fact]
+    public async Task GetBookingRequestDetail_VehicleFactsNull_ForPreAud008Rows()
+    {
+        // Rows projected before the vehicle-facts migration have null vehicle fields
+        await SeedOutcome("req-pre-aud008", "tenant-a", "user-abc123");
+
+        var ctrl = new BookingOutcomesController(_db, new FakeCurrentUser("tenant-a", "auditor-user"));
+        var result = await ctrl.GetBookingRequestDetail("req-pre-aud008", ct: default) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(result!.Value);
+        Assert.Contains("\"VehicleLicensePlate\":null", json);
+        Assert.Contains("\"VehicleType\":null", json);
+        Assert.Contains("\"VehicleIsElectric\":null", json);
+        // Short ref still populated
+        Assert.Contains("\"RequestorShortRef\":\"ABC123\"", json);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
