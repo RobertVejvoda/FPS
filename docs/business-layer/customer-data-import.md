@@ -4,6 +4,8 @@ FairSpot should integrate with a company primarily through the company's identit
 
 Use [Tenant Onboarding](./tenant-onboarding) for the end-to-end sequence that creates a new company tenant, configures identity, creates the first administrator, sets up parking policy/slots, loads pilot employee facts, and proves readiness.
 
+See [Tenant Discovery and Login Modes](./tenant-login-modes) for the two employee login entry paths and the pre-auth tenant discovery model.
+
 Local FairSpot-created accounts are an explicit fallback for demo, small tenants, break-glass administration, or customers without SSO. When FairSpot owns such an account, credential verifiers such as password hashes are Secret data and must be handled by the Identity service using hardened credential storage. Plaintext passwords are never stored.
 
 ## Integration Goal

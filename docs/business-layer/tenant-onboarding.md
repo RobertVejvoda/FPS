@@ -2,7 +2,7 @@
 
 Tenant onboarding explains how a new company becomes usable in FairSpot. It is the business and implementation contract for creating the tenant, connecting identity, creating the first administrator, configuring parking resources, loading the minimum employee facts, and proving the setup before employees use the system.
 
-This page complements [Customer Integration](./customer-data-import), which defines the SSO-first identity and profile-data contract. Tenant onboarding is the operational sequence that applies that contract to one company.
+This page complements [Customer Integration](./customer-data-import), which defines the SSO-first identity and profile-data contract, and [Tenant Discovery and Login Modes](./tenant-login-modes), which explains the two employee login entry paths and pre-auth tenant discovery. Tenant onboarding is the operational sequence that applies those contracts to one company.
 
 ## Goals
 
