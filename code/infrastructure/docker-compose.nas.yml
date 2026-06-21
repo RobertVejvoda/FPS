@@ -1,0 +1,51 @@
+# NAS deployment overlay — adds restart policies to all infrastructure services.
+#
+# Usage (run after the main stack):
+#   docker compose -f docker-compose.yaml -f docker-compose.nas.yml up -d
+#
+# This overlay is NAS/hosted-only. Do not apply it to local development.
+# The default docker-compose.yaml has no restart policy so containers do not
+# auto-start on developer machine reboots.
+
+services:
+  envoy-proxy:
+    restart: unless-stopped
+
+  vault:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
+
+  keycloak:
+    restart: unless-stopped
+
+  rabbitmq:
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  mongodb:
+    restart: unless-stopped
+
+  jaeger:
+    restart: unless-stopped
+
+  prometheus:
+    restart: unless-stopped
+
+  alertmanager:
+    restart: unless-stopped
+
+  loki:
+    restart: unless-stopped
+
+  promtail:
+    restart: unless-stopped
+
+  grafana:
+    restart: unless-stopped
+
+  zipkin:
+    restart: unless-stopped

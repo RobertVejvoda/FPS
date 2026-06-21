@@ -1,0 +1,15 @@
+# Demo profile — cron binding that triggers the daily parking draw.
+# Fires at 18:00 UTC by default; adjust to match tenant DrawCutOffTime policy.
+# Set schedule to "@disabled" or remove this component to suppress scheduled draws.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: draw-scheduler
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  - name: schedule
+    value: "0 18 * * *"
+scopes:
+- fps-booking
