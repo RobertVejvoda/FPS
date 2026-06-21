@@ -13,7 +13,7 @@ on:
   issue_comment:
     types: [created]
   pull_request_target:
-    types: [opened, synchronize, reopened, closed, ready_for_review]
+    types: [opened, synchronize, reopened, closed, ready_for_review, converted_to_draft]
   pull_request_review:
     types: [submitted]
   workflow_dispatch:
@@ -293,6 +293,83 @@ jobs:
     if: >
       github.event_name == 'pull_request_review' &&
       github.event.review.state == 'changes_requested' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Set linked issues Status=Needs changes Owner=Implementer
+        continue-on-error: true
+        env:
+          BOARD_PAT: ${{ secrets.PROJECT_SYNC_TOKEN }}
+          FALLBACK_PAT: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BOARD_PAT:-}" ]; then
+            export GH_TOKEN="$BOARD_PAT"
+          else
+            export GH_TOKEN="$FALLBACK_PAT"
+            echo "::warning::PROJECT_SYNC_TOKEN not set; project writes may fail"
+          fi
+
+          REPO_OWNER="${GH_REPO%%/*}"
+          REPO_NAME="${GH_REPO##*/}"
+
+          LINKED_ISSUES="$(gh api graphql \
+            -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){closingIssuesReferences(first:10){nodes{number}}}}}' \
+            -f owner="$REPO_OWNER" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
+            --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' \
+            2>/dev/null || true)"
+
+          if [ -z "$LINKED_ISSUES" ]; then
+            echo "::notice::PR #$PR_NUMBER has no linked closing issues; no board update"
+            exit 0
+          fi
+
+          for ISSUE_NUM in $LINKED_ISSUES; do
+            ISSUE_URL="https://github.com/$GH_REPO/issues/$ISSUE_NUM"
+            ITEM_ID="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" \
+              --url "$ISSUE_URL" --format json --jq .id 2>/dev/null || true)"
+            if [ -z "$ITEM_ID" ]; then
+              echo "::warning::Could not get project item for issue #$ISSUE_NUM; skipping"
+              continue
+            fi
+
+            IMPLEMENTER_NAME="$(gh api graphql \
+              -f query='query($id:ID!){node(id:$id){...on ProjectV2Item{fieldValues(first:20){nodes{...on ProjectV2ItemFieldSingleSelectValue{name,field{...on ProjectV2SingleSelectField{name}}}}}}}}' \
+              -f id="$ITEM_ID" \
+              --jq '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' \
+              2>/dev/null || true)"
+
+            case "$IMPLEMENTER_NAME" in
+              Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
+              Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+              Human)   OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
+              *)       OWNER_OPTION="$OPT_OWNER_NONE" ;;
+            esac
+
+            gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+              --field-id "$FIELD_STATUS" --single-select-option-id "$OPT_STATUS_NEEDS_CHANGES" \
+              && echo "::notice::Issue #$ISSUE_NUM Status -> Needs changes" \
+              || echo "::warning::Failed to set Status for issue #$ISSUE_NUM"
+
+            gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+              --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
+              && echo "::notice::Issue #$ISSUE_NUM Owner -> ${IMPLEMENTER_NAME:-None}" \
+              || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+
+            if [ "$IMPLEMENTER_NAME" = "Claude" ]; then
+              gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label "needs-claude-action" \
+                && echo "::notice::PR #$PR_NUMBER labelled needs-claude-action for Claude handoff" \
+                || echo "::warning::Failed to label PR #$PR_NUMBER"
+            fi
+          done
+
+  pr-converted-to-draft:
+    name: PR converted to draft — Needs changes / Owner=Implementer
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'converted_to_draft' &&
       github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Set linked issues Status=Needs changes Owner=Implementer
