@@ -113,7 +113,6 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         SubmissionContext context;
         AvailableSlot? sameDaySlot = null;
-        string? sameDayRejectionReason = null;
         // For scheduled (non-same-day) company-car requests: resolved fixed slot for immediate Tier 1 allocation.
         AvailableSlot? scheduledCompanyCarSlot = null;
 
@@ -129,15 +128,13 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                 {
                     var fixedSlot = CompanyCarReservedSlotRules.Resolve(requestorId, vehicle, slots);
                     sameDaySlot = fixedSlot.Slot;
-                    sameDayRejectionReason = fixedSlot.RejectionReason;
                 }
-                else
+
+                // When no fixed slot was found (or not a company-car), fall through to normal slot lookup.
+                // Apply the same motorcycle preference rule as the Draw: a motorcycle request takes a
+                // motorcycle-specific unit before falling back to an ordinary slot.
+                if (sameDaySlot is null)
                 {
-                    // Apply the same motorcycle preference rule as the Draw: a motorcycle
-                    // request takes a motorcycle-specific unit before falling back to an
-                    // ordinary slot. For non-motorcycle vehicles, motorcycle units are
-                    // already filtered out by CanAccommodate. Reserved-for-user capacity
-                    // never enters non-company same-day allocation.
                     sameDaySlot = slots
                         .Where(s => string.IsNullOrWhiteSpace(s.ReservedForUserId))
                         .Where(s => s.CanAccommodate(vehicle))
@@ -158,8 +155,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             // For company-car employees submitting a scheduled request before cut-off,
             // resolve the HR-assigned fixed slot for immediate Tier 1 allocation.
             // If the slot is missing, inactive, incompatible, or already consumed the
-            // request stays Pending and goes through the normal Draw (Tier 1 there may
-            // still reject it for configuration drift).
+            // request stays Pending and enters the normal Draw (Tier 2 lottery).
             if (vehicle.IsCompanyCar && !isCutOffPassed)
             {
                 var slots = await slotService.GetAvailableSlotsAsync(
@@ -179,14 +175,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         var publisher = eventPublisher.WithContext(publishCtx);
 
         var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, publisher);
-        var effectiveRejectionReason =
-            isSameDay
-            && request.Status == BookingRequestStatus.Rejected
-            && request.RejectionCode == BookingRejectionCode.NoCapacityForSameDay
-            && vehicle.IsCompanyCar
-            && !string.IsNullOrWhiteSpace(sameDayRejectionReason)
-                ? sameDayRejectionReason
-                : request.RejectionReason;
+        var effectiveRejectionReason = request.RejectionReason;
 
         if (isSameDay && request.Status == BookingRequestStatus.Pending && sameDaySlot is not null)
         {

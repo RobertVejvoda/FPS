@@ -264,8 +264,11 @@ public sealed class SubmitBookingRequestHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SameDay_CompanyCar_MissingReservedSlot_ReturnsFixedSlotReason()
+    public async Task Handle_SameDay_CompanyCar_MissingFixedSlot_FallsThroughToNormalAllocation()
     {
+        // No slot reserved for this user — company-car same-day request falls through to
+        // normal slot lookup. The unassigned company-car-reserved slot has no reservedForUserId
+        // so it is included; CanAccommodate passes for a company-car vehicle → Allocated.
         profileService
             .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CompanyCarProfile);
@@ -279,8 +282,23 @@ public sealed class SubmitBookingRequestHandlerTests
 
         var result = await handler.Handle(cmd, CancellationToken.None);
 
+        Assert.Equal("Allocated", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_SameDay_CompanyCar_MissingFixedSlot_NoNormalSlot_RejectsAsNoCapacity()
+    {
+        // No fixed slot and no normal slots available → rejected as NoCapacityForSameDay.
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyCarProfile);
+
+        // slotService already defaults to returning an empty list
+
+        var result = await handler.Handle(SameDayCommand(isCompanyCar: true), CancellationToken.None);
+
         Assert.Equal("Rejected", result.Status);
-        Assert.Equal(CompanyCarReservedSlotRules.MissingReservedSlotReason, result.Reason);
+        Assert.Equal("NoCapacityForSameDay", result.RejectionCode);
     }
 
     [Fact]

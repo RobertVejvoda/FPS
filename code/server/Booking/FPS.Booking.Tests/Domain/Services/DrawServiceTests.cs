@@ -31,21 +31,24 @@ public sealed class DrawServiceTests
     }
 
     [Fact]
-    public void RunDraw_CompanyCar_MissingReservedSlot_RejectsWithReason()
+    public void RunDraw_CompanyCar_MissingReservedSlot_FallsThroughToNormalAllocation()
     {
+        // No slot reserved for this user — company-car request joins normal Tier 2 allocation.
+        // The unassigned company-car-reserved slot has no reservedForUserId, so Tier 2 considers
+        // it; CanAccommodate passes for a company-car vehicle → Allocated.
         var car = MakeRequest(isCompanyCar: true);
         var unassignedCompanyCapacity = AvailableSlot.Create(Slot("CC1"), isCompanyCarReserved: true);
 
         var result = Run([car], slotObjects: [unassignedCompanyCapacity]);
 
-        var rejected = result.Decisions.Single();
-        Assert.Equal(DrawOutcome.Rejected, rejected.Outcome);
-        Assert.Equal(CompanyCarReservedSlotRules.MissingReservedSlotReason, rejected.Reason);
+        Assert.Equal(DrawOutcome.Allocated, result.Decisions.Single().Outcome);
     }
 
     [Fact]
-    public void RunDraw_CompanyCar_InactiveReservedSlot_RejectsWithReason()
+    public void RunDraw_CompanyCar_InactiveReservedSlot_FallsThroughToNormalAllocation_Waitlisted()
     {
+        // The assigned slot is inactive — company-car request falls through to Tier 2.
+        // The inactive slot has a reservedForUserId so Tier 2 skips it → Waitlisted.
         var owner = UserId.New();
         var car = MakeRequest(userId: owner, isCompanyCar: true);
         var inactiveReserved = AvailableSlot.Create(
@@ -56,14 +59,14 @@ public sealed class DrawServiceTests
 
         var result = Run([car], slotObjects: [inactiveReserved]);
 
-        var decision = result.Decisions.Single();
-        Assert.Equal(DrawOutcome.Rejected, decision.Outcome);
-        Assert.Equal(CompanyCarReservedSlotRules.InactiveReservedSlotReason, decision.Reason);
+        Assert.Equal(DrawOutcome.Waitlisted, result.Decisions.Single().Outcome);
     }
 
     [Fact]
-    public void RunDraw_CompanyCar_IncompatibleReservedSlot_RejectsWithReason()
+    public void RunDraw_CompanyCar_IncompatibleReservedSlot_FallsThroughToNormalAllocation_Waitlisted()
     {
+        // The assigned slot lacks EV charging — company-car request falls through to Tier 2.
+        // The slot has a reservedForUserId so Tier 2 skips it → Waitlisted.
         var owner = UserId.New();
         var evCompanyCar = MakeRequest(userId: owner, isCompanyCar: true, isElectric: true);
         var reservedWithoutCharger = AvailableSlot.Create(
@@ -73,9 +76,7 @@ public sealed class DrawServiceTests
 
         var result = Run([evCompanyCar], slotObjects: [reservedWithoutCharger]);
 
-        var decision = result.Decisions.Single();
-        Assert.Equal(DrawOutcome.Rejected, decision.Outcome);
-        Assert.Equal(CompanyCarReservedSlotRules.IncompatibleReservedSlotReason, decision.Reason);
+        Assert.Equal(DrawOutcome.Waitlisted, result.Decisions.Single().Outcome);
     }
 
     [Fact]
@@ -93,8 +94,10 @@ public sealed class DrawServiceTests
     }
 
     [Fact]
-    public void RunDraw_CompanyCar_SameOwnerSecondRequest_RejectsReservedSlotConflict()
+    public void RunDraw_CompanyCar_SameOwnerSecondRequest_SlotConsumed_SecondWaitlisted()
     {
+        // First request consumes the fixed slot; second request falls through to Tier 2.
+        // No other slots remain → Waitlisted (not Rejected).
         var owner = UserId.New();
         var first = MakeRequest(userId: owner, isCompanyCar: true);
         var second = MakeRequest(userId: owner, isCompanyCar: true);
@@ -106,9 +109,7 @@ public sealed class DrawServiceTests
         var result = Run([first, second], slotObjects: [reserved]);
 
         Assert.Equal(DrawOutcome.Allocated, Decision(result, first.Id).Outcome);
-        var rejected = Decision(result, second.Id);
-        Assert.Equal(DrawOutcome.Rejected, rejected.Outcome);
-        Assert.Equal(CompanyCarReservedSlotRules.ReservedSlotAlreadyConsumedReason, rejected.Reason);
+        Assert.Equal(DrawOutcome.Waitlisted, Decision(result, second.Id).Outcome);
     }
 
     // ── Tier 2: weighted lottery ──────────────────────────────────────────────
