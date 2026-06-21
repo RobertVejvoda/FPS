@@ -1,0 +1,33 @@
+# Demo profile — MongoDB-compatible managed store.
+# Replace host with a managed MongoDB Atlas connection string or equivalent.
+# Use collection-per-tenant provisioning: {tenantId}_profiles.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: profilestore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: mongodb-connection
+      key: host
+  - name: databaseName
+    value: fps-profile
+  - name: collectionName
+    value: profiles
+  - name: username
+    secretKeyRef:
+      name: mongodb-connection
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-connection
+      key: password
+  - name: params
+    value: "?ssl=true&replicaSet=atlas-xxx"
+scopes:
+- fps-profile
+auth:
+  secretStore: secretstore

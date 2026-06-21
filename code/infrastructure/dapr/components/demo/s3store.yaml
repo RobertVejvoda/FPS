@@ -1,0 +1,46 @@
+# Demo profile — S3-compatible object store for report output binding.
+# Replace endpoint with a cloud S3 bucket (AWS S3, Cloudflare R2, Backblaze B2, etc.).
+# Remove the endpoint field when targeting AWS S3 (it defaults to the regional endpoint).
+#
+# AWS S3 example (swap the metadata block; component name stays s3store):
+#
+# spec:
+#   type: bindings.aws.s3
+#   version: v1
+#   metadata:
+#   - name: bucket
+#     value: "fps-demo-reports"
+#   - name: region
+#     value: "eu-west-1"
+#   - name: accessKey
+#     secretKeyRef:
+#       name: s3-credentials
+#       key: accessKey
+#   - name: secretKey
+#     secretKeyRef:
+#       name: s3-credentials
+#       key: secretKey
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: s3store
+spec:
+  type: bindings.aws.s3
+  version: v1
+  metadata:
+  - name: accessKey
+    secretKeyRef:
+      name: s3-credentials
+      key: accessKey
+  - name: secretKey
+    secretKeyRef:
+      name: s3-credentials
+      key: secretKey
+  - name: bucket
+    value: fps-demo-reports
+  - name: endpoint
+    value: "{env:S3_ENDPOINT}"
+scopes:
+- fps-reporting
+auth:
+  secretStore: secretstore

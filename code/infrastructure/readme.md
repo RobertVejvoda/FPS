@@ -157,6 +157,24 @@ See `dapr/README.md` for the full component contract, app scoping rules, and pro
 
 ---
 
+## NAS / Hosted Deployment
+
+For NAS or hosted deployments, apply the `docker-compose.nas.yml` overlay which adds `restart: unless-stopped` to all infrastructure services:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.nas.yml up -d
+```
+
+The Cloudflare Tunnel connector is a separate overlay started independently:
+
+```bash
+docker compose -f cloudflared/docker-compose.cloudflared.yml --env-file cloudflared/.env.nas up -d
+```
+
+See `docs/production/nas-cloudflare-deployment-profile.md` for the full NAS deployment runbook.
+
+---
+
 ## Step 6: Stop the Infrastructure
 
 To stop all running containers, use the following command:

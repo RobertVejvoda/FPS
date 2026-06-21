@@ -210,13 +210,16 @@ Or use the harness start script if available:
 ./tools/start-with-dapr.sh
 ```
 
-Add restart policies to the Docker Compose services for NAS hosting. All infrastructure containers should include:
+For NAS hosting, apply the `docker-compose.nas.yml` overlay which adds `restart: unless-stopped` to every infrastructure service. The default `docker-compose.yaml` targets local development and has no restart policy so containers do not auto-start on developer machine reboots.
 
-```yaml
-restart: unless-stopped
+```bash
+cd /path/to/fps-repo/code/infrastructure
+docker compose -f docker-compose.yaml -f docker-compose.nas.yml up -d
 ```
 
-The default `docker-compose.yaml` in this repository targets local development. For NAS hosting, apply the override in `cloudflared/docker-compose.cloudflared.yml` which adds restart policies. Review and confirm that MongoDB, RabbitMQ, Vault, MinIO, Keycloak, and Envoy all have named volumes (not anonymous volumes) so data survives container restarts.
+Review and confirm that MongoDB, RabbitMQ, Vault, MinIO, Keycloak, and Envoy all have named volumes (not anonymous volumes) so data survives container restarts.
+
+> **Note:** `cloudflared/docker-compose.cloudflared.yml` is a separate file that starts only the Cloudflare Tunnel connector. Run it independently with `--env-file cloudflared/.env.nas` as shown in Step 5.
 
 ---
 
