@@ -920,6 +920,80 @@
         ]
       }
     },
+    "/profile/hr/company-car-locations": {
+      "get": {
+        "tags": [
+          "HrProfile"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyCarLocationSummaryResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyCarLocationSummaryResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyCarLocationSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/profile/snapshot": {
       "get": {
         "tags": [
@@ -1069,6 +1143,66 @@
             "type": "boolean"
           },
           "reservedSpaceEligible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CompanyCarLocationRow": {
+        "required": [
+          "locationId",
+          "companyCarEmployeeCount",
+          "companyCarUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string"
+          },
+          "companyCarEmployeeCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "companyCarUsers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompanyCarUserRow"
+            }
+          }
+        }
+      },
+      "CompanyCarLocationSummaryResponse": {
+        "required": [
+          "locations"
+        ],
+        "type": "object",
+        "properties": {
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompanyCarLocationRow"
+            }
+          }
+        }
+      },
+      "CompanyCarUserRow": {
+        "required": [
+          "userId",
+          "requiresChargerForEveryRequest",
+          "requiresAccessibleSpot"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "requiresChargerForEveryRequest": {
+            "type": "boolean"
+          },
+          "requiresAccessibleSpot": {
             "type": "boolean"
           }
         }

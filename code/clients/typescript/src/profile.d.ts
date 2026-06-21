@@ -721,6 +721,65 @@ export interface paths {
         };
         trace?: never;
     };
+    "/profile/hr/company-car-locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompanyCarLocationSummaryResponse"];
+                        "application/json": components["schemas"]["CompanyCarLocationSummaryResponse"];
+                        "text/json": components["schemas"]["CompanyCarLocationSummaryResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile/snapshot": {
         parameters: {
             query?: never;
@@ -760,6 +819,20 @@ export interface components {
             hasCompanyCar: boolean;
             accessibilityEligible: boolean;
             reservedSpaceEligible: boolean;
+        };
+        CompanyCarLocationRow: {
+            locationId: string;
+            /** Format: int32 */
+            companyCarEmployeeCount: number | string;
+            companyCarUsers: components["schemas"]["CompanyCarUserRow"][];
+        };
+        CompanyCarLocationSummaryResponse: {
+            locations: components["schemas"]["CompanyCarLocationRow"][];
+        };
+        CompanyCarUserRow: {
+            userId: string;
+            requiresChargerForEveryRequest: boolean;
+            requiresAccessibleSpot: boolean;
         };
         DeactivateRequest: {
             externalSubject: null | string;
