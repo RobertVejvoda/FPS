@@ -322,6 +322,12 @@ html, body {
   margin-top: 4px;
 }
 
+.fps-page-copy {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: -10px 0 22px;
+}
+
 .fps-divider {
   border: none;
   border-top: 1px solid var(--border);

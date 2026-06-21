@@ -102,14 +102,14 @@ export function HrEmployeeHistoryPage() {
     <div className="page-stack">
       <div className="page-hero" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 0.25rem 0' }}>
-            <Link to="/hr-operations" style={{ color: '#1d4ed8', textDecoration: 'none' }}>← Parking Requests</Link>
-          </p>
-          <h2 style={{ margin: 0, wordBreak: 'break-word' }}>{headerName}</h2>
-          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b', fontFamily: 'monospace' }}>
-            #{shortRef}
+          <h2 style={{ margin: 0, wordBreak: 'break-word' }}>Employee parking history</h2>
+          <p>
+            {headerName} · Support ref {shortRef}
           </p>
         </div>
+        <Link to="/hr-operations" className="btn-secondary" style={{ flexShrink: 0, textDecoration: 'none' }}>
+          Back to Parking Requests
+        </Link>
       </div>
 
       <div className="panel">
