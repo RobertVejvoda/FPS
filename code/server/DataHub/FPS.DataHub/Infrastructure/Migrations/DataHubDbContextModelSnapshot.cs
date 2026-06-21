@@ -96,6 +96,15 @@ namespace FPS.DataHub.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("VehicleLicensePlate")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VehicleType")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("VehicleIsElectric")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingRequestId")

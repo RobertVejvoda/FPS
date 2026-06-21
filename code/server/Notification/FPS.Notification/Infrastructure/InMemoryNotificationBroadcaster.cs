@@ -12,6 +12,10 @@ public sealed class InMemoryNotificationBroadcaster : INotificationBroadcaster
 
     private readonly ConcurrentDictionary<Guid, Subscription> subscriptions = new();
 
+    // Exposed for test synchronisation — lets callers wait until a known
+    // number of subscribers have registered before broadcasting.
+    public int SubscriptionCount => subscriptions.Count;
+
     public Task BroadcastAsync(NotificationRecord record, CancellationToken cancellationToken = default)
     {
         foreach (var sub in subscriptions.Values)

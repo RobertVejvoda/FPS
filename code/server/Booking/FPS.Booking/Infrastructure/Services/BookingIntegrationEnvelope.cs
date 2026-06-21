@@ -39,7 +39,12 @@ public sealed record BookingIntegrationPayload(
     // to the Booking service. Steps never include seeds, stack traces, or
     // employee-private details.
     IReadOnlyList<DrawProgressStepPayload>? LifecycleSteps = null,
-    string? SafeFailureReason = null);
+    string? SafeFailureReason = null,
+    // AUD008: vehicle and location context captured at submission time so DataHub
+    // can store auditor-safe facts without a second Profile lookup.
+    string? VehicleLicensePlate = null,
+    string? VehicleType = null,
+    bool? VehicleIsElectric = null);
 
 /// <summary>
 /// Safe, serialisable representation of one Draw workflow lifecycle step.

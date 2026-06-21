@@ -172,7 +172,11 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         var publishCtx = new BookingPublishContext(
             cmd.TenantId, Guid.NewGuid().ToString(), "employee", cmd.RequestorId,
-            SubjectRequestorId: cmd.RequestorId);
+            SubjectRequestorId: cmd.RequestorId,
+            LocationId: cmd.LocationId ?? cmd.FacilityId,
+            VehicleLicensePlate: vehicle.LicensePlate,
+            VehicleType: vehicle.Type.ToString(),
+            VehicleIsElectric: vehicle.IsElectric);
         var publisher = eventPublisher.WithContext(publishCtx);
 
         var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, publisher);

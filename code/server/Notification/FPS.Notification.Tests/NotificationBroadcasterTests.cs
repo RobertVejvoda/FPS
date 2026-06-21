@@ -91,7 +91,7 @@ public sealed class NotificationBroadcasterTests
     [Fact]
     public async Task Broadcast_DeliverToMultipleMatchingSubscribers()
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var record = MakeRecord("t1", "u1");
 
         var received1 = new List<NotificationRecord>();
@@ -108,9 +108,17 @@ public sealed class NotificationBroadcasterTests
                 received2.Add(n);
         });
 
-        await Task.Delay(200); // two concurrent subscribers need more time to register on CI
+        // Poll until both subscriptions are registered; SubscribeAsync registers
+        // synchronously (no await before TryAdd), so once SubscriptionCount == 2
+        // both channels are ready to receive — no fixed-delay race condition.
+        while (broadcaster.SubscriptionCount < 2 && !cts.Token.IsCancellationRequested)
+            await Task.Delay(5);
+
         await broadcaster.BroadcastAsync(record);
-        await Task.Delay(200);
+
+        // Poll for delivery instead of a fixed delay.
+        while ((received1.Count == 0 || received2.Count == 0) && !cts.Token.IsCancellationRequested)
+            await Task.Delay(5);
 
         cts.Cancel();
         await Task.WhenAll(
