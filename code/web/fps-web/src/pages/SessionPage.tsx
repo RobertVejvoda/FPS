@@ -124,9 +124,9 @@ export function SessionPage() {
             Sign in with SSO
           </button>
           <div className="session-security-note">
-            <span>SSO protected</span>
-            <span>Tenant scoped</span>
-            <span>Audit ready</span>
+            <span>Fair parking</span>
+            <span>Team policies</span>
+            <span>Clear outcomes</span>
           </div>
 
           {devFallbackEnabled ? (

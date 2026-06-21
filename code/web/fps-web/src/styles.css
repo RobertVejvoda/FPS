@@ -448,8 +448,8 @@ select {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   color: var(--muted);
   font-size: 12px;
@@ -458,10 +458,13 @@ select {
 }
 
 .session-security-note span {
+  flex: 1 1 112px;
+  min-width: 0;
   padding: 7px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #f8fafc;
+  line-height: 1.25;
 }
 
 .session-snapshot {
@@ -559,10 +562,6 @@ select {
 
   .session-panel-wrap {
     padding: 24px 16px;
-  }
-
-  .session-security-note {
-    grid-template-columns: 1fr;
   }
 
   .day-tiles-grid {
