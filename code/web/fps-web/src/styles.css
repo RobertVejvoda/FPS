@@ -93,6 +93,10 @@ select {
   font-size: 12px;
 }
 
+.session-story .brand-title span {
+  color: rgba(255, 255, 255, 0.84);
+}
+
 .app-nav {
   flex: 1;
   display: flex;
