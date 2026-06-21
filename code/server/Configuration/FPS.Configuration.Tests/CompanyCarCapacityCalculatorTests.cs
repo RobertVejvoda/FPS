@@ -4,10 +4,12 @@ namespace FPS.Configuration.Tests;
 
 // Issue #533: tests for the shared company-car capacity warning helper.
 // The slot-side semantics mirror CompanyCarReservedSlotRules.Resolve from
-// Booking — only active, company-car-only slots reserved for a specific user
-// count as a guarantee, which is exactly what PR #529's immediate Tier 1
-// allocator honors. These tests pin that mirroring so the warning never
-// over-promises.
+// Booking (FPS.Booking/Domain/Services/CompanyCarReservedSlotRules.cs). The
+// allocator immediately allocates an on-time company-car request when any
+// active slot reserved for that requestor can accommodate the vehicle, so the
+// warning must treat such slots as guarantees regardless of the
+// IsCompanyCarOnly flag. Motorcycle-only bays are the one compatibility gate
+// that always rejects company cars, so they cannot count as guarantees.
 public sealed class CompanyCarCapacityCalculatorTests
 {
     private const string Loc = "loc-prague";
@@ -15,9 +17,9 @@ public sealed class CompanyCarCapacityCalculatorTests
     private static CompanyCarCapacitySlot Slot(
         string locationId = Loc,
         bool isActive = true,
-        bool isCompanyCarOnly = true,
+        bool isMotorcycleCapacity = false,
         string? reservedFor = "user-1") =>
-        new(locationId, isActive, isCompanyCarOnly, reservedFor);
+        new(locationId, isActive, isMotorcycleCapacity, reservedFor);
 
     [Fact]
     public void EnoughCapacity_AllUsersReserved_NoWarning()
@@ -83,22 +85,49 @@ public sealed class CompanyCarCapacityCalculatorTests
     }
 
     [Fact]
-    public void IncompatibleSlot_NotCompanyCarOnly_DoesNotCount()
+    public void NormalReservedSlot_NotMarkedCompanyCarOnly_StillCountsAsGuarantee()
     {
+        // Booking's CompanyCarReservedSlotRules.Resolve immediately allocates
+        // ANY active reserved slot that the vehicle can use, regardless of the
+        // IsCompanyCarOnly flag. The warning must therefore treat a normal
+        // active reserved compatible slot as a guarantee — otherwise HR would
+        // see a false-positive warning for an employee the allocator will
+        // actually serve.
         var users = new Dictionary<string, IReadOnlyList<string>>
         {
             [Loc] = new[] { "user-1" },
         };
         var slots = new[]
         {
-            // Slot is active and reserved for the user but is NOT a company-car-only
-            // slot, so the allocator would not treat it as a guarantee.
-            Slot(reservedFor: "user-1", isCompanyCarOnly: false),
+            Slot(reservedFor: "user-1"),
+        };
+
+        var row = Assert.Single(CompanyCarCapacityCalculator.Compute(users, slots));
+
+        Assert.Equal(1, row.ActiveCompatibleFixedSlotCount);
+        Assert.Equal(0, row.EmployeesWithoutGuaranteedSlot);
+        Assert.False(row.IsCapacityExceeded);
+    }
+
+    [Fact]
+    public void MotorcycleOnlySlot_DoesNotCountAsCapacity()
+    {
+        // A reserved motorcycle bay is rejected by the allocator for a
+        // company-car vehicle (AvailableSlot.CanAccommodate), so it cannot
+        // count as a company-car guarantee.
+        var users = new Dictionary<string, IReadOnlyList<string>>
+        {
+            [Loc] = new[] { "user-1" },
+        };
+        var slots = new[]
+        {
+            Slot(reservedFor: "user-1", isMotorcycleCapacity: true),
         };
 
         var row = Assert.Single(CompanyCarCapacityCalculator.Compute(users, slots));
 
         Assert.Equal(0, row.ActiveCompatibleFixedSlotCount);
+        Assert.Equal(1, row.EmployeesWithoutGuaranteedSlot);
         Assert.True(row.IsCapacityExceeded);
     }
 
@@ -116,15 +145,16 @@ public sealed class CompanyCarCapacityCalculatorTests
 
         var row = Assert.Single(CompanyCarCapacityCalculator.Compute(users, slots));
 
-        // Slot counts as guaranteed capacity (it IS active+company-car+reserved)
-        // but it covers user-other, not user-1. So the row still warns.
+        // Slot counts as guaranteed capacity (it IS active + reserved + not a
+        // motorcycle bay) but it covers user-other, not user-1. So the row
+        // still warns.
         Assert.Equal(1, row.ActiveCompatibleFixedSlotCount);
         Assert.Equal(1, row.EmployeesWithoutGuaranteedSlot);
         Assert.True(row.IsCapacityExceeded);
     }
 
     [Fact]
-    public void UnreservedCompanyCarSlot_DoesNotCount()
+    public void UnreservedSlot_DoesNotCount()
     {
         var users = new Dictionary<string, IReadOnlyList<string>>
         {
@@ -132,9 +162,8 @@ public sealed class CompanyCarCapacityCalculatorTests
         };
         var slots = new[]
         {
-            // company-car-only but not reserved for anyone — this is a free
-            // floating company-car slot, not a guarantee. Allocator would not
-            // honor it as Tier 1.
+            // Active but not reserved for anyone — a free-floating slot that
+            // the allocator will not honor as Tier 1.
             Slot(reservedFor: null),
         };
 

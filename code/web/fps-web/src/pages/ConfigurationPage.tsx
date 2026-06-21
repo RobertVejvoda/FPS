@@ -654,10 +654,12 @@ function SaveBanner({ ok, text }: { ok: boolean; text: string }) {
 }
 
 // Issue #533: HR/admin warning shown when the number of company-car employees
-// assigned to this location exceeds the number of active company-car fixed
-// slots reserved for specific users. The "guaranteed slot" definition mirrors
-// CompanyCarReservedSlotRules.Resolve in Booking (PR #529) so we never
-// over-promise capacity that the allocator won't honor.
+// assigned to this location exceeds the number of active fixed slots reserved
+// for those employees. The "guaranteed slot" definition mirrors
+// CompanyCarReservedSlotRules.Resolve in Booking (PR #529): any active slot
+// reserved for the employee that the vehicle can use is immediately allocated.
+// Motorcycle-only bays are the one compatibility gate that always rejects a
+// company-car vehicle, so they are excluded as guarantees here.
 function CompanyCarCapacityBanner({
   locationId,
   slots,
@@ -669,11 +671,12 @@ function CompanyCarCapacityBanner({
 }) {
   if (!summary || !locationId) return null;
   const row = summary.locations.find(r => r.locationId === locationId);
-  // Distinct reserved user ids among active company-car-only slots — the
-  // single source of "guaranteed" capacity at this location.
+  // Distinct reserved user ids among active reserved slots that a company-car
+  // vehicle can use — the single source of "guaranteed" capacity at this
+  // location. Mirrors CompanyCarCapacityCalculator in FPS.SharedKernel.
   const guaranteedUserIds = new Set(
     slots
-      .filter(s => s.isActive && s.isCompanyCarOnly && s.reservedForUserId)
+      .filter(s => s.isActive && !s.isMotorcycleCapacity && s.reservedForUserId)
       .map(s => s.reservedForUserId as string),
   );
   const employeeIds = row?.companyCarUserIds ?? [];
@@ -682,7 +685,7 @@ function CompanyCarCapacityBanner({
   const unreservedEmployees = employeeIds.filter(uid => !guaranteedUserIds.has(uid)).length;
 
   // Skip rendering when this location is neither relevant to the warning
-  // (no company-car employees) nor configured for fixed company-car slots.
+  // (no company-car employees) nor configured for fixed reserved slots.
   if (employeeCount === 0 && guaranteedSlotCount === 0) return null;
 
   const ok = unreservedEmployees === 0;
@@ -706,7 +709,7 @@ function CompanyCarCapacityBanner({
       </div>
       <div>
         {employeeCount} company-car employee{employeeCount === 1 ? '' : 's'} assigned to this location;
-        {' '}{guaranteedSlotCount} active company-car fixed slot{guaranteedSlotCount === 1 ? '' : 's'} reserved for a specific user.
+        {' '}{guaranteedSlotCount} active fixed slot{guaranteedSlotCount === 1 ? '' : 's'} reserved for a specific user.
         {' '}
         {ok
           ? 'Every assigned employee has a guaranteed slot.'

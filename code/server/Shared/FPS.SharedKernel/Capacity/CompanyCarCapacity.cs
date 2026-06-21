@@ -2,10 +2,21 @@ namespace FPS.SharedKernel.Capacity;
 
 // Issue #533: shared helper for the company-car fixed-slot capacity warning.
 // The slot-side semantics intentionally mirror CompanyCarReservedSlotRules.Resolve
-// in Booking — a slot only counts as "guaranteed capacity" when it is active,
-// company-car-only, and reserved for a specific user. This is the same shape
-// PR #529 uses for the immediate Tier 1 allocation, so the Configuration
-// warning surfaces the exact set of guarantees the allocator will honor.
+// in Booking (FPS.Booking/Domain/Services/CompanyCarReservedSlotRules.cs). The
+// allocator immediately allocates an on-time company-car request when there is
+// any active slot reserved for that requestor that the vehicle can use
+// (AvailableSlot.CanAccommodate). A slot reserved for a user is therefore the
+// guarantee, not the IsCompanyCarOnly flag.
+//
+// The compatibility gates AvailableSlot.CanAccommodate applies are:
+//   * IsActive
+//   * (IsCompanyCarReserved && !vehicle.IsCompanyCar) → company-car-only slot rejects
+//     non-company-car vehicles. Not a barrier for a company-car employee.
+//   * (IsMotorcycleCapacity && vehicle.Type != Motorcycle) → motorcycle bay
+//     rejects company cars. The warning excludes these as guarantees.
+//   * HasCharger / IsAccessible are vehicle-trait gates (electric / accessibility).
+//     The warning is vehicle-trait-agnostic; HR can inspect the slot row for
+//     finer compatibility details if needed.
 //
 // The helper is intentionally cross-service-free: callers pass their own
 // snapshot of slots (Configuration) and company-car users (Profile). That keeps
@@ -16,10 +27,15 @@ namespace FPS.SharedKernel.Capacity;
 /// guaranteed company-car fixed slot. Mirrors the Configuration ParkingSlot
 /// shape but stays free of any service-specific dependency.
 /// </summary>
+/// <param name="IsMotorcycleCapacity">
+/// True when the slot is a motorcycle-only bay. Motorcycle bays reject company
+/// cars at allocation time (AvailableSlot.CanAccommodate), so they do not count
+/// as a guarantee for company-car employees.
+/// </param>
 public readonly record struct CompanyCarCapacitySlot(
     string LocationId,
     bool IsActive,
-    bool IsCompanyCarOnly,
+    bool IsMotorcycleCapacity,
     string? ReservedForUserId);
 
 /// <summary>
@@ -30,8 +46,9 @@ public readonly record struct CompanyCarCapacitySlot(
 /// Active company-car employees assigned to this location.
 /// </param>
 /// <param name="ActiveCompatibleFixedSlotCount">
-/// Active, company-car-only slots reserved for a specific user at this location.
-/// Mirrors the "active compatible fixed slot" rule used by the allocator.
+/// Distinct users covered by an active fixed slot reserved for them at this
+/// location (excluding motorcycle-only bays). Mirrors what the allocator will
+/// honor as an immediate Tier 1 allocation for a company-car request.
 /// </param>
 /// <param name="EmployeesWithoutGuaranteedSlot">
 /// Company-car employees at this location whose userId is NOT reserved on any
@@ -69,12 +86,13 @@ public static class CompanyCarCapacityCalculator
         ArgumentNullException.ThrowIfNull(companyCarUsersByLocation);
         ArgumentNullException.ThrowIfNull(slots);
 
-        // Filter slots to the "active compatible fixed company-car slot"
-        // definition. This is what PR #529 (CompanyCarReservedSlotRules.Resolve)
-        // treats as a guarantee, so the warning will not over-promise.
+        // Filter slots to the "active compatible fixed slot for the requestor"
+        // definition the allocator uses. Motorcycle-only bays are the one
+        // compatibility gate that always rejects company-car vehicles, so they
+        // cannot count as a guarantee.
         var guaranteedByLocation = slots
             .Where(s => s.IsActive
-                        && s.IsCompanyCarOnly
+                        && !s.IsMotorcycleCapacity
                         && !string.IsNullOrEmpty(s.ReservedForUserId))
             .GroupBy(s => s.LocationId, StringComparer.Ordinal)
             .ToDictionary(
