@@ -29,4 +29,5 @@ internal static class CustomerStorageKey
     internal static string IdentityAdmins(string tenantId) => $"identity:admins:{Sanitise(tenantId)}";
     internal static string Bootstrap(string tenantId) => $"bootstrap:{Sanitise(tenantId)}";
     internal static string IdentityIndex() => "identity:index";
+    internal static string DiscoveryDomain(string domain) => $"tenant:discovery-domain:{domain.Trim().ToLowerInvariant()}";
 }

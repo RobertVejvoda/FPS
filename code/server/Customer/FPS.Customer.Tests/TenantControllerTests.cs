@@ -198,4 +198,171 @@ public sealed class TenantControllerTests
         Assert.Contains("slug-a", prov1.ServiceCollections["booking"]);
         Assert.Contains("slug-b", prov2.ServiceCollections["booking"]);
     }
+
+    // ── Branding endpoints (AUTH002) ─────────────────────────────────────────
+
+    [Fact]
+    public async Task SetBranding_ValidRequest_Returns204()
+    {
+        var created = await controller.Create(new CreateTenantRequest("brand-ctrl", "Brand Ctrl", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest("#aabbcc", null, null, null, null, "CompanySso"),
+            CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        var tenant = await repository.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal("#aabbcc", tenant!.Branding.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task SetBranding_InvalidColor_Returns400()
+    {
+        var created = await controller.Create(new CreateTenantRequest("brand-bad", "Brand Bad", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest("not-a-hex", null, null, null, null),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SetBranding_UnknownTenant_Returns404()
+    {
+        var result = await controller.SetBranding("no-such",
+            new SetBrandingRequest(null, null, null, null, null),
+            CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task SetBranding_UnknownLoginMode_Returns400()
+    {
+        var created = await controller.Create(new CreateTenantRequest("brand-mode", "Brand Mode", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest(null, null, null, null, null, "InvalidMode"),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    // ── Discovery domain endpoints (AUTH002) ─────────────────────────────────
+
+    [Fact]
+    public async Task RegisterDiscoveryDomain_ValidDomain_Returns204()
+    {
+        var created = await controller.Create(new CreateTenantRequest("dom-ctrl", "Dom Ctrl", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.RegisterDiscoveryDomain(tenantId,
+            new RegisterDiscoveryDomainRequest("dom-ctrl.example"),
+            CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task RegisterDiscoveryDomain_UnknownTenant_Returns404()
+    {
+        var result = await controller.RegisterDiscoveryDomain("no-such",
+            new RegisterDiscoveryDomainRequest("x.example"),
+            CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task UnregisterDiscoveryDomain_ExistingDomain_Returns204()
+    {
+        var created = await controller.Create(new CreateTenantRequest("undom-ctrl", "UnDom", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await controller.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("undom.example"), CancellationToken.None);
+
+        var result = await controller.UnregisterDiscoveryDomain(tenantId, "undom.example", CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task UnregisterDiscoveryDomain_NonExistentDomain_Returns404()
+    {
+        var created = await controller.Create(new CreateTenantRequest("undom-miss", "UnDom Miss", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.UnregisterDiscoveryDomain(tenantId, "missing.example", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+}
+
+public sealed class TenantDiscoveryControllerTests
+{
+    private readonly InMemoryTenantRepository repository = new();
+    private readonly TenantService service;
+    private readonly TenantDiscoveryController discoveryController;
+    private readonly Mock<ICurrentUser> currentUser = new();
+    private readonly TenantController tenantController;
+
+    public TenantDiscoveryControllerTests()
+    {
+        currentUser.Setup(u => u.IsAuthenticated).Returns(true);
+        currentUser.Setup(u => u.UserId).Returns("admin-1");
+        service = new TenantService(repository);
+        discoveryController = new TenantDiscoveryController(service);
+        tenantController = new TenantController(service, currentUser.Object);
+    }
+
+    [Fact]
+    public async Task Discover_RegisteredDomain_Returns200WithSafeFields()
+    {
+        var created = await tenantController.Create(new CreateTenantRequest("green-co", "Green Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.SetBranding(tenantId, new SetBrandingRequest("#00ff00", null, null, null, null, "CompanySso"), CancellationToken.None);
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("green.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("green.example", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<TenantDiscoveryResponse>(ok.Value);
+        Assert.Equal("green-co", response.Slug);
+        Assert.Equal("Green Co", response.DisplayName);
+        Assert.Equal("CompanySso", response.LoginMode);
+        Assert.Equal("#00ff00", response.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task Discover_UnregisteredDomain_Returns404()
+    {
+        var result = await discoveryController.Discover("unknown.example", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Discover_MissingDomainParam_Returns400()
+    {
+        var result = await discoveryController.Discover(null, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Discover_ResponseDoesNotContainTenantId()
+    {
+        var created = await tenantController.Create(new CreateTenantRequest("safe-disc", "Safe", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("safe.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("safe.example", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var json = System.Text.Json.JsonSerializer.Serialize(ok.Value);
+        Assert.DoesNotContain(tenantId, json);
+    }
 }

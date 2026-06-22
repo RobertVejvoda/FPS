@@ -20,10 +20,31 @@ public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenan
         return result is not null;
     }
 
+    public async Task<TenantWorkspace?> FindByDiscoveryDomainAsync(string domain, CancellationToken ct)
+    {
+        var normalized = domain.Trim().ToLowerInvariant();
+        var tenantId = await daprClient.GetStateAsync<string>(Store, CustomerStorageKey.DiscoveryDomain(normalized), cancellationToken: ct);
+        if (tenantId is null) return null;
+        return await GetAsync(tenantId, ct);
+    }
+
+    public async Task<bool> IsDomainRegisteredAsync(string domain, string? excludeTenantId, CancellationToken ct)
+    {
+        var normalized = domain.Trim().ToLowerInvariant();
+        var tenantId = await daprClient.GetStateAsync<string>(Store, CustomerStorageKey.DiscoveryDomain(normalized), cancellationToken: ct);
+        if (tenantId is null) return false;
+        if (excludeTenantId is not null && tenantId.Equals(excludeTenantId, StringComparison.OrdinalIgnoreCase))
+            return false;
+        return true;
+    }
+
     public async Task SaveAsync(TenantWorkspace tenant, CancellationToken ct)
     {
         var dto = TenantWorkspaceDto.FromDomain(tenant);
         await daprClient.SaveStateAsync(Store, CustomerStorageKey.Tenant(tenant.TenantId), dto, cancellationToken: ct);
         await daprClient.SaveStateAsync(Store, CustomerStorageKey.TenantSlug(tenant.Slug), tenant.TenantId, cancellationToken: ct);
+
+        foreach (var dd in tenant.DiscoveryDomains)
+            await daprClient.SaveStateAsync(Store, CustomerStorageKey.DiscoveryDomain(dd.Domain), tenant.TenantId, cancellationToken: ct);
     }
 }

@@ -3,6 +3,7 @@ namespace FPS.Customer.Domain;
 public sealed class TenantWorkspace
 {
     private readonly List<TenantStateTransition> transitions = [];
+    private readonly List<TenantDiscoveryDomain> discoveryDomains = [];
 
     public string TenantId { get; init; } = string.Empty;
     public string Slug { get; init; } = string.Empty;
@@ -13,6 +14,8 @@ public sealed class TenantWorkspace
     public TenantLifecycleState LifecycleState { get; private set; } = TenantLifecycleState.Draft;
     public IReadOnlyList<TenantStateTransition> Transitions => transitions.AsReadOnly();
     public TenantProvisioningMetadata Provisioning { get; init; } = new();
+    public TenantBrandingConfig Branding { get; private set; } = new();
+    public IReadOnlyList<TenantDiscoveryDomain> DiscoveryDomains => discoveryDomains.AsReadOnly();
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
@@ -28,6 +31,37 @@ public sealed class TenantWorkspace
         return null;
     }
 
+    public string? SetBranding(TenantBrandingConfig config)
+    {
+        var error = TenantBrandingConfig.Validate(config);
+        if (error is not null) return error;
+        Branding = config;
+        Touch();
+        return null;
+    }
+
+    public string? AddDiscoveryDomain(string domain, string actorHash)
+    {
+        var normalized = NormalizeDomain(domain);
+        if (!IsValidDomainFormat(normalized))
+            return "Domain format is invalid. Expected a hostname such as 'example.com'.";
+        if (discoveryDomains.Any(d => d.Domain == normalized))
+            return $"Domain '{normalized}' is already registered for this tenant.";
+        discoveryDomains.Add(new TenantDiscoveryDomain(normalized, actorHash, DateTimeOffset.UtcNow));
+        Touch();
+        return null;
+    }
+
+    public bool RemoveDiscoveryDomain(string domain)
+    {
+        var normalized = NormalizeDomain(domain);
+        var index = discoveryDomains.FindIndex(d => d.Domain == normalized);
+        if (index < 0) return false;
+        discoveryDomains.RemoveAt(index);
+        Touch();
+        return true;
+    }
+
     public void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 
     internal static TenantWorkspace Restore(
@@ -36,6 +70,8 @@ public sealed class TenantWorkspace
         TenantLifecycleState lifecycleState,
         IReadOnlyList<TenantStateTransition> storedTransitions,
         TenantProvisioningMetadata provisioning,
+        TenantBrandingConfig branding,
+        IReadOnlyList<TenantDiscoveryDomain> storedDiscoveryDomains,
         DateTimeOffset createdAt, DateTimeOffset updatedAt)
     {
         var ws = new TenantWorkspace
@@ -46,9 +82,21 @@ public sealed class TenantWorkspace
         };
         ws.transitions.AddRange(storedTransitions);
         ws.LifecycleState = lifecycleState;
+        ws.Branding = branding;
+        ws.discoveryDomains.AddRange(storedDiscoveryDomains);
         ws.UpdatedAt = updatedAt;
         return ws;
     }
+
+    private static string NormalizeDomain(string domain) =>
+        domain.Trim().ToLowerInvariant();
+
+    private static bool IsValidDomainFormat(string domain) =>
+        !string.IsNullOrEmpty(domain)
+        && domain.Contains('.')
+        && !domain.StartsWith('.')
+        && !domain.EndsWith('.')
+        && !domain.Contains("..");
 
     private static bool IsValidTransition(TenantLifecycleState from, TenantLifecycleState to) =>
         (from, to) switch

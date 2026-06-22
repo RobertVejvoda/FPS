@@ -313,4 +313,165 @@ public sealed class TenantServiceTests
         var retrieved = await service.GetAsync("", CancellationToken.None);
         Assert.Null(retrieved);
     }
+
+    // ── Branding (AUTH002) ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SetBranding_ValidConfig_PersistsBranding()
+    {
+        var (created, _) = await service.CreateAsync("brand-co", "Brand Co", "eu", "UTC", [], CancellationToken.None);
+        var config = new TenantBrandingConfig { PrimaryColor = "#ff0000", LoginMode = TenantLoginMode.CompanySso };
+
+        var error = await service.SetBrandingAsync(created!.TenantId, config, CancellationToken.None);
+
+        Assert.Null(error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Equal("#ff0000", tenant!.Branding.PrimaryColor);
+        Assert.Equal(TenantLoginMode.CompanySso, tenant.Branding.LoginMode);
+    }
+
+    [Fact]
+    public async Task SetBranding_InvalidHexColor_ReturnsError()
+    {
+        var (created, _) = await service.CreateAsync("brand-err", "Err Co", "eu", "UTC", [], CancellationToken.None);
+
+        var error = await service.SetBrandingAsync(created!.TenantId, new TenantBrandingConfig { PrimaryColor = "red" }, CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("PrimaryColor", error);
+    }
+
+    [Fact]
+    public async Task SetBranding_UnknownTenant_ReturnsError()
+    {
+        var error = await service.SetBrandingAsync("no-such", new TenantBrandingConfig(), CancellationToken.None);
+
+        Assert.Contains("not found", error);
+    }
+
+    [Fact]
+    public async Task SetBranding_ArchivedTenant_ReturnsError()
+    {
+        var (created, _) = await service.CreateAsync("arch-brand", "Arch", "eu", "UTC", [], CancellationToken.None);
+        await service.TransitionAsync(created!.TenantId, TenantLifecycleState.Archived, "actor", null, null, CancellationToken.None);
+
+        var error = await service.SetBrandingAsync(created.TenantId, new TenantBrandingConfig(), CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("Archived", error);
+    }
+
+    // ── Discovery domains (AUTH002) ───────────────────────────────────────────
+
+    [Fact]
+    public async Task RegisterDiscoveryDomain_ValidDomain_PersistsDomain()
+    {
+        var (created, _) = await service.CreateAsync("disc-co", "Disc Co", "eu", "UTC", [], CancellationToken.None);
+
+        var error = await service.RegisterDiscoveryDomainAsync(created!.TenantId, "disc.example", "actor-hash", CancellationToken.None);
+
+        Assert.Null(error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Single(tenant!.DiscoveryDomains);
+        Assert.Equal("disc.example", tenant.DiscoveryDomains[0].Domain);
+    }
+
+    [Fact]
+    public async Task RegisterDiscoveryDomain_DuplicateOnSameTenant_ReturnsError()
+    {
+        var (created, _) = await service.CreateAsync("dup-dom", "Dup", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "dup.example", "h", CancellationToken.None);
+
+        var error = await service.RegisterDiscoveryDomainAsync(created.TenantId, "dup.example", "h", CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("already registered", error);
+    }
+
+    [Fact]
+    public async Task RegisterDiscoveryDomain_SameDomainOnAnotherTenant_ReturnsError()
+    {
+        var (t1, _) = await service.CreateAsync("t1", "T1", "eu", "UTC", [], CancellationToken.None);
+        var (t2, _) = await service.CreateAsync("t2", "T2", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(t1!.TenantId, "shared.example", "h", CancellationToken.None);
+
+        var error = await service.RegisterDiscoveryDomainAsync(t2!.TenantId, "shared.example", "h", CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("another tenant", error);
+    }
+
+    [Fact]
+    public async Task RegisterDiscoveryDomain_InvalidFormat_ReturnsError()
+    {
+        var (created, _) = await service.CreateAsync("fmt-co", "Fmt", "eu", "UTC", [], CancellationToken.None);
+
+        var error = await service.RegisterDiscoveryDomainAsync(created!.TenantId, "notadomain", "h", CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("invalid", error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UnregisterDiscoveryDomain_ExistingDomain_RemovesDomain()
+    {
+        var (created, _) = await service.CreateAsync("rm-dom", "Rm", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "rm.example", "h", CancellationToken.None);
+
+        var (found, error) = await service.UnregisterDiscoveryDomainAsync(created.TenantId, "rm.example", CancellationToken.None);
+
+        Assert.True(found);
+        Assert.Null(error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Empty(tenant!.DiscoveryDomains);
+    }
+
+    [Fact]
+    public async Task UnregisterDiscoveryDomain_NonExistentDomain_ReturnsFalse()
+    {
+        var (created, _) = await service.CreateAsync("rm-miss", "Rm Miss", "eu", "UTC", [], CancellationToken.None);
+
+        var (found, error) = await service.UnregisterDiscoveryDomainAsync(created!.TenantId, "missing.example", CancellationToken.None);
+
+        Assert.False(found);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_RegisteredDomain_ReturnsSafeResponse()
+    {
+        var (created, _) = await service.CreateAsync("discover-co", "Discover Co", "eu", "UTC", [], CancellationToken.None);
+        await service.SetBrandingAsync(created!.TenantId, new TenantBrandingConfig { PrimaryColor = "#123456", LoginMode = TenantLoginMode.CompanySso }, CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created.TenantId, "discover.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("discover.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal("discover-co", response!.Slug);
+        Assert.Equal("Discover Co", response.DisplayName);
+        Assert.Equal("CompanySso", response.LoginMode);
+        Assert.Equal("#123456", response.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_UnregisteredDomain_ReturnsNull()
+    {
+        var result = await service.DiscoverAsync("unknown.example", CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_DoesNotExposeInternalIds()
+    {
+        var (created, _) = await service.CreateAsync("safe-co", "Safe Co", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "safe.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("safe.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        // Response must not expose TenantId — only safe brand tokens and login hint.
+        var json = System.Text.Json.JsonSerializer.Serialize(response);
+        Assert.DoesNotContain(created.TenantId, json);
+    }
 }
