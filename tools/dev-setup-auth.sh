@@ -20,7 +20,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
 IMPORT_REALM_FILE="$REALM_FILE"
 TMP_REALM_FILE=""
-USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor"
+USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor gl-employee1 gl-tenant-admin"
 
 if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
   for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
@@ -278,14 +278,33 @@ for USERNAME in employee1 employee4; do
 done
 echo "Demo token claims: ok"
 
+echo "Validating Green Logistics token claims..."
+for USERNAME in gl-employee1 gl-tenant-admin; do
+  TOKEN=$(get_user_token "$USERNAME")
+  if [ -z "$TOKEN" ]; then
+    echo "ERROR: Could not get validation token for '$USERNAME'."
+    exit 1
+  fi
+  TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
+  if [ "$TENANT_ID" != "greenlogistics" ]; then
+    echo "ERROR: Token for '$USERNAME' has tenant_id='$TENANT_ID' (expected greenlogistics)."
+    exit 1
+  fi
+done
+echo "Green Logistics token claims: ok"
+
 echo ""
 echo "== Setup complete =="
 echo "Realm:    $REALM"
 echo "Users:    $USERS"
 echo "Password: \$FPS_DEV_PASSWORD (default: Dev1234!)"
 echo ""
-echo "Get a dev token:"
+echo "Demo tenant (tenant_id=demo):"
 echo "  ./tools/dev-auth.sh employee1"
+echo ""
+echo "Green Logistics tenant (tenant_id=greenlogistics):"
+echo "  ./tools/dev-auth.sh gl-employee1"
+echo "  ./tools/dev-auth.sh gl-tenant-admin"
 echo ""
 echo "Before running backend services, export local issuer settings:"
 echo "  source ./tools/dev-env.sh"

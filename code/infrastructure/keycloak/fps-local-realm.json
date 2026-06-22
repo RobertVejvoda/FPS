@@ -291,6 +291,38 @@
         "auditor"
       ],
       "credentials": []
+    },
+    {
+      "username": "gl-employee1",
+      "enabled": true,
+      "email": "alice.green@greenlogistics.example",
+      "firstName": "Alice",
+      "lastName": "Green",
+      "attributes": {
+        "tenant_id": [
+          "greenlogistics"
+        ]
+      },
+      "realmRoles": [
+        "employee"
+      ],
+      "credentials": []
+    },
+    {
+      "username": "gl-tenant-admin",
+      "enabled": true,
+      "email": "bob.admin@greenlogistics.example",
+      "firstName": "Bob",
+      "lastName": "Admin",
+      "attributes": {
+        "tenant_id": [
+          "greenlogistics"
+        ]
+      },
+      "realmRoles": [
+        "admin"
+      ],
+      "credentials": []
     }
   ],
   "loginTheme": "fairspot"

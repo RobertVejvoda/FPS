@@ -104,6 +104,7 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     await SeedLocalDemoTenantAsync(scope.ServiceProvider);
+    await SeedGreenLogisticsTenantAsync(scope.ServiceProvider);
 }
 
 app.Run();
@@ -197,6 +198,90 @@ static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
         "local-seed",
         now));
     bootstrap.RecordLocation("Prague", activeSlotCount: 15, hasLocationPolicy: false, "local-seed");
+    await parkingRepository.SaveAsync(bootstrap, CancellationToken.None);
+}
+
+static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
+{
+    const string tenantId = "greenlogistics";
+    const string slug = "greenlogistics";
+    const string discoveryDomain = "greenlogistics.example";
+
+    var tenantRepository = services.GetRequiredService<ITenantRepository>();
+    if (await tenantRepository.GetAsync(tenantId, CancellationToken.None) is not null)
+        return;
+
+    var now = DateTimeOffset.UtcNow;
+    var tenant = new TenantWorkspace
+    {
+        TenantId = tenantId,
+        Slug = slug,
+        DisplayName = "Green Logistics",
+        Region = "EU",
+        TimeZone = "Europe/Prague",
+        SupportContacts =
+        [
+            new TenantSupportContact("GL Facilities", "facilities@greenlogistics.example", "Facilities"),
+            new TenantSupportContact("GL IT Support", "it@greenlogistics.example", "Identity"),
+        ],
+        Provisioning = TenantProvisioningMetadata.Generate(tenantId, slug),
+        CreatedAt = now,
+    };
+
+    tenant.SetBranding(new TenantBrandingConfig
+    {
+        PrimaryColor = "#2e7d32",
+        AccentColor = "#a5d6a7",
+        LoginMode = TenantLoginMode.Both,
+    });
+    tenant.AddDiscoveryDomain(discoveryDomain, "local-seed");
+
+    tenant.TryTransition(TenantLifecycleState.Configured, "local-seed", "Green Logistics demo tenant setup", "Development seed");
+    tenant.TryTransition(TenantLifecycleState.Seeded, "local-seed", "Green Logistics demo seed data available", "Development seed");
+
+    await tenantRepository.SaveAsync(tenant, CancellationToken.None);
+
+    var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
+    await identityRepository.SaveConfigAsync(new TenantIdentityConfig
+    {
+        TenantId = tenantId,
+        TrustedIssuer = "http://localhost:8180/realms/fps-local",
+        Audience = "fps-api",
+        TenantClaimName = "tenant_id",
+        SubjectClaimName = "sub",
+        RoleClaimNames = ["roles"],
+        RoleMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["employee"] = "employee",
+            ["hr_manager"] = "hr_manager",
+            ["admin"] = "admin",
+            ["report_viewer"] = "report_viewer",
+            ["auditor"] = "auditor",
+        },
+        LocalAccountPolicyEnabled = true,
+        ConfiguredByHash = "local-seed",
+        ConfiguredAt = now,
+    }, CancellationToken.None);
+
+    await identityRepository.SaveAdminAsync(new TenantAdminRecord(
+        tenantId,
+        "local-seed-gl-admin",
+        TenantAdminType.Local,
+        "local-seed",
+        now,
+        "Green Logistics development tenant administrator.",
+        IsActive: true), CancellationToken.None);
+
+    var parkingRepository = services.GetRequiredService<ITenantParkingBootstrapRepository>();
+    var bootstrap = await parkingRepository.GetOrCreateAsync(tenantId, CancellationToken.None);
+    bootstrap.RecordDefaultPolicy(new BootstrapPolicySnapshot(
+        "Europe/Prague",
+        "18:00",
+        50,
+        30,
+        "local-seed",
+        now));
+    bootstrap.RecordLocation("GL-HQ", activeSlotCount: 20, hasLocationPolicy: false, "local-seed");
     await parkingRepository.SaveAsync(bootstrap, CancellationToken.None);
 }
 
