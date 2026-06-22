@@ -73,6 +73,7 @@
   * [Maintenance](./production/maintenance)
   * [Mobile Device Testing](./production/mobile-device-testing)
   * [External IdP Broker Test Setup](./production/idp-broker-test-setup)
+  * [PERF001 Readiness Evidence](./production/perf001-readiness-evidence)
 * [Roadmap](./roadmap)
 * [Demo and Evaluation](./demo-and-evaluation)
 * [Client Evaluation Pack](./client-evaluation-pack)

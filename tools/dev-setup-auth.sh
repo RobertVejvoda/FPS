@@ -6,6 +6,11 @@
 # Usage:
 #   ./tools/dev-setup-auth.sh
 #   FPS_DEV_PASSWORD=MyPass123 ./tools/dev-setup-auth.sh
+#   FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh   # add 50 GL employees for PERF001 load tests
+#
+# Environment variables:
+#   FPS_DEMO_EMPLOYEE_COUNT   number of demo-tenant employees (default 25, max supported 25)
+#   FPS_GL_EMPLOYEE_COUNT     number of Green Logistics employees (default 1, gl-employee1 is always present)
 #
 # Default dev password: Dev1234!  (local only, never commit real passwords)
 set -eu
@@ -15,6 +20,7 @@ ADMIN_USER="${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-admin}}"
 ADMIN_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
+GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-1}"
 REALM="fps-local"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
@@ -25,6 +31,12 @@ USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor
 if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
   for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
     USERS="$USERS employee$i"
+  done
+fi
+
+if [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
+  for i in $(seq 2 "$GL_EMPLOYEE_COUNT"); do
+    USERS="$USERS gl-employee$i"
   done
 fi
 
@@ -173,15 +185,17 @@ if [ "$EXISTING" = "200" ]; then
     "$KEYCLOAK_URL/admin/realms/$REALM"
 fi
 
-if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
+if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ] || [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
   TMP_REALM_FILE="$(mktemp)"
-  python3 - "$REALM_FILE" "$TMP_REALM_FILE" "$DEMO_EMPLOYEE_COUNT" << 'PYEOF'
+  python3 - "$REALM_FILE" "$TMP_REALM_FILE" "$DEMO_EMPLOYEE_COUNT" "$GL_EMPLOYEE_COUNT" << 'PYEOF'
 import json
 import sys
 
-source, target, count_arg = sys.argv[1], sys.argv[2], sys.argv[3]
-count = int(count_arg)
-names = {
+source, target, demo_count_arg, gl_count_arg = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+demo_count = int(demo_count_arg)
+gl_count = int(gl_count_arg)
+
+demo_names = {
     4: ("Pavel", "Cerny"),
     5: ("Hana", "Vesela"),
     6: ("Martin", "Horak"),
@@ -206,16 +220,45 @@ names = {
     25: ("Ivana", "Ruzickova"),
 }
 
+# GL employee names (indices 2..N; index 1 is gl-employee1 = Alice Green in realm JSON)
+gl_names = {
+    2:  ("Carla",   "Novak"),
+    3:  ("David",   "Maly"),
+    4:  ("Eva",     "Kratka"),
+    5:  ("Filip",   "Dlouhy"),
+    6:  ("Gabriela","Silna"),
+    7:  ("Hana",    "Bílá"),
+    8:  ("Ivan",    "Cerny"),
+    9:  ("Jana",    "Ruda"),
+    10: ("Karel",   "Zeleny"),
+    11: ("Lenka",   "Modra"),
+    12: ("Milan",   "Zlaty"),
+    13: ("Nina",    "Stribr"),
+    14: ("Ondrej",  "Horni"),
+    15: ("Petra",   "Dolni"),
+    16: ("Radek",   "Levy"),
+    17: ("Sandra",  "Pravy"),
+    18: ("Tomas",   "Velky"),
+    19: ("Ula",     "Maly"),
+    20: ("Vaclav",  "Stary"),
+    21: ("Wendy",   "Novy"),
+    22: ("Xena",    "Prvni"),
+    23: ("Yuri",    "Druhy"),
+    24: ("Zuzana",  "Treti"),
+    25: ("Adam",    "Ctvrty"),
+}
+
 with open(source, encoding="utf-8") as f:
     realm = json.load(f)
 
 users = realm.setdefault("users", [])
 existing = {u.get("username") for u in users}
-for index in range(4, count + 1):
+
+for index in range(4, demo_count + 1):
     username = f"employee{index}"
     if username in existing:
         continue
-    first, last = names.get(index, ("Demo", f"Employee{index}"))
+    first, last = demo_names.get(index, ("Demo", f"Employee{index}"))
     users.append({
         "username": username,
         "enabled": True,
@@ -223,6 +266,22 @@ for index in range(4, count + 1):
         "firstName": first,
         "lastName": last,
         "attributes": {"tenant_id": ["demo"]},
+        "realmRoles": ["employee"],
+        "credentials": []
+    })
+
+for index in range(2, gl_count + 1):
+    username = f"gl-employee{index}"
+    if username in existing:
+        continue
+    first, last = gl_names.get(index, ("GL", f"Employee{index}"))
+    users.append({
+        "username": username,
+        "enabled": True,
+        "email": f"{username}@greenlogistics.example",
+        "firstName": first,
+        "lastName": last,
+        "attributes": {"tenant_id": ["greenlogistics"]},
         "realmRoles": ["employee"],
         "credentials": []
     })
@@ -293,6 +352,22 @@ for USERNAME in gl-employee1 gl-tenant-admin; do
 done
 echo "Green Logistics token claims: ok"
 
+if [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
+  echo "Validating extended GL employee token claims..."
+  LAST_GL="gl-employee$GL_EMPLOYEE_COUNT"
+  TOKEN=$(get_user_token "$LAST_GL")
+  if [ -z "$TOKEN" ]; then
+    echo "ERROR: Could not get validation token for '$LAST_GL'."
+    exit 1
+  fi
+  TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
+  if [ "$TENANT_ID" != "greenlogistics" ]; then
+    echo "ERROR: Token for '$LAST_GL' has tenant_id='$TENANT_ID' (expected greenlogistics)."
+    exit 1
+  fi
+  echo "Extended GL token claims: ok ($GL_EMPLOYEE_COUNT total GL employees)"
+fi
+
 echo ""
 echo "== Setup complete =="
 echo "Realm:    $REALM"
@@ -305,6 +380,13 @@ echo ""
 echo "Green Logistics tenant (tenant_id=greenlogistics):"
 echo "  ./tools/dev-auth.sh gl-employee1"
 echo "  ./tools/dev-auth.sh gl-tenant-admin"
+if [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
+  echo "  (plus gl-employee2..gl-employee$GL_EMPLOYEE_COUNT from FPS_GL_EMPLOYEE_COUNT=$GL_EMPLOYEE_COUNT)"
+fi
+echo ""
+echo "For load-test seed (PERF001):"
+echo "  FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh"
+echo "  ./tools/perf-seed-greenlogistics.sh"
 echo ""
 echo "Before running backend services, export local issuer settings:"
 echo "  source ./tools/dev-env.sh"
