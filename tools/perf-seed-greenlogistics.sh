@@ -46,6 +46,7 @@ CLIENT_ID="${FPS_LOCAL_CLIENT:-fps-mobile-dev}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 
 GL_TENANT_ID="greenlogistics"
+GL_FACILITY_ID="${GL_FACILITY_ID:-00000000-0000-0000-0000-000000000002}"
 GL_LOCATION_ID="GL-HQ"
 
 GL_EMPLOYEE_COUNT="${GL_EMPLOYEE_COUNT:-50}"
@@ -164,21 +165,41 @@ if [ "$RESET_STATE" = "true" ]; then
   echo ""
   echo "-- Resetting GL booking/profile state --"
   if command -v docker > /dev/null 2>&1; then
-    docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongo \
-      mongosh --quiet --eval \
-      "['fps-booking','fps-notification','fps-reporting','fps-audit'].forEach(db => db.getSiblingDB(db).dropDatabase());" \
-      > /dev/null 2>&1 || warn "MongoDB reset skipped (may not be running)"
+    RESET_ERRORS=0
 
-    docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T postgres \
-      psql -U fps -d fps_datahub -c \
-      'TRUNCATE TABLE datahub_booking_outcome, datahub_draw_history, datahub_event_inbox, datahub_projection_checkpoint RESTART IDENTITY;' \
-      > /dev/null 2>&1 || warn "PostgreSQL reset skipped"
+    if docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongodb \
+        mongosh --quiet --eval \
+        "['fps-booking','fps-notification','fps-reporting','fps-audit'].forEach(dbName => db.getSiblingDB(dbName).dropDatabase());" \
+        > /dev/null 2>&1; then
+      ok "MongoDB collections dropped"
+    else
+      warn "MongoDB reset skipped (service not running)"
+      RESET_ERRORS=$((RESET_ERRORS+1))
+    fi
 
-    # Clear profile Dapr state (Redis)
-    docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T redis \
-      redis-cli FLUSHDB > /dev/null 2>&1 || warn "Redis reset skipped"
+    if docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T postgres \
+        psql -U fps -d fps_datahub -c \
+        'TRUNCATE TABLE datahub_booking_outcome, datahub_draw_history, datahub_event_inbox, datahub_projection_checkpoint RESTART IDENTITY;' \
+        > /dev/null 2>&1; then
+      ok "PostgreSQL tables truncated"
+    else
+      warn "PostgreSQL reset skipped (service not running or table missing)"
+      RESET_ERRORS=$((RESET_ERRORS+1))
+    fi
 
-    ok "State reset complete"
+    if docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T redis \
+        redis-cli FLUSHDB > /dev/null 2>&1; then
+      ok "Redis flushed"
+    else
+      warn "Redis reset skipped (service not running)"
+      RESET_ERRORS=$((RESET_ERRORS+1))
+    fi
+
+    if [ "$RESET_ERRORS" -eq 0 ]; then
+      ok "State reset complete (all stores cleared)"
+    else
+      warn "State reset partial — $RESET_ERRORS store(s) skipped. Re-run start-local-harness.sh if needed."
+    fi
   else
     warn "docker not found — skipping state reset. Set RESET_STATE=false to suppress this warning."
   fi
@@ -421,14 +442,15 @@ for draw_num in $(seq 1 "$GL_DRAW_COUNT"); do
       -H "Authorization: Bearer $USER_TOKEN" \
       -H "Content-Type: application/json" \
       -d "{
+        \"facilityId\": \"$GL_FACILITY_ID\",
         \"locationId\": \"$GL_LOCATION_ID\",
-        \"requestedTimeSlotStart\": \"$ARRIVAL\",
-        \"requestedTimeSlotEnd\": \"$DEPARTURE\",
         \"licensePlate\": \"$PLATE\",
         \"vehicleType\": \"Sedan\",
         \"isElectric\": false,
+        \"requiresAccessibleSpot\": false,
         \"isCompanyCar\": $IS_CC,
-        \"requiresAccessibleSlot\": false
+        \"plannedArrivalTime\": \"$ARRIVAL\",
+        \"plannedDepartureTime\": \"$DEPARTURE\"
       }" 2>/dev/null || true)
 
     if [ "$BOOK_HTTP" = "202" ]; then
