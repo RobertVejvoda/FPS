@@ -2,6 +2,16 @@ using FPS.Customer.Domain;
 
 namespace FPS.Customer.Application;
 
+public sealed record TenantDiscoveryResponse(
+    string Slug,
+    string DisplayName,
+    string LoginMode,
+    string? PrimaryColor,
+    string? AccentColor,
+    string? LogoAssetId,
+    string? FaviconAssetId,
+    string? LegalFooterText);
+
 public sealed class TenantService(
     ITenantRepository repository,
     TenantReadinessService? readinessService = null)
@@ -94,5 +104,66 @@ public sealed class TenantService(
 
         await repository.SaveAsync(tenant, ct);
         return null;
+    }
+
+    public async Task<string?> SetBrandingAsync(string tenantId, TenantBrandingConfig config, CancellationToken ct)
+    {
+        var tenant = await repository.GetAsync(tenantId, ct);
+        if (tenant is null) return "Tenant not found.";
+        if (tenant.LifecycleState == TenantLifecycleState.Archived) return "Archived tenants cannot be updated.";
+
+        var error = tenant.SetBranding(config);
+        if (error is not null) return error;
+
+        await repository.SaveAsync(tenant, ct);
+        return null;
+    }
+
+    public async Task<string?> RegisterDiscoveryDomainAsync(
+        string tenantId, string domain, string actorHash, CancellationToken ct)
+    {
+        var tenant = await repository.GetAsync(tenantId, ct);
+        if (tenant is null) return "Tenant not found.";
+        if (tenant.LifecycleState == TenantLifecycleState.Archived) return "Archived tenants cannot be updated.";
+
+        if (await repository.IsDomainRegisteredAsync(domain, excludeTenantId: tenantId, ct))
+            return $"Domain '{domain.Trim().ToLowerInvariant()}' is already registered by another tenant.";
+
+        var error = tenant.AddDiscoveryDomain(domain, actorHash);
+        if (error is not null) return error;
+
+        await repository.SaveAsync(tenant, ct);
+        return null;
+    }
+
+    public async Task<(bool found, string? error)> UnregisterDiscoveryDomainAsync(
+        string tenantId, string domain, CancellationToken ct)
+    {
+        var tenant = await repository.GetAsync(tenantId, ct);
+        if (tenant is null) return (false, "Tenant not found.");
+        if (tenant.LifecycleState == TenantLifecycleState.Archived) return (false, "Archived tenants cannot be updated.");
+
+        var removed = tenant.RemoveDiscoveryDomain(domain);
+        if (!removed) return (false, null);
+
+        await repository.SaveAsync(tenant, ct);
+        return (true, null);
+    }
+
+    public async Task<TenantDiscoveryResponse?> DiscoverAsync(string domain, CancellationToken ct)
+    {
+        var tenant = await repository.FindByDiscoveryDomainAsync(domain, ct);
+        if (tenant is null) return null;
+
+        var b = tenant.Branding;
+        return new TenantDiscoveryResponse(
+            tenant.Slug,
+            tenant.DisplayName,
+            b.LoginMode.ToString(),
+            b.PrimaryColor,
+            b.AccentColor,
+            b.LogoAssetId,
+            b.FaviconAssetId,
+            b.LegalFooterText);
     }
 }

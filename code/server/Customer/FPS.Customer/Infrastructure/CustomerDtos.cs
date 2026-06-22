@@ -13,12 +13,14 @@ internal sealed class TenantWorkspaceDto
     public TenantLifecycleState LifecycleState { get; set; }
     public List<TenantStateTransition> Transitions { get; set; } = [];
     public TenantProvisioningMetadata Provisioning { get; set; } = new();
+    public TenantBrandingConfig Branding { get; set; } = new();
+    public List<TenantDiscoveryDomain> DiscoveryDomains { get; set; } = [];
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
     public TenantWorkspace ToDomain() => TenantWorkspace.Restore(
         TenantId, Slug, DisplayName, Region, TimeZone, SupportContacts,
-        LifecycleState, Transitions, Provisioning, CreatedAt, UpdatedAt);
+        LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, CreatedAt, UpdatedAt);
 
     public static TenantWorkspaceDto FromDomain(TenantWorkspace ws) => new()
     {
@@ -31,6 +33,8 @@ internal sealed class TenantWorkspaceDto
         LifecycleState = ws.LifecycleState,
         Transitions = ws.Transitions.ToList(),
         Provisioning = ws.Provisioning,
+        Branding = ws.Branding,
+        DiscoveryDomains = ws.DiscoveryDomains.ToList(),
         CreatedAt = ws.CreatedAt,
         UpdatedAt = ws.UpdatedAt,
     };

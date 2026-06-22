@@ -91,6 +91,57 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         return Ok(new ProvisioningResponse(p.TenantId, p.TenantSlug, p.GeneratedAt, p.ServiceCollections));
     }
 
+    [HttpPut("/tenants/{tenantId}/branding")]
+    public async Task<IActionResult> SetBranding(string tenantId, [FromBody] SetBrandingRequest request, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated) return Unauthorized();
+
+        if (!Enum.TryParse<TenantLoginMode>(request.LoginMode, ignoreCase: true, out var loginMode))
+            return BadRequest(new { error = $"Unknown login mode: {request.LoginMode}" });
+
+        var config = new TenantBrandingConfig
+        {
+            PrimaryColor = request.PrimaryColor,
+            AccentColor = request.AccentColor,
+            LogoAssetId = request.LogoAssetId,
+            FaviconAssetId = request.FaviconAssetId,
+            LegalFooterText = request.LegalFooterText,
+            LoginMode = loginMode,
+        };
+
+        var error = await service.SetBrandingAsync(tenantId, config, ct);
+        if (error == "Tenant not found.") return NotFound();
+        if (error is not null) return BadRequest(new { error });
+        return NoContent();
+    }
+
+    [HttpPost("/tenants/{tenantId}/discovery-domains")]
+    public async Task<IActionResult> RegisterDiscoveryDomain(string tenantId, [FromBody] RegisterDiscoveryDomainRequest request, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId)) return Unauthorized();
+
+        var error = await service.RegisterDiscoveryDomainAsync(tenantId, request.Domain, Hash(currentUser.UserId), ct);
+        if (error == "Tenant not found.") return NotFound();
+        if (error is not null) return BadRequest(new { error });
+        return NoContent();
+    }
+
+    [HttpDelete("/tenants/{tenantId}/discovery-domains/{domain}")]
+    public async Task<IActionResult> UnregisterDiscoveryDomain(string tenantId, string domain, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated) return Unauthorized();
+
+        var (found, error) = await service.UnregisterDiscoveryDomainAsync(tenantId, domain, ct);
+        if (error == "Tenant not found.") return NotFound();
+        if (error is not null) return BadRequest(new { error });
+        if (!found) return NotFound();
+        return NoContent();
+    }
+
+    private static string Hash(string value) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(value)))[..16];
+
     private static TenantResponse ToResponse(TenantWorkspace t) => new(
         t.TenantId, t.Slug, t.DisplayName, t.Region, t.TimeZone,
         t.LifecycleState.ToString(),
@@ -134,3 +185,13 @@ public sealed record ProvisioningResponse(
     string TenantSlug,
     DateTimeOffset GeneratedAt,
     IReadOnlyDictionary<string, string> ServiceCollections);
+
+public sealed record SetBrandingRequest(
+    string? PrimaryColor,
+    string? AccentColor,
+    string? LogoAssetId,
+    string? FaviconAssetId,
+    string? LegalFooterText,
+    string LoginMode = "LocalAccount");
+
+public sealed record RegisterDiscoveryDomainRequest(string Domain);
