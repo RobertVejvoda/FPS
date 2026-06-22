@@ -1,0 +1,60 @@
+{
+  "_comment": "Green Logistics demo tenant — customer-like SSO scenario. Synthetic data only, no real PII. Uses reserved .example TLD throughout.",
+  "tenantId": "greenlogistics",
+  "slug": "greenlogistics",
+  "displayName": "Green Logistics",
+  "region": "EU",
+  "timezone": "Europe/Prague",
+  "supportContacts": [
+    { "name": "GL Facilities", "email": "facilities@greenlogistics.example", "role": "Facilities" },
+    { "name": "GL IT Support", "email": "it@greenlogistics.example",         "role": "Identity"  }
+  ],
+  "branding": {
+    "primaryColor": "#2e7d32",
+    "accentColor": "#a5d6a7",
+    "loginMode": "Both"
+  },
+  "discoveryDomains": ["greenlogistics.example"],
+  "identity": {
+    "trustedIssuer": "http://localhost:8180/realms/fps-local",
+    "audience": "fps-api",
+    "tenantClaimName": "tenant_id",
+    "subjectClaimName": "sub",
+    "roleClaimNames": ["roles"],
+    "roleMapping": {
+      "employee":      "employee",
+      "hr_manager":    "hr_manager",
+      "admin":         "admin",
+      "report_viewer": "report_viewer",
+      "auditor":       "auditor"
+    },
+    "localAccountPolicyEnabled": true
+  },
+  "parkingPolicy": {
+    "dailyRequestCap": 50,
+    "drawCutOffHour": 18,
+    "drawCutOffMinute": 0,
+    "allocationLookbackDays": 10,
+    "lateCancellationPenalty": 1,
+    "noShowPenalty": 2,
+    "sameDayBookingEnabled": true,
+    "companyCarTier1Enabled": true,
+    "companyCarOverflowBehavior": "reject",
+    "automaticReallocationEnabled": true,
+    "usageConfirmationRequired": false,
+    "usageConfirmationWindowMinutes": 60,
+    "usageConfirmationMethods": ["manual"],
+    "noShowDetectionEnabled": false
+  },
+  "locations": [
+    {
+      "locationId": "GL-HQ",
+      "displayName": "Green Logistics HQ",
+      "slotCount": 20,
+      "chargerSlots": 4,
+      "accessibleSlots": 2
+    }
+  ],
+  "smokeUsers": ["gl-employee1", "gl-tenant-admin"],
+  "notes": "Primary demo tenant for company-SSO flow. Uses greenlogistics.example (reserved TLD) for all synthetic email addresses and tenant discovery. LoginMode=Both: SSO is the primary path; local fallback accounts are available for demo and break-glass use. The company-SSO broker configuration is implemented in AUTH004. Discovery domain greenlogistics.example routes pre-auth email lookups to this tenant."
+}
