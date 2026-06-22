@@ -36,7 +36,7 @@ type AuthState = {
   environment: string;
   simulationEnabled: boolean;
   appVersion: string;
-  login: () => Promise<void>;
+  login: (loginHint?: string) => Promise<void>;
   logout: () => Promise<void>;
   save: (apiBaseUrl: string, token: string) => Promise<void>;
   clear: () => void;
@@ -199,12 +199,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = useCallback(async () => {
+  const login = useCallback(async (loginHint?: string) => {
     const um = userManagerRef.current;
     if (!um) return;
     try {
       await um.removeUser();
-      await um.signinRedirect({ prompt: 'login' });
+      await um.signinRedirect({ prompt: 'login', login_hint: loginHint });
     } catch {
       setPhase('login-failed');
     }

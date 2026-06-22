@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { defaultRoute } from '../auth/roles';
+import { discoverTenant } from '../api/customer';
+import { useEffect } from 'react';
 
 const phaseMessages: Record<string, string> = {
   'login-cancelled': 'Sign in was cancelled. Try again.',
@@ -20,7 +22,6 @@ export function SessionPage() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Navigate away once login completes successfully.
   useEffect(() => {
     if (phase === 'authenticated') {
       navigate(defaultRoute(roles), { replace: true });
@@ -116,13 +117,20 @@ export function SessionPage() {
             <p style={{ marginTop: 14, color: 'var(--danger)', fontSize: 13 }}>{statusMessage}</p>
           ) : null}
 
+          <CompanySsoPath apiBaseUrl={apiBaseUrl} onLogin={login} />
+
+          <div style={dividerStyle}>
+            <span style={dividerLabelStyle}>or</span>
+          </div>
+
           <button
             onClick={() => { void login(); }}
-            className="btn-primary"
-            style={{ width: '100%', marginTop: 22, minHeight: 46 }}
+            className="btn-secondary"
+            style={{ width: '100%', minHeight: 46 }}
           >
-            Sign in with SSO
+            Sign in with FairSpot account
           </button>
+
           <div className="session-security-note">
             <span>Fair parking</span>
             <span>Team policies</span>
@@ -182,6 +190,75 @@ export function SessionPage() {
   );
 }
 
+type SsoStep = 'idle' | 'discovering' | 'notfound' | 'error';
+
+function CompanySsoPath({
+  apiBaseUrl,
+  onLogin,
+}: {
+  apiBaseUrl: string;
+  onLogin: (loginHint?: string) => Promise<void>;
+}) {
+  const [email, setEmail] = useState('');
+  const [step, setStep] = useState<SsoStep>('idle');
+
+  const domain = email.includes('@') ? email.slice(email.indexOf('@') + 1).trim() : '';
+  const canSubmit = domain.length > 1 && step !== 'discovering';
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setStep('discovering');
+    const result = await discoverTenant(apiBaseUrl, domain);
+    if (result.kind === 'ok') {
+      await onLogin(email);
+    } else if (result.kind === 'notfound') {
+      setStep('notfound');
+    } else {
+      setStep('error');
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEmail(e.target.value);
+    if (step !== 'idle') setStep('idle');
+  }
+
+  return (
+    <form onSubmit={(e) => { void handleSubmit(e); }} style={{ marginTop: 22 }}>
+      <label style={labelStyle}>
+        Work email
+        <input
+          type="email"
+          value={email}
+          onChange={handleChange}
+          placeholder="you@yourcompany.com"
+          autoComplete="email"
+          autoCapitalize="none"
+          style={inputStyle}
+        />
+      </label>
+      {step === 'notfound' ? (
+        <p style={discoveryMessageStyle}>
+          We couldn't find your company. Check your work email address or use a FairSpot account to sign in.
+        </p>
+      ) : step === 'error' ? (
+        <p style={discoveryMessageStyle}>
+          Something went wrong. Try again or use a FairSpot account to sign in.
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="btn-primary"
+        style={{ width: '100%', marginTop: 10, minHeight: 46 }}
+      >
+        {step === 'discovering' ? 'Looking up your company…' : 'Continue with company SSO'}
+      </button>
+    </form>
+  );
+}
+
 function BrandLockup({ branding, compact = false }: { branding: { productName: string; tenantName: string; logoUrl: string }; compact?: boolean }) {
   return (
     <div className="brand-lockup" style={compact ? { minWidth: 0 } : undefined}>
@@ -226,6 +303,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   color: '#111827',
 };
+
 const inputStyle: React.CSSProperties = {
   border: '1px solid #e5e7eb',
   borderRadius: 6,
@@ -235,4 +313,26 @@ const inputStyle: React.CSSProperties = {
   background: '#fff',
   width: '100%',
   boxSizing: 'border-box',
+};
+
+const dividerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  margin: '18px 0',
+  color: 'var(--muted)',
+  fontSize: 12,
+};
+
+const dividerLabelStyle: React.CSSProperties = {
+  flexShrink: 0,
+  padding: '0 6px',
+  background: '#fff',
+};
+
+const discoveryMessageStyle: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 13,
+  color: 'var(--muted)',
+  lineHeight: 1.4,
 };

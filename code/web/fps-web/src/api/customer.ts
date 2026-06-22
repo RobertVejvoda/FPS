@@ -1,5 +1,38 @@
 import type { ApiClientConfig, FetchResult } from './client';
 
+export interface TenantDiscoveryResponse {
+  slug: string;
+  displayName: string;
+  loginMode: string;
+  primaryColor?: string;
+  accentColor?: string;
+  logoAssetId?: string;
+  faviconAssetId?: string;
+  legalFooterText?: string;
+}
+
+export type DiscoverResult =
+  | { kind: 'ok'; data: TenantDiscoveryResponse }
+  | { kind: 'notfound' }
+  | { kind: 'error' };
+
+export async function discoverTenant(
+  apiBaseUrl: string,
+  domain: string,
+): Promise<DiscoverResult> {
+  try {
+    const res = await fetch(
+      `${apiBaseUrl}/tenants/discover?domain=${encodeURIComponent(domain)}`,
+      { headers: { Accept: 'application/json' } },
+    );
+    if (res.status === 404) return { kind: 'notfound' };
+    if (!res.ok) return { kind: 'error' };
+    return { kind: 'ok', data: (await res.json()) as TenantDiscoveryResponse };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
 export interface TenantContactDto {
   name: string;
   email: string;
