@@ -25,7 +25,15 @@ public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenan
         var normalized = domain.Trim().ToLowerInvariant();
         var tenantId = await daprClient.GetStateAsync<string>(Store, CustomerStorageKey.DiscoveryDomain(normalized), cancellationToken: ct);
         if (tenantId is null) return null;
-        return await GetAsync(tenantId, ct);
+
+        var tenant = await GetAsync(tenantId, ct);
+        if (tenant is null || !tenant.DiscoveryDomains.Any(d => d.Domain == normalized))
+        {
+            // Stale key left over from a previous unregister — remove and treat as not found.
+            await daprClient.DeleteStateAsync(Store, CustomerStorageKey.DiscoveryDomain(normalized), cancellationToken: ct);
+            return null;
+        }
+        return tenant;
     }
 
     public async Task<bool> IsDomainRegisteredAsync(string domain, string? excludeTenantId, CancellationToken ct)
@@ -35,6 +43,14 @@ public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenan
         if (tenantId is null) return false;
         if (excludeTenantId is not null && tenantId.Equals(excludeTenantId, StringComparison.OrdinalIgnoreCase))
             return false;
+
+        // Verify the domain is still present on the tenant record (guards against stale keys).
+        var tenant = await GetAsync(tenantId, ct);
+        if (tenant is null || !tenant.DiscoveryDomains.Any(d => d.Domain == normalized))
+        {
+            await daprClient.DeleteStateAsync(Store, CustomerStorageKey.DiscoveryDomain(normalized), cancellationToken: ct);
+            return false;
+        }
         return true;
     }
 

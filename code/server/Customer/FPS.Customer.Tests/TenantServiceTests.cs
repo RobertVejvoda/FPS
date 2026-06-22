@@ -470,8 +470,58 @@ public sealed class TenantServiceTests
         var response = await service.DiscoverAsync("safe.example", CancellationToken.None);
 
         Assert.NotNull(response);
-        // Response must not expose TenantId — only safe brand tokens and login hint.
         var json = System.Text.Json.JsonSerializer.Serialize(response);
         Assert.DoesNotContain(created.TenantId, json);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_AfterUnregister_ReturnsNull()
+    {
+        var (created, _) = await service.CreateAsync("post-rm", "Post Rm", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "post-rm.example", "h", CancellationToken.None);
+        await service.UnregisterDiscoveryDomainAsync(created.TenantId, "post-rm.example", CancellationToken.None);
+
+        var result = await service.DiscoverAsync("post-rm.example", CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    // ── Domain format validation (AUTH002) ────────────────────────────────────
+
+    [Theory]
+    [InlineData("example.com")]
+    [InlineData("sub.example.com")]
+    [InlineData("greenlogistics.example")]
+    [InlineData("my-company.co.uk")]
+    [InlineData("xn--nxasmq6b.com")]
+    public async Task RegisterDiscoveryDomain_ValidHostnames_Succeed(string domain)
+    {
+        var (created, _) = await service.CreateAsync($"host-{Guid.NewGuid():N}", "Co", "eu", "UTC", [], CancellationToken.None);
+
+        var error = await service.RegisterDiscoveryDomainAsync(created!.TenantId, domain, "h", CancellationToken.None);
+
+        Assert.Null(error);
+    }
+
+    [Theory]
+    [InlineData("https://greenlogistics.example")]
+    [InlineData("green logistics.example")]
+    [InlineData("green/logistics.example")]
+    [InlineData("*@greenlogistics.example")]
+    [InlineData("notadomain")]
+    [InlineData(".example.com")]
+    [InlineData("example.com.")]
+    [InlineData("exam..ple.com")]
+    [InlineData("")]
+    [InlineData("a")]
+    [InlineData("a.b")]
+    public async Task RegisterDiscoveryDomain_InvalidHostnames_ReturnError(string domain)
+    {
+        var (created, _) = await service.CreateAsync($"host-{Guid.NewGuid():N}", "Co", "eu", "UTC", [], CancellationToken.None);
+
+        var error = await service.RegisterDiscoveryDomainAsync(created!.TenantId, domain, "h", CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("invalid", error, StringComparison.OrdinalIgnoreCase);
     }
 }

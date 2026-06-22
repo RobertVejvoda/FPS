@@ -1,7 +1,13 @@
+using System.Text.RegularExpressions;
+
 namespace FPS.Customer.Domain;
 
 public sealed class TenantWorkspace
 {
+    // Each label: starts/ends with alnum, middle may contain hyphens (RFC 1123).
+    // TLD: at least two alnum chars. No scheme, path, port, wildcard, or whitespace.
+    private static readonly Regex HostnamePattern =
+        new(@"^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]{2,}$", RegexOptions.Compiled);
     private readonly List<TenantStateTransition> transitions = [];
     private readonly List<TenantDiscoveryDomain> discoveryDomains = [];
 
@@ -92,11 +98,7 @@ public sealed class TenantWorkspace
         domain.Trim().ToLowerInvariant();
 
     private static bool IsValidDomainFormat(string domain) =>
-        !string.IsNullOrEmpty(domain)
-        && domain.Contains('.')
-        && !domain.StartsWith('.')
-        && !domain.EndsWith('.')
-        && !domain.Contains("..");
+        !string.IsNullOrEmpty(domain) && HostnamePattern.IsMatch(domain);
 
     private static bool IsValidTransition(TenantLifecycleState from, TenantLifecycleState to) =>
         (from, to) switch
