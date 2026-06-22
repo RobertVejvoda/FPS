@@ -525,3 +525,111 @@ public sealed class TenantServiceTests
         Assert.Contains("invalid", error, StringComparison.OrdinalIgnoreCase);
     }
 }
+
+/// <summary>
+/// Verifies the Green Logistics demo tenant seed produces the expected
+/// branding, discovery domain, and lifecycle state (AUTH003).
+/// </summary>
+public sealed class GreenLogisticsSeedTests
+{
+    private readonly InMemoryTenantRepository repository = new();
+    private readonly TenantService service;
+
+    public GreenLogisticsSeedTests() => service = new TenantService(repository);
+
+    private async Task<TenantWorkspace> SeedAsync()
+    {
+        const string tenantId = "greenlogistics";
+        const string slug = "greenlogistics";
+
+        var (tenant, error) = await service.CreateAsync(
+            slug, "Green Logistics", "EU", "Europe/Prague",
+            [
+                new TenantSupportContact("GL Facilities", "facilities@greenlogistics.example", "Facilities"),
+                new TenantSupportContact("GL IT Support", "it@greenlogistics.example", "Identity"),
+            ],
+            CancellationToken.None, requestedTenantId: tenantId);
+
+        Assert.Null(error);
+        Assert.NotNull(tenant);
+
+        await service.SetBrandingAsync(tenant!.TenantId, new TenantBrandingConfig
+        {
+            PrimaryColor = "#2e7d32",
+            AccentColor = "#a5d6a7",
+            LoginMode = TenantLoginMode.Both,
+        }, CancellationToken.None);
+
+        await service.RegisterDiscoveryDomainAsync(tenant.TenantId, "greenlogistics.example", "local-seed", CancellationToken.None);
+
+        await service.TransitionAsync(tenant.TenantId, TenantLifecycleState.Configured, "local-seed", "demo setup", null, CancellationToken.None);
+        await service.TransitionAsync(tenant.TenantId, TenantLifecycleState.Seeded, "local-seed", "demo seed available", null, CancellationToken.None);
+
+        return (await service.GetAsync(tenant.TenantId, CancellationToken.None))!;
+    }
+
+    [Fact]
+    public async Task Seed_ProducesCorrectTenantId()
+    {
+        var tenant = await SeedAsync();
+        Assert.Equal("greenlogistics", tenant.TenantId);
+        Assert.Equal("greenlogistics", tenant.Slug);
+    }
+
+    [Fact]
+    public async Task Seed_LifecycleIsSeeded()
+    {
+        var tenant = await SeedAsync();
+        Assert.Equal(TenantLifecycleState.Seeded, tenant.LifecycleState);
+    }
+
+    [Fact]
+    public async Task Seed_BrandingIsApplied()
+    {
+        var tenant = await SeedAsync();
+        Assert.Equal("#2e7d32", tenant.Branding.PrimaryColor);
+        Assert.Equal("#a5d6a7", tenant.Branding.AccentColor);
+        Assert.Equal(TenantLoginMode.Both, tenant.Branding.LoginMode);
+    }
+
+    [Fact]
+    public async Task Seed_DiscoveryDomainIsRegistered()
+    {
+        var tenant = await SeedAsync();
+        Assert.Single(tenant.DiscoveryDomains);
+        Assert.Equal("greenlogistics.example", tenant.DiscoveryDomains[0].Domain);
+    }
+
+    [Fact]
+    public async Task Seed_DiscoverByDomainReturnsGreenLogistics()
+    {
+        await SeedAsync();
+        var response = await service.DiscoverAsync("greenlogistics.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal("greenlogistics", response!.Slug);
+        Assert.Equal("Green Logistics", response.DisplayName);
+        Assert.Equal("Both", response.LoginMode);
+        Assert.Equal("#2e7d32", response.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task Seed_SupportContactsUseGreenLogisticsExampleDomain()
+    {
+        var tenant = await SeedAsync();
+        Assert.All(tenant.SupportContacts, c => Assert.EndsWith("@greenlogistics.example", c.Email));
+    }
+
+    [Fact]
+    public async Task Seed_IdempotentSecondCall_DoesNotError()
+    {
+        await SeedAsync();
+        // Second seed attempt should be a no-op (tenant already exists).
+        var existing = await service.GetAsync("greenlogistics", CancellationToken.None);
+        Assert.NotNull(existing);
+        // No duplicate domain error should occur since domain already registered.
+        var domainError = await service.RegisterDiscoveryDomainAsync("greenlogistics", "greenlogistics.example", "h", CancellationToken.None);
+        Assert.NotNull(domainError);
+        Assert.Contains("already registered", domainError);
+    }
+}
