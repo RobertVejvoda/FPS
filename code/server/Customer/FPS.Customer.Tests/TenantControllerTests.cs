@@ -365,4 +365,30 @@ public sealed class TenantDiscoveryControllerTests
         var json = System.Text.Json.JsonSerializer.Serialize(ok.Value);
         Assert.DoesNotContain(tenantId, json);
     }
+
+    // ── Discovery: malformed and ambiguous inputs (AUTH005) ───────────────────
+
+    [Theory]
+    [InlineData("https://greenlogistics.example")]
+    [InlineData("notadomain")]
+    [InlineData("@greenlogistics.example")]
+    [InlineData("../evil")]
+    public async Task Discover_MalformedDomain_Returns404(string malformed)
+    {
+        var result = await discoveryController.Discover(malformed, CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Discover_CaseInsensitiveDomain_Returns200()
+    {
+        var created = await tenantController.Create(new CreateTenantRequest("ci-co", "CI Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("ci.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("CI.EXAMPLE", CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+    }
 }

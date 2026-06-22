@@ -486,6 +486,55 @@ public sealed class TenantServiceTests
         Assert.Null(result);
     }
 
+    // ── Discovery: malformed and ambiguous inputs (AUTH005) ───────────────────
+
+    [Theory]
+    [InlineData("https://greenlogistics.example")]
+    [InlineData("notadomain")]
+    [InlineData("../evil")]
+    [InlineData("@greenlogistics.example")]
+    [InlineData("green logistics.example")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DiscoverAsync_MalformedInput_ReturnsNull(string input)
+    {
+        var result = await service.DiscoverAsync(input, CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_CaseInsensitiveLookup_ReturnsResult()
+    {
+        var (created, _) = await service.CreateAsync("case-co", "Case Co", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "case.example", "h", CancellationToken.None);
+
+        var result = await service.DiscoverAsync("CASE.EXAMPLE", CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("Case Co", result!.DisplayName);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_AmbiguousDomainCannotOccur_SecondRegistrationIsRejected()
+    {
+        // Domain uniqueness is enforced at registration time, so DiscoverAsync
+        // can never encounter a domain claimed by two tenants simultaneously.
+        var (t1, _) = await service.CreateAsync("ambig-t1", "Tenant One", "eu", "UTC", [], CancellationToken.None);
+        var (t2, _) = await service.CreateAsync("ambig-t2", "Tenant Two", "eu", "UTC", [], CancellationToken.None);
+
+        await service.RegisterDiscoveryDomainAsync(t1!.TenantId, "ambig.example", "h", CancellationToken.None);
+        var error = await service.RegisterDiscoveryDomainAsync(t2!.TenantId, "ambig.example", "h", CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("already registered", error, StringComparison.OrdinalIgnoreCase);
+
+        // Discover still returns the original tenant — no ambiguity.
+        var result = await service.DiscoverAsync("ambig.example", CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.Equal("ambig-t1", result!.Slug);
+    }
+
     // ── Domain format validation (AUTH002) ────────────────────────────────────
 
     [Theory]
