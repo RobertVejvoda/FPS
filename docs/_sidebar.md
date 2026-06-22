@@ -72,6 +72,7 @@
   * [Backup And Restore](./production/backup-restore)
   * [Maintenance](./production/maintenance)
   * [Mobile Device Testing](./production/mobile-device-testing)
+  * [External IdP Broker Test Setup](./production/idp-broker-test-setup)
 * [Roadmap](./roadmap)
 * [Demo and Evaluation](./demo-and-evaluation)
 * [Client Evaluation Pack](./client-evaluation-pack)
