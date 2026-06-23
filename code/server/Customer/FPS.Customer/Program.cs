@@ -103,8 +103,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
-    await SeedLocalDemoTenantAsync(scope.ServiceProvider);
-    await SeedGreenLogisticsTenantAsync(scope.ServiceProvider);
+    var seedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try { await SeedLocalDemoTenantAsync(scope.ServiceProvider); }
+    catch (Exception ex) { seedLogger.LogError(ex, "Demo tenant seed failed; skipping"); }
+    try { await SeedGreenLogisticsTenantAsync(scope.ServiceProvider); }
+    catch (Exception ex) { seedLogger.LogError(ex, "GL tenant seed failed; skipping"); }
 }
 
 app.Run();
@@ -114,8 +117,44 @@ static async Task HydrateIdentityStoresAsync(IServiceProvider services)
     var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
     var configStore = services.GetRequiredService<InMemoryTenantIdentityConfigStore>();
     var roleMappingStore = services.GetRequiredService<InMemoryTenantRoleMappingStore>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
 
-    var tenantIds = await identityRepository.GetConfiguredTenantIdsAsync(CancellationToken.None);
+    // Poll /v1.0/healthz/outbound — only returns 200 after all components (state stores) are ready.
+    var daprHttpPort = Environment.GetEnvironmentVariable("DAPR_HTTP_PORT") ?? "3500";
+    var healthUrl = $"http://localhost:{daprHttpPort}/v1.0/healthz/outbound";
+    using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) })
+    {
+        for (var attempt = 1; attempt <= 60; attempt++)
+        {
+            try
+            {
+                var resp = await http.GetAsync(healthUrl);
+                if (resp.IsSuccessStatusCode)
+                {
+                    logger.LogInformation("Dapr sidecar outbound health ready after {Attempt} attempt(s).", attempt);
+                    break;
+                }
+            }
+            catch
+            {
+                // sidecar not yet listening
+            }
+            logger.LogWarning("Waiting for Dapr outbound health on {Url} (attempt {Attempt}/60)…", healthUrl, attempt);
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    IReadOnlyList<string> tenantIds;
+    try
+    {
+        tenantIds = await identityRepository.GetConfiguredTenantIdsAsync(CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Identity store hydration failed; stores will be empty until next restart");
+        return;
+    }
+
     foreach (var tenantId in tenantIds)
     {
         var config = await identityRepository.GetConfigAsync(tenantId, CancellationToken.None);
