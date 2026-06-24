@@ -196,6 +196,59 @@ public sealed class ProfileSnapshotControllerTests
         Assert.True(snapshot.HasCompanyCar);
     }
 
+    // ── SSO provisioning: display name from claims (#559) ─────────────────────
+
+    [Fact]
+    public async Task GetSnapshot_SsoProvisioning_SavesDisplayNameFromClaims()
+    {
+        repository.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+
+        currentUser.Setup(u => u.DisplayName).Returns("Alice Smith");
+
+        UserProfile? saved = null;
+        repository.Setup(r => r.SaveAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()))
+            .Callback<UserProfile, CancellationToken>((p, _) => saved = p)
+            .Returns(Task.CompletedTask);
+
+        await controller.GetSnapshot(CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.Equal("Alice Smith", saved!.DisplayName);
+    }
+
+    [Fact]
+    public async Task GetSnapshot_SsoProvisioning_NullDisplayName_SavesNull()
+    {
+        repository.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+
+        currentUser.Setup(u => u.DisplayName).Returns((string?)null);
+
+        UserProfile? saved = null;
+        repository.Setup(r => r.SaveAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()))
+            .Callback<UserProfile, CancellationToken>((p, _) => saved = p)
+            .Returns(Task.CompletedTask);
+
+        await controller.GetSnapshot(CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.Null(saved!.DisplayName);
+    }
+
+    [Fact]
+    public async Task GetSnapshot_ExistingProfile_DoesNotCallProvisionFromClaims()
+    {
+        // Existing profiles must not be overwritten — provisioning only runs when profile is null.
+        var existing = BuildProfile(ProfileStatus.Active, parkingEligible: true);
+        repository.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        await controller.GetSnapshot(CancellationToken.None);
+
+        repository.Verify(r => r.SaveAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static UserProfile BuildProfile(
         ProfileStatus status, bool parkingEligible,
         bool hasCompanyCar = false, bool includeInactiveVehicle = false, bool defaultVehicle = false)

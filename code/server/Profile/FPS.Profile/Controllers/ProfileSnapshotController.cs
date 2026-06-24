@@ -40,6 +40,7 @@ public sealed class ProfileSnapshotController(
     {
         TenantId = currentUser.TenantId,
         UserId = currentUser.UserId,
+        DisplayName = currentUser.DisplayName,
         Status = ProfileStatus.Active,
         ParkingEligible = false,
         HasCompanyCar = false,

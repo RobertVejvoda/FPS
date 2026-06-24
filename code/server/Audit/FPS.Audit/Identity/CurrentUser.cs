@@ -9,6 +9,7 @@ public sealed class CurrentUser : ICurrentUser
     public string TenantId { get; }
     public IReadOnlyList<string> Roles { get; }
     public bool IsAuthenticated { get; }
+    public string? DisplayName => null;
 
     public CurrentUser(IHttpContextAccessor httpContextAccessor)
     {
