@@ -10,6 +10,7 @@ public sealed class TenantWorkspace
         new(@"^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]{2,}$", RegexOptions.Compiled);
     private readonly List<TenantStateTransition> transitions = [];
     private readonly List<TenantDiscoveryDomain> discoveryDomains = [];
+    private readonly List<TenantDemoSeedEvent> seedEvents = [];
 
     public string TenantId { get; init; } = string.Empty;
     public string Slug { get; init; } = string.Empty;
@@ -20,6 +21,7 @@ public sealed class TenantWorkspace
     public TenantKind Kind { get; init; } = TenantKind.Production;
     public TenantLifecycleState LifecycleState { get; private set; } = TenantLifecycleState.Draft;
     public IReadOnlyList<TenantStateTransition> Transitions => transitions.AsReadOnly();
+    public IReadOnlyList<TenantDemoSeedEvent> SeedEvents => seedEvents.AsReadOnly();
     public TenantProvisioningMetadata Provisioning { get; init; } = new();
     public TenantBrandingConfig Branding { get; private set; } = new();
     public IReadOnlyList<TenantDiscoveryDomain> DiscoveryDomains => discoveryDomains.AsReadOnly();
@@ -69,6 +71,12 @@ public sealed class TenantWorkspace
         return true;
     }
 
+    public void RecordSeedEvent(string actorHash, string datasetVersion, string reason)
+    {
+        seedEvents.Add(new TenantDemoSeedEvent(actorHash, datasetVersion, DateTimeOffset.UtcNow, reason));
+        Touch();
+    }
+
     public void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 
     internal static TenantWorkspace Restore(
@@ -80,6 +88,7 @@ public sealed class TenantWorkspace
         TenantProvisioningMetadata provisioning,
         TenantBrandingConfig branding,
         IReadOnlyList<TenantDiscoveryDomain> storedDiscoveryDomains,
+        IReadOnlyList<TenantDemoSeedEvent> storedSeedEvents,
         DateTimeOffset createdAt, DateTimeOffset updatedAt)
     {
         var ws = new TenantWorkspace
@@ -92,6 +101,7 @@ public sealed class TenantWorkspace
         ws.LifecycleState = lifecycleState;
         ws.Branding = branding;
         ws.discoveryDomains.AddRange(storedDiscoveryDomains);
+        ws.seedEvents.AddRange(storedSeedEvents);
         ws.UpdatedAt = updatedAt;
         return ws;
     }

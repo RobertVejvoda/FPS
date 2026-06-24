@@ -4,6 +4,7 @@ using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.Extensions.Configuration;
 
 namespace FPS.Configuration.Controllers;
 
@@ -17,7 +18,8 @@ namespace FPS.Configuration.Controllers;
 public sealed class ConfigDemoSeedController(
     ParkingSlotService slotService,
     ParkingPolicyService policyService,
-    ICurrentUser currentUser) : ControllerBase
+    ICurrentUser currentUser,
+    IConfiguration config) : ControllerBase
 {
     [HttpPost("demo-seed")]
     public async Task<IActionResult> DemoSeed(
@@ -26,6 +28,14 @@ public sealed class ConfigDemoSeedController(
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
             return Unauthorized();
+
+        var expectedKey = config["DemoSeed:InternalKey"];
+        if (!string.IsNullOrEmpty(expectedKey))
+        {
+            var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
+            if (providedKey != expectedKey)
+                return Unauthorized();
+        }
 
         var tenantId = currentUser.TenantId;
 

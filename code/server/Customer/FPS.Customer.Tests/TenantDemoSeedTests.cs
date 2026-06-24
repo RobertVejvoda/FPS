@@ -191,4 +191,32 @@ public sealed class TenantDemoSeedTests
 
         Assert.IsType<UnauthorizedResult>(result);
     }
+
+    [Fact]
+    public async Task DemoSeed_RecordsAuditSeedEvent()
+    {
+        var tenantId = await CreateSandboxTenantAsync();
+
+        await controller.DemoSeed(tenantId, CancellationToken.None);
+
+        var tenant = await tenantRepo.GetAsync(tenantId, CancellationToken.None);
+        Assert.NotNull(tenant);
+        Assert.Single(tenant.SeedEvents);
+        var evt = tenant.SeedEvents[0];
+        Assert.Equal("gl-v1", evt.DatasetVersion);
+        Assert.Equal("demo-seed", evt.Reason);
+        Assert.NotEmpty(evt.ActorHash);
+    }
+
+    [Fact]
+    public async Task DemoSeed_RepeatedSeed_AppendsAuditEvents()
+    {
+        var tenantId = await CreateSandboxTenantAsync();
+
+        await controller.DemoSeed(tenantId, CancellationToken.None);
+        await controller.DemoSeed(tenantId, CancellationToken.None);
+
+        var tenant = await tenantRepo.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal(2, tenant!.SeedEvents.Count);
+    }
 }

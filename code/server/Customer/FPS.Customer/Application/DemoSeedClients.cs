@@ -34,6 +34,9 @@ public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration co
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         if (!string.IsNullOrEmpty(authorizationHeader))
             request.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
+        var internalKey = config["DemoSeed:InternalKey"];
+        if (!string.IsNullOrEmpty(internalKey))
+            request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
         request.Content = JsonContent.Create(new { employees });
 
         try
@@ -66,6 +69,9 @@ public sealed class HttpDemoSeedConfigurationClient(HttpClient http, IConfigurat
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         if (!string.IsNullOrEmpty(authorizationHeader))
             request.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
+        var internalKey = config["DemoSeed:InternalKey"];
+        if (!string.IsNullOrEmpty(internalKey))
+            request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
         request.Content = JsonContent.Create(new { locationId, slots, policy });
 
         try

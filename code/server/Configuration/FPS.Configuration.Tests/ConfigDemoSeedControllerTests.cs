@@ -3,7 +3,9 @@ using FPS.Configuration.Controllers;
 using FPS.Configuration.Domain;
 using FPS.Configuration.Infrastructure;
 using FPS.SharedKernel.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Moq;
 
 namespace FPS.Configuration.Tests;
@@ -16,6 +18,13 @@ public sealed class ConfigDemoSeedControllerTests
     private readonly Mock<ICurrentUser> currentUser = new();
     private readonly ConfigDemoSeedController controller;
 
+    private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();
+
+    private static IConfiguration KeyConfig(string key) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection([new KeyValuePair<string, string?>("DemoSeed:InternalKey", key)])
+            .Build();
+
     public ConfigDemoSeedControllerTests()
     {
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
@@ -24,7 +33,20 @@ public sealed class ConfigDemoSeedControllerTests
 
         var slotService = new ParkingSlotService(slotRepo, changeRepo);
         var policyService = new ParkingPolicyService(policyRepo);
-        controller = new ConfigDemoSeedController(slotService, policyService, currentUser.Object);
+        controller = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, EmptyConfig());
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+    }
+
+    private ConfigDemoSeedController BuildWithKey(string key, string? headerValue = null)
+    {
+        var slotService = new ParkingSlotService(slotRepo, changeRepo);
+        var policyService = new ParkingPolicyService(policyRepo);
+        var c = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, KeyConfig(key));
+        var ctx = new DefaultHttpContext();
+        if (headerValue is not null)
+            ctx.Request.Headers["X-FPS-Seed-Key"] = headerValue;
+        c.ControllerContext = new ControllerContext { HttpContext = ctx };
+        return c;
     }
 
     private static ConfigDemoSeedRequest BasicRequest(int slotCount = 5) => new(
@@ -123,5 +145,35 @@ public sealed class ConfigDemoSeedControllerTests
         var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyConfigured_MissingHeader_Returns401()
+    {
+        var c = BuildWithKey("secret-key", headerValue: null);
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyConfigured_WrongHeader_Returns401()
+    {
+        var c = BuildWithKey("secret-key", headerValue: "wrong-key");
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyConfigured_CorrectHeader_Succeeds()
+    {
+        var c = BuildWithKey("secret-key", headerValue: "secret-key");
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
     }
 }

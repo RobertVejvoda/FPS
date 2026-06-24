@@ -2,7 +2,9 @@ using FPS.Profile.Controllers;
 using FPS.Profile.Domain;
 using FPS.Profile.Infrastructure;
 using FPS.SharedKernel.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Moq;
 
 namespace FPS.Profile.Tests;
@@ -14,11 +16,29 @@ public sealed class ProfileDemoSeedControllerTests
     private readonly Mock<ICurrentUser> currentUser = new();
     private readonly ProfileDemoSeedController controller;
 
+    private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();
+
+    private static IConfiguration KeyConfig(string key) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection([new KeyValuePair<string, string?>("DemoSeed:InternalKey", key)])
+            .Build();
+
     public ProfileDemoSeedControllerTests()
     {
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
         currentUser.Setup(u => u.TenantId).Returns("demo-tenant");
-        controller = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object);
+        controller = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, EmptyConfig());
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+    }
+
+    private ProfileDemoSeedController BuildWithKey(string key, string? headerValue = null)
+    {
+        var c = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, KeyConfig(key));
+        var ctx = new DefaultHttpContext();
+        if (headerValue is not null)
+            ctx.Request.Headers["X-FPS-Seed-Key"] = headerValue;
+        c.ControllerContext = new ControllerContext { HttpContext = ctx };
+        return c;
     }
 
     private static ProfileDemoSeedRequest BasicRequest(int count = 1)
@@ -148,5 +168,35 @@ public sealed class ProfileDemoSeedControllerTests
         var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyConfigured_MissingHeader_Returns401()
+    {
+        var c = BuildWithKey("secret-key", headerValue: null);
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyConfigured_WrongHeader_Returns401()
+    {
+        var c = BuildWithKey("secret-key", headerValue: "wrong-key");
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyConfigured_CorrectHeader_Succeeds()
+    {
+        var c = BuildWithKey("secret-key", headerValue: "secret-key");
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
     }
 }

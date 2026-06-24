@@ -342,6 +342,33 @@
         ]
       }
     },
+    "/tenants/{tenantId}/demo-seed": {
+      "post": {
+        "tags": [
+          "TenantDemoSeed"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
+    },
     "/tenants/discover": {
       "get": {
         "tags": [
@@ -1005,6 +1032,9 @@
   "tags": [
     {
       "name": "Tenant"
+    },
+    {
+      "name": "TenantDemoSeed"
     },
     {
       "name": "TenantDiscovery"

@@ -16,12 +16,13 @@ internal sealed class TenantWorkspaceDto
     public TenantProvisioningMetadata Provisioning { get; set; } = new();
     public TenantBrandingConfig Branding { get; set; } = new();
     public List<TenantDiscoveryDomain> DiscoveryDomains { get; set; } = [];
+    public List<TenantDemoSeedEvent> SeedEvents { get; set; } = [];
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
     public TenantWorkspace ToDomain() => TenantWorkspace.Restore(
         TenantId, Slug, DisplayName, Region, TimeZone, SupportContacts,
-        Kind, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, CreatedAt, UpdatedAt);
+        Kind, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, SeedEvents, CreatedAt, UpdatedAt);
 
     public static TenantWorkspaceDto FromDomain(TenantWorkspace ws) => new()
     {
@@ -37,6 +38,7 @@ internal sealed class TenantWorkspaceDto
         Provisioning = ws.Provisioning,
         Branding = ws.Branding,
         DiscoveryDomains = ws.DiscoveryDomains.ToList(),
+        SeedEvents = ws.SeedEvents.ToList(),
         CreatedAt = ws.CreatedAt,
         UpdatedAt = ws.UpdatedAt,
     };

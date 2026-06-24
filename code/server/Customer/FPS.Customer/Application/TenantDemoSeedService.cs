@@ -9,6 +9,10 @@ public sealed class TenantDemoSeedService(
 {
     private const string DatasetVersion = "gl-v1";
 
+    private static string Hash(string value) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(value)))[..16];
+
     public async Task<(DemoSeedResult? result, string? error)> SeedAsync(
         string tenantId, string actorId, string authorizationHeader, CancellationToken ct)
     {
@@ -30,6 +34,9 @@ public sealed class TenantDemoSeedService(
             GreenLogisticsDataset.Slots, GreenLogisticsDataset.Policy, ct);
         if (configError is not null)
             return (null, $"Configuration seed failed: {configError}");
+
+        tenant.RecordSeedEvent(Hash(actorId), DatasetVersion, "demo-seed");
+        await tenantRepository.SaveAsync(tenant, ct);
 
         return (new DemoSeedResult(
             tenantId, DatasetVersion, seedAt, profilesSeeded, slotsSeeded,
