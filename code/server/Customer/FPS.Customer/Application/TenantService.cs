@@ -20,7 +20,8 @@ public sealed class TenantService(
         string? slug, string displayName, string region, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,
         CancellationToken ct,
-        string? requestedTenantId = null)
+        string? requestedTenantId = null,
+        TenantKind kind = TenantKind.Production)
     {
         if (string.IsNullOrWhiteSpace(displayName)) return (null, "Display name is required.");
         if (string.IsNullOrWhiteSpace(region)) return (null, "Region is required.");
@@ -49,6 +50,7 @@ public sealed class TenantService(
             Region = region.Trim(),
             TimeZone = timeZone.Trim(),
             SupportContacts = supportContacts,
+            Kind = kind,
             Provisioning = TenantProvisioningMetadata.Generate(tenantId, safeSlug),
         };
 

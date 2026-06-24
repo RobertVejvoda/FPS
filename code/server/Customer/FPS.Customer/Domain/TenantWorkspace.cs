@@ -17,6 +17,7 @@ public sealed class TenantWorkspace
     public string Region { get; init; } = string.Empty;
     public string TimeZone { get; set; } = string.Empty;
     public IReadOnlyList<TenantSupportContact> SupportContacts { get; set; } = [];
+    public TenantKind Kind { get; init; } = TenantKind.Production;
     public TenantLifecycleState LifecycleState { get; private set; } = TenantLifecycleState.Draft;
     public IReadOnlyList<TenantStateTransition> Transitions => transitions.AsReadOnly();
     public TenantProvisioningMetadata Provisioning { get; init; } = new();
@@ -73,6 +74,7 @@ public sealed class TenantWorkspace
     internal static TenantWorkspace Restore(
         string tenantId, string slug, string displayName, string region, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,
+        TenantKind kind,
         TenantLifecycleState lifecycleState,
         IReadOnlyList<TenantStateTransition> storedTransitions,
         TenantProvisioningMetadata provisioning,
@@ -84,7 +86,7 @@ public sealed class TenantWorkspace
         {
             TenantId = tenantId, Slug = slug, DisplayName = displayName,
             Region = region, TimeZone = timeZone, SupportContacts = supportContacts,
-            Provisioning = provisioning, CreatedAt = createdAt,
+            Kind = kind, Provisioning = provisioning, CreatedAt = createdAt,
         };
         ws.transitions.AddRange(storedTransitions);
         ws.LifecycleState = lifecycleState;

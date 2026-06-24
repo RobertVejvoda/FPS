@@ -189,6 +189,7 @@ static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
         DisplayName = "Demo Company",
         Region = "CZ",
         TimeZone = "Europe/Prague",
+        Kind = TenantKind.Sandbox,
         SupportContacts =
         [
             new TenantSupportContact("Demo Facilities", "facilities@example.local", "Facilities"),
@@ -261,6 +262,7 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
         DisplayName = "Green Logistics",
         Region = "EU",
         TimeZone = "Europe/Prague",
+        Kind = TenantKind.Sandbox,
         SupportContacts =
         [
             new TenantSupportContact("GL Facilities", "facilities@greenlogistics.example", "Facilities"),

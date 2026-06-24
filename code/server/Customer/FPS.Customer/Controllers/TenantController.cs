@@ -15,10 +15,13 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
 
+        if (!Enum.TryParse<TenantKind>(request.Kind ?? "Production", ignoreCase: true, out var kind))
+            return BadRequest(new { error = $"Unknown tenant kind: {request.Kind}" });
+
         var (tenant, error) = await service.CreateAsync(
             request.Slug, request.DisplayName, request.Region, request.TimeZone,
             request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct, request.TenantId);
+            ct, request.TenantId, kind);
 
         if (error is not null) return BadRequest(new { error });
         return CreatedAtAction(nameof(Get), new { tenantId = tenant!.TenantId }, ToResponse(tenant));
@@ -153,6 +156,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
 
     private static TenantResponse ToResponse(TenantWorkspace t) => new(
         t.TenantId, t.Slug, t.DisplayName, t.Region, t.TimeZone,
+        t.Kind.ToString(),
         t.LifecycleState.ToString(),
         t.SupportContacts.Select(c => new ContactDto(c.Name, c.Email, c.Role)).ToList(),
         t.Provisioning.ServiceCollections,
@@ -166,7 +170,9 @@ public sealed record CreateTenantRequest(
     string TimeZone,
     IReadOnlyList<ContactDto> SupportContacts,
     // Optional deterministic tenant ID for provisioning tools. If omitted, a GUID is generated.
-    string? TenantId = null);
+    string? TenantId = null,
+    // Tenant kind — defaults to Production for safety. Use Sandbox or Evaluation for demo tenants.
+    string? Kind = null);
 
 public sealed record UpdateTenantRequest(
     string DisplayName,
@@ -183,6 +189,7 @@ public sealed record TenantResponse(
     string DisplayName,
     string Region,
     string TimeZone,
+    string Kind,
     string LifecycleState,
     IReadOnlyList<ContactDto> SupportContacts,
     IReadOnlyDictionary<string, string> ServiceCollections,

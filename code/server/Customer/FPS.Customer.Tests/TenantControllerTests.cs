@@ -147,6 +147,64 @@ public sealed class TenantControllerTests
         Assert.Equal("Updated Name", tenant!.DisplayName);
     }
 
+    // ── TenantKind discriminator (#521 prerequisite) ─────────────────────────
+
+    [Fact]
+    public async Task Create_NoKindSpecified_DefaultsToProduction()
+    {
+        var result = await controller.Create(new CreateTenantRequest("prod-co", "Prod Co", "eu", "UTC", []), CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
+        Assert.Equal("Production", response.Kind);
+    }
+
+    [Theory]
+    [InlineData("Sandbox")]
+    [InlineData("Evaluation")]
+    [InlineData("Production")]
+    public async Task Create_ExplicitKind_PersistedAndReturnedInResponse(string kind)
+    {
+        var slug = $"kind-{kind.ToLower()}";
+        var result = await controller.Create(new CreateTenantRequest(slug, "Co", "eu", "UTC", [], Kind: kind), CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
+        Assert.Equal(kind, response.Kind);
+    }
+
+    [Fact]
+    public async Task Create_UnknownKind_Returns400()
+    {
+        var result = await controller.Create(new CreateTenantRequest("bad-kind", "Co", "eu", "UTC", [], Kind: "Enterprise"), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Get_AfterSandboxCreate_ReturnsSandboxKind()
+    {
+        var created = await controller.Create(new CreateTenantRequest("sandbox-co", "Sandbox Co", "eu", "UTC", [], Kind: "Sandbox"), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.Get(tenantId, CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Sandbox", response.Kind);
+    }
+
+    [Fact]
+    public async Task Get_KindPersistedThroughSave_SurvivesRoundTrip()
+    {
+        // Verify that Kind is preserved after a save (e.g., following an update).
+        var created = await controller.Create(new CreateTenantRequest("eval-co", "Eval Co", "eu", "UTC", [], Kind: "Evaluation"), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await controller.Update(tenantId, new UpdateTenantRequest("Eval Co Updated", "UTC", []), CancellationToken.None);
+
+        var result = await controller.Get(tenantId, CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Evaluation", response.Kind);
+    }
+
     [Fact]
     public async Task Create_IncludesServiceCollectionsInResponse()
     {

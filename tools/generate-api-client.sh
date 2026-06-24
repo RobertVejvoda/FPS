@@ -17,7 +17,8 @@ SRC_DIR="$OUT_DIR/src"
 SERVICES="identity:code/server/Identity/FPS.Identity:5100
 booking:code/server/Booking/FPS.Booking:5101
 profile:code/server/Profile/FPS.Profile:5102
-notification:code/server/Notification/FPS.Notification:5103"
+notification:code/server/Notification/FPS.Notification:5103
+customer:code/server/Customer/FPS.Customer:5104"
 
 mkdir -p "$OPENAPI_DIR" "$SRC_DIR"
 
