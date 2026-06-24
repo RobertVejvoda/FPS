@@ -36,9 +36,30 @@ fi
 
 DAPR_VERSION=$(dapr --version 2>/dev/null | grep "CLI version" | grep -o '[0-9]\+\.[0-9]\+' | head -1)
 echo "Dapr CLI: $(dapr --version | head -2 | tr '\n' ' ')"
+
+# Preflight: confirm Vault is reachable and mongodb-credentials are seeded.
+# Without this the local state-store components cannot initialise and Customer
+# will exhaust 60 × 5s health retries before reporting failure. (#564)
+VAULT_TOKEN="${VAULT_TOKEN:-root}"
+VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
+echo "Checking Vault at $VAULT_ADDR ..."
+if ! curl -sf -o /dev/null -H "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/secret/data/mongodb-credentials"; then
+  echo ""
+  echo "ERROR: Vault is not reachable or mongodb-credentials are not seeded."
+  echo "  Run the full harness first:"
+  echo "    ./tools/start-local-harness.sh"
+  echo ""
+  echo "  Or seed Vault manually (Docker Compose must be up):"
+  echo "    curl -s --request POST $VAULT_ADDR/v1/secret/data/mongodb-credentials \\"
+  echo "      -H 'X-Vault-Token: $VAULT_TOKEN' \\"
+  echo "      -H 'Content-Type: application/json' \\"
+  echo "      -d '{\"data\":{\"username\":\"admin\",\"password\":\"admin\"}}'"
+  exit 1
+fi
+echo "Vault OK — mongodb-credentials present."
+
 echo "Starting FPS services with Dapr sidecars..."
 echo "  Config: $REPO_ROOT/dapr.yaml"
-echo "  Components: code/infrastructure/dapr/components/smoke (in-memory)"
 echo ""
 echo "Start Identity separately (no Dapr sidecar needed):"
 echo "  source ./tools/dev-env.sh"
