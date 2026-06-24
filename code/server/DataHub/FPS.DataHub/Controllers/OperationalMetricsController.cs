@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FPS.DataHub.Controllers;
 
 [ApiController]
-[Authorize(Roles = "hr_manager,admin")]
+[Authorize(Roles = "hr_manager,admin,report_viewer")]
 public sealed class OperationalMetricsController(
     DataHubDbContext db,
     ICurrentUser currentUser) : ControllerBase
@@ -236,7 +236,8 @@ public sealed class OperationalMetricsController(
 
     // ── GET /datahub/metrics/employee-impact ────────────────────────────────────
     // Per-employee allocation fairness summary. Exposes RequestorId for Profile
-    // display-name lookup by the web; HR/admin role required.
+    // display-name lookup by the web; HR/admin role required (not report_viewer).
+    [Authorize(Roles = "hr_manager,admin")]
     [HttpGet("/datahub/metrics/employee-impact")]
     public async Task<IActionResult> EmployeeImpact(
         [FromQuery] string? locationId,
@@ -292,6 +293,7 @@ public sealed class OperationalMetricsController(
 
     // ── GET /datahub/metrics/operational-exceptions ─────────────────────────────
     // Failed draws, draws that completed with zero allocations, and projection lag.
+    [Authorize(Roles = "hr_manager,admin")]
     [HttpGet("/datahub/metrics/operational-exceptions")]
     public async Task<IActionResult> OperationalExceptions(
         [FromQuery] string? locationId,

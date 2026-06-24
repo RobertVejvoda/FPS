@@ -2,8 +2,10 @@ using FPS.DataHub.Controllers;
 using FPS.DataHub.Domain;
 using FPS.DataHub.Infrastructure;
 using FPS.SharedKernel.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace FPS.DataHub.Tests;
 
@@ -478,5 +480,64 @@ public sealed class OperationalMetricsControllerTests : IDisposable
 
         var resp = Assert.IsType<DashboardResponse>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.Equal(1, resp.Demand);
+    }
+}
+
+// ── Authorization attribute tests ─────────────────────────────────────────────
+// Verifies role configuration on OperationalMetricsController without
+// invoking auth middleware — consistent with SecurityIngestionGuardTests pattern.
+public sealed class MetricsAuthorizationTests
+{
+    private static readonly Type ControllerType = typeof(OperationalMetricsController);
+
+    private static string EffectiveRoles(string methodName)
+    {
+        // Class-level roles: any of these is sufficient to pass class-level gate.
+        var classRoles = ControllerType
+            .GetCustomAttribute<AuthorizeAttribute>()?.Roles ?? "";
+
+        // Action-level roles: AND'd with class-level in ASP.NET Core.
+        var method = ControllerType.GetMethod(methodName,
+            BindingFlags.Public | BindingFlags.Instance);
+        var actionRoles = method?
+            .GetCustomAttribute<AuthorizeAttribute>()?.Roles ?? "";
+
+        // If action has a restrictive override, the effective set is the action's roles
+        // (intersection with class roles, but class roles are a superset).
+        return actionRoles.Length > 0 ? actionRoles : classRoles;
+    }
+
+    [Theory]
+    [InlineData("Dashboard")]
+    [InlineData("Daily")]
+    [InlineData("Utilization")]
+    [InlineData("ReasonCodes")]
+    public void AggregateSafeEndpoints_AllowReportViewer(string action)
+    {
+        var roles = EffectiveRoles(action);
+        Assert.Contains("report_viewer", roles);
+    }
+
+    [Theory]
+    [InlineData("EmployeeImpact")]
+    [InlineData("OperationalExceptions")]
+    public void SensitiveEndpoints_DoNotAllowReportViewer(string action)
+    {
+        // These actions must have their own [Authorize] without report_viewer,
+        // which overrides the class-level broader grant.
+        var method = ControllerType.GetMethod(action,
+            BindingFlags.Public | BindingFlags.Instance);
+        var actionAttr = method?.GetCustomAttribute<AuthorizeAttribute>();
+
+        Assert.NotNull(actionAttr);
+        Assert.NotNull(actionAttr.Roles);
+        Assert.DoesNotContain("report_viewer", actionAttr.Roles);
+    }
+
+    [Fact]
+    public void Controller_RequiresAuthentication()
+    {
+        var classAttr = ControllerType.GetCustomAttribute<AuthorizeAttribute>();
+        Assert.NotNull(classAttr);
     }
 }
