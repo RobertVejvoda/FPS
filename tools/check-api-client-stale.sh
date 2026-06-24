@@ -23,7 +23,8 @@ mkdir -p "$TMP_OPENAPI" "$TMP_SRC"
 SERVICES="identity:code/server/Identity/FPS.Identity:5110
 booking:code/server/Booking/FPS.Booking:5111
 profile:code/server/Profile/FPS.Profile:5112
-notification:code/server/Notification/FPS.Notification:5113"
+notification:code/server/Notification/FPS.Notification:5113
+customer:code/server/Customer/FPS.Customer:5114"
 
 # Build Release once before launching any service, so --no-build below has
 # something to run. CI typically builds Debug; without this, dotnet run

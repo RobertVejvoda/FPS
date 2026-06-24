@@ -14,6 +14,8 @@
     ".": "./src/index.ts",
     "./identity": "./src/identity.d.ts",
     "./booking": "./src/booking.d.ts",
-    "./profile": "./src/profile.d.ts"
+    "./profile": "./src/profile.d.ts",
+    "./notification": "./src/notification.d.ts",
+    "./customer": "./src/customer.d.ts"
   }
 }
