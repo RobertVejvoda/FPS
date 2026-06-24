@@ -10,6 +10,7 @@ internal sealed class TenantWorkspaceDto
     public string Region { get; set; } = string.Empty;
     public string TimeZone { get; set; } = string.Empty;
     public List<TenantSupportContact> SupportContacts { get; set; } = [];
+    public TenantKind Kind { get; set; } = TenantKind.Production;
     public TenantLifecycleState LifecycleState { get; set; }
     public List<TenantStateTransition> Transitions { get; set; } = [];
     public TenantProvisioningMetadata Provisioning { get; set; } = new();
@@ -20,7 +21,7 @@ internal sealed class TenantWorkspaceDto
 
     public TenantWorkspace ToDomain() => TenantWorkspace.Restore(
         TenantId, Slug, DisplayName, Region, TimeZone, SupportContacts,
-        LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, CreatedAt, UpdatedAt);
+        Kind, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, CreatedAt, UpdatedAt);
 
     public static TenantWorkspaceDto FromDomain(TenantWorkspace ws) => new()
     {
@@ -30,6 +31,7 @@ internal sealed class TenantWorkspaceDto
         Region = ws.Region,
         TimeZone = ws.TimeZone,
         SupportContacts = ws.SupportContacts.ToList(),
+        Kind = ws.Kind,
         LifecycleState = ws.LifecycleState,
         Transitions = ws.Transitions.ToList(),
         Provisioning = ws.Provisioning,
