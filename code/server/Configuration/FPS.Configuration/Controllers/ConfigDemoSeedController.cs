@@ -30,12 +30,12 @@ public sealed class ConfigDemoSeedController(
             return Unauthorized();
 
         var expectedKey = config["DemoSeed:InternalKey"];
-        if (!string.IsNullOrEmpty(expectedKey))
-        {
-            var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
-            if (providedKey != expectedKey)
-                return Unauthorized();
-        }
+        if (string.IsNullOrEmpty(expectedKey))
+            return StatusCode(503, new { error = "Demo seed internal key not configured." });
+
+        var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
+        if (providedKey != expectedKey)
+            return Unauthorized();
 
         var tenantId = currentUser.TenantId;
 

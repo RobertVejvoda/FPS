@@ -27,8 +27,10 @@ public sealed class ProfileDemoSeedControllerTests
     {
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
         currentUser.Setup(u => u.TenantId).Returns("demo-tenant");
-        controller = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, EmptyConfig());
-        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Headers["X-FPS-Seed-Key"] = "test-key";
+        controller = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, KeyConfig("test-key"));
+        controller.ControllerContext = new ControllerContext { HttpContext = ctx };
     }
 
     private ProfileDemoSeedController BuildWithKey(string key, string? headerValue = null)
@@ -168,6 +170,18 @@ public sealed class ProfileDemoSeedControllerTests
         var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyNotConfigured_Returns503()
+    {
+        var c = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, EmptyConfig());
+        c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        var obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(503, obj.StatusCode);
     }
 
     [Fact]

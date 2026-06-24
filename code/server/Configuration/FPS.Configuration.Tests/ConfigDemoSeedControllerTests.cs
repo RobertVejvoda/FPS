@@ -31,10 +31,12 @@ public sealed class ConfigDemoSeedControllerTests
         currentUser.Setup(u => u.TenantId).Returns("demo-tenant");
         currentUser.Setup(u => u.UserId).Returns("admin-1");
 
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Headers["X-FPS-Seed-Key"] = "test-key";
         var slotService = new ParkingSlotService(slotRepo, changeRepo);
         var policyService = new ParkingPolicyService(policyRepo);
-        controller = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, EmptyConfig());
-        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        controller = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, KeyConfig("test-key"));
+        controller.ControllerContext = new ControllerContext { HttpContext = ctx };
     }
 
     private ConfigDemoSeedController BuildWithKey(string key, string? headerValue = null)
@@ -145,6 +147,20 @@ public sealed class ConfigDemoSeedControllerTests
         var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task DemoSeed_InternalKeyNotConfigured_Returns503()
+    {
+        var slotService = new ParkingSlotService(slotRepo, changeRepo);
+        var policyService = new ParkingPolicyService(policyRepo);
+        var c = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, EmptyConfig());
+        c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+
+        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+
+        var obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(503, obj.StatusCode);
     }
 
     [Fact]
