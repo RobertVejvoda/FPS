@@ -47,9 +47,12 @@ public sealed class EmployeeBootstrapService(
         var err = ValidateRequest(request);
         if (err is not null) return (null, err);
 
-        var subjectHash = Hash(request.ExternalSubject);
+        // Use ExternalSubject directly as the profile key — the same key that
+        // ProfileSnapshotController and Booking use (raw JWT sub UUID). Storing
+        // under a hash broke eligibility lookups for HR-imported employees.
+        var userId = request.ExternalSubject;
 
-        var existing = await profileRepository.GetAsync(tenantId, subjectHash, ct);
+        var existing = await profileRepository.GetAsync(tenantId, userId, ct);
         if (existing is not null)
             return (null, "An employee with this external subject is already registered for this tenant.");
 
@@ -57,9 +60,9 @@ public sealed class EmployeeBootstrapService(
             await profileRepository.EmployeeIdExistsAsync(tenantId, request.EmployeeId, ct))
             return (null, $"Employee ID '{request.EmployeeId}' is already registered for this tenant.");
 
-        var profile = BuildProfile(tenantId, subjectHash, request);
+        var profile = BuildProfile(tenantId, userId, request);
         await profileRepository.SaveAsync(profile, ct);
-        SyncDeactivatedStore(tenantId, subjectHash, profile.IsActive);
+        SyncDeactivatedStore(tenantId, userId, profile.IsActive);
         return (profile, null);
     }
 
@@ -139,13 +142,12 @@ public sealed class EmployeeBootstrapService(
     public async Task<string?> DeactivateAsync(string tenantId, string externalSubject, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(externalSubject)) return "External subject is required.";
-        var subjectHash = Hash(externalSubject);
-        var existing = await profileRepository.GetAsync(tenantId, subjectHash, ct);
+        var existing = await profileRepository.GetAsync(tenantId, externalSubject, ct);
         if (existing is null) return "Employee not found.";
 
         var updated = new UserProfile
         {
-            TenantId = tenantId, UserId = subjectHash,
+            TenantId = tenantId, UserId = externalSubject,
             Status = ProfileStatus.Inactive,
             EmployeeId = existing.EmployeeId,
             DisplayName = existing.DisplayName,
@@ -163,7 +165,7 @@ public sealed class EmployeeBootstrapService(
         };
 
         await profileRepository.SaveAsync(updated, ct);
-        SyncDeactivatedStore(tenantId, subjectHash, false);
+        SyncDeactivatedStore(tenantId, externalSubject, false);
         return null;
     }
 
@@ -172,8 +174,8 @@ public sealed class EmployeeBootstrapService(
         string tenantId, IReadOnlyList<BootstrapEmployeeRequest> requests, CancellationToken ct)
     {
         var errors = new List<string>();
-        var valid = new List<(BootstrapEmployeeRequest req, string hash)>();
-        var seenHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var valid = new List<(BootstrapEmployeeRequest req, string userId)>();
+        var seenUserIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenEmployeeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Phase 1: validate all rows — no saves yet.
@@ -184,10 +186,10 @@ public sealed class EmployeeBootstrapService(
             var err = ValidateRequest(req);
             if (err is not null) { errors.Add($"{label}: {err}"); continue; }
 
-            var hash = Hash(req.ExternalSubject);
-            if (seenHashes.Contains(hash))
+            var userId = req.ExternalSubject;
+            if (seenUserIds.Contains(userId))
             { errors.Add($"{label}: duplicate external subject within this batch."); continue; }
-            if (await profileRepository.GetAsync(tenantId, hash, ct) is not null)
+            if (await profileRepository.GetAsync(tenantId, userId, ct) is not null)
             { errors.Add($"{label}: subject already registered for this tenant."); continue; }
 
             if (req.EmployeeId is not null)
@@ -199,25 +201,25 @@ public sealed class EmployeeBootstrapService(
                 seenEmployeeIds.Add(req.EmployeeId);
             }
 
-            seenHashes.Add(hash);
-            valid.Add((req, hash));
+            seenUserIds.Add(userId);
+            valid.Add((req, userId));
         }
 
         // Phase 2: commit ONLY when the entire batch is valid.
         if (errors.Count > 0) return new ImportSummary(0, errors.Count, errors);
 
-        foreach (var (req, hash) in valid)
+        foreach (var (req, userId) in valid)
         {
-            var profile = BuildProfile(tenantId, hash, req);
+            var profile = BuildProfile(tenantId, userId, req);
             await profileRepository.SaveAsync(profile, ct);
-            SyncDeactivatedStore(tenantId, hash, profile.IsActive);
+            SyncDeactivatedStore(tenantId, userId, profile.IsActive);
         }
 
         return new ImportSummary(valid.Count, 0, []);
     }
 
     public async Task<UserProfile?> GetAsync(string tenantId, string externalSubject, CancellationToken ct) =>
-        await profileRepository.GetAsync(tenantId, Hash(externalSubject), ct);
+        await profileRepository.GetAsync(tenantId, externalSubject, ct);
 
     public async Task<UserProfile?> GetByHashAsync(string tenantId, string subjectHash, CancellationToken ct) =>
         await profileRepository.GetAsync(tenantId, subjectHash, ct);
