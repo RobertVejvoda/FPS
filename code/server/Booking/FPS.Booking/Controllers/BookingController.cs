@@ -37,6 +37,9 @@ public sealed class BookingController : ControllerBase
         if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
             return Unauthorized();
 
+        if (!Guid.TryParse(body.FacilityId, out _))
+            return BadRequest(new { error = "FacilityId must be a valid UUID." });
+
         var command = new SubmitBookingRequestCommand(
             TenantId: currentUser.TenantId,
             RequestorId: currentUser.UserId,

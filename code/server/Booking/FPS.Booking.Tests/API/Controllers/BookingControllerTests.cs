@@ -64,6 +64,22 @@ public sealed class BookingControllerTests
         Assert.Equal("DuplicateRequest", body.RejectionCode);
     }
 
+    [Theory]
+    [InlineData("GL-HQ")]
+    [InlineData("not-a-guid")]
+    [InlineData("")]
+    public async Task SubmitBookingRequest_NonGuidFacilityId_Returns400(string facilityId)
+    {
+        // Regression (#563): non-UUID FacilityId must return 400 from the controller,
+        // not 500 from Guid.Parse deep inside ToDto.
+        var body = ValidSubmitBody() with { FacilityId = facilityId };
+        var result = await controller.SubmitBookingRequest(body, CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.NotNull(bad.Value);
+        mediator.Verify(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task SubmitBookingRequest_MapsCommandFieldsFromCurrentUser()
     {
