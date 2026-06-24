@@ -16,6 +16,7 @@ file sealed class FakeCurrentUser(string tenantId, string userId) : ICurrentUser
     public string UserId { get; } = userId;
     public IReadOnlyList<string> Roles => [];
     public bool IsAuthenticated => true;
+    public string? DisplayName => null;
     public bool IsInRole(string role) => false;
 }
 

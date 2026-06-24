@@ -566,6 +566,7 @@ file sealed class StaticCurrentUser(string userId, string tenantId) : ICurrentUs
     public string UserId => userId;
     public string TenantId => tenantId;
     public IReadOnlyList<string> Roles => [];
+    public string? DisplayName => null;
     public bool IsInRole(string role) => false;
 }
 
