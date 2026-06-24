@@ -111,7 +111,7 @@ public sealed class HrImportServiceTests
         Assert.Equal(1, result!.Applied);
         Assert.Equal(1, result.VehiclesApplied);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         Assert.NotNull(profile);
         var vehicle = Assert.Single(profile!.Vehicles);
@@ -143,7 +143,7 @@ public sealed class HrImportServiceTests
         Assert.Null(error);
         Assert.Equal(1, result!.VehiclesApplied);
 
-        var hash = EmployeeBootstrapService.Hash("existing-emp");
+        var hash = "existing-emp";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         Assert.Single(profile!.Vehicles);
     }
@@ -187,7 +187,7 @@ public sealed class HrImportServiceTests
         Assert.Equal(1, result.VehiclesRejected);
 
         // Employee was not persisted since vehicle errors blocked commit.
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         Assert.Null(await profileRepo.GetAsync("t1", hash, CancellationToken.None));
     }
 
@@ -261,7 +261,7 @@ public sealed class HrImportServiceTests
         Assert.Null(error);
         Assert.Equal(1, result!.VehiclesApplied);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.False(vehicle.IsActive);
@@ -295,7 +295,7 @@ public sealed class HrImportServiceTests
         Assert.Null(error);
         Assert.NotNull(result);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         // Idempotent: exactly one vehicle, not two.
         Assert.Single(profile!.Vehicles);
@@ -315,7 +315,7 @@ public sealed class HrImportServiceTests
 
         await service.CommitAsync("t1", emp, veh, CancellationToken.None);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.Equal("My Blue Car", vehicle.Alias);
@@ -339,7 +339,7 @@ public sealed class HrImportServiceTests
         Assert.Null(error);
         Assert.Equal(2, result!.VehiclesApplied);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         Assert.Equal(2, profile!.Vehicles.Count);
     }
@@ -366,7 +366,7 @@ public sealed class HrImportServiceTests
         Assert.Equal(0, result.VehiclesApplied);
 
         // Neither employee nor vehicle was persisted.
-        Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("emp1"), CancellationToken.None));
+        Assert.Null(await profileRepo.GetAsync("t1", "emp1", CancellationToken.None));
     }
 
     // ── Vehicle CSV header validation ─────────────────────────────────────────
@@ -415,7 +415,7 @@ public sealed class HrImportServiceTests
 
         await service.CommitAsync("t1", emp, veh, CancellationToken.None);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.True(vehicle.IsDefault);
@@ -435,7 +435,7 @@ public sealed class HrImportServiceTests
 
         await service.CommitAsync("t1", emp, veh, CancellationToken.None);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.True(vehicle.IsElectric);
@@ -456,8 +456,7 @@ public sealed class HrImportServiceTests
 
         // The 2nd GetAsync for emp1 (inside UpdateAsync) returns null, simulating a
         // race-condition delete between classify and apply.
-        var emp1Hash = EmployeeBootstrapService.Hash("emp1");
-        var failingRepo = new NthCallNullRepository(inner, emp1Hash, failOnCallN: 2);
+        var failingRepo = new NthCallNullRepository(inner, "emp1", failOnCallN: 2);
         var svc = new HrImportService(
             failingRepo, deactivated, new StaticCurrentUser("actor-1", "t1"),
             NullLogger<HrImportService>.Instance);
@@ -499,7 +498,7 @@ public sealed class HrImportServiceTests
         Assert.Null(error);
         Assert.Equal(1, result!.VehiclesApplied);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.Equal("van", vehicle.VehicleType);
@@ -524,7 +523,7 @@ public sealed class HrImportServiceTests
         var veh2 = CsvStream(VehicleHeader, "emp1,,AA 1111,car,false,false");
         await service.CommitAsync("t1", emp2, veh2, CancellationToken.None);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.False(vehicle.IsActive);
@@ -552,7 +551,7 @@ public sealed class HrImportServiceTests
         var veh3 = CsvStream(VehicleHeader, "emp1,,BB 2222,car,false,true");
         await service.CommitAsync("t1", emp3, veh3, CancellationToken.None);
 
-        var hash = EmployeeBootstrapService.Hash("emp1");
+        var hash = "emp1";
         var profile = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
         var vehicle = Assert.Single(profile!.Vehicles);
         Assert.True(vehicle.IsActive);

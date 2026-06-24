@@ -34,9 +34,9 @@ public sealed class EmployeeBootstrapController(
         return Ok(summary);
     }
 
-    // Subject hash from GET response is used as the path parameter — no re-hashing.
-    [HttpPut("/profile/bootstrap/{subjectHash}")]
-    public async Task<IActionResult> Update(string subjectHash, [FromBody] UpdateRequest request, CancellationToken ct)
+    // UserId from the POST /profile/bootstrap response is used as the path parameter.
+    [HttpPut("/profile/bootstrap/{userId}")]
+    public async Task<IActionResult> Update(string userId, [FromBody] UpdateRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId)) return Unauthorized();
 
@@ -46,7 +46,7 @@ public sealed class EmployeeBootstrapController(
             request.ParkingEligible, request.HasCompanyCar,
             request.AccessibilityEligible, request.ReservedSpaceEligible);
 
-        var error = await service.UpdateAsync(currentUser.TenantId, subjectHash, updateReq, ct);
+        var error = await service.UpdateAsync(currentUser.TenantId, userId, updateReq, ct);
         if (error == "Employee not found.") return NotFound();
         if (error is not null) return BadRequest(new { error });
         return NoContent();
@@ -73,7 +73,7 @@ public sealed class EmployeeBootstrapController(
     private static object ToResponse(Domain.UserProfile p) => new
     {
         tenantId = p.TenantId,
-        subjectHash = p.UserId,
+        userId = p.UserId,
         isActive = p.IsActive,
         parkingEligible = p.ParkingEligible,
         hasCompanyCar = p.HasCompanyCar,

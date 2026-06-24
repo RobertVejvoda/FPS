@@ -42,7 +42,7 @@ public sealed record HrImportCommitResult(
 internal sealed record ClassifiedRow(
     int LineNumber,
     string ExternalSubject,
-    string SubjectHash,
+    string UserId,
     HrImportRowStatus Status,
     string? Reason,
     BootstrapEmployeeRequest? CreateRequest,
@@ -52,7 +52,7 @@ internal sealed record ClassifiedRow(
 internal sealed record ClassifiedVehicleRow(
     int LineNumber,
     string ExternalSubject,
-    string SubjectHash,
+    string UserId,
     string LicensePlate,
     string? Alias,
     string VehicleType,
@@ -97,9 +97,9 @@ public sealed class HrImportService(
         List<ClassifiedVehicleRow> vehicleRows = [];
         if (vehicleStream is not null)
         {
-            // Build the set of known subject hashes from the employee batch.
+            // Build the set of known user IDs from the employee batch.
             var batchHashes = rows
-                .Select(r => r.SubjectHash)
+                .Select(r => r.UserId)
                 .Where(h => !string.IsNullOrEmpty(h))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -129,7 +129,7 @@ public sealed class HrImportService(
         if (vehicleStream is not null)
         {
             var batchHashes = rows
-                .Select(r => r.SubjectHash)
+                .Select(r => r.UserId)
                 .Where(h => !string.IsNullOrEmpty(h))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -170,7 +170,7 @@ public sealed class HrImportService(
             }
             else if (row.Status == HrImportRowStatus.Updated && row.UpdateRequest is not null)
             {
-                serviceError = await bootstrapService.UpdateAsync(tenantId, row.SubjectHash, row.UpdateRequest, ct);
+                serviceError = await bootstrapService.UpdateAsync(tenantId, row.UserId, row.UpdateRequest, ct);
             }
             else continue;
 
@@ -255,15 +255,14 @@ public sealed class HrImportService(
             var homeLocation = GetField(fields, colIndex, "home_location").Trim().NullIfEmpty();
             var email        = GetField(fields, colIndex, "email").Trim().NullIfEmpty();
             var displayName  = GetField(fields, colIndex, "display_name").Trim().NullIfEmpty();
-            var subjectHash  = EmployeeBootstrapService.Hash(subject);
-            var existing     = await profileRepository.GetAsync(tenantId, subjectHash, ct);
+            var existing = await profileRepository.GetAsync(tenantId, subject, ct);
 
             if (existing is null)
             {
                 var createReq = new BootstrapEmployeeRequest(
                     subject, null, isActive, roles, email, homeLocation,
                     parkingEligible, hasCompanyCar, accessibility, reserved, "hr-import", displayName);
-                rows.Add(new ClassifiedRow(lineNo, subject, subjectHash, HrImportRowStatus.Created, null, createReq, null));
+                rows.Add(new ClassifiedRow(lineNo, subject, subject, HrImportRowStatus.Created, null, createReq, null));
             }
             else
             {
@@ -271,7 +270,7 @@ public sealed class HrImportService(
                     isActive, roles, email, homeLocation,
                     parkingEligible, hasCompanyCar, accessibility, reserved, displayName);
                 var status = IsUnchanged(existing, updateReq) ? HrImportRowStatus.Unchanged : HrImportRowStatus.Updated;
-                rows.Add(new ClassifiedRow(lineNo, subject, subjectHash, status, null, null, updateReq));
+                rows.Add(new ClassifiedRow(lineNo, subject, subject, status, null, null, updateReq));
             }
         }
 
@@ -281,7 +280,7 @@ public sealed class HrImportService(
     private async Task<(List<ClassifiedVehicleRow> rows, string? error)> ClassifyVehiclesAsync(
         string tenantId,
         Stream vehicleCsvStream,
-        IReadOnlySet<string> employeeBatchSubjectHashes,
+        IReadOnlySet<string> employeeBatchUserIds,
         CancellationToken ct)
     {
         var lines = await ReadLinesAsync(vehicleCsvStream, ct);
@@ -332,12 +331,10 @@ public sealed class HrImportService(
             var boolErr = elErr ?? actErr;
             if (boolErr is not null) { rows.Add(VehicleRejected(lineNo, subject, plate, boolErr)); continue; }
 
-            var subjectHash = EmployeeBootstrapService.Hash(subject);
-
             // Subject must be in the employee batch or exist as a profile in this tenant.
-            if (!employeeBatchSubjectHashes.Contains(subjectHash))
+            if (!employeeBatchUserIds.Contains(subject))
             {
-                var existingProfile = await profileRepository.GetAsync(tenantId, subjectHash, ct);
+                var existingProfile = await profileRepository.GetAsync(tenantId, subject, ct);
                 if (existingProfile is null)
                 {
                     rows.Add(VehicleRejected(lineNo, subject, plate,
@@ -347,7 +344,7 @@ public sealed class HrImportService(
             }
 
             var alias = GetField(fields, colIndex, "vehicle_alias").Trim().NullIfEmpty();
-            rows.Add(new ClassifiedVehicleRow(lineNo, subject, subjectHash, plate, alias, vehicleType, isElectric, isActive, HrVehicleImportStatus.Valid, null));
+            rows.Add(new ClassifiedVehicleRow(lineNo, subject, subject, plate, alias, vehicleType, isElectric, isActive, HrVehicleImportStatus.Valid, null));
         }
 
         return (rows, null);
@@ -362,10 +359,10 @@ public sealed class HrImportService(
         var rejected = 0;
         var errors = new List<string>();
 
-        // Group by subject hash so each profile is loaded and saved at most once.
+        // Group by userId so each profile is loaded and saved at most once.
         var bySubject = vehicleRows
             .Where(r => r.Status == HrVehicleImportStatus.Valid)
-            .GroupBy(r => r.SubjectHash, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(r => r.UserId, StringComparer.OrdinalIgnoreCase);
 
         foreach (var group in bySubject)
         {

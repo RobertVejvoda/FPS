@@ -59,6 +59,28 @@ public sealed class EmployeeBootstrapServiceTests
     }
 
     [Fact]
+    public async Task Register_ProfileStoredUnderRawSubject_MatchesSnapshotAndBookingLookupKey()
+    {
+        // Regression for #555: bootstrap must store under the raw ExternalSubject
+        // (JWT sub UUID) so that ProfileSnapshotController and Booking eligibility
+        // lookups — both of which use the authenticated JWT sub directly — find
+        // the same profile that HR imported.
+        const string rawSub = "052887f8-74ba-4789-8a58-ca28fa5cc7e1";
+        var req = ValidRequest(rawSub) with { ParkingEligible = true };
+
+        var (profile, error) = await service.RegisterAsync("greenlogistics", req, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(profile);
+        Assert.Equal(rawSub, profile!.UserId);
+
+        // The key the snapshot controller uses is the raw JWT sub — must hit.
+        var found = await profileRepo.GetAsync("greenlogistics", rawSub, CancellationToken.None);
+        Assert.NotNull(found);
+        Assert.True(found!.ParkingEligible);
+    }
+
+    [Fact]
     public async Task Register_DuplicateSubject_ReturnsError()
     {
         await service.RegisterAsync("t1", ValidRequest("sub-x"), CancellationToken.None);
@@ -156,10 +178,9 @@ public sealed class EmployeeBootstrapServiceTests
         await service.RegisterAsync("t1", ValidRequest("sub-d"), CancellationToken.None);
         var error = await service.DeactivateAsync("t1", "sub-d", CancellationToken.None);
         Assert.Null(error);
-        var hash = EmployeeBootstrapService.Hash("sub-d");
-        var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        var stored = await profileRepo.GetAsync("t1", "sub-d", CancellationToken.None);
         Assert.Equal(Domain.ProfileStatus.Inactive, stored!.Status);
-        Assert.True(deactivatedStore.IsDeactivated("t1", hash));
+        Assert.True(deactivatedStore.IsDeactivated("t1", "sub-d"));
     }
 
     [Fact]
@@ -176,8 +197,7 @@ public sealed class EmployeeBootstrapServiceTests
         await service.RegisterAsync("t1", req, CancellationToken.None);
         var error = await service.DeactivateAsync("t1", "sub-deact", CancellationToken.None);
         Assert.Null(error);
-        var hash = EmployeeBootstrapService.Hash("sub-deact");
-        var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        var stored = await profileRepo.GetAsync("t1", "sub-deact", CancellationToken.None);
         Assert.Equal(Domain.ProfileStatus.Inactive, stored!.Status);
         Assert.Equal("EMP-999", stored.EmployeeId);
         Assert.Contains("employee", stored.FpsRoles);
@@ -198,7 +218,7 @@ public sealed class EmployeeBootstrapServiceTests
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(2, summary.Accepted);
         Assert.Equal(0, summary.Rejected);
-        var stored = await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("sub-1"), CancellationToken.None);
+        var stored = await profileRepo.GetAsync("t1", "sub-1", CancellationToken.None);
         Assert.Equal("EMP-001", stored!.EmployeeId);
         Assert.Equal("a@c.com", stored.NotificationAddress);
     }
@@ -209,7 +229,7 @@ public sealed class EmployeeBootstrapServiceTests
         var batch = new[] { ValidRequest("sub-ok"), ValidRequest("") with { ExternalSubject = "" } };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(0, summary.Accepted);
-        Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("sub-ok"), CancellationToken.None));
+        Assert.Null(await profileRepo.GetAsync("t1", "sub-ok", CancellationToken.None));
     }
 
     [Fact]
@@ -237,7 +257,7 @@ public sealed class EmployeeBootstrapServiceTests
         var batch = new[] { ValidRequest("new-sub", "EMP-001") };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(0, summary.Accepted);
-        Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("new-sub"), CancellationToken.None));
+        Assert.Null(await profileRepo.GetAsync("t1", "new-sub", CancellationToken.None));
     }
 
     [Fact]
@@ -247,7 +267,7 @@ public sealed class EmployeeBootstrapServiceTests
         var batch = new[] { ValidRequest("new-sub"), ValidRequest("existing") };
         var summary = await service.ImportAsync("t1", batch, CancellationToken.None);
         Assert.Equal(0, summary.Accepted);
-        Assert.Null(await profileRepo.GetAsync("t1", EmployeeBootstrapService.Hash("new-sub"), CancellationToken.None));
+        Assert.Null(await profileRepo.GetAsync("t1", "new-sub", CancellationToken.None));
     }
 
     // ── EmployeeIdExistsAsync ─────────────────────────────────────────────────
@@ -309,8 +329,7 @@ public sealed class EmployeeBootstrapServiceTests
         await service.RegisterAsync("t1", req, CancellationToken.None);
         await service.DeactivateAsync("t1", "sub-deact-name", CancellationToken.None);
 
-        var hash = EmployeeBootstrapService.Hash("sub-deact-name");
-        var stored = await profileRepo.GetAsync("t1", hash, CancellationToken.None);
+        var stored = await profileRepo.GetAsync("t1", "sub-deact-name", CancellationToken.None);
         Assert.Equal("Bob Jones", stored!.DisplayName);
     }
 
