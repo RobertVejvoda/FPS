@@ -119,11 +119,14 @@ static async Task HydrateIdentityStoresAsync(IServiceProvider services)
     var roleMappingStore = services.GetRequiredService<InMemoryTenantRoleMappingStore>();
     var logger = services.GetRequiredService<ILogger<Program>>();
 
-    // Poll /v1.0/healthz/outbound — only returns 200 after all components (state stores) are ready.
-    var daprHttpPort = Environment.GetEnvironmentVariable("DAPR_HTTP_PORT") ?? "3500";
-    var healthUrl = $"http://localhost:{daprHttpPort}/v1.0/healthz/outbound";
-    using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) })
+    // Only poll Dapr outbound health when the Dapr harness is actually present (DAPR_HTTP_PORT set).
+    // Without this guard, test runs that host Customer via WebApplicationFactory stall for up to 5 min
+    // per startup because no sidecar is listening and every attempt times out.
+    var daprHttpPort = Environment.GetEnvironmentVariable("DAPR_HTTP_PORT");
+    if (!string.IsNullOrEmpty(daprHttpPort))
     {
+        var healthUrl = $"http://localhost:{daprHttpPort}/v1.0/healthz/outbound";
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
         for (var attempt = 1; attempt <= 60; attempt++)
         {
             try
