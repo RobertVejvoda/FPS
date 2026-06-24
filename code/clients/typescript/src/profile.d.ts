@@ -82,7 +82,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/profile/bootstrap/{subjectHash}": {
+    "/profile/bootstrap/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -95,7 +95,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    subjectHash: string;
+                    userId: string;
                 };
                 cookie?: never;
             };

@@ -79,14 +79,14 @@
         ]
       }
     },
-    "/profile/bootstrap/{subjectHash}": {
+    "/profile/bootstrap/{userId}": {
       "put": {
         "tags": [
           "EmployeeBootstrap"
         ],
         "parameters": [
           {
-            "name": "subjectHash",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
