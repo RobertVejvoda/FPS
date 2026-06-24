@@ -1,14 +1,23 @@
 # dapr.yaml — FPS multi-app run configuration for local smoke testing.
 # Usage: dapr run -f dapr.yaml
 #
-# Prerequisites:
-#   docker compose -f code/infrastructure/docker-compose.yaml up -d
-#   ./tools/dev-setup-auth.sh
-#   source ./tools/dev-env.sh
-#   dotnet build code/server/FPS.sln --no-restore
+# Prerequisites (in order):
+#   1. ./tools/start-local-harness.sh        ← REQUIRED — starts Docker infra AND
+#      seeds Vault with mongodb-credentials, rabbitmq-credentials, minio-credentials.
+#      All state store components in code/infrastructure/dapr/components/local/ read
+#      credentials from Vault. If Vault is unseeded the state stores never initialise
+#      and Customer will exhaust 60 health retries before giving up.
 #
-# Uses in-memory state/pubsub so no Vault or MongoDB credentials are needed.
-# For durable local state use: --resources-path code/infrastructure/dapr/components/local
+#      Alternatively, seed Vault manually:
+#        docker compose -f code/infrastructure/docker-compose.yaml up -d
+#        curl -s --request POST http://localhost:8200/v1/secret/data/mongodb-credentials \
+#          -H "X-Vault-Token: root" \
+#          -H "Content-Type: application/json" \
+#          -d '{"data":{"username":"admin","password":"admin"}}'
+#
+#   2. ./tools/dev-setup-auth.sh
+#   3. source ./tools/dev-env.sh
+#   4. dotnet build code/server/FPS.sln --no-restore
 #
 # Requires: Dapr CLI >= 1.18  (https://docs.dapr.io/getting-started/install-dapr-cli/)
 
