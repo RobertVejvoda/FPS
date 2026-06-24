@@ -1,8 +1,8 @@
 #!/bin/sh
 # start-with-dapr.sh — Start FPS services with Dapr sidecars for local smoke testing.
 #
-# Uses the Dapr CLI multi-app run file (dapr.yaml) which starts seven FPS services
-# each paired with a Dapr sidecar loaded with in-memory components.
+# Uses the Dapr CLI multi-app run file (dapr.yaml) which starts nine FPS services
+# each paired with a Dapr sidecar using durable local components (MongoDB + Vault).
 #
 # Identity does not need a sidecar and must be started separately:
 #   source ./tools/dev-env.sh
@@ -19,10 +19,11 @@
 #       docker compose -f code/infrastructure/docker-compose.yaml up -d
 #   - Auth set up: ./tools/dev-setup-auth.sh
 #   - Local env sourced: source ./tools/dev-env.sh
+#   - Vault seeded with MongoDB credentials (done by start-local-harness.sh):
+#       ./tools/start-local-harness.sh
 #
-# In-memory components are used so no Vault or MongoDB credentials are required.
-# State is not persisted across restarts. Use code/infrastructure/dapr/components/local
-# for durable state when Vault and MongoDB are initialised.
+# State is persisted to MongoDB. Vault must be running and seeded before starting
+# services — this script will abort with a clear error if the preflight check fails.
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
