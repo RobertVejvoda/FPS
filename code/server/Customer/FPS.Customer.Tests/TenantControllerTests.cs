@@ -74,6 +74,20 @@ public sealed class TenantControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
+    [Theory]
+    [InlineData("me")]
+    [InlineData("x")]
+    [InlineData("fps-reserved")]
+    public async Task Get_InvalidTenantId_Returns404NotThrows(string tenantId)
+    {
+        // Regression (#554): short/reserved strings like "me" reach this route via
+        // /tenants/{tenantId} and previously threw ArgumentException from
+        // CustomerStorageKey.Sanitise, producing a 500. Should return 404 instead.
+        var result = await controller.Get(tenantId, CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
     [Fact]
     public async Task Transition_ValidState_Returns204()
     {
