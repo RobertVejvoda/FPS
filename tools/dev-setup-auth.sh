@@ -26,7 +26,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
 IMPORT_REALM_FILE="$REALM_FILE"
 TMP_REALM_FILE=""
-USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor gl-employee1 gl-tenant-admin"
+USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor gl-employee1 gl-tenant-admin gl-hr-admin gl-auditor gl-report-viewer"
 
 if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
   for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
@@ -338,7 +338,7 @@ done
 echo "Demo token claims: ok"
 
 echo "Validating Green Logistics token claims..."
-for USERNAME in gl-employee1 gl-tenant-admin; do
+for USERNAME in gl-employee1 gl-tenant-admin gl-hr-admin gl-auditor gl-report-viewer; do
   TOKEN=$(get_user_token "$USERNAME")
   if [ -z "$TOKEN" ]; then
     echo "ERROR: Could not get validation token for '$USERNAME'."
@@ -380,6 +380,9 @@ echo ""
 echo "Green Logistics tenant (tenant_id=greenlogistics):"
 echo "  ./tools/dev-auth.sh gl-employee1"
 echo "  ./tools/dev-auth.sh gl-tenant-admin"
+echo "  ./tools/dev-auth.sh gl-hr-admin"
+echo "  ./tools/dev-auth.sh gl-auditor"
+echo "  ./tools/dev-auth.sh gl-report-viewer"
 if [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
   echo "  (plus gl-employee2..gl-employee$GL_EMPLOYEE_COUNT from FPS_GL_EMPLOYEE_COUNT=$GL_EMPLOYEE_COUNT)"
 fi

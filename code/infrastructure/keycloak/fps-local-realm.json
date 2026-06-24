@@ -323,6 +323,55 @@
         "admin"
       ],
       "credentials": []
+    },
+    {
+      "username": "gl-hr-admin",
+      "enabled": true,
+      "email": "carol.hr@greenlogistics.example",
+      "firstName": "Carol",
+      "lastName": "HR",
+      "attributes": {
+        "tenant_id": [
+          "greenlogistics"
+        ]
+      },
+      "realmRoles": [
+        "employee",
+        "hr_manager"
+      ],
+      "credentials": []
+    },
+    {
+      "username": "gl-auditor",
+      "enabled": true,
+      "email": "dan.audit@greenlogistics.example",
+      "firstName": "Dan",
+      "lastName": "Audit",
+      "attributes": {
+        "tenant_id": [
+          "greenlogistics"
+        ]
+      },
+      "realmRoles": [
+        "auditor"
+      ],
+      "credentials": []
+    },
+    {
+      "username": "gl-report-viewer",
+      "enabled": true,
+      "email": "eve.reports@greenlogistics.example",
+      "firstName": "Eve",
+      "lastName": "Reports",
+      "attributes": {
+        "tenant_id": [
+          "greenlogistics"
+        ]
+      },
+      "realmRoles": [
+        "report_viewer"
+      ],
+      "credentials": []
     }
   ],
   "loginTheme": "fairspot"
