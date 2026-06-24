@@ -29,8 +29,17 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
 
-        var tenant = await service.GetAsync(tenantId, ct);
-        return tenant is null ? NotFound() : Ok(ToResponse(tenant));
+        try
+        {
+            var tenant = await service.GetAsync(tenantId, ct);
+            return tenant is null ? NotFound() : Ok(ToResponse(tenant));
+        }
+        catch (ArgumentException)
+        {
+            // Paths like "/tenants/me" reach this route; "me" fails the 3-char
+            // minimum in CustomerStorageKey.Sanitise — treat as not found.
+            return NotFound();
+        }
     }
 
     [HttpPut("/tenants/{tenantId}")]
