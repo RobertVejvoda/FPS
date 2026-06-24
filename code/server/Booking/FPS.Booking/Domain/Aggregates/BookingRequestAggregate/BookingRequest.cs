@@ -42,9 +42,6 @@ public sealed class BookingRequest : IAggregateRoot
             SubmittedAt = DateTime.UtcNow
         };
 
-        eventPublisher.PublishAsync(new BookingRequestSubmittedEvent(
-            request.Id, requestorId, requestedPeriod));
-
         var (rejectionCode, rejectionReason) = request.Validate(context);
 
         if (rejectionCode is not null)
@@ -57,6 +54,10 @@ public sealed class BookingRequest : IAggregateRoot
         else
         {
             request.Status = BookingRequestStatus.Pending;
+            // Submitted event fires only for requests that enter the queue (Pending).
+            // Synchronously rejected requests skip it so callers receive exactly one
+            // notification (the rejection) instead of two.
+            eventPublisher.PublishAsync(new BookingRequestSubmittedEvent(request.Id, requestorId, requestedPeriod));
             eventPublisher.PublishAsync(new BookingRequestPendingEvent(request.Id));
         }
 

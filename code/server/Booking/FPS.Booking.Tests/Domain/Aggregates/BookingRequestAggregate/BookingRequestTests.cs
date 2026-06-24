@@ -80,12 +80,14 @@ public class BookingRequestTests
     }
 
     [Fact]
-    public void Submit_Rejected_FiresSubmittedAndRejectedEvents()
+    public void Submit_Rejected_FiresOnlyRejectedEvent_NoSubmittedEvent()
     {
+        // Fix for #560: synchronously rejected bookings must not fire
+        // BookingRequestSubmittedEvent — that would cause a double notification
+        // (Submitted + Rejected) for a request the user never sees enter the queue.
         var request = Submit(ValidContext(isCutOffPassed: true));
 
-        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestSubmittedEvent>(
-            e => e.RequestId == request.Id), default), Times.Once);
+        _publisher.Verify(p => p.PublishAsync(It.IsAny<BookingRequestSubmittedEvent>(), default), Times.Never);
         _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestRejectedEvent>(
             e => e.RequestId == request.Id && e.RejectionCode == BookingRejectionCode.CutOffPassed), default), Times.Once);
     }
