@@ -179,6 +179,52 @@ public sealed class DrawsControllerTests
         Assert.True(body.CanRequest);
     }
 
+    // ── GET /draws/{date}/lifecycle – missing time params (#561) ─────────────
+
+    [Theory]
+    [InlineData(true, false)]   // start provided, end omitted
+    [InlineData(false, true)]   // start omitted,  end provided
+    [InlineData(false, false)]  // both omitted
+    public async Task GetDrawLifecycle_MissingTimeSlotParams_Returns400(bool hasStart, bool hasEnd)
+    {
+        var start = hasStart ? SlotStart : default;
+        var end   = hasEnd   ? SlotEnd   : default;
+
+        var result = await controller.GetDrawLifecycle(DrawDate, "loc-1", start, end, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        mediator.Verify(m => m.Send(It.IsAny<GetDrawLifecycleQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetDrawLifecycle_BothParamsProvided_SendsQuery()
+    {
+        mediator.Setup(m => m.Send(It.IsAny<GetDrawLifecycleQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawLifecycleResult?)null);
+
+        var result = await controller.GetDrawLifecycle(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+        mediator.Verify(m => m.Send(It.IsAny<GetDrawLifecycleQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── GET /draws/{date}/status – missing time params (#561) ────────────────
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task GetDrawStatus_MissingTimeSlotParams_Returns400(bool hasStart, bool hasEnd)
+    {
+        var start = hasStart ? SlotStart : default;
+        var end   = hasEnd   ? SlotEnd   : default;
+
+        var result = await controller.GetDrawStatus(DrawDate, "loc-1", start, end, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        mediator.Verify(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static TriggerDrawRequest ValidBody() => new(
         LocationId: "loc-1",
         Date: DrawDate,
