@@ -786,6 +786,74 @@ public sealed class SubmitBookingRequestHandlerTests
         Assert.DoesNotContain(capturedContexts, ctx => ctx.AllocationSource == "sameDay");
     }
 
+    // ── Vehicle type mapping (#562) ───────────────────────────────────────────
+
+    [Theory]
+    [InlineData("Car")]
+    [InlineData("car")]
+    public async Task Handle_ProfileVehicleType_CarAlias_SubmitsWithoutThrowing(string vehicleType)
+    {
+        // Regression: Profile/HR import can store "car" or "Car". Booking must
+        // map these to Sedan rather than throwing ArgumentException via Enum.Parse.
+        var profile = DefaultProfile with
+        {
+            Vehicles = [new VehicleSnapshot("v-car", "HR-001", vehicleType, false, true)]
+        };
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        var cmd = FutureCommand() with { LicensePlate = "HR-001" };
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.NotEqual("Rejected", result.Status);
+        Assert.Null(result.RejectionCode);
+    }
+
+    [Fact]
+    public async Task Handle_ProfileVehicleType_CarAlias_MapsToSedan()
+    {
+        var profile = DefaultProfile with
+        {
+            Vehicles = [new VehicleSnapshot("v-car", "HR-001", "Car", false, true)]
+        };
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        BookingRequestDto? saved = null;
+        repository
+            .Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(dto => saved = dto)
+            .Returns(Task.CompletedTask);
+
+        var cmd = FutureCommand() with { LicensePlate = "HR-001" };
+        await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.Equal("Sedan", saved!.VehicleType);
+    }
+
+    [Fact]
+    public async Task Handle_ProfileVehicleType_UnknownAlias_ReturnsControlledRejection()
+    {
+        // Unknown vehicle type strings must not throw — they must return a controlled
+        // VehicleConstraintUnmatched rejection so the caller receives 400, not 500.
+        var profile = DefaultProfile with
+        {
+            Vehicles = [new VehicleSnapshot("v-x", "HR-002", "hovercraft", false, true)]
+        };
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        var cmd = FutureCommand() with { LicensePlate = "HR-002" };
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.Equal("Rejected", result.Status);
+        Assert.Equal("VehicleConstraintUnmatched", result.RejectionCode);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     // Command for a scheduled (D+1) company-car request.
