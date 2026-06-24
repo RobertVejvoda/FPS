@@ -113,6 +113,23 @@ public sealed class BookingController : ControllerBase
         return Ok(new GetMyBookingsResponse(result.Items, result.NextCursor, result.TotalCount));
     }
 
+    [HttpGet("{requestId:guid}")]
+    [ProducesResponseType(typeof(GetBookingByIdResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBookingById(
+        Guid requestId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
+            return Unauthorized();
+
+        var result = await mediator.Send(
+            new GetBookingByIdQuery(currentUser.TenantId, currentUser.UserId, requestId),
+            cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost("{requestId:guid}/confirm-usage")]
     [ProducesResponseType(typeof(ConfirmUsageResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

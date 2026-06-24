@@ -613,6 +613,78 @@ public sealed class BookingControllerTests
         Assert.Equal("cursor", captured.Cursor);
     }
 
+    // ── GET /bookings/{requestId} (#557) ─────────────────────────────────────
+
+    [Fact]
+    public async Task GetBookingById_ExistingOwnBooking_Returns200()
+    {
+        var id = Guid.NewGuid();
+        var result = SampleBookingResult(id);
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetBookingByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+
+        var response = await controller.GetBookingById(id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(response);
+        var body = Assert.IsType<GetBookingByIdResult>(ok.Value);
+        Assert.Equal(id, body.RequestId);
+        Assert.Equal("Allocated", body.Status);
+    }
+
+    [Fact]
+    public async Task GetBookingById_NotFound_Returns404()
+    {
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetBookingByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetBookingByIdResult?)null);
+
+        var response = await controller.GetBookingById(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(response);
+    }
+
+    [Fact]
+    public async Task GetBookingById_PassesTenantAndRequestorToQuery()
+    {
+        currentUser.Setup(u => u.TenantId).Returns("t-abc");
+        currentUser.Setup(u => u.UserId).Returns("u-xyz");
+        var id = Guid.NewGuid();
+
+        GetBookingByIdQuery? captured = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetBookingByIdQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<GetBookingByIdResult?>, CancellationToken>(
+                (q, _) => captured = (GetBookingByIdQuery)q)
+            .ReturnsAsync((GetBookingByIdResult?)null);
+
+        await controller.GetBookingById(id, CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal("t-abc", captured.TenantId);
+        Assert.Equal("u-xyz", captured.RequestorId);
+        Assert.Equal(id, captured.RequestId);
+    }
+
+    private static GetBookingByIdResult SampleBookingResult(Guid id) => new(
+        RequestId: id,
+        Status: "Allocated",
+        RejectionCode: null,
+        RejectionReason: null,
+        CancellationReason: null,
+        AllocatedSlotId: "P1-5",
+        LocationId: "loc-1",
+        PlannedArrivalTime: DateTime.UtcNow.Date.AddHours(9),
+        PlannedDepartureTime: DateTime.UtcNow.Date.AddHours(17),
+        VehicleType: "Sedan",
+        VehicleIsElectric: false,
+        RequiresAccessibleSpot: false,
+        VehicleIsCompanyCar: false,
+        RequestedAt: DateTime.UtcNow.AddDays(-1),
+        LastStatusChangedAt: DateTime.UtcNow,
+        UsageConfirmedAt: null,
+        ConfirmationSource: null);
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static SubmitBookingRequest ValidSubmitBody() => new(
