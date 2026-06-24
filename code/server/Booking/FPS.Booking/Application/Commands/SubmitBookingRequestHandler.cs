@@ -97,9 +97,19 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         var requestorId = UserId.FromString(cmd.RequestorId);
 
         // Profile facts take precedence over request body fields
+        if (!TryMapVehicleType(profileVehicle.VehicleType, out var mappedVehicleType))
+        {
+            logger.LogWarning(
+                "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode} VehicleType={VehicleType}",
+                cmd.TenantId, BookingRejectionCode.VehicleConstraintUnmatched, profileVehicle.VehicleType);
+            return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
+                BookingRejectionCode.VehicleConstraintUnmatched.ToString(),
+                $"Vehicle type '{profileVehicle.VehicleType}' is not supported for booking.");
+        }
+
         var vehicle = VehicleInformation.Create(
             profileVehicle.LicensePlate,
-            Enum.Parse<VehicleType>(profileVehicle.VehicleType, ignoreCase: true),
+            mappedVehicleType,
             profileVehicle.IsElectric,
             snapshot.AccessibilityEligible,
             snapshot.HasCompanyCar);
@@ -223,6 +233,20 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             request.Status.ToString(),
             request.RejectionCode?.ToString(),
             effectiveRejectionReason);
+    }
+
+    // Maps Profile/HR vehicle type strings to Booking VehicleType.
+    // Handles canonical enum names (case-insensitive) and HR import aliases (e.g. "car" → Sedan).
+    private static bool TryMapVehicleType(string value, out VehicleType result)
+    {
+        if (Enum.TryParse(value, ignoreCase: true, out result))
+            return true;
+
+        switch (value.ToLowerInvariant())
+        {
+            case "car": result = VehicleType.Sedan; return true;
+            default: result = default; return false;
+        }
     }
 
     private static bool IsSameDay(TenantPolicy policy, DateTime requestedStart, DateTimeOffset now)
