@@ -92,7 +92,41 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GetBookingByIdResult"];
+                        "application/json": components["schemas"]["GetBookingByIdResult"];
+                        "text/json": components["schemas"]["GetBookingByIdResult"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         put?: never;
         post?: never;
         delete: {
@@ -1283,6 +1317,31 @@ export interface components {
             /** Format: int32 */
             skippedCount: number | string;
             skippedReason: null | string;
+        };
+        GetBookingByIdResult: {
+            /** Format: uuid */
+            requestId: string;
+            status: string;
+            rejectionCode: null | string;
+            rejectionReason: null | string;
+            cancellationReason: null | string;
+            allocatedSlotId: null | string;
+            locationId: null | string;
+            /** Format: date-time */
+            plannedArrivalTime: string;
+            /** Format: date-time */
+            plannedDepartureTime: string;
+            vehicleType: null | string;
+            vehicleIsElectric: boolean;
+            requiresAccessibleSpot: boolean;
+            vehicleIsCompanyCar: boolean;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            lastStatusChangedAt: string;
+            /** Format: date-time */
+            usageConfirmedAt: null | string;
+            confirmationSource: null | string;
         };
         GetHrBookingsResponse: {
             items: components["schemas"]["HrBookingListItem"][];
