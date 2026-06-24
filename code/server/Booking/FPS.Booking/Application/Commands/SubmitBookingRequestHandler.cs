@@ -275,7 +275,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             RequestId = request.Id.Value,
             TenantId = tenantId,
             VehicleId = Guid.Empty,
-            FacilityId = Guid.Parse(facilityId),
+            FacilityId = Guid.TryParse(facilityId, out var fid) ? fid : Guid.Empty,
             LocationId = locationId ?? facilityId,
             PlannedArrivalTime = request.RequestedPeriod.Start,
             PlannedDepartureTime = request.RequestedPeriod.End,
