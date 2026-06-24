@@ -67,6 +67,7 @@ public sealed class DrawsController : ControllerBase
     [HttpGet("{date}/lifecycle")]
     [Authorize(Roles = "auditor,admin,hr_manager")]
     [ProducesResponseType(typeof(DrawLifecycleResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDrawLifecycle(
         DateOnly date,
@@ -77,6 +78,9 @@ public sealed class DrawsController : ControllerBase
     {
         if (string.IsNullOrEmpty(currentUser.TenantId))
             return Unauthorized();
+
+        if (timeSlotStart == default || timeSlotEnd == default)
+            return BadRequest(new { error = "timeSlotStart and timeSlotEnd are required." });
 
         var result = await mediator.Send(
             new GetDrawLifecycleQuery(currentUser.TenantId, locationId, date, timeSlotStart, timeSlotEnd),
@@ -107,6 +111,7 @@ public sealed class DrawsController : ControllerBase
 
     [HttpGet("{date}/status")]
     [ProducesResponseType(typeof(DrawStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetDrawStatus(
         DateOnly date,
         [FromQuery] string locationId,
@@ -116,6 +121,9 @@ public sealed class DrawsController : ControllerBase
     {
         if (string.IsNullOrEmpty(currentUser.TenantId))
             return Unauthorized();
+
+        if (timeSlotStart == default || timeSlotEnd == default)
+            return BadRequest(new { error = "timeSlotStart and timeSlotEnd are required." });
 
         var result = await mediator.Send(
             new GetDrawStatusQuery(currentUser.TenantId, locationId, date, timeSlotStart, timeSlotEnd),
