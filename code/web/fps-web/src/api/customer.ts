@@ -54,7 +54,7 @@ export interface TenantResponse {
 
 export interface ReadinessCheckDto {
   name: string;
-  status: 'Passed' | 'Failed' | 'Skipped';
+  status: 'Passed' | 'Failed' | 'Skipped' | 'Deferred';
   reason: string | null;
 }
 

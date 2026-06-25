@@ -2,7 +2,7 @@ using FPS.Customer.Domain;
 
 namespace FPS.Customer.Application;
 
-public enum ReadinessStatus { Passed, Failed, Skipped }
+public enum ReadinessStatus { Passed, Failed, Skipped, Deferred }
 
 public sealed record ReadinessCheckResult(string Name, ReadinessStatus Status, string Reason)
 {
@@ -14,6 +14,9 @@ public sealed record ReadinessCheckResult(string Name, ReadinessStatus Status, s
 
     public static ReadinessCheckResult Skipped(string name, string reason) =>
         new(name, ReadinessStatus.Skipped, reason);
+
+    public static ReadinessCheckResult Defer(string name, string reason) =>
+        new(name, ReadinessStatus.Deferred, reason);
 }
 
 public sealed record ReadinessReport(
@@ -52,6 +55,8 @@ public sealed class TenantReadinessService(
             await CheckRoleMappingAsync(tenantId, ct),
             await CheckParkingPolicyAsync(tenantId, ct),
             await CheckParkingLocationAsync(tenantId, ct),
+            CheckObjectStorageReadiness(),
+            CheckBrandingReadiness(),
             await profileProbe.CheckAsync(tenantId, ct),
             await bookingProbe.CheckAsync(tenantId, ct),
             await notificationProbe.CheckAsync(tenantId, ct),
@@ -59,7 +64,7 @@ public sealed class TenantReadinessService(
             await reportingProbe.CheckAsync(tenantId, ct),
         };
 
-        var isReady = checks.All(c => c.Status != ReadinessStatus.Failed);
+        var isReady = checks.All(c => c.Status is not ReadinessStatus.Failed);
         return (new ReadinessReport(tenantId, dryRun, isReady, checks), null);
     }
 
@@ -134,4 +139,16 @@ public sealed class TenantReadinessService(
                 "No location with active slots found. Add at least one location with capacity.");
         return ReadinessCheckResult.Pass("ParkingLocation");
     }
+
+    private static ReadinessCheckResult CheckObjectStorageReadiness() =>
+        ReadinessCheckResult.Defer("ObjectStorageReadiness",
+            "Pilot limitation: Object storage provisioning is not yet implemented. " +
+            "Tenant document uploads, report exports, audit evidence exports, and branding uploads " +
+            "are unavailable during the pilot. Resolve before production (OPS008C).");
+
+    private static ReadinessCheckResult CheckBrandingReadiness() =>
+        ReadinessCheckResult.Defer("BrandingReadiness",
+            "Pilot limitation: Organization branding is not configured. " +
+            "FairSpot defaults (name, generic styling) will be used during the pilot. " +
+            "Resolve before production (CUST010).");
 }
