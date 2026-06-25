@@ -9,15 +9,17 @@
 #   OIDC_REALM=fps-pilot ./tools/smoke-hosted.sh
 #
 # Usage (localhost — TLS/WAF checks become PENDING):
-#   APP_URL=http://localhost:10000 AUTH_URL=http://localhost:8080 \
+#   APP_URL=http://localhost:10000 AUTH_URL=http://localhost:8180 \
 #   OIDC_REALM=fps-local ./tools/smoke-hosted.sh
+#
+# Note: local Keycloak Docker container maps internal :8080 to host :8180.
 #
 # See docs/production/hosted-smoke-runbook.md for full context and the
 # mandatory-checks table.
 set -euo pipefail
 
 APP_URL="${APP_URL:-http://localhost:10000}"
-AUTH_URL="${AUTH_URL:-http://localhost:8080}"
+AUTH_URL="${AUTH_URL:-http://localhost:8180}"
 OIDC_REALM="${OIDC_REALM:-fps-local}"
 OIDC_CLIENT_ID="${OIDC_CLIENT_ID:-fps-mobile-dev}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-Dev1234!}"
@@ -44,6 +46,7 @@ PASS_COUNT=0
 FAIL_COUNT=0
 PENDING_COUNT=0
 SKIP_COUNT=0
+DEFERRED_COUNT=0
 REQUIRED_FAILURES=0
 
 # localhost mode: Cloudflare-only checks become PENDING rather than FAIL
@@ -98,6 +101,12 @@ skip() {
   SKIP_COUNT=$((SKIP_COUNT+1))
 }
 
+deferred_note() {
+  echo -e "  ${YELLOW}DEFERRED${NC} $1 (pilot limitation; already counted in onboarding evidence)"
+  _ev "[DEFERRED] $1"
+  DEFERRED_COUNT=$((DEFERRED_COUNT+1))
+}
+
 header() {
   echo
   echo "=== $1 ==="
@@ -127,7 +136,17 @@ json_field() {
 }
 
 json_list_len() {
-  python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else d.get('total',d.get('count',0)))" <<< "$1" 2>/dev/null || echo "0"
+  python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+if isinstance(d,list):
+    print(len(d))
+else:
+    # FPS services use different pagination shapes: totalCount, totalReturned, total, count
+    # Fall back to len(items) if no count field is present
+    items=d.get('items',[])
+    print(d.get('totalCount',d.get('totalReturned',d.get('total',d.get('count',len(items))))))
+" <<< "$1" 2>/dev/null || echo "0"
 }
 
 http_get() {
@@ -272,16 +291,17 @@ fi
 header "Booking request  [mandatory #4 #5]"
 BOOKING_ID=""
 if [[ -n "$EMP_TOKEN" ]]; then
-  TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d 2>/dev/null || echo "2099-01-01")
+  # Use +3 days to avoid CutOffPassed rejection for same/next-day slots when run in the evening
+  SMOKE_DATE=$(date -v+3d +%Y-%m-%d 2>/dev/null || date -d "+3 days" +%Y-%m-%d 2>/dev/null || echo "2099-01-01")
   BOOKING_RESP=$(http_post "$EMP_TOKEN" "$APP_URL/bookings" \
-    "{\"facilityId\":\"$SMOKE_FACILITY_ID\",\"locationId\":\"$SMOKE_LOCATION_ID\",\"licensePlate\":\"$SMOKE_LICENSE_PLATE\",\"vehicleType\":\"$SMOKE_VEHICLE_TYPE\",\"isElectric\":false,\"requiresAccessibleSpot\":false,\"isCompanyCar\":false,\"plannedArrivalTime\":\"${TOMORROW}T09:00:00Z\",\"plannedDepartureTime\":\"${TOMORROW}T17:00:00Z\"}")
+    "{\"facilityId\":\"$SMOKE_FACILITY_ID\",\"locationId\":\"$SMOKE_LOCATION_ID\",\"licensePlate\":\"$SMOKE_LICENSE_PLATE\",\"vehicleType\":\"$SMOKE_VEHICLE_TYPE\",\"isElectric\":false,\"requiresAccessibleSpot\":false,\"isCompanyCar\":false,\"plannedArrivalTime\":\"${SMOKE_DATE}T09:00:00Z\",\"plannedDepartureTime\":\"${SMOKE_DATE}T17:00:00Z\"}")
   if [[ -n "$BOOKING_RESP" ]]; then
     BOOKING_STATUS=$(json_field "$BOOKING_RESP" "status")
     BOOKING_ID=$(json_field "$BOOKING_RESP" "requestId")
     if [[ -n "$BOOKING_STATUS" && "$BOOKING_STATUS" != "Rejected" ]]; then
       pass "POST /bookings → status=$BOOKING_STATUS requestId=${BOOKING_ID:0:8}…  [mandatory #4]"
     elif [[ "$BOOKING_STATUS" == "Rejected" ]]; then
-      fail "POST /bookings → status=Rejected (check SMOKE_LICENSE_PLATE='$SMOKE_LICENSE_PLATE' matches $SMOKE_EMPLOYEE profile; run dev-seed.sh first)" "true"
+      fail "POST /bookings → status=Rejected (rejectionCode=$(python3 -c \"import sys,json; print(json.load(sys.stdin).get('rejectionCode','?'))\" <<< \"$BOOKING_RESP\" 2>/dev/null); check $SMOKE_EMPLOYEE profile and run dev-seed.sh)" "true"
     else
       fail "POST /bookings → unexpected response (no status field)" "true"
     fi
@@ -324,9 +344,13 @@ if [[ -n "$EMP_TOKEN" ]]; then
   NOTIFS=$(http_get "$EMP_TOKEN" "$APP_URL/notifications")
   if [[ -n "$NOTIFS" ]]; then
     N_COUNT=$(json_list_len "$NOTIFS")
-    pass "GET /notifications → $N_COUNT record(s)  [mandatory #6]"
+    if [[ "$N_COUNT" -ge 1 ]]; then
+      pass "GET /notifications → $N_COUNT record(s) — Booking event reached Notification  [mandatory #6]"
+    else
+      fail "GET /notifications → 0 records (Booking event did not reach Notification service; check Dapr pub/sub and run dev-seed.sh)" "true"
+    fi
   else
-    fail "GET /notifications → unreachable or empty after booking event" "true"
+    fail "GET /notifications → unreachable after booking event" "true"
   fi
 else
   skip "Notifications — no employee token"
@@ -386,8 +410,27 @@ header "Tenant readiness  [mandatory #8]"
 if [[ -n "$ADMIN_TOKEN" ]]; then
   READINESS=$(http_get "$ADMIN_TOKEN" "$APP_URL/tenants/$SMOKE_TENANT/readiness")
   if [[ -n "$READINESS" ]]; then
-    R_STATUS=$(json_field "$READINESS" "status")
-    pass "GET /tenants/$SMOKE_TENANT/readiness → status=$R_STATUS  [mandatory #8]"
+    IS_READY=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('isReady','UNKNOWN'))" <<< "$READINESS" 2>/dev/null || echo "UNKNOWN")
+    FAILED_CHECKS=$(python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+names=[c['name'] for c in d.get('checks',[]) if c['status']=='Failed']
+print(','.join(names) if names else 'none')
+" <<< "$READINESS" 2>/dev/null || echo "UNKNOWN")
+    DEFERRED_CHECKS=$(python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+names=[c['name'] for c in d.get('checks',[]) if c['status']=='Deferred']
+print(','.join(names) if names else 'none')
+" <<< "$READINESS" 2>/dev/null || echo "UNKNOWN")
+    if [[ "$IS_READY" == "True" ]]; then
+      pass "GET /tenants/$SMOKE_TENANT/readiness → isReady=True (failed: $FAILED_CHECKS)  [mandatory #8]"
+    else
+      fail "GET /tenants/$SMOKE_TENANT/readiness → isReady=$IS_READY (failed: $FAILED_CHECKS)" "true"
+    fi
+    if [[ "$DEFERRED_CHECKS" != "none" && "$DEFERRED_CHECKS" != "UNKNOWN" ]]; then
+      deferred_note "Pilot-deferred readiness checks: $DEFERRED_CHECKS (see docs/production/cust008-onboarding-e2e-evidence.md)"
+    fi
   else
     fail "Tenant readiness check unreachable" "true"
   fi
@@ -424,6 +467,10 @@ TOTAL=$((PASS_COUNT + FAIL_COUNT + PENDING_COUNT + SKIP_COUNT))
   printf '\n'
   printf 'Summary: %d PASS / %d FAIL / %d PENDING / %d SKIP  (%d total)\n' \
     "$PASS_COUNT" "$FAIL_COUNT" "$PENDING_COUNT" "$SKIP_COUNT" "$TOTAL"
+  if [[ "$DEFERRED_COUNT" -gt 0 ]]; then
+    printf 'DEFERRED: %d pilot limitation(s) — non-blocking; resolve before production.\n' "$DEFERRED_COUNT"
+    printf '  See docs/production/cust008-onboarding-e2e-evidence.md for deferred item details.\n'
+  fi
   if [[ "$REQUIRED_FAILURES" -gt 0 ]]; then
     printf 'MANDATORY FAILURES: %d — customer access MUST NOT be enabled until resolved.\n' "$REQUIRED_FAILURES"
   fi
@@ -434,10 +481,11 @@ TOTAL=$((PASS_COUNT + FAIL_COUNT + PENDING_COUNT + SKIP_COUNT))
 
 echo
 echo "=== Smoke Summary ==="
-echo "  PASS:    $PASS_COUNT"
-echo "  FAIL:    $FAIL_COUNT"
-echo "  PENDING: $PENDING_COUNT (public-domain checks — run against https to verify)"
-echo "  SKIP:    $SKIP_COUNT"
+echo "  PASS:     $PASS_COUNT"
+echo "  FAIL:     $FAIL_COUNT"
+echo "  PENDING:  $PENDING_COUNT (public-domain checks — run against https to verify)"
+echo "  SKIP:     $SKIP_COUNT"
+echo "  DEFERRED: $DEFERRED_COUNT (pilot limitations — non-blocking)"
 echo
 echo "Evidence written to: $EVIDENCE_FILE"
 echo "Attach this file to the PR or release note before enabling customer access."

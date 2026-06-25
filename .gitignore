@@ -29,6 +29,9 @@ logs/
 *.tmp
 *.temp
 
+# Smoke evidence files (runtime output; attach to PRs but do not commit)
+smoke-evidence-*.txt
+
 # Claude Code — exclude everything except project settings
 .claude/**
 !.claude/settings.json
