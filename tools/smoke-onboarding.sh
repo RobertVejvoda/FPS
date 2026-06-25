@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tenant onboarding E2E smoke — synthetic acme-corp path.
-# Each step prints PASS / FAIL / SKIP and a note on current implementation status.
+# Each step prints PASS / FAIL / SKIP / DEFERRED and notes current implementation status.
 # Run after: ./tools/start-local-harness.sh && ./tools/dev-seed.sh
 #
 # Usage: ./tools/smoke-onboarding.sh
@@ -14,12 +14,15 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-pass()  { echo -e "  ${GREEN}PASS${NC}  $1"; }
-fail()  { echo -e "  ${RED}FAIL${NC}  $1"; FAILURES=$((FAILURES+1)); }
-skip()  { echo -e "  ${YELLOW}SKIP${NC}  $1 (evaluation-grade or manual — see docs/production/tenant-onboarding-smoke.md)"; }
-header(){ echo; echo "=== $1 ==="; }
+pass()          { echo -e "  ${GREEN}PASS${NC}     $1"; }
+fail()          { echo -e "  ${RED}FAIL${NC}     $1"; FAILURES=$((FAILURES+1)); }
+skip()          { echo -e "  ${YELLOW}SKIP${NC}     $1 (evaluation-grade or manual — see docs/production/tenant-onboarding-smoke.md)"; }
+deferred()      { echo -e "  ${YELLOW}DEFERRED${NC} $1 (pilot limitation — non-blocking; resolve before production)"; DEFERRED_COUNT=$((DEFERRED_COUNT+1)); }
+deferred_note() { echo -e "  ${YELLOW}DEFERRED${NC} $1 (reported by readiness; already counted above)"; }
+header()        { echo; echo "=== $1 ==="; }
 
 FAILURES=0
+DEFERRED_COUNT=0
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,21 +58,20 @@ TOKEN=$(get_token tenant-admin)
 if [[ -z "$TOKEN" ]]; then
   fail "Could not obtain tenant-admin token"
 else
-  STATUS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT/readiness" \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNREACHABLE")
-  if [[ "$STATUS" != "UNREACHABLE" ]]; then
-    pass "Tenant readiness endpoint reachable (status: $STATUS)"
-  else
-    fail "Tenant readiness endpoint unreachable"
-  fi
-  TENANT=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT" \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "UNREACHABLE")
-  if [[ "$TENANT" == "$DEMO_TENANT" ]]; then
-    pass "GET /tenants/$DEMO_TENANT returns tenant record"
+  TENANT_JSON=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT" 2>/dev/null || echo "UNREACHABLE")
+  if [[ "$TENANT_JSON" != "UNREACHABLE" && "$TENANT_JSON" != "" ]]; then
+    TENANT_ID=$(echo "$TENANT_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "MISSING")
+    LC_STATE=$(echo "$TENANT_JSON"  | python3 -c "import sys,json; print(json.load(sys.stdin).get('lifecycleState','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
+    if [[ "$TENANT_ID" == "$DEMO_TENANT" ]]; then
+      pass "GET /tenants/$DEMO_TENANT: tenantId=$TENANT_ID lifecycleState=$LC_STATE"
+    else
+      fail "GET /tenants/$DEMO_TENANT: unexpected tenantId=$TENANT_ID"
+    fi
   else
     fail "GET /tenants/$DEMO_TENANT unreachable or missing"
   fi
 fi
+skip "Tenant workspace created via POST /tenants (API implemented; no web form yet)"
 
 # ── step 2: identity and role mapping ───────────────────────────────────────
 
@@ -77,12 +79,12 @@ header "Step 2 — Identity and role mapping"
 TOKEN=$(get_token employee1)
 if [[ -n "$TOKEN" ]]; then
   ME=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/me" 2>/dev/null || echo "UNREACHABLE")
-  TENANT=$(echo "$ME" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "PARSE_FAIL")
-  ROLES=$(echo "$ME" | python3 -c "import sys,json; print(','.join(json.load(sys.stdin).get('roles',[])))" 2>/dev/null || echo "PARSE_FAIL")
-  if [[ "$TENANT" == "$DEMO_TENANT" && "$ROLES" == *"employee"* ]]; then
-    pass "GET /me for employee1: tenantId=$TENANT roles=$ROLES"
+  ME_TENANT=$(echo "$ME" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "PARSE_FAIL")
+  ROLES=$(echo "$ME"    | python3 -c "import sys,json; print(','.join(json.load(sys.stdin).get('roles',[])))" 2>/dev/null || echo "PARSE_FAIL")
+  if [[ "$ME_TENANT" == "$DEMO_TENANT" && "$ROLES" == *"employee"* ]]; then
+    pass "GET /me for employee1: tenantId=$ME_TENANT roles=$ROLES"
   else
-    fail "GET /me for employee1: unexpected tenantId=$TENANT or roles=$ROLES"
+    fail "GET /me for employee1: unexpected tenantId=$ME_TENANT or roles=$ROLES"
   fi
 else
   fail "Could not obtain employee1 token"
@@ -123,9 +125,15 @@ else
 fi
 skip "Tenant admin web UI for location/slot setup — using seeded Configuration data"
 
-# ── step 5: employee and profile bootstrap ───────────────────────────────────
+# ── step 5: tenant object storage and branding ───────────────────────────────
 
-header "Step 5 — Employee and profile bootstrap"
+header "Step 5 — Tenant object storage and branding"
+deferred "Object storage provisioning (OPS008C) — document uploads, report exports, audit exports, and branding uploads are not available"
+deferred "Organization branding (CUST010) — FairSpot defaults used; no custom logo or color tokens"
+
+# ── step 6: employee and profile bootstrap ───────────────────────────────────
+
+header "Step 6 — Employee and profile bootstrap"
 TOKEN=$(get_token employee1)
 if [[ -n "$TOKEN" ]]; then
   PROFILE=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/profile/snapshot" 2>/dev/null || echo "UNREACHABLE")
@@ -139,7 +147,6 @@ else
   fail "Could not obtain employee1 token"
 fi
 
-# Validate HR templates
 if ./tools/validate-hr-import.sh tools/templates/demo-employees.csv tools/templates/demo-vehicles.csv > /dev/null 2>&1; then
   pass "HR import templates validate cleanly"
 else
@@ -147,15 +154,34 @@ else
 fi
 skip "Web HR import upload (DATA002) — using dev-seed.sh and validate-hr-import.sh"
 
-# ── step 6: readiness check ──────────────────────────────────────────────────
+# ── step 7: readiness check ──────────────────────────────────────────────────
 
-header "Step 6 — Readiness check"
+header "Step 7 — Readiness check"
 TOKEN=$(get_token tenant-admin)
 if [[ -n "$TOKEN" ]]; then
-  READY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT/readiness" 2>/dev/null || echo "UNREACHABLE")
-  if [[ "$READY" != "UNREACHABLE" && "$READY" != "" ]]; then
-    STATUS=$(echo "$READY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
-    pass "Readiness check endpoint reachable (status: $STATUS)"
+  READINESS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT/readiness" 2>/dev/null || echo "UNREACHABLE")
+  if [[ "$READINESS" != "UNREACHABLE" && "$READINESS" != "" ]]; then
+    IS_READY=$(echo "$READINESS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('isReady','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
+    FAILED_CHECKS=$(echo "$READINESS" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+names=[c['name'] for c in d.get('checks',[]) if c['status']=='Failed']
+print(','.join(names) if names else 'none')
+" 2>/dev/null || echo "UNKNOWN")
+    DEFERRED_CHECKS=$(echo "$READINESS" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+names=[c['name'] for c in d.get('checks',[]) if c['status']=='Deferred']
+print(','.join(names) if names else 'none')
+" 2>/dev/null || echo "UNKNOWN")
+    if [[ "$IS_READY" == "True" ]]; then
+      pass "Readiness check: isReady=True (failed: $FAILED_CHECKS)"
+    else
+      fail "Readiness check: isReady=$IS_READY (failed: $FAILED_CHECKS)"
+    fi
+    if [[ "$DEFERRED_CHECKS" != "none" && "$DEFERRED_CHECKS" != "UNKNOWN" ]]; then
+      deferred_note "Pilot-deferred checks reported by readiness: $DEFERRED_CHECKS"
+    fi
   else
     fail "Readiness check endpoint unreachable"
   fi
@@ -163,9 +189,9 @@ else
   fail "Could not obtain tenant-admin token"
 fi
 
-# ── step 7: first booking smoke ──────────────────────────────────────────────
+# ── step 8: first booking smoke ──────────────────────────────────────────────
 
-header "Step 7 — First booking smoke"
+header "Step 8 — First booking smoke"
 TOKEN=$(get_token employee1)
 if [[ -n "$TOKEN" ]]; then
   TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d 2>/dev/null || echo "2099-01-01")
@@ -175,8 +201,8 @@ if [[ -n "$TOKEN" ]]; then
     -d "{\"locationId\":\"Prague\",\"date\":\"$TOMORROW\",\"reason\":\"onboarding smoke\"}" \
     2>/dev/null || echo "UNREACHABLE")
   if [[ "$BOOKING" != "UNREACHABLE" && "$BOOKING" != "" ]]; then
-    STATUS=$(echo "$BOOKING" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
-    pass "POST /bookings for employee1 (status: $STATUS)"
+    B_STATUS=$(echo "$BOOKING" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
+    pass "POST /bookings for employee1 (status: $B_STATUS)"
   else
     fail "POST /bookings failed or unreachable"
   fi
@@ -192,9 +218,9 @@ else
   fail "Could not obtain employee1 token"
 fi
 
-# ── step 8: audit evidence ───────────────────────────────────────────────────
+# ── step 9: audit evidence ───────────────────────────────────────────────────
 
-header "Step 8 — Audit evidence"
+header "Step 9 — Audit evidence"
 TOKEN=$(get_token auditor)
 if [[ -n "$TOKEN" ]]; then
   AUDIT=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/audit" 2>/dev/null || echo "UNREACHABLE")
@@ -213,7 +239,12 @@ fi
 echo
 echo "=== Onboarding Smoke Summary ==="
 if [[ $FAILURES -eq 0 ]]; then
-  echo -e "${GREEN}All checks passed.${NC} SKIP items require manual or evaluation-grade steps — see docs/production/tenant-onboarding-smoke.md."
+  echo -e "${GREEN}All automated checks passed.${NC}"
+  if [[ $DEFERRED_COUNT -gt 0 ]]; then
+    echo -e "${YELLOW}$DEFERRED_COUNT pilot-deferred item(s) reported.${NC} These are non-blocking for the pilot but must be resolved before production."
+  fi
+  echo "SKIP items require manual or evaluation-grade steps — see docs/production/tenant-onboarding-smoke.md."
+  echo "Full classification: docs/production/cust008-onboarding-e2e-evidence.md"
 else
   echo -e "${RED}$FAILURES check(s) failed.${NC} Review output above and consult docs/production/tenant-onboarding-smoke.md for blockers."
   exit 1
