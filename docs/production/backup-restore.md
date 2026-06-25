@@ -58,3 +58,4 @@ Every restore drill should record:
 - Decide whether point-in-time recovery is required for the first hosted pilot.
 - Define per-tenant restore tooling after tenant provisioning is implemented.
 - Define backup encryption key ownership and recovery process.
+- Per-service backup scope is defined in [OPS008 persistence profile](./ops008-persistence-profile.md) for each PERSIST slice. Restore procedures for Configuration, Profile, Audit, Notification, and Booking fairness metrics should be added here once durable stores are implemented.
