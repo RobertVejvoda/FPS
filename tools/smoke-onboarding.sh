@@ -14,11 +14,12 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-pass()     { echo -e "  ${GREEN}PASS${NC}     $1"; }
-fail()     { echo -e "  ${RED}FAIL${NC}     $1"; FAILURES=$((FAILURES+1)); }
-skip()     { echo -e "  ${YELLOW}SKIP${NC}     $1 (evaluation-grade or manual — see docs/production/tenant-onboarding-smoke.md)"; }
-deferred() { echo -e "  ${YELLOW}DEFERRED${NC} $1 (pilot limitation — non-blocking; resolve before production)"; DEFERRED_COUNT=$((DEFERRED_COUNT+1)); }
-header()   { echo; echo "=== $1 ==="; }
+pass()          { echo -e "  ${GREEN}PASS${NC}     $1"; }
+fail()          { echo -e "  ${RED}FAIL${NC}     $1"; FAILURES=$((FAILURES+1)); }
+skip()          { echo -e "  ${YELLOW}SKIP${NC}     $1 (evaluation-grade or manual — see docs/production/tenant-onboarding-smoke.md)"; }
+deferred()      { echo -e "  ${YELLOW}DEFERRED${NC} $1 (pilot limitation — non-blocking; resolve before production)"; DEFERRED_COUNT=$((DEFERRED_COUNT+1)); }
+deferred_note() { echo -e "  ${YELLOW}DEFERRED${NC} $1 (reported by readiness; already counted above)"; }
+header()        { echo; echo "=== $1 ==="; }
 
 FAILURES=0
 DEFERRED_COUNT=0
@@ -179,7 +180,7 @@ print(','.join(names) if names else 'none')
       fail "Readiness check: isReady=$IS_READY (failed: $FAILED_CHECKS)"
     fi
     if [[ "$DEFERRED_CHECKS" != "none" && "$DEFERRED_CHECKS" != "UNKNOWN" ]]; then
-      deferred "Pilot-deferred checks reported by readiness: $DEFERRED_CHECKS"
+      deferred_note "Pilot-deferred checks reported by readiness: $DEFERRED_CHECKS"
     fi
   else
     fail "Readiness check endpoint unreachable"

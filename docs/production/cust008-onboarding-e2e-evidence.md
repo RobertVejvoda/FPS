@@ -2,11 +2,11 @@
 
 This document records the end-to-end onboarding path for one synthetic company in the FairSpot local demo environment. It classifies each step by implementation status and lists the remaining gaps that must be resolved before a first real customer can be onboarded.
 
-**Synthetic company:** ACME Corp  
-**Local tenant ID:** `demo` (controlled by `FPS_DEMO_TENANT_ID`)  
+**Synthetic company:** ACME Corp
+**Local tenant ID:** `demo` (controlled by `FPS_DEMO_TENANT_ID`)
 **Personas used:** `tenant-admin`, `employee1`, `auditor` (all defined in `docs/production/tenant-onboarding-smoke.md`)
 
-**Related runbook:** `docs/production/tenant-onboarding-smoke.md`  
+**Related runbook:** `docs/production/tenant-onboarding-smoke.md`
 **Smoke script:** `tools/smoke-onboarding.sh`
 
 ---
