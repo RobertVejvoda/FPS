@@ -192,9 +192,32 @@ TOKEN=$(./tools/dev-auth.sh tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
 ```
 
-**Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
+**Expected after all previous steps:** `isReady: true` with per-check pass/deferred breakdown.
 
-Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Object-storage (`ObjectStorageReadiness`) and branding (`BrandingReadiness`) checks are now included in the readiness response with a `Deferred` status, making pilot limitations explicit and non-blocking. Deeper tenant-specific evidence checks, such as verifying exact seeded profile counts, storage namespaces, branding assets, or audit rows, remain future hardening.
+```json
+{
+  "tenantId": "demo",
+  "isDryRun": false,
+  "isReady": true,
+  "checks": [
+    { "name": "LifecycleState",         "status": "Passed",   "reason": null },
+    { "name": "IdentityConfig",         "status": "Passed",   "reason": null },
+    { "name": "ActiveAdmin",            "status": "Passed",   "reason": null },
+    { "name": "RoleMapping",            "status": "Passed",   "reason": null },
+    { "name": "ParkingPolicy",          "status": "Passed",   "reason": null },
+    { "name": "ParkingLocation",        "status": "Passed",   "reason": null },
+    { "name": "ObjectStorageReadiness", "status": "Deferred", "reason": "Pilot limitation: ..." },
+    { "name": "BrandingReadiness",      "status": "Deferred", "reason": "Pilot limitation: ..." },
+    { "name": "ProfileFacts",           "status": "Passed",   "reason": null },
+    { "name": "BookingSmokeTest",       "status": "Passed",   "reason": null },
+    { "name": "NotificationReachable",  "status": "Passed",   "reason": null },
+    { "name": "AuditEvidence",          "status": "Passed",   "reason": null },
+    { "name": "ReportingEvidence",      "status": "Passed",   "reason": null }
+  ]
+}
+```
+
+Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Object-storage (`ObjectStorageReadiness`) and branding (`BrandingReadiness`) checks return `Deferred`, making pilot limitations explicit and non-blocking. Deeper tenant-specific evidence checks (exact seeded profile counts, storage namespaces, branding assets, audit rows) remain future hardening. See `docs/production/cust008-onboarding-e2e-evidence.md` for the full step classification.
 
 ---
 
