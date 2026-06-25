@@ -51,7 +51,7 @@ const CHECK_META: Record<string, CheckMeta> = {
   },
   RoleMapping: {
     label: 'Role configuration',
-    purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager, report_viewer).',
+    purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager, report_viewer, auditor).',
     nextAction: 'Fix the role mapping in your identity configuration, or contact your operator.',
   },
   ParkingPolicy: {

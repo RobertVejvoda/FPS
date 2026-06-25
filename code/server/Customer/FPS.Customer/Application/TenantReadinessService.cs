@@ -28,7 +28,7 @@ public sealed record ReadinessReport(
 file static class KnownFpsRoles
 {
     internal static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase)
-        { "employee", "hr_manager", "admin", "report_viewer" };
+        { "employee", "hr_manager", "admin", "report_viewer", "auditor" };
 }
 
 public sealed class TenantReadinessService(

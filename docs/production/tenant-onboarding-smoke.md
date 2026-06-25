@@ -115,41 +115,41 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/p
 
 ## Step 5 — Tenant Object Storage
 
-**Status:** ❌ Missing
+**Status:** 🟡 Pilot-deferred (readiness evidence added)
 
-Tenant onboarding should provision tenant-scoped object storage before document upload, report export, audit evidence export, GDPR export, or organization branding upload is enabled.
+Tenant object storage provisioning (document upload, report export, audit evidence export, GDPR export, branding upload) is not yet implemented. The tenant readiness check now reports `ObjectStorageReadiness` as **Deferred** with explicit pilot rationale — this is a non-blocking, visible pilot limitation rather than a silent gap.
 
-For local/demo, MinIO should be used through the same provisioning path as production-like profiles. The demo tenant should receive either a dedicated demo bucket/container or an enforced `demo/` prefix inside a shared bucket. Users and clients must not access MinIO directly.
+The Tenant Admin page shows this as an amber "(pilot deferred)" item in the readiness panel. Resolve before production: OPS008C.
 
-**Expected future verification:**
+**Verify deferred status appears in readiness response:**
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
 ```
 
-**Expected:** Readiness includes an object-storage probe confirming the tenant storage boundary exists and can be reached by the responsible service identity.
+**Expected:** Readiness response includes `{ "name": "ObjectStorageReadiness", "status": "Deferred", "reason": "Pilot limitation: ..." }`.
 
-**Blocker for production:** Tenant object storage provisioning and readiness evidence. Follow-up: OPS008C.
+**Production blocker:** Tenant object storage provisioning and readiness probe. Follow-up: OPS008C.
 
 ---
 
 ## Step 6 — Organization Branding Assets
 
-**Status:** ❌ Missing
+**Status:** 🟡 Pilot-deferred (readiness evidence added)
 
-Tenant administrators should be able to upload approved organization branding assets through FairSpot APIs. The web and mobile clients should load branding from FairSpot client configuration, not from hardcoded MinIO/S3 paths.
+Tenant branding asset upload and client-config loading are not yet implemented. The tenant readiness check now reports `BrandingReadiness` as **Deferred** with explicit pilot rationale — FairSpot defaults are used during the pilot without exposing bucket names or object keys.
 
-V1 branding should be limited to organization display name, logo, favicon/app icon, color tokens, and optional legal footer reference. This is organization branding, not full white-labeling.
+The Tenant Admin page shows this as an amber "(pilot deferred)" item in the readiness panel. Resolve before production: CUST010.
 
-**Expected future verification:**
+**Verify deferred status appears in readiness response:**
 ```bash
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/client-config | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
 ```
 
-**Expected:** Client config returns FairSpot defaults or approved tenant branding references without exposing bucket names, raw object keys, GUIDs, or MinIO/S3 URLs.
+**Expected:** Readiness response includes `{ "name": "BrandingReadiness", "status": "Deferred", "reason": "Pilot limitation: ..." }`.
 
-**Blocker for production:** Tenant branding asset upload/catalog and client-config exposure. Follow-up: CUST010.
+**Production blocker:** Tenant branding asset upload/catalog and client-config exposure. Follow-up: CUST010.
 
 ---
 
@@ -194,7 +194,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/rea
 
 **Expected after all previous steps:** status `Ready` or `Configured` with per-probe pass/fail breakdown.
 
-Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Object-storage and branding readiness probes are future additions. Deeper tenant-specific evidence checks, such as verifying exact seeded profile counts, storage namespaces, branding assets, or audit rows, remain future hardening.
+Note: The local demo wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. These probes prove that the dependent services are reachable and healthy before marking the tenant ready. Object-storage (`ObjectStorageReadiness`) and branding (`BrandingReadiness`) checks are now included in the readiness response with a `Deferred` status, making pilot limitations explicit and non-blocking. Deeper tenant-specific evidence checks, such as verifying exact seeded profile counts, storage namespaces, branding assets, or audit rows, remain future hardening.
 
 ---
 
@@ -250,10 +250,10 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 | 2 | Configure identity and role mapping | 🔧 Manual + 🟡 Eval | IdP config UI, per-tenant mapping API |
 | 3 | Create first administrator | 🟡 Evaluation-grade | First-admin provisioning API |
 | 4 | Parking bootstrap (location, policy, slots) | 🟡 Evaluation-grade | Tenant admin web UI |
-| 5 | Tenant object storage | ❌ Missing | OPS008C tenant storage provisioning |
-| 6 | Organization branding assets | ❌ Missing | CUST010 branding asset catalog and client config |
+| 5 | Tenant object storage | 🟡 Pilot-deferred | OPS008C tenant storage provisioning; readiness now shows `ObjectStorageReadiness=Deferred` |
+| 6 | Organization branding assets | 🟡 Pilot-deferred | CUST010 branding asset catalog and client config; readiness now shows `BrandingReadiness=Deferred` |
 | 7 | Employee and profile bootstrap | 🟡 Eval (seed) / ✅ API | Web HR import upload (DATA002) |
-| 8 | Readiness check | ✅ Implemented | Local demo uses connected HTTP health probes; object-storage/branding probes and deeper tenant-specific evidence are future hardening |
+| 8 | Readiness check | ✅ Implemented | Local demo uses connected HTTP health probes; object-storage and branding are reported as Deferred (non-blocking); deeper tenant-specific evidence is future hardening |
 | 9 | First booking smoke | ✅ Implemented | — |
 | 10 | Audit evidence | ✅ Implemented | — |
 

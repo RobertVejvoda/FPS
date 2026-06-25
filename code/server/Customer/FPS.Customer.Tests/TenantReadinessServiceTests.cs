@@ -244,6 +244,22 @@ public sealed class TenantReadinessServiceTests
     }
 
     [Fact]
+    public async Task Check_AuditorRoleMapping_RoleMappingPasses()
+    {
+        var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
+        await SeedIdentityAsync(tenantId, roleMapping: new Dictionary<string, string>
+        {
+            { "grp-admin", "admin" },
+            { "grp-employee", "employee" },
+            { "grp-auditor", "auditor" },
+            { "grp-report-viewer", "report_viewer" },
+        });
+        var (report, _) = await service.CheckAsync(tenantId, false, CancellationToken.None);
+        var rm = report!.Checks.Single(c => c.Name == "RoleMapping");
+        Assert.Equal(ReadinessStatus.Passed, rm.Status);
+    }
+
+    [Fact]
     public async Task Check_NoIdentity_RoleMappingSkipped()
     {
         var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
