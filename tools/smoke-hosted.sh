@@ -9,15 +9,17 @@
 #   OIDC_REALM=fps-pilot ./tools/smoke-hosted.sh
 #
 # Usage (localhost — TLS/WAF checks become PENDING):
-#   APP_URL=http://localhost:10000 AUTH_URL=http://localhost:8080 \
+#   APP_URL=http://localhost:10000 AUTH_URL=http://localhost:8180 \
 #   OIDC_REALM=fps-local ./tools/smoke-hosted.sh
+#
+# Note: local Keycloak Docker container maps internal :8080 to host :8180.
 #
 # See docs/production/hosted-smoke-runbook.md for full context and the
 # mandatory-checks table.
 set -euo pipefail
 
 APP_URL="${APP_URL:-http://localhost:10000}"
-AUTH_URL="${AUTH_URL:-http://localhost:8080}"
+AUTH_URL="${AUTH_URL:-http://localhost:8180}"
 OIDC_REALM="${OIDC_REALM:-fps-local}"
 OIDC_CLIENT_ID="${OIDC_CLIENT_ID:-fps-mobile-dev}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-Dev1234!}"
@@ -134,7 +136,17 @@ json_field() {
 }
 
 json_list_len() {
-  python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else d.get('totalCount',d.get('total',d.get('count',0))))" <<< "$1" 2>/dev/null || echo "0"
+  python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+if isinstance(d,list):
+    print(len(d))
+else:
+    # FPS services use different pagination shapes: totalCount, totalReturned, total, count
+    # Fall back to len(items) if no count field is present
+    items=d.get('items',[])
+    print(d.get('totalCount',d.get('totalReturned',d.get('total',d.get('count',len(items))))))
+" <<< "$1" 2>/dev/null || echo "0"
 }
 
 http_get() {
@@ -332,9 +344,13 @@ if [[ -n "$EMP_TOKEN" ]]; then
   NOTIFS=$(http_get "$EMP_TOKEN" "$APP_URL/notifications")
   if [[ -n "$NOTIFS" ]]; then
     N_COUNT=$(json_list_len "$NOTIFS")
-    pass "GET /notifications → $N_COUNT record(s)  [mandatory #6]"
+    if [[ "$N_COUNT" -ge 1 ]]; then
+      pass "GET /notifications → $N_COUNT record(s) — Booking event reached Notification  [mandatory #6]"
+    else
+      fail "GET /notifications → 0 records (Booking event did not reach Notification service; check Dapr pub/sub and run dev-seed.sh)" "true"
+    fi
   else
-    fail "GET /notifications → unreachable or empty after booking event" "true"
+    fail "GET /notifications → unreachable after booking event" "true"
   fi
 else
   skip "Notifications — no employee token"

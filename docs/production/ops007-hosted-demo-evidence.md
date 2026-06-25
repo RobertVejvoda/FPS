@@ -92,11 +92,11 @@ OIDC_REALM=fps-local
 - `./tools/dev-seed.sh` (25 bookings, 3 employees, 1 draw)
 - `source ./tools/dev-env.sh` (Auth__Authority=http://localhost:8180/realms/fps-local)
 
-**Result:**
+**Result (re-run after blocker fixes):**
 
 ```
 === FairSpot Hosted Smoke Evidence ===
-Run at:      2026-06-25T19:33:09Z
+Run at:      2026-06-25T19:44:42Z
 Environment: http://localhost:10000
 Auth:        http://localhost:8180
 Realm:       fps-local
@@ -124,14 +124,14 @@ Mode:        localhost (TLS/WAF checks PENDING)
 
 [PASS]    GET /profile/snapshot → parkingEligible=True
 
-[PASS]    POST /bookings → status=Pending requestId=161e590e…
-[PASS]    GET /bookings → 5 record(s) visible
+[PASS]    POST /bookings → status=Pending requestId=6c549540…
+[PASS]    GET /bookings → 6 record(s) visible
 
 [PASS]    GET /draws/2026-06-25/status → status=NotScheduled
 
-[PASS]    GET /notifications → 0 record(s)
+[PASS]    GET /notifications → 9 record(s) — Booking event reached Notification
 
-[PASS]    GET /audit → 48 record(s) after booking
+[PASS]    GET /audit → 49 record(s) after booking
 
 [PASS]    GET /reports/parking/summary → accessible to admin
 
@@ -147,7 +147,7 @@ Summary: 22 PASS / 0 FAIL / 4 PENDING / 0 SKIP  (26 total)
 DEFERRED: 1 pilot limitation(s) — non-blocking
 ```
 
-**Verdict:** All locally verifiable mandatory checks pass. 4 checks remain PENDING until the Cloudflare tunnel and public domain are configured. No mandatory failures in localhost mode.
+**Verdict:** All locally verifiable mandatory checks pass, including notification delivery (9 records). 4 checks remain PENDING until the Cloudflare tunnel and public domain are configured. No mandatory failures in localhost mode.
 
 ---
 
@@ -224,3 +224,4 @@ OIDC_REALM=fps-pilot \
 | Date | Author | Change |
 |---|---|---|
 | 2026-06-25 | Claude | Initial OPS007 evidence document for issue #226 |
+| 2026-06-25 | Claude | Fix AUTH_URL default to 8180, fix json_list_len for totalReturned, require ≥1 notification; rerun smoke |
