@@ -244,6 +244,22 @@ public sealed class TenantReadinessServiceTests
     }
 
     [Fact]
+    public async Task Check_AuditorRoleMapping_RoleMappingPasses()
+    {
+        var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
+        await SeedIdentityAsync(tenantId, roleMapping: new Dictionary<string, string>
+        {
+            { "grp-admin", "admin" },
+            { "grp-employee", "employee" },
+            { "grp-auditor", "auditor" },
+            { "grp-report-viewer", "report_viewer" },
+        });
+        var (report, _) = await service.CheckAsync(tenantId, false, CancellationToken.None);
+        var rm = report!.Checks.Single(c => c.Name == "RoleMapping");
+        Assert.Equal(ReadinessStatus.Passed, rm.Status);
+    }
+
+    [Fact]
     public async Task Check_NoIdentity_RoleMappingSkipped()
     {
         var tenantId = await SeedTenantAsync(TenantLifecycleState.Configured);
@@ -305,6 +321,56 @@ public sealed class TenantReadinessServiceTests
         Assert.All(report.Checks.Where(c => c.Name is "LifecycleState" or "IdentityConfig"
                 or "ActiveAdmin" or "RoleMapping" or "ParkingPolicy" or "ParkingLocation"),
             c => Assert.Equal(ReadinessStatus.Passed, c.Status));
+        // Pilot-deferred checks are always Deferred, regardless of probe connectivity.
+        Assert.All(report.Checks.Where(c => c.Name is "ObjectStorageReadiness" or "BrandingReadiness"),
+            c => Assert.Equal(ReadinessStatus.Deferred, c.Status));
+    }
+
+    // ── pilot-deferred checks ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Check_ObjectStorageReadiness_IsAlwaysDeferred()
+    {
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
+        var check = report!.Checks.Single(c => c.Name == "ObjectStorageReadiness");
+        Assert.Equal(ReadinessStatus.Deferred, check.Status);
+        Assert.Contains("Pilot limitation", check.Reason);
+        Assert.Contains("OPS008C", check.Reason);
+    }
+
+    [Fact]
+    public async Task Check_BrandingReadiness_IsAlwaysDeferred()
+    {
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
+        var check = report!.Checks.Single(c => c.Name == "BrandingReadiness");
+        Assert.Equal(ReadinessStatus.Deferred, check.Status);
+        Assert.Contains("Pilot limitation", check.Reason);
+        Assert.Contains("CUST010", check.Reason);
+    }
+
+    [Fact]
+    public async Task Check_DeferredChecks_DoNotBlockIsReady()
+    {
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
+        Assert.True(report!.IsReady);
+        var deferred = report.Checks.Where(c => c.Status == ReadinessStatus.Deferred).ToList();
+        Assert.NotEmpty(deferred);
+    }
+
+    [Fact]
+    public async Task Check_Output_DoesNotLeakStoragePaths()
+    {
+        var tenantId = await FullyConfiguredTenantAsync();
+        var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
+        foreach (var check in report!.Checks)
+        {
+            Assert.DoesNotContain("minio", check.Reason ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("s3://", check.Reason ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("bucket", check.Reason ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     // ── full pass (connected deployment) ─────────────────────────────────────
@@ -315,7 +381,11 @@ public sealed class TenantReadinessServiceTests
         var tenantId = await FullyConfiguredTenantAsync();
         var (report, _) = await connectedService.CheckAsync(tenantId, false, CancellationToken.None);
         Assert.True(report!.IsReady);
-        Assert.All(report.Checks, c => Assert.Equal(ReadinessStatus.Passed, c.Status));
+        // Deferred pilot-limitation checks (ObjectStorageReadiness, BrandingReadiness) are
+        // non-blocking: they appear in the report but do not prevent IsReady.
+        Assert.All(report.Checks, c => Assert.True(
+            c.Status is ReadinessStatus.Passed or ReadinessStatus.Deferred,
+            $"Expected Passed or Deferred for '{c.Name}' but got {c.Status}"));
     }
 
     // ── dry-run ───────────────────────────────────────────────────────────────

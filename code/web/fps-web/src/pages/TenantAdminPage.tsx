@@ -51,7 +51,7 @@ const CHECK_META: Record<string, CheckMeta> = {
   },
   RoleMapping: {
     label: 'Role configuration',
-    purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager).',
+    purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager, report_viewer, auditor).',
     nextAction: 'Fix the role mapping in your identity configuration, or contact your operator.',
   },
   ParkingPolicy: {
@@ -95,6 +95,16 @@ const CHECK_META: Record<string, CheckMeta> = {
     purpose: 'The reporting service must be available for management and compliance reports.',
     nextAction: 'Check that the reporting service is running. If the issue persists, contact your operator.',
   },
+  ObjectStorageReadiness: {
+    label: 'Document & file storage',
+    purpose: 'Tenant file storage enables document uploads, report exports, audit evidence, and branding assets.',
+    nextAction: 'Deferred for pilot — file storage provisioning (OPS008C) is not yet implemented. FairSpot will operate without document uploads or branding assets during the pilot.',
+  },
+  BrandingReadiness: {
+    label: 'Organization branding',
+    purpose: 'Tenant branding lets your employees see your organization name and logo in FairSpot.',
+    nextAction: 'Deferred for pilot — branding configuration (CUST010) is not yet implemented. FairSpot defaults will be shown to employees during the pilot.',
+  },
 };
 
 function getCheckMeta(name: string): CheckMeta {
@@ -115,6 +125,8 @@ interface NextAction {
 }
 
 function deriveNextAction(checks: ReadinessCheckDto[]): NextAction | null {
+  // Only surface Failed checks as the primary next action — Deferred items are known
+  // pilot limitations and do not block day-to-day tenant operation.
   const failedCheck = checks.find(c => c.status === 'Failed');
   if (!failedCheck) return null;
 
@@ -252,13 +264,24 @@ export function TenantAdminPage() {
         </section>
       )}
 
-      {readinessState.kind === 'ok' && readinessState.report.isReady && (
-        <section style={{ ...card, background: '#f0fdf4', borderColor: '#86efac' }}>
-          <p style={{ margin: 0, fontWeight: 600, color: '#166534', fontSize: 14 }}>
-            All checks passed — tenant is ready for live use.
-          </p>
-        </section>
-      )}
+      {readinessState.kind === 'ok' && readinessState.report.isReady && (() => {
+        const deferred = readinessState.report.checks.filter(c => c.status === 'Deferred');
+        return (
+          <section style={{ ...card, background: '#f0fdf4', borderColor: '#86efac' }}>
+            <p style={{ margin: 0, fontWeight: 600, color: '#166534', fontSize: 14 }}>
+              {deferred.length > 0
+                ? 'Tenant is pilot-ready — required checks passed.'
+                : 'All checks passed — tenant is ready for live use.'}
+            </p>
+            {deferred.length > 0 && (
+              <p style={{ margin: '6px 0 0', fontSize: 12, color: '#166534' }}>
+                {deferred.length} item{deferred.length > 1 ? 's are' : ' is'} deferred for the pilot and will not block day-to-day operation.
+                Resolve before moving to production: {deferred.map(c => getCheckMeta(c.name).label).join(', ')}.
+              </p>
+            )}
+          </section>
+        );
+      })()}
 
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={load} style={btnSm}>Refresh</button>
@@ -309,11 +332,23 @@ function ReadinessBadge({ isReady }: { isReady: boolean }) {
 
 function CheckRow({ check }: { check: ReadinessCheckDto }) {
   const status = check.status;
-  const icon = status === 'Passed' ? '✓' : status === 'Failed' ? '✗' : '–';
-  const color = status === 'Passed' ? '#166534' : status === 'Failed' ? '#b91c1c' : '#6b7280';
-  const bg = status === 'Passed' ? '#f0fdf4' : status === 'Failed' ? '#fef2f2' : '#f9fafb';
+  const icon =
+    status === 'Passed' ? '✓' :
+    status === 'Failed' ? '✗' :
+    status === 'Deferred' ? '~' : '–';
+  const color =
+    status === 'Passed' ? '#166534' :
+    status === 'Failed' ? '#b91c1c' :
+    status === 'Deferred' ? '#92400e' : '#6b7280';
+  const bg =
+    status === 'Passed' ? '#f0fdf4' :
+    status === 'Failed' ? '#fef2f2' :
+    status === 'Deferred' ? '#fffbeb' : '#f9fafb';
   const meta = getCheckMeta(check.name);
   const showNextAction = status !== 'Passed';
+  const nextActionColor =
+    status === 'Failed' ? '#991b1b' :
+    status === 'Deferred' ? '#78350f' : '#6b7280';
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
       <span style={{ color, fontWeight: 700, width: 16, flexShrink: 0, paddingTop: 2 }}>{icon}</span>
@@ -321,14 +356,15 @@ function CheckRow({ check }: { check: ReadinessCheckDto }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 600, background: bg, color, borderRadius: 4, padding: '1px 6px' }}>
             {meta.label}
+            {status === 'Deferred' && <span style={{ fontWeight: 400, marginLeft: 4 }}>(pilot deferred)</span>}
           </span>
           {meta.purpose && (
             <span style={{ fontSize: 12, color: '#6b7280' }}>{meta.purpose}</span>
           )}
         </div>
         {showNextAction && (
-          <p style={{ margin: '4px 0 0', fontSize: 12, color: status === 'Failed' ? '#991b1b' : '#6b7280' }}>
-            {check.reason ? `${meta.nextAction} (${check.reason})` : meta.nextAction}
+          <p style={{ margin: '4px 0 0', fontSize: 12, color: nextActionColor }}>
+            {meta.nextAction}
             {meta.link && (
               <> — <Link to={meta.link} style={{ color: '#1d4ed8', fontWeight: 500 }}>Go to {meta.linkLabel ?? meta.link} →</Link></>
             )}
