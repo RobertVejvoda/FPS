@@ -512,26 +512,15 @@ public sealed class MetricsAuthorizationTests
     [InlineData("Daily")]
     [InlineData("Utilization")]
     [InlineData("ReasonCodes")]
-    public void AggregateSafeEndpoints_AllowReportViewer(string action)
-    {
-        var roles = EffectiveRoles(action);
-        Assert.Contains("report_viewer", roles);
-    }
-
-    [Theory]
     [InlineData("EmployeeImpact")]
     [InlineData("OperationalExceptions")]
-    public void SensitiveEndpoints_DoNotAllowReportViewer(string action)
+    public void AllReportSafeEndpoints_AllowReportViewer(string action)
     {
-        // These actions must have their own [Authorize] without report_viewer,
-        // which overrides the class-level broader grant.
-        var method = ControllerType.GetMethod(action,
-            BindingFlags.Public | BindingFlags.Instance);
-        var actionAttr = method?.GetCustomAttribute<AuthorizeAttribute>();
-
-        Assert.NotNull(actionAttr);
-        Assert.NotNull(actionAttr.Roles);
-        Assert.DoesNotContain("report_viewer", actionAttr.Roles);
+        // All six endpoints must match the existing Reporting role contract:
+        // hr_manager, admin, and report_viewer. EmployeeImpact and OperationalExceptions
+        // have equivalent endpoints in ReportingController already open to report_viewer.
+        var roles = EffectiveRoles(action);
+        Assert.Contains("report_viewer", roles);
     }
 
     [Fact]

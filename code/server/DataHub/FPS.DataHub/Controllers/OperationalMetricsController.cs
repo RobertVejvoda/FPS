@@ -235,9 +235,8 @@ public sealed class OperationalMetricsController(
     }
 
     // ── GET /datahub/metrics/employee-impact ────────────────────────────────────
-    // Per-employee allocation fairness summary. Exposes RequestorId for Profile
-    // display-name lookup by the web; HR/admin role required (not report_viewer).
-    [Authorize(Roles = "hr_manager,admin")]
+    // Per-employee allocation fairness summary. Matches existing /reports/parking/employee-impact
+    // role contract (hr_manager, admin, report_viewer) — all three may access this endpoint.
     [HttpGet("/datahub/metrics/employee-impact")]
     public async Task<IActionResult> EmployeeImpact(
         [FromQuery] string? locationId,
@@ -293,7 +292,7 @@ public sealed class OperationalMetricsController(
 
     // ── GET /datahub/metrics/operational-exceptions ─────────────────────────────
     // Failed draws, draws that completed with zero allocations, and projection lag.
-    [Authorize(Roles = "hr_manager,admin")]
+    // Matches existing /reports/parking/operational-exceptions role contract.
     [HttpGet("/datahub/metrics/operational-exceptions")]
     public async Task<IActionResult> OperationalExceptions(
         [FromQuery] string? locationId,
