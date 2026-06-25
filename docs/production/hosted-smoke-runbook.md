@@ -58,18 +58,32 @@ OIDC_REALM=fps-pilot \
   ./tools/smoke-hosted.sh
 ```
 
-The script outputs `PASS`, `FAIL`, `PENDING`, or `SKIP` for each check, prints a summary at the end, and exits non-zero if any required check fails.
+The script outputs `PASS`, `FAIL`, `PENDING`, `SKIP`, or `DEFERRED` for each check, prints a summary at the end, and exits non-zero if any required check fails.
 
 **If the public domain is not yet configured**, run in local mode to verify the same checks against the local harness:
 
 ```bash
+# 1. Start all services with Dapr (Customer service requires its Dapr sidecar):
+#    dapr run -f dapr.yaml   OR   ./tools/start-with-dapr.sh
+# 2. Seed demo data:
+#    ./tools/dev-seed.sh
+# 3. Source auth environment (sets Auth__Authority for services):
+source ./tools/dev-env.sh
+
 APP_URL=http://localhost:10000 \
-AUTH_URL=http://localhost:8080 \
+AUTH_URL=http://localhost:8180 \
 OIDC_REALM=fps-local \
   ./tools/smoke-hosted.sh
 ```
 
-The script marks any public-domain-only checks (Cloudflare reachability, TLS) as `PENDING` when running against localhost.
+**Important local harness notes:**
+- The local Keycloak container maps internal port 8080 to host port **8180**. Use `AUTH_URL=http://localhost:8180`, not `http://localhost:8080`.
+- The Customer service (port 5181) requires a Dapr sidecar to access its state store. Running it with bare `dotnet run` without the sidecar will cause 500 errors on readiness checks.
+- The smoke uses +3 days from today for the test booking to avoid `CutOffPassed` rejection in the evening.
+
+The script marks any public-domain-only checks (Cloudflare reachability, TLS, WAF) as `PENDING` when running against localhost.
+
+**Pilot-deferred items:** A `DEFERRED` status in the readiness section indicates pilot limitations (ObjectStorageReadiness, BrandingReadiness) that are non-blocking. See `docs/production/cust008-onboarding-e2e-evidence.md` for the full classification.
 
 ---
 
@@ -196,3 +210,4 @@ Complete this checklist and attach the smoke evidence file to the release or PR 
 | Date | Author | Change |
 |---|---|---|
 | 2026-05-29 | Claude | Initial runbook for issue #314 |
+| 2026-06-25 | Claude | OPS007: fix local AUTH_URL to 8180, add Dapr startup note, add DEFERRED status, add +3d booking note |
