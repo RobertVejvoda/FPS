@@ -1,4 +1,17 @@
 import type { ApiClientConfig, FetchResult } from './client';
+import {
+  fetchMetricsDashboard,
+  fetchMetricsDaily,
+  fetchMetricsUtilization,
+  fetchMetricsReasonCodes,
+  fetchMetricsEmployeeImpact,
+  fetchMetricsOperationalExceptions,
+} from './dataHub';
+
+// ── Response interfaces ───────────────────────────────────────────────────────
+// Shapes are preserved from the legacy Reporting API so ReportingPage.tsx
+// requires no changes. The fetch functions below now delegate to DataHub
+// metrics endpoints (DATAHUB006 / issue #334).
 
 export interface DashboardResponse {
   totalDemand: number;
@@ -96,10 +109,6 @@ export interface OperationalExceptionsResponse {
 
 type CsvResult = { kind: 'ok'; blob: Blob } | { kind: 'unauthenticated' } | { kind: 'error'; message: string; status?: number } | { kind: 'unreachable'; message: string };
 
-function authHeaders(bearerToken: string) {
-  return { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' };
-}
-
 async function fetchCsv(apiBaseUrl: string, bearerToken: string, path: string): Promise<CsvResult> {
   try {
     const res = await fetch(`${apiBaseUrl}${path}`, {
@@ -114,111 +123,174 @@ async function fetchCsv(apiBaseUrl: string, bearerToken: string, path: string): 
   }
 }
 
+// ── Fetch functions ───────────────────────────────────────────────────────────
+// All JSON reads now go to DataHub metrics endpoints. CSV exports stay on the
+// Reporting service (no DataHub export equivalent exists yet).
+
 export async function fetchReportingDashboard(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
 ): Promise<FetchResult<DashboardResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/dashboard`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/dashboard returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as DashboardResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const r = await fetchMetricsDashboard(cfg);
+  if (r.kind !== 'ok') return r;
+  const m = r.data;
+  return {
+    kind: 'ok',
+    data: {
+      totalDemand:          m.demand,
+      totalAllocations:     m.allocated,
+      totalRejections:      m.rejected,
+      totalCancellations:   m.cancelled,
+      totalNoShows:         m.noShow,
+      totalPenalties:       0,
+      overallAllocationRate: m.allocationRate / 100,
+      // rejectionsByReason and dailyTrend are not in the dashboard aggregate;
+      // the dedicated Reason Codes and Daily Summary sections in the page cover them.
+      rejectionsByReason: {},
+      dailyTrend:          [],
+    },
+  };
 }
 
 export async function fetchReportingSummary(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
 ): Promise<FetchResult<SummaryResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/summary`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/summary returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as SummaryResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const r = await fetchMetricsDaily(cfg, { pageSize: 100 });
+  if (r.kind !== 'ok') return r;
+  return {
+    kind: 'ok',
+    data: {
+      items: r.data.items.map(row => ({
+        date:             row.date,
+        locationId:       row.locationId,
+        timeSlot:         row.timeSlot,
+        demandCount:      row.demand,
+        allocationCount:  row.allocated,
+        allocationRate:   row.allocationRate / 100,
+        rejectionCount:   row.rejected,
+        cancellationCount: row.cancelled,
+        noShowCount:      row.noShow,
+        penaltyCount:     0,
+      })),
+    },
+  };
 }
 
 export async function fetchReportingFairness(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
 ): Promise<FetchResult<FairnessResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/fairness`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/fairness returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as FairnessResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const r = await fetchMetricsEmployeeImpact(cfg, { pageSize: 100 });
+  if (r.kind !== 'ok') return r;
+  return {
+    kind: 'ok',
+    data: {
+      items: r.data.items.map(row => ({
+        requestorRef:   row.requestorId,
+        requestCount:   row.demand,
+        allocationCount: row.allocated,
+        allocationRate: row.allocationRate / 100,
+      })),
+    },
+  };
 }
 
 export async function fetchUtilizationReport(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
 ): Promise<FetchResult<UtilizationResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/utilization`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/utilization returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as UtilizationResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const r = await fetchMetricsUtilization(cfg);
+  if (r.kind !== 'ok') return r;
+  return {
+    kind: 'ok',
+    data: {
+      items: r.data.items.map(row => ({
+        locationId:       row.locationId,
+        totalDemand:      row.demand,
+        totalAllocations: row.allocated,
+        totalRejections:  row.rejected,
+        totalCancellations: row.cancelled,
+        totalNoShows:     0,
+        allocationRate:   row.allocationRate / 100,
+      })),
+    },
+  };
 }
 
 export async function fetchReasonCodeReport(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
 ): Promise<FetchResult<ReasonCodeResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/reason-codes`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/reason-codes returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as ReasonCodeResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const [rcResult, dashResult] = await Promise.all([
+    fetchMetricsReasonCodes(cfg),
+    fetchMetricsDashboard(cfg),
+  ]);
+  if (rcResult.kind !== 'ok') return rcResult;
+  const totalDemand = dashResult.kind === 'ok' ? dashResult.data.demand : 0;
+  const allEntries = [
+    ...rcResult.data.rejections,
+    ...rcResult.data.cancellations,
+    ...rcResult.data.noShows,
+  ];
+  return {
+    kind: 'ok',
+    data: {
+      items: allEntries.map(entry => ({
+        reasonCode:   entry.reasonCode,
+        count:        entry.count,
+        rateOfDemand: totalDemand > 0 ? entry.count / totalDemand : 0,
+      })),
+      totalDemand,
+    },
+  };
 }
 
 export async function fetchEmployeeImpact(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
   minRejections = 2,
 ): Promise<FetchResult<EmployeeImpactResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/employee-impact?minRejections=${minRejections}`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/employee-impact returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as EmployeeImpactResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const r = await fetchMetricsEmployeeImpact(cfg, { pageSize: 100 });
+  if (r.kind !== 'ok') return r;
+  const filtered = r.data.items.filter(row => row.rejected >= minRejections);
+  return {
+    kind: 'ok',
+    data: {
+      items: filtered.map(row => ({
+        requestorRef:    row.requestorId,
+        totalRequests:   row.demand,
+        totalRejections: row.rejected,
+        totalAllocations: row.allocated,
+      })),
+      minRejectionThreshold: minRejections,
+    },
+  };
 }
 
 export async function fetchOperationalExceptions(
-  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  cfg: ApiClientConfig,
 ): Promise<FetchResult<OperationalExceptionsResponse>> {
-  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
-  try {
-    const res = await fetch(`${apiBaseUrl}/reports/parking/operational-exceptions`, { headers: authHeaders(bearerToken) });
-    if (res.status === 401) return { kind: 'unauthenticated' };
-    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
-    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /reports/parking/operational-exceptions returned ${res.status}` };
-    return { kind: 'ok', data: (await res.json()) as OperationalExceptionsResponse };
-  } catch (e) {
-    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
-  }
+  const r = await fetchMetricsOperationalExceptions(cfg);
+  if (r.kind !== 'ok') return r;
+  const items: OperationalExceptionEntry[] = [
+    ...r.data.failedDraws.map(d => ({
+      date:             d.date,
+      locationId:       d.locationId,
+      exceptionType:    'failed_draw',
+      description:      d.safeFailureReason ?? 'Draw failed',
+      totalDemand:      0,
+      totalAllocations: 0,
+      totalRejections:  0,
+    })),
+    ...r.data.zeroAllocationDraws.map(d => ({
+      date:             d.date,
+      locationId:       d.locationId,
+      exceptionType:    'demand_no_allocations',
+      description:      'Draw completed with no allocations',
+      totalDemand:      d.rejectedCount + d.waitlistedCount,
+      totalAllocations: 0,
+      totalRejections:  d.rejectedCount,
+    })),
+  ];
+  return { kind: 'ok', data: { items } };
 }
+
+// ── CSV exports (stay on Reporting service) ───────────────────────────────────
 
 export async function downloadCsvReport({ apiBaseUrl, bearerToken }: ApiClientConfig): Promise<CsvResult> {
   if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };

@@ -277,6 +277,224 @@ export async function fetchDrawProgress(
   }
 }
 
+// ── Operational Metrics (DATAHUB006) ────────────────────────────────────────
+
+export interface MetricsDashboard {
+  period: { from: string; to: string };
+  locationId: string | null;
+  demand: number;
+  allocated: number;
+  rejected: number;
+  cancelled: number;
+  noShow: number;
+  used: number;
+  waitlisted: number;
+  expired: number;
+  submitted: number;
+  allocationRate: number;
+  totalDraws: number;
+  failedDraws: number;
+  projectionFreshnessAt: string | null;
+}
+
+export interface MetricsDailyRow {
+  date: string;
+  locationId: string;
+  timeSlot: string;
+  demand: number;
+  allocated: number;
+  rejected: number;
+  cancelled: number;
+  noShow: number;
+  waitlisted: number;
+  allocationRate: number;
+}
+
+export interface MetricsDailyResponse {
+  items: MetricsDailyRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface MetricsUtilizationRow {
+  locationId: string;
+  demand: number;
+  allocated: number;
+  allocationRate: number;
+  rejected: number;
+  cancelled: number;
+  uniqueRequestors: number;
+}
+
+export interface MetricsUtilizationResponse {
+  period: { from: string; to: string };
+  items: MetricsUtilizationRow[];
+}
+
+export interface MetricsReasonCodeEntry {
+  reasonCode: string;
+  count: number;
+}
+
+export interface MetricsReasonCodesResponse {
+  period: { from: string; to: string };
+  locationId: string | null;
+  rejections: MetricsReasonCodeEntry[];
+  cancellations: MetricsReasonCodeEntry[];
+  noShows: MetricsReasonCodeEntry[];
+}
+
+export interface MetricsEmployeeImpactRow {
+  requestorId: string;
+  demand: number;
+  allocated: number;
+  allocationRate: number;
+  rejected: number;
+  cancelled: number;
+  noShow: number;
+}
+
+export interface MetricsEmployeeImpactResponse {
+  period: { from: string; to: string };
+  items: MetricsEmployeeImpactRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface MetricsFailedDraw {
+  drawAttemptId: string;
+  locationId: string;
+  date: string;
+  timeSlot: string;
+  safeFailureReason: string | null;
+  lastUpdatedAt: string;
+}
+
+export interface MetricsZeroAllocationDraw {
+  drawAttemptId: string;
+  locationId: string;
+  date: string;
+  timeSlot: string;
+  rejectedCount: number;
+  waitlistedCount: number;
+  lastUpdatedAt: string;
+}
+
+export interface MetricsOperationalExceptionsResponse {
+  period: { from: string; to: string };
+  locationId: string | null;
+  failedDraws: MetricsFailedDraw[];
+  zeroAllocationDraws: MetricsZeroAllocationDraw[];
+  projectionLagSeconds: number | null;
+  lastProjectedAt: string | null;
+}
+
+function metricsHeaders(bearerToken: string) {
+  return { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' };
+}
+
+export async function fetchMetricsDashboard(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+): Promise<FetchResult<MetricsDashboard>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/datahub/metrics/dashboard`, { headers: metricsHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/metrics/dashboard returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MetricsDashboard };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchMetricsDaily(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<FetchResult<MetricsDailyResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const url = `${apiBaseUrl}/datahub/metrics/daily${qs.size ? `?${qs}` : ''}`;
+  try {
+    const res = await fetch(url, { headers: metricsHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/metrics/daily returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MetricsDailyResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchMetricsUtilization(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+): Promise<FetchResult<MetricsUtilizationResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/datahub/metrics/utilization`, { headers: metricsHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/metrics/utilization returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MetricsUtilizationResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchMetricsReasonCodes(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+): Promise<FetchResult<MetricsReasonCodesResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/datahub/metrics/reason-codes`, { headers: metricsHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/metrics/reason-codes returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MetricsReasonCodesResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchMetricsEmployeeImpact(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<FetchResult<MetricsEmployeeImpactResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const url = `${apiBaseUrl}/datahub/metrics/employee-impact${qs.size ? `?${qs}` : ''}`;
+  try {
+    const res = await fetch(url, { headers: metricsHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/metrics/employee-impact returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MetricsEmployeeImpactResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export async function fetchMetricsOperationalExceptions(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+): Promise<FetchResult<MetricsOperationalExceptionsResponse>> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/datahub/metrics/operational-exceptions`, { headers: metricsHeaders(bearerToken) });
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (res.status === 403) return { kind: 'error', status: 403, message: 'Insufficient permissions.' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /datahub/metrics/operational-exceptions returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as MetricsOperationalExceptionsResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 /**
  * AUD008: Fetch auditor-safe booking-request detail by booking request ID.
  * Returns business-safe fields scoped to the authenticated tenant.
