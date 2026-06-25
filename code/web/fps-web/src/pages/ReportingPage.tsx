@@ -374,7 +374,7 @@ export function ReportingPage() {
         <section style={card}>
           <h3 style={cardTitle}>Operational Exceptions</h3>
           <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
-            Dates where demand was recorded but allocations are missing or all requests were rejected.
+            Dates with draw failures, missing allocations, or fully rejected demand.
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
@@ -384,7 +384,7 @@ export function ReportingPage() {
                   <tr key={i}>
                     <td style={td}>{new Date(row.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
                     <td style={td}>{displayLocation(row.locationId) ?? row.locationId}</td>
-                    <td style={{ ...td, color: '#b45309', fontWeight: 500 }}>{row.exceptionType === 'demand_no_allocations' ? 'No allocations' : 'All rejected'}</td>
+                    <td style={{ ...td, color: '#b45309', fontWeight: 500 }}>{row.exceptionType === 'demand_no_allocations' ? 'No allocations' : row.exceptionType === 'failed_draw' ? row.description : 'All rejected'}</td>
                     <td style={td}>{row.totalDemand}</td>
                     <td style={td}>{row.totalAllocations}</td>
                     <td style={{ ...td, color: '#dc2626' }}>{row.totalRejections}</td>
