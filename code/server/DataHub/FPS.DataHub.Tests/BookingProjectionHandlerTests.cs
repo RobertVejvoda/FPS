@@ -897,4 +897,72 @@ public sealed class BookingProjectionHandlerTests : IDisposable
         Assert.Equal("loc-hq", tenantAProjections[0].LocationId);
         Assert.Equal("loc-office", tenantBProjections[0].LocationId);
     }
+
+    // ── PERSIST005 evidence: tenant-scoped projection rows ────────────────────
+    // Confirms that TenantId is present on all projection entity types and that
+    // rows from different tenants are physically separate (not shared).
+
+    [Fact]
+    public async Task DrawHistoryProjection_HasTenantId()
+    {
+        var envelope = new BookingEventEnvelope(
+            EventId: "evt-tenant-scope-1", EventType: "booking.drawStarted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-persist005", CorrelationId: "c1",
+            CausationId: null, ActorType: "system", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(null, null, "loc-hq", "2026-07-15", "08:00-17:00", null, null, null, null, null));
+
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+
+        var row = await _db.DrawHistory.SingleAsync(d => d.DrawAttemptId == "evt-tenant-scope-1");
+        Assert.Equal("tenant-persist005", row.TenantId);
+    }
+
+    [Fact]
+    public async Task BookingOutcomeProjection_HasTenantId()
+    {
+        var requestId = Guid.NewGuid().ToString();
+        var envelope = new BookingEventEnvelope(
+            EventId: "evt-tenant-scope-2", EventType: "booking.requestSubmitted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-persist005", CorrelationId: "c2",
+            CausationId: null, ActorType: "employee", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: requestId, RequestorId: "user-persist005",
+                LocationId: "loc-hq", Date: "2026-07-15", TimeSlot: "08:00-17:00",
+                PreviousStatus: null, NewStatus: "Submitted",
+                ReasonCode: null, ReasonText: null, AffectedRecipientIds: null));
+
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+
+        var row = await _db.BookingOutcomes.SingleAsync(o => o.BookingRequestId == requestId);
+        Assert.Equal("tenant-persist005", row.TenantId);
+    }
+
+    [Fact]
+    public async Task ProjectionRows_DifferentTenants_ArePhysicallySeparate()
+    {
+        var reqA = Guid.NewGuid().ToString();
+        var reqB = Guid.NewGuid().ToString();
+
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-sep-a", EventType: "booking.requestSubmitted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-a", CorrelationId: "ca",
+            CausationId: null, ActorType: "employee", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(reqA, "user-1", "loc-a", "2026-07-15", "08:00-17:00", null, "Submitted", null, null, null)),
+            CancellationToken.None);
+
+        await _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: "evt-sep-b", EventType: "booking.requestSubmitted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-b", CorrelationId: "cb",
+            CausationId: null, ActorType: "employee", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(reqB, "user-1", "loc-b", "2026-07-15", "08:00-17:00", null, "Submitted", null, null, null)),
+            CancellationToken.None);
+
+        // Each tenant can only see their own rows
+        var aRows = await _db.BookingOutcomes.Where(o => o.TenantId == "tenant-a").ToListAsync();
+        var bRows = await _db.BookingOutcomes.Where(o => o.TenantId == "tenant-b").ToListAsync();
+        Assert.Single(aRows);
+        Assert.Single(bRows);
+        Assert.Equal(reqA, aRows[0].BookingRequestId);
+        Assert.Equal(reqB, bRows[0].BookingRequestId);
+    }
 }

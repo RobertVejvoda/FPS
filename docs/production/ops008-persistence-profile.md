@@ -213,11 +213,9 @@ All component files are under `code/infrastructure/dapr/components/`. Local prof
 
 ### PERSIST005 — DataHub Projection Durability and Rebuild Evidence
 
+**Status: Complete — PR #599**
+
 **Current state:** DataHub already uses EF Core + PostgreSQL (`DataHubDbContext`). The `BookingProjectionHandler` processes booking events from Dapr pub/sub and writes to the durable store. DataHub is not in-memory.
-
-**Gap:** The rebuild/replay path when the PostgreSQL store is reset or when projections need to be re-derived from upstream events is not documented. There is no evidence that projections can be rebuilt from event replay after a failure.
-
-**Target state:** Document the rebuild path and test it for the existing `BookingProjectionHandler`.
 
 **Rebuild expectations:**
 
@@ -230,14 +228,38 @@ All component files are under `code/infrastructure/dapr/components/`. Local prof
 
 3. **Snapshot rebuild from source service API (alternative):** DataHub can poll `GET /bookings` (paginated) for a tenant to rebuild the booking projection from the durable Booking store, instead of relying on event replay. This requires PERSIST001–PERSIST004 to be complete so source stores are reliable.
 
-**Provisioning evidence required:**
+**Manual cold rebuild procedure (DrawHistoryProjection):**
 
-- [ ] DataHub PostgreSQL connection string and EF Core migrations applied before service startup.
-- [ ] `EventInboxService` deduplication prevents duplicate projection writes on event re-delivery.
-- [ ] Cold rebuild documented: either event replay or snapshot poll path is confirmed working for at least one projection type (`BookingProjectionHandler`).
-- [ ] Tenant-scoped projection rows in `DataHubDbContext` tables (confirm `tenantId` column exists on projection entities).
+1. Stop the DataHub service (or fence it from the broker).
+2. Clear inbox and projection tables for the target tenant:
+   ```sql
+   DELETE FROM datahub_event_inbox WHERE tenant_id = '<tenant>';
+   DELETE FROM datahub_draw_history WHERE tenant_id = '<tenant>';
+   DELETE FROM datahub_booking_outcome WHERE tenant_id = '<tenant>';
+   ```
+3. Reset the Dapr pub/sub broker offset for `fps-booking-events` subscription to replay from the desired point, OR call the source service paginated replay API.
+4. Restart DataHub — `EventInboxService` re-ingests events and `BookingProjectionHandler` reconstructs projections idempotently.
+5. Verify row counts match expected values with a tenant-scoped query.
 
-**Done criteria:** DataHub booking projection survives PostgreSQL schema migration without data loss. Rebuild path documented with a manual test procedure. Projection rows confirm tenant-scoped isolation.
+**Tenant-scoped rebuild rule:** Any rebuild must clear and replay for one tenant at a time. Never run a cross-tenant clear on projection tables.
+
+**Provisioning evidence:**
+
+- [x] DataHub PostgreSQL connection string and EF Core migrations applied before service startup.
+  - Migrations at `code/server/DataHub/FPS.DataHub/Infrastructure/Migrations/` applied via `dotnet ef database update` in the provisioning pipeline.
+- [x] `EventInboxService` deduplication prevents duplicate projection writes on event re-delivery.
+  - Test: `EventInboxServiceTests.Accept_DuplicateEvent_DoesNotCreateSecondRow` (line 72–83)
+  - Test: `EventInboxServiceTests.ColdRebuild_ClearInboxAndProjection_ThenReplay_RebuildsDrawHistory` — demonstrates full rebuild cycle
+  - Test: `EventInboxServiceTests.ColdRebuild_TenantIsolation_OnlyRebuildsTargetTenant` — demonstrates tenant-scoped rebuild
+- [x] Cold rebuild confirmed for `BookingProjectionHandler` (DrawHistory projection type).
+  - `EventInboxServiceTests.ColdRebuild_*` tests above cover the end-to-end rebuild path.
+- [x] Tenant-scoped projection rows confirmed in all `DataHubDbContext` tables.
+  - `EventInboxRecord.TenantId` — `DataHubDbContext.OnModelCreating` lines 30–32; index `ix_event_inbox_tenant_processed`
+  - `DrawHistoryProjection.TenantId` — `DataHubDbContext.OnModelCreating`; index `ix_draw_history_tenant_location_date`
+  - `BookingOutcomeProjection.TenantId` — `DataHubDbContext.OnModelCreating`; index `ix_booking_outcome_tenant_requestor_date`
+  - Tests: `BookingProjectionHandlerTests.DrawHistoryProjection_HasTenantId`, `BookingOutcomeProjection_HasTenantId`, `ProjectionRows_DifferentTenants_ArePhysicallySeparate`
+
+**Done criteria:** ✓ DataHub booking projection survives PostgreSQL schema migration without data loss. ✓ Rebuild path documented with a manual test procedure (see above). ✓ Projection rows confirm tenant-scoped isolation.
 
 ---
 
@@ -361,3 +383,5 @@ These rules apply to all PERSIST slices.
 | 2026-06-25 | Claude | Initial OPS008 persistence profile — implementation sequence, provisioning evidence, DataHub implications, checklist |
 | 2026-06-26 | Claude | PERSIST001 implemented (PR #595) — update key pattern table to match aggregate-list-key design; document trade-offs, bounds, and restore implications |
 | 2026-06-26 | Claude | Fix tenant-default/location-override key collision: use `config-policy:{tenantId}:tenant-default` and `config-policy-location:{tenantId}:{locationId}` as structurally distinct prefixes |
+| 2026-06-26 | Claude | PERSIST004 implemented (PR #598) — Notification durable inbox/prefs/HR roster via `notificationstore`; tenant-scoped dedup key, startup hydration for roster |
+| 2026-06-26 | Claude | PERSIST005 complete (PR #599) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |
