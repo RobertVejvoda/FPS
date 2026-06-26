@@ -65,12 +65,7 @@ builder.Services.AddAuthentication("Bearer")
         options.ConfigureFpsJwtBearer(builder.Configuration, builder.Environment);
     });
 
-var identityHydrationCheck = new IdentityHydrationHealthCheck();
-builder.Services.AddSingleton(identityHydrationCheck);
-builder.Services.AddFpsHealthChecks()
-    .AddCheck<IdentityHydrationHealthCheck>(
-        "identity-hydration",
-        Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy);
+builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-customer", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
@@ -87,6 +82,7 @@ builder.Services.AddSingleton(identityConfigStore);
 var roleMappingStore = new InMemoryTenantRoleMappingStore(identityConfigStore);
 builder.Services.AddSingleton<ITenantRoleMapper>(roleMappingStore);
 builder.Services.AddSingleton(roleMappingStore);
+builder.Services.AddSingleton<IdentityStoreHydrator>();
 
 var app = builder.Build();
 
@@ -104,12 +100,38 @@ app.UseFpsRequestTraceLogging();
 app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 
-// Startup gate (PERSIST006B): HydrateIdentityStoresAsync runs synchronously before app.Run().
-// If hydration fails, IdentityHydrationHealthCheck marks the service Unhealthy so the
-// readiness probe blocks traffic — preventing the fail-open path in TenantClaimsTransformation.
+// Wait for Dapr sidecar before hydrating. Guard skips the poll in test runs and local dev
+// without a sidecar (DAPR_HTTP_PORT absent) to avoid 5-minute startup timeouts.
+var daprHttpPort = Environment.GetEnvironmentVariable("DAPR_HTTP_PORT");
+if (!string.IsNullOrEmpty(daprHttpPort))
+{
+    var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    var healthUrl = $"http://localhost:{daprHttpPort}/v1.0/healthz/outbound";
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+    for (var attempt = 1; attempt <= 60; attempt++)
+    {
+        try
+        {
+            var resp = await http.GetAsync(healthUrl);
+            if (resp.IsSuccessStatusCode)
+            {
+                startupLogger.LogInformation("Dapr sidecar outbound health ready after {Attempt} attempt(s).", attempt);
+                break;
+            }
+        }
+        catch { /* sidecar not yet listening */ }
+        startupLogger.LogWarning("Waiting for Dapr outbound health on {Url} (attempt {Attempt}/60)…", healthUrl, attempt);
+        await Task.Delay(TimeSpan.FromSeconds(5));
+    }
+}
+
+// PERSIST006B startup gate: IdentityStoreHydrator.HydrateAsync propagates exceptions in
+// non-Development profiles, crashing the process before app.Run() so the orchestrator
+// restarts the pod when Dapr is unavailable — preventing the fail-open path in
+// TenantClaimsTransformation (IsEnforcementActive==false passes raw roles with empty stores).
 using (var scope = app.Services.CreateScope())
 {
-    await HydrateIdentityStoresAsync(scope.ServiceProvider, identityHydrationCheck);
+    await scope.ServiceProvider.GetRequiredService<IdentityStoreHydrator>().HydrateAsync();
 }
 
 if (app.Environment.IsDevelopment())
@@ -124,68 +146,6 @@ if (app.Environment.IsDevelopment())
 
 app.Run();
 
-static async Task HydrateIdentityStoresAsync(IServiceProvider services, IdentityHydrationHealthCheck hydrationCheck)
-{
-    var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
-    var configStore = services.GetRequiredService<InMemoryTenantIdentityConfigStore>();
-    var roleMappingStore = services.GetRequiredService<InMemoryTenantRoleMappingStore>();
-    var logger = services.GetRequiredService<ILogger<Program>>();
-
-    // Only poll Dapr outbound health when the Dapr harness is actually present (DAPR_HTTP_PORT set).
-    // Without this guard, test runs that host Customer via WebApplicationFactory stall for up to 5 min
-    // per startup because no sidecar is listening and every attempt times out.
-    var daprHttpPort = Environment.GetEnvironmentVariable("DAPR_HTTP_PORT");
-    if (!string.IsNullOrEmpty(daprHttpPort))
-    {
-        var healthUrl = $"http://localhost:{daprHttpPort}/v1.0/healthz/outbound";
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-        for (var attempt = 1; attempt <= 60; attempt++)
-        {
-            try
-            {
-                var resp = await http.GetAsync(healthUrl);
-                if (resp.IsSuccessStatusCode)
-                {
-                    logger.LogInformation("Dapr sidecar outbound health ready after {Attempt} attempt(s).", attempt);
-                    break;
-                }
-            }
-            catch
-            {
-                // sidecar not yet listening
-            }
-            logger.LogWarning("Waiting for Dapr outbound health on {Url} (attempt {Attempt}/60)…", healthUrl, attempt);
-            await Task.Delay(TimeSpan.FromSeconds(5));
-        }
-    }
-
-    IReadOnlyList<string> tenantIds;
-    try
-    {
-        tenantIds = await identityRepository.GetConfiguredTenantIdsAsync(CancellationToken.None);
-    }
-    catch (Exception ex)
-    {
-        // Mark the readiness check Unhealthy so the load balancer stops routing traffic.
-        // This prevents the fail-open path in TenantClaimsTransformation (IsEnforcementActive==false
-        // passes raw roles through when the config store is empty).
-        hydrationCheck.MarkFailed();
-        logger.LogError(ex,
-            "Identity store hydration failed. Service is Unhealthy — readiness probe will block traffic " +
-            "until the service restarts with Dapr available.");
-        return;
-    }
-
-    foreach (var tenantId in tenantIds)
-    {
-        var config = await identityRepository.GetConfigAsync(tenantId, CancellationToken.None);
-        if (config is null) continue;
-        configStore.Register(config.TenantId);
-        roleMappingStore.SetMapping(config.TenantId, config.RoleMapping);
-        configStore.SetClaimConfig(config.TenantId, new TenantClaimConfig(
-            config.TenantClaimName, config.SubjectClaimName, config.RoleClaimNames));
-    }
-}
 
 static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
 {
