@@ -286,19 +286,34 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
 
 ### PERSIST006A — Booking Fairness Metrics Durability
 
+**Status: Complete — PR #599**
+
 **Current gap:** `InMemoryEmployeeMetricsService` tracks fairness history (allocation counts per employee per lookback window). This history is lost on Booking service restart. If fairness metrics are erased, the draw algorithm may over-allocate to employees who received spots recently.
 
-**Target state:** Dapr state store key per employee per tenant, with consistent key format.
+**Target state:** Dapr state store entry per employee per tenant, backed by the existing `bookingstore` component (no new Dapr component or database technology).
 
-**Tenant key pattern:**
+**Key and value schema (implemented, PR #599):**
 
-| Entity | Key pattern |
-|---|---|
-| Employee allocation count | `metrics:{tenantId}:{userId}:{period}` |
+| Entity | Key pattern | Value shape | Notes |
+|---|---|---|---|
+| Employee allocation history | `metrics:{tenantId}:{userId}` | `List<string>` (ISO dates, e.g. `"2026-06-15"`) | One key per tenant+user; window filtering at query time |
 
-**Note:** If the production draw cadence makes stale restart-loss acceptable (e.g., weekly draws where the lookback window is longer than the expected restart interval), this gap may be accepted with documented rationale. The implementer must confirm the risk with the product owner before deferring.
+**Period granularity:** Individual allocation dates are stored as ISO-8601 strings (`yyyy-MM-dd`) in the list value, not as separate keys. This design was chosen to limit Dapr round-trips to 1 per participant during `GetMetricsSnapshotAsync`, regardless of lookback window length. The `{period}` suffix in the original OPS008 draft was an implementation-time decision resolved in favour of list-per-user.
 
-**Done criteria:** Employee fairness metrics visible to `DrawService` after cold Booking service restart. Lookback window calculation produces consistent results across restarts.
+**Active penalty score:** Continues to read from `IPenaltyRepository` (durable Booking DB) — no change to that path.
+
+**Dapr component:** Uses the existing `bookingstore` component (MongoDB `fps-booking.*`) present in local/demo/smoke profiles. No new component files needed.
+
+**Provisioning evidence:**
+
+- [x] Metrics persist across restart — `DaprEmployeeMetricsServiceTests.IncrementThenRestart_GetMetrics_ReturnsDurableCount`
+- [x] Lookback window filtering — `GetMetrics_AllocationWithinWindow_Counted`, `GetMetrics_AllocationOutsideWindow_NotCounted`, `GetMetrics_MixedAllocations_CountsOnlyWithinWindow`
+- [x] Tenant isolation — `GetMetrics_DifferentTenants_Isolated`, `GetMetrics_TwoTenants_EachSeeOwnCounts`
+- [x] Active penalty score included — `GetMetrics_IncludesActivePenaltyScore`, `GetMetrics_ExpiredPenalty_NotCounted`
+- [x] Tier2Weight correct — `GetMetrics_Tier2Weight_DecreasesWithAllocationCount`
+- [x] Multiple participant draw — `GetMetrics_MultipleParticipants_EachCorrect`
+
+**Done criteria:** ✓ Employee fairness metrics survive cold Booking service restart. ✓ Lookback window produces consistent results across restarts.
 
 ---
 
@@ -406,3 +421,4 @@ These rules apply to all PERSIST slices.
 | 2026-06-26 | Claude | Fix tenant-default/location-override key collision: use `config-policy:{tenantId}:tenant-default` and `config-policy-location:{tenantId}:{locationId}` as structurally distinct prefixes |
 | 2026-06-26 | Claude | PERSIST004 implemented (PR #598) — Notification durable inbox/prefs/HR roster via `notificationstore`; tenant-scoped dedup key, startup hydration for roster |
 | 2026-06-26 | Claude | PERSIST005 complete (PR #598, combined with PERSIST004) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |
+| 2026-06-26 | Claude | PERSIST006A implemented (PR #599) — Booking fairness metrics durable via `bookingstore`; list-per-user key design for O(1) Dapr reads per participant; 11 new tests |

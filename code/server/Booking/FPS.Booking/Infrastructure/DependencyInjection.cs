@@ -26,7 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IDrawRepository, DaprDrawRepository>();
         services.AddScoped<IPenaltyRepository, DaprPenaltyRepository>();
         services.AddScoped<ICorrectionAuditRepository, DaprCorrectionAuditRepository>();
-        services.AddSingleton<IEmployeeMetricsService, InMemoryEmployeeMetricsService>();
+        services.AddSingleton<IEmployeeMetricsService, DaprEmployeeMetricsService>();
         services.AddScoped<IAvailableSlotService, ConfiguredAvailableSlotService>();
         services.AddHttpClient<IProfileSnapshotService, HttpProfileSnapshotService>(client =>
             client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fps-profile"));
