@@ -32,7 +32,7 @@ public sealed class AuditRecord
 
 public interface IAuditRepository
 {
-    Task<bool> ExistsAsync(string sourceEventId, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(string sourceEventId, string tenantId, CancellationToken cancellationToken = default);
     Task AppendAsync(AuditRecord record, CancellationToken cancellationToken = default);
 }
 

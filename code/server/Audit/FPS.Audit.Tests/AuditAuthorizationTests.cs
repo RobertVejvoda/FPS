@@ -1,3 +1,6 @@
+using FPS.Audit.Application.Privacy;
+using FPS.Audit.Domain;
+using FPS.Audit.Infrastructure;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -28,6 +31,12 @@ public sealed class AuditAuthorizationTests : IClassFixture<WebApplicationFactor
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
+                var inMemAudit = new InMemoryAuditRepository();
+                services.AddSingleton<IAuditRepository>(inMemAudit);
+                services.AddSingleton<IAuditQueryRepository>(inMemAudit);
+                services.AddSingleton<IAuditRetentionRepository>(inMemAudit);
+                services.AddSingleton<IPiiMappingRepository, InMemoryPiiMappingRepository>();
+                services.AddSingleton<IErasureRequestRepository, InMemoryErasureRequestRepository>();
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {
                     options.Authority = null;

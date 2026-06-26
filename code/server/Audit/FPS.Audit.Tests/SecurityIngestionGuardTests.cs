@@ -1,6 +1,12 @@
+using FPS.Audit.Application.Privacy;
+using FPS.Audit.Domain;
+using FPS.Audit.Infrastructure;
 using FPS.SharedKernel.Filters;
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -26,6 +32,16 @@ public sealed class SecurityIngestionGuardTests : IClassFixture<WebApplicationFa
         {
             builder.UseEnvironment("Test");
             builder.UseSetting(ConfigKey, TestToken);
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
+                var inMemAudit = new InMemoryAuditRepository();
+                services.AddSingleton<IAuditRepository>(inMemAudit);
+                services.AddSingleton<IAuditQueryRepository>(inMemAudit);
+                services.AddSingleton<IAuditRetentionRepository>(inMemAudit);
+                services.AddSingleton<IPiiMappingRepository, InMemoryPiiMappingRepository>();
+                services.AddSingleton<IErasureRequestRepository, InMemoryErasureRequestRepository>();
+            });
         });
     }
 

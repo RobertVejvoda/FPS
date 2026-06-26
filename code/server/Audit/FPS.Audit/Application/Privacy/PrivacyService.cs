@@ -108,7 +108,7 @@ public sealed class PrivacyService(
         CancellationToken cancellationToken)
     {
         var sourceEventId = $"{eventType}:{erasureRequestId}";
-        if (await auditRepository.ExistsAsync(sourceEventId, cancellationToken))
+        if (await auditRepository.ExistsAsync(sourceEventId, tenantId, cancellationToken))
             return;
 
         var record = new AuditRecord

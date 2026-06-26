@@ -8,8 +8,8 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
 {
     private readonly ConcurrentDictionary<string, AuditRecord> store = new();
 
-    public Task<bool> ExistsAsync(string sourceEventId, CancellationToken cancellationToken = default)
-        => Task.FromResult(store.ContainsKey(sourceEventId));
+    public Task<bool> ExistsAsync(string sourceEventId, string tenantId, CancellationToken cancellationToken = default)
+        => Task.FromResult(store.TryGetValue(sourceEventId, out var r) && r.TenantId == tenantId);
 
     public Task AppendAsync(AuditRecord record, CancellationToken cancellationToken = default)
     {

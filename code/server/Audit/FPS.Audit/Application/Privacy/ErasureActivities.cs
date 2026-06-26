@@ -153,7 +153,7 @@ public sealed class RecordErasureStepActivity(
         var step = input.StepResult;
         var sourceEventId = $"privacy.erasureStepRecorded:{w.ErasureRequestId}:{step.Service}";
 
-        if (await auditRepository.ExistsAsync(sourceEventId))
+        if (await auditRepository.ExistsAsync(sourceEventId, w.TenantId))
             return true;
 
         var record = new AuditRecord

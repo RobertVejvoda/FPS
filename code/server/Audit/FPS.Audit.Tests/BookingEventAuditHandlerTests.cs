@@ -17,7 +17,7 @@ public sealed class BookingEventAuditHandlerTests
     public BookingEventAuditHandlerTests()
     {
         handler = new BookingEventAuditHandler(repository.Object, piiMappingRepository, NullLogger<BookingEventAuditHandler>.Instance);
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.AppendAsync(It.IsAny<AuditRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -46,7 +46,7 @@ public sealed class BookingEventAuditHandlerTests
     [Fact]
     public async Task Handle_DuplicateEvent_DoesNotAppendAgain()
     {
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
