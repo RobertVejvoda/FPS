@@ -23,8 +23,11 @@
 
 The immediate customer-first target is NAS-hosted FairSpot behind Cloudflare Tunnel:
 
-- `app.<domain>` routes through Cloudflare to the API/web gateway.
-- `auth.<domain>` routes through Cloudflare to public Keycloak login endpoints.
+- `app.fairspot.net` routes through Cloudflare to the API/web gateway for Release 1.
+- `auth.fairspot.net` routes through Cloudflare to public Keycloak login endpoints for Release 1.
+- Release 1 uses one Keycloak realm named `fairspot` for demo and Green Logistics users.
+- Tenant separation is enforced by application tenant claims and authorization, not by separate realms.
+- Separate realms are deferred until a real customer requires identity administration isolation.
 - Keycloak admin, Grafana/Prometheus/Jaeger/Loki, databases, brokers, MinIO, Vault, services, and Dapr sidecars remain private.
 - Operator-only surfaces use local access or Cloudflare Access, not public exposure.
 - WAF custom rules block internal/debug paths and rate-limit abuse-sensitive endpoints.

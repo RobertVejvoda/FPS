@@ -11,6 +11,17 @@
 
 This runbook documents how to configure Keycloak/OIDC, the Envoy API gateway, and the web and mobile applications for a public-domain FairSpot pilot deployment at `app.<domain>` and `auth.<domain>`.
 
+Release 1 uses these concrete values:
+
+| Setting | Release 1 value |
+|---|---|
+| Application hostname | `app.fairspot.net` |
+| Authentication hostname | `auth.fairspot.net` |
+| Keycloak realm | `fairspot` |
+| Primary demo tenant | Green Logistics |
+
+FairSpot uses one Keycloak realm named `fairspot` for Release 1 demo and Green Logistics users. Tenant separation is enforced by application tenant claims and authorization, not by separate realms. Separate realms are deferred until a real customer requires identity administration isolation.
+
 This document is the companion to [OPS011 — NAS Cloudflare Deployment Profile](./nas-cloudflare-deployment-profile.md). It implements Step 7 of OPS011 (Configure OIDC for the public domain) in full. Complete OPS011 Steps 1–6 before following this document.
 
 No secrets or live credentials are committed here. All values specific to the operator's domain are written as `<domain>`, `<realm>`, or similar placeholders. See [Section 7 — Values Robert must replace](#section-7--values-robert-must-replace) for the complete replacement table.
@@ -21,22 +32,18 @@ No secrets or live credentials are committed here. All values specific to the op
 
 ### Background
 
-The local development realm (`fps-local`) has `accessTokenLifespan: 3600` (one hour) and all redirect URIs pointing to `localhost`. Before the pilot, the realm must be updated or a dedicated pilot realm created so that:
+The local development realm (`fps-local`) has `accessTokenLifespan: 3600` (one hour) and all redirect URIs pointing to `localhost`. Before Release 1, create or update the `fairspot` realm so that:
 
-- The OIDC issuer resolves to `https://auth.<domain>/realms/<realm>`.
+- The OIDC issuer resolves to `https://auth.fairspot.net/realms/fairspot`.
 - Token lifetimes follow security-model minimums (15 min access, 30 min refresh).
-- Redirect URIs and web origins reference only `https://app.<domain>` for pilot clients.
+- Redirect URIs and web origins reference only `https://app.fairspot.net` for Release 1 clients.
 - The Keycloak admin console is not reachable through the Cloudflare tunnel.
 
-### Option A — Update the existing `fps-local` realm (simpler)
+### Release 1 realm decision
 
-Use this option if the NAS hosts only the pilot and no local development runs against the same Keycloak instance.
+Use one Keycloak realm named `fairspot` for Release 1. Keep `fps-local` for local development only. The `fairspot` realm may contain demo users and Green Logistics users; tenant isolation is not based on separate realms. It is based on the validated `tenant_id` claim, FairSpot tenant configuration, and service authorization.
 
-### Option B — Create a dedicated `fps-pilot` realm (recommended)
-
-Export the `fps-local` realm as a starting point, import it as `fps-pilot`, and apply the changes below to that realm only. This keeps the local development clients (`fps-web-dev`, `fps-mobile-dev`) untouched in `fps-local` and gives the pilot its own namespace and clean client set.
-
-> The remaining steps in this section refer to the realm you choose as `<realm>`. The recommended value is `fps-pilot`.
+Separate realms are deferred until a real customer requires identity administration isolation, for example separate realm administrators, separate password/session policies, isolated external IdP brokering, or contractual administration boundaries.
 
 ---
 
@@ -44,19 +51,19 @@ Export the `fps-local` realm as a starting point, import it as `fps-pilot`, and 
 
 The Frontend URL controls the `iss` claim in all tokens issued by the realm.
 
-1. Log in to the Keycloak admin console at `http://localhost:8080/admin` (NAS local access only — do not use the public `auth.<domain>` hostname for admin operations).
-2. Select the `<realm>` realm from the realm dropdown.
+1. Log in to the Keycloak admin console at `http://localhost:8080/admin` (NAS local access only — do not use the public `auth.fairspot.net` hostname for admin operations).
+2. Select the `fairspot` realm from the realm dropdown.
 3. Navigate to **Realm settings** → **General**.
-4. Set **Frontend URL** to `https://auth.<domain>`.
+4. Set **Frontend URL** to `https://auth.fairspot.net`.
 5. Click **Save**.
 
 After this change, the OIDC discovery document will be served at:
 
 ```
-https://auth.<domain>/realms/<realm>/.well-known/openid-configuration
+https://auth.fairspot.net/realms/fairspot/.well-known/openid-configuration
 ```
 
-and all tokens will carry `"iss": "https://auth.<domain>/realms/<realm>"`.
+and all tokens will carry `"iss": "https://auth.fairspot.net/realms/fairspot"`.
 
 ---
 
@@ -66,17 +73,17 @@ The current realm JSON defines `fps-web-dev` (localhost-only). For the pilot, ei
 
 > `fps-web-dev` should be excluded from the pilot realm or left disabled. Do not add public-domain redirect URIs to the dev client.
 
-1. In the `<realm>` realm, navigate to **Clients**.
+1. In the `fairspot` realm, navigate to **Clients**.
 2. Click **Create client** (or select the existing client to edit).
 3. Set **Client ID** to `fps-web`.
 4. Set **Name** to `FairSpot Web`.
 5. Confirm **Client authentication** is **OFF** (public client — no client secret).
 6. Enable **Standard flow** (Authorization Code). Disable all other flows.
-7. Under **Valid redirect URIs**, enter: `https://app.<domain>/*`
+7. Under **Valid redirect URIs**, enter: `https://app.fairspot.net/*`
 8. Remove all `http://localhost:*` entries if copied from the dev client.
-9. Under **Web origins**, enter: `https://app.<domain>`
+9. Under **Web origins**, enter: `https://app.fairspot.net`
 10. Under **Advanced** → **Fine-grained OpenID Connect configuration**, set **Access token lifespan** to `900` (15 minutes).
-11. Set `post.logout.redirect.uris` to `https://app.<domain>/`.
+11. Set `post.logout.redirect.uris` to `https://app.fairspot.net/`.
 12. Click **Save**.
 
 | Setting | Value |
@@ -84,9 +91,9 @@ The current realm JSON defines `fps-web-dev` (localhost-only). For the pilot, ei
 | Client ID | `fps-web` |
 | Client type | Public (no secret) |
 | Standard flow | Enabled |
-| Valid redirect URIs | `https://app.<domain>/*` |
-| Web origins | `https://app.<domain>` |
-| Post-logout redirect URI | `https://app.<domain>/` |
+| Valid redirect URIs | `https://app.fairspot.net/*` |
+| Web origins | `https://app.fairspot.net` |
+| Post-logout redirect URI | `https://app.fairspot.net/` |
 | Access token lifespan | `900` (15 min) |
 | PKCE method | `S256` |
 
@@ -96,14 +103,14 @@ The current realm JSON defines `fps-web-dev` (localhost-only). For the pilot, ei
 
 Mobile apps use Authorization Code + PKCE with a custom URI scheme. Create one client per platform or a single shared `fps-mobile` client.
 
-1. In the `<realm>` realm, navigate to **Clients** → **Create client**.
+1. In the `fairspot` realm, navigate to **Clients** → **Create client**.
 2. Set **Client ID** to `fps-mobile-android` (repeat for `fps-mobile-ios`, or use `fps-mobile` for a shared client).
 3. Confirm **Client authentication** is **OFF** (public client).
 4. Enable **Standard flow**. Disable all other flows.
 5. Under **Valid redirect URIs**, add both:
    - `fps://auth/callback`
-   - `https://app.<domain>/*` (for future web-view fallback)
-6. Under **Web origins**, enter `https://app.<domain>`.
+   - `https://app.fairspot.net/*` (for future web-view fallback)
+6. Under **Web origins**, enter `https://app.fairspot.net`.
 7. Set **Access token lifespan** to `900`.
 8. Under **Advanced**, set `pkce.code.challenge.method` to `S256`.
 9. Click **Save**.
@@ -115,8 +122,8 @@ Mobile apps use Authorization Code + PKCE with a custom URI scheme. Create one c
 | Client ID | `fps-mobile-android` / `fps-mobile-ios` / `fps-mobile` |
 | Client type | Public (no secret) |
 | Standard flow | Enabled |
-| Valid redirect URIs | `fps://auth/callback`, `https://app.<domain>/*` |
-| Web origins | `https://app.<domain>` |
+| Valid redirect URIs | `fps://auth/callback`, `https://app.fairspot.net/*` |
+| Web origins | `https://app.fairspot.net` |
 | Access token lifespan | `900` (15 min) |
 | PKCE method | `S256` |
 
@@ -129,7 +136,7 @@ Mobile apps use Authorization Code + PKCE with a custom URI scheme. Create one c
    - **SSO session max lifespan**: `1800` (30 min) — controls how long the session (and thus refresh capability) persists.
 2. In **Realm settings** → **Sessions**, confirm **SSO session idle** is appropriate for the pilot (recommend `1800`).
 
-Cookie settings are controlled by Keycloak's internal session handling. When `Frontend URL` is set to `https://auth.<domain>` and all traffic flows through the Cloudflare-terminated HTTPS tunnel, Keycloak will set cookies with `Secure=true`. Ensure the following in Keycloak realm settings:
+Cookie settings are controlled by Keycloak's internal session handling. When `Frontend URL` is set to `https://auth.fairspot.net` and all traffic flows through the Cloudflare-terminated HTTPS tunnel, Keycloak will set cookies with `Secure=true`. Ensure the following in Keycloak realm settings:
 
 | Cookie attribute | Required value | Where to confirm |
 |---|---|---|
@@ -143,8 +150,8 @@ Cookie settings are controlled by Keycloak's internal session handling. When `Fr
 
 The Keycloak admin console must **not** be published as a public Cloudflare hostname.
 
-- The `auth.<domain>` tunnel entry points to `http://keycloak:8080`, which includes the full Keycloak application.
-- Add a **Cloudflare WAF custom rule** (also covered in SEC010/issue #315) to block requests matching `http.request.uri.path contains "/admin"` on the `auth.<domain>` hostname.
+- The `auth.fairspot.net` tunnel entry points to `http://keycloak:8080`, which includes the full Keycloak application.
+- Add a **Cloudflare WAF custom rule** (also covered in SEC010/issue #315) to block requests matching `http.request.uri.path contains "/admin"` on the `auth.fairspot.net` hostname.
 - Alternatively, configure Cloudflare Zero Trust Access on a separate `ops.<domain>` hostname restricted to named operators if remote admin access is needed.
 - For routine admin operations, access Keycloak directly at `http://localhost:8080/admin` from the NAS or over an SSH tunnel.
 
@@ -163,7 +170,7 @@ All FairSpot services extract identity from JWT claims. The pilot realm must inc
 
 To verify mappers are present:
 
-1. In the `<realm>` realm, navigate to **Clients** → select `fps-web` → **Client scopes** tab.
+1. In the `fairspot` realm, navigate to **Clients** → select `fps-web` → **Client scopes** tab.
 2. Confirm `tenant_id`, `roles`, and the audience mapper appear in the assigned or dedicated scope.
 3. Use the **Evaluate** sub-tab, enter `employee1`, and confirm the generated access token contains `tenant_id`, `sub`, and `roles` claims.
 
@@ -185,9 +192,9 @@ Tenant/user/role claims must always come from the validated JWT. Never accept `t
 
 ### Background
 
-The development `envoy.yaml` allows CORS from `http://localhost:5200` only. In the pilot, the web app is served at `https://app.<domain>`, so browsers will send preflight requests with `Origin: https://app.<domain>`. These will be rejected unless the CORS configuration is updated.
+The development `envoy.yaml` allows CORS from `http://localhost:5200` only. In Release 1, the web app is served at `https://app.fairspot.net`, so browsers will send preflight requests with `Origin: https://app.fairspot.net`. These will be rejected unless the CORS configuration is updated.
 
-The Envoy listener continues to bind to `0.0.0.0:10000` internally. Cloudflare Tunnel routes `app.<domain>` to `http://envoy-proxy:10000` inside the Docker network — no listener port change is needed.
+The Envoy listener continues to bind to `0.0.0.0:10000` internally. Cloudflare Tunnel routes `app.fairspot.net` to `http://envoy-proxy:10000` inside the Docker network — no listener port change is needed.
 
 ### 2.1 — What changes
 
@@ -204,10 +211,10 @@ cors:
 ```yaml
 cors:
   allow_origin_string_match:
-    - exact: "https://app.<domain>"
+    - exact: "https://app.fairspot.net"
 ```
 
-Replace `<domain>` with your actual domain. The full `envoy-public.yaml` file is at `code/infrastructure/envoy/envoy-public.yaml`.
+The full `envoy-public.yaml` file is at `code/infrastructure/envoy/envoy-public.yaml`.
 
 ### 2.2 — Deployment approach
 
@@ -219,7 +226,7 @@ services:
     volumes:
       # Development (localhost CORS):
       # - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
-      # Pilot (public-domain CORS) — uncomment and replace <domain>:
+      # Release 1 (public-domain CORS):
       - ./envoy/envoy-public.yaml:/etc/envoy/envoy.yaml:ro
 ```
 
@@ -254,11 +261,11 @@ The web app (`code/web/fps-web`) reads runtime configuration from `public/config
 
 | Key | Development value | Pilot value |
 |---|---|---|
-| `apiBaseUrl` | `http://localhost:10000` | `https://app.<domain>` |
-| `oidc.authority` | `http://localhost:8180/realms/fps-local` | `https://auth.<domain>/realms/<realm>` |
+| `apiBaseUrl` | `http://localhost:10000` | `https://app.fairspot.net` |
+| `oidc.authority` | `http://localhost:8180/realms/fps-local` | `https://auth.fairspot.net/realms/fairspot` |
 | `oidc.clientId` | `fps-web-dev` | `fps-web` |
-| `oidc.redirectUri` | `http://localhost:5200/auth/callback` | `https://app.<domain>/auth/callback` |
-| `oidc.postLogoutRedirectUri` | `http://localhost:5200/` | `https://app.<domain>/` |
+| `oidc.redirectUri` | `http://localhost:5200/auth/callback` | `https://app.fairspot.net/auth/callback` |
+| `oidc.postLogoutRedirectUri` | `http://localhost:5200/` | `https://app.fairspot.net/` |
 | `oidc.scopes` | `openid profile email` | `openid profile email` (unchanged) |
 | `devTokenFallbackEnabled` | `false` | `false` (must remain false in pilot) |
 
@@ -266,13 +273,13 @@ The web app (`code/web/fps-web`) reads runtime configuration from `public/config
 
 ```json
 {
-  "apiBaseUrl": "https://app.<domain>",
+  "apiBaseUrl": "https://app.fairspot.net",
   "oidc": {
-    "authority": "https://auth.<domain>/realms/<realm>",
+    "authority": "https://auth.fairspot.net/realms/fairspot",
     "clientId": "fps-web",
     "scopes": "openid profile email",
-    "redirectUri": "https://app.<domain>/auth/callback",
-    "postLogoutRedirectUri": "https://app.<domain>/"
+    "redirectUri": "https://app.fairspot.net/auth/callback",
+    "postLogoutRedirectUri": "https://app.fairspot.net/"
   },
   "branding": {
     "productName": "FairSpot",
@@ -285,7 +292,7 @@ The web app (`code/web/fps-web`) reads runtime configuration from `public/config
 }
 ```
 
-Replace `<domain>` and `<realm>` before deploying. Do not commit a `config.json` containing the live domain — distribute it as an operator-supplied runtime file or inject it via the container build process outside of source control.
+Do not commit an environment-specific `config.json` for the hosted profile. Distribute it as an operator-supplied runtime file or inject it via the container build process outside of source control.
 
 ### 3.3 — Notes
 
@@ -305,19 +312,19 @@ The Expo/React Native mobile app uses Authorization Code + PKCE. There is no cli
 
 | Variable | Development value | Pilot value |
 |---|---|---|
-| `EXPO_PUBLIC_API_BASE_URL` | `http://localhost:10000` | `https://app.<domain>` |
-| `EXPO_PUBLIC_AUTH_URL` | `http://localhost:8180` | `https://auth.<domain>` |
+| `EXPO_PUBLIC_API_BASE_URL` | `http://localhost:10000` | `https://app.fairspot.net` |
+| `EXPO_PUBLIC_AUTH_URL` | `http://localhost:8180` | `https://auth.fairspot.net` |
 | `EXPO_PUBLIC_OIDC_CLIENT_ID` | `fps-mobile-dev` | `fps-mobile-android` or `fps-mobile` |
 | `EXPO_PUBLIC_OIDC_REDIRECT_URI` | (local scheme) | `fps://auth/callback` |
-| `EXPO_PUBLIC_OIDC_AUTHORITY` | `http://localhost:8180/realms/fps-local` | `https://auth.<domain>/realms/<realm>` |
+| `EXPO_PUBLIC_OIDC_AUTHORITY` | `http://localhost:8180/realms/fps-local` | `https://auth.fairspot.net/realms/fairspot` |
 
 ### 4.2 — Pilot `.env` file for Expo build
 
 ```dotenv
-EXPO_PUBLIC_API_BASE_URL=https://app.<domain>
-EXPO_PUBLIC_AUTH_URL=https://auth.<domain>
+EXPO_PUBLIC_API_BASE_URL=https://app.fairspot.net
+EXPO_PUBLIC_AUTH_URL=https://auth.fairspot.net
 EXPO_PUBLIC_OIDC_CLIENT_ID=fps-mobile
-EXPO_PUBLIC_OIDC_AUTHORITY=https://auth.<domain>/realms/<realm>
+EXPO_PUBLIC_OIDC_AUTHORITY=https://auth.fairspot.net/realms/fairspot
 EXPO_PUBLIC_OIDC_REDIRECT_URI=fps://auth/callback
 ```
 
@@ -349,25 +356,25 @@ Each .NET FairSpot service validates JWT tokens against the OIDC issuer and audi
 
 ### 5.1 — Required environment variables per service
 
-Set these values in the Docker Compose environment section (or `.env.nas`) for each service. Values below use `<domain>` and `<realm>` as placeholders.
+Set these values in the Docker Compose environment section (or `.env.nas`) for each service.
 
 | Service | Env var | Example value |
 |---|---|---|
-| `fps-identity` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-identity` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-identity` | `Auth__Audience` | `fps-web` |
-| `fps-booking` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-booking` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-booking` | `Auth__Audience` | `fps-web` |
-| `fps-profile` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-profile` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-profile` | `Auth__Audience` | `fps-web` |
-| `fps-notification` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-notification` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-notification` | `Auth__Audience` | `fps-web` |
-| `fps-audit` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-audit` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-audit` | `Auth__Audience` | `fps-web` |
-| `fps-reporting` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-reporting` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-reporting` | `Auth__Audience` | `fps-web` |
-| `fps-configuration` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-configuration` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-configuration` | `Auth__Audience` | `fps-web` |
-| `fps-customer` | `Auth__Authority` | `https://auth.<domain>/realms/<realm>` |
+| `fps-customer` | `Auth__Authority` | `https://auth.fairspot.net/realms/fairspot` |
 | `fps-customer` | `Auth__Audience` | `fps-web` |
 
 > The double-underscore (`__`) separator is the .NET environment variable convention for nested configuration keys (`Auth:Authority` becomes `Auth__Authority`).
@@ -393,16 +400,16 @@ Run these checks after completing Sections 1–5, before allowing customer traff
 
 | # | Check | Command / URL | Expected result |
 |---|---|---|---|
-| 1 | OIDC discovery reachable | `curl -s https://auth.<domain>/realms/<realm>/.well-known/openid-configuration \| jq .issuer` | `"https://auth.<domain>/realms/<realm>"` |
-| 2 | App gateway reachable | `curl -I https://app.<domain>/openapi/v1.json` | HTTP 200 or 401 (gateway up; auth may block) |
-| 3 | CORS preflight accepted | `curl -I -X OPTIONS https://app.<domain>/me -H "Origin: https://app.<domain>" -H "Access-Control-Request-Method: GET"` | HTTP 200; response includes `Access-Control-Allow-Origin: https://app.<domain>` |
-| 4 | Employee login via web | Open `https://app.<domain>` in browser → log in as `employee1` | Redirected to Keycloak at `https://auth.<domain>`, login succeeds, redirected back to `https://app.<domain>/auth/callback` |
-| 5 | `/me` returns correct claims | After login in step 4, trigger `GET https://app.<domain>/me` | Returns `tenantId: "demo"`, `roles: ["employee"]` |
-| 6 | Booking creation | `POST https://app.<domain>/bookings` with valid JWT | HTTP 201 Accepted |
-| 7 | Keycloak admin blocked | `curl -I https://auth.<domain>/admin` | HTTP 403 or connection refused (WAF rule or not published) |
-| 8 | CORS from localhost blocked | `curl -I -X OPTIONS https://app.<domain>/me -H "Origin: http://localhost:5200"` | HTTP 200 response must NOT include `Access-Control-Allow-Origin: http://localhost:5200` |
-| 9 | Internal MongoDB not exposed | From external machine: `curl -v https://<domain>:27017` | Connection refused or timeout |
-| 10 | Token audience correct | Decode JWT from step 4 | `aud` claim contains `fps-web`; `iss` is `https://auth.<domain>/realms/<realm>` |
+| 1 | OIDC discovery reachable | `curl -s https://auth.fairspot.net/realms/fairspot/.well-known/openid-configuration \| jq .issuer` | `"https://auth.fairspot.net/realms/fairspot"` |
+| 2 | App gateway reachable | `curl -I https://app.fairspot.net/openapi/v1.json` | HTTP 200 or 401 (gateway up; auth may block) |
+| 3 | CORS preflight accepted | `curl -I -X OPTIONS https://app.fairspot.net/me -H "Origin: https://app.fairspot.net" -H "Access-Control-Request-Method: GET"` | HTTP 200; response includes `Access-Control-Allow-Origin: https://app.fairspot.net` |
+| 4 | Employee login via web | Open `https://app.fairspot.net` in browser → log in as `employee1` | Redirected to Keycloak at `https://auth.fairspot.net`, login succeeds, redirected back to `https://app.fairspot.net/auth/callback` |
+| 5 | `/me` returns correct claims | After login in step 4, trigger `GET https://app.fairspot.net/me` | Returns Green Logistics tenant identity and employee role from JWT claims |
+| 6 | Booking creation | `POST https://app.fairspot.net/bookings` with valid JWT | HTTP 201 Accepted |
+| 7 | Keycloak admin blocked | `curl -I https://auth.fairspot.net/admin` | HTTP 403 or connection refused (WAF rule or not published) |
+| 8 | CORS from localhost blocked | `curl -I -X OPTIONS https://app.fairspot.net/me -H "Origin: http://localhost:5200"` | HTTP 200 response must NOT include `Access-Control-Allow-Origin: http://localhost:5200` |
+| 9 | Internal MongoDB not exposed | From external machine: `curl -v https://fairspot.net:27017` | Connection refused or timeout |
+| 10 | Token audience correct | Decode JWT from step 4 | `aud` claim contains `fps-web`; `iss` is `https://auth.fairspot.net/realms/fairspot` |
 
 ---
 
@@ -412,8 +419,8 @@ Replace every placeholder below with the actual value for the pilot environment 
 
 | Placeholder | What it represents | Where to set it |
 |---|---|---|
-| `<domain>` | Actual domain registered and managed in Cloudflare (e.g. `fairspot.example.com`) | Cloudflare DNS, Keycloak Frontend URL, `config.json`, `envoy-public.yaml`, `.env.nas`, service env vars |
-| `<realm>` | Keycloak realm name for the pilot. Default in source is `fps-local`. Recommended: rename to `fps-pilot` for isolation. | Keycloak realm settings; all OIDC authority URLs |
+| `<domain>` | Domain registered and managed in Cloudflare. Release 1 value: `fairspot.net`. | Cloudflare DNS, Keycloak Frontend URL, `config.json`, `envoy-public.yaml`, `.env.nas`, service env vars |
+| `<realm>` | Keycloak realm name. Release 1 value: `fairspot`. | Keycloak realm settings; all OIDC authority URLs |
 | `fps-web` | OIDC client ID for the web app. Can be kept as `fps-web` or customised. | Keycloak client settings, `config.json`, service `Auth__Audience` |
 | `fps-mobile` | OIDC client ID for the mobile app. Can be `fps-mobile`, `fps-mobile-android`, `fps-mobile-ios`. | Keycloak client settings, mobile `.env` |
 | `fps://auth/callback` | Custom URI scheme for mobile OAuth redirect. Must match Expo app registration. | Keycloak client → Valid redirect URIs, mobile app config |
@@ -422,8 +429,8 @@ Replace every placeholder below with the actual value for the pilot environment 
 
 | Client | Platform | Public | Redirect URI | Web origin |
 |---|---|---|---|---|
-| `fps-web` | Web browser | Yes (no secret) | `https://app.<domain>/auth/callback` | `https://app.<domain>` |
-| `fps-mobile` | Android / iOS | Yes (no secret) | `fps://auth/callback` | `https://app.<domain>` |
+| `fps-web` | Web browser | Yes (no secret) | `https://app.fairspot.net/auth/callback` | `https://app.fairspot.net` |
+| `fps-mobile` | Android / iOS | Yes (no secret) | `fps://auth/callback` | `https://app.fairspot.net` |
 | `fps-web-dev` | Local dev only | Yes | `http://localhost:5200/auth/callback` | Keep in `fps-local` only; exclude from pilot realm |
 | `fps-mobile-dev` | Expo Go dev | Yes | `exp://*` | Keep in `fps-local` only; exclude from pilot realm |
 

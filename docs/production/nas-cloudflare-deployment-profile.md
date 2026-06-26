@@ -13,10 +13,12 @@ This runbook describes how to deploy FairSpot on a NAS (Network-Attached Storage
 
 The result of following this runbook is:
 
-- `app.<domain>` routed through Cloudflare to the Envoy API gateway on the NAS
-- `auth.<domain>` routed through Cloudflare to the Keycloak identity provider on the NAS
+- `app.fairspot.net` routed through Cloudflare to the Envoy API gateway on the NAS for Release 1
+- `auth.fairspot.net` routed through Cloudflare to the Keycloak identity provider on the NAS for Release 1
 - All internal service, Dapr, database, broker, and monitoring ports remaining private
 - No committed secrets, tunnel tokens, or certificates in source control
+
+Release 1 uses one Keycloak realm named `fairspot` for demo and Green Logistics users. Tenant separation is enforced by application tenant claims and authorization, not by separate realms. Separate realms are deferred until a real customer requires identity administration isolation.
 
 This runbook is **not** a full client-owned production handoff. See [client-production-handoff.md](./client-production-handoff.md) for that. This profile exists to get the first customer pilot running from the current NAS-hosted stack.
 
@@ -35,9 +37,9 @@ Cloudflare Edge (DNS proxy, TLS, WAF, DDoS, rate limiting)
     ▼
 cloudflared (Docker container on NAS)
     │
-    ├─ app.<domain>  → http://envoy-proxy:10000  (Envoy API gateway)
+    ├─ app.fairspot.net  → http://envoy-proxy:10000  (Envoy API gateway)
     │
-    └─ auth.<domain> → http://keycloak:8080      (Keycloak public login)
+    └─ auth.fairspot.net → http://keycloak:8080      (Keycloak public login)
          (Keycloak admin console must NOT be published as a public hostname)
 
 NAS Docker network (not reachable from Internet)
@@ -130,12 +132,12 @@ Apply these rules through the NAS firewall interface or Linux `iptables`/`ufw` b
 
 ## Step 3 — Configure public hostnames
 
-In the Cloudflare tunnel configuration, add these public hostname entries. Replace `<domain>` with your actual domain.
+In the Cloudflare tunnel configuration, add these public hostname entries for Release 1.
 
 | Public hostname | Type | URL | Notes |
 |---|---|---|---|
-| `app.<domain>` | HTTP | `http://envoy-proxy:10000` | FairSpot API gateway; public to authenticated users |
-| `auth.<domain>` | HTTP | `http://keycloak:8080` | Keycloak public login only |
+| `app.fairspot.net` | HTTP | `http://envoy-proxy:10000` | FairSpot API gateway; public to authenticated users |
+| `auth.fairspot.net` | HTTP | `http://keycloak:8080` | Keycloak public login only |
 
 **Do not add a public hostname for:**
 - Keycloak admin console (`/auth/admin`, `/admin`)
@@ -230,13 +232,13 @@ Review and confirm that MongoDB, RabbitMQ, Vault, MinIO, Keycloak, and Envoy all
 After the stack is running, update the Keycloak realm to accept the new public domain:
 
 1. Log in to the Keycloak admin console at `http://localhost:8080/admin` (local access only — not through the tunnel).
-2. Select the `fps-local` realm (or the production realm).
-3. Under **Realm settings** → **General**, update the **Frontend URL** to `https://auth.<domain>`.
+2. Select the `fairspot` realm.
+3. Under **Realm settings** → **General**, update the **Frontend URL** to `https://auth.fairspot.net`.
 4. Under each FairSpot client (e.g. `fps-web`, `fps-mobile`):
-   - Add `https://app.<domain>/*` to **Valid redirect URIs**.
-   - Add `https://app.<domain>` to **Web origins**.
+   - Add `https://app.fairspot.net/*` to **Valid redirect URIs**.
+   - Add `https://app.fairspot.net` to **Web origins**.
    - Remove `http://localhost:*` redirect URIs that should not be active in the pilot (keep them for dev if using a separate realm).
-5. Update `Auth:Authority` in each .NET service's environment or appsettings to `https://auth.<domain>/realms/<realm>`.
+5. Update `Auth:Authority` in each .NET service's environment or appsettings to `https://auth.fairspot.net/realms/fairspot`.
 6. Confirm no CORS or cookie settings still reference `localhost` for the public pilot path.
 
 See [OPS012](./nas-cloudflare-auth-profile.md) (issue #316) for the full auth and gateway profile once that slice is implemented.
@@ -250,7 +252,7 @@ See [OPS012](./nas-cloudflare-auth-profile.md) (issue #316) for the full auth an
 Before customer traffic is allowed, complete the Cloudflare WAF configuration described in SEC010. At minimum before go-live:
 
 - Enable the Cloudflare Free plan WAF rules (available on all plans) for the domain.
-- Add a custom WAF rule to block requests to `/metrics`, `/dapr`, `/admin`, `/swagger`, `/openapi`, and Keycloak admin paths from the `app.<domain>` hostname.
+- Add a custom WAF rule to block requests to `/metrics`, `/dapr`, `/admin`, `/swagger`, `/openapi`, and Keycloak admin paths from the `app.fairspot.net` and `auth.fairspot.net` hostnames.
 - Set Cloudflare SSL/TLS mode to **Full** or **Full (strict)**.
 - Enable **Bot Fight Mode** if available on your plan.
 - Confirm that the Cloudflare **Always Use HTTPS** setting is enabled for both hostnames.
@@ -264,10 +266,10 @@ After completing Steps 1–7, run the following checks before treating the NAS d
 | Check | Command / URL | Expected result |
 |---|---|---|
 | Tunnel connected | `docker compose -f cloudflared/docker-compose.cloudflared.yml logs cloudflared` | `Registered tunnel connection` |
-| App hostname reachable | `curl -I https://app.<domain>/openapi/v1.json` (from external machine) | HTTP 200 or 401 |
-| Auth hostname reachable | `curl -I https://auth.<domain>/realms/<realm>/.well-known/openid-configuration` (from external machine) | HTTP 200 |
+| App hostname reachable | `curl -I https://app.fairspot.net/openapi/v1.json` (from external machine) | HTTP 200 or 401 |
+| Auth hostname reachable | `curl -I https://auth.fairspot.net/realms/fairspot/.well-known/openid-configuration` (from external machine) | HTTP 200 |
 | Internal MongoDB not exposed | `curl -v https://<your-NAS-public-IP>:27017` | Connection refused or timeout |
-| Internal Grafana not exposed | `curl -v https://app.<domain>:3000` | Connection refused or timeout |
+| Internal Grafana not exposed | `curl -v https://app.fairspot.net:3000` | Connection refused or timeout |
 | Local services healthy | `curl http://localhost:10000/openapi/v1.json` (on NAS) | HTTP 200 |
 
 A complete hosted smoke script is tracked in **OPS013** (issue #314).
