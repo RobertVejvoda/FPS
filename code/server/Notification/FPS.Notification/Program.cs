@@ -11,11 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddDapr();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
-builder.Services.AddSingleton<INotificationPreferencesRepository, InMemoryNotificationPreferencesRepository>();
+builder.Services.AddSingleton<DaprNotificationRepository>();
+builder.Services.AddSingleton<INotificationRepository>(sp => sp.GetRequiredService<DaprNotificationRepository>());
+builder.Services.AddSingleton<INotificationPreferencesRepository, DaprNotificationPreferencesRepository>();
+builder.Services.AddSingleton<DaprHrRosterStore>();
+builder.Services.AddSingleton<IHrRosterStore>(sp => sp.GetRequiredService<DaprHrRosterStore>());
 builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroadcaster>();
 builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
-builder.Services.AddSingleton<IHrRosterStore, InMemoryHrRosterStore>();
 builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
 builder.Services.AddSingleton<HrRosterConfigurationSeeder>();
 builder.Services.AddScoped<BookingEventNotificationHandler>();
@@ -64,6 +66,10 @@ builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
+
+// Hydrate HR roster from Dapr before seeding from config so that
+// a config-absent restart still restores the last known roster.
+app.Services.GetRequiredService<DaprHrRosterStore>().HydrateAsync().GetAwaiter().GetResult();
 
 // Populate the HR roster from configuration before the app starts
 // serving traffic so the first event arriving after restart fans out

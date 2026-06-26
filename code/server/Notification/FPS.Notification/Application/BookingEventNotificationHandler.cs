@@ -79,7 +79,7 @@ public sealed class BookingEventNotificationHandler(
     private async Task HandleInAppAsync(BookingEventEnvelope envelope, DeliveryTarget delivery, CancellationToken cancellationToken)
     {
         var dedupKey = DeduplicationKey(envelope.EventId, delivery.RecipientId, delivery.EffectiveType, NotificationChannel.InApp);
-        if (await repository.ExistsAsync(dedupKey, cancellationToken))
+        if (await repository.ExistsAsync(dedupKey, envelope.TenantId, cancellationToken))
             return;
 
         var record = CreateRecord(envelope, delivery, NotificationChannel.InApp, dedupKey);
@@ -91,7 +91,7 @@ public sealed class BookingEventNotificationHandler(
     private async Task HandleEmailAsync(BookingEventEnvelope envelope, DeliveryTarget delivery, CancellationToken cancellationToken)
     {
         var dedupKey = DeduplicationKey(envelope.EventId, delivery.RecipientId, delivery.EffectiveType, NotificationChannel.Email);
-        if (await repository.ExistsAsync(dedupKey, cancellationToken))
+        if (await repository.ExistsAsync(dedupKey, envelope.TenantId, cancellationToken))
             return;
 
         var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey);

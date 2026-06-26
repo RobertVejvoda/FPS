@@ -9,8 +9,8 @@ public sealed class InMemoryNotificationRepository : INotificationRepository
 {
     private readonly ConcurrentDictionary<string, NotificationRecord> store = new();
 
-    public Task<bool> ExistsAsync(string deduplicationKey, CancellationToken cancellationToken = default)
-        => Task.FromResult(store.ContainsKey(deduplicationKey));
+    public Task<bool> ExistsAsync(string deduplicationKey, string tenantId, CancellationToken cancellationToken = default)
+        => Task.FromResult(store.TryGetValue(deduplicationKey, out var r) && r.TenantId == tenantId);
 
     public Task SaveAsync(NotificationRecord record, CancellationToken cancellationToken = default)
     {

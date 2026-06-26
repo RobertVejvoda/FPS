@@ -22,7 +22,7 @@ public sealed class BookingEventNotificationHandlerTests
             NullLogger<BookingEventNotificationHandler>.Instance);
         emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.SaveAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -51,7 +51,7 @@ public sealed class BookingEventNotificationHandlerTests
     [Fact]
     public async Task Handle_DuplicateEvent_DoesNotSaveAgain()
     {
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
@@ -144,7 +144,7 @@ public sealed class BookingEventNotificationHandlerTests
     [Fact]
     public async Task Handle_DuplicateEvent_DoesNotBroadcast()
     {
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
