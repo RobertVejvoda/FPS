@@ -17,8 +17,11 @@ The result of following this runbook is:
 - `auth.fairspot.net` routed through Cloudflare to the Keycloak identity provider on the NAS for Release 1
 - All internal service, Dapr, database, broker, and monitoring ports remaining private
 - No committed secrets, tunnel tokens, or certificates in source control
+- No host-installed .NET SDK/runtime or Dapr CLI dependency on the NAS
 
 Release 1 uses one Keycloak realm named `fairspot` for demo and Green Logistics users. Tenant separation is enforced by application tenant claims and authorization, not by separate realms. Separate realms are deferred until a real customer requires identity administration isolation.
+
+Release 1 is a fully containerized NAS profile. Synology should run Docker/Container Manager only; FairSpot services, Dapr sidecars/runtime services, Cloudflare Tunnel, databases, broker, identity, gateway, and observability run as containers on the private Docker network.
 
 This runbook is **not** a full client-owned production handoff. See [client-production-handoff.md](./client-production-handoff.md) for that. This profile exists to get the first customer pilot running from the current NAS-hosted stack.
 
@@ -192,32 +195,30 @@ Look for a line like `Connection registered connIndex=0` or `Registered tunnel c
 
 ## Step 6 — Start the FairSpot stack
 
-Start the application infrastructure (databases, broker, vault, keycloak, envoy, observability):
+The Release 1 NAS stack must be started through Docker Compose. Do **not** install .NET or the Dapr CLI on the NAS and do not use `dapr run -f dapr.yaml` for the hosted profile.
+
+The target compose profile starts:
+
+- infrastructure containers: databases, broker, vault, keycloak, envoy, observability;
+- FairSpot service containers: Booking, Identity, Profile, Notification, Audit, Reporting, Configuration, Customer, DataHub;
+- Dapr runtime/sidecar containers for the FairSpot services that use Dapr state, pub/sub, workflow, bindings, or secret stores;
+- cloudflared as a separate connector container on the same private Docker network.
+
+Until the containerized app/Dapr compose profile is implemented, this step is not customer-traffic ready. The old local developer flow (`dapr run -f dapr.yaml` or `./tools/start-with-dapr.sh`) remains valid for local development only and is not the NAS deployment path.
+
+Expected operator shape after the implementation slice:
 
 ```bash
 cd /path/to/fps-repo/code/infrastructure
-docker compose up -d
+docker compose \
+  --env-file .env.nas \
+  -f docker-compose.yaml \
+  -f docker-compose.nas.yml \
+  -f docker-compose.apps.yml \
+  up -d --build
 ```
 
-Then start the .NET services with Dapr. On Linux the multi-app run file should be tested first:
-
-```bash
-cd /path/to/fps-repo
-dapr run -f dapr.yaml
-```
-
-Or use the harness start script if available:
-
-```bash
-./tools/start-with-dapr.sh
-```
-
-For NAS hosting, apply the `docker-compose.nas.yml` overlay which adds `restart: unless-stopped` to every infrastructure service. The default `docker-compose.yaml` targets local development and has no restart policy so containers do not auto-start on developer machine reboots.
-
-```bash
-cd /path/to/fps-repo/code/infrastructure
-docker compose -f docker-compose.yaml -f docker-compose.nas.yml up -d
-```
+`docker-compose.apps.yml` is the planned hosted application profile. It must use container service names for internal routing and must not rely on `host.docker.internal`.
 
 Review and confirm that MongoDB, RabbitMQ, Vault, MinIO, Keycloak, and Envoy all have named volumes (not anonymous volumes) so data survives container restarts.
 

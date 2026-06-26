@@ -28,6 +28,7 @@ The immediate customer-first target is NAS-hosted FairSpot behind Cloudflare Tun
 - Release 1 uses one Keycloak realm named `fairspot` for demo and Green Logistics users.
 - Tenant separation is enforced by application tenant claims and authorization, not by separate realms.
 - Separate realms are deferred until a real customer requires identity administration isolation.
+- NAS operation requires Docker/Container Manager only. .NET and Dapr are runtime containers, not host-installed prerequisites.
 - Keycloak admin, Grafana/Prometheus/Jaeger/Loki, databases, brokers, MinIO, Vault, services, and Dapr sidecars remain private.
 - Operator-only surfaces use local access or Cloudflare Access, not public exposure.
 - WAF custom rules block internal/debug paths and rate-limit abuse-sensitive endpoints.
