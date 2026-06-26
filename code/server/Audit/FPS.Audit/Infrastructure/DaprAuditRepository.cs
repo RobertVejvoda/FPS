@@ -16,18 +16,21 @@ public sealed class DaprAuditRepository : IAuditRepository, IAuditQueryRepositor
         this.daprClient = daprClient;
     }
 
-    public async Task<bool> ExistsAsync(string sourceEventId, CancellationToken ct = default)
-        => await daprClient.GetStateAsync<bool>(StoreName, SrcKey(sourceEventId), cancellationToken: ct);
+    public async Task<bool> ExistsAsync(string sourceEventId, string tenantId, CancellationToken ct = default)
+        => await daprClient.GetStateAsync<bool>(StoreName, SrcKey(tenantId, sourceEventId), cancellationToken: ct);
 
     public async Task AppendAsync(AuditRecord record, CancellationToken ct = default)
     {
-        var srcKey = SrcKey(record.SourceEventId);
+        var srcKey = SrcKey(record.TenantId, record.SourceEventId);
         if (await daprClient.GetStateAsync<bool>(StoreName, srcKey, cancellationToken: ct))
             return;
 
+        // Write record first, then make it queryable via the index, then mark
+        // the source event as processed. This ordering ensures that if the index
+        // write fails the record is invisible and the next retry can re-append it.
         await daprClient.SaveStateAsync(StoreName, RecordKey(record.TenantId, record.AuditRecordId.ToString()), record, cancellationToken: ct);
-        await daprClient.SaveStateAsync(StoreName, srcKey, true, cancellationToken: ct);
         await AddToIndexAsync(record.TenantId, record.AuditRecordId.ToString(), ct);
+        await daprClient.SaveStateAsync(StoreName, srcKey, true, cancellationToken: ct);
     }
 
     public async Task<(IReadOnlyList<AuditRecord> Items, int TotalCount)> QueryAsync(
@@ -145,5 +148,5 @@ public sealed class DaprAuditRepository : IAuditRepository, IAuditQueryRepositor
 
     private static string RecordKey(string tenantId, string recordId) => TenantStorageKey.For("audit", tenantId, recordId);
     private static string IndexKey(string tenantId) => TenantStorageKey.For("audit-index", tenantId, "all");
-    private static string SrcKey(string sourceEventId) => $"audit-src:{sourceEventId}";
+    private static string SrcKey(string tenantId, string sourceEventId) => TenantStorageKey.For("audit-src", tenantId, sourceEventId);
 }

@@ -91,7 +91,7 @@ public sealed class PiiMappingTests
         await service.DeleteByUserIdAsync("user-1", "tenant-1", "actor-hash");
 
         // Audit record still exists and is unchanged.
-        Assert.True(await auditRepo.ExistsAsync("event-1"));
+        Assert.True(await auditRepo.ExistsAsync("event-1", "tenant-1"));
     }
 
     [Fact]
@@ -164,6 +164,6 @@ public sealed class PiiMappingTests
 
         await mappingRepo.DeleteByActorHashAsync(hash, "tenant-1");
 
-        Assert.True(await auditRepo.ExistsAsync("evt-pii"));
+        Assert.True(await auditRepo.ExistsAsync("evt-pii", "tenant-1"));
     }
 }

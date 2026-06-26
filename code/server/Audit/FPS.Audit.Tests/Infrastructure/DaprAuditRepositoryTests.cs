@@ -91,14 +91,14 @@ public sealed class DaprAuditRepositoryTests
         var repo = BuildRepo();
         var record = MakeRecord();
         await repo.AppendAsync(record);
-        Assert.True(await repo.ExistsAsync(record.SourceEventId));
+        Assert.True(await repo.ExistsAsync(record.SourceEventId, record.TenantId));
     }
 
     [Fact]
     public async Task ExistsAsync_BeforeAppend_ReturnsFalse()
     {
         var repo = BuildRepo();
-        Assert.False(await repo.ExistsAsync("unknown-event-id"));
+        Assert.False(await repo.ExistsAsync("unknown-event-id", "demo"));
     }
 
     // ── Idempotency ────────────────────────────────────────────────────────────
@@ -114,6 +114,23 @@ public sealed class DaprAuditRepositoryTests
 
         var (_, total) = await repo.QueryAsync(new AuditQueryRequest(), "demo");
         Assert.Equal(1, total);
+    }
+
+    [Fact]
+    public async Task AppendAsync_SameSourceEventId_DifferentTenants_BothAccepted()
+    {
+        // Idempotency key is tenant-scoped: the same upstream event ID must not
+        // block a second tenant from recording their own audit evidence.
+        var repo = BuildRepo();
+        var sharedSourceEventId = Guid.NewGuid().ToString();
+        await repo.AppendAsync(MakeRecord("tenant-a", sourceEventId: sharedSourceEventId));
+        await repo.AppendAsync(MakeRecord("tenant-b", sourceEventId: sharedSourceEventId));
+
+        var (_, aTotal) = await repo.QueryAsync(new AuditQueryRequest(), "tenant-a");
+        var (_, bTotal) = await repo.QueryAsync(new AuditQueryRequest(), "tenant-b");
+
+        Assert.Equal(1, aTotal);
+        Assert.Equal(1, bTotal);
     }
 
     // ── Tenant isolation ──────────────────────────────────────────────────────

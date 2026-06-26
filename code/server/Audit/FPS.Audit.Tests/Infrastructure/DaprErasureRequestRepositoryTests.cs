@@ -7,7 +7,7 @@ namespace FPS.Audit.Tests.Infrastructure;
 
 public sealed class DaprErasureRequestRepositoryTests
 {
-    private const string StoreName = "auditstore";
+    private const string StoreName = "erasure-store";
     private readonly Dictionary<string, object?> store = new();
 
     private DaprErasureRequestRepository BuildRepo()

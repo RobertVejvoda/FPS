@@ -7,7 +7,7 @@ namespace FPS.Audit.Infrastructure;
 public sealed class DaprPiiMappingRepository : IPiiMappingRepository
 {
     private readonly DaprClient daprClient;
-    private const string StoreName = "auditstore";
+    private const string StoreName = "pii-mappingstore";
 
     public DaprPiiMappingRepository(DaprClient daprClient)
     {

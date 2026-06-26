@@ -139,25 +139,38 @@ Restore scope: all profile data for a tenant is under `profile:{tenantId}:*`. Ve
 
 **Append-only constraint:** The store implementation must not expose a delete or update operation on audit records to the application layer. GDPR erasure operates on the PII mapping table (delete the actor-hash-to-name mapping), leaving audit records intact but effectively pseudonymised. This must be enforced at the repository interface level (`IAuditRepository` must have no `Delete` or `Update` method for audit records).
 
-**Tenant key pattern:**
+**Tenant key pattern and component/collection separation (implemented, PR #597):**
 
-| Entity | Partition / collection approach |
-|---|---|
-| Audit records | One collection or partition per tenant: `audit:{tenantId}` |
-| PII mapping | Separate collection: `pii-mapping:{tenantId}` |
-| Erasure requests | Separate collection: `erasure:{tenantId}` |
+Three physically separate Dapr components back the three stores, all pointing to the `fps-audit` MongoDB database but to independent collections. This allows MongoDB-level backup, restore, and TTL index policies per collection, and ensures a GDPR erasure purge of `pii-mappings` cannot touch `auditlog`.
 
-Using collection-level scoping (e.g., MongoDB collection per tenant, or Dapr state key prefix `audit:{tenantId}:{recordId}`) is both valid. The deployment profile documents the choice.
+| Entity | Dapr component | MongoDB collection | Key pattern | Value shape | Notes |
+|---|---|---|---|---|---|
+| Audit record | `auditstore` | `auditlog` | `audit:{tenantId}:{recordId}` | `AuditRecord` | Append-only; no delete via repo |
+| Tenant audit index | `auditstore` | `auditlog` | `audit-index:{tenantId}:all` | `List<string>` (recordIds) | Required for tenant-scoped listing (no prefix scan in Dapr) |
+| Source-event idempotency | `auditstore` | `auditlog` | `audit-src:{tenantId}:{sourceEventId}` | `bool` | **Tenant-scoped**: same sourceEventId in two tenants creates two independent audit records. Marker written after the record is visible in the index (write order: record → index → marker). |
+| PII mapping (userId → hash) | `pii-mappingstore` | `pii-mappings` | `pii:{tenantId}:{userId}` | `PiiMapping` | Separate Dapr component; GDPR erasure can truncate/drop without touching auditlog |
+| PII hash reverse index | `pii-mappingstore` | `pii-mappings` | `pii-hash:{tenantId}:{actorHash}` | `string` (userId) | Bidirectional lookup: hash → userId for batch resolution |
+| Erasure request | `erasure-store` | `erasure-requests` | `erasure:{tenantId}:{erasureRequestId}` | `ErasureRequest` | Separate Dapr component; lifecycle mutations (status, serviceResults) do not touch auditlog |
 
-**Indexes required:** `tenantId`, `occurredAt`, `action`, `actorHash` on audit records. `actorHash` on PII mapping (supports efficient lookup for erasure).
+All keys pass through `TenantStorageKey.For(...)` (in `FPS.SharedKernel.Infrastructure`). Tenant ID comes from the JWT claim only — no caller-supplied storage identifiers.
+
+**Dapr component files:**
+- `code/infrastructure/dapr/components/demo/auditstore.yaml` — MongoDB `fps-audit.auditlog`
+- `code/infrastructure/dapr/components/demo/pii-mappingstore.yaml` — MongoDB `fps-audit.pii-mappings`
+- `code/infrastructure/dapr/components/demo/erasure-store.yaml` — MongoDB `fps-audit.erasure-requests`
+- Smoke equivalents use `state.in-memory` with the same component names.
+
+**Indexes required:** `tenantId`, `occurredAt`, `action`, `actorHash` on `auditlog`. `actorHash` on `pii-mappings` (supports efficient batch lookup for auditor workspace). No index on `erasure-requests` beyond the primary key — expected volume is low.
 
 **Provisioning evidence required before customer traffic:**
 
 - [ ] Audit records visible via `GET /audit` after service restart (existing records must survive restart).
-- [ ] PII mapping stored in a separate, independently addressable collection from audit records.
+- [ ] PII mapping stored in `pii-mappingstore` / `pii-mappings` collection — independently addressable from audit records.
+- [ ] Erasure request stored in `erasure-store` / `erasure-requests` collection.
 - [ ] Erasure request workflow updates PII mapping without modifying audit records.
 - [ ] Append-only contract documented and enforced at the repository interface.
 - [ ] Tenant isolation verified: `demo` tenant audit records are not visible from a second tenant's API calls.
+- [ ] Cross-tenant idempotency: same `sourceEventId` in two tenants produces two independent audit records (regression test in `DaprAuditRepositoryTests.AppendAsync_SameSourceEventId_DifferentTenants_BothAccepted`).
 
 **DataHub implications:** Audit events may feed a DataHub compliance projection. With a durable audit store, projection rebuild can replay events from the store (via `GET /audit` paginated endpoint) rather than requiring broker replay. Document the rebuild path.
 

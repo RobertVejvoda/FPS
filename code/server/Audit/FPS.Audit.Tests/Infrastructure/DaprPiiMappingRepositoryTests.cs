@@ -7,7 +7,7 @@ namespace FPS.Audit.Tests.Infrastructure;
 
 public sealed class DaprPiiMappingRepositoryTests
 {
-    private const string StoreName = "auditstore";
+    private const string StoreName = "pii-mappingstore";
     private readonly Dictionary<string, object?> store = new();
 
     private DaprPiiMappingRepository BuildRepo()

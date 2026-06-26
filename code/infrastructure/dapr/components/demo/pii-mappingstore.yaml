@@ -1,0 +1,33 @@
+# Demo profile — separate MongoDB collection for PII mappings.
+# Kept physically separate from auditlog so GDPR erasure can drop/truncate
+# this collection without touching append-only audit evidence.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pii-mappingstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: mongodb-connection
+      key: host
+  - name: databaseName
+    value: fps-audit
+  - name: collectionName
+    value: pii-mappings
+  - name: username
+    secretKeyRef:
+      name: mongodb-connection
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-connection
+      key: password
+  - name: params
+    value: "?ssl=true&replicaSet=atlas-xxx"
+scopes:
+- fps-audit
+auth:
+  secretStore: secretstore

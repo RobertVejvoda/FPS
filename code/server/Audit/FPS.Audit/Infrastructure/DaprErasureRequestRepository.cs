@@ -7,7 +7,7 @@ namespace FPS.Audit.Infrastructure;
 public sealed class DaprErasureRequestRepository : IErasureRequestRepository
 {
     private readonly DaprClient daprClient;
-    private const string StoreName = "auditstore";
+    private const string StoreName = "erasure-store";
 
     public DaprErasureRequestRepository(DaprClient daprClient)
     {

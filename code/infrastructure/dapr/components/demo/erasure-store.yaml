@@ -1,0 +1,33 @@
+# Demo profile — separate MongoDB collection for erasure requests.
+# Kept physically separate from auditlog so erasure lifecycle can be queried
+# and purged independently without touching append-only audit evidence.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: erasure-store
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: mongodb-connection
+      key: host
+  - name: databaseName
+    value: fps-audit
+  - name: collectionName
+    value: erasure-requests
+  - name: username
+    secretKeyRef:
+      name: mongodb-connection
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-connection
+      key: password
+  - name: params
+    value: "?ssl=true&replicaSet=atlas-xxx"
+scopes:
+- fps-audit
+auth:
+  secretStore: secretstore

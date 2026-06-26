@@ -31,7 +31,7 @@ public sealed class BookingEventAuditHandler(
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
-        if (await repository.ExistsAsync(envelope.EventId, cancellationToken))
+        if (await repository.ExistsAsync(envelope.EventId, envelope.TenantId, cancellationToken))
         {
             logger.LogDebug(
                 "Audit event duplicate skipped. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",
