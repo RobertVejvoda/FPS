@@ -99,6 +99,8 @@ app.UseFpsRequestTraceLogging();
 app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 
+// Startup gate (PERSIST006B): HydrateIdentityStoresAsync runs synchronously before app.Run(),
+// so the service never accepts traffic with empty identity stores.
 using (var scope = app.Services.CreateScope())
 {
     await HydrateIdentityStoresAsync(scope.ServiceProvider);

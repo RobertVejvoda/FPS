@@ -319,17 +319,24 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
 
 ### PERSIST006B — Customer Identity Runtime Cache Review
 
-**Current state:** `InMemoryTenantIdentityConfigStore` and `InMemoryTenantRoleMappingStore` are registered in Customer `Program.cs` and used at runtime for JWT claim transformation. However, they are hydrated from the durable `DaprCustomerIdentityRepository` at startup via `HydrateIdentityStoresAsync()`.
+**Status: Complete — PR #600**
 
-**Review required:**
+**Finding: No gap — stores are already restart-safe.**
 
-1. Confirm that no runtime mutation of these stores occurs without a corresponding write to the durable Dapr store. If an admin updates identity config at runtime, the in-memory store must be updated AND the Dapr store must be written atomically (or the service must be designed so the Dapr store is always the write target, with the in-memory store as a read cache only).
+`InMemoryTenantIdentityConfigStore` and `InMemoryTenantRoleMappingStore` are read-through caches. Review confirmed:
 
-2. Confirm that `HydrateIdentityStoresAsync()` runs before the service accepts traffic (startup gate, not background task).
+**1. Write-through invariant confirmed.**
+The only runtime mutation path is `TenantIdentityService.ConfigureAsync`. It calls `await repository.SaveConfigAsync(config, ct)` (writes to `DaprCustomerIdentityRepository`) before updating either in-memory store. No code path mutates the stores without a prior durable write. This is documented in a code comment in `TenantIdentityService.cs`.
 
-3. If runtime mutations are possible without Dapr persistence, add a write-through path before this gap is closed.
+**2. Startup gate confirmed.**
+`HydrateIdentityStoresAsync()` is called synchronously inside `using (var scope = app.Services.CreateScope())` before `app.Run()`. The service does not accept traffic until hydration completes. This is documented with a comment in `Program.cs`.
 
-**Done criteria:** Documentation in `TenantIdentityService` (or a README section) confirms whether the in-memory stores are pure read caches or whether they accept unperisted mutations. If mutations bypass Dapr, add write-through before marking done.
+**3. No write-through path needed.**
+All mutation paths already write to Dapr first. No additional implementation is required.
+
+**Evidence tests added (`TenantIdentityServiceTests`):**
+- `ConfigureAsync_WritesDurableRepositoryBeforeUpdatingCache` — confirms that after `ConfigureAsync` returns, the config is in both the durable repository and the in-memory cache
+- `HydrateFromRepository_RestoresConfigAndRoleMapping` — confirms that fresh in-memory stores hydrated from the durable repository produce the same configuration as the original write
 
 ---
 
@@ -422,3 +429,4 @@ These rules apply to all PERSIST slices.
 | 2026-06-26 | Claude | PERSIST004 implemented (PR #598) — Notification durable inbox/prefs/HR roster via `notificationstore`; tenant-scoped dedup key, startup hydration for roster |
 | 2026-06-26 | Claude | PERSIST005 complete (PR #598, combined with PERSIST004) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |
 | 2026-06-26 | Claude | PERSIST006A implemented (PR #599) — Booking fairness metrics durable via `bookingstore`; list-per-user key design for O(1) Dapr reads per participant; 11 new tests |
+| 2026-06-26 | Claude | PERSIST006B complete (PR #600) — Customer identity cache review: no gap found; write-through invariant and startup gate confirmed and documented; 2 evidence tests added |

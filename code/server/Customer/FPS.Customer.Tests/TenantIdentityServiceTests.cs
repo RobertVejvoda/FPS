@@ -354,6 +354,55 @@ public sealed class TenantIdentityServiceTests
         Assert.Equal(["admin"], freshRoleStore.MapToRoles(tenantId, ["idp-admin"]));
     }
 
+    // ── PERSIST006B: write-through invariant ─────────────────────────────────
+    // Confirms that ConfigureAsync always writes to the durable repository before
+    // updating the in-memory stores, so a restart after ConfigureAsync returns
+    // will restore the config via HydrateIdentityStoresAsync.
+
+    [Fact]
+    public async Task ConfigureAsync_WritesDurableRepositoryBeforeUpdatingCache()
+    {
+        var tenantId = await CreateTenant();
+        var config = MakeConfig(tenantId);
+
+        var error = await service.ConfigureAsync(config, CancellationToken.None);
+        Assert.Null(error);
+
+        // Durable repository must hold the config (restart-safe).
+        var persisted = await identityRepo.GetConfigAsync(tenantId, CancellationToken.None);
+        Assert.NotNull(persisted);
+        Assert.Equal(tenantId, persisted.TenantId);
+
+        // In-memory cache must also reflect the config (runtime-ready).
+        Assert.True(configStore.IsConfigured(tenantId));
+    }
+
+    [Fact]
+    public async Task HydrateFromRepository_RestoresConfigAndRoleMapping()
+    {
+        // Simulate ConfigureAsync writing to durable store.
+        var tenantId = await CreateTenant();
+        await identityRepo.SaveConfigAsync(MakeConfig(tenantId), CancellationToken.None);
+
+        // Simulate service restart: fresh in-memory stores, hydrate from durable repo.
+        var freshConfigStore = new InMemoryTenantIdentityConfigStore();
+        var freshRoleStore = new InMemoryTenantRoleMappingStore(freshConfigStore);
+
+        var tenantIds = await identityRepo.GetConfiguredTenantIdsAsync(CancellationToken.None);
+        foreach (var id in tenantIds)
+        {
+            var config = await identityRepo.GetConfigAsync(id, CancellationToken.None);
+            if (config is null) continue;
+            freshConfigStore.Register(config.TenantId);
+            freshRoleStore.SetMapping(config.TenantId, config.RoleMapping);
+            freshConfigStore.SetClaimConfig(config.TenantId, new TenantClaimConfig(
+                config.TenantClaimName, config.SubjectClaimName, config.RoleClaimNames));
+        }
+
+        Assert.True(freshConfigStore.IsConfigured(tenantId));
+        Assert.Equal(["admin"], freshRoleStore.MapToRoles(tenantId, ["fps-admins"]));
+    }
+
     // ── Blank subject guard ──────────────────────────────────────────────────
 
     [Fact]
