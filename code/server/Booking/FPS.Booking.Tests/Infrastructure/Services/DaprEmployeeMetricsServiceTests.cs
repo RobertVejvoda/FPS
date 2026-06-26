@@ -12,30 +12,60 @@ public sealed class DaprEmployeeMetricsServiceTests
     private const string UserId = "user-001";
     private static readonly DateOnly Today = new(2026, 6, 15);
 
-    private readonly Dictionary<string, object?> store = new();
+    // Shared backing state simulating the Dapr store with ETag versioning.
+    private readonly Dictionary<string, List<string>> storeData = new();
+    private readonly Dictionary<string, int> storeVersions = new();
 
     private DaprEmployeeMetricsService BuildService(Mock<IPenaltyRepository>? penaltyMock = null)
     {
         penaltyMock ??= EmptyPenaltyMock();
-
-        var daprMock = new Mock<DaprClient>();
-
-        daprMock.Setup(c => c.GetStateAsync<List<string>>(
-                StoreName, It.IsAny<string>(), null, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, string key, ConsistencyMode? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
-                store.TryGetValue(key, out var v) ? v as List<string> : (List<string>?)null);
-
-        daprMock.Setup(c => c.SaveStateAsync(
-                StoreName, It.IsAny<string>(), It.IsAny<List<string>>(), null, null, It.IsAny<CancellationToken>()))
-            .Callback<string, string, List<string>, StateOptions?, IReadOnlyDictionary<string, string>?, CancellationToken>(
-                (_, key, value, _, _, _) => store[key] = new List<string>(value))
-            .Returns(Task.CompletedTask);
-
+        var daprMock = BuildDaprMock();
         var services = new ServiceCollection()
             .AddScoped(_ => penaltyMock.Object)
             .BuildServiceProvider();
-
         return new DaprEmployeeMetricsService(daprMock.Object, services.GetRequiredService<IServiceScopeFactory>());
+    }
+
+    private Mock<DaprClient> BuildDaprMock()
+    {
+        var daprMock = new Mock<DaprClient>();
+
+        // GetStateAsync — used by GetMetricsSnapshotAsync
+        // CS8619/CS8620: Moq's nullability inference diverges from Dapr's nullable return types.
+#pragma warning disable CS8619, CS8620
+        daprMock.Setup(c => c.GetStateAsync<List<string>>(
+                StoreName, It.IsAny<string>(), null, null, It.IsAny<CancellationToken>()))
+            .Returns((string _, string key, ConsistencyMode? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
+                Task.FromResult<List<string>?>(
+                    storeData.TryGetValue(key, out var v) ? new List<string>(v) : null));
+
+        // GetStateAndETagAsync — used by IncrementRecentAllocationAsync
+        daprMock.Setup(c => c.GetStateAndETagAsync<List<string>>(
+                StoreName, It.IsAny<string>(), null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, string key, ConsistencyMode? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
+            {
+                var value = storeData.TryGetValue(key, out var v) ? new List<string>(v) : null;
+                var etag = storeVersions.TryGetValue(key, out var ver) ? ver.ToString() : "0";
+                return (value, etag);
+            });
+#pragma warning restore CS8619, CS8620
+
+        // TrySaveStateAsync — atomic ETag-checked write
+        daprMock.Setup(c => c.TrySaveStateAsync(
+                StoreName, It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, string key, List<string> value, string etag, StateOptions? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
+            {
+                lock (storeData)
+                {
+                    var currentVersion = storeVersions.TryGetValue(key, out var ver) ? ver : 0;
+                    if (etag != currentVersion.ToString()) return false;
+                    storeData[key] = new List<string>(value);
+                    storeVersions[key] = currentVersion + 1;
+                    return true;
+                }
+            });
+
+        return daprMock;
     }
 
     private static Mock<IPenaltyRepository> EmptyPenaltyMock()
@@ -55,11 +85,27 @@ public sealed class DaprEmployeeMetricsServiceTests
         var svc1 = BuildService();
         await svc1.IncrementRecentAllocationAsync(TenantId, UserId, Today.AddDays(-3));
 
-        // Simulate restart by building a new service that shares the same backing store.
+        // Simulate restart — new service instance, same backing store.
         var svc2 = BuildService();
         var result = await svc2.GetMetricsSnapshotAsync(TenantId, [UserId], Today, lookbackDays: 10);
 
         Assert.Equal(1, result[UserId].RecentAllocationCount);
+    }
+
+    // ── Concurrent increment (ETag regression) ────────────────────────────────
+
+    [Fact]
+    public async Task IncrementAsync_TwoConcurrentCallers_BothIncrementsRetained()
+    {
+        var svc = BuildService();
+
+        // Two concurrent increments — without ETag retry one would overwrite the other.
+        var t1 = svc.IncrementRecentAllocationAsync(TenantId, UserId, new DateOnly(2026, 6, 10));
+        var t2 = svc.IncrementRecentAllocationAsync(TenantId, UserId, new DateOnly(2026, 6, 11));
+        await Task.WhenAll(t1, t2);
+
+        var result = await svc.GetMetricsSnapshotAsync(TenantId, [UserId], Today, lookbackDays: 30);
+        Assert.Equal(2, result[UserId].RecentAllocationCount);
     }
 
     // ── Lookback window filtering ─────────────────────────────────────────────

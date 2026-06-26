@@ -60,9 +60,17 @@ public sealed class DaprEmployeeMetricsService : IEmployeeMetricsService
         CancellationToken cancellationToken = default)
     {
         var key = MetricsKey(tenantId, requestorId);
-        var dates = await daprClient.GetStateAsync<List<string>>(StoreName, key, cancellationToken: cancellationToken) ?? [];
-        dates.Add(allocationDate.ToString("yyyy-MM-dd"));
-        await daprClient.SaveStateAsync(StoreName, key, dates, cancellationToken: cancellationToken);
+        // Optimistic concurrency: retry on ETag mismatch so concurrent draw allocations
+        // do not silently overwrite each other's appends.
+        while (true)
+        {
+            var (dates, etag) = await daprClient.GetStateAndETagAsync<List<string>>(StoreName, key, cancellationToken: cancellationToken);
+            dates ??= [];
+            dates.Add(allocationDate.ToString("yyyy-MM-dd"));
+            if (await daprClient.TrySaveStateAsync(StoreName, key, dates, etag, cancellationToken: cancellationToken))
+                return;
+            // ETag mismatch — another writer committed first; retry.
+        }
     }
 
     public async Task<int> GetActivePenaltyScoreAsync(
