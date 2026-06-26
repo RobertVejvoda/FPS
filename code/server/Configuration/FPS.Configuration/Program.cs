@@ -1,3 +1,4 @@
+using Dapr.Client;
 using FPS.Configuration.Application;
 using FPS.Configuration.Domain;
 using FPS.Configuration.Identity;
@@ -11,9 +12,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddSingleton<IParkingPolicyRepository, InMemoryParkingPolicyRepository>();
-builder.Services.AddSingleton<IParkingSlotRepository, InMemoryParkingSlotRepository>();
-builder.Services.AddSingleton<ISlotChangeRepository, InMemorySlotChangeRepository>();
+builder.Services.AddDaprClient();
+builder.Services.AddSingleton<IParkingPolicyRepository, DaprParkingPolicyRepository>();
+builder.Services.AddSingleton<IParkingSlotRepository, DaprParkingSlotRepository>();
+builder.Services.AddSingleton<ISlotChangeRepository, DaprSlotChangeRepository>();
 
 builder.Services.AddScoped<ParkingPolicyService>();
 builder.Services.AddScoped<ParkingSlotService>();
@@ -37,14 +39,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Seed demo configuration data in Development so smoke tests can exercise booking scenarios.
+// Seed demo configuration data in Development if the tenant default policy is not yet stored.
+// With a durable Dapr store the check prevents re-seeding after the first run.
 if (app.Environment.IsDevelopment())
 {
     var policyRepo = app.Services.GetRequiredService<IParkingPolicyRepository>();
     var slotRepo = app.Services.GetRequiredService<IParkingSlotRepository>();
     var slotChangeRepo = app.Services.GetRequiredService<ISlotChangeRepository>();
 
-    // FPS_DEMO_TENANT_ID overrides the default demo tenant for local experiments.
     var demoTenantId = app.Configuration["FPS_DEMO_TENANT_ID"] ?? "demo";
 
     if (await policyRepo.GetTenantDefaultAsync(demoTenantId) is null)

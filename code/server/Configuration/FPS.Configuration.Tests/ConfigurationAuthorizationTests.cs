@@ -1,3 +1,5 @@
+using FPS.Configuration.Domain;
+using FPS.Configuration.Infrastructure;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -28,6 +30,12 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
             builder.UseEnvironment("Test");
             builder.ConfigureTestServices(services =>
             {
+                // Replace Dapr-backed repositories with in-memory stubs so tests
+                // run without a Dapr sidecar.
+                services.AddSingleton<IParkingPolicyRepository, InMemoryParkingPolicyRepository>();
+                services.AddSingleton<IParkingSlotRepository, InMemoryParkingSlotRepository>();
+                services.AddSingleton<ISlotChangeRepository, InMemorySlotChangeRepository>();
+
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {
                     options.Authority = null;
