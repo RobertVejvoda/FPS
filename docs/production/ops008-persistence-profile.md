@@ -321,22 +321,31 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
 
 **Status: Complete — PR #600**
 
-**Finding: No gap — stores are already restart-safe.**
+**Finding: Stores are restart-safe; startup gate required fail-closed fix.**
 
-`InMemoryTenantIdentityConfigStore` and `InMemoryTenantRoleMappingStore` are read-through caches. Review confirmed:
+`InMemoryTenantIdentityConfigStore` and `InMemoryTenantRoleMappingStore` are read-through caches hydrated from `DaprCustomerIdentityRepository` at startup. Review confirmed:
 
 **1. Write-through invariant confirmed.**
-The only runtime mutation path is `TenantIdentityService.ConfigureAsync`. It calls `await repository.SaveConfigAsync(config, ct)` (writes to `DaprCustomerIdentityRepository`) before updating either in-memory store. No code path mutates the stores without a prior durable write. This is documented in a code comment in `TenantIdentityService.cs`.
+The only runtime mutation path is `TenantIdentityService.ConfigureAsync`. It calls `await repository.SaveConfigAsync(config, ct)` (writes to `DaprCustomerIdentityRepository`) before updating either in-memory store. No code path mutates the stores without a prior durable write. Documented with a code comment in `TenantIdentityService.cs`.
 
-**2. Startup gate confirmed.**
-`HydrateIdentityStoresAsync()` is called synchronously inside `using (var scope = app.Services.CreateScope())` before `app.Run()`. The service does not accept traffic until hydration completes. This is documented with a comment in `Program.cs`.
+**2. Startup gate — fail-closed fix required (Codex finding).**
+The original `HydrateIdentityStoresAsync()` caught repository exceptions and returned, allowing `app.Run()` to proceed with empty identity stores. `TenantClaimsTransformation` then saw `IsEnforcementActive == false` and passed raw JWT roles through unchanged — a fail-open security path.
 
-**3. No write-through path needed.**
-All mutation paths already write to Dapr first. No additional implementation is required.
+The fix is `IdentityStoreHydrator` (`FPS.Customer.Infrastructure`), which uses a `catch when` filter keyed on `IHostEnvironment`:
+- **Development**: repository exception is logged; service starts with empty stores (local dev without Dapr sidecar keeps working)
+- **All other profiles (Production/Staging)**: exception propagates before `app.Run()` — the process exits and the orchestrator restarts the pod once Dapr is available
 
-**Evidence tests added (`TenantIdentityServiceTests`):**
-- `ConfigureAsync_WritesDurableRepositoryBeforeUpdatingCache` — confirms that after `ConfigureAsync` returns, the config is in both the durable repository and the in-memory cache
-- `HydrateFromRepository_RestoresConfigAndRoleMapping` — confirms that fresh in-memory stores hydrated from the durable repository produce the same configuration as the original write
+The NAS/Envoy profile routes `/tenants` directly to `fps-customer` without health-check-based outlier removal, so a readiness health check alone is not sufficient; the application boundary must enforce fail-closed.
+
+**3. No additional mutation paths needed.**
+All runtime write paths already write to Dapr first. No further implementation required.
+
+**Evidence tests:**
+- `ConfigureAsync_WritesDurableRepositoryBeforeUpdatingCache` (`TenantIdentityServiceTests`) — confirms that after `ConfigureAsync` returns, the config is in both the durable repository and the in-memory cache
+- `HydrateFromRepository_RestoresConfigAndRoleMapping` (`TenantIdentityServiceTests`) — confirms that fresh in-memory stores hydrated from the durable repository produce the same configuration as the original write
+- `HydrateAsync_RepositoryThrowsInProduction_PropagatesException` (`IdentityStoreHydratorTests`) — primary regression guard: asserts that a repository failure in non-Development causes the exception to propagate (prevents re-introducing the fail-open path)
+- `HydrateAsync_RepositoryThrowsInDevelopment_DoesNotThrow_StoresRemainEmpty` (`IdentityStoreHydratorTests`)
+- `HydrateAsync_SuccessfulHydration_PopulatesConfigAndRoleMapping` (`IdentityStoreHydratorTests`)
 
 ---
 
@@ -429,4 +438,4 @@ These rules apply to all PERSIST slices.
 | 2026-06-26 | Claude | PERSIST004 implemented (PR #598) — Notification durable inbox/prefs/HR roster via `notificationstore`; tenant-scoped dedup key, startup hydration for roster |
 | 2026-06-26 | Claude | PERSIST005 complete (PR #598, combined with PERSIST004) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |
 | 2026-06-26 | Claude | PERSIST006A implemented (PR #599) — Booking fairness metrics durable via `bookingstore`; list-per-user key design for O(1) Dapr reads per participant; 11 new tests |
-| 2026-06-26 | Claude | PERSIST006B complete (PR #600) — Customer identity cache review: no gap found; write-through invariant and startup gate confirmed and documented; 2 evidence tests added |
+| 2026-06-26 | Claude | PERSIST006B complete (PR #600) — Customer identity cache review: write-through invariant confirmed; startup gate fixed (IdentityStoreHydrator fail-closed in non-Development); 5 evidence tests added |

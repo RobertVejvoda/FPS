@@ -357,37 +357,7 @@ public sealed class TenantIdentityServiceTests
     // ── PERSIST006B: write-through invariant ─────────────────────────────────
     // Confirms that ConfigureAsync always writes to the durable repository before
     // updating the in-memory stores, so a restart after ConfigureAsync returns
-    // will restore the config via HydrateIdentityStoresAsync.
-
-    // ── PERSIST006B: hydration failure → readiness Unhealthy ─────────────────
-    // Confirms that a Dapr failure during startup causes the readiness health check
-    // to report Unhealthy, blocking traffic rather than serving with empty stores.
-
-    [Fact]
-    public async Task IdentityHydrationHealthCheck_WhenMarkFailed_ReportsUnhealthy()
-    {
-        var check = new IdentityHydrationHealthCheck();
-        check.MarkFailed();
-
-        var result = await check.CheckHealthAsync(null!, CancellationToken.None);
-
-        Assert.Equal(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy, result.Status);
-    }
-
-    [Fact]
-    public async Task IdentityHydrationHealthCheck_WhenNotFailed_ReportsHealthy()
-    {
-        var check = new IdentityHydrationHealthCheck();
-
-        var result = await check.CheckHealthAsync(null!, CancellationToken.None);
-
-        Assert.Equal(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy, result.Status);
-    }
-
-    // ── PERSIST006B: write-through invariant ─────────────────────────────────
-    // Confirms that ConfigureAsync always writes to the durable repository before
-    // updating the in-memory stores, so a restart after ConfigureAsync returns
-    // will restore the config via HydrateIdentityStoresAsync.
+    // will restore the config via IdentityStoreHydrator.
 
     [Fact]
     public async Task ConfigureAsync_WritesDurableRepositoryBeforeUpdatingCache()
