@@ -13,13 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers().AddDapr();
 builder.Services.AddHttpContextAccessor();
 
-// Share the same in-memory instance for append, query, and retention interfaces.
-var inMemoryAuditRepo = new InMemoryAuditRepository();
-builder.Services.AddSingleton<IAuditRepository>(inMemoryAuditRepo);
-builder.Services.AddSingleton<IAuditQueryRepository>(inMemoryAuditRepo);
-builder.Services.AddSingleton<IAuditRetentionRepository>(inMemoryAuditRepo);
-builder.Services.AddSingleton<IPiiMappingRepository, InMemoryPiiMappingRepository>();
-builder.Services.AddSingleton<IErasureRequestRepository, InMemoryErasureRequestRepository>();
+builder.Services.AddSingleton<DaprAuditRepository>();
+builder.Services.AddSingleton<IAuditRepository>(sp => sp.GetRequiredService<DaprAuditRepository>());
+builder.Services.AddSingleton<IAuditQueryRepository>(sp => sp.GetRequiredService<DaprAuditRepository>());
+builder.Services.AddSingleton<IAuditRetentionRepository>(sp => sp.GetRequiredService<DaprAuditRepository>());
+builder.Services.AddSingleton<IPiiMappingRepository, DaprPiiMappingRepository>();
+builder.Services.AddSingleton<IErasureRequestRepository, DaprErasureRequestRepository>();
 
 builder.Services.AddScoped<BookingEventAuditHandler>();
 builder.Services.AddScoped<AuditQueryService>();
