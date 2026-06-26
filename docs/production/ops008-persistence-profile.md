@@ -154,11 +154,15 @@ Three physically separate Dapr components back the three stores, all pointing to
 
 All keys pass through `TenantStorageKey.For(...)` (in `FPS.SharedKernel.Infrastructure`). Tenant ID comes from the JWT claim only — no caller-supplied storage identifiers.
 
-**Dapr component files:**
-- `code/infrastructure/dapr/components/demo/auditstore.yaml` — MongoDB `fps-audit.auditlog`
-- `code/infrastructure/dapr/components/demo/pii-mappingstore.yaml` — MongoDB `fps-audit.pii-mappings`
-- `code/infrastructure/dapr/components/demo/erasure-store.yaml` — MongoDB `fps-audit.erasure-requests`
-- Smoke equivalents use `state.in-memory` with the same component names.
+**Dapr component files (all three profiles):**
+
+| Profile | auditstore | pii-mappingstore | erasure-store |
+|---|---|---|---|
+| local | `local/auditstore.yaml` → MongoDB `fps-audit.auditlog` | `local/pii-mappingstore.yaml` → MongoDB `fps-audit.pii-mappings` | `local/erasure-store.yaml` → MongoDB `fps-audit.erasure-requests` |
+| demo | `demo/auditstore.yaml` → MongoDB `fps-audit.auditlog` | `demo/pii-mappingstore.yaml` → MongoDB `fps-audit.pii-mappings` | `demo/erasure-store.yaml` → MongoDB `fps-audit.erasure-requests` |
+| smoke | `smoke/auditstore.yaml` → `state.in-memory` | `smoke/pii-mappingstore.yaml` → `state.in-memory` | `smoke/erasure-store.yaml` → `state.in-memory` |
+
+All component files are under `code/infrastructure/dapr/components/`. Local profile uses `localhost:27017` with `mongodb-credentials` secret; demo profile uses `mongodb-connection` secret with Atlas TLS params.
 
 **Indexes required:** `tenantId`, `occurredAt`, `action`, `actorHash` on `auditlog`. `actorHash` on `pii-mappings` (supports efficient batch lookup for auditor workspace). No index on `erasure-requests` beyond the primary key — expected volume is low.
 
