@@ -11,7 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
+builder.Services.AddDaprClient();
+builder.Services.AddSingleton<IProfileRepository, DaprProfileRepository>();
 builder.Services.AddScoped<EmployeeBootstrapService>();
 builder.Services.AddScoped<HrImportService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
@@ -55,6 +56,7 @@ builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-profile", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
+builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
 

@@ -3,6 +3,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
+using FPS.Profile.Application;
+using FPS.Profile.Infrastructure;
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -48,6 +51,10 @@ public sealed class HrProfileAuthorizationTests : IClassFixture<WebApplicationFa
                         NameClaimType = ClaimTypes.NameIdentifier
                     };
                 });
+
+                // Override Dapr-backed repos with in-memory stubs so tests run without a Dapr sidecar.
+                services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
             });
         });
     }

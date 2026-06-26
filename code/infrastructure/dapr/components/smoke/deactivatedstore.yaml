@@ -1,0 +1,9 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: deactivatedstore
+spec:
+  type: state.in-memory
+  version: v1
+# No scopes — all fps-* services read and write deactivated-user state.
+# Smoke-test only. State is not persisted across restarts.

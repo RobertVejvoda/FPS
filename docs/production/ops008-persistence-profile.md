@@ -96,13 +96,27 @@ All keys go through `TenantStorageKey.For(...)` (moved to `FPS.SharedKernel.Infr
 
 **Dependency on PERSIST001:** Profile eligibility (`parkingEligible`) may depend on parking policy settings. Configuration must be durable before Profile to avoid bootstrapping issues on restart.
 
-**Tenant key pattern:**
+**Tenant key pattern (implemented, PR #596):**
 
-| Entity | Key pattern |
-|---|---|
-| Employee profile | `profile:{tenantId}:{userId}` |
-| Vehicle | `vehicle:{tenantId}:{userId}:{vehicleId}` |
-| Deactivated user | `deactivated:{tenantId}:{userId}` |
+| Entity | Key | Value shape | Notes |
+|---|---|---|---|
+| Employee profile + vehicles | `profile:{tenantId}:{userId}` | `UserProfile` (full document) | Vehicles stored as `IReadOnlyList<Vehicle>` inside the profile document — no separate vehicle keys |
+| Employee ID uniqueness index | `profile-empidx:{tenantId}:{employeeId}` | `bool` | Fast duplicate check without full scan |
+| Tenant user list | `profile-index:{tenantId}:all` | `List<string>` (userIds) | Required for `ListByTenantAsync`; Dapr has no prefix scan |
+| Deactivated user | `deactivated:{tenantId}:{userId}` | `bool` | Stored in `deactivatedstore` component (no scope restriction — shared by all fps-* services) |
+
+**Design decision — vehicles embedded in profile document:**
+
+The OPS008 draft listed per-vehicle keys (`vehicle:{tenantId}:{userId}:{vehicleId}`). The implementation uses `profile:{tenantId}:{userId}` to store the full `UserProfile` document including the `IReadOnlyList<Vehicle>` field. Reasons:
+
+1. `IProfileRepository.SaveAsync` takes a full `UserProfile`. The vehicle list is always updated as part of the profile — there is no per-vehicle update path at the repository interface level.
+2. A per-vehicle key design would require a secondary vehicle index per user, plus a read-old/diff/write-new cycle on every profile save. The aggregate-document approach keeps saves atomic.
+
+Restore scope: all profile data for a tenant is under `profile:{tenantId}:*`. Vehicle history is not separately addressable (add per-vehicle keys in a future slice if per-vehicle CRUD is required).
+
+**Design decision — `deactivatedstore` shared Dapr component:**
+
+`deactivated:{tenantId}:{userId}` keys are stored in a dedicated `deactivatedstore` Dapr component with **no scope restriction**. This allows all fps-* services to read and write deactivated-user state from the same backing store. Profile writes on `Deactivate`/`Reactivate`; all other services read during claims transformation. The store uses a 30-second TTL in-process cache to bound Dapr read frequency while limiting cross-instance staleness to ≤30 seconds.
 
 **Provisioning evidence required before customer traffic:**
 

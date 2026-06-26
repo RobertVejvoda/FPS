@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using FPS.Customer.Application;
 using FPS.Customer.Infrastructure;
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -45,6 +46,7 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
                 services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
                 services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
                 services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
 
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {

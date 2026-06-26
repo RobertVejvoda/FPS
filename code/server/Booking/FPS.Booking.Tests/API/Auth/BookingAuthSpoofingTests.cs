@@ -53,6 +53,7 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
                     .Setup(m => m.Send(It.IsAny<GetHrDrawOutcomesQuery>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new List<HrDrawOutcomeSummary>());
                 services.AddSingleton(mediatorMock.Object);
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
 
                 services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
                 {

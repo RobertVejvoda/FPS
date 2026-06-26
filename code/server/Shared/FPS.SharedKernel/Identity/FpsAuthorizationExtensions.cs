@@ -1,3 +1,5 @@
+using Dapr.Client;
+using FPS.SharedKernel.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +30,19 @@ public static class FpsAuthorizationExtensions
                 .Build();
         });
 
+        return services;
+    }
+
+    // Replaces the InMemoryDeactivatedUserStore (registered by AddFpsAuthorization) with the
+    // Dapr-backed DaprDeactivatedUserStore. Call after AddFpsAuthorization() in every service
+    // that has a Dapr sidecar so deactivated-user state survives service restarts and is shared
+    // across all instances via the "deactivatedstore" Dapr component (no scope restriction).
+    public static IServiceCollection AddFpsDurableDeactivatedUserStore(
+        this IServiceCollection services,
+        string storeName = "deactivatedstore")
+    {
+        services.AddSingleton<IDeactivatedUserStore>(sp =>
+            new DaprDeactivatedUserStore(sp.GetRequiredService<DaprClient>(), storeName));
         return services;
     }
 }
