@@ -32,14 +32,23 @@ public sealed class DaprHrRosterStore : IHrRosterStore
 
     public async Task HydrateAsync(CancellationToken cancellationToken = default)
     {
-        var registry = await daprClient.GetStateAsync<List<string>>(StoreName, RegistryKey, cancellationToken: cancellationToken) ?? [];
-        foreach (var tenantId in registry)
+        try
         {
-            var users = await daprClient.GetStateAsync<List<string>>(StoreName, RosterKey(tenantId), cancellationToken: cancellationToken);
-            if (users is not null)
-                cache[tenantId] = users;
+            var registry = await daprClient.GetStateAsync<List<string>>(StoreName, RegistryKey, cancellationToken: cancellationToken) ?? [];
+            foreach (var tenantId in registry)
+            {
+                var users = await daprClient.GetStateAsync<List<string>>(StoreName, RosterKey(tenantId), cancellationToken: cancellationToken);
+                if (users is not null)
+                    cache[tenantId] = users;
+            }
+            logger.LogInformation("HR roster hydrated from Dapr. Tenants={Count}", registry.Count);
         }
-        logger.LogInformation("HR roster hydrated from Dapr. Tenants={Count}", registry.Count);
+        catch (Exception ex)
+        {
+            // Dapr sidecar not available at startup (e.g. stale-check, dev without Dapr).
+            // Config seeder will populate the in-memory cache instead.
+            logger.LogWarning(ex, "HR roster Dapr hydration failed; falling back to configuration seeder.");
+        }
     }
 
     private async Task PersistAsync(string tenantId, List<string> hrUserIds)
