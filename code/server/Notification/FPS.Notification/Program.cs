@@ -59,7 +59,8 @@ builder.Services.AddOpenApi("v1", options =>
     });
 });
 
-builder.Services.AddFpsHealthChecks();
+builder.Services.AddFpsHealthChecks()
+    .AddCheck<HrRosterPersistenceHealthCheck>("hr-roster-persistence", Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded);
 builder.Services.AddFpsObservability("fps-notification", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();

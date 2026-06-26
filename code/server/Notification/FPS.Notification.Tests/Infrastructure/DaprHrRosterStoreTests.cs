@@ -104,4 +104,37 @@ public sealed class DaprHrRosterStoreTests
         Assert.Equal(2, users.Count);
         Assert.DoesNotContain(string.Empty, users);
     }
+
+    // ── Persistence failure path ──────────────────────────────────────────────
+
+    [Fact]
+    public void Set_WhenDaprUnavailable_SetsRosterInMemoryAndMarksDegraded()
+    {
+        var mock = new Mock<DaprClient>();
+        mock.Setup(c => c.SaveStateAsync(StoreName, It.IsAny<string>(), It.IsAny<List<string>>(), null, null, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Dapr sidecar unavailable"));
+
+        var rosterStore = new DaprHrRosterStore(mock.Object, NullLogger<DaprHrRosterStore>.Instance);
+        rosterStore.Set("demo", ["hr-1"]);
+
+        // In-memory cache populated (best-effort), health gate flags the failure.
+        Assert.Contains("hr-1", rosterStore.GetHrUserIds("demo"));
+        Assert.True(rosterStore.IsRosterPersistenceDegraded);
+    }
+
+    [Fact]
+    public void Set_AfterSuccessfulWrite_ClearsDegradedFlag()
+    {
+        var failMock = new Mock<DaprClient>();
+        failMock.Setup(c => c.SaveStateAsync(StoreName, It.IsAny<string>(), It.IsAny<List<string>>(), null, null, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Dapr sidecar unavailable"));
+        var failStore = new DaprHrRosterStore(failMock.Object, NullLogger<DaprHrRosterStore>.Instance);
+        failStore.Set("demo", ["hr-1"]);
+        Assert.True(failStore.IsRosterPersistenceDegraded);
+
+        // Successful write clears the flag.
+        var successStore = BuildStore();
+        successStore.Set("demo", ["hr-1"]);
+        Assert.False(successStore.IsRosterPersistenceDegraded);
+    }
 }
