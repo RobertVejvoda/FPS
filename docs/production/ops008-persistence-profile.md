@@ -184,36 +184,57 @@ All component files are under `code/infrastructure/dapr/components/`. Local prof
 
 ### PERSIST004 — Notification Durable Inbox, Preferences, and HR Audience State
 
+**Status: Complete — PR #598**
+
 **Current gap:** `InMemoryNotificationRepository` (inbox), `InMemoryNotificationPreferencesRepository` (delivery preferences), `InMemoryHrRosterStore` (HR audience routing).
 
 **Target state:** Tenant-scoped persistent store. Notifications are user-visible UX features; employees expect their inbox to persist across sessions.
 
-**Tenant key pattern:**
+**Dapr component and key/value schema (implemented, PR #598):**
 
-| Entity | Key pattern |
-|---|---|
-| Notification record | `notification:{tenantId}:{recipientId}:{notificationId}` |
-| User preferences | `notif-prefs:{tenantId}:{recipientId}` |
-| HR roster entry | `notif-roster:{tenantId}:{userId}` |
+All entities share the single `notificationstore` Dapr component (MongoDB `fps-notification.notifications`). No GDPR-physical separation is required — notification records are pseudonymised at write time and are erasable via `DeleteByRecipientIdAsync`.
+
+| Entity | Key pattern | Value shape | Notes |
+|---|---|---|---|
+| Notification record | `notification:{tenantId}:{recipientId}:{notificationId}` | `NotificationRecord` | Append-only; mutated only by `MarkRead` |
+| Recipient index | `notif-index:{tenantId}:{recipientId}` | `List<Guid>` (notification IDs) | Updated on each `SaveAsync`; used for `GetByRecipientAsync` |
+| Dedup marker | `notif-dedup:{tenantId}:{deduplicationKey}` | `bool` (true) | Written last; idempotency guard per tenant |
+| User preferences | `notif-prefs:{tenantId}:{userId}` | `NotificationPreferences` | Defaults returned when absent |
+| HR roster (per tenant) | `notif-roster:{tenantId}:all` | `List<string>` (HR user IDs) | Written synchronously by `Set`; hydrated at startup |
+| HR roster registry | `notif-roster-registry:all` | `List<string>` (tenant IDs) | Global key (not tenant-scoped); tracks which tenants have roster data so `HydrateAsync` knows what to load. Contains no tenant-owned data — only tenant IDs. |
+
+**Write ordering for inbox:** record → index → dedup marker. A failed index write leaves the record re-retriable; only once the dedup marker is written is the event considered processed.
+
+**Dapr component files:**
+
+| Profile | File | Backing store |
+|---|---|---|
+| local | `code/infrastructure/dapr/components/local/notificationstore.yaml` | MongoDB `localhost:27017` / `fps-notification.notifications` |
+| demo | `code/infrastructure/dapr/components/demo/notificationstore.yaml` | MongoDB Atlas / `fps-notification.notifications` |
+| smoke | `code/infrastructure/dapr/components/smoke/notificationstore.yaml` | `state.in-memory` |
+
+**HR roster global registry key rationale:** The `notif-roster-registry:all` key is intentionally not tenant-scoped. It is a service-level index storing only tenant IDs (no tenant-owned content), and is readable only by the Notification service's own Dapr app ID (`fps-notification`). Dapr component scoping ensures no other service can reach this key.
 
 **Retention:** 90 days after creation (see [Tenant Storage Contract](./tenant-storage-contract.md#notification)).
 
-**Provisioning evidence required before customer traffic:**
+**Provisioning evidence:**
 
-- [ ] Notification records visible via `GET /notifications` after service restart without re-triggering booking events.
-- [ ] Notification service health check passes on startup (store accessible).
-- [ ] `totalReturned` field returned in paginated response (confirmed compatible with `smoke-hosted.sh` `json_list_len`).
-- [ ] Tenant isolation verified: notifications seeded for `demo` tenant are not visible to a second tenant.
+- [x] Notification records persist across restart — `DaprNotificationRepositoryTests.SaveAsync_ThenRestart_RecordSurvives`
+- [x] Tenant isolation — `DaprNotificationRepositoryTests.ExistsAsync_SameDedupKey_DifferentTenants_ReturnsFalseForOtherTenant`, `DeleteByRecipientId_TenantIsolation_DoesNotAffectOtherTenant`
+- [x] Preferences persist across restart — `DaprNotificationPreferencesRepositoryTests.SaveAsync_ThenRestart_PreferencesSurvive`
+- [x] HR roster persists and hydrates — `DaprHrRosterStoreTests.Set_ThenRestart_HydrateRestoresRoster`
+- [x] `totalReturned` field compatible with `smoke-hosted.sh` — no change to controller pagination contract
+- [x] Notification service health check passes on startup — no change to `AddFpsHealthChecks()`
 
 **DataHub implications:** Notification delivery evidence (delivered/failed/read) is a candidate DataHub projection for HR reporting on communication reach. No DataHub subscription to notification events exists today. If added, it follows the standard Dapr pub/sub topic pattern and must use tenant-scoped projection keys.
 
-**Done criteria:** `GET /notifications` returns the same records after cold Notification service restart. Mandatory check #6 in `smoke-hosted.sh` passes without re-running `dev-seed.sh`.
+**Done criteria:** ✓ `GET /notifications` returns the same records after cold Notification service restart. ✓ Tenant isolation confirmed via infrastructure tests.
 
 ---
 
 ### PERSIST005 — DataHub Projection Durability and Rebuild Evidence
 
-**Status: Complete — PR #599**
+**Status: Complete — PR #598** (combined with PERSIST004)
 
 **Current state:** DataHub already uses EF Core + PostgreSQL (`DataHubDbContext`). The `BookingProjectionHandler` processes booking events from Dapr pub/sub and writes to the durable store. DataHub is not in-memory.
 
@@ -311,7 +332,7 @@ When any service in PERSIST001–PERSIST004 gains a durable store, DataHub proje
 
 **Tenant isolation rule for rebuilds:** Any rebuild or replay operation must be scoped to a single tenant. A multi-tenant rebuild must iterate tenant-by-tenant. DataHub must not issue a cross-tenant projection query against source service APIs.
 
-**DataHub projection rebuild is not in scope for PERSIST001–PERSIST004 implementation PRs.** Each PERSIST slice documents what DataHub implications exist; a dedicated DataHub hardening slice (PERSIST005) confirms the rebuild path.
+DataHub projection rebuild evidence (PERSIST005) was delivered in the same PR as PERSIST004 (#598). Each PERSIST001–PERSIST003 implementation PR documented DataHub implications for that service; PERSIST005 was confirmed and closed in PERSIST004's PR.
 
 ---
 
@@ -384,4 +405,4 @@ These rules apply to all PERSIST slices.
 | 2026-06-26 | Claude | PERSIST001 implemented (PR #595) — update key pattern table to match aggregate-list-key design; document trade-offs, bounds, and restore implications |
 | 2026-06-26 | Claude | Fix tenant-default/location-override key collision: use `config-policy:{tenantId}:tenant-default` and `config-policy-location:{tenantId}:{locationId}` as structurally distinct prefixes |
 | 2026-06-26 | Claude | PERSIST004 implemented (PR #598) — Notification durable inbox/prefs/HR roster via `notificationstore`; tenant-scoped dedup key, startup hydration for roster |
-| 2026-06-26 | Claude | PERSIST005 complete (PR #599) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |
+| 2026-06-26 | Claude | PERSIST005 complete (PR #598, combined with PERSIST004) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |

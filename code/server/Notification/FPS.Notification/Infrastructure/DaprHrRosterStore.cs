@@ -27,7 +27,10 @@ public sealed class DaprHrRosterStore : IHrRosterStore
     {
         var list = hrUserIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
         cache[tenantId] = list;
-        _ = PersistAsync(tenantId, list);
+        // Block until durable write completes so a process exit after Set returns
+        // cannot lose the roster. Set is only called at startup (not on request threads),
+        // so GetAwaiter().GetResult() is safe here (no SynchronizationContext deadlock risk).
+        PersistAsync(tenantId, list).GetAwaiter().GetResult();
     }
 
     public async Task HydrateAsync(CancellationToken cancellationToken = default)
