@@ -1,3 +1,4 @@
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -26,6 +27,7 @@ public sealed class AuditAuthorizationTests : IClassFixture<WebApplicationFactor
             builder.UseEnvironment("Test");
             builder.ConfigureTestServices(services =>
             {
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {
                     options.Authority = null;

@@ -35,6 +35,7 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
                 services.AddSingleton<IParkingPolicyRepository, InMemoryParkingPolicyRepository>();
                 services.AddSingleton<IParkingSlotRepository, InMemoryParkingSlotRepository>();
                 services.AddSingleton<ISlotChangeRepository, InMemorySlotChangeRepository>();
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
 
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {

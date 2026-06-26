@@ -1,3 +1,4 @@
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -26,6 +27,7 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
             builder.UseEnvironment("Test");
             builder.ConfigureTestServices(services =>
             {
+                services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
                 services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
                 {
                     options.Authority = null;
