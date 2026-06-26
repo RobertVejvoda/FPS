@@ -49,17 +49,29 @@ The order is driven by service dependency: Configuration is the upstream of all 
 
 **Dapr component:** Uses the shared `fps-statestore` component (or a dedicated `fps-configuration-statestore`). Component scoping to `fps-configuration` app ID is required before customer traffic.
 
-**Tenant key pattern:**
+**Tenant key pattern (implemented, PR #595):**
 
-| Entity | Key pattern |
-|---|---|
-| Parking policy | `config-policy:{tenantId}:{policyId}` |
-| Policy version | `config-policy-version:{tenantId}:{policyId}:{version}` |
-| Parking location | `config-location:{tenantId}:{locationId}` |
-| Parking slot | `config-slot:{tenantId}:{locationId}:{slotId}` |
-| Slot change event | `config-slotchange:{tenantId}:{locationId}:{changeId}` |
+| Entity | Key | Value shape | Notes |
+|---|---|---|---|
+| Policy version list (tenant default) | `config-policy:{tenantId}:default` | `List<ParkingPolicy>` (newest last) | All versions for the tenant-level policy in one key |
+| Policy version list (location override) | `config-policy:{tenantId}:{locationId}` | `List<ParkingPolicy>` (newest last) | All versions for a location override |
+| Location slot list | `config-slots:{tenantId}:{locationId}` | `List<ParkingSlot>` | Full slot list replaced atomically via `ReplaceLocationSlotsAsync` |
+| Slot change log | `config-slotchange:{tenantId}:{locationId}` | `List<SlotChangeRecord>` (newest last, capped at 100) | Append-only change history per location |
 
-All keys must go through `TenantStorageKey.For(...)` (same helper pattern as Booking — add to `FPS.SharedKernel` or implement in `FPS.Configuration.Infrastructure`).
+**Design decision — aggregate list keys over per-entity keys:**
+
+The original draft listed per-entity keys (`config-slot:{tenantId}:{locationId}:{slotId}`, `config-slotchange:{tenantId}:{locationId}:{changeId}`). The implementation uses aggregate list keys for two reasons:
+
+1. `IParkingSlotRepository.ReplaceLocationSlotsAsync` replaces the entire slot set for a location in one call. Per-slot keys would require a location index key plus a multi-step read-old/delete-old/write-new cycle that cannot be made atomic without Dapr state transactions. The aggregate-key approach provides atomic replacement in a single `SaveStateAsync` call.
+
+2. The `GetHistoryAsync` interface already reads and returns an ordered list; storing the list directly avoids maintaining a separate version counter or index.
+
+**Trade-offs and restore implications:**
+- Each list key is a single Dapr document. Slot lists are bounded by the number of slots per location (typically < 200). Policy history is capped at 50 versions; change log at 100 entries. Both limits are enforced on write.
+- Restore scope for a tenant is all keys prefixed with `config-*:{tenantId}:`. A targeted restore of a single slot does not require reading individual slot keys — restore replays the full slot list key.
+- If per-slot granularity is required in a future release (e.g., per-slot CRUD without replace), add individual `config-slot:{tenantId}:{locationId}:{slotId}` keys alongside or instead, and migrate at that point.
+
+All keys go through `TenantStorageKey.For(...)` (moved to `FPS.SharedKernel.Infrastructure`, PR #595).
 
 **No caller-supplied storage identifiers.** Location and slot IDs used in keys must be service-assigned; the API must validate that route parameters refer to entities already in the authenticated tenant's scope before using them in key construction.
 
@@ -316,3 +328,4 @@ These rules apply to all PERSIST slices.
 | Date | Author | Change |
 |---|---|---|
 | 2026-06-25 | Claude | Initial OPS008 persistence profile — implementation sequence, provisioning evidence, DataHub implications, checklist |
+| 2026-06-26 | Claude | PERSIST001 implemented (PR #595) — update key pattern table to match aggregate-list-key design; document trade-offs, bounds, and restore implications |
