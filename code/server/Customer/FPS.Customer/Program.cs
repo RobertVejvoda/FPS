@@ -65,7 +65,12 @@ builder.Services.AddAuthentication("Bearer")
         options.ConfigureFpsJwtBearer(builder.Configuration, builder.Environment);
     });
 
-builder.Services.AddFpsHealthChecks();
+var identityHydrationCheck = new IdentityHydrationHealthCheck();
+builder.Services.AddSingleton(identityHydrationCheck);
+builder.Services.AddFpsHealthChecks()
+    .AddCheck<IdentityHydrationHealthCheck>(
+        "identity-hydration",
+        Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy);
 builder.Services.AddFpsObservability("fps-customer", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
@@ -99,11 +104,12 @@ app.UseFpsRequestTraceLogging();
 app.MapFpsMetrics();
 app.MapFpsHealthChecks();
 
-// Startup gate (PERSIST006B): HydrateIdentityStoresAsync runs synchronously before app.Run(),
-// so the service never accepts traffic with empty identity stores.
+// Startup gate (PERSIST006B): HydrateIdentityStoresAsync runs synchronously before app.Run().
+// If hydration fails, IdentityHydrationHealthCheck marks the service Unhealthy so the
+// readiness probe blocks traffic — preventing the fail-open path in TenantClaimsTransformation.
 using (var scope = app.Services.CreateScope())
 {
-    await HydrateIdentityStoresAsync(scope.ServiceProvider);
+    await HydrateIdentityStoresAsync(scope.ServiceProvider, identityHydrationCheck);
 }
 
 if (app.Environment.IsDevelopment())
@@ -118,7 +124,7 @@ if (app.Environment.IsDevelopment())
 
 app.Run();
 
-static async Task HydrateIdentityStoresAsync(IServiceProvider services)
+static async Task HydrateIdentityStoresAsync(IServiceProvider services, IdentityHydrationHealthCheck hydrationCheck)
 {
     var identityRepository = services.GetRequiredService<ITenantIdentityRepository>();
     var configStore = services.GetRequiredService<InMemoryTenantIdentityConfigStore>();
@@ -160,7 +166,13 @@ static async Task HydrateIdentityStoresAsync(IServiceProvider services)
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Identity store hydration failed; stores will be empty until next restart");
+        // Mark the readiness check Unhealthy so the load balancer stops routing traffic.
+        // This prevents the fail-open path in TenantClaimsTransformation (IsEnforcementActive==false
+        // passes raw roles through when the config store is empty).
+        hydrationCheck.MarkFailed();
+        logger.LogError(ex,
+            "Identity store hydration failed. Service is Unhealthy — readiness probe will block traffic " +
+            "until the service restarts with Dapr available.");
         return;
     }
 
