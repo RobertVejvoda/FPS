@@ -9,15 +9,23 @@ public sealed class ConfigurationStorageKeyTests
     [Fact]
     public void PolicyKey_TenantDefault_HasExpectedFormat()
     {
-        var key = TenantStorageKey.For("config-policy", "demo", "default");
-        Assert.Equal("config-policy:demo:default", key);
+        var key = TenantStorageKey.For("config-policy", "demo", "tenant-default");
+        Assert.Equal("config-policy:demo:tenant-default", key);
     }
 
     [Fact]
     public void PolicyKey_LocationOverride_HasExpectedFormat()
     {
-        var key = TenantStorageKey.For("config-policy", "demo", "prague");
-        Assert.Equal("config-policy:demo:prague", key);
+        var key = TenantStorageKey.For("config-policy-location", "demo", "prague");
+        Assert.Equal("config-policy-location:demo:prague", key);
+    }
+
+    [Fact]
+    public void PolicyKey_TenantDefault_StructurallyDistinctFromLocationNamedDefault()
+    {
+        var tenantDefaultKey = TenantStorageKey.For("config-policy", "demo", "tenant-default");
+        var locationDefaultKey = TenantStorageKey.For("config-policy-location", "demo", "default");
+        Assert.NotEqual(tenantDefaultKey, locationDefaultKey);
     }
 
     // ── config-slots key format ───────────────────────────────────────────────

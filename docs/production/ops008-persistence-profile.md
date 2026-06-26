@@ -53,8 +53,8 @@ The order is driven by service dependency: Configuration is the upstream of all 
 
 | Entity | Key | Value shape | Notes |
 |---|---|---|---|
-| Policy version list (tenant default) | `config-policy:{tenantId}:default` | `List<ParkingPolicy>` (newest last) | All versions for the tenant-level policy in one key |
-| Policy version list (location override) | `config-policy:{tenantId}:{locationId}` | `List<ParkingPolicy>` (newest last) | All versions for a location override |
+| Policy version list (tenant default) | `config-policy:{tenantId}:tenant-default` | `List<ParkingPolicy>` (newest last) | Structurally distinct from any location key |
+| Policy version list (location override) | `config-policy-location:{tenantId}:{locationId}` | `List<ParkingPolicy>` (newest last) | Separate entity type prevents collision with tenant-default key even if `locationId = "default"` |
 | Location slot list | `config-slots:{tenantId}:{locationId}` | `List<ParkingSlot>` | Full slot list replaced atomically via `ReplaceLocationSlotsAsync` |
 | Slot change log | `config-slotchange:{tenantId}:{locationId}` | `List<SlotChangeRecord>` (newest last, capped at 100) | Append-only change history per location |
 
@@ -329,3 +329,4 @@ These rules apply to all PERSIST slices.
 |---|---|---|
 | 2026-06-25 | Claude | Initial OPS008 persistence profile — implementation sequence, provisioning evidence, DataHub implications, checklist |
 | 2026-06-26 | Claude | PERSIST001 implemented (PR #595) — update key pattern table to match aggregate-list-key design; document trade-offs, bounds, and restore implications |
+| 2026-06-26 | Claude | Fix tenant-default/location-override key collision: use `config-policy:{tenantId}:tenant-default` and `config-policy-location:{tenantId}:{locationId}` as structurally distinct prefixes |

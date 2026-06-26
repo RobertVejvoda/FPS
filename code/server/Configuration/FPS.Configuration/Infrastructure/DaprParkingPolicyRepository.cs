@@ -9,9 +9,11 @@ public sealed class DaprParkingPolicyRepository : IParkingPolicyRepository
     private readonly DaprClient daprClient;
     private const string ConfigStore = "configstore";
 
-    // Policy version lists are stored at a single key per (tenant, scope).
-    // The scope is "default" for tenant-level policies or the locationId for overrides.
-    // Max versions retained per scope — protects key size; policy changes are infrequent.
+    // Tenant-default and location-override policies use structurally distinct key prefixes
+    // so that a location named "default" (or any other value) cannot collide with the
+    // tenant-level policy key.
+    //   Tenant default:      config-policy:{tenantId}:tenant-default
+    //   Location override:   config-policy-location:{tenantId}:{locationId}
     private const int MaxVersionsRetained = 50;
 
     public DaprParkingPolicyRepository(DaprClient daprClient)
@@ -22,21 +24,22 @@ public sealed class DaprParkingPolicyRepository : IParkingPolicyRepository
 
     public async Task<ParkingPolicy?> GetTenantDefaultAsync(string tenantId, CancellationToken cancellationToken = default)
     {
-        var list = await LoadVersionsAsync(tenantId, scope: "default", cancellationToken);
+        var list = await LoadVersionsAsync(TenantDefaultKey(tenantId), cancellationToken);
         return list.Count > 0 ? list[^1] : null;
     }
 
     public async Task<ParkingPolicy?> GetLocationOverrideAsync(string tenantId, string locationId, CancellationToken cancellationToken = default)
     {
-        var list = await LoadVersionsAsync(tenantId, LocationScope(locationId), cancellationToken);
+        var list = await LoadVersionsAsync(LocationOverrideKey(tenantId, locationId), cancellationToken);
         return list.Count > 0 ? list[^1] : null;
     }
 
     public async Task SaveAsync(ParkingPolicy policy, CancellationToken cancellationToken = default)
     {
-        var scope = policy.LocationId is not null ? LocationScope(policy.LocationId) : "default";
-        var key = PolicyKey(policy.TenantId, scope);
-        var list = await LoadVersionsAsync(policy.TenantId, scope, cancellationToken);
+        var key = policy.LocationId is not null
+            ? LocationOverrideKey(policy.TenantId, policy.LocationId)
+            : TenantDefaultKey(policy.TenantId);
+        var list = await LoadVersionsAsync(key, cancellationToken);
         list.Add(policy);
         if (list.Count > MaxVersionsRetained)
             list.RemoveRange(0, list.Count - MaxVersionsRetained);
@@ -46,18 +49,19 @@ public sealed class DaprParkingPolicyRepository : IParkingPolicyRepository
     public async Task<IReadOnlyList<ParkingPolicy>> GetHistoryAsync(
         string tenantId, string? locationId, int limit = 20, CancellationToken cancellationToken = default)
     {
-        var scope = locationId is not null ? LocationScope(locationId) : "default";
-        var list = await LoadVersionsAsync(tenantId, scope, cancellationToken);
+        var key = locationId is not null
+            ? LocationOverrideKey(tenantId, locationId)
+            : TenantDefaultKey(tenantId);
+        var list = await LoadVersionsAsync(key, cancellationToken);
         return list.AsEnumerable().Reverse().Take(limit).ToList();
     }
 
-    private async Task<List<ParkingPolicy>> LoadVersionsAsync(string tenantId, string scope, CancellationToken cancellationToken)
-        => await daprClient.GetStateAsync<List<ParkingPolicy>>(
-               ConfigStore, PolicyKey(tenantId, scope), cancellationToken: cancellationToken) ?? [];
+    private async Task<List<ParkingPolicy>> LoadVersionsAsync(string key, CancellationToken cancellationToken)
+        => await daprClient.GetStateAsync<List<ParkingPolicy>>(ConfigStore, key, cancellationToken: cancellationToken) ?? [];
 
-    private static string PolicyKey(string tenantId, string scope)
-        => TenantStorageKey.For("config-policy", tenantId, scope);
+    private static string TenantDefaultKey(string tenantId)
+        => TenantStorageKey.For("config-policy", tenantId, "tenant-default");
 
-    private static string LocationScope(string locationId)
-        => locationId.ToLowerInvariant();
+    private static string LocationOverrideKey(string tenantId, string locationId)
+        => TenantStorageKey.For("config-policy-location", tenantId, locationId.ToLowerInvariant());
 }

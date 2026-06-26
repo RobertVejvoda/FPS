@@ -132,6 +132,36 @@ public sealed class DaprParkingPolicyRepositoryTests
         Assert.Equal(50, locationPolicy!.DailyRequestCap);
     }
 
+    // ── locationId="default" must not collide with tenant-default key ──────────
+
+    [Fact]
+    public async Task LocationOverride_LocationIdDefault_DoesNotCollideWithTenantDefault()
+    {
+        var repo = BuildRepo();
+        await repo.SaveAsync(MakePolicy("demo", locationId: null, cap: 111));       // tenant default
+        await repo.SaveAsync(MakePolicy("demo", locationId: "default", cap: 222));  // location override named "default"
+
+        var tenantDefault = await repo.GetTenantDefaultAsync("demo");
+        var locationOverride = await repo.GetLocationOverrideAsync("demo", "default");
+
+        Assert.Equal(111, tenantDefault!.DailyRequestCap);
+        Assert.Equal(222, locationOverride!.DailyRequestCap);
+    }
+
+    [Fact]
+    public async Task TenantDefault_Key_DoesNotContainLocationPrefix()
+    {
+        // Verify the keys written are structurally distinct by checking the
+        // backing store entries do not share a key.
+        var repo = BuildRepo();
+        await repo.SaveAsync(MakePolicy("demo", locationId: null, cap: 1));
+        await repo.SaveAsync(MakePolicy("demo", locationId: "default", cap: 2));
+
+        // Two distinct keys must exist in the store.
+        Assert.Equal(2, store.Count);
+        Assert.DoesNotContain(store.Keys, k => store.Keys.Count(k2 => k2 == k) > 1);
+    }
+
     // ── Tenant isolation ──────────────────────────────────────────────────────
 
     [Fact]
