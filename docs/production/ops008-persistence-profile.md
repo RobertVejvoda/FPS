@@ -286,13 +286,13 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
 
 ### PERSIST006A — Booking Fairness Metrics Durability
 
-**Status: Complete — PR #600**
+**Status: Complete — PR #599**
 
 **Current gap:** `InMemoryEmployeeMetricsService` tracks fairness history (allocation counts per employee per lookback window). This history is lost on Booking service restart. If fairness metrics are erased, the draw algorithm may over-allocate to employees who received spots recently.
 
 **Target state:** Dapr state store entry per employee per tenant, backed by the existing `bookingstore` component (no new Dapr component or database technology).
 
-**Key and value schema (implemented, PR #600):**
+**Key and value schema (implemented, PR #599):**
 
 | Entity | Key pattern | Value shape | Notes |
 |---|---|---|---|
@@ -421,4 +421,4 @@ These rules apply to all PERSIST slices.
 | 2026-06-26 | Claude | Fix tenant-default/location-override key collision: use `config-policy:{tenantId}:tenant-default` and `config-policy-location:{tenantId}:{locationId}` as structurally distinct prefixes |
 | 2026-06-26 | Claude | PERSIST004 implemented (PR #598) — Notification durable inbox/prefs/HR roster via `notificationstore`; tenant-scoped dedup key, startup hydration for roster |
 | 2026-06-26 | Claude | PERSIST005 complete (PR #598, combined with PERSIST004) — DataHub projection rebuild evidence: cold rebuild tests, tenant-scoped projection row confirmation, manual rebuild procedure documented |
-| 2026-06-26 | Claude | PERSIST006A implemented (PR #600) — Booking fairness metrics durable via `bookingstore`; list-per-user key design for O(1) Dapr reads per participant; 11 new tests |
+| 2026-06-26 | Claude | PERSIST006A implemented (PR #599) — Booking fairness metrics durable via `bookingstore`; list-per-user key design for O(1) Dapr reads per participant; 11 new tests |
