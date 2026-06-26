@@ -4,54 +4,61 @@ using FPS.SharedKernel.Identity;
 
 namespace FPS.SharedKernel.Infrastructure;
 
-// Dapr-backed deactivated user store with write-through in-process cache.
+// Dapr-backed deactivated user store with a 30-second write-through cache.
 //
-// Write-through semantics:
-//   Deactivate/Reactivate update the in-process cache and write synchronously to
-//   Dapr so the change survives service restart. IsDeactivated checks the cache
-//   first; on a cache miss (e.g. first request after restart) it falls back to a
-//   synchronous Dapr read. ASP.NET Core thread-pool threads have no
-//   SynchronizationContext, so the GetAwaiter().GetResult() calls are safe.
+// Store: "deactivatedstore" Dapr component (no scope restriction — shared by all fps-* services).
+// Key format: deactivated:{tenantId}:{userId} → bool
 //
-// Multi-instance note: deactivations written by one instance propagate to other
-// instances on their next cache miss for that user. This eventual-consistency
-// window is acceptable for an admin action (deactivation is rare, not
-// high-frequency).
+// Cache TTL semantics:
+//   Entries are cached for 30 seconds. After expiry the next IsDeactivated call re-reads from Dapr.
+//   This bounds cross-instance staleness to ≤30 seconds: if instance A deactivates a user, any
+//   other instance will see the change within 30 seconds (once its cached entry expires and it
+//   re-reads Dapr). Deactivate/Reactivate update the local cache immediately and write to Dapr
+//   synchronously so the change is durable before returning.
+//
+// Sync-over-async: ASP.NET Core thread-pool threads have no SynchronizationContext, so
+// GetAwaiter().GetResult() does not deadlock.
 public sealed class DaprDeactivatedUserStore : IDeactivatedUserStore
 {
     private readonly DaprClient daprClient;
-    private readonly ConcurrentDictionary<string, bool> cache = new(StringComparer.OrdinalIgnoreCase);
-    private const string StoreName = "configstore";
+    private readonly string storeName;
+    private readonly ConcurrentDictionary<string, (bool Value, long ExpiresAt)> cache = new();
 
-    public DaprDeactivatedUserStore(DaprClient daprClient)
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
+
+    public DaprDeactivatedUserStore(DaprClient daprClient, string storeName = "deactivatedstore")
     {
         ArgumentNullException.ThrowIfNull(daprClient);
+        ArgumentException.ThrowIfNullOrWhiteSpace(storeName);
         this.daprClient = daprClient;
+        this.storeName = storeName;
     }
 
     public bool IsDeactivated(string tenantId, string userId)
     {
         var key = DeactivatedKey(tenantId, userId);
-        if (cache.TryGetValue(key, out var cached))
-            return cached;
+        var now = Environment.TickCount64;
 
-        var value = daprClient.GetStateAsync<bool>(StoreName, key).GetAwaiter().GetResult();
-        cache[key] = value;
+        if (cache.TryGetValue(key, out var entry) && entry.ExpiresAt > now)
+            return entry.Value;
+
+        var value = daprClient.GetStateAsync<bool>(storeName, key).GetAwaiter().GetResult();
+        cache[key] = (value, now + (long)CacheTtl.TotalMilliseconds);
         return value;
     }
 
     public void Deactivate(string tenantId, string userId)
     {
         var key = DeactivatedKey(tenantId, userId);
-        cache[key] = true;
-        daprClient.SaveStateAsync(StoreName, key, true).GetAwaiter().GetResult();
+        cache[key] = (true, Environment.TickCount64 + (long)CacheTtl.TotalMilliseconds);
+        daprClient.SaveStateAsync(storeName, key, true).GetAwaiter().GetResult();
     }
 
     public void Reactivate(string tenantId, string userId)
     {
         var key = DeactivatedKey(tenantId, userId);
-        cache[key] = false;
-        daprClient.SaveStateAsync(StoreName, key, false).GetAwaiter().GetResult();
+        cache[key] = (false, Environment.TickCount64 + (long)CacheTtl.TotalMilliseconds);
+        daprClient.SaveStateAsync(storeName, key, false).GetAwaiter().GetResult();
     }
 
     private static string DeactivatedKey(string tenantId, string userId)

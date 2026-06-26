@@ -69,6 +69,7 @@ builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-customer", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
+builder.Services.AddFpsDurableDeactivatedUserStore();
 // Override the default ITenantIdentityConfigStore with the concrete singleton so
 // TenantIdentityService can call Register() and TenantClaimsTransformation can enforce it.
 var identityConfigStore = new InMemoryTenantIdentityConfigStore();

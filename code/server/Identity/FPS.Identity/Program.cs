@@ -8,6 +8,7 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddDaprClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddLogging();
@@ -52,6 +53,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsAuthorization();
+builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
 

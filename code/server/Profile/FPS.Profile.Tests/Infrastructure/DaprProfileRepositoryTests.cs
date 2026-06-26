@@ -11,7 +11,7 @@ namespace FPS.Profile.Tests.Infrastructure;
 /// </summary>
 public sealed class DaprProfileRepositoryTests
 {
-    private const string StoreName = "configstore";
+    private const string StoreName = "profilestore";
 
     private readonly Dictionary<string, object?> store = new();
 

@@ -2,7 +2,6 @@ using FPS.Profile.Application;
 using FPS.Profile.Identity;
 using FPS.Profile.Infrastructure;
 using FPS.SharedKernel.HealthChecks;
-using FPS.SharedKernel.Infrastructure;
 using FPS.SharedKernel.Observability;
 using FPS.SharedKernel.Identity;
 using Microsoft.OpenApi;
@@ -57,9 +56,7 @@ builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-profile", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
-// Override InMemoryDeactivatedUserStore (registered by AddFpsAuthorization) with the
-// Dapr-backed version so deactivation state survives service restart.
-builder.Services.AddSingleton<IDeactivatedUserStore, DaprDeactivatedUserStore>();
+builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
 

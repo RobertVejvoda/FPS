@@ -73,6 +73,7 @@ builder.Services.AddFpsHealthChecks()
 builder.Services.AddFpsObservability("fps-datahub", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
+builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
 

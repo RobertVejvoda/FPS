@@ -11,7 +11,7 @@ namespace FPS.Profile.Tests.Infrastructure;
 /// </summary>
 public sealed class DaprDeactivatedUserStoreTests
 {
-    private const string StoreName = "configstore";
+    private const string StoreName = "deactivatedstore";
 
     private readonly Dictionary<string, object?> store = new();
 
@@ -31,7 +31,7 @@ public sealed class DaprDeactivatedUserStoreTests
             .ReturnsAsync((string _, string key, ConsistencyMode? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
                 store.TryGetValue(key, out var val) && val is bool b && b);
 
-        return new DaprDeactivatedUserStore(mock.Object);
+        return new DaprDeactivatedUserStore(mock.Object, StoreName);
     }
 
     // ── Deactivation survives restart (cold-restart persistence) ─────────────
@@ -118,10 +118,10 @@ public sealed class DaprDeactivatedUserStoreTests
                 null, null, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var s = new DaprDeactivatedUserStore(mock.Object);
+        var s = new DaprDeactivatedUserStore(mock.Object, StoreName);
 
         _ = s.IsDeactivated("demo", "user-1"); // cache miss → Dapr
-        _ = s.IsDeactivated("demo", "user-1"); // cache hit
+        _ = s.IsDeactivated("demo", "user-1"); // cache hit (within 30s TTL)
 
         // GetStateAsync should only be called once (cache miss path).
         mock.Verify(c => c.GetStateAsync<bool>(

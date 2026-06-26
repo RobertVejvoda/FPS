@@ -8,7 +8,7 @@ namespace FPS.Profile.Infrastructure;
 public sealed class DaprProfileRepository : IProfileRepository
 {
     private readonly DaprClient daprClient;
-    private const string StoreName = "configstore";
+    private const string StoreName = "profilestore";
 
     public DaprProfileRepository(DaprClient daprClient)
     {

@@ -1,0 +1,31 @@
+# Demo profile — MongoDB-compatible managed store.
+# Replace host with a managed MongoDB Atlas connection string or equivalent.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: deactivatedstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    secretKeyRef:
+      name: mongodb-connection
+      key: host
+  - name: databaseName
+    value: fps-shared
+  - name: collectionName
+    value: deactivated-users
+  - name: username
+    secretKeyRef:
+      name: mongodb-connection
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-connection
+      key: password
+  - name: params
+    value: "?ssl=true&replicaSet=atlas-xxx"
+# No scopes — all fps-* services read and write deactivated-user state.
+auth:
+  secretStore: secretstore

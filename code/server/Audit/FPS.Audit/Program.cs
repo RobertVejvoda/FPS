@@ -53,6 +53,7 @@ builder.Services.AddFpsHealthChecks();
 builder.Services.AddFpsObservability("fps-audit", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
+builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
 
