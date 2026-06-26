@@ -21,7 +21,7 @@ public sealed class EmailNotificationHandlerTests
             new InMemoryNotificationPreferencesRepository(),
             new RosterBackedAudienceResolver(new InMemoryHrRosterStore()),
             logger.Object);
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         repository.Setup(r => r.SaveAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -88,7 +88,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_DuplicateEvent_DoesNotResendEmail()
     {
-        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));

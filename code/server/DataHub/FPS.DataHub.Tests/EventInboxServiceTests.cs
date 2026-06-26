@@ -1,6 +1,7 @@
 using FPS.DataHub.Application;
 using FPS.DataHub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FPS.DataHub.Tests;
 
@@ -261,5 +262,89 @@ public sealed class EventInboxServiceTests
 
         var record = await db.EventInbox.SingleAsync();
         Assert.Equal(EventProcessingStatus.Pending, record.ProcessingStatus);
+    }
+
+    // ── Cold rebuild (PERSIST005 evidence) ────────────────────────────────────
+    // Demonstrates the rebuild procedure: clear inbox + projection tables, then
+    // re-deliver the same events from the broker (offset reset) so projections
+    // are reconstructed from durable upstream events.
+
+    [Fact]
+    public async Task ColdRebuild_ClearInboxAndProjection_ThenReplay_RebuildsDrawHistory()
+    {
+        using var db = CreateDb();
+        var handler = new BookingProjectionHandler(db, NullLogger<BookingProjectionHandler>.Instance);
+        var service = new EventInboxService(db, [handler]);
+
+        var drawStarted = new BookingEventEnvelope(
+            EventId: "evt-rebuild-draw-1",
+            EventType: "booking.drawStarted",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-a",
+            CorrelationId: "corr-rebuild",
+            CausationId: null, ActorType: "system", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: null, RequestorId: null,
+                LocationId: "loc-hq", Date: "2026-07-01", TimeSlot: "08:00-17:00",
+                PreviousStatus: null, NewStatus: null,
+                ReasonCode: null, ReasonText: null, AffectedRecipientIds: null));
+
+        // Initial build
+        await service.AcceptAsync(drawStarted, CancellationToken.None);
+        Assert.Equal(1, await db.DrawHistory.CountAsync());
+        Assert.Equal(EventProcessingStatus.Processed, (await db.EventInbox.SingleAsync()).ProcessingStatus);
+
+        // Step 1: Cold rebuild — clear inbox and projection tables
+        db.DrawHistory.RemoveRange(db.DrawHistory);
+        db.EventInbox.RemoveRange(db.EventInbox);
+        await db.SaveChangesAsync();
+        Assert.Equal(0, await db.DrawHistory.CountAsync());
+
+        // Step 2: Re-deliver same event from broker (Dapr offset reset)
+        await service.AcceptAsync(drawStarted, CancellationToken.None);
+
+        // Projection is rebuilt from the replayed event
+        Assert.Equal(1, await db.DrawHistory.CountAsync());
+        var rebuilt = await db.DrawHistory.SingleAsync();
+        Assert.Equal("tenant-a", rebuilt.TenantId);
+        Assert.Equal("loc-hq", rebuilt.LocationId);
+    }
+
+    [Fact]
+    public async Task ColdRebuild_TenantIsolation_OnlyRebuildsTargetTenant()
+    {
+        using var db = CreateDb();
+        var handler = new BookingProjectionHandler(db, NullLogger<BookingProjectionHandler>.Instance);
+        var service = new EventInboxService(db, [handler]);
+
+        var tenantA = new BookingEventEnvelope(
+            EventId: "evt-tenant-a", EventType: "booking.drawStarted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-a", CorrelationId: "c-a",
+            CausationId: null, ActorType: "system", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(null, null, "loc-a", "2026-07-01", "08:00-17:00", null, null, null, null, null));
+
+        var tenantB = new BookingEventEnvelope(
+            EventId: "evt-tenant-b", EventType: "booking.drawStarted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: "tenant-b", CorrelationId: "c-b",
+            CausationId: null, ActorType: "system", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(null, null, "loc-b", "2026-07-01", "08:00-17:00", null, null, null, null, null));
+
+        await service.AcceptAsync(tenantA, CancellationToken.None);
+        await service.AcceptAsync(tenantB, CancellationToken.None);
+        Assert.Equal(2, await db.DrawHistory.CountAsync());
+
+        // Rebuild only tenant-a: clear tenant-a projections and inbox entries
+        db.DrawHistory.RemoveRange(db.DrawHistory.Where(d => d.TenantId == "tenant-a"));
+        db.EventInbox.RemoveRange(db.EventInbox.Where(e => e.TenantId == "tenant-a"));
+        await db.SaveChangesAsync();
+        Assert.Equal(1, await db.DrawHistory.CountAsync());
+
+        // Re-deliver only tenant-a events
+        await service.AcceptAsync(tenantA, CancellationToken.None);
+
+        Assert.Equal(2, await db.DrawHistory.CountAsync());
+        Assert.Single(await db.DrawHistory.Where(d => d.TenantId == "tenant-a").ToListAsync());
+        Assert.Single(await db.DrawHistory.Where(d => d.TenantId == "tenant-b").ToListAsync());
     }
 }
