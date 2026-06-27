@@ -30,7 +30,7 @@ services:
       ASPNETCORE_URLS: "http://+:5161"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-booking:
     image: fps-booking:local
@@ -47,7 +47,7 @@ services:
       ASPNETCORE_URLS: "http://+:5131"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-configuration:
     image: fps-configuration:local
@@ -64,7 +64,7 @@ services:
       ASPNETCORE_URLS: "http://+:5141"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-customer:
     image: fps-customer:local
@@ -81,7 +81,7 @@ services:
       ASPNETCORE_URLS: "http://+:5181"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-datahub:
     image: fps-datahub:local
@@ -98,7 +98,7 @@ services:
       ASPNETCORE_URLS: "http://+:5211"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-identity:
     image: fps-identity:local
@@ -115,7 +115,7 @@ services:
       ASPNETCORE_URLS: "http://+:5192"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-notification:
     image: fps-notification:local
@@ -132,7 +132,7 @@ services:
       ASPNETCORE_URLS: "http://+:5157"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-profile:
     image: fps-profile:local
@@ -149,7 +149,7 @@ services:
       ASPNETCORE_URLS: "http://+:5197"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
   fps-reporting:
     image: fps-reporting:local
@@ -166,9 +166,9 @@ services:
       ASPNETCORE_URLS: "http://+:5171"
       ASPNETCORE_ENVIRONMENT: Production
     networks:
-      - fps-net
+      - web
 
 networks:
-  fps-net:
+  web:
     external: true
-    name: fps-net
+    name: fps_network
