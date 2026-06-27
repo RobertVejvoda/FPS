@@ -197,7 +197,7 @@ Look for a line like `Connection registered connIndex=0` or `Registered tunnel c
 
 The Release 1 NAS stack runs entirely in Docker. **Do not install .NET SDK/runtime or the Dapr CLI on the NAS.** All FairSpot services, Dapr sidecars, state stores, broker, identity, gateway, and observability run as containers. The local developer flow (`dapr run -f dapr.yaml` or `./tools/start-with-dapr.sh`) is for developer machines only and is not used here.
 
-Use the container start script to bring up the full stack and run post-start health checks:
+Use the container start script to bring up the full stack and run post-start health checks. In `--nas` mode the host needs **only Docker and the Docker Compose v2 plugin** — the script reads container state with `docker inspect` and runs every HTTP probe inside a throwaway curl container, so no host `curl`, `python3`, .NET, or Dapr CLI is required:
 
 ```bash
 cd /path/to/fps-repo
@@ -223,17 +223,13 @@ After startup the script:
 
 If any check fails the script prints the failing service, the log command, and the compose command to restart it.
 
-On a clean host, add `--seed` to also configure Keycloak, seed demo + Green Logistics data, and run the local E2E smoke (booking → notification → audit) that proves pub/sub and workflow are wired:
+To bring up the stack and verify container/service/sidecar health only — skipping the gateway, OIDC, and E2E smoke (faster on subsequent starts):
 
 ```bash
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --seed
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
 ```
 
-To bring up the stack without post-start checks (faster on subsequent starts):
-
-```bash
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-smoke
-```
+> **Seeding on NAS:** `--seed` is **local-only** and is rejected with `--nas`. The seed helpers target the `fps-local` realm with dev credentials, which do not match the NAS-enforced secrets. Seed a NAS pilot with your own pilot-data process, and validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section below). NAS-aware seeding is a tracked follow-up.
 
 To tear down (data volumes are preserved):
 
@@ -285,15 +281,17 @@ Before customer traffic is allowed, complete the Cloudflare WAF configuration de
 
 After completing Steps 1–7, run the following checks before treating the NAS deployment as ready.
 
-**Step 1 — Local container smoke** (included in the start script, or run standalone):
+**Step 1 — Local container smoke** (run by the start script in `--nas` mode):
 
 ```bash
-# Included automatically in start-container-stack.sh --nas
-# Or run standalone after the stack is already up:
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-smoke
+# Full health + gateway + OIDC smoke (default):
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
+
+# Health-only (skip gateway/OIDC/E2E smoke) for a faster restart:
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
 ```
 
-The start script covers: Vault seed, all 9 app service health, all 9 Dapr sidecars running, Keycloak OIDC discovery, and all 9 services via the Envoy gateway.
+The start script covers: Vault seed, all 9 app service health, all 9 Dapr sidecars running, Keycloak OIDC discovery, and all 9 services via the Envoy gateway. On a developer machine (not NAS), add `--seed` to also seed demo + Green Logistics data and run the booking → notification → audit E2E.
 
 **Step 2 — Public-domain smoke** (once Cloudflare Tunnel and OIDC are configured):
 
@@ -342,29 +340,29 @@ In the Cloudflare dashboard, a disabled or deleted tunnel removes DNS routing im
 
 ---
 
-## Reset (demo / pilot data)
+## Reset
 
-To re-seed demo and Green Logistics data without stopping infrastructure (idempotent — clears local demo runtime state and re-seeds):
-
-```bash
-./tools/dev-setup-auth.sh
-./tools/dev-seed.sh
-```
-
-The tunnel and OIDC session state are unaffected by a data re-seed.
-
-For a full environment reset (stop all services, clean volumes, restart clean, re-seed):
+**Full environment reset (NAS — stop all services, clean volumes, restart clean):**
 
 ```bash
 # Tear down and remove data volumes
 ./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
 docker volume rm $(docker volume ls -q | grep fps)
 
-# Bring the stack back up and re-seed in one step
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --seed
+# Bring the stack back up (Docker/Compose only — no host tools needed)
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
 ```
 
-The `--seed` flag configures Keycloak, seeds demo + Green Logistics data, and runs the local E2E smoke (booking → notification → audit) to confirm pub/sub and workflow are wired.
+After a clean start on NAS, re-apply pilot tenant data through your pilot onboarding process (HR import + `POST /profile/bootstrap`), then validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section). The `fps-local` demo seed (`dev-setup-auth.sh` / `dev-seed.sh`) is for developer machines only and does not match NAS-enforced credentials.
+
+**Demo re-seed (developer machine, local-container profile only):**
+
+```bash
+# On a dev box running the stack without the NAS overlay:
+./tools/start-container-stack.sh --seed
+```
+
+This configures the `fps-local` realm, seeds demo + Green Logistics data, and runs the local E2E smoke (booking → notification → audit) to confirm pub/sub and workflow are wired. The tunnel and OIDC session state are unaffected by a data re-seed.
 
 ---
 
@@ -436,3 +434,4 @@ The following slices must be completed or explicitly deferred before allowing re
 |---|---|---|
 | 2026-05-29 | Claude | Initial runbook for issue #313 |
 | 2026-06-27 | Claude | OPS015C — replace stale Step 6 placeholder with real compose commands and `start-container-stack.sh`; update Dapr component notes to reference container component path; update smoke section with two-level check procedure |
+| 2026-06-27 | Claude | OPS015C review round 2 — `--nas` path is now Docker/Compose-only (container state via `docker inspect`, HTTP probes via throwaway curl container); `--seed` is local-only and rejected with `--nas`; `--skip-smoke` renamed to `--skip-e2e` with accurate wording |
