@@ -1,0 +1,174 @@
+# Build and run all FairSpot backend service containers.
+#
+# Build all images from a clean checkout:
+#   docker compose -f code/infrastructure/docker-compose.services.yml build
+#
+# Run alongside the infrastructure stack:
+#   docker compose \
+#     -f code/infrastructure/docker-compose.yaml \
+#     -f code/infrastructure/docker-compose.services.yml \
+#     up -d
+#
+# Image names follow the pattern fps-<service>:local.
+# Port assignments match the service launchSettings.json HTTP ports.
+# Dapr sidecars are wired separately (see OPS014).
+
+services:
+
+  fps-audit:
+    image: fps-audit:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Audit
+        PROJECT: FPS.Audit
+        PORT: "5161"
+    ports:
+      - "5161:5161"
+    environment:
+      ASPNETCORE_URLS: "http://+:5161"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-booking:
+    image: fps-booking:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Booking
+        PROJECT: FPS.Booking
+        PORT: "5131"
+    ports:
+      - "5131:5131"
+    environment:
+      ASPNETCORE_URLS: "http://+:5131"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-configuration:
+    image: fps-configuration:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Configuration
+        PROJECT: FPS.Configuration
+        PORT: "5141"
+    ports:
+      - "5141:5141"
+    environment:
+      ASPNETCORE_URLS: "http://+:5141"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-customer:
+    image: fps-customer:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Customer
+        PROJECT: FPS.Customer
+        PORT: "5181"
+    ports:
+      - "5181:5181"
+    environment:
+      ASPNETCORE_URLS: "http://+:5181"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-datahub:
+    image: fps-datahub:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: DataHub
+        PROJECT: FPS.DataHub
+        PORT: "5211"
+    ports:
+      - "5211:5211"
+    environment:
+      ASPNETCORE_URLS: "http://+:5211"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-identity:
+    image: fps-identity:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Identity
+        PROJECT: FPS.Identity
+        PORT: "5192"
+    ports:
+      - "5192:5192"
+    environment:
+      ASPNETCORE_URLS: "http://+:5192"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-notification:
+    image: fps-notification:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Notification
+        PROJECT: FPS.Notification
+        PORT: "5157"
+    ports:
+      - "5157:5157"
+    environment:
+      ASPNETCORE_URLS: "http://+:5157"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-profile:
+    image: fps-profile:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Profile
+        PROJECT: FPS.Profile
+        PORT: "5197"
+    ports:
+      - "5197:5197"
+    environment:
+      ASPNETCORE_URLS: "http://+:5197"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+  fps-reporting:
+    image: fps-reporting:local
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      args:
+        SERVICE: Reporting
+        PROJECT: FPS.Reporting
+        PORT: "5171"
+    ports:
+      - "5171:5171"
+    environment:
+      ASPNETCORE_URLS: "http://+:5171"
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+    name: fps_network

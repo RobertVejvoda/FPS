@@ -1,0 +1,21 @@
+# Build output — let the SDK layer produce these inside the container.
+**/bin/
+**/obj/
+
+# Test projects — never published, exclude to keep build context small.
+**/*.Tests/
+
+# Local overrides and secrets — must never reach the image.
+**/*.env
+**/*.env.*
+**/appsettings.Development.*
+**/appsettings.Local.*
+**/.user
+**/*.user
+**/launchSettings.json
+
+# IDE and OS noise.
+**/.vs/
+**/.idea/
+**/.vscode/
+**/*.DS_Store
