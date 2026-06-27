@@ -1,6 +1,6 @@
 # Tenant Discovery and Login Modes
 
-**Status:** Decision recorded — implementation tracked in AUTH002–AUTH005.
+**Status:** Implemented on web for Release 1 — the sign-in screen offers company-SSO work-email discovery and FairSpot-account sign-in. Mobile currently uses a single OIDC sign-in. Original decision and remaining follow-ups tracked under AUTH001–AUTH005.
 **Tracks:** Issue #539 (AUTH001)
 **Related decisions:** `versions-and-decisions.md` → *Two-path login model and tenant discovery*
 
@@ -108,7 +108,7 @@ This is the fallback path for accounts owned by FairSpot Identity.
 
 **Allowed use cases:**
 
-- Demo users (e.g. `employee1`, `hr-admin` in the Green Logistics demo tenant).
+- Demo users (e.g. `employee1`, `hr-admin` in the `demo` tenant; `gl-employee1` in the Green Logistics tenant).
 - Small tenants without a company IdP.
 - Break-glass administrator accounts.
 - Fallback accounts for employees who cannot complete SSO for operational reasons.
@@ -127,17 +127,18 @@ See [Customer Integration](./customer-data-import.md) → *Local Account Fallbac
 
 ## Green Logistics Demo Tenant
 
-**Green Logistics** is the primary demo tenant for FairSpot. It is used to demonstrate the employee booking flow and, when AUTH003 is complete, the SSO discovery and brokered login path.
+FairSpot ships **two** local demo tenants. The `demo` tenant is the out-of-the-box one — `dev-seed.sh` populates its profiles, vehicles, and bookings for the full employee booking/Draw/notification/audit flow. **Green Logistics** is a **second** tenant used to demonstrate company-SSO / work-email tenant discovery (the `greenlogistics.example` domain) and multi-tenant isolation; it also has its own canonical demo dataset seeded on demand (see below).
 
 | Aspect | Detail |
 |---|---|
-| Tenant name | Green Logistics |
+| Tenant id | `greenlogistics` (the out-of-the-box demo tenant is `demo`) |
 | Email domain | `greenlogistics.example` (reserved `.example` domain for demo) |
-| Login path | Company SSO (external IdP broker) for the main demo; FairSpot-local fallback for demo users |
-| Demo users | `employee1@greenlogistics.example`, `employee2@greenlogistics.example`, `hr-admin@greenlogistics.example` (exact usernames set at seed time — see AUTH003) |
-| Seeding | Tracked in AUTH003 (issue #541) |
+| Login path | FairSpot-local accounts for local demo; company-SSO broker when an external IdP is configured |
+| Demo users | `gl-employee1` (Alice Green), `gl-tenant-admin`, `gl-hr-admin`, `gl-auditor`, `gl-report-viewer` — all `tenant_id=greenlogistics` |
+| Identity seeding | Provisioned by `tools/dev-setup-auth.sh` in the `fps-local` realm. |
+| Data seeding | `dev-seed.sh` does **not** seed Green Logistics. A canonical `gl-v1` dataset (employees, vehicles, ~20 slots, policy) is seeded via the tenant-admin demo-seed endpoint `POST /tenants/{tenantId}/demo-seed`; historical bookings/draws are not auto-created. |
 
-For local/demo use, Green Logistics users may log in through FairSpot-local accounts seeded by `tools/dev-seed.sh`. The SSO broker path requires a configured external IdP; local demo runs without one use the FairSpot account path instead.
+See [Demo Seed Data](../demo-seed-data) for the full user list, password, and the "which tenant to use" guidance. For local/demo runs without an external IdP, Green Logistics users sign in through the FairSpot-account path; the SSO broker path requires a configured external IdP.
 
 Local Keycloak remains the identity provider for all demo and local environments. It brokers outbound to an external IdP when SSO is configured; it validates FairSpot-local credentials directly otherwise.
 

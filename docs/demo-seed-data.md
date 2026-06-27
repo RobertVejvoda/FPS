@@ -15,8 +15,8 @@ Profile re-seeding is safe (idempotent). Bookings, notifications, and audit reco
 
 ## Demo users
 
-| Username | Roles | Parking | Vehicles | Demo purpose |
-|----------|-------|---------|----------|-------------|
+| Username | Name | Roles | Parking | Vehicles | Demo purpose |
+|----------|------|-------|---------|----------|-------------|
 | `employee1` | Jan Novak | employee | ✅ eligible | Daily Driver (`1AA 2345`), EV Commuter (`2AB 3456`) | Standard employee — booking, vehicle selection, notifications |
 | `employee2` | Petra Svobodova | employee | ✅ eligible + company car | Company Fleet (`3AC 4567`) | Company-car fixed-slot policy demonstration |
 | `employee3` | Tomas Dvorak | employee | ✅ eligible + accessible | Accessible (`4AD 5678`) | Accessibility-eligible booking path |
@@ -25,7 +25,35 @@ Profile re-seeding is safe (idempotent). Bookings, notifications, and audit reco
 | `report-viewer` | Eva Kralova | report_viewer | ❌ | — | Read-only reports access |
 | `auditor` | Martin Cerny | auditor | ❌ | — | Audit log review |
 
-Password for all demo users: `Dev1234!` (local Keycloak only).
+Password for all demo users: `Dev1234!` (local Keycloak realm `fps-local` only).
+
+The two login paths an evaluator sees on the sign-in screen — **Company SSO** (work-email tenant discovery) and **FairSpot account** (local/demo accounts) — are explained in [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes). Demo users above use the FairSpot-account path.
+
+---
+
+## Green Logistics tenant (second demo tenant)
+
+FairSpot provisions a second tenant, **Green Logistics** (`tenant_id=greenlogistics`), used to demonstrate **company-SSO / work-email tenant discovery** (the `greenlogistics.example` domain) and **multi-tenant isolation** (a `greenlogistics` user must never see `demo` tenant data). Three seed paths are distinct:
+
+- **`./tools/dev-setup-auth.sh`** — provisions Green Logistics **identity users** (`gl-*`) in the `fps-local` realm.
+- **`./tools/dev-seed.sh`** — seeds the **`demo`** tenant's profile/vehicle/booking dataset. It does **not** touch Green Logistics.
+- **Green Logistics demo dataset (`gl-v1`)** — a canonical dataset (employees, vehicles, ~20 parking slots including EV-charger, accessible, company-car/reserved, and motorcycle-capacity, plus policy) seeded through the tenant-admin demo-seed endpoint `POST /tenants/{tenantId}/demo-seed` (Customer service). It does **not** auto-create historical bookings/draws — run a Draw manually after seeding.
+
+| Username | Name | Role intent | Tenant |
+|----------|------|-------------|--------|
+| `gl-employee1` | Alice Green | Employee | greenlogistics |
+| `gl-tenant-admin` | — | Tenant admin | greenlogistics |
+| `gl-hr-admin` | — | HR / reports | greenlogistics |
+| `gl-auditor` | — | Auditor | greenlogistics |
+| `gl-report-viewer` | — | Report viewer | greenlogistics |
+
+Roles mirror the demo-tenant equivalents. All Green Logistics users share the password `Dev1234!`. Mint a token with `./tools/dev-auth.sh gl-employee1`. Add more Green Logistics employees for load testing with `FPS_GL_EMPLOYEE_COUNT=N ./tools/dev-setup-auth.sh` (`gl-employee1` is always present).
+
+**Which tenant to use:**
+
+| Use the `demo` tenant when… | Use `greenlogistics` when… |
+|---|---|
+| Demonstrating the full employee booking / Draw / notification / audit flow out of the box — `dev-seed.sh` populates its profiles, vehicles, and bookings below. | Demonstrating company-SSO / work-email tenant discovery or tenant isolation, or seeding the canonical `gl-v1` dataset via the tenant-admin demo-seed endpoint and running a Draw. |
 
 ---
 
