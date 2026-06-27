@@ -44,15 +44,23 @@ FairSpot is still a product under active development. The current focus is demo 
 
 There are two ways to run FairSpot locally. Pick the one that matches your goal.
 
-### Release 1 / evaluation path — containers only
+### Release 1 / evaluation path — containers
 
-The Release 1 hosting profile is fully containerized: a technical evaluator or operator needs only Docker and the Docker Compose v2 plugin — **no host .NET SDK or Dapr CLI**. From the repository root:
+The Release 1 hosting profile is fully containerized: a technical evaluator or operator needs only **Docker and the Docker Compose v2 plugin** — **no host .NET SDK or Dapr CLI**. From the repository root:
+
+```bash
+./tools/start-container-stack.sh
+```
+
+For the NAS-behind-Cloudflare evaluation profile (required credentials enforced), use `--nas --env-file code/infrastructure/.env`. Both bring up every service, Dapr sidecar, gateway, identity, and data store as containers and are **Docker/Compose-only**. See the [NAS / Cloudflare Deployment Profile](./docs/production/nas-cloudflare-deployment-profile.md) for hosting a reviewable demo at a public HTTPS domain.
+
+To also seed demo data and run the local end-to-end smoke (booking → notification → audit), add `--seed`:
 
 ```bash
 ./tools/start-container-stack.sh --seed
 ```
 
-This brings up every service, Dapr sidecar, gateway, identity, and data store as containers, seeds demo data, and runs a local smoke check. The same script and compose stack underpin the NAS-behind-Cloudflare evaluation profile — see the [NAS / Cloudflare Deployment Profile](./docs/production/nas-cloudflare-deployment-profile.md) for hosting a reviewable demo at a public HTTPS domain.
+`--seed` is **local-only** and additionally needs host `curl` and `python3` (it runs the demo auth/seed/smoke helper scripts); it is rejected with `--nas`.
 
 ### Developer path — host harness
 
