@@ -29,6 +29,17 @@ This pack gives a new evaluator enough context to decide whether FairSpot is wor
 
 Use synthetic demo data only unless a customer-approved pilot explicitly changes that rule.
 
+**Before you start (local container demo).** Bring the stack up with `./tools/start-container-stack.sh --seed`, then reach it at:
+
+| What | Where |
+|---|---|
+| API gateway | `http://localhost:10000` |
+| Web app | `./tools/start-smoke-web.sh` → `http://localhost:5200` |
+| Mobile (Expo) | `./tools/start-smoke-mobile.sh` |
+| Keycloak sign-in | `http://localhost:8180` (realm `fps-local`) |
+
+Demo users live in the `demo` tenant with password `Dev1234!`: `employee1` (standard), `employee2` (company car), `employee3` (accessible), `hr-admin`, `tenant-admin`, `report-viewer`, `auditor`. A second tenant, **Green Logistics** (`gl-*` users, `tenant_id=greenlogistics`), demonstrates company-SSO / work-email tenant discovery and tenant isolation. Full user list, roles, and seeded data: [Demo Seed Data](./demo-seed-data). The two sign-in paths (company SSO vs FairSpot account) are explained in [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes).
+
 | Step | Role | Demo action | Evidence to show |
 | --- | --- | --- | --- |
 | 1 | Employee | Log in through demo OIDC and open the mobile shell. | `GET /me` resolves tenant/user context; no tenant/user is entered manually. |

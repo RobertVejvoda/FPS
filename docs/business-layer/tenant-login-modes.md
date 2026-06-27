@@ -1,6 +1,6 @@
 # Tenant Discovery and Login Modes
 
-**Status:** Decision recorded — implementation tracked in AUTH002–AUTH005.
+**Status:** Implemented on web for Release 1 — the sign-in screen offers company-SSO work-email discovery and FairSpot-account sign-in. Mobile currently uses a single OIDC sign-in. Original decision and remaining follow-ups tracked under AUTH001–AUTH005.
 **Tracks:** Issue #539 (AUTH001)
 **Related decisions:** `versions-and-decisions.md` → *Two-path login model and tenant discovery*
 
