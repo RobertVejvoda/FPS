@@ -127,15 +127,16 @@ See [Customer Integration](./customer-data-import.md) → *Local Account Fallbac
 
 ## Green Logistics Demo Tenant
 
-FairSpot ships **two** local demo tenants. The `demo` tenant is the **primary** one — it carries the seeded profiles, vehicles, and bookings used to demonstrate the full employee booking/Draw/notification/audit flow. **Green Logistics** is a **second, identity/login-only** tenant whose purpose is to demonstrate company-SSO / work-email tenant discovery (the `greenlogistics.example` domain) and multi-tenant isolation.
+FairSpot ships **two** local demo tenants. The `demo` tenant is the out-of-the-box one — `dev-seed.sh` populates its profiles, vehicles, and bookings for the full employee booking/Draw/notification/audit flow. **Green Logistics** is a **second** tenant used to demonstrate company-SSO / work-email tenant discovery (the `greenlogistics.example` domain) and multi-tenant isolation; it also has its own canonical demo dataset seeded on demand (see below).
 
 | Aspect | Detail |
 |---|---|
-| Tenant id | `greenlogistics` (the primary demo tenant is `demo`) |
+| Tenant id | `greenlogistics` (the out-of-the-box demo tenant is `demo`) |
 | Email domain | `greenlogistics.example` (reserved `.example` domain for demo) |
 | Login path | FairSpot-local accounts for local demo; company-SSO broker when an external IdP is configured |
 | Demo users | `gl-employee1` (Alice Green), `gl-tenant-admin`, `gl-hr-admin`, `gl-auditor`, `gl-report-viewer` — all `tenant_id=greenlogistics` |
-| Seeding | Provisioned by `tools/dev-setup-auth.sh` in the `fps-local` realm. Identity only — `dev-seed.sh` does not create Green Logistics profiles or bookings. |
+| Identity seeding | Provisioned by `tools/dev-setup-auth.sh` in the `fps-local` realm. |
+| Data seeding | `dev-seed.sh` does **not** seed Green Logistics. A canonical `gl-v1` dataset (employees, vehicles, ~20 slots, policy) is seeded via the tenant-admin demo-seed endpoint `POST /tenants/{tenantId}/demo-seed`; historical bookings/draws are not auto-created. |
 
 See [Demo Seed Data](../demo-seed-data) for the full user list, password, and the "which tenant to use" guidance. For local/demo runs without an external IdP, Green Logistics users sign in through the FairSpot-account path; the SSO broker path requires a configured external IdP.
 

@@ -33,7 +33,11 @@ The two login paths an evaluator sees on the sign-in screen — **Company SSO** 
 
 ## Green Logistics tenant (second demo tenant)
 
-The auth setup (`./tools/dev-setup-auth.sh`) also provisions a second tenant, **Green Logistics** (`tenant_id=greenlogistics`), in the same `fps-local` realm. Green Logistics is **identity/login only** — `dev-seed.sh` does **not** create Green Logistics profiles or bookings. Its purpose is to demonstrate **company-SSO / work-email tenant discovery** (the `greenlogistics.example` domain) and **multi-tenant isolation** (a `greenlogistics` user must never see `demo` tenant data).
+FairSpot provisions a second tenant, **Green Logistics** (`tenant_id=greenlogistics`), used to demonstrate **company-SSO / work-email tenant discovery** (the `greenlogistics.example` domain) and **multi-tenant isolation** (a `greenlogistics` user must never see `demo` tenant data). Three seed paths are distinct:
+
+- **`./tools/dev-setup-auth.sh`** — provisions Green Logistics **identity users** (`gl-*`) in the `fps-local` realm.
+- **`./tools/dev-seed.sh`** — seeds the **`demo`** tenant's profile/vehicle/booking dataset. It does **not** touch Green Logistics.
+- **Green Logistics demo dataset (`gl-v1`)** — a canonical dataset (employees, vehicles, ~20 parking slots including EV-charger, accessible, company-car/reserved, and motorcycle-capacity, plus policy) seeded through the tenant-admin demo-seed endpoint `POST /tenants/{tenantId}/demo-seed` (Customer service). It does **not** auto-create historical bookings/draws — run a Draw manually after seeding.
 
 | Username | Name | Role intent | Tenant |
 |----------|------|-------------|--------|
@@ -49,7 +53,7 @@ Roles mirror the demo-tenant equivalents. All Green Logistics users share the pa
 
 | Use the `demo` tenant when… | Use `greenlogistics` when… |
 |---|---|
-| Demonstrating the full employee booking / Draw / notification / audit flow — it has the seeded profiles, vehicles, and bookings below. | Demonstrating company-SSO / work-email tenant discovery, or proving tenant isolation between two tenants. |
+| Demonstrating the full employee booking / Draw / notification / audit flow out of the box — `dev-seed.sh` populates its profiles, vehicles, and bookings below. | Demonstrating company-SSO / work-email tenant discovery or tenant isolation, or seeding the canonical `gl-v1` dataset via the tenant-admin demo-seed endpoint and running a Draw. |
 
 ---
 
