@@ -71,10 +71,13 @@ Key architecture links:
 | Profile | Owner | Purpose | Current expectation |
 | --- | --- | --- | --- |
 | Local | FairSpot delivery team | Development and validation. | Local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
+| NAS / Cloudflare (Release 1 evaluation) | FairSpot delivery team / evaluator operator | Self-hosted, reviewable demo at a public HTTPS domain. | Fully containerized Docker Compose stack (services, Dapr sidecars, gateway, identity, stores) reached through a Cloudflare Tunnel. Needs only Docker + Compose on the host — no host .NET SDK or Dapr CLI. Started with `./tools/start-container-stack.sh`. |
 | Demo | FairSpot delivery team | Evaluation environment and operational evidence. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
 | Client production | Client IT / operations | Real operation under client controls. | Client-owned platform, IdP, persistence, secrets, observability, backups, incident process, and release controls. |
 
-The demo environment baseline is documented in [Demo Environment Baseline](./production/demo-environment-baseline). Client production handoff remains a later slice; FairSpot should not promise managed production operation until that model is explicitly approved.
+The NAS/Cloudflare evaluation profile — the Release 1 hosting target — is documented in the [NAS / Cloudflare Deployment Profile](./production/nas-cloudflare-deployment-profile). The demo environment baseline is documented in [Demo Environment Baseline](./production/demo-environment-baseline). Client production handoff remains a later slice; FairSpot should not promise managed production operation until that model is explicitly approved.
+
+**Release 1 evaluation boundary:** Release 1 is for synthetic/demo evaluation only and is not approved for real customer data unless explicitly agreed. The [Roadmap → Release 1 Scope](./roadmap#release-1-scope) records what is ready, demo-only, and deferred.
 
 ## Security And GDPR Summary
 
