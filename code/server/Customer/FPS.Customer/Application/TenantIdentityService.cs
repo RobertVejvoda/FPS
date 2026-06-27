@@ -23,6 +23,9 @@ public sealed class TenantIdentityService(
         if (tenant.LifecycleState == TenantLifecycleState.Archived)
             return "Cannot configure identity for an archived tenant.";
 
+        // Write-through: Dapr repository is written first; in-memory stores are
+        // updated only after the durable write succeeds. The in-memory stores are
+        // never mutated directly — this is the only mutation path (PERSIST006B).
         await repository.SaveConfigAsync(config, ct);
         configStore.Register(config.TenantId);
         roleMappingStore.SetMapping(config.TenantId, config.RoleMapping);
