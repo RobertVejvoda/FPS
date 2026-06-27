@@ -1,0 +1,11 @@
+# Deny cross-app workflow scheduling by default for the workflow-hosting apps.
+# Same-app workflow execution remains allowed.
+apiVersion: dapr.io/v1alpha1
+kind: WorkflowAccessPolicy
+metadata:
+  name: fps-workflow-default-deny
+scopes:
+  - fps-booking
+  - fps-audit
+spec:
+  rules: []

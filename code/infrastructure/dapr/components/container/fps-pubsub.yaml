@@ -1,0 +1,40 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: fps-pubsub
+scopes:
+- fps-booking
+- fps-notification
+- fps-audit
+- fps-reporting
+- fps-datahub
+spec:
+  type: pubsub.rabbitmq
+  version: v1
+  metadata:
+  - name: protocol
+    value: amqp
+  - name: hostname
+    value: rabbitmq
+  - name: durable
+    value: "true"
+  - name: deletedWhenUnused
+    value: "false"
+  - name: prefetchCount
+    value: "10"
+  - name: reconnectWait
+    value: "5s"
+  - name: enableTLS
+    value: "false"
+  - name: deliveryMode
+    value: "2"
+  - name: username
+    secretKeyRef:
+      name: rabbitmq-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: rabbitmq-credentials
+      key: password
+auth:
+  secretStore: secretstore
