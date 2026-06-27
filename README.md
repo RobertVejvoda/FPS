@@ -34,16 +34,43 @@ FairSpot is still a product under active development. The current focus is demo 
 | See the roadmap and status | [Roadmap](./docs/roadmap.md), [Implementation Tracker](./docs/implementation-tracker.md), and [Delivery Board](./docs/delivery-board.md) |
 | Review the architecture | [Architecture Summary](./docs/architecture-views.md) and [Software Architecture](./docs/technology-layer/software-architecture.md) |
 | Review security, privacy, and audit | [Security Review Pack](./docs/security/security-review-pack.md), [Security Model](./docs/security/security-model.md), and [Logging and Monitoring](./docs/security/logging-monitoring.md) |
-| Run the local demo | [Local Test Harness](./docs/production/local-test-harness.md) and [Demo Seed Data](./docs/demo-seed-data.md) |
+| Run the demo (containers only, Release 1 path) | [Run The Demo](#run-the-demo) and [NAS / Cloudflare Deployment Profile](./docs/production/nas-cloudflare-deployment-profile.md) |
+| Run the developer harness | [Local Test Harness](./docs/production/local-test-harness.md) and [Demo Seed Data](./docs/demo-seed-data.md) |
 | Work on implementation | [AGENTS.md](./AGENTS.md), [Development Plan](./docs/development-plan.md), and [Delivery Board](./docs/delivery-board.md) |
 
-## Run The Local Demo
+## Run The Demo
 
-Prerequisites are documented in [Local Test Harness](./docs/production/local-test-harness.md). From the repository root:
+> **Release 1 boundary:** the demo runs on **synthetic data only** and is for evaluation/demonstration. It is **not** approved for real customer data unless explicitly agreed. See the [Roadmap → Release 1 Scope](./docs/roadmap.md#release-1-scope) for what is ready, demo-only, and deferred.
+
+There are two ways to run FairSpot locally. Pick the one that matches your goal.
+
+### Release 1 / evaluation path — containers
+
+The Release 1 hosting profile is fully containerized: a technical evaluator or operator needs only **Docker and the Docker Compose v2 plugin** — **no host .NET SDK or Dapr CLI**. From the repository root:
+
+```bash
+./tools/start-container-stack.sh
+```
+
+For the NAS-behind-Cloudflare evaluation profile (required credentials enforced), use `--nas --env-file code/infrastructure/.env`. Both bring up every service, Dapr sidecar, gateway, identity, and data store as containers and are **Docker/Compose-only**. See the [NAS / Cloudflare Deployment Profile](./docs/production/nas-cloudflare-deployment-profile.md) for hosting a reviewable demo at a public HTTPS domain.
+
+To also seed demo data and run the local end-to-end smoke (booking → notification → audit), add `--seed`:
+
+```bash
+./tools/start-container-stack.sh --seed
+```
+
+`--seed` is **local-only** and additionally needs host `curl` and `python3` (it runs the demo auth/seed/smoke helper scripts); it is rejected with `--nas`.
+
+### Developer path — host harness
+
+For day-to-day development, the host harness runs services directly and allows a host .NET SDK / Dapr CLI. Prerequisites are documented in [Local Test Harness](./docs/production/local-test-harness.md). From the repository root:
 
 ```bash
 ./tools/start-local-harness.sh
 ```
+
+> `start-local-harness.sh` is the **developer/local-only** path. For the Release 1 evaluation experience, use the containerized path above.
 
 In a second shell:
 
