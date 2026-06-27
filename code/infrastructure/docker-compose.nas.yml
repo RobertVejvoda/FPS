@@ -1,33 +1,71 @@
-# NAS deployment overlay — adds restart policies to all infrastructure services.
+# NAS deployment overlay — adds restart policies and enforces required secrets.
 #
-# Usage (run after the main stack):
-#   docker compose -f docker-compose.yaml -f docker-compose.nas.yml up -d
+# Usage (infra-only stack):
+#   docker compose \
+#     --env-file .env \
+#     -f docker-compose.yaml \
+#     -f docker-compose.nas.yml \
+#     up -d
+#
+# With service containers + Dapr (full stack):
+#   docker compose \
+#     --env-file .env \
+#     -f docker-compose.yaml \
+#     -f docker-compose.services.yml \
+#     -f docker-compose.dapr.yml \
+#     -f docker-compose.nas.yml \
+#     up -d
+#
+# Prerequisites:
+#   Copy code/infrastructure/.env.example to code/infrastructure/.env
+#   and fill in all required values before first run.
+#   The .env file is gitignored and must never be committed.
 #
 # This overlay is NAS/hosted-only. Do not apply it to local development.
 # The default docker-compose.yaml has no restart policy so containers do not
 # auto-start on developer machine reboots.
 
 services:
+
   envoy-proxy:
     restart: unless-stopped
 
+  # Vault: restart + enforce non-default token.
+  # The :? syntax causes Docker Compose to abort with an error if the variable
+  # is unset or empty, preventing startup with the dev-only-token default.
   vault:
     restart: unless-stopped
+    command: >
+      server -dev
+      -dev-root-token-id=${VAULT_TOKEN:?Set VAULT_TOKEN in .env (never use dev-only-token on NAS)}
+      -dev-listen-address=0.0.0.0:8200
 
   minio:
     restart: unless-stopped
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in .env}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in .env}
 
   keycloak:
     restart: unless-stopped
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN_USER:?Set KC_ADMIN_USER in .env}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_ADMIN_PASS:?Set KC_ADMIN_PASS in .env}
 
   rabbitmq:
     restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:?Set RABBITMQ_PASS in .env}
 
   postgres:
     restart: unless-stopped
 
   mongodb:
     restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:?Set MONGO_USER in .env}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:?Set MONGO_PASS in .env}
 
   jaeger:
     restart: unless-stopped
@@ -49,3 +87,15 @@ services:
 
   zipkin:
     restart: unless-stopped
+
+  # vault-init is defined in docker-compose.dapr.yml — only present in the full stack.
+  # This override enforces all credentials when that file is included.
+  vault-init:
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:?Set VAULT_TOKEN in .env}"
+      MONGO_USER: "${MONGO_USER:?Set MONGO_USER in .env}"
+      MONGO_PASS: "${MONGO_PASS:?Set MONGO_PASS in .env}"
+      RABBITMQ_USER: "${RABBITMQ_USER:?Set RABBITMQ_USER in .env}"
+      RABBITMQ_PASS: "${RABBITMQ_PASS:?Set RABBITMQ_PASS in .env}"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in .env}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in .env}"

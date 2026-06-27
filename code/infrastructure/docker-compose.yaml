@@ -24,7 +24,7 @@ services:
       - vault_data:/vault/data
     # Local dev mode matches the checked-in Dapr local component token.
     # Do not mount /vault/config in dev mode, or the listener is loaded twice.
-    command: server -dev -dev-root-token-id=dev-only-token -dev-listen-address=0.0.0.0:8200
+    command: server -dev -dev-root-token-id=${VAULT_TOKEN:-dev-only-token} -dev-listen-address=0.0.0.0:8200
     healthcheck:
       test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
       interval: 5s
@@ -39,8 +39,8 @@ services:
     volumes:
       - minio_data:/data
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
     command: server /data --console-address ":9001"
     networks:
       - web
@@ -49,8 +49,8 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     environment:
-      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN_USER:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_ADMIN_PASS:-admin}
       - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT=false
     ports:
@@ -69,8 +69,8 @@ services:
       - "15672:15672"
       - "15692:15692"
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-admin}
     # Enable prometheus plugin so GET :15692/metrics is available for scraping
     command: >
       bash -c "rabbitmq-plugins enable --offline rabbitmq_prometheus && rabbitmq-server"
@@ -106,8 +106,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:-admin}
     volumes:
       - mongodb_data:/data/db
     entrypoint: >
