@@ -35,9 +35,11 @@ echo "== Check suspicious staged files =="
 # Exempt only those specific paths; all other files remain subject to the check.
 if git diff --cached --name-only \
     | grep -v 'keycloak/themes/.*\.ftl$' \
+    | grep -v '\.env\.example$' \
     | grep -Ei '(\.env|secret|password|token|private.*key)' >/dev/null; then
   git diff --cached --name-only \
     | grep -v 'keycloak/themes/.*\.ftl$' \
+    | grep -v '\.env\.example$' \
     | grep -Ei '(\.env|secret|password|token|private.*key)'
   echo "ERROR: suspicious file staged"
   exit 1

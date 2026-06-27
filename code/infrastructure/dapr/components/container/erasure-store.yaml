@@ -1,0 +1,30 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: erasure-store
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: mongodb:27017
+  - name: databaseName
+    value: fps-audit
+  - name: collectionName
+    value: erasure-requests
+  - name: username
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-credentials
+      key: password
+  - name: authSource
+    value: admin
+  - name: params
+    value: "?authSource=admin&ssl=false"
+scopes:
+- fps-audit
+auth:
+  secretStore: secretstore

@@ -1,0 +1,508 @@
+# Dapr system services + per-app sidecars + Vault seed for the local-container profile.
+#
+# Profile: local-container (internal Docker-only run — no host Dapr CLI or .NET required)
+# NOT NAS/production: Vault token defaults to dev-only-token via VAULT_TOKEN env var.
+# For NAS-hosted: inject VAULT_TOKEN and set DAPR_VERSION to match the deployed runtime.
+#
+# Combined bring-up (from repo root):
+#   docker compose \
+#     -f code/infrastructure/docker-compose.yaml \
+#     -f code/infrastructure/docker-compose.services.yml \
+#     -f code/infrastructure/docker-compose.dapr.yml \
+#     up -d
+#
+# Image strategy:
+#   DAPR_VERSION (env, default 1.18.4) controls all Dapr image tags.
+#   System services (placement, scheduler) use daprio/dapr which contains all binaries.
+#   Sidecars use daprio/daprd (leaner, sidecar-only image) — matches docs/production/demo-profile-decision.md.
+#
+# Placement (actors) and Scheduler (workflow reminders) are both required for Dapr 1.14+.
+#
+# Each sidecar uses network_mode: "service:<app>" so it shares the app container's
+# loopback: daprd reaches the app on localhost:<app-port>, and the app reaches Dapr
+# on localhost:3500 (HTTP) / localhost:50001 (gRPC).
+
+x-dapr-system: &dapr-system
+  image: daprio/dapr:${DAPR_VERSION:-1.18.4}
+  restart: unless-stopped
+
+x-dapr-sidecar-base: &dapr-sidecar-base
+  image: daprio/daprd:${DAPR_VERSION:-1.18.4}
+  volumes:
+    - ./dapr/components/container:/dapr/components:ro
+    - ./dapr/configuration:/dapr/config:ro
+  restart: unless-stopped
+
+services:
+
+  # ── Vault secret seed ───────────────────────────────────────────────────────
+  # Seeds the three Dapr secrets on a clean host without host Vault CLI or Dapr CLI.
+  # Runs once and exits (restart: "no"). For NAS: override VAULT_TOKEN and credentials
+  # as env vars; do not re-seed if Vault already has the secrets.
+
+  vault-init:
+    image: hashicorp/vault:latest
+    networks:
+      - web
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+      MONGO_USER: "${MONGO_USER:-admin}"
+      MONGO_PASS: "${MONGO_PASS:-admin}"
+      RABBITMQ_USER: "${RABBITMQ_USER:-admin}"
+      RABBITMQ_PASS: "${RABBITMQ_PASS:-admin}"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -eu
+        vault kv put secret/dapr/mongodb-credentials \
+          username="$$MONGO_USER" password="$$MONGO_PASS"
+        vault kv put secret/dapr/rabbitmq-credentials \
+          username="$$RABBITMQ_USER" password="$$RABBITMQ_PASS"
+        vault kv put secret/dapr/minio-credentials \
+          accessKey="$$MINIO_ACCESS_KEY" secretKey="$$MINIO_SECRET_KEY"
+        echo "Vault secrets seeded."
+
+  # ── Dapr system services ────────────────────────────────────────────────────
+
+  dapr-placement:
+    <<: *dapr-system
+    command:
+      - "./placement"
+      - "--port"
+      - "50006"
+      - "--log-level"
+      - "info"
+    networks:
+      - web
+
+  dapr-scheduler:
+    <<: *dapr-system
+    command:
+      - "./scheduler"
+      - "--port"
+      - "50007"
+      - "--etcd-data-dir"
+      - "/var/lock/dapr/scheduler"
+      - "--log-level"
+      - "info"
+    volumes:
+      - dapr_scheduler_data:/var/lock/dapr/scheduler
+    networks:
+      - web
+    depends_on:
+      - dapr-placement
+
+  # ── Per-app Dapr sidecars ───────────────────────────────────────────────────
+
+  fps-audit-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-audit"
+      - "--app-port"
+      - "5161"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-audit"
+    depends_on:
+      fps-audit:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-booking-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-booking"
+      - "--app-port"
+      - "5131"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-booking"
+    depends_on:
+      fps-booking:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-configuration-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-configuration"
+      - "--app-port"
+      - "5141"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-configuration"
+    depends_on:
+      fps-configuration:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-customer-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-customer"
+      - "--app-port"
+      - "5181"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-customer"
+    depends_on:
+      fps-customer:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-datahub-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-datahub"
+      - "--app-port"
+      - "5211"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-datahub"
+    depends_on:
+      fps-datahub:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-identity-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-identity"
+      - "--app-port"
+      - "5192"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-identity"
+    depends_on:
+      fps-identity:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-notification-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-notification"
+      - "--app-port"
+      - "5157"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-notification"
+    depends_on:
+      fps-notification:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-profile-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-profile"
+      - "--app-port"
+      - "5197"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-profile"
+    depends_on:
+      fps-profile:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  fps-reporting-dapr:
+    <<: *dapr-sidecar-base
+    command:
+      - "./daprd"
+      - "--app-id"
+      - "fps-reporting"
+      - "--app-port"
+      - "5171"
+      - "--dapr-http-port"
+      - "3500"
+      - "--dapr-grpc-port"
+      - "50001"
+      - "--metrics-port"
+      - "9090"
+      - "--placement-host-address"
+      - "dapr-placement:50006"
+      - "--scheduler-host-address"
+      - "dapr-scheduler:50007"
+      - "--components-path"
+      - "/dapr/components"
+      - "--config"
+      - "/dapr/config/fps-config.yaml"
+      - "--log-level"
+      - "info"
+    environment:
+      VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+    network_mode: "service:fps-reporting"
+    depends_on:
+      fps-reporting:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
+
+  # ── App service env-var overrides ──────────────────────────────────────────
+  # Inject Dapr port variables so each service's startup health poll fires
+  # and Customer's IdentityStoreHydrator waits for the sidecar before hydrating.
+
+  fps-audit:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-booking:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-configuration:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-customer:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-datahub:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-identity:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-notification:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-profile:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  fps-reporting:
+    environment:
+      DAPR_HTTP_PORT: "3500"
+      DAPR_GRPC_PORT: "50001"
+
+  # ── Envoy override ──────────────────────────────────────────────────────────
+  # Switch Envoy clusters from host.docker.internal to Docker DNS service names.
+  # Mount the container config to a separate path and override the command to
+  # avoid a duplicate bind mount on /etc/envoy/envoy.yaml.
+
+  envoy-proxy:
+    volumes:
+      - ./envoy/envoy-container.yaml:/etc/envoy/envoy-container.yaml:ro
+    command:
+      - "envoy"
+      - "-c"
+      - "/etc/envoy/envoy-container.yaml"
+      - "--log-level"
+      - "warn"
+
+volumes:
+  dapr_scheduler_data:
+
+networks:
+  web:
+    external: true
+    name: fps_network

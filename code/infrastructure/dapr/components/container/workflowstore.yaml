@@ -1,0 +1,30 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: workflowstore
+spec:
+  type: state.mongodb
+  version: v1
+  metadata:
+  - name: host
+    value: mongodb:27017
+  - name: databaseName
+    value: fps-workflow
+  - name: collectionName
+    value: workflows
+  - name: username
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+  - name: password
+    secretKeyRef:
+      name: mongodb-credentials
+      key: password
+  - name: authSource
+    value: admin
+  - name: params
+    value: "?authSource=admin&ssl=false&replicaSet=rs0"
+  - name: actorStateStore
+    value: "true"
+auth:
+  secretStore: secretstore
