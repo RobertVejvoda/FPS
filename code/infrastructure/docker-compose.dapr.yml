@@ -61,6 +61,7 @@ services:
       - sh
       - -c
       - |
+        set -eu
         vault kv put secret/dapr/mongodb-credentials \
           username="$$MONGO_USER" password="$$MONGO_PASS"
         vault kv put secret/dapr/rabbitmq-credentials \
@@ -129,10 +130,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-audit"
     depends_on:
-      - fps-audit
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-audit:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-booking-dapr:
     <<: *dapr-sidecar-base
@@ -162,10 +167,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-booking"
     depends_on:
-      - fps-booking
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-booking:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-configuration-dapr:
     <<: *dapr-sidecar-base
@@ -195,10 +204,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-configuration"
     depends_on:
-      - fps-configuration
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-configuration:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-customer-dapr:
     <<: *dapr-sidecar-base
@@ -228,10 +241,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-customer"
     depends_on:
-      - fps-customer
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-customer:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-datahub-dapr:
     <<: *dapr-sidecar-base
@@ -261,10 +278,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-datahub"
     depends_on:
-      - fps-datahub
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-datahub:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-identity-dapr:
     <<: *dapr-sidecar-base
@@ -294,10 +315,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-identity"
     depends_on:
-      - fps-identity
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-identity:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-notification-dapr:
     <<: *dapr-sidecar-base
@@ -327,10 +352,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-notification"
     depends_on:
-      - fps-notification
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-notification:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-profile-dapr:
     <<: *dapr-sidecar-base
@@ -360,10 +389,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-profile"
     depends_on:
-      - fps-profile
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-profile:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   fps-reporting-dapr:
     <<: *dapr-sidecar-base
@@ -393,10 +426,14 @@ services:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
     network_mode: "service:fps-reporting"
     depends_on:
-      - fps-reporting
-      - dapr-placement
-      - dapr-scheduler
-      - vault-init
+      fps-reporting:
+        condition: service_started
+      dapr-placement:
+        condition: service_started
+      dapr-scheduler:
+        condition: service_started
+      vault-init:
+        condition: service_completed_successfully
 
   # ── App service env-var overrides ──────────────────────────────────────────
   # Inject Dapr port variables so each service's startup health poll fires
