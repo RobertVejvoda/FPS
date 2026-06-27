@@ -31,8 +31,13 @@
 #   --skip-e2e         Bring up the stack and verify container/service/sidecar
 #                      health, then stop. Skips the gateway, OIDC, seeded E2E, and
 #                      public-domain smoke checks. Health/readiness still runs.
+#   --realm NAME       Internal Keycloak realm to validate OIDC discovery against.
+#                      Default: fps-local in local mode; in --nas mode the internal
+#                      OIDC check is skipped (the hosted realm is configured in
+#                      runbook Step 7 and proven via --domain) unless --realm is set.
 #   --domain DOMAIN    After local checks pass, probe https://app.DOMAIN and
-#                      https://auth.DOMAIN through Cloudflare (Docker-only).
+#                      https://auth.DOMAIN through Cloudflare (Docker-only). The
+#                      public realm defaults to fairspot (override with --realm).
 #   --down             Tear down the stack (same compose files) and exit.
 #
 # Override the probe image with CURL_IMAGE (default curlimages/curl:8.11.1).
@@ -60,11 +65,13 @@ SKIP_E2E=false
 TEARDOWN=false
 PUBLIC_DOMAIN=""
 SEED=false
+REALM_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --nas)        MODE="nas" ;;
     --env-file)   ENV_FILE="$2"; shift ;;
+    --realm)      REALM_OVERRIDE="$2"; shift ;;
     --skip-e2e)   SKIP_E2E=true ;;
     --seed)       SEED=true ;;
     --down)       TEARDOWN=true ;;
@@ -109,6 +116,21 @@ if [[ "$MODE" == "nas" && "$SEED" == "true" ]]; then
   echo "NAS-aware seeding is tracked as a follow-up to #604."
   exit 1
 fi
+
+# ── Resolve the internal OIDC realm ──────────────────────────────────────────────
+# Local mode ships the fps-local dev realm, so the internal Keycloak OIDC check is
+# meaningful there. On a clean NAS the hosted realm is configured later (runbook
+# Step 7), and fps-local does not exist — so the internal OIDC check is skipped by
+# default and hosted OIDC is proven via --domain instead. --realm forces a check
+# against a named realm in either mode.
+if [[ -n "$REALM_OVERRIDE" ]]; then
+  INTERNAL_REALM="$REALM_OVERRIDE"
+elif [[ "$MODE" == "local" ]]; then
+  INTERNAL_REALM="fps-local"
+else
+  INTERNAL_REALM=""   # nas default: skip internal OIDC (realm not yet configured)
+fi
+PUBLIC_REALM="${REALM_OVERRIDE:-fairspot}"
 
 # ── Build compose command ───────────────────────────────────────────────────────
 
@@ -463,20 +485,27 @@ fi
 
 # ── Gateway + OIDC smoke ─────────────────────────────────────────────────────────
 
-hdr "Gateway + OIDC smoke"
+hdr "Gateway smoke"
 
-echo "Keycloak OIDC discovery (internal: keycloak:8080, realm fps-local)..."
-KC_DISC="$(probe_net -sf http://keycloak:8080/realms/fps-local/.well-known/openid-configuration || true)"
-if printf '%s' "$KC_DISC" | grep -q '"issuer"'; then
-  ISS="$(printf '%s' "$KC_DISC" | grep -o '"issuer":"[^"]*"' | head -1)"
-  ok "Keycloak OIDC discovery ($ISS)"
+if [[ -n "$INTERNAL_REALM" ]]; then
+  echo "Keycloak OIDC discovery (internal: keycloak:8080, realm $INTERNAL_REALM)..."
+  KC_DISC="$(probe_net -sf "http://keycloak:8080/realms/$INTERNAL_REALM/.well-known/openid-configuration" || true)"
+  if printf '%s' "$KC_DISC" | grep -q '"issuer"'; then
+    ISS="$(printf '%s' "$KC_DISC" | grep -o '"issuer":"[^"]*"' | head -1)"
+    ok "Keycloak OIDC discovery ($ISS)"
+  else
+    fail "Keycloak OIDC discovery unreachable (realm $INTERNAL_REALM)"
+    echo "    On a clean NAS the hosted realm is configured later (runbook Step 7);"
+    echo "    omit --realm to skip this check, or validate hosted OIDC via --domain."
+    echo "    Logs:  $COMPOSE_HUMAN logs keycloak"
+  fi
+  echo
 else
-  fail "Keycloak OIDC discovery unreachable (realm fps-local)"
-  echo "    Logs:  $COMPOSE_HUMAN logs keycloak"
-  echo "    Rerun: $COMPOSE_HUMAN up -d keycloak"
+  info "Internal OIDC discovery skipped (NAS mode): the hosted realm is configured in"
+  info "runbook Step 7. Validate hosted OIDC via --domain, or pass --realm <name>."
+  echo
 fi
 
-echo
 echo "Service health through the Envoy gateway (internal: envoy-proxy:10000)..."
 
 GATEWAY_SERVICES=(identity booking notification profile audit reporting configuration customer datahub)
@@ -516,7 +545,7 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
 
   APP_URL="https://app.$PUBLIC_DOMAIN"
   AUTH_URL="https://auth.$PUBLIC_DOMAIN"
-  REALM="fairspot"
+  REALM="$PUBLIC_REALM"
 
   echo "Cloudflare tunnel connectivity..."
   APP_STATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/health/identity" || true)"

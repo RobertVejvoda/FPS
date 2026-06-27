@@ -218,10 +218,11 @@ After startup the script:
 - Confirms `vault-init` seeded the three Dapr secrets into Vault
 - Waits for all 9 app services to respond on their `/health` endpoints
 - Checks Dapr sidecar container state
-- Checks Keycloak OIDC discovery
 - Probes all 9 services through the Envoy gateway
 
 If any check fails the script prints the failing service, the log command, and the compose command to restart it.
+
+> **Internal OIDC on NAS:** the default `--nas` run does **not** check an internal Keycloak realm. On a clean NAS the hosted `fairspot` realm is configured later (Step 7), and the dev `fps-local` realm does not exist — so the gate proves the container stack (health + gateway) and leaves hosted OIDC to the public-domain smoke (`--domain`, see below). To check a realm that already exists, pass `--realm <name>`.
 
 To bring up the stack and verify container/service/sidecar health only — skipping the gateway, OIDC, and E2E smoke (faster on subsequent starts):
 
@@ -291,7 +292,7 @@ After completing Steps 1–7, run the following checks before treating the NAS d
 ./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
 ```
 
-The start script covers: Vault seed, all 9 app service health, all 9 Dapr sidecars running, Keycloak OIDC discovery, and all 9 services via the Envoy gateway. On a developer machine (not NAS), add `--seed` to also seed demo + Green Logistics data and run the booking → notification → audit E2E.
+The start script covers: Vault seed, all 9 app service health, all 9 Dapr sidecars running, and all 9 services via the Envoy gateway. Internal Keycloak OIDC discovery is checked in local mode (realm `fps-local`) or when `--realm <name>` is given; on a default NAS run it is skipped because the hosted realm is configured in Step 7 (validate hosted OIDC via `--domain` in Step 2 below). On a developer machine (not NAS), add `--seed` to also seed demo + Green Logistics data and run the booking → notification → audit E2E.
 
 **Step 2 — Public-domain smoke** (once Cloudflare Tunnel and OIDC are configured):
 
@@ -435,3 +436,4 @@ The following slices must be completed or explicitly deferred before allowing re
 | 2026-05-29 | Claude | Initial runbook for issue #313 |
 | 2026-06-27 | Claude | OPS015C — replace stale Step 6 placeholder with real compose commands and `start-container-stack.sh`; update Dapr component notes to reference container component path; update smoke section with two-level check procedure |
 | 2026-06-27 | Claude | OPS015C review round 2 — `--nas` path is now Docker/Compose-only (container state via `docker inspect`, HTTP probes via throwaway curl container); `--seed` is local-only and rejected with `--nas`; `--skip-smoke` renamed to `--skip-e2e` with accurate wording |
+| 2026-06-27 | Claude | OPS015C review round 3 — environment-aware OIDC realm: default `--nas` no longer checks the `fps-local` realm (absent on a clean NAS); internal OIDC runs in local mode or with `--realm`, hosted OIDC is proven via `--domain` (public realm defaults to `fairspot`) |
