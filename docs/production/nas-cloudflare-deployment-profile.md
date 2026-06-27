@@ -195,34 +195,52 @@ Look for a line like `Connection registered connIndex=0` or `Registered tunnel c
 
 ## Step 6 — Start the FairSpot stack
 
-The Release 1 NAS stack must be started through Docker Compose. Do **not** install .NET or the Dapr CLI on the NAS and do not use `dapr run -f dapr.yaml` for the hosted profile.
+The Release 1 NAS stack runs entirely in Docker. **Do not install .NET SDK/runtime or the Dapr CLI on the NAS.** All FairSpot services, Dapr sidecars, state stores, broker, identity, gateway, and observability run as containers. The local developer flow (`dapr run -f dapr.yaml` or `./tools/start-with-dapr.sh`) is for developer machines only and is not used here.
 
-The target compose profile starts:
-
-- infrastructure containers: databases, broker, vault, keycloak, envoy, observability;
-- FairSpot service containers: Booking, Identity, Profile, Notification, Audit, Reporting, Configuration, Customer, DataHub;
-- Dapr runtime/sidecar containers for the FairSpot services that use Dapr state, pub/sub, workflow, bindings, or secret stores;
-- cloudflared as a separate connector container on the same private Docker network.
-
-Until the containerized app/Dapr compose profile is implemented, this step is not customer-traffic ready. The old local developer flow (`dapr run -f dapr.yaml` or `./tools/start-with-dapr.sh`) remains valid for local development only and is not the NAS deployment path.
-
-Expected operator shape after the implementation slice:
+Use the container start script to bring up the full stack and run post-start health checks. In `--nas` mode the host needs **only Docker and the Docker Compose v2 plugin** — the script reads container state with `docker inspect` and runs every HTTP probe inside a throwaway curl container, so no host `curl`, `python3`, .NET, or Dapr CLI is required:
 
 ```bash
-cd /path/to/fps-repo/code/infrastructure
-docker compose \
-  --env-file .env.nas \
-  -f docker-compose.yaml \
-  -f docker-compose.nas.yml \
-  -f docker-compose.apps.yml \
-  up -d --build
+cd /path/to/fps-repo
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
 ```
 
-`docker-compose.apps.yml` is the planned hosted application profile. It must use container service names for internal routing and must not rely on `host.docker.internal`.
+The script starts these compose layers in order:
 
-Review and confirm that MongoDB, RabbitMQ, Vault, MinIO, Keycloak, and Envoy all have named volumes (not anonymous volumes) so data survives container restarts.
+| File | Contents |
+|---|---|
+| `docker-compose.yaml` | Infrastructure: MongoDB, RabbitMQ, Vault, MinIO, Keycloak, Envoy, observability |
+| `docker-compose.services.yml` | FairSpot app containers: 9 services, no host .NET required |
+| `docker-compose.dapr.yml` | Dapr system services (placement, scheduler), per-app sidecars, vault-init seed |
+| `docker-compose.nas.yml` | NAS overlay: restart-unless-stopped for all containers, required credential enforcement |
 
-> **Note:** `cloudflared/docker-compose.cloudflared.yml` is a separate file that starts only the Cloudflare Tunnel connector. Run it independently with `--env-file cloudflared/.env.nas` as shown in Step 5.
+After startup the script:
+- Waits for infrastructure health checks (Vault, RabbitMQ, MongoDB, PostgreSQL)
+- Confirms `vault-init` seeded the three Dapr secrets into Vault
+- Waits for all 9 app services to respond on their `/health` endpoints
+- Checks Dapr sidecar container state
+- Probes all 9 services through the Envoy gateway
+
+If any check fails the script prints the failing service, the log command, and the compose command to restart it.
+
+> **Internal OIDC on NAS:** the default `--nas` run does **not** check an internal Keycloak realm. On a clean NAS the hosted `fairspot` realm is configured later (Step 7), and the dev `fps-local` realm does not exist — so the gate proves the container stack (health + gateway) and leaves hosted OIDC to the public-domain smoke (`--domain`, see below). To check a realm that already exists, pass `--realm <name>`.
+
+To bring up the stack and verify container/service/sidecar health only — skipping the gateway, OIDC, and E2E smoke (faster on subsequent starts):
+
+```bash
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
+```
+
+> **Seeding on NAS:** `--seed` is **local-only** and is rejected with `--nas`. The seed helpers target the `fps-local` realm with dev credentials, which do not match the NAS-enforced secrets. Seed a NAS pilot with your own pilot-data process, and validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section below). NAS-aware seeding is a tracked follow-up.
+
+To tear down (data volumes are preserved):
+
+```bash
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
+```
+
+All named volumes (MongoDB, RabbitMQ, Vault, MinIO, Keycloak, Grafana, Prometheus, Loki, PostgreSQL) persist across restarts. Only `docker compose down -v` removes data — do not run that command in production.
+
+> **Note:** `cloudflared/docker-compose.cloudflared.yml` is a separate file that starts only the Cloudflare Tunnel connector. Run it independently with `--env-file cloudflared/.env.nas` as shown in Step 5. The start script does not manage cloudflared.
 
 ---
 
@@ -262,18 +280,38 @@ Before customer traffic is allowed, complete the Cloudflare WAF configuration de
 
 ## Smoke check after deployment
 
-After completing Steps 1–7, run the following checks before treating the NAS deployment as ready:
+After completing Steps 1–7, run the following checks before treating the NAS deployment as ready.
 
-| Check | Command / URL | Expected result |
+**Step 1 — Local container smoke** (run by the start script in `--nas` mode):
+
+```bash
+# Full health + gateway + OIDC smoke (default):
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
+
+# Health-only (skip gateway/OIDC/E2E smoke) for a faster restart:
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
+```
+
+The start script covers: Vault seed, all 9 app service health, all 9 Dapr sidecars running, and all 9 services via the Envoy gateway. Internal Keycloak OIDC discovery is checked in local mode (realm `fps-local`) or when `--realm <name>` is given; on a default NAS run it is skipped because the hosted realm is configured in Step 7 (validate hosted OIDC via `--domain` in Step 2 below). On a developer machine (not NAS), add `--seed` to also seed demo + Green Logistics data and run the booking → notification → audit E2E.
+
+**Step 2 — Public-domain smoke** (once Cloudflare Tunnel and OIDC are configured):
+
+```bash
+# Quick connectivity check via the start script:
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --domain fairspot.net
+
+# Full hosted E2E smoke (login, booking, notifications, audit, WAF, TLS):
+APP_URL=https://app.fairspot.net AUTH_URL=https://auth.fairspot.net \
+OIDC_REALM=fairspot ./tools/smoke-hosted.sh
+```
+
+**Step 3 — Additional spot checks:**
+
+| Check | Command | Expected |
 |---|---|---|
 | Tunnel connected | `docker compose -f cloudflared/docker-compose.cloudflared.yml logs cloudflared` | `Registered tunnel connection` |
-| App hostname reachable | `curl -I https://app.fairspot.net/openapi/v1.json` (from external machine) | HTTP 200 or 401 |
-| Auth hostname reachable | `curl -I https://auth.fairspot.net/realms/fairspot/.well-known/openid-configuration` (from external machine) | HTTP 200 |
-| Internal MongoDB not exposed | `curl -v https://<your-NAS-public-IP>:27017` | Connection refused or timeout |
+| Internal MongoDB not exposed | `curl -v https://<NAS-public-IP>:27017` from the Internet | Connection refused or timeout |
 | Internal Grafana not exposed | `curl -v https://app.fairspot.net:3000` | Connection refused or timeout |
-| Local services healthy | `curl http://localhost:10000/openapi/v1.json` (on NAS) | HTTP 200 |
-
-A complete hosted smoke script is tracked in **OPS013** (issue #314).
 
 ---
 
@@ -292,36 +330,40 @@ To fully tear down:
 # Stop cloudflared
 docker compose -f cloudflared/docker-compose.cloudflared.yml down
 
-# Stop application stack
-docker compose down
+# Stop application stack (all compose layers, volumes preserved)
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
 
-# (Keep volumes — data is preserved)
-# docker compose down -v would remove all data
+# Data volumes are preserved by the line above.
+# To remove data too: docker volume rm $(docker volume ls -q | grep fps)
 ```
 
 In the Cloudflare dashboard, a disabled or deleted tunnel removes DNS routing immediately.
 
 ---
 
-## Reset (demo / pilot data)
+## Reset
 
-To reset seeded data to a known state without stopping infrastructure:
-
-```bash
-./tools/demo-reset.sh
-```
-
-This drops and re-creates demo tenants, users, parking data, and booking history without restarting Docker containers. The tunnel and OIDC session state are unaffected by a data reset.
-
-For a full environment reset (stop all services, clean volumes, restart clean):
+**Full environment reset (NAS — stop all services, clean volumes, restart clean):**
 
 ```bash
-docker compose down -v
-docker compose up -d
-# then re-seed:
-./tools/dev-setup-auth.sh
-./tools/dev-seed.sh
+# Tear down and remove data volumes
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
+docker volume rm $(docker volume ls -q | grep fps)
+
+# Bring the stack back up (Docker/Compose only — no host tools needed)
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
 ```
+
+After a clean start on NAS, re-apply pilot tenant data through your pilot onboarding process (HR import + `POST /profile/bootstrap`), then validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section). The `fps-local` demo seed (`dev-setup-auth.sh` / `dev-seed.sh`) is for developer machines only and does not match NAS-enforced credentials.
+
+**Demo re-seed (developer machine, local-container profile only):**
+
+```bash
+# On a dev box running the stack without the NAS overlay:
+./tools/start-container-stack.sh --seed
+```
+
+This configures the `fps-local` realm, seeds demo + Green Logistics data, and runs the local E2E smoke (booking → notification → audit) to confirm pub/sub and workflow are wired. The tunnel and OIDC session state are unaffected by a data re-seed.
 
 ---
 
@@ -348,14 +390,23 @@ If the file is not ignored, do not proceed — add it to `.gitignore` first.
 
 ## Dapr component notes
 
-The NAS pilot uses the local Dapr component set from `code/infrastructure/dapr/components/local/`. These components are unchanged from local development. For customer pilot use:
+The NAS pilot uses the container Dapr component set from `code/infrastructure/dapr/components/container/`. These components are identical to the local development set except all hostnames are Docker service names instead of `localhost`:
 
-- MongoDB state-store components target the NAS-local MongoDB container. Named volumes ensure data persists across restarts.
+| Component | Local endpoint | Container endpoint |
+|---|---|---|
+| MongoDB state stores | `localhost:27017` | `mongodb:27017` |
+| RabbitMQ pub/sub | `hostname: localhost` | `hostname: rabbitmq` |
+| Vault secret store | `http://localhost:8200` | `http://vault:8200` |
+| MinIO bindings | `http://localhost:9000` | `http://minio:9000` |
+
+The Vault token is injected at runtime via the `{env:VAULT_TOKEN}` Dapr component expansion — no token is committed to source control. `vault-init` seeds the three Dapr secrets (MongoDB, RabbitMQ, MinIO credentials) into Vault once on first startup.
+
+Other notes:
 - `workflowstore` is the shared Dapr actor state store required by Dapr Workflow.
-- `fps-pubsub` uses RabbitMQ on the same Docker network.
-- `secretstore` uses HashiCorp Vault in dev mode. **Dev mode Vault does not persist state across restarts.** Before customer traffic, either run Vault in server mode with a persistent volume or replace the secretstore component with a production-grade secret manager.
+- `fps-pubsub` uses RabbitMQ on the `fps_network` Docker network.
+- **Vault runs in dev mode.** Dev mode Vault does not persist state across container restarts. Before customer traffic, run Vault in server mode with a persistent volume (or replace the secret store component with a production-grade alternative) and re-run vault-init after each Vault restart.
 
-A Vault persistence upgrade and production-mode configuration are prerequisites for any customer data. Flag this as a blocker in the acceptance gate below.
+A Vault persistence upgrade and production-mode configuration are prerequisites for any customer data.
 
 ---
 
@@ -369,7 +420,7 @@ The following slices must be completed or explicitly deferred before allowing re
 | 2 | Public-domain Keycloak/OIDC, Envoy CORS, redirect URIs | OPS012 #316 | Not started | **Yes** — auth cannot use localhost assumptions in production |
 | 3 | Persistent tenant-scoped storage (Booking key gaps, in-memory repos) | DATA010 #317 | Not started | **Yes** — no customer data in evaluation-grade stores |
 | 4 | Vault in production mode (not dev mode) | — | Not started | **Yes** — Vault dev mode loses secrets on restart |
-| 5 | Hosted smoke/readiness evidence | OPS013 #314 | Not started | **Yes** — proof that the public domain works end-to-end |
+| 5 | Hosted smoke/readiness evidence | OPS013 #314 / OPS015C #604 | Tooling ready — `start-container-stack.sh` (local) + `smoke-hosted.sh` (public). Operator must attach a passing run. | **Yes** — proof that the public domain works end-to-end |
 | 6 | HR operations workspace | #310 | Not started | Recommended before HR users access the pilot |
 | 7 | Administrator default workspace | #311 | Not started | Recommended before admin users access the pilot |
 | 8 | Tenant onboarding hardening | CUST011 #319 | Not started | Required for production tenant creation |
@@ -383,3 +434,6 @@ The following slices must be completed or explicitly deferred before allowing re
 | Date | Author | Change |
 |---|---|---|
 | 2026-05-29 | Claude | Initial runbook for issue #313 |
+| 2026-06-27 | Claude | OPS015C — replace stale Step 6 placeholder with real compose commands and `start-container-stack.sh`; update Dapr component notes to reference container component path; update smoke section with two-level check procedure |
+| 2026-06-27 | Claude | OPS015C review round 2 — `--nas` path is now Docker/Compose-only (container state via `docker inspect`, HTTP probes via throwaway curl container); `--seed` is local-only and rejected with `--nas`; `--skip-smoke` renamed to `--skip-e2e` with accurate wording |
+| 2026-06-27 | Claude | OPS015C review round 3 — environment-aware OIDC realm: default `--nas` no longer checks the `fps-local` realm (absent on a clean NAS); internal OIDC runs in local mode or with `--realm`, hosted OIDC is proven via `--domain` (public realm defaults to `fairspot`) |
