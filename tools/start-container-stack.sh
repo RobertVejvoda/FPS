@@ -32,9 +32,10 @@
 #                      health, then stop. Skips the gateway, OIDC, seeded E2E, and
 #                      public-domain smoke checks. Health/readiness still runs.
 #   --realm NAME       Internal Keycloak realm to validate OIDC discovery against.
-#                      Default: fps-local in local mode; in --nas mode the internal
-#                      OIDC check is skipped (the hosted realm is configured in
-#                      runbook Step 7 and proven via --domain) unless --realm is set.
+#                      Default: fps-local only when --seed is used. Without --seed,
+#                      local mode skips OIDC because the dev realm may not exist yet.
+#                      In --nas mode the internal OIDC check is skipped unless
+#                      --realm is set.
 #   --domain DOMAIN    After local checks pass, probe https://app.DOMAIN and
 #                      https://auth.DOMAIN through Cloudflare (Docker-only). The
 #                      public realm defaults to fairspot (override with --realm).
@@ -125,17 +126,16 @@ if [[ "$MODE" == "nas" && "$SEED" == "true" ]]; then
 fi
 
 # ── Resolve the internal OIDC realm ──────────────────────────────────────────────
-# Local mode ships the fps-local dev realm, so the internal Keycloak OIDC check is
-# meaningful there. On a clean NAS the hosted realm is configured later (runbook
-# Step 7), and fps-local does not exist — so the internal OIDC check is skipped by
-# default and hosted OIDC is proven via --domain instead. --realm forces a check
-# against a named realm in either mode.
+# Local mode configures the fps-local dev realm only when --seed runs
+# dev-setup-auth.sh. On an unseeded local or clean NAS stack, the realm may not
+# exist yet, so the internal OIDC check is skipped by default. --realm forces a
+# check against a named realm in either mode.
 if [[ -n "$REALM_OVERRIDE" ]]; then
   INTERNAL_REALM="$REALM_OVERRIDE"
-elif [[ "$MODE" == "local" ]]; then
+elif [[ "$MODE" == "local" && "$SEED" == "true" ]]; then
   INTERNAL_REALM="fps-local"
 else
-  INTERNAL_REALM=""   # nas default: skip internal OIDC (realm not yet configured)
+  INTERNAL_REALM=""   # unseeded local/NAS default: skip internal OIDC
 fi
 PUBLIC_REALM="${REALM_OVERRIDE:-fairspot}"
 
@@ -508,8 +508,13 @@ if [[ -n "$INTERNAL_REALM" ]]; then
   fi
   echo
 else
-  info "Internal OIDC discovery skipped (NAS mode): the hosted realm is configured in"
-  info "runbook Step 7. Validate hosted OIDC via --domain, or pass --realm <name>."
+  if [[ "$MODE" == "local" ]]; then
+    info "Internal OIDC discovery skipped: local Keycloak realm is configured by --seed."
+    info "Use --seed to create fps-local and run E2E smoke, or pass --realm <name>."
+  else
+    info "Internal OIDC discovery skipped (NAS mode): the hosted realm is configured in"
+    info "runbook Step 7. Validate hosted OIDC via --domain, or pass --realm <name>."
+  fi
   echo
 fi
 
