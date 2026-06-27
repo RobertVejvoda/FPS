@@ -1,4 +1,4 @@
-# NAS deployment environment template
+# Cloudflare Tunnel environment template
 # Copy this file to .env.nas and fill in the values.
 # .env.nas is listed in .gitignore and must NEVER be committed.
 #
@@ -16,27 +16,3 @@ CLOUDFLARED_TUNNEL_TOKEN=REPLACE_WITH_YOUR_TUNNEL_TOKEN
 # Used for reference in documentation; actual routing is set in the
 # Cloudflare dashboard public hostname configuration.
 FPS_PUBLIC_DOMAIN=REPLACE_WITH_YOUR_DOMAIN
-
-# ─── Keycloak ─────────────────────────────────────────────────────────────────
-# Admin credentials for the NAS-hosted Keycloak instance.
-# Only used locally; admin console is not published through the tunnel.
-KEYCLOAK_ADMIN=REPLACE_WITH_ADMIN_USERNAME
-KEYCLOAK_ADMIN_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
-
-# ─── MongoDB ──────────────────────────────────────────────────────────────────
-# If using authenticated MongoDB in the NAS profile, set credentials here.
-# Dapr state-store components must reference these through the Dapr secret store,
-# not via inline values in component YAML.
-MONGO_INITDB_ROOT_USERNAME=REPLACE_WITH_MONGO_USERNAME
-MONGO_INITDB_ROOT_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
-
-# ─── MinIO ────────────────────────────────────────────────────────────────────
-# Replace the default minioadmin credentials before NAS pilot use.
-MINIO_ROOT_USER=REPLACE_WITH_MINIO_USERNAME
-MINIO_ROOT_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
-
-# ─── Vault ────────────────────────────────────────────────────────────────────
-# IMPORTANT: The local dev token (dev-only-token) must not be used in any hosted
-# environment. Run Vault in server mode with a persistent volume and rotate the
-# root token before customer traffic. See the deployment runbook for details.
-VAULT_ROOT_TOKEN=REPLACE_WITH_VAULT_TOKEN

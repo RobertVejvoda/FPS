@@ -157,7 +157,7 @@ Ensure **Proxied** (orange cloud) is toggled on for all DNS records. This is req
 
 ## Step 4 — Create the NAS environment file
 
-The cloudflared service requires the tunnel token at runtime. Create a `.env.nas` file from the provided template. This file is listed in `.gitignore` and must never be committed.
+The cloudflared service requires the tunnel token at runtime. Create a `.env.nas` file from the provided template. This file is listed in `.gitignore` and must never be committed. This file is only for the Cloudflare Tunnel connector; FairSpot stack credentials live in `code/infrastructure/.env`.
 
 ```bash
 cd /path/to/fps-repo/code/infrastructure
@@ -170,7 +170,28 @@ Edit `cloudflared/.env.nas` and set:
 CLOUDFLARED_TUNNEL_TOKEN=<paste tunnel token here>
 ```
 
-All other values in the template are placeholders that the operator must review and fill in before starting services. See the template comments for each value.
+The optional `FPS_PUBLIC_DOMAIN` value is documentation/reference only; routing is configured in the Cloudflare dashboard.
+
+Create the FairSpot stack environment file as well:
+
+```bash
+cd /path/to/fps-repo
+cp code/infrastructure/.env.example code/infrastructure/.env
+```
+
+Fill every required value in `code/infrastructure/.env`. The NAS overlay intentionally refuses to start when these are missing:
+
+| Value | Why it is required |
+|---|---|
+| `VAULT_TOKEN` | Dapr sidecars read component credentials through Vault; the local `dev-only-token` is not allowed on NAS. |
+| `MONGO_USER` / `MONGO_PASS` | Authoritative state stores must not use local `admin/admin` defaults. |
+| `RABBITMQ_USER` / `RABBITMQ_PASS` | Pub/sub broker credentials protect business events and background processing. |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Object storage credentials must not use `minioadmin/minioadmin`. |
+| `KC_ADMIN_USER` / `KC_ADMIN_PASS` | Keycloak bootstrap admin must be unique and used only for setup. |
+| `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | Grafana is an operator console; local `admin/admin` must not be accepted for hosted use. |
+| `FPS_AUTH_*` | Services must validate tokens from the hosted public issuer, not the local `fps-local` realm. |
+
+Generate secrets with a password manager or a command such as `openssl rand -hex 32`. Store the final values in the operator password manager and the NAS-only env file. Do not paste them into GitHub issues, PRs, logs, or screenshots.
 
 ---
 
@@ -197,7 +218,16 @@ Look for a line like `Connection registered connIndex=0` or `Registered tunnel c
 
 The Release 1 NAS stack runs entirely in Docker. **Do not install .NET SDK/runtime or the Dapr CLI on the NAS.** All FairSpot services, Dapr sidecars, state stores, broker, identity, gateway, and observability run as containers. The local developer flow (`dapr run -f dapr.yaml` or `./tools/start-with-dapr.sh`) is for developer machines only and is not used here.
 
-Use the container start script to bring up the full stack and run post-start health checks. In `--nas` mode the host needs **only Docker and the Docker Compose v2 plugin** — the script reads container state with `docker inspect` and runs every HTTP probe inside a throwaway curl container, so no host `curl`, `python3`, .NET, or Dapr CLI is required:
+The preferred operator command is the NAS deployment wrapper:
+
+```bash
+cd /path/to/fps-repo
+./tools/deploy-nas.sh --domain fairspot.net
+```
+
+The wrapper starts the FairSpot container stack, starts the Cloudflare Tunnel connector when `code/infrastructure/cloudflared/.env.nas` exists, and runs public-domain checks when `--domain` is supplied.
+
+Use the lower-level container start script when you want to troubleshoot the stack without starting the tunnel. In `--nas` mode the host needs **only Docker and the Docker Compose v2 plugin** — the script reads container state with `docker inspect` and runs every HTTP probe inside a throwaway curl container, so no host `curl`, `python3`, .NET, or Dapr CLI is required:
 
 ```bash
 cd /path/to/fps-repo
@@ -385,17 +415,19 @@ Local container demos use dev defaults (`http://keycloak:8080/realms/fps-local`,
 
 | Value | Where to store | Never do this |
 |---|---|---|
-| Cloudflare tunnel token | `.env.nas` on the NAS; operator's password manager | Commit to git; paste into any issue or PR |
-| Keycloak admin password | NAS secrets manager or `.env.nas` | Hardcode in `docker-compose.yaml` |
-| MongoDB passwords | Dapr secretstore (Vault) or `.env.nas` | Commit inline credentials |
+| Cloudflare tunnel token | `code/infrastructure/cloudflared/.env.nas` on the NAS; operator's password manager | Commit to git; paste into any issue or PR |
+| Keycloak admin password | NAS secrets manager or `code/infrastructure/.env` | Hardcode in `docker-compose.yaml` |
+| Grafana admin password | NAS secrets manager or `code/infrastructure/.env` | Use `admin/admin` in hosted use |
+| MongoDB passwords | Dapr secretstore (Vault) plus `code/infrastructure/.env` for startup seeding | Commit inline credentials |
 | Vault root token | NAS secrets manager | Use the local dev token (`dev-only-token`) in any hosted environment |
-| MinIO root credentials | `.env.nas` | Use default `minioadmin` credentials in pilot |
+| MinIO root credentials | NAS secrets manager or `code/infrastructure/.env` | Use default `minioadmin` credentials in pilot |
 | JWT signing keys | Keycloak-managed; never exported | Commit key material |
 
-The `.env.nas` file is in `.gitignore`. Verify this before your first commit on the NAS:
+The NAS env files are in `.gitignore`. Verify this before your first commit on the NAS:
 
 ```bash
 git check-ignore -v code/infrastructure/cloudflared/.env.nas
+git check-ignore -v code/infrastructure/.env
 ```
 
 If the file is not ignored, do not proceed — add it to `.gitignore` first.

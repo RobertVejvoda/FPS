@@ -43,10 +43,11 @@ This document records the hosted demo environment evidence for the NAS/Cloudflar
 | Value | Where stored | Verification |
 |---|---|---|
 | Cloudflare tunnel token | `.env.nas` (gitignored) | `git check-ignore -v code/infrastructure/cloudflared/.env.nas` |
-| Keycloak admin password | `.env.nas` or NAS secrets manager | Must not be the default `admin` password |
-| MongoDB passwords | Dapr secretstore (Vault) or `.env.nas` | Must not use default `admin/admin` credentials |
+| Keycloak admin password | `code/infrastructure/.env` or NAS secrets manager | Must not be the default `admin` password |
+| Grafana admin password | `code/infrastructure/.env` or NAS secrets manager | Must not use `admin/admin` |
+| MongoDB passwords | Dapr secretstore (Vault) plus `code/infrastructure/.env` for startup seeding | Must not use default `admin/admin` credentials |
 | Vault root token | NAS secrets manager | Must **not** use `dev-only-token` (dev mode value) |
-| MinIO root credentials | `.env.nas` | Must **not** use default `minioadmin/minioadmin` |
+| MinIO root credentials | `code/infrastructure/.env` or NAS secrets manager | Must **not** use default `minioadmin/minioadmin` |
 
 **Vault dev mode warning:** The local Dapr secret store uses HashiCorp Vault in dev mode (`dev-only-token`). Dev mode does not persist secrets across restarts. Before any customer data, Vault must be switched to server mode with a persistent volume. This is a prerequisite listed in OPS011 "Before customer traffic" table.
 

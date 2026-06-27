@@ -14,10 +14,33 @@
 - Dapr component bindings and OpenTelemetry exporters are the portability boundary.
 - Provider-specific scripts are allowed only in deployment/profile folders, not inside business logic.
 - Demo and production profiles must use real secret stores, not committed files.
+- Local profiles may use documented default credentials because they are disposable developer environments. Hosted profiles must refuse to start when required operator secrets are missing.
 - Public profile ingress must expose only intended web/API/auth endpoints.
 - Internal service ports, databases, brokers, Dapr sidecars, metrics, Swagger/OpenAPI, Keycloak admin, and observability backends must not be public.
 - Mobile store release is not the first deployment gate; internal/TestFlight/Play internal testing follows after hosted web/API/auth are stable.
 - Operational procedures stay in `production/` runbooks; this page states profile boundaries and acceptance gates.
+
+## Operator Experience Target
+
+The target deployment experience is one command after one-time environment setup.
+
+One-time setup is still required because the operator must create secrets and domain resources that cannot safely be committed or generated blindly:
+
+1. Create or copy the NAS environment file from `code/infrastructure/.env.example`.
+2. Fill all required secrets with unique values from a password manager.
+3. Create the Cloudflare Tunnel and copy its token into the ignored tunnel env file.
+4. Configure public hostnames in Cloudflare.
+5. Configure the hosted Keycloak realm and clients for the public URLs.
+
+After that, the expected NAS operation path is:
+
+```bash
+./tools/deploy-nas.sh --domain fairspot.net
+```
+
+The wrapper starts the full container stack, starts `cloudflared` when its env file is present, and runs public-domain checks when a domain is supplied. The lower-level `./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env` remains the reusable health gate for CI/manual troubleshooting.
+
+This is intentionally "single command", not "zero configuration": credentials, DNS ownership, WAF policy, and identity-provider settings are security boundaries and must remain explicit.
 
 ## NAS/Cloudflare Target
 
@@ -31,6 +54,7 @@ The immediate customer-first target is NAS-hosted FairSpot behind Cloudflare Tun
 - NAS operation requires Docker/Container Manager only. .NET and Dapr are runtime containers, not host-installed prerequisites.
 - Keycloak admin, Grafana/Prometheus/Jaeger/Loki, databases, brokers, MinIO, Vault, services, and Dapr sidecars remain private.
 - Operator-only surfaces use local access or Cloudflare Access, not public exposure.
+- The NAS overlay enforces real credentials for Keycloak, Grafana, MongoDB, RabbitMQ, MinIO, Vault, and FairSpot token validation settings before startup.
 - WAF custom rules block internal/debug paths and rate-limit abuse-sensitive endpoints.
 - Smoke evidence must cover login, booking, Draw, notifications, audit, reporting/read-models, HR/admin operations, reset, backup/restore, and log review.
 - Hosted smoke evidence must be recorded before customer data is allowed. Localhost smoke can prove script behavior, but public-domain checks remain pending until run against the real domain.
