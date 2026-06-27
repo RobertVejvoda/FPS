@@ -89,6 +89,13 @@ if [[ "$MODE" == "local" ]]; then
   export VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
 fi
 
+# The normal container profile is Production-like. The local --seed path is a
+# developer/demo bootstrap path: it needs OpenAPI availability and the
+# Development-only profile seed endpoint.
+if [[ "$MODE" == "local" && "$SEED" == "true" ]]; then
+  export FPS_ASPNETCORE_ENVIRONMENT="${FPS_ASPNETCORE_ENVIRONMENT:-Development}"
+fi
+
 # ── Output helpers ──────────────────────────────────────────────────────────────
 
 GREEN='\033[0;32m'
@@ -260,10 +267,10 @@ ok "probe image: $CURL_IMAGE"
 # ── Start the stack ──────────────────────────────────────────────────────────────
 
 hdr "Starting stack ($MODE mode)"
-echo "Command: $COMPOSE_HUMAN up -d"
+echo "Command: $COMPOSE_HUMAN up -d --build"
 echo
 
-"${COMPOSE_CMD[@]}" up -d
+"${COMPOSE_CMD[@]}" up -d --build
 
 # ── Wait for infrastructure health ───────────────────────────────────────────────
 

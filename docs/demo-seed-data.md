@@ -149,6 +149,8 @@ docker volume rm $(docker volume ls -q | grep fps)
 ./tools/start-container-stack.sh --seed
 ```
 
+`start-container-stack.sh --seed` starts the local container services in `Development` mode so the dev-only seed endpoints and OpenAPI probes are available. The default container stack and the NAS profile remain Production-like.
+
 Configuration (policy + slots at `Prague`) is re-seeded automatically by the Configuration service on startup when its store is empty after a full reset.
 
 > **Evidence:** durable-store list per [OPS008 Persistence Profile](./production/ops008-persistence-profile) and the merged PERSIST001–006 slices; `bookingstore` is a MongoDB-backed Dapr component. This guidance is from a static review of the persistence docs/components — confirm exact per-store behavior by running the stack.

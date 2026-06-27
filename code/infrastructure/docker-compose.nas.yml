@@ -27,6 +27,78 @@
 
 services:
 
+  fps-audit:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-booking:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-configuration:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-customer:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-datahub:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-identity:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-notification:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-profile:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
+  fps-reporting:
+    environment:
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
+      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
+      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
+
   envoy-proxy:
     restart: unless-stopped
 

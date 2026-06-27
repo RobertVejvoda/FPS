@@ -56,6 +56,24 @@ public sealed class FpsJwtBearerOptionsExtensionsTests
     }
 
     [Fact]
+    public void ConfigureFpsJwtBearer_InProduction_AllowsHttpMetadataOnlyWhenExplicitlyEnabled()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Auth:Authority"] = "http://keycloak:8080/realms/fps-local",
+                ["Auth:Audience"] = "fps-mobile-dev",
+                ["Auth:AllowHttpMetadata"] = "true",
+            })
+            .Build();
+        var options = new JwtBearerOptions();
+
+        options.ConfigureFpsJwtBearer(configuration, new FakeHostEnvironment("Production"));
+
+        Assert.False(options.RequireHttpsMetadata);
+    }
+
+    [Fact]
     public void ConfigureFpsJwtBearer_DoesNotAllowDifferentRealmIssuerHostOverride()
     {
         var configuration = new ConfigurationBuilder()

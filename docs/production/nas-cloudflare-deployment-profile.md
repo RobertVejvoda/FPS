@@ -230,7 +230,7 @@ To bring up the stack and verify container/service/sidecar health only — skipp
 ./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
 ```
 
-> **Seeding on NAS:** `--seed` is **local-only** and is rejected with `--nas`. The seed helpers target the `fps-local` realm with dev credentials, which do not match the NAS-enforced secrets. Seed a NAS pilot with your own pilot-data process, and validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section below). NAS-aware seeding is a tracked follow-up.
+> **Seeding on NAS:** `--seed` is **local-only** and is rejected with `--nas`. The seed helpers target the `fps-local` realm with dev credentials, and the local seeded container path runs app services in `Development` mode so dev-only seed endpoints are available. This does not match the NAS-enforced secrets or Production-like service profile. Seed a NAS pilot with your own pilot-data process, and validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section below). NAS-aware seeding is a tracked follow-up.
 
 To tear down (data volumes are preserved):
 
@@ -365,9 +365,23 @@ After a clean start on NAS, re-apply pilot tenant data through your pilot onboar
 
 This configures the `fps-local` realm, seeds demo + Green Logistics data, and runs the local E2E smoke (booking → notification → audit) to confirm pub/sub and workflow are wired. The tunnel and OIDC session state are unaffected by a data re-seed.
 
+The local seeded container profile intentionally runs app services in `Development` mode; the default local and NAS starts remain Production-like.
+
 ---
 
 ## Secrets and environment values
+
+The NAS `.env` must include the hosted OIDC issuer and API audience used by browser/mobile tokens. For Release 1 with one `fairspot` realm:
+
+```bash
+FPS_AUTH_AUTHORITY=https://auth.fairspot.net/realms/fairspot
+FPS_AUTH_AUDIENCE=fps-web
+FPS_AUTH_ADDITIONAL_AUDIENCES=fps-mobile,fps-cli
+FPS_AUTH_ALLOW_HTTP_METADATA=false
+FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE=false
+```
+
+Local container demos use dev defaults (`http://keycloak:8080/realms/fps-local`, `fps-mobile-dev`, HTTP metadata allowed, plus local issuer host override) so tokens minted from `http://localhost:8180` validate inside Docker. The NAS overlay requires explicit hosted values and will not silently inherit those local defaults.
 
 | Value | Where to store | Never do this |
 |---|---|---|

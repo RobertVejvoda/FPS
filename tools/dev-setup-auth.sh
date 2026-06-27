@@ -305,7 +305,7 @@ echo "Realm imported."
 for USERNAME in $USERS; do
   USER_ID=$(curl -sf \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
-    "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME" \
+    "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$USERNAME&exact=true" \
     | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
   if [ -z "$USER_ID" ]; then
@@ -324,6 +324,18 @@ done
 
 echo "Validating demo token claims..."
 for USERNAME in employee1 employee4; do
+  TOKEN=$(get_user_token "$USERNAME")
+  if [ -z "$TOKEN" ]; then
+    echo "ERROR: Could not get validation token for '$USERNAME'."
+    exit 1
+  fi
+  TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
+  if [ "$TENANT_ID" != "demo" ]; then
+    echo "ERROR: Token for '$USERNAME' has tenant_id='$TENANT_ID' (expected demo)."
+    exit 1
+  fi
+done
+for USERNAME in hr-admin tenant-admin report-viewer auditor; do
   TOKEN=$(get_user_token "$USERNAME")
   if [ -z "$TOKEN" ]; then
     echo "ERROR: Could not get validation token for '$USERNAME'."

@@ -17,7 +17,8 @@ public static class FpsJwtBearerOptionsExtensions
 
         options.Authority = configuration["Auth:Authority"];
         options.Audience = primaryAudience;
-        options.RequireHttpsMetadata = !environment.IsDevelopment();
+        options.RequireHttpsMetadata = !environment.IsDevelopment()
+            && !IsTruthy(configuration["Auth:AllowHttpMetadata"]);
         options.TokenValidationParameters.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
         options.TokenValidationParameters.NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier;
         if (audiences.Count > 0)

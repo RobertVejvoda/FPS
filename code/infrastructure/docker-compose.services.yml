@@ -13,6 +13,13 @@
 # Port assignments match the service launchSettings.json HTTP ports.
 # Dapr sidecars are wired separately (see OPS014).
 
+x-fps-service-auth-env: &fps-service-auth-env
+  Auth__Authority: ${FPS_AUTH_AUTHORITY:-http://keycloak:8080/realms/fps-local}
+  Auth__Audience: ${FPS_AUTH_AUDIENCE:-fps-mobile-dev}
+  Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-fps-web-dev,fps-cli-dev}
+  Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-true}
+  Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-true}
+
 services:
 
   fps-audit:
@@ -27,8 +34,9 @@ services:
     ports:
       - "5161:5161"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5161"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
@@ -44,8 +52,10 @@ services:
     ports:
       - "5131:5131"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5131"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
+      ProfileService__BaseUrl: "http://fps-profile:5197"
     networks:
       - web
 
@@ -61,8 +71,9 @@ services:
     ports:
       - "5141:5141"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5141"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
@@ -78,8 +89,16 @@ services:
     ports:
       - "5181:5181"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5181"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
+      DemoSeed__ProfileBaseUrl: "http://fps-profile:5197"
+      DemoSeed__ConfigurationBaseUrl: "http://fps-configuration:5141"
+      Readiness__ProfileBaseUrl: "http://fps-profile:5197"
+      Readiness__BookingBaseUrl: "http://fps-booking:5131"
+      Readiness__NotificationBaseUrl: "http://fps-notification:5157"
+      Readiness__AuditBaseUrl: "http://fps-audit:5161"
+      Readiness__ReportingBaseUrl: "http://fps-reporting:5171"
     networks:
       - web
 
@@ -95,8 +114,9 @@ services:
     ports:
       - "5211:5211"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5211"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=fps_datahub;Username=fps;Password=fps"
     networks:
       - web
@@ -113,8 +133,9 @@ services:
     ports:
       - "5192:5192"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5192"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
@@ -130,8 +151,9 @@ services:
     ports:
       - "5157:5157"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5157"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
@@ -147,8 +169,9 @@ services:
     ports:
       - "5197:5197"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5197"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
@@ -164,8 +187,9 @@ services:
     ports:
       - "5171:5171"
     environment:
+      <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5171"
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
