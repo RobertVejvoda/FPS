@@ -2,7 +2,8 @@
 #
 # Profile: local-container (internal Docker-only run — no host Dapr CLI or .NET required)
 # NOT NAS/production: Vault token defaults to dev-only-token via VAULT_TOKEN env var.
-# For NAS-hosted: inject VAULT_TOKEN and set DAPR_VERSION to match the deployed runtime.
+# For NAS-hosted: inject VAULT_TOKEN and set DAPR_RUNTIME_VERSION / VAULT_IMAGE_VERSION
+# to match the deployed runtime.
 #
 # Combined bring-up (from repo root):
 #   docker compose \
@@ -12,9 +13,11 @@
 #     up -d
 #
 # Image strategy:
-#   DAPR_VERSION (env, default 1.18.4) controls all Dapr image tags.
-#   System services (placement, scheduler) use daprio/dapr which contains all binaries.
-#   Sidecars use daprio/daprd (leaner, sidecar-only image) — matches docs/production/demo-profile-decision.md.
+#   DAPR_RUNTIME_VERSION (env, default 1.18.0) controls Dapr runtime image tags.
+#   Keep this separate from .NET SDK package versions such as 1.18.4: not every
+#   SDK patch release has a matching Docker runtime image tag.
+#   System services (placement, scheduler) use daprio/dapr which contains all
+#   binaries. Sidecars use daprio/daprd, the lean sidecar image.
 #
 # Placement (actors) and Scheduler (workflow reminders) are both required for Dapr 1.14+.
 #
@@ -23,14 +26,16 @@
 # on localhost:3500 (HTTP) / localhost:50001 (gRPC).
 
 x-dapr-system: &dapr-system
-  image: daprio/dapr:${DAPR_VERSION:-1.18.4}
+  image: daprio/dapr:${DAPR_RUNTIME_VERSION:-1.18.0}
   restart: unless-stopped
 
 x-dapr-sidecar-base: &dapr-sidecar-base
-  image: daprio/daprd:${DAPR_VERSION:-1.18.4}
+  image: daprio/daprd:${DAPR_RUNTIME_VERSION:-1.18.0}
   volumes:
     - ./dapr/components/container:/dapr/components:ro
     - ./dapr/configuration:/dapr/config:ro
+  secrets:
+    - vault_token
   restart: unless-stopped
 
 services:
@@ -41,10 +46,12 @@ services:
   # as env vars; do not re-seed if Vault already has the secrets.
 
   vault-init:
-    image: hashicorp/vault:latest
+    image: hashicorp/vault:${VAULT_IMAGE_VERSION:-1.18}
     networks:
       - web
     depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
       vault:
         condition: service_healthy
     restart: "no"
@@ -85,6 +92,9 @@ services:
 
   dapr-scheduler:
     <<: *dapr-system
+    # The Dapr 1.18 scheduler image runs as a non-root user by default; run the
+    # local/NAS scheduler as root so the mounted scheduler volume is writable.
+    user: "0:0"
     command:
       - "./scheduler"
       - "--port"
@@ -501,6 +511,10 @@ services:
 
 volumes:
   dapr_scheduler_data:
+
+secrets:
+  vault_token:
+    environment: VAULT_TOKEN
 
 networks:
   web:

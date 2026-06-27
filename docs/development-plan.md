@@ -136,7 +136,7 @@ This section tracks historical gaps that were found while planning and the remai
 ### Resolved
 
 **1. Dapr version was outdated** ✅ *Resolved*
-FairSpot targets **Dapr 1.18+**. Dapr Workflows require at least 1.10. The .NET SDK packages and runtime baseline were upgraded to 1.18.4 in OPS014.
+FairSpot targets **Dapr 1.18+**. Dapr Workflows require at least 1.10. The .NET SDK packages are pinned to 1.18.4; the container runtime images are pinned separately to an available Dapr 1.18 runtime tag (`DAPR_RUNTIME_VERSION=1.18.0`).
 
 **2. Multi-tenancy isolation strategy was undefined** ✅ *Resolved, revised 14.5.2026*
 The current decision is tenant-scoped storage inside service-owned stores. The current implementation direction uses collection-per-tenant where the selected store supports it, but the durable architecture rule is that services resolve tenant-specific storage names, partitions, or keys from authenticated/service context.

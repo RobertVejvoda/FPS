@@ -9,7 +9,7 @@ services:
       - web
 
   vault:
-    image: hashicorp/vault:latest
+    image: hashicorp/vault:${VAULT_IMAGE_VERSION:-1.18}
     ports:
       - "8200:8200"    
     cap_add:
@@ -117,6 +117,58 @@ services:
       && exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile /data/configdb/keyfile"
     networks:
       - web
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mongodb-init:
+    image: mongo:latest
+    networks:
+      - web
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      MONGO_USER: "${MONGO_USER:-admin}"
+      MONGO_PASS: "${MONGO_PASS:-admin}"
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+        mongosh --quiet \
+          --username "$$MONGO_USER" \
+          --password "$$MONGO_PASS" \
+          --authenticationDatabase admin \
+          --host mongodb:27017 \
+          --eval '
+            const expected = "mongodb:27017";
+            const desired = { _id: "rs0", members: [{ _id: 0, host: expected }] };
+            try {
+              const status = rs.status();
+              if (status.ok === 1) {
+                const cfg = rs.conf();
+                if (cfg.members.length !== 1 || cfg.members[0].host !== expected) {
+                  cfg.members = desired.members;
+                  cfg.version = (cfg.version || 1) + 1;
+                  rs.reconfig(cfg, { force: true });
+                  print("Mongo replica set reconfigured for Docker DNS.");
+                } else {
+                  print("Mongo replica set already configured.");
+                }
+              }
+            } catch (e) {
+              rs.initiate(desired);
+              print("Mongo replica set initialized.");
+            }
+          '
     
 
   jaeger:

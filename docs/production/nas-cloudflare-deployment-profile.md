@@ -399,7 +399,7 @@ The NAS pilot uses the container Dapr component set from `code/infrastructure/da
 | Vault secret store | `http://localhost:8200` | `http://vault:8200` |
 | MinIO bindings | `http://localhost:9000` | `http://minio:9000` |
 
-The Vault token is injected at runtime via the `{env:VAULT_TOKEN}` Dapr component expansion — no token is committed to source control. `vault-init` seeds the three Dapr secrets (MongoDB, RabbitMQ, MinIO credentials) into Vault once on first startup.
+The Vault token is mounted into Dapr sidecars as a Docker Compose secret file and referenced by the Vault component through `vaultTokenMountPath` — no token is committed to source control. `vault-init` seeds the three Dapr secrets (MongoDB, RabbitMQ, MinIO credentials) into Vault once on first startup.
 
 Other notes:
 - `workflowstore` is the shared Dapr actor state store required by Dapr Workflow.

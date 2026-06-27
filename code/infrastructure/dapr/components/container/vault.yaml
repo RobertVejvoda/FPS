@@ -10,8 +10,8 @@ spec:
     value: http://vault:8200
   - name: skipVerify
     value : "true"
-  - name: vaultToken
-    value : "{env:VAULT_TOKEN}"
+  - name: vaultTokenMountPath
+    value : "/run/secrets/vault_token"
   - name: vaultKVPrefix
     value : "dapr"
   - name: vaultKVUsePrefix
@@ -20,6 +20,7 @@ spec:
     value: "secret"
   - name: vaultValueType
     value: "map"
-  # VAULT_TOKEN is injected at runtime via docker-compose.dapr.yml (env var).
-  # Local-container default: dev-only-token. NAS/production: set VAULT_TOKEN
-  # in the host environment; the token must never be committed in source control.
+  # VAULT_TOKEN is mounted at runtime via the docker-compose.dapr.yml
+  # vault_token secret. Local-container default: dev-only-token. NAS/production:
+  # set VAULT_TOKEN in the env file; the token must never be committed in source
+  # control.

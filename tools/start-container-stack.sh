@@ -81,6 +81,13 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# Compose mounts VAULT_TOKEN into Dapr sidecars as a Docker secret file for the
+# Vault component. Local-container mode uses the checked-in dev Vault token. NAS
+# mode must get a real value from --env-file and is enforced below.
+if [[ "$MODE" == "local" ]]; then
+  export VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
+fi
+
 # ── Output helpers ──────────────────────────────────────────────────────────────
 
 GREEN='\033[0;32m'

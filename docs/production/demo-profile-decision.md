@@ -37,7 +37,7 @@ What the local harness already provides, from `local-test-harness.md` and the re
 | Keycloak | `quay.io/keycloak/keycloak:latest` | OIDC identity provider, `fps-local` realm |
 | RabbitMQ | `rabbitmq:3-management` | Dapr pub/sub broker (`fps-pubsub`) |
 | MongoDB | `mongo:latest` | Dapr state stores (booking, profile, audit, reporting, config, notification) |
-| HashiCorp Vault | `hashicorp/vault:latest` | Dapr secret store |
+| HashiCorp Vault | `hashicorp/vault:1.18` | Dapr secret store |
 | MinIO | `minio/minio` | Dapr S3-compatible output binding (`s3store`) |
 | Envoy | `envoyproxy/envoy:v1.33.1` | Local API gateway / ingress |
 | Jaeger | `jaegertracing/all-in-one` | Distributed traces |
@@ -46,7 +46,7 @@ What the local harness already provides, from `local-test-harness.md` and the re
 | Alertmanager | `prom/alertmanager` | Alert routing |
 | Loki | `grafana/loki` | Log aggregation |
 | Grafana | `grafana/grafana` | Dashboards |
-| Dapr sidecar | `daprio/daprd:1.18.4` | Service mesh, pub/sub, state, secrets |
+| Dapr runtime / sidecar | `daprio/dapr:1.18.0` for placement/scheduler, `daprio/daprd:1.18.0` for sidecars | Placement, scheduler, sidecar runtime (`daprd`), pub/sub, state, secrets |
 
 ### 1.3 Dapr Component Contracts
 
