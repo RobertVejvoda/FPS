@@ -9,7 +9,7 @@ This document describes the demo data seeded by `./tools/dev-seed.sh` and which 
 ./tools/dev-seed.sh              # seed profiles, vehicles, bookings, and run the demo Draw
 ```
 
-Profile re-seeding is safe. Booking request seeding is not idempotent; restart the local harness before re-running when you need a clean demo.
+Profile re-seeding is safe (idempotent). Bookings, notifications, and audit records are now stored in durable Dapr state (MongoDB), so re-running the seed **accumulates** data rather than replacing it. When you need a clean demo, do a full reset — see [Resetting seed data](#resetting-seed-data).
 
 ---
 
@@ -84,7 +84,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 # Admin/reporting experience
 TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/tenants/tenant-1/readiness | python3 -m json.tool
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/tenants/demo/readiness | python3 -m json.tool
 
 TOKEN=$(./tools/dev-auth.sh report-viewer)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/summary | python3 -m json.tool
@@ -97,17 +97,33 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3
 
 ## Resetting seed data
 
-Profile snapshots are overwritten on each run of `dev-seed.sh` (idempotent).
+> **After PERSIST001–006, several stores are durable.** Configuration, Profile, Audit, Notification, Booking fairness metrics, and the DataHub read models are backed by MongoDB/PostgreSQL (Dapr state stores and EF Core), so they **survive a service restart**. Restarting services alone no longer gives a clean demo — re-running `dev-seed.sh` accumulates duplicate bookings, notifications, and audit records.
 
-Booking requests are **not** idempotent — repeated `dev-seed.sh` runs create duplicate future requests because the booking service has no admin-delete endpoint. To reset booking data, restart the services (the in-memory store is cleared on shutdown):
+| Action | Effect |
+|---|---|
+| Re-run `dev-seed.sh` | Profile snapshots are overwritten (idempotent); new bookings, notifications, and audit records are **added** on top of existing data. |
+| Restart services only | Durable stores above are **kept**; only intentional in-memory stubs (e.g. the simulation clock) reset. |
+| Full reset (clear data volumes) | Removes all durable state for a clean demo. |
+
+**Clean reset — developer harness** (`stop-local-harness.sh --reset` runs `docker compose down -v`, removing the data volumes):
 
 ```bash
-./tools/stop-local-harness.sh
+./tools/stop-local-harness.sh --reset
 ./tools/start-local-harness.sh
 ./tools/dev-seed.sh
 ```
 
-Configuration (policy + slots at `Prague`) is re-seeded automatically by the Configuration service on startup.
+**Clean reset — container stack:**
+
+```bash
+./tools/start-container-stack.sh --down
+docker volume rm $(docker volume ls -q | grep fps)
+./tools/start-container-stack.sh --seed
+```
+
+Configuration (policy + slots at `Prague`) is re-seeded automatically by the Configuration service on startup when its store is empty after a full reset.
+
+> **Evidence:** durable-store list per [OPS008 Persistence Profile](./production/ops008-persistence-profile) and the merged PERSIST001–006 slices; `bookingstore` is a MongoDB-backed Dapr component. This guidance is from a static review of the persistence docs/components — confirm exact per-store behavior by running the stack.
 
 ---
 

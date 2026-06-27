@@ -12,8 +12,8 @@ This pack gives a new evaluator enough context to decide whether FairSpot is wor
 | Business value | HR/facilities teams can configure policy and capacity, reduce manual coordination, and explain allocation outcomes using audit and reporting evidence. |
 | Trust value | Allocation rules, notifications, audit, GDPR erasure behavior, and tenant isolation are explicit rather than implicit operational habits. |
 | Deployment posture | FairSpot is designed for local development, a low-cost hosted demo, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
-| Current status | Core backend flow, mobile employee foundation, notification/audit/reporting/configuration services, Dapr component baseline, SSO-first integration contract, and demo environment baseline are documented or implemented. |
-| Near-term gaps | Mobile profile/draw visibility/polish, web/admin surfaces, hosted demo evidence, client-owned production handoff, observability hardening, and pilot-specific evidence. |
+| Current status | Release 1 evaluation baseline: employee mobile journey, web employee + HR/admin/reporting/audit surfaces, booking/Draw lifecycle, notifications, audit, reporting, durable Dapr persistence (PERSIST001–006), and the containerized NAS/Cloudflare hosting path are implemented. The [Roadmap → Release 1 Scope](./roadmap#release-1-scope) is the authoritative status. |
+| Near-term gaps | Mobile vehicle management and UX polish, broader tenant administration, client-owned production handoff, and pilot-specific evidence. See the [Roadmap](./roadmap) for the live gap list. |
 
 ## Evaluator Paths
 
@@ -118,14 +118,11 @@ Provider prices change frequently. Do not present numeric cost commitments witho
 | Is billing implemented? | No. Commercialisation and billing are later decisions. The current AGPL project can still support paid implementation, support, and client-specific integration services. |
 | What is needed before a client pilot? | Hosted demo evidence, mobile polish/profile/draw visibility, web/admin surfaces where needed, observability and backup/restore evidence, and a client-owned production handoff model. |
 
-## Current Demo v0 Evidence
+## Delivery Status And Evidence
 
-| Slice | Status | Evidence |
-| --- | --- | --- |
-| `MOB006` Mobile Notifications | Done | Mobile notification consumption, unread count, mark-read action, and polling fallback. |
-| `OPS001` Pluggable Dapr Component Baseline | Done | Local/demo/client component profile direction, state/pubsub/secrets naming, and local setup docs. |
-| `OPS002` Demo Environment Baseline | Done | Hosted demo scope, components, synthetic data rules, smoke checks, reset/teardown, and cost-evidence model. |
-| `CUST002` SSO-First Customer Integration Contract | Done | Trusted issuer/tenant mapping, minimal profile facts, local-account fallback, import constraints, audit/GDPR requirements. |
-| `DOCS001` Client Evaluation Pack | Done | This page. |
+This pack does not maintain its own slice-by-slice status table — it goes stale quickly. The authoritative, current status lives in:
+
+- [Roadmap](./roadmap) — phases, milestones, and the [Release 1 Scope](./roadmap#release-1-scope) (what is ready, demo-only, and deferred).
+- [Implementation Tracker](./implementation-tracker) and [Delivery Board](./delivery-board) — per-slice delivery state and evidence.
 
 The pack is a starting point for conversation, not a substitute for a live pilot plan. Before sharing externally, update any environment-specific evidence, screenshots, URLs, and cost assumptions to match the actual demo environment.

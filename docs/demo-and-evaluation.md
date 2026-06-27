@@ -32,13 +32,15 @@ The demo should prove that FairSpot is more than a booking form. It should show 
 
 ## Demo Tracks
 
-| Track | Goal | Required Implemented Slices | Gaps To Close |
-| --- | --- | --- | --- |
-| Employee mobile demo | Show the employee self-service path. | `MOB001`-`MOB005`, `B001`-`B010`, `BK011`, `ID001` | `MOB006` notifications, `MOB007` profile/vehicle details, `MOB008` draw/allocation detail, `MOB009` polish. |
-| HR / facilities backend demo | Show policy, slots, reporting, and operational evidence. | `CFG001`, `CFG002`, `REPORT001`, `A001`, `A002` | Web/admin UI, `CFG003`, `REPORT002`. |
-| Auditor demo | Show pseudonymised audit query and GDPR erasure behavior. | `A001`, `A002` | `A003` retention/integrity and export evidence. |
-| Client IT demo | Show local stack, Dapr component boundary, and observability approach. | Local tooling, `OPS000` proposal | `OPS001`, `OPS002`, `OPS003`. |
-| Sponsor evaluation | Show value, roadmap, costs, and deployment ownership model. | Current docs and tracker | Client evaluation pack. |
+| Track | Goal |
+| --- | --- |
+| Employee mobile demo | Show the employee self-service path: login, My Spots, request, cancel/confirm, notifications, profile, and Draw schedule visibility. |
+| HR / facilities backend demo | Show policy, slots, reporting, and operational evidence. |
+| Auditor demo | Show pseudonymised audit query and GDPR erasure behavior. |
+| Client IT demo | Show the containerized local/NAS stack, Dapr component boundary, and observability approach. |
+| Sponsor evaluation | Show value, roadmap, costs, and deployment ownership model. |
+
+For the live, per-slice delivery state and remaining gaps per track, see the [Roadmap](./roadmap) and [Implementation Tracker](./implementation-tracker). (The previous "Gaps To Close" column listed slices such as `MOB006`–`MOB009`, web/admin UI, and `OPS001`–`OPS003` that are now delivered.)
 
 ## Client-Facing Materials
 
