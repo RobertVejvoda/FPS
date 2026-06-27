@@ -88,14 +88,8 @@ services:
   zipkin:
     restart: unless-stopped
 
-  # vault-init is defined in docker-compose.dapr.yml — only present in the full stack.
-  # This override enforces all credentials when that file is included.
-  vault-init:
-    environment:
-      VAULT_TOKEN: "${VAULT_TOKEN:?Set VAULT_TOKEN in .env}"
-      MONGO_USER: "${MONGO_USER:?Set MONGO_USER in .env}"
-      MONGO_PASS: "${MONGO_PASS:?Set MONGO_PASS in .env}"
-      RABBITMQ_USER: "${RABBITMQ_USER:?Set RABBITMQ_USER in .env}"
-      RABBITMQ_PASS: "${RABBITMQ_PASS:?Set RABBITMQ_PASS in .env}"
-      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in .env}"
-      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in .env}"
+  # vault-init is defined only in docker-compose.dapr.yml and must not be overridden
+  # here — doing so creates a phantom service with no image when the Dapr file is
+  # absent, failing compose validation. vault-init inherits VAULT_TOKEN and
+  # credential env vars from the host environment, which are already enforced
+  # above by the vault/mongodb/rabbitmq/minio service overrides.
