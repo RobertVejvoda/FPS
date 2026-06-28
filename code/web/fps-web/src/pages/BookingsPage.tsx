@@ -23,10 +23,10 @@ export function BookingsPage() {
   const [loadState, setLoadState] = useState<LoadState>({ kind: 'loading' });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
-  const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([null, null, null]);
+  const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([]);
   const [drawStatusesLoading, setDrawStatusesLoading] = useState(true);
   const { dateBase, simulationActive } = useTenantDateContext();
-  const days = useMemo(() => nextWorkdayOptions(dateBase, 3, { relativeLabels: !simulationActive }), [dateBase, simulationActive]);
+  const days = useMemo(() => nextWorkdayOptions(dateBase, 4, { relativeLabels: !simulationActive }), [dateBase, simulationActive]);
 
   const drawLocationId = loadState.kind === 'ok'
     ? loadState.items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID
@@ -46,7 +46,7 @@ export function BookingsPage() {
   useEffect(() => {
     let cancelled = false;
     setDrawStatusesLoading(true);
-    setDrawStatuses([null, null, null]);
+    setDrawStatuses(days.map(() => null));
     Promise.all(
       days.map(day => fetchDrawStatus({ apiBaseUrl, bearerToken }, {
         date: day.date,
