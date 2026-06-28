@@ -13,17 +13,19 @@
 # Keycloak realm with dev credentials and use host curl/python3. Seeding a NAS
 # with enforced credentials is a separate follow-up; --nas --seed is rejected.
 #
-# Usage (local-container — dev defaults, no env file needed):
+# Usage (local-container — optional local-docker.env overrides):
 #   ./tools/start-container-stack.sh
 #   ./tools/start-container-stack.sh --seed     # also seed demo data + local E2E
 #
-# Usage (NAS/hosted — real credentials enforced via .env, Docker/Compose only):
-#   ./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
-#   ./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --domain fairspot.net
+# Usage (NAS/hosted — real credentials enforced via nas.env, Docker/Compose only):
+#   ./tools/start-container-stack.sh --nas
+#   ./tools/start-container-stack.sh --nas --domain fairspot.net
 #
 # Flags:
 #   --nas              Apply NAS overlay (restart policies + required credential check).
-#   --env-file PATH    Env file for --nas mode. Default: code/infrastructure/.env
+#   --env-file PATH    Env file for the selected mode.
+#                      Local default: code/infrastructure/local-docker.env if present.
+#                      NAS default: code/infrastructure/nas.env.
 #   --seed             LOCAL ONLY. After services are healthy, configure Keycloak
 #                      and seed demo + Green Logistics data, then run the local E2E
 #                      smoke (booking -> notification -> audit) to validate pub/sub
@@ -61,7 +63,7 @@ CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:8.11.1}"
 # ── Argument parsing ────────────────────────────────────────────────────────────
 
 MODE="local"
-ENV_FILE="$INFRA_DIR/.env"
+ENV_FILE=""
 SKIP_E2E=false
 TEARDOWN=false
 PUBLIC_DOMAIN=""
@@ -86,7 +88,10 @@ done
 # Vault component. Local-container mode uses the checked-in dev Vault token. NAS
 # mode must get a real value from --env-file and is enforced below.
 if [[ "$MODE" == "local" ]]; then
+  ENV_FILE="${ENV_FILE:-$INFRA_DIR/local-docker.env}"
   export VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
+else
+  ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
 fi
 
 # The normal container profile is Production-like. The local --seed path is a
@@ -121,7 +126,7 @@ if [[ "$MODE" == "nas" && "$SEED" == "true" ]]; then
   echo
   echo "The seed/E2E helpers (dev-setup-auth.sh, dev-seed.sh, smoke-hosted.sh) use the"
   echo "fps-local Keycloak realm and local dev credentials, which do not match the"
-  echo "NAS-enforced secrets in your .env file."
+  echo "NAS-enforced secrets in your nas.env file."
   echo
   echo "For NAS validation, start the stack and probe the public domain instead:"
   echo "  ./tools/start-container-stack.sh --nas --env-file <env> --domain <domain>"
@@ -159,6 +164,8 @@ fi
 
 if [[ "$MODE" == "nas" ]]; then
   COMPOSE_CMD=(docker compose --project-directory "$INFRA_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
+elif [[ -f "$ENV_FILE" ]]; then
+  COMPOSE_CMD=(docker compose --project-directory "$INFRA_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
 else
   COMPOSE_CMD=(docker compose --project-directory "$INFRA_DIR" "${COMPOSE_FILES[@]}")
 fi
@@ -166,7 +173,9 @@ fi
 # Human-readable compose command shown in log messages (no secrets).
 COMPOSE_HUMAN="docker compose --project-directory code/infrastructure"
 if [[ "$MODE" == "nas" ]]; then
-  COMPOSE_HUMAN+=" --env-file code/infrastructure/.env"
+  COMPOSE_HUMAN+=" --env-file code/infrastructure/nas.env"
+elif [[ -f "$ENV_FILE" ]]; then
+  COMPOSE_HUMAN+=" --env-file code/infrastructure/local-docker.env"
 fi
 COMPOSE_HUMAN+=" -f docker-compose.yaml -f docker-compose.services.yml -f docker-compose.dapr.yml"
 if [[ "$MODE" == "nas" ]]; then
@@ -214,7 +223,7 @@ if [[ "$MODE" == "nas" ]]; then
   if [[ ! -f "$ENV_FILE" ]]; then
     echo "ERROR: --nas mode requires an env file at: $ENV_FILE"
     echo "Copy the template and fill in all values:"
-    echo "  cp code/infrastructure/.env.example code/infrastructure/.env"
+    echo "  cp code/infrastructure/nas.env.example code/infrastructure/nas.env"
     exit 1
   fi
   ok "env file: $ENV_FILE (exists — values not printed)"

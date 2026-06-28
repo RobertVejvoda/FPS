@@ -51,6 +51,8 @@ package-lock.json
 
 # Secrets
 .env
+code/infrastructure/nas.env
+code/infrastructure/local-docker.env
 *.env.local
 *.env.nas
 

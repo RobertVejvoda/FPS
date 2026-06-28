@@ -42,12 +42,12 @@ This document records the hosted demo environment evidence for the NAS/Cloudflar
 
 | Value | Where stored | Verification |
 |---|---|---|
-| Cloudflare tunnel token | `.env.nas` (gitignored) | `git check-ignore -v code/infrastructure/cloudflared/.env.nas` |
-| Keycloak admin password | `code/infrastructure/.env` or NAS secrets manager | Must not be the default `admin` password |
-| Grafana admin password | `code/infrastructure/.env` or NAS secrets manager | Must not use `admin/admin` |
-| MongoDB passwords | Dapr secretstore (Vault) plus `code/infrastructure/.env` for startup seeding | Must not use default `admin/admin` credentials |
+| Cloudflare tunnel token | `code/infrastructure/cloudflared/.env.nas` (gitignored) | `git check-ignore -v code/infrastructure/cloudflared/.env.nas` |
+| Keycloak admin password | `code/infrastructure/nas.env` or NAS secrets manager | Must not be the default `admin` password |
+| Grafana admin password | `code/infrastructure/nas.env` or NAS secrets manager | Must not use `admin/admin` |
+| MongoDB passwords | Dapr secretstore (Vault) plus `code/infrastructure/nas.env` for startup seeding | Must not use default `admin/admin` credentials |
 | Vault root token | NAS secrets manager | Must **not** use `dev-only-token` (dev mode value) |
-| MinIO root credentials | `code/infrastructure/.env` or NAS secrets manager | Must **not** use default `minioadmin/minioadmin` |
+| MinIO root credentials | `code/infrastructure/nas.env` or NAS secrets manager | Must **not** use default `minioadmin/minioadmin` |
 
 **Vault dev mode warning:** The local Dapr secret store uses HashiCorp Vault in dev mode (`dev-only-token`). Dev mode does not persist secrets across restarts. Before any customer data, Vault must be switched to server mode with a persistent volume. This is a prerequisite listed in OPS011 "Before customer traffic" table.
 
@@ -195,8 +195,10 @@ The following gaps must be resolved before the first external customer is allowe
 | 3 | Persistent tenant-scoped storage for in-memory services | DATA010 #317 | ⏳ Not started |
 | 4 | Vault in server mode (not dev mode) with persistent volume | — | ⏳ Not started |
 | 5 | Public-domain smoke evidence (TLS, WAF, OIDC at `https://app.<domain>`) | OPS013 #314 | ⏳ Pending tunnel/domain |
+| 6 | Hosted Dapr mTLS/service-identity evidence | — | ⏳ Not started |
+| 7 | NAS/store/backup encryption-at-rest evidence | — | ⏳ Not started |
 
-Items 1–4 are prerequisites for item 5. The localhost smoke in this document satisfies the API-level evidence only.
+Items 1–4, 6, and 7 are prerequisites for item 5. The localhost smoke in this document satisfies the API-level evidence only.
 
 ---
 

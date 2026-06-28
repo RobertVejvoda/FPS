@@ -3,12 +3,12 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.5 |
+| **Version** | 0.6 |
 | **Architecture State** | Target |
 | **ADM Phase** | Requirements Management |
 | **Responsible** | Codex/Product Owner |
 | **Accountable** | Robert |
-| **Last Reviewed** | 2026-05-31 |
+| **Last Reviewed** | 2026-06-28 |
 | **Next Review** | Before customer architecture review |
 
 Requirements Management is continuous across the ADM. Requirements are not owned by only Phase A or Business Architecture; they are captured centrally here and traced to the affected business, information systems, technology, security, governance, and transition architecture views.
@@ -41,6 +41,7 @@ When a phase introduces or changes an architecture-significant requirement, upda
 | AR-022 | Production-facing Dapr components must have profile-specific evidence for component scopes, secret references, mTLS/service identity where used, resiliency policies, state encryption where supported, and sidecar/API hardening. | Dapr-first production direction | Technology, security | Placeholder |
 | AR-023 | Backup, restore, export, and break-glass operations must preserve tenant boundaries, avoid recording secrets, audit privileged access, and document restore-time re-erasure where personal data is restored. | Security model and backup/restore direction | Security, technology, privacy | Placeholder |
 | AR-024 | Sponsor, facilities, HR support, and DataHub projection views must have approved role-safe output shapes before external customer use. | Privacy architecture and DataHub direction | Security, business, data | Placeholder |
+| AR-025 | Any non-local hosted profile that processes tenant or employee data must treat that data as Confidential and provide HTTPS public access, protected ingress/WAF, service-to-service encryption or approved equivalent, encrypted storage/backups, real secret management, and deployment evidence before customer use. | Hosted encryption boundary decision | Security, technology, architecture states | Draft |
 
 ## ADM Phase Impact
 
@@ -58,7 +59,7 @@ When a phase introduces or changes an architecture-significant requirement, upda
 
 ## Robert TODOs
 
-- Robert TODO: prioritize AR-011 through AR-014 and AR-017 through AR-024 into delivery slices before customer-facing review.
+- Robert TODO: prioritize AR-011 through AR-014 and AR-017 through AR-025 into delivery slices before customer-facing review.
 - Robert TODO: confirm which AR items are mandatory for the first hosted demo versus mandatory for a paid pilot.
 - Robert TODO: confirm whether Feedback is required as a small evaluator-feedback slice before the first customer demo.
 - Robert TODO: confirm whether requirements approval should happen per phase artifact, centrally on this page, or both for customer-facing reviews.

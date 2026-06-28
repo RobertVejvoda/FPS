@@ -2,7 +2,7 @@
 
 This register records known security and privacy gaps that are not yet implemented or fully evidenced. Each entry is factual, issue-ready, and ordered by area. Gaps labelled **production-blocking** must be resolved before any client-owned production deployment.
 
-Last updated: 2026-05-24.
+Last updated: 2026-06-28.
 
 ---
 
@@ -39,8 +39,9 @@ Last updated: 2026-05-24.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Encryption at rest not configured | High — production-blocking | Services rely on infrastructure storage defaults. Client must enable encryption at rest on all stores (MongoDB, object storage). FairSpot does not configure this; it is a client deployment responsibility. |
-| TLS for internal service-to-service traffic only via Dapr mTLS | Medium — production-blocking | Dapr mTLS is disabled in local config (`fps-config.yaml`). Must be enabled in production. Client is responsible for Dapr trust anchor and mTLS configuration. |
+| Hosted encryption gate not evidenced | High — production-blocking | NAS and later hosted profiles must prove HTTPS public URLs, Cloudflare/WAF boundary, blocked internal/admin endpoints, and no accidental public exposure of Dapr, stores, observability, or management ports. |
+| Encryption at rest not configured or evidenced | High — production-blocking | Services rely on infrastructure storage defaults. Hosted profiles must prove encrypted NAS volumes/shared folders, object storage, state stores, broker persistence where used, Keycloak state, and backup targets before real customer data. |
+| Dapr mTLS/service identity not enabled for hosted profiles | High — production-blocking | Dapr mTLS is disabled in local config (`fps-config.yaml`). Local remains exempt, but NAS/client profiles must enable and evidence Dapr mTLS or document an approved equivalent service-to-service encryption boundary. |
 
 ---
 
@@ -48,7 +49,7 @@ Last updated: 2026-05-24.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Vault is unsealed with a dev root token in local config | Low | Local/demo only. Production must use a hardened Vault or equivalent secret store with proper unseal and access-control policies. |
+| Hosted secret store still uses transitional Vault development mode | High — production-blocking | Local may use Vault dev mode. NAS/client profiles need hardened Vault or an approved equivalent secret store with persistent storage, proper unseal/recovery, least-privilege policies, and no reusable dev root token. |
 | Secret rotation is not automated | Medium | Documented as customer responsibility. No tooling or rotation schedule is provided by FairSpot. |
 
 ---

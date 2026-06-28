@@ -2,14 +2,14 @@
 #
 # Usage (infra-only stack):
 #   docker compose \
-#     --env-file .env \
+#     --env-file nas.env \
 #     -f docker-compose.yaml \
 #     -f docker-compose.nas.yml \
 #     up -d
 #
 # With service containers + Dapr (full stack):
 #   docker compose \
-#     --env-file .env \
+#     --env-file nas.env \
 #     -f docker-compose.yaml \
 #     -f docker-compose.services.yml \
 #     -f docker-compose.dapr.yml \
@@ -17,9 +17,9 @@
 #     up -d
 #
 # Prerequisites:
-#   Copy code/infrastructure/.env.example to code/infrastructure/.env
+#   Copy code/infrastructure/nas.env.example to code/infrastructure/nas.env
 #   and fill in all required values before first run.
-#   The .env file is gitignored and must never be committed.
+#   The nas.env file is gitignored and must never be committed.
 #
 # This overlay is NAS/hosted-only. Do not apply it to local development.
 # The default docker-compose.yaml has no restart policy so containers do not
@@ -29,72 +29,72 @@ services:
 
   fps-audit:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-booking:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-configuration:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-customer:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-datahub:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-identity:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-notification:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-profile:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   fps-reporting:
     environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in .env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in .env}
+      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
+      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
       Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
@@ -109,26 +109,26 @@ services:
     restart: unless-stopped
     command: >
       server -dev
-      -dev-root-token-id=${VAULT_TOKEN:?Set VAULT_TOKEN in .env (never use dev-only-token on NAS)}
+      -dev-root-token-id=${VAULT_TOKEN:?Set VAULT_TOKEN in nas.env (never use dev-only-token on NAS)}
       -dev-listen-address=0.0.0.0:8200
 
   minio:
     restart: unless-stopped
     environment:
-      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in .env}
-      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in .env}
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in nas.env}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in nas.env}
 
   keycloak:
     restart: unless-stopped
     environment:
-      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN_USER:?Set KC_ADMIN_USER in .env}
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_ADMIN_PASS:?Set KC_ADMIN_PASS in .env}
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN_USER:?Set KC_ADMIN_USER in nas.env}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_ADMIN_PASS:?Set KC_ADMIN_PASS in nas.env}
 
   rabbitmq:
     restart: unless-stopped
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:?Set RABBITMQ_PASS in .env}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:?Set RABBITMQ_USER in nas.env}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:?Set RABBITMQ_PASS in nas.env}
 
   postgres:
     restart: unless-stopped
@@ -136,8 +136,8 @@ services:
   mongodb:
     restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:?Set MONGO_USER in .env}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:?Set MONGO_PASS in .env}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:?Set MONGO_USER in nas.env}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:?Set MONGO_PASS in nas.env}
 
   jaeger:
     restart: unless-stopped
@@ -157,8 +157,8 @@ services:
   grafana:
     restart: unless-stopped
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in .env}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in nas.env}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in nas.env}
 
   zipkin:
     restart: unless-stopped

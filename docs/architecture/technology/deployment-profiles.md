@@ -16,6 +16,7 @@
 - Demo and production profiles must use real secret stores, not committed files.
 - Local profiles may use documented default credentials because they are disposable developer environments. Hosted profiles must refuse to start when required operator secrets are missing.
 - Public profile ingress must expose only intended web/API/auth endpoints.
+- Local-only profiles may use HTTP on loopback/LAN for development. Every non-local profile must use encrypted external communication (`https://` public endpoints) and must not expose raw internal HTTP service ports.
 - Internal service ports, databases, brokers, Dapr sidecars, metrics, Swagger/OpenAPI, Keycloak admin, and observability backends must not be public.
 - Mobile store release is not the first deployment gate; internal/TestFlight/Play internal testing follows after hosted web/API/auth are stable.
 - Operational procedures stay in `production/` runbooks; this page states profile boundaries and acceptance gates.
@@ -26,7 +27,7 @@ The target deployment experience is one command after one-time environment setup
 
 One-time setup is still required because the operator must create secrets and domain resources that cannot safely be committed or generated blindly:
 
-1. Create or copy the NAS environment file from `code/infrastructure/.env.example`.
+1. Create or copy the NAS environment file from `code/infrastructure/nas.env.example`.
 2. Fill all required secrets with unique values from a password manager.
 3. Create the Cloudflare Tunnel and copy its token into the ignored tunnel env file.
 4. Configure public hostnames in Cloudflare.
@@ -38,7 +39,7 @@ After that, the expected NAS operation path is:
 ./tools/deploy-nas.sh --domain fairspot.net
 ```
 
-The wrapper starts the full container stack, starts `cloudflared` when its env file is present, and runs public-domain checks when a domain is supplied. The lower-level `./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env` remains the reusable health gate for CI/manual troubleshooting.
+The wrapper starts the full container stack, starts `cloudflared`, and runs public-domain checks. The lower-level `./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env` remains the reusable health gate for CI/manual troubleshooting.
 
 This is intentionally "single command", not "zero configuration": credentials, DNS ownership, WAF policy, and identity-provider settings are security boundaries and must remain explicit.
 
@@ -48,6 +49,7 @@ The immediate customer-first target is NAS-hosted FairSpot behind Cloudflare Tun
 
 - `app.fairspot.net` routes through Cloudflare to the API/web gateway for Release 1.
 - `auth.fairspot.net` routes through Cloudflare to public Keycloak login endpoints for Release 1.
+- Public app/auth URLs must be HTTPS. Cloudflare terminates public TLS and routes to private Docker-network HTTP origins through the encrypted tunnel.
 - Release 1 uses one Keycloak realm named `fairspot` for demo and Green Logistics users.
 - Tenant separation is enforced by application tenant claims and authorization, not by separate realms.
 - Separate realms are deferred until a real customer requires identity administration isolation.

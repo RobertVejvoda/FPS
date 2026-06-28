@@ -15,6 +15,7 @@ The result of following this runbook is:
 
 - `app.fairspot.net` routed through Cloudflare to the Envoy API gateway on the NAS for Release 1
 - `auth.fairspot.net` routed through Cloudflare to the Keycloak identity provider on the NAS for Release 1
+- Public traffic encrypted with HTTPS at Cloudflare; local Docker-network HTTP is private origin traffic only
 - All internal service, Dapr, database, broker, and monitoring ports remaining private
 - No committed secrets, tunnel tokens, or certificates in source control
 - No host-installed .NET SDK/runtime or Dapr CLI dependency on the NAS
@@ -65,6 +66,8 @@ NAS Docker network (not reachable from Internet)
 ```
 
 Cloudflare Tunnel replaces the need for any inbound firewall hole or public IP. The `cloudflared` daemon opens an outbound encrypted connection from the NAS to the Cloudflare edge. Cloudflare terminates TLS for public visitors and routes traffic into the tunnel.
+
+Only the local development profile may use plain HTTP for browser/mobile testing. For NAS and every later hosted/cloud profile, browser and mobile clients must use `https://` endpoints. Internal container-to-container HTTP is acceptable only on the private Docker network and must not be reachable from the Internet.
 
 ---
 
@@ -157,7 +160,7 @@ Ensure **Proxied** (orange cloud) is toggled on for all DNS records. This is req
 
 ## Step 4 — Create the NAS environment file
 
-The cloudflared service requires the tunnel token at runtime. Create a `.env.nas` file from the provided template. This file is listed in `.gitignore` and must never be committed. This file is only for the Cloudflare Tunnel connector; FairSpot stack credentials live in `code/infrastructure/.env`.
+The cloudflared service requires the tunnel token at runtime. Create a `.env.nas` file from the provided template. This file is listed in `.gitignore` and must never be committed. This file is only for the Cloudflare Tunnel connector; FairSpot stack credentials live in `code/infrastructure/nas.env`.
 
 ```bash
 cd /path/to/fps-repo/code/infrastructure
@@ -176,10 +179,10 @@ Create the FairSpot stack environment file as well:
 
 ```bash
 cd /path/to/fps-repo
-cp code/infrastructure/.env.example code/infrastructure/.env
+cp code/infrastructure/nas.env.example code/infrastructure/nas.env
 ```
 
-Fill every required value in `code/infrastructure/.env`. The NAS overlay intentionally refuses to start when these are missing:
+Fill every required value in `code/infrastructure/nas.env`. The NAS overlay intentionally refuses to start when these are missing:
 
 | Value | Why it is required |
 |---|---|
@@ -225,13 +228,13 @@ cd /path/to/fps-repo
 ./tools/deploy-nas.sh --domain fairspot.net
 ```
 
-The wrapper starts the FairSpot container stack, starts the Cloudflare Tunnel connector when `code/infrastructure/cloudflared/.env.nas` exists, and runs public-domain checks when `--domain` is supplied.
+The wrapper starts the FairSpot container stack, starts the Cloudflare Tunnel connector, and runs public-domain checks. A NAS hosted deployment is treated as external hosting, so Cloudflare Tunnel and HTTPS public endpoints are required for the normal path.
 
 Use the lower-level container start script when you want to troubleshoot the stack without starting the tunnel. In `--nas` mode the host needs **only Docker and the Docker Compose v2 plugin** — the script reads container state with `docker inspect` and runs every HTTP probe inside a throwaway curl container, so no host `curl`, `python3`, .NET, or Dapr CLI is required:
 
 ```bash
 cd /path/to/fps-repo
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env
 ```
 
 The script starts these compose layers in order:
@@ -257,7 +260,7 @@ If any check fails the script prints the failing service, the log command, and t
 To bring up the stack and verify container/service/sidecar health only — skipping the gateway, OIDC, and E2E smoke (faster on subsequent starts):
 
 ```bash
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --skip-e2e
 ```
 
 > **Seeding on NAS:** `--seed` is **local-only** and is rejected with `--nas`. The seed helpers target the `fps-local` realm with dev credentials, and the local seeded container path runs app services in `Development` mode so dev-only seed endpoints are available. This does not match the NAS-enforced secrets or Production-like service profile. Seed a NAS pilot with your own pilot-data process, and validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section below). NAS-aware seeding is a tracked follow-up.
@@ -265,7 +268,7 @@ To bring up the stack and verify container/service/sidecar health only — skipp
 To tear down (data volumes are preserved):
 
 ```bash
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --down
 ```
 
 All named volumes (MongoDB, RabbitMQ, Vault, MinIO, Keycloak, Grafana, Prometheus, Loki, PostgreSQL) persist across restarts. Only `docker compose down -v` removes data — do not run that command in production.
@@ -316,10 +319,10 @@ After completing Steps 1–7, run the following checks before treating the NAS d
 
 ```bash
 # Full health + gateway + OIDC smoke (default):
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env
 
 # Health-only (skip gateway/OIDC/E2E smoke) for a faster restart:
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --skip-e2e
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --skip-e2e
 ```
 
 The start script covers: Vault seed, all 9 app service health, all 9 Dapr sidecars running, and all 9 services via the Envoy gateway. Internal Keycloak OIDC discovery is checked in local mode (realm `fps-local`) or when `--realm <name>` is given; on a default NAS run it is skipped because the hosted realm is configured in Step 7 (validate hosted OIDC via `--domain` in Step 2 below). On a developer machine (not NAS), add `--seed` to also seed demo + Green Logistics data and run the booking → notification → audit E2E.
@@ -328,7 +331,7 @@ The start script covers: Vault seed, all 9 app service health, all 9 Dapr sideca
 
 ```bash
 # Quick connectivity check via the start script:
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --domain fairspot.net
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --domain fairspot.net
 
 # Full hosted E2E smoke (login, booking, notifications, audit, WAF, TLS):
 APP_URL=https://app.fairspot.net AUTH_URL=https://auth.fairspot.net \
@@ -361,7 +364,7 @@ To fully tear down:
 docker compose -f cloudflared/docker-compose.cloudflared.yml down
 
 # Stop application stack (all compose layers, volumes preserved)
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --down
 
 # Data volumes are preserved by the line above.
 # To remove data too: docker volume rm $(docker volume ls -q | grep fps)
@@ -377,11 +380,11 @@ In the Cloudflare dashboard, a disabled or deleted tunnel removes DNS routing im
 
 ```bash
 # Tear down and remove data volumes
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env --down
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --down
 docker volume rm $(docker volume ls -q | grep fps)
 
 # Bring the stack back up (Docker/Compose only — no host tools needed)
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/.env
+./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env
 ```
 
 After a clean start on NAS, re-apply pilot tenant data through your pilot onboarding process (HR import + `POST /profile/bootstrap`), then validate the public domain with `--domain` and `smoke-hosted.sh` (see the smoke section). The `fps-local` demo seed (`dev-setup-auth.sh` / `dev-seed.sh`) is for developer machines only and does not match NAS-enforced credentials.
@@ -416,18 +419,18 @@ Local container demos use dev defaults (`http://keycloak:8080/realms/fps-local`,
 | Value | Where to store | Never do this |
 |---|---|---|
 | Cloudflare tunnel token | `code/infrastructure/cloudflared/.env.nas` on the NAS; operator's password manager | Commit to git; paste into any issue or PR |
-| Keycloak admin password | NAS secrets manager or `code/infrastructure/.env` | Hardcode in `docker-compose.yaml` |
-| Grafana admin password | NAS secrets manager or `code/infrastructure/.env` | Use `admin/admin` in hosted use |
-| MongoDB passwords | Dapr secretstore (Vault) plus `code/infrastructure/.env` for startup seeding | Commit inline credentials |
+| Keycloak admin password | NAS secrets manager or `code/infrastructure/nas.env` | Hardcode in `docker-compose.yaml` |
+| Grafana admin password | NAS secrets manager or `code/infrastructure/nas.env` | Use `admin/admin` in hosted use |
+| MongoDB passwords | Dapr secretstore (Vault) plus `code/infrastructure/nas.env` for startup seeding | Commit inline credentials |
 | Vault root token | NAS secrets manager | Use the local dev token (`dev-only-token`) in any hosted environment |
-| MinIO root credentials | NAS secrets manager or `code/infrastructure/.env` | Use default `minioadmin` credentials in pilot |
+| MinIO root credentials | NAS secrets manager or `code/infrastructure/nas.env` | Use default `minioadmin` credentials in pilot |
 | JWT signing keys | Keycloak-managed; never exported | Commit key material |
 
 The NAS env files are in `.gitignore`. Verify this before your first commit on the NAS:
 
 ```bash
 git check-ignore -v code/infrastructure/cloudflared/.env.nas
-git check-ignore -v code/infrastructure/.env
+git check-ignore -v code/infrastructure/nas.env
 ```
 
 If the file is not ignored, do not proceed — add it to `.gitignore` first.
@@ -467,11 +470,13 @@ The following slices must be completed or explicitly deferred before allowing re
 | 3 | Persistent tenant-scoped storage (Booking key gaps, in-memory repos) | DATA010 #317 | Not started | **Yes** — no customer data in evaluation-grade stores |
 | 4 | Vault in production mode (not dev mode) | — | Not started | **Yes** — Vault dev mode loses secrets on restart |
 | 5 | Hosted smoke/readiness evidence | OPS013 #314 / OPS015C #604 | Tooling ready — `start-container-stack.sh` (local) + `smoke-hosted.sh` (public). Operator must attach a passing run. | **Yes** — proof that the public domain works end-to-end |
-| 6 | HR operations workspace | #310 | Not started | Recommended before HR users access the pilot |
-| 7 | Administrator default workspace | #311 | Not started | Recommended before admin users access the pilot |
-| 8 | Tenant onboarding hardening | CUST011 #319 | Not started | Required for production tenant creation |
+| 6 | Dapr mTLS/service-identity evidence for hosted profile | — | Not started | **Yes** — service-to-service encryption or an approved equivalent must be evidenced |
+| 7 | NAS/store/backup encryption-at-rest evidence | — | Not started | **Yes** — hosted Confidential data must be encrypted at rest |
+| 8 | HR operations workspace | #310 | Not started | Recommended before HR users access the pilot |
+| 9 | Administrator default workspace | #311 | Not started | Recommended before admin users access the pilot |
+| 10 | Tenant onboarding hardening | CUST011 #319 | Not started | Required for production tenant creation |
 
-**Do not allow external customer access** until items 1–5 are complete and evidenced.
+**Do not allow external customer access** until items 1–7 are complete and evidenced.
 
 ---
 
@@ -483,3 +488,4 @@ The following slices must be completed or explicitly deferred before allowing re
 | 2026-06-27 | Claude | OPS015C — replace stale Step 6 placeholder with real compose commands and `start-container-stack.sh`; update Dapr component notes to reference container component path; update smoke section with two-level check procedure |
 | 2026-06-27 | Claude | OPS015C review round 2 — `--nas` path is now Docker/Compose-only (container state via `docker inspect`, HTTP probes via throwaway curl container); `--seed` is local-only and rejected with `--nas`; `--skip-smoke` renamed to `--skip-e2e` with accurate wording |
 | 2026-06-27 | Claude | OPS015C review round 3 — environment-aware OIDC realm: default `--nas` no longer checks the `fps-local` realm (absent on a clean NAS); internal OIDC runs in local mode or with `--realm`, hosted OIDC is proven via `--domain` (public realm defaults to `fairspot`) |
+| 2026-06-28 | Codex | Clarify NAS profile as Cloudflare-required hosted profile; add hosted encryption, Dapr mTLS, and encryption-at-rest evidence gates |
