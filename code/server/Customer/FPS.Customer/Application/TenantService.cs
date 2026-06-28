@@ -1,4 +1,5 @@
 using FPS.Customer.Domain;
+using FPS.SharedKernel.Infrastructure;
 
 namespace FPS.Customer.Application;
 
@@ -29,6 +30,10 @@ public sealed class TenantService(
 
         var safeSlug = TenantProvisioningMetadata.Sanitize(slug);
         if (string.IsNullOrEmpty(safeSlug)) return (null, "Slug is required and must contain at least one alphanumeric character.");
+        // PLAT002: the slug is the tenant storage key, so it must satisfy the tenant-storage
+        // contract (3–63 chars, no reserved prefix). Reject gracefully at provisioning time.
+        try { _ = TenantStorageKey.Sanitise(safeSlug); }
+        catch (ArgumentException ex) { return (null, $"Slug '{safeSlug}' is not a valid tenant storage key: {ex.Message}"); }
         if (await repository.SlugExistsAsync(safeSlug, ct)) return (null, $"Slug '{safeSlug}' is already in use.");
 
         // Allow a deterministic tenant ID for provisioning tools; fall back to a generated GUID.

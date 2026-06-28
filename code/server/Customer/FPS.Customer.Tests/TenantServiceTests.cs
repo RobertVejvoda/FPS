@@ -226,6 +226,20 @@ public sealed class TenantServiceTests
     }
 
     [Fact]
+    public async Task Create_ProvisioningMetadata_IncludesAllPersistingServiceScopes()
+    {
+        var (tenant, _) = await service.CreateAsync("acme-corp", "Acme", "eu", "UTC", [], CancellationToken.None);
+
+        var scopes = tenant!.Provisioning.ServiceCollections;
+        // PLAT002: durable evidence must cover every bounded context that persists tenant data.
+        foreach (var service in new[] { "customer", "booking", "notification", "profile", "audit", "configuration", "datahub", "reporting" })
+        {
+            Assert.True(scopes.ContainsKey(service), $"provisioning metadata is missing the '{service}' scope");
+            Assert.Equal($"fps-acme-corp-{service}", scopes[service]);
+        }
+    }
+
+    [Fact]
     public async Task Create_ProvisioningMetadata_SanitizesSlugInCollectionNames()
     {
         // Slug sanitization strips chars that aren't alphanumeric/hyphen.
@@ -391,8 +405,8 @@ public sealed class TenantServiceTests
     [Fact]
     public async Task RegisterDiscoveryDomain_SameDomainOnAnotherTenant_ReturnsError()
     {
-        var (t1, _) = await service.CreateAsync("t1", "T1", "eu", "UTC", [], CancellationToken.None);
-        var (t2, _) = await service.CreateAsync("t2", "T2", "eu", "UTC", [], CancellationToken.None);
+        var (t1, _) = await service.CreateAsync("ten1", "T1", "eu", "UTC", [], CancellationToken.None);
+        var (t2, _) = await service.CreateAsync("ten2", "T2", "eu", "UTC", [], CancellationToken.None);
         await service.RegisterDiscoveryDomainAsync(t1!.TenantId, "shared.example", "h", CancellationToken.None);
 
         var error = await service.RegisterDiscoveryDomainAsync(t2!.TenantId, "shared.example", "h", CancellationToken.None);

@@ -79,6 +79,23 @@ If the deployment profile uses tenant-scoped Dapr state store components (separa
 
 ---
 
+## Tenant Storage Scope and Purge (PLAT002)
+
+The shared-kernel `TenantStorageScope` (`FPS.SharedKernel.Infrastructure`) is the single, provider-neutral source of tenant storage identifiers. It reuses `TenantStorageKey` sanitisation and produces, from a trusted tenant key only:
+
+- `Collection(service, tenantKey)` — deterministic `fps-{tenant}-{service}` collection / partition / schema-safe names.
+- `KeyPrefix(entityType, tenantKey)` / `KeySegment(tenantKey)` — the Dapr state-key prefixes that scope a tenant's keys.
+
+Callers never supply storage names directly. `TenantProvisioningMetadata` records these per-service scopes (Customer, Booking, Notification, Profile, Audit, Configuration, DataHub, legacy Reporting) as durable provisioning evidence, derived from the tenant's provisioning slug so the evidence matches purge targets exactly. The slug is validated against this contract at provisioning time (3–63 chars, no reserved prefix).
+
+**Tenant purge contract.** A single-tenant purge is defined by:
+
+- `TenantPurgeScope.For(tenantKey)` — derived from the tenant key only; rejects blank/invalid input; exposes the key segment + per-service collections, all containing only that tenant.
+- `ITenantStorePurger` — a per-service hook each store-owning service implements to delete its own tenant data for a scope. Stores holding immutable evidence (Audit) flag `IsImmutableEvidence`.
+- `TenantPurgeOrchestrator` — platform-only; builds the scope, then invokes each purger. **Immutable-evidence stores are skipped unless an explicit sandbox/demo reset is requested**; normal GDPR erasure stays a separate path. Demo reset (#636) consumes this primitive.
+
+---
+
 ## Service-Owned Read Model and Store Requirements
 
 Each bounded context that persists data must satisfy the following provisioning contract:
