@@ -92,6 +92,7 @@ The following paths must never be reachable from the Internet. They expose Dapr 
     or starts_with(http.request.uri.path, "/openapi")
     or starts_with(http.request.uri.path, "/api/openapi")
     or starts_with(http.request.uri.path, "/admin")
+    or starts_with(http.request.uri.path, "/api/admin")
     or starts_with(http.request.uri.path, "/_")
     or starts_with(http.request.uri.path, "/api/_")
   )
@@ -112,7 +113,7 @@ The `/api/*` clauses match the single-origin browser path; the root clauses keep
 | `/healthz`, `/api/healthz` | Kubernetes/Envoy health endpoint — internal probe only |
 | `/swagger`, `/api/swagger` | OpenAPI UI — should not be public in production |
 | `/openapi`, `/api/openapi` | OpenAPI schema endpoint |
-| `/admin` | Catch-all admin prefix (Keycloak admin is on `auth.<domain>` — see 1.2) |
+| `/admin`, `/api/admin` | Catch-all admin prefix (Keycloak admin is on `auth.<domain>` — see 1.2) |
 | `/_*`, `/api/_*` | Framework internal routes (ASP.NET, Envoy internals) |
 
 > **Note:** If the operator needs to expose `/openapi` (or `/api/openapi`) for developer portal purposes, remove those clauses and apply authentication via Cloudflare Access instead.
