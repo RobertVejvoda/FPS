@@ -59,15 +59,21 @@ if [[ "$APP_URL" == "http://localhost"* || "$APP_URL" == "http://127.0.0.1"* ]];
 fi
 
 # Single-origin public model: the API is proxied at app.<domain>/api, so the
-# public APP_URL must target the /api base. Normalize a root public URL to /api
-# so the API probes ($APP_URL/me, /bookings, /openapi/v1.json, ...) hit the
-# gateway and not the SPA root — which would return 200 for every path and
-# record misleading evidence. Localhost talks to the Envoy gateway directly
-# (API served at root), so it is left unchanged.
-if [[ "$IS_LOCALHOST" == "false" && "$APP_URL" != */api && "$APP_URL" != */api/ ]]; then
-  APP_URL="${APP_URL%/}/api"
-  echo "Note: normalized public APP_URL to $APP_URL (single-origin /api base)."
+# public APP_URL must target the /api base. Drop any trailing slash, then add
+# /api if missing, so the API probes ($APP_URL/me, /bookings, /openapi/v1.json,
+# ...) hit the gateway and not the SPA root — which would return 200 for every
+# path and record misleading evidence. Localhost talks to the Envoy gateway
+# directly (API served at root), so it is left unchanged.
+APP_URL="${APP_URL%/}"
+if [[ "$IS_LOCALHOST" == "false" && "$APP_URL" != */api ]]; then
+  APP_URL="$APP_URL/api"
+  echo "Note: using public API base APP_URL=$APP_URL (single-origin /api)."
 fi
+
+# Bare public origin, for root-path checks that must hit app.<domain> directly
+# (not the /api base): the WAF /metrics block and the HTTP→HTTPS redirect. For
+# localhost (no /api) this equals APP_URL.
+APP_ORIGIN="${APP_URL%/api}"
 
 # ── evidence file ─────────────────────────────────────────────────────────────
 
@@ -238,9 +244,8 @@ else
   fi
 
   # "Always Use HTTPS": the plain-HTTP app origin must redirect to https, not
-  # serve content. Derive the bare host (strip any /api suffix), swap the scheme.
-  APP_HOST="${APP_URL%/api}"
-  HTTP_APP="${APP_HOST/https:/http:}"
+  # serve content. Probe the bare origin (not the /api base), swap the scheme.
+  HTTP_APP="${APP_ORIGIN/https:/http:}"
   HTTP_STATUS=$(http_status "$HTTP_APP/")
   if [[ "$HTTP_STATUS" == "301" || "$HTTP_STATUS" == "302" || "$HTTP_STATUS" == "308" ]]; then
     pass "GET $HTTP_APP/ → HTTP $HTTP_STATUS (redirects to HTTPS)  [mandatory #9]"
@@ -474,11 +479,13 @@ if [[ "$IS_LOCALHOST" == "true" ]]; then
   pending "WAF /metrics block — localhost mode (run against public domain to verify)"
   pending "WAF Keycloak admin block — localhost mode (run against public domain to verify)"
 else
-  METRICS_STATUS=$(http_status "$APP_URL/metrics")
+  # Root-origin path: the WAF/SEC010 contract blocks https://app.<domain>/metrics
+  # (not /api/metrics), so probe the bare origin, not the API base.
+  METRICS_STATUS=$(http_status "$APP_ORIGIN/metrics")
   if [[ "$METRICS_STATUS" == "403" || "$METRICS_STATUS" == "404" ]]; then
-    pass "GET /metrics → HTTP $METRICS_STATUS (blocked from public internet)  [mandatory #10]"
+    pass "GET $APP_ORIGIN/metrics → HTTP $METRICS_STATUS (blocked from public internet)  [mandatory #10]"
   else
-    fail "GET /metrics → HTTP $METRICS_STATUS (expected 403/404 — WAF rule may not be active)" "true"
+    fail "GET $APP_ORIGIN/metrics → HTTP $METRICS_STATUS (expected 403/404 — WAF rule may not be active)" "true"
   fi
 
   KC_ADMIN_STATUS=$(http_status "$AUTH_URL/admin")
