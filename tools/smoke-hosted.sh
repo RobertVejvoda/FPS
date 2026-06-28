@@ -4,14 +4,17 @@
 # Writes a structured evidence file (smoke-evidence-<timestamp>.txt) with all
 # tokens redacted.  Exits non-zero if any mandatory check fails.
 #
-# Usage (public domain):
-#   APP_URL=https://app.<domain> AUTH_URL=https://auth.<domain> \
+# Usage (public domain — single-origin: the API is proxied at app.<domain>/api):
+#   APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> \
 #   OIDC_REALM=fps-pilot ./tools/smoke-hosted.sh
 #
-# Usage (localhost — TLS/WAF checks become PENDING):
+# Usage (localhost — talks to the Envoy gateway directly, API served at root, so
+# no /api; TLS/WAF checks become PENDING):
 #   APP_URL=http://localhost:10000 AUTH_URL=http://localhost:8180 \
 #   OIDC_REALM=fps-local ./tools/smoke-hosted.sh
 #
+# A root public APP_URL is auto-normalized to its /api base (see below), so the
+# API probes never accidentally hit the SPA root.
 # Note: local Keycloak Docker container maps internal :8080 to host :8180.
 #
 # See docs/production/hosted-smoke-runbook.md for full context and the
@@ -53,6 +56,17 @@ REQUIRED_FAILURES=0
 IS_LOCALHOST=false
 if [[ "$APP_URL" == "http://localhost"* || "$APP_URL" == "http://127.0.0.1"* ]]; then
   IS_LOCALHOST=true
+fi
+
+# Single-origin public model: the API is proxied at app.<domain>/api, so the
+# public APP_URL must target the /api base. Normalize a root public URL to /api
+# so the API probes ($APP_URL/me, /bookings, /openapi/v1.json, ...) hit the
+# gateway and not the SPA root — which would return 200 for every path and
+# record misleading evidence. Localhost talks to the Envoy gateway directly
+# (API served at root), so it is left unchanged.
+if [[ "$IS_LOCALHOST" == "false" && "$APP_URL" != */api && "$APP_URL" != */api/ ]]; then
+  APP_URL="${APP_URL%/}/api"
+  echo "Note: normalized public APP_URL to $APP_URL (single-origin /api base)."
 fi
 
 # ── evidence file ─────────────────────────────────────────────────────────────

@@ -51,8 +51,10 @@ Before running the smoke:
 ## Running the smoke script
 
 ```bash
-# Minimal: point at public domain
-APP_URL=https://app.<domain> \
+# Minimal: point at public domain. Single-origin model — the API is proxied at
+# app.<domain>/api, so APP_URL targets the /api base (a root URL is auto-
+# normalized to /api by the script).
+APP_URL=https://app.<domain>/api \
 AUTH_URL=https://auth.<domain> \
 OIDC_REALM=fps-pilot \
   ./tools/smoke-hosted.sh
@@ -70,6 +72,7 @@ The script outputs `PASS`, `FAIL`, `PENDING`, `SKIP`, or `DEFERRED` for each che
 # 3. Source auth environment (sets Auth__Authority for services):
 source ./tools/dev-env.sh
 
+# Localhost hits the Envoy gateway directly (API served at root), so no /api here.
 APP_URL=http://localhost:10000 \
 AUTH_URL=http://localhost:8180 \
 OIDC_REALM=fps-local \
@@ -224,7 +227,7 @@ The smoke writes a redacted `smoke-evidence-*.txt` (tokens/headers never printed
 | Auth | public OIDC discovery resolves at `auth.<domain>` |
 | WAF / internal paths [#10] | `/metrics`, `auth/admin`, and `/api/{openapi/v1.json,swagger,v1.0/healthz,v1.0/metadata}` are **not** publicly served (expect 401/403/404; a 200 fails the gate) |
 
-> Single-origin note: at the app **root** the SPA history-fallback returns 200 for any unknown path by design (static SPA, no sensitive data). The blocking checks therefore target the `/api/*` surfaces proxied to the gateway, so `APP_URL` must include the `/api` prefix.
+> Single-origin note: at the app **root** the SPA history-fallback returns 200 for any unknown path by design (static SPA, no sensitive data). The blocking checks therefore target the `/api/*` surfaces proxied to the gateway, so the public `APP_URL` targets the `/api` base — the script auto-normalizes a root public URL to `/api`. (Localhost mode hits the Envoy gateway directly, where the API is served at root, so no `/api` there.)
 
 **Operator-confirm items (not script-testable — verify in Cloudflare / Synology):**
 
