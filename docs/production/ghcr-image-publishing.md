@@ -2,7 +2,7 @@
 
 **Status:** Implemented.
 **Tracks:** OPS021.
-**Related:** [NAS / Cloudflare Deployment Profile](./nas-cloudflare-deployment-profile.md), [`tools/start-container-stack.sh`](../../tools/start-container-stack.sh).
+**Related:** [Release Pipeline](./release-pipeline.md) (OPS022), [NAS / Cloudflare Deployment Profile](./nas-cloudflare-deployment-profile.md), [`tools/start-container-stack.sh`](../../tools/start-container-stack.sh).
 
 ---
 

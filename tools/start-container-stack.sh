@@ -622,17 +622,40 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
   AUTH_URL="https://auth.$PUBLIC_DOMAIN"
   REALM="$PUBLIC_REALM"
 
-  echo "Cloudflare tunnel connectivity..."
-  APP_STATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/health/identity" || true)"
-  if [[ "$APP_STATUS" == "200" || "$APP_STATUS" == "401" ]]; then
-    ok "app.$PUBLIC_DOMAIN reachable (HTTP $APP_STATUS)"
-  elif [[ -z "$APP_STATUS" || "$APP_STATUS" == "000" ]]; then
-    fail "app.$PUBLIC_DOMAIN unreachable — is the Cloudflare Tunnel running?"
+  # Single-origin model: app.<domain> serves the SPA at / and proxies /api/ to
+  # Envoy. The API therefore lives under /api, not at the app root.
+
+  # 1) Web app entry point (SPA index served by fps-web).
+  echo "Web app entry point..."
+  APP_ROOT_STATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/" || true)"
+  if [[ "$APP_ROOT_STATUS" == "200" ]]; then
+    ok "app.$PUBLIC_DOMAIN / reachable (HTTP 200, SPA)"
+  elif [[ -z "$APP_ROOT_STATUS" || "$APP_ROOT_STATUS" == "000" ]]; then
+    fail "app.$PUBLIC_DOMAIN unreachable — is the Cloudflare Tunnel running and routed to fps-web:80?"
     echo "    Start tunnel: docker compose -f code/infrastructure/cloudflared/docker-compose.cloudflared.yml --env-file code/infrastructure/cloudflared/.env.nas up -d"
   else
-    fail "app.$PUBLIC_DOMAIN returned HTTP $APP_STATUS (expected 200 or 401)"
+    fail "app.$PUBLIC_DOMAIN / returned HTTP $APP_ROOT_STATUS (expected 200)"
   fi
 
+  # 2) Runtime config served by the web container.
+  CFG="$(probe_pub -sf "$APP_URL/config.json" || true)"
+  if printf '%s' "$CFG" | grep -q '"apiBaseUrl"'; then
+    API_BASE="$(printf '%s' "$CFG" | grep -o '"apiBaseUrl":"[^"]*"' | head -1)"
+    ok "app.$PUBLIC_DOMAIN /config.json present ($API_BASE)"
+  else
+    fail "app.$PUBLIC_DOMAIN /config.json missing or invalid (no apiBaseUrl)"
+    echo "    Set FPS_WEB_* in nas.env so the web entrypoint generates config.json."
+  fi
+
+  # 3) API health through the web /api proxy → Envoy → Identity.
+  API_HEALTH="$(probe_pub -sf "$APP_URL/api/health/identity" || true)"
+  if printf '%s' "$API_HEALTH" | grep -q '"status":"Healthy"'; then
+    ok "app.$PUBLIC_DOMAIN /api/health/identity → Healthy (web → Envoy proxy works)"
+  else
+    fail "app.$PUBLIC_DOMAIN /api/health/identity not Healthy — check the nginx /api proxy and Envoy"
+  fi
+
+  # 4) Auth discovery.
   AUTH_DISC="$(probe_pub -sf "$AUTH_URL/realms/$REALM/.well-known/openid-configuration" || true)"
   if printf '%s' "$AUTH_DISC" | grep -q '"issuer"'; then
     ISS="$(printf '%s' "$AUTH_DISC" | grep -o '"issuer":"[^"]*"' | head -1)"
@@ -642,9 +665,17 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
     echo "    Check tunnel: docker compose -f code/infrastructure/cloudflared/docker-compose.cloudflared.yml logs cloudflared"
   fi
 
+  # 5) Protected internal surface — the Keycloak admin console must not be public.
+  KC_ADMIN_STATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$AUTH_URL/admin/" || true)"
+  if [[ "$KC_ADMIN_STATUS" == "401" || "$KC_ADMIN_STATUS" == "403" || "$KC_ADMIN_STATUS" == "404" ]]; then
+    ok "Keycloak admin not publicly exposed (HTTP $KC_ADMIN_STATUS)"
+  else
+    fail "auth.$PUBLIC_DOMAIN/admin returned HTTP $KC_ADMIN_STATUS — admin console must not be public (configure the Cloudflare WAF / hostname rules, SEC010)"
+  fi
+
   echo
-  info "For full OIDC/Keycloak, booking, and WAF checks on the public domain, run:"
-  info "  APP_URL=$APP_URL AUTH_URL=$AUTH_URL OIDC_REALM=$REALM ./tools/smoke-hosted.sh"
+  info "For the full hosted E2E (login, booking, notifications, WAF, TLS), run:"
+  info "  APP_URL=$APP_URL/api AUTH_URL=$AUTH_URL OIDC_REALM=$REALM ./tools/smoke-hosted.sh"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────────

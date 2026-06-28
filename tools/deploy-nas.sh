@@ -26,6 +26,8 @@ TUNNEL_ENV_FILE="$INFRA_DIR/cloudflared/.env.nas"
 DOMAIN=""
 SKIP_TUNNEL=false
 SKIP_PUBLIC=false
+IMAGE_TAG=""
+ALLOW_LATEST=false
 
 read_env_value() {
   key="$1"
@@ -50,6 +52,11 @@ Options:
   --env-file PATH          NAS stack env file. Default: code/infrastructure/nas.env
   --tunnel-env-file PATH   Cloudflare tunnel env file. Default: code/infrastructure/cloudflared/.env.nas
   --domain DOMAIN          Public domain for smoke checks, e.g. fairspot.net
+  --tag TAG                Image tag to deploy (sets FPS_IMAGE_TAG). Use an immutable
+                           tag — sha-<commit> or a v* release tag. Required for a
+                           public release deployment (see --allow-latest).
+  --allow-latest           Permit deploying the moving "latest" tag for a public
+                           deploy. Not valid for Release 1 evidence.
   --skip-tunnel            Internal troubleshooting only. Do not start cloudflared.
   --skip-public            Internal troubleshooting only. Do not run public hostname checks.
 
@@ -65,6 +72,8 @@ while [[ $# -gt 0 ]]; do
     --env-file) ENV_FILE="$2"; shift ;;
     --tunnel-env-file) TUNNEL_ENV_FILE="$2"; shift ;;
     --domain) DOMAIN="$2"; shift ;;
+    --tag) IMAGE_TAG="$2"; shift ;;
+    --allow-latest) ALLOW_LATEST=true ;;
     --skip-tunnel) SKIP_TUNNEL=true ;;
     --skip-public) SKIP_PUBLIC=true ;;
     -h|--help) usage; exit 0 ;;
@@ -110,9 +119,35 @@ if [[ "$SKIP_PUBLIC" != "true" && -n "$AUTH_AUTHORITY" && "$AUTH_AUTHORITY" != h
   exit 1
 fi
 
+# Image tag selection. NAS runs pulled images; a public (release-evidence) deploy
+# must pin an immutable tag — sha-<commit> or a v* release tag — and must not
+# silently use the moving "latest". --tag wins; otherwise fall back to any
+# FPS_IMAGE_TAG already in the environment.
+IMAGE_TAG="${IMAGE_TAG:-${FPS_IMAGE_TAG:-}}"
+if [[ "$SKIP_PUBLIC" != "true" ]]; then
+  if [[ -z "$IMAGE_TAG" || "$IMAGE_TAG" == "latest" ]]; then
+    if [[ "$ALLOW_LATEST" != "true" ]]; then
+      echo "ERROR: a public release deployment requires an immutable image tag."
+      echo "Pin a sha-<commit> (or a v* release tag) so the deploy is reproducible"
+      echo "and recorded in the release evidence:"
+      echo "  ./tools/deploy-nas.sh --domain ${DOMAIN:-<domain>} --tag sha-<commit>"
+      echo
+      echo "To deploy the moving 'latest' tag anyway (not valid for release evidence),"
+      echo "add --allow-latest."
+      exit 1
+    fi
+    echo "WARNING: deploying moving tag 'latest' (--allow-latest). Not valid for Release 1 evidence."
+    IMAGE_TAG="latest"
+  fi
+fi
+if [[ -n "$IMAGE_TAG" ]]; then
+  export FPS_IMAGE_TAG="$IMAGE_TAG"
+fi
+
 echo "== FairSpot NAS deployment =="
 echo "Stack env:  $ENV_FILE"
 echo "Domain:     ${DOMAIN:-not set}"
+echo "Image tag:  ${IMAGE_TAG:-<compose default>}"
 echo
 
 "$REPO_ROOT/tools/start-container-stack.sh" --nas --env-file "$ENV_FILE"
