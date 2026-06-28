@@ -285,35 +285,16 @@ ok "probe image: $CURL_IMAGE"
 
 hdr "Starting stack ($MODE mode)"
 
-if [[ "$MODE" == "nas" ]]; then
-  # NAS runs pre-built images from a registry — pull, then start (never build).
-  echo "Registry: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}  Tag: ${FPS_IMAGE_TAG:-latest}"
-  echo "If the packages are private, run 'docker login ghcr.io' first."
-  echo "Command: $COMPOSE_HUMAN pull && $COMPOSE_HUMAN up -d"
-  echo
-  if ! "${COMPOSE_CMD[@]}" pull; then
-    echo "ERROR: image pull failed. Check the registry/tag and 'docker login ghcr.io' for private packages."
-    exit 1
-  fi
-  "${COMPOSE_CMD[@]}" up -d
-else
-  echo "Command: $COMPOSE_HUMAN up -d --build"
-  echo
-  "${COMPOSE_CMD[@]}" up -d --build
-fi
-
-# ── Wait for infrastructure health ───────────────────────────────────────────────
-
-hdr "Waiting for infrastructure health"
-
-# NAS server-mode Vault preflight. In --nas mode Vault runs durable server mode
-# (not -dev): it starts sealed/uninitialized and only reports healthy once the
-# operator unseals it. Detect that via /v1/sys/seal-status (served even while
-# sealed) and print the runbook step instead of waiting out the health timeout.
-if [[ "$MODE" == "nas" ]]; then
+# NAS server-mode Vault gate. In --nas mode Vault runs durable server mode (not
+# -dev): it boots sealed/uninitialized and only reports healthy once the operator
+# unseals it. vault-init has `depends_on: vault {condition: service_healthy}`, so
+# bringing the whole graph up at once would deadlock on a sealed Vault before we
+# could print instructions. The NAS path is therefore two-stage: start Vault
+# alone, gate here, then start the rest. Seal state is read from
+# /v1/sys/seal-status, which Vault serves even while sealed.
+require_vault_unsealed() {
   printf "  Checking Vault seal status"
-  seal=""
-  vsleep=0
+  local seal="" vsleep=0
   while [[ $vsleep -lt 30 ]]; do
     seal="$(probe_net -s http://vault:8200/v1/sys/seal-status || true)"
     [[ -n "$seal" ]] && break
@@ -341,9 +322,36 @@ if [[ "$MODE" == "nas" ]]; then
   elif printf '%s' "$seal" | grep -q '"sealed":false'; then
     printf " — unsealed\n"
   else
-    printf " — (could not read seal status; continuing to health checks)\n"
+    printf " — (could not read seal status; continuing)\n"
   fi
+}
+
+if [[ "$MODE" == "nas" ]]; then
+  # NAS runs pre-built images from a registry — pull, then start (never build).
+  echo "Registry: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}  Tag: ${FPS_IMAGE_TAG:-latest}"
+  echo "If the packages are private, run 'docker login ghcr.io' first."
+  echo "Command: $COMPOSE_HUMAN pull, then a two-stage up -d (Vault first, then the rest)"
+  echo
+  if ! "${COMPOSE_CMD[@]}" pull; then
+    echo "ERROR: image pull failed. Check the registry/tag and 'docker login ghcr.io' for private packages."
+    exit 1
+  fi
+  # Stage 1: Vault only — so vault-init cannot deadlock on a sealed Vault.
+  echo "Stage 1/2: starting Vault (server mode)…"
+  "${COMPOSE_CMD[@]}" up -d vault
+  require_vault_unsealed
+  # Stage 2: Vault is unsealed — start the rest of the graph, incl. vault-init.
+  echo "Stage 2/2: Vault unsealed — starting the full stack…"
+  "${COMPOSE_CMD[@]}" up -d
+else
+  echo "Command: $COMPOSE_HUMAN up -d --build"
+  echo
+  "${COMPOSE_CMD[@]}" up -d --build
 fi
+
+# ── Wait for infrastructure health ───────────────────────────────────────────────
+
+hdr "Waiting for infrastructure health"
 
 INFRA_TIMEOUT=120
 INFRA_INTERVAL=5
