@@ -117,6 +117,7 @@ Before creating the tunnel, confirm no NAS service ports are exposed to the Inte
 | 9090 | TCP | Block inbound; Prometheus internal only |
 | 3000 | TCP | Block inbound; Grafana via Cloudflare Access if needed, not directly |
 | 5131–5197 | TCP | Block inbound; FPS service ports internal only |
+| 5200 | TCP | Block inbound; web SPA (fps-web) reached only through the Tunnel |
 | 3500 / 50001 | TCP | Block inbound; Dapr ports internal only |
 
 Apply these rules through the NAS firewall interface or Linux `iptables`/`ufw` before proceeding.
