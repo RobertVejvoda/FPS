@@ -409,8 +409,9 @@ The start script covers: Vault seed, all 9 app service health, all 9 Dapr sideca
 # Quick connectivity check via the start script:
 ./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --domain fairspot.net
 
-# Full hosted E2E smoke (login, booking, notifications, audit, WAF, TLS):
-APP_URL=https://app.fairspot.net AUTH_URL=https://auth.fairspot.net \
+# Full hosted E2E smoke (login, booking, notifications, audit, WAF, TLS).
+# Single-origin: the API is proxied at app.<domain>/api, so APP_URL targets /api.
+APP_URL=https://app.fairspot.net/api AUTH_URL=https://auth.fairspot.net \
 OIDC_REALM=fairspot ./tools/smoke-hosted.sh
 ```
 

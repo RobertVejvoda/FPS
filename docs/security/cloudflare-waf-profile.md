@@ -67,6 +67,8 @@ Use `starts_with()` and `contains` in the expressions below. The regex `matches`
 
 The following paths must never be reachable from the Internet. They expose Dapr sidecar APIs, internal health checks, diagnostic endpoints, and documentation surfaces.
 
+**Single-origin note (Release 1):** `app.<domain>` serves the SPA and reverse-proxies the API under `/api/` to the Envoy gateway. Cloudflare evaluates the **browser-facing** path *before* nginx strips the `/api` prefix, so each internal path must be blocked in **both** its root form and its `/api/`-prefixed form. The SEC011 hosted smoke enforces exactly this: it checks `/metrics` at the root origin and `/api/{openapi,swagger,v1.0/*}` at the API base.
+
 **Rule name:** `FPS — Block internal paths on app`
 
 **Action:** Block (returns HTTP 403)
@@ -78,33 +80,43 @@ The following paths must never be reachable from the Internet. They expose Dapr 
   http.host eq "app.REPLACE_WITH_DOMAIN"
   and (
     starts_with(http.request.uri.path, "/metrics")
+    or starts_with(http.request.uri.path, "/api/metrics")
     or starts_with(http.request.uri.path, "/dapr/")
+    or starts_with(http.request.uri.path, "/api/dapr/")
     or starts_with(http.request.uri.path, "/v1.0/")
+    or starts_with(http.request.uri.path, "/api/v1.0/")
     or starts_with(http.request.uri.path, "/healthz")
-    or starts_with(http.request.uri.path, "/admin")
+    or starts_with(http.request.uri.path, "/api/healthz")
     or starts_with(http.request.uri.path, "/swagger")
+    or starts_with(http.request.uri.path, "/api/swagger")
     or starts_with(http.request.uri.path, "/openapi")
+    or starts_with(http.request.uri.path, "/api/openapi")
+    or starts_with(http.request.uri.path, "/admin")
+    or starts_with(http.request.uri.path, "/api/admin")
     or starts_with(http.request.uri.path, "/_")
+    or starts_with(http.request.uri.path, "/api/_")
   )
 )
 ```
 
 Replace `REPLACE_WITH_DOMAIN` with the operator's domain (e.g. `app.example.com`).
 
+The `/api/*` clauses match the single-origin browser path; the root clauses keep the rule correct for any direct-origin or non-single-origin access. Legitimate API calls (`/api/me`, `/api/bookings`, `/api/health/identity`, `/api/draws/...`) are unaffected — none start with a blocked diagnostic prefix (note `/healthz` ≠ `/api/health/...`).
+
 **Paths blocked and rationale:**
 
 | Path pattern | Reason to block |
 |---|---|
-| `/metrics` | Prometheus scrape endpoint — internal only |
-| `/dapr/*` | Dapr HTTP sidecar API — never exposed publicly |
-| `/v1.0/*` | Dapr API prefix — overlaps with Dapr invoke paths |
-| `/healthz` | Kubernetes/Envoy health endpoint — internal probe only |
-| `/admin` | Catch-all admin prefix |
-| `/swagger` | OpenAPI UI — should not be public in production |
-| `/openapi` | OpenAPI schema endpoint |
-| `/_*` | Framework internal routes (ASP.NET, Envoy internals) |
+| `/metrics`, `/api/metrics` | Prometheus scrape endpoint — internal only |
+| `/dapr/*`, `/api/dapr/*` | Dapr HTTP sidecar API — never exposed publicly |
+| `/v1.0/*`, `/api/v1.0/*` | Dapr API prefix — overlaps with Dapr invoke paths |
+| `/healthz`, `/api/healthz` | Kubernetes/Envoy health endpoint — internal probe only |
+| `/swagger`, `/api/swagger` | OpenAPI UI — should not be public in production |
+| `/openapi`, `/api/openapi` | OpenAPI schema endpoint |
+| `/admin`, `/api/admin` | Catch-all admin prefix (Keycloak admin is on `auth.<domain>` — see 1.2) |
+| `/_*`, `/api/_*` | Framework internal routes (ASP.NET, Envoy internals) |
 
-> **Note:** If the operator needs to expose `/openapi` for developer portal purposes, remove that clause and apply authentication via Cloudflare Access instead.
+> **Note:** If the operator needs to expose `/openapi` (or `/api/openapi`) for developer portal purposes, remove those clauses and apply authentication via Cloudflare Access instead.
 
 ### 1.2 Block Keycloak admin paths on `auth.<domain>`
 

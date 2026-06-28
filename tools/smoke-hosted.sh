@@ -4,14 +4,17 @@
 # Writes a structured evidence file (smoke-evidence-<timestamp>.txt) with all
 # tokens redacted.  Exits non-zero if any mandatory check fails.
 #
-# Usage (public domain):
-#   APP_URL=https://app.<domain> AUTH_URL=https://auth.<domain> \
+# Usage (public domain — single-origin: the API is proxied at app.<domain>/api):
+#   APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> \
 #   OIDC_REALM=fps-pilot ./tools/smoke-hosted.sh
 #
-# Usage (localhost — TLS/WAF checks become PENDING):
+# Usage (localhost — talks to the Envoy gateway directly, API served at root, so
+# no /api; TLS/WAF checks become PENDING):
 #   APP_URL=http://localhost:10000 AUTH_URL=http://localhost:8180 \
 #   OIDC_REALM=fps-local ./tools/smoke-hosted.sh
 #
+# A root public APP_URL is auto-normalized to its /api base (see below), so the
+# API probes never accidentally hit the SPA root.
 # Note: local Keycloak Docker container maps internal :8080 to host :8180.
 #
 # See docs/production/hosted-smoke-runbook.md for full context and the
@@ -54,6 +57,23 @@ IS_LOCALHOST=false
 if [[ "$APP_URL" == "http://localhost"* || "$APP_URL" == "http://127.0.0.1"* ]]; then
   IS_LOCALHOST=true
 fi
+
+# Single-origin public model: the API is proxied at app.<domain>/api, so the
+# public APP_URL must target the /api base. Drop any trailing slash, then add
+# /api if missing, so the API probes ($APP_URL/me, /bookings, /openapi/v1.json,
+# ...) hit the gateway and not the SPA root — which would return 200 for every
+# path and record misleading evidence. Localhost talks to the Envoy gateway
+# directly (API served at root), so it is left unchanged.
+APP_URL="${APP_URL%/}"
+if [[ "$IS_LOCALHOST" == "false" && "$APP_URL" != */api ]]; then
+  APP_URL="$APP_URL/api"
+  echo "Note: using public API base APP_URL=$APP_URL (single-origin /api)."
+fi
+
+# Bare public origin, for root-path checks that must hit app.<domain> directly
+# (not the /api base): the WAF /metrics block and the HTTP→HTTPS redirect. For
+# localhost (no /api) this equals APP_URL.
+APP_ORIGIN="${APP_URL%/api}"
 
 # ── evidence file ─────────────────────────────────────────────────────────────
 
@@ -221,6 +241,20 @@ else
     pass "AUTH_URL uses HTTPS: $AUTH_URL"
   else
     fail "AUTH_URL does not use HTTPS — TLS not active" "true"
+  fi
+
+  # "Always Use HTTPS": the plain-HTTP app origin must redirect to https, not
+  # serve content. Probe the bare origin (not the /api base), swap the scheme.
+  HTTP_APP="${APP_ORIGIN/https:/http:}"
+  HTTP_STATUS=$(http_status "$HTTP_APP/")
+  if [[ "$HTTP_STATUS" == "301" || "$HTTP_STATUS" == "302" || "$HTTP_STATUS" == "308" ]]; then
+    pass "GET $HTTP_APP/ → HTTP $HTTP_STATUS (redirects to HTTPS)  [mandatory #9]"
+  elif [[ "$HTTP_STATUS" == "000" || -z "$HTTP_STATUS" ]]; then
+    pass "GET $HTTP_APP/ → no plain-HTTP response (HTTP not served)  [mandatory #9]"
+  elif [[ "$HTTP_STATUS" == "200" ]]; then
+    fail "GET $HTTP_APP/ → HTTP 200 over plain HTTP — enable Cloudflare 'Always Use HTTPS'" "true"
+  else
+    pending "GET $HTTP_APP/ → HTTP $HTTP_STATUS (confirm 'Always Use HTTPS' on the live domain)"
   fi
 fi
 
@@ -445,11 +479,13 @@ if [[ "$IS_LOCALHOST" == "true" ]]; then
   pending "WAF /metrics block — localhost mode (run against public domain to verify)"
   pending "WAF Keycloak admin block — localhost mode (run against public domain to verify)"
 else
-  METRICS_STATUS=$(http_status "$APP_URL/metrics")
+  # Root-origin path: the WAF/SEC010 contract blocks https://app.<domain>/metrics
+  # (not /api/metrics), so probe the bare origin, not the API base.
+  METRICS_STATUS=$(http_status "$APP_ORIGIN/metrics")
   if [[ "$METRICS_STATUS" == "403" || "$METRICS_STATUS" == "404" ]]; then
-    pass "GET /metrics → HTTP $METRICS_STATUS (blocked from public internet)  [mandatory #10]"
+    pass "GET $APP_ORIGIN/metrics → HTTP $METRICS_STATUS (blocked from public internet)  [mandatory #10]"
   else
-    fail "GET /metrics → HTTP $METRICS_STATUS (expected 403/404 — WAF rule may not be active)" "true"
+    fail "GET $APP_ORIGIN/metrics → HTTP $METRICS_STATUS (expected 403/404 — WAF rule may not be active)" "true"
   fi
 
   KC_ADMIN_STATUS=$(http_status "$AUTH_URL/admin")
@@ -458,6 +494,22 @@ else
   else
     fail "GET $AUTH_URL/admin → HTTP $KC_ADMIN_STATUS (expected 403/404 — WAF or Cloudflare Access rule needed)" "true"
   fi
+
+  # Additional internal/diagnostic surfaces that must not be publicly served via
+  # the API. NOTE: in the single-origin model the SPA history-fallback returns
+  # 200 for any unknown path at the app *root* by design (static SPA, no
+  # sensitive data); the meaningful checks target the /api/* surfaces proxied to
+  # the gateway, so APP_URL must include the /api prefix.
+  for ipath in "openapi/v1.json" "swagger" "swagger/index.html" "v1.0/healthz" "v1.0/metadata"; do
+    ISTATUS=$(http_status "$APP_URL/$ipath")
+    if [[ "$ISTATUS" == "401" || "$ISTATUS" == "403" || "$ISTATUS" == "404" ]]; then
+      pass "GET /api/$ipath → HTTP $ISTATUS (internal surface not publicly served)  [mandatory #10]"
+    elif [[ "$ISTATUS" == "200" ]]; then
+      fail "GET /api/$ipath → HTTP 200 (internal surface exposed through the public API)" "true"
+    else
+      pending "GET /api/$ipath → HTTP $ISTATUS (confirm against the live domain/WAF)"
+    fi
+  done
 fi
 
 # ── evidence file summary ─────────────────────────────────────────────────────
