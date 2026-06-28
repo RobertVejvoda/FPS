@@ -41,7 +41,7 @@ Cloudflare Edge (DNS proxy, TLS, WAF, DDoS, rate limiting)
     ▼
 cloudflared (Docker container on NAS)
     │
-    ├─ app.fairspot.net  → http://envoy-proxy:10000  (Envoy API gateway)
+    ├─ app.fairspot.net  → http://fps-web:80         (Web SPA; nginx proxies /api/ to Envoy)
     │
     └─ auth.fairspot.net → http://keycloak:8080      (Keycloak public login)
          (Keycloak admin console must NOT be published as a public hostname)
@@ -142,7 +142,7 @@ In the Cloudflare tunnel configuration, add these public hostname entries for Re
 
 | Public hostname | Type | URL | Notes |
 |---|---|---|---|
-| `app.fairspot.net` | HTTP | `http://envoy-proxy:10000` | FairSpot API gateway; public to authenticated users |
+| `app.fairspot.net` | HTTP | `http://fps-web:80` | Web SPA; nginx serves the UI and reverse-proxies `/api/` to the Envoy gateway (single origin, no CORS). Set `FPS_WEB_API_BASE_URL=https://app.fairspot.net/api`. |
 | `auth.fairspot.net` | HTTP | `http://keycloak:8080` | Keycloak public login only |
 
 **Do not add a public hostname for:**

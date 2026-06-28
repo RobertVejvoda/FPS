@@ -21,6 +21,12 @@ permissions:
   contents: read
   packages: write
 
+# GHCR image repository names must be lowercase. github.repository_owner is
+# mixed-case (RobertVejvoda), so pin the lowercase owner once and reuse it so the
+# published image names match the NAS compose default (ghcr.io/robertvejvoda/...).
+env:
+  REGISTRY_OWNER: robertvejvoda
+
 jobs:
   build-server:
     runs-on: ubuntu-latest
@@ -53,7 +59,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}
+          images: ghcr.io/${{ env.REGISTRY_OWNER }}/${{ matrix.name }}
           tags: |
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
@@ -93,7 +99,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/fps-web
+          images: ghcr.io/${{ env.REGISTRY_OWNER }}/fps-web
           tags: |
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}

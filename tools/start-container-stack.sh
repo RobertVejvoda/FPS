@@ -570,6 +570,32 @@ for svc in "${GATEWAY_SERVICES[@]}"; do
   fi
 done
 
+# ── Web SPA smoke (NAS image stack only; local mode runs web via Vite) ───────────
+if [[ "$MODE" == "nas" ]]; then
+  echo
+  echo "Web app (fps-web)..."
+  web_cid="$(_cid fps-web)"
+  if [[ -z "$web_cid" || "$(_state "$web_cid")" != "running" ]]; then
+    fail "fps-web is not running (state: $( [[ -n "$web_cid" ]] && _state "$web_cid" || echo missing ))"
+    echo "    Logs:  $COMPOSE_HUMAN logs fps-web"
+    echo "    Rerun: $COMPOSE_HUMAN up -d fps-web"
+  else
+    if probe_net -sf -o /dev/null http://fps-web:80/; then
+      ok "fps-web serves / (SPA index)"
+    else
+      fail "fps-web / not reachable"
+      echo "    Logs: $COMPOSE_HUMAN logs fps-web"
+    fi
+    cfg="$(probe_net -sf http://fps-web:80/config.json || true)"
+    if printf '%s' "$cfg" | grep -q '"apiBaseUrl"'; then
+      ok "fps-web serves /config.json (runtime config present)"
+    else
+      fail "fps-web /config.json missing or invalid (no apiBaseUrl)"
+      echo "    Set FPS_WEB_* in nas.env, or check the entrypoint: $COMPOSE_HUMAN logs fps-web"
+    fi
+  fi
+fi
+
 # ── Local E2E smoke (only when data was seeded) ──────────────────────────────────
 # Proves state stores, pub/sub, and workflow: a booking submitted through the
 # gateway must produce notification + audit records via Dapr events. Local only.

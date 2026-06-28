@@ -95,7 +95,7 @@ Add these to `code/infrastructure/nas.env` (all optional — defaults shown):
 |---|---|---|
 | `FPS_REGISTRY` | `ghcr.io/robertvejvoda` | Registry + owner prefix for all FairSpot images |
 | `FPS_IMAGE_TAG` | `latest` | Image tag to deploy — pin `sha-<commit>` for repeatable deploys/rollback |
-| `FPS_WEB_API_BASE_URL` | _(unset → baked default)_ | Public API base URL the web app calls (e.g. `https://app.fairspot.net`) |
+| `FPS_WEB_API_BASE_URL` | _(unset → baked default)_ | Public API base URL the web app calls. With the single-origin model this is `https://app.<domain>/api` (nginx proxies `/api/` to Envoy) |
 | `FPS_WEB_OIDC_AUTHORITY` | — | Public OIDC authority (e.g. `https://auth.fairspot.net/realms/fairspot`) |
 | `FPS_WEB_OIDC_CLIENT_ID` | — | Web OIDC client id |
 | `FPS_WEB_OIDC_REDIRECT_URI` | — | OIDC redirect URI |
@@ -136,6 +136,31 @@ Local development still builds from source — nothing here changes it:
 
 ---
 
+## Hosted routing (single origin)
+
+The web container is the public entry point for the browser UI. nginx in `fps-web`:
+
+- serves the SPA at `/` (client-side routing falls back to `index.html`), and
+- reverse-proxies `/api/` to the Envoy gateway (`envoy-proxy:10000`).
+
+Because the SPA and API share one origin, there is **no CORS** and no separate API hostname. Cloudflare public hostnames for the NAS profile:
+
+| Hostname | Routes to | Serves |
+|---|---|---|
+| `app.<domain>` | `http://fps-web:80` | Web SPA + `/api/` proxy to Envoy |
+| `auth.<domain>` | `http://keycloak:8080` | Keycloak public login |
+
+Set the web app's API base URL to the same origin under `/api`:
+
+```
+FPS_WEB_API_BASE_URL=https://app.<domain>/api
+FPS_WEB_OIDC_AUTHORITY=https://auth.<domain>/realms/fairspot
+```
+
+SPA routes live at `/` and never collide with the `/api/` backend prefix.
+
+The NAS smoke run (`start-container-stack.sh --nas`) verifies `fps-web` is running and that `/` and `/config.json` are reachable.
+
 ## Out of scope (OPS021)
 
-Production Vault/mTLS/storage-encryption hardening and public Cloudflare routing for the web container are **not** part of this slice. The web image runs and is reachable on the Docker network and its mapped host port; wiring a public hostname is handled in the NAS/Cloudflare profile work.
+Production Vault/mTLS/storage-encryption hardening is **not** part of this slice. The Cloudflare hostname/Tunnel configuration that points `app.<domain>` at `fps-web` is an operator step documented in the [NAS / Cloudflare Deployment Profile](./nas-cloudflare-deployment-profile.md).
