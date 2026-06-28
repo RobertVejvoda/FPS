@@ -141,8 +141,13 @@ public sealed class TenantClaimsTransformation : IClaimsTransformation
 
         foreach (var claim in identity.FindAll(ClaimTypes.Role).ToList())
             identity.RemoveClaim(claim);
+        // PLAT001: a customer-issuer token never grants a platform_* role, whichever
+        // ITenantRoleMapper is registered (this is the universal gate; the mapper
+        // guard is defence-in-depth). Platform roles only come from the platform
+        // branch above.
         foreach (var role in roleMapper.MapToRoles(tenantId, rawRoleValues))
-            identity.AddClaim(new Claim(ClaimTypes.Role, role));
+            if (!FpsRoles.IsPlatformRole(role))
+                identity.AddClaim(new Claim(ClaimTypes.Role, role));
 
         // Step 6: enforcement and deactivation checks.
         if (enforcement && !identityConfigStore.IsConfigured(tenantId))

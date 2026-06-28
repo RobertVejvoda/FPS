@@ -1,40 +1,33 @@
-using FPS.Customer.Application;
+using FPS.Customer.Identity;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using FPS.Customer.Application;
 
 namespace FPS.Customer.Controllers;
 
-// Class-level [Authorize] only requires authentication. The read-only GET
-// is open to both admin and hr_manager so HR can discover the tenant's
-// known locations from the Configuration page (issue #477) — same role
-// policy the Configuration location/slot endpoints already use. The
-// mutating POSTs stay admin-only because they record tenant-wide
-// bootstrap state. Same lesson as MAP001 (#467) and HR display-names
-// (#475) — controller-level role attributes are additive, so the
-// per-action relaxation has to live on the methods.
+// PLAT001 — the read-only GET is also open to hr_manager (own tenant only) so the
+// Configuration page can discover locations (issue #477). The mutating POSTs are
+// tenant-admin only ([RequireTenantAdmin]). Role-list attributes are avoided here
+// because they would exclude a cross-tenant platform_admin; the helper checks
+// (CanAdministerTenant) carry the platform/tenant logic instead.
 [ApiController]
 [Authorize]
 public sealed class TenantParkingBootstrapController(
     TenantParkingBootstrapService service,
     ICurrentUser currentUser) : ControllerBase
 {
-    private const string DiscoveryRoles = "admin,hr_manager";
-    private const string MutatingRoles = "admin";
-
     [HttpGet("/tenants/{tenantId}/parking-bootstrap")]
-    [Authorize(Roles = DiscoveryRoles)]
     public async Task<IActionResult> Get(string tenantId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
 
-        // Tenant isolation (Codex review on PR #486): hr_manager is now
-        // allowed onto this endpoint so the Configuration page can discover
-        // locations, but HR is tenant-scoped — they must only read their
-        // own tenant's bootstrap. Admin keeps cross-tenant capability
-        // intentionally, matching the rest of the Customer admin surface.
-        if (!currentUser.IsInRole("admin")
-            && !string.Equals(tenantId, currentUser.TenantId, StringComparison.Ordinal))
+        // A tenant admin or platform_admin may read this (CanAdministerTenant).
+        // hr_manager may read it only for their own tenant. No actor may read
+        // another tenant's bootstrap.
+        var hrOwnTenant = currentUser.IsInRole(FpsRoles.HrManager)
+            && string.Equals(tenantId, currentUser.TenantId, StringComparison.Ordinal);
+        if (!currentUser.CanAdministerTenant(tenantId) && !hrOwnTenant)
         {
             return Forbid();
         }
@@ -69,7 +62,7 @@ public sealed class TenantParkingBootstrapController(
     }
 
     [HttpPost("/tenants/{tenantId}/parking-bootstrap/policy")]
-    [Authorize(Roles = MutatingRoles)]
+    [RequireTenantAdmin]
     public async Task<IActionResult> RecordPolicy(
         string tenantId, [FromBody] RecordPolicyRequest request, CancellationToken ct)
     {
@@ -89,7 +82,7 @@ public sealed class TenantParkingBootstrapController(
     }
 
     [HttpPost("/tenants/{tenantId}/parking-bootstrap/locations")]
-    [Authorize(Roles = MutatingRoles)]
+    [RequireTenantAdmin]
     public async Task<IActionResult> RecordLocation(
         string tenantId, [FromBody] RecordLocationRequest request, CancellationToken ct)
     {

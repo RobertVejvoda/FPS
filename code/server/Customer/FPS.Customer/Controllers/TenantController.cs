@@ -1,16 +1,21 @@
 using FPS.Customer.Application;
 using FPS.Customer.Domain;
+using FPS.Customer.Identity;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Customer.Controllers;
 
+// PLAT001: creating a tenant is a platform-plane operation (RequirePlatformAdmin);
+// every /tenants/{tenantId} operation is tenant-scoped (RequireTenantAdmin =
+// platform_admin cross-tenant, or the tenant's own admin).
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize]
 public sealed class TenantController(TenantService service, ICurrentUser currentUser) : ControllerBase
 {
     [HttpPost("/tenants")]
+    [RequirePlatformAdmin]
     public async Task<IActionResult> Create([FromBody] CreateTenantRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -28,6 +33,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpGet("/tenants/{tenantId}")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> Get(string tenantId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -46,6 +52,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpPut("/tenants/{tenantId}")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> Update(string tenantId, [FromBody] UpdateTenantRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -61,6 +68,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpPost("/tenants/{tenantId}/transitions")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> Transition(string tenantId, [FromBody] TransitionRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId)) return Unauthorized();
@@ -75,6 +83,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpGet("/tenants/{tenantId}/transitions")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> GetTransitions(string tenantId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -93,6 +102,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpGet("/tenants/{tenantId}/provisioning")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> GetProvisioning(string tenantId, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -104,6 +114,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpPut("/tenants/{tenantId}/branding")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> SetBranding(string tenantId, [FromBody] SetBrandingRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();
@@ -128,6 +139,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpPost("/tenants/{tenantId}/discovery-domains")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> RegisterDiscoveryDomain(string tenantId, [FromBody] RegisterDiscoveryDomainRequest request, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId)) return Unauthorized();
@@ -139,6 +151,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
     }
 
     [HttpDelete("/tenants/{tenantId}/discovery-domains/{domain}")]
+    [RequireTenantAdmin]
     public async Task<IActionResult> UnregisterDiscoveryDomain(string tenantId, string domain, CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated) return Unauthorized();

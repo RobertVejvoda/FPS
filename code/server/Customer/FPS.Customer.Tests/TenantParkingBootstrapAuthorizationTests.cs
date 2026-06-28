@@ -118,14 +118,24 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
     }
 
     [Fact]
-    public async Task GetBootstrap_AdminOtherTenant_PassesAuthGate()
+    public async Task GetBootstrap_AdminOtherTenant_IsForbidden()
     {
-        // Admin is intentionally cross-tenant — matches the rest of the
-        // Customer admin surface. Tenant isolation only applies to HR.
+        // PLAT001: admin is now tenant-scoped. A tenant-a admin cannot read
+        // tenant-b's bootstrap — cross-tenant access requires platform_admin.
         var client = ClientWithToken("user-1", "tenant-a", "admin");
         var response = await client.GetAsync("/tenants/tenant-b/parking-bootstrap");
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBootstrap_CustomerTokenWithPlatformAdminClaim_IsForbiddenCrossTenant()
+    {
+        // A customer-issuer token can never reach the platform plane: even if its
+        // IdP injects a platform_admin claim, the claims transformation strips it,
+        // so it cannot cross tenants.
+        var client = ClientWithToken("user-1", "tenant-a", "platform_admin");
+        var response = await client.GetAsync("/tenants/tenant-b/parking-bootstrap");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ── POST /tenants/{tenantId}/parking-bootstrap/policy (mutating) ──────────
