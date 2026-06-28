@@ -10,8 +10,9 @@ services:
 
   vault:
     image: hashicorp/vault:${VAULT_IMAGE_VERSION:-1.18}
+    # Internal secret store — loopback only (containers use vault:8200).
     ports:
-      - "8200:8200"    
+      - "127.0.0.1:8200:8200"
     cap_add:
       - IPC_LOCK
     networks:
@@ -33,9 +34,10 @@ services:
 
   minio:
     image: minio/minio
+    # Internal object store — loopback only (containers use minio:9000).
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/data
     environment:
@@ -64,10 +66,12 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
+    # Internal broker — loopback only (containers use rabbitmq:5672; Prometheus
+    # scrapes :15692 over the Docker network).
     ports:
-      - "5672:5672"
-      - "15672:15672"
-      - "15692:15692"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:15692:15692"
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-admin}
@@ -85,26 +89,29 @@ services:
 
   postgres:
     image: postgres:16
+    # Internal datastore — bind to loopback so it is never reachable on the host
+    # LAN interface. Containers reach it over the Docker network (postgres:5432).
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
-      - POSTGRES_USER=fps
-      - POSTGRES_PASSWORD=fps
-      - POSTGRES_DB=fps_datahub
+      - POSTGRES_USER=${POSTGRES_USER:-fps}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fps}
+      - POSTGRES_DB=${POSTGRES_DB:-fps_datahub}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - web
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fps -d fps_datahub"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fps} -d ${POSTGRES_DB:-fps_datahub}"]
       interval: 5s
       timeout: 3s
       retries: 20
 
   mongodb:
     image: mongo:latest
+    # Internal datastore — loopback only (containers use mongodb:27017).
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:-admin}

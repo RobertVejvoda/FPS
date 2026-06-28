@@ -130,8 +130,15 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:?Set RABBITMQ_USER in nas.env}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:?Set RABBITMQ_PASS in nas.env}
 
+  # Interim: enforce a non-default Postgres credential, consistent with the other
+  # datastores. Target architecture is to source all datastore credentials from
+  # Vault so only the Vault password lives in nas.env — see security backlog #628.
   postgres:
     restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:?Set POSTGRES_USER in nas.env}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in nas.env}
+      - POSTGRES_DB=${POSTGRES_DB:-fps_datahub}
 
   mongodb:
     restart: unless-stopped

@@ -92,7 +92,7 @@ services:
       <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5211"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=fps_datahub;Username=fps;Password=fps"
+      ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-fps_datahub};Username=${POSTGRES_USER:-fps};Password=${POSTGRES_PASSWORD:-fps}"
     networks:
       - web
 

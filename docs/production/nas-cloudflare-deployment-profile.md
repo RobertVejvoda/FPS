@@ -145,15 +145,16 @@ In the Cloudflare tunnel configuration, add these public hostname entries for Re
 |---|---|---|---|
 | `app.fairspot.net` | HTTP | `http://fps-web:80` | Web SPA; nginx serves the UI and reverse-proxies `/api/` to the Envoy gateway (single origin, no CORS). Set `FPS_WEB_API_BASE_URL=https://app.fairspot.net/api`. |
 | `auth.fairspot.net` | HTTP | `http://keycloak:8080` | Keycloak public login only |
+| `ops.fairspot.net` | HTTP | `http://grafana:3000` | Operator observability only. Must be protected by a Cloudflare Access allow-list before use. |
 
 **Do not add a public hostname for:**
 - Keycloak admin console (`/auth/admin`, `/admin`)
-- Grafana, Prometheus, Alertmanager, Loki, Jaeger
+- Prometheus, Alertmanager, Loki, Jaeger
 - MongoDB, RabbitMQ, Vault, MinIO endpoints
 - Dapr sidecar ports
 - FPS service ports (5131–5197)
 
-If operator access to Grafana is needed externally, add `ops.<domain>` behind a **Cloudflare Access** policy with email or OIDC authentication. Do not expose it publicly.
+Do not expose Grafana directly. `ops.<domain>` is acceptable only when protected by a **Cloudflare Access** policy with named operator email or OIDC group authentication.
 
 Ensure **Proxied** (orange cloud) is toggled on for all DNS records. This is required for Cloudflare TLS, WAF, and DDoS protection.
 
@@ -191,6 +192,7 @@ Fill every required value in `code/infrastructure/nas.env`. The NAS overlay inte
 | `MONGO_USER` / `MONGO_PASS` | Authoritative state stores must not use local `admin/admin` defaults. |
 | `RABBITMQ_USER` / `RABBITMQ_PASS` | Pub/sub broker credentials protect business events and background processing. |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Object storage credentials must not use `minioadmin/minioadmin`. |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` | DataHub read-model database must not use the local `fps/fps` default. (`POSTGRES_DB` defaults to `fps_datahub`.) |
 | `KC_ADMIN_USER` / `KC_ADMIN_PASS` | Keycloak bootstrap admin must be unique and used only for setup. |
 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | Grafana is an operator console; local `admin/admin` must not be accepted for hosted use. |
 | `FPS_AUTH_*` | Services must validate tokens from the hosted public issuer, not the local `fps-local` realm. |
