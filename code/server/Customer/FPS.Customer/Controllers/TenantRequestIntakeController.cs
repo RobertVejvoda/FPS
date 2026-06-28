@@ -37,8 +37,31 @@ public sealed record SubmitTenantRequest(
 
 public sealed record TenantRequestAcknowledgement(string RequestId, string Status);
 
-/// <summary>Shared name for the intake rate-limit policy (registered in Program).</summary>
+/// <summary>Intake rate-limit policy name + trusted client-IP resolution (used by Program).</summary>
 public static class TenantRequestRateLimit
 {
     public const string PolicyName = "tenant-request-intake";
+
+    /// <summary>
+    /// Cloudflare's authoritative client-IP header. FairSpot's public boundary is reachable only
+    /// through Cloudflare Tunnel (see docs/production/nas-cloudflare-deployment-profile.md and the
+    /// WAF profile), and Cloudflare sets — and overwrites — this header with the true client IP,
+    /// so it is the trusted client identifier here.
+    /// </summary>
+    public const string CloudflareClientIpHeader = "CF-Connecting-IP";
+
+    /// <summary>
+    /// Partition key for the public intake limiter: the real client IP, so the window is per-client
+    /// rather than a single global bucket behind the proxy. We trust <see cref="CloudflareClientIpHeader"/>
+    /// (set only by the Cloudflare edge) — deliberately <b>not</b> arbitrary <c>X-Forwarded-For</c>.
+    /// Without Cloudflare (local/dev) the socket peer address is the client, so we fall back to it.
+    /// </summary>
+    public static string ClientPartitionKey(string? cloudflareClientIp, System.Net.IPAddress? remoteIp)
+    {
+        if (!string.IsNullOrWhiteSpace(cloudflareClientIp) &&
+            System.Net.IPAddress.TryParse(cloudflareClientIp.Trim(), out var parsed))
+            return parsed.ToString();
+
+        return remoteIp?.ToString() ?? "unknown";
+    }
 }

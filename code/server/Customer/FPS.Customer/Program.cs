@@ -30,10 +30,15 @@ builder.Services.AddScoped<TenantRequestService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    // Per-IP fixed window on the open intake path — Turnstile handles bot challenges; this caps abuse volume.
+    // Per-client fixed window on the open intake path. The partition key is the real client IP via
+    // Cloudflare's trusted CF-Connecting-IP (the boundary is Cloudflare-Tunnel-only), falling back
+    // to the socket peer locally — so this is genuinely per-client, not one global bucket behind
+    // the proxy. Turnstile handles bot challenges; this caps abuse volume.
     options.AddPolicy(TenantRequestRateLimit.PolicyName, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            TenantRequestRateLimit.ClientPartitionKey(
+                httpContext.Request.Headers[TenantRequestRateLimit.CloudflareClientIpHeader].FirstOrDefault(),
+                httpContext.Connection.RemoteIpAddress),
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
 });
 builder.Services.AddScoped<TenantIdentityService>();
