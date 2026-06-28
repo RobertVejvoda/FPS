@@ -78,6 +78,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # GHCR displays BuildKit provenance attestations as an extra
+          # unknown/unknown OS/Arch entry, which confuses package consumers.
+          provenance: false
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
@@ -114,5 +117,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # GHCR displays BuildKit provenance attestations as an extra
+          # unknown/unknown OS/Arch entry, which confuses package consumers.
+          provenance: false
           cache-from: type=gha,scope=fps-web
           cache-to: type=gha,mode=max,scope=fps-web
