@@ -39,7 +39,7 @@ Before configuring any rules, confirm which Cloudflare plan is active. Features 
 
 | Feature | Free | Pro | Business | Enterprise |
 |---|---|---|---|---|
-| Cloudflare managed rules (basic ruleset) | Yes | Yes | Yes | Yes |
+| Cloudflare managed rules / WAF managed rulesets | No in current Free setup | Yes | Yes | Yes |
 | OWASP Core Rule Set (managed rules) | No | Yes | Yes | Yes |
 | Custom WAF rules (up to 5) | Yes (5 rules) | Yes (20 rules) | Yes (100 rules) | Yes (unlimited) |
 | Rate limiting rules (counting-based) | No | Yes | Yes | Yes |
@@ -51,13 +51,17 @@ Before configuring any rules, confirm which Cloudflare plan is active. Features 
 | HSTS | Yes | Yes | Yes | Yes |
 | Full (strict) TLS | Yes | Yes | Yes | Yes |
 
-**Minimum viable plan for this profile:** **Pro** — required for rate limiting and OWASP managed rules. Free plan operators can apply WAF custom rules and TLS settings but cannot enforce rate limits at the edge.
+**Current Release 1 baseline:** Free plan. Use custom WAF rules and TLS settings now. Treat managed WAF rulesets, OWASP managed rules, and edge rate limiting as upgrade gaps until the plan is upgraded.
+
+**Recommended customer-facing plan:** Pro or higher, because it unlocks managed WAF rules and rate limiting. Do not mark the managed-rules or rate-limit checks as complete on a Free plan.
 
 ---
 
 ## 1. WAF custom rules
 
 Custom WAF rules block or challenge requests before they reach the NAS. Configure these in the Cloudflare dashboard under **Security** → **WAF** → **Custom rules** for the zone, or via the Cloudflare API / Terraform `cloudflare_ruleset` resource.
+
+Use `starts_with()` and `contains` in the expressions below. The regex `matches` operator requires Cloudflare Business or WAF Advanced and should not be used in the baseline Release 1 profile.
 
 ### 1.1 Block internal paths on `app.<domain>`
 
@@ -73,14 +77,14 @@ The following paths must never be reachable from the Internet. They expose Dapr 
 (
   http.host eq "app.REPLACE_WITH_DOMAIN"
   and (
-    http.request.uri.path matches "^/metrics"
-    or http.request.uri.path matches "^/dapr/"
-    or http.request.uri.path matches "^/v1\.0/"
-    or http.request.uri.path matches "^/healthz"
-    or http.request.uri.path matches "^/admin"
-    or http.request.uri.path matches "^/swagger"
-    or http.request.uri.path matches "^/openapi"
-    or http.request.uri.path matches "^/_"
+    starts_with(http.request.uri.path, "/metrics")
+    or starts_with(http.request.uri.path, "/dapr/")
+    or starts_with(http.request.uri.path, "/v1.0/")
+    or starts_with(http.request.uri.path, "/healthz")
+    or starts_with(http.request.uri.path, "/admin")
+    or starts_with(http.request.uri.path, "/swagger")
+    or starts_with(http.request.uri.path, "/openapi")
+    or starts_with(http.request.uri.path, "/_")
   )
 )
 ```
@@ -116,10 +120,13 @@ The Keycloak admin console must never be accessible from the public Internet. If
 (
   http.host eq "auth.REPLACE_WITH_DOMAIN"
   and (
-    http.request.uri.path matches "^/auth/admin"
-    or http.request.uri.path matches "^/admin"
-    or http.request.uri.path matches "^/realms/[^/]+/account/applications"
-    or http.request.uri.path matches "^/metrics"
+    starts_with(http.request.uri.path, "/auth/admin")
+    or starts_with(http.request.uri.path, "/admin")
+    or starts_with(http.request.uri.path, "/metrics")
+    or (
+      starts_with(http.request.uri.path, "/realms/")
+      and http.request.uri.path contains "/account/applications"
+    )
   )
 )
 ```
@@ -150,13 +157,13 @@ Suggested priority assignments:
 
 ## 2. Managed rules and OWASP
 
-### 2.1 Cloudflare managed ruleset (all plans)
+### 2.1 Cloudflare managed ruleset
 
-Enable the **Cloudflare Managed Ruleset** for the zone. This provides signatures for common attack categories (SQLi, XSS, RCE, path traversal) maintained by Cloudflare.
+Enable the **Cloudflare Managed Ruleset** only if the active plan exposes it. In the current Free plan setup this is not available, so record it as a Release 1 upgrade gap rather than a completed control.
 
 **Dashboard path:** Security → WAF → Managed rules → Deploy Cloudflare Managed Ruleset
 
-Default action for most rules in this ruleset is **Managed Challenge** (browser integrity check). Review the ruleset overrides once customer traffic is flowing and tune any rules generating false positives.
+When available, default action for most rules in this ruleset is **Managed Challenge** (browser integrity check). Review the ruleset overrides once customer traffic is flowing and tune any rules generating false positives.
 
 ### 2.2 OWASP Core Rule Set (Pro/Business/Enterprise only)
 
@@ -174,7 +181,7 @@ Recommended initial settings:
 
 Start at PL1/Medium to avoid false positives on the FairSpot API. After one week of customer traffic, review the WAF analytics and increase paranoia level if the false-positive rate is acceptable.
 
-> **Free plan:** OWASP managed rules are not available. The Cloudflare basic managed ruleset still provides meaningful protection. Document the gap in the operator's risk register and plan an upgrade path to Pro before processing sensitive personal data.
+> **Free plan:** OWASP managed rules are not available. Document the gap in the operator's risk register and plan an upgrade path to Pro before processing sensitive personal data.
 
 ---
 
@@ -192,8 +199,8 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "auth.REPLACE_WITH_DOMAIN" and (http.request.uri.path matches "^/realms/.*/protocol/openid-connect/token" or http.request.uri.path matches "^/auth/realms/.*/protocol/openid-connect/token")` |
-| Also match | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and http.request.uri.path matches "^/token"` |
+| Match on | `http.host eq "auth.REPLACE_WITH_DOMAIN" and http.request.uri.path contains "/protocol/openid-connect/token"` |
+| Also match | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/token")` |
 | Counting dimension | IP address |
 | Threshold | 5 requests |
 | Period | 10 seconds |
@@ -208,7 +215,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and http.request.uri.path matches "^/bookings"` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/bookings")` |
 | Counting dimension (Pro) | IP address |
 | Counting dimension (Business+) | Custom header `CF-Connecting-IP` correlated with `Authorization` JWT subject (requires advanced rate limiting) |
 | Threshold | 10 requests per IP per minute (Pro) — or 3 per authenticated user per minute (Business+) |
@@ -223,7 +230,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and http.request.uri.path matches "^/draws"` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/draws")` |
 | Counting dimension | IP address |
 | Threshold | 2 requests per minute |
 | Action | Block (HTTP 429) |
@@ -237,7 +244,7 @@ Draw triggers are admin-only operations. A threshold of 2 per minute per IP acco
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and http.request.uri.path matches "^/bookings/.*/cancel"` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/bookings/") and http.request.uri.path contains "/cancel"` |
 | Counting dimension | IP address |
 | Threshold | 5 requests per minute |
 | Action | Block (HTTP 429) |
@@ -249,7 +256,7 @@ Draw triggers are admin-only operations. A threshold of 2 per minute per IP acco
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (http.request.uri.path matches "^/import" or http.request.uri.path matches "^/.*/import")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/import") or http.request.uri.path contains "/import")` |
 | Counting dimension | IP address |
 | Threshold | 2 requests per minute |
 | Action | Block (HTTP 429) |
@@ -488,17 +495,17 @@ The operator must tick off each item before allowing external customer traffic. 
 - [ ] Verified by requesting `https://app.<domain>/swagger` — response is HTTP 403.
 - [ ] Custom rule `FPS — Block Keycloak admin paths on auth` is active and set to Block.
 - [ ] Verified by requesting `https://auth.<domain>/admin` — response is HTTP 403.
-- [ ] Cloudflare Managed Ruleset is deployed and active.
-- [ ] OWASP Core Ruleset is deployed (Pro plan or above) or absence is recorded in the risk register with plan upgrade path.
+- [ ] Cloudflare Managed Ruleset is deployed and active, or Free-plan limitation is recorded as a gap.
+- [ ] OWASP Core Ruleset is deployed, or Free-plan limitation is recorded as a gap with plan upgrade path.
 
 ### Rate limiting
 
-- [ ] Rate limiting requires Cloudflare Pro — plan is confirmed as Pro or above, or this section is deferred with a recorded risk acceptance.
-- [ ] Login/token rate limit rule is active (5 req/10s per IP on token endpoints).
-- [ ] Booking submission rate limit rule is active (10 req/min per IP).
-- [ ] Draw trigger rate limit rule is active (2 req/min per IP).
-- [ ] HR cancellation rate limit rule is active (5 req/min per IP).
-- [ ] Import endpoint rate limit rule is active (2 req/min per IP).
+- [ ] Rate limiting requires Cloudflare Pro — plan is confirmed as Pro or above, or Free-plan limitation is recorded as a gap.
+- [ ] Login/token rate limit rule is active (5 req/10s per IP on token endpoints), or deferred due to Free plan.
+- [ ] Booking submission rate limit rule is active (10 req/min per IP), or deferred due to Free plan.
+- [ ] Draw trigger rate limit rule is active (2 req/min per IP), or deferred due to Free plan.
+- [ ] HR cancellation rate limit rule is active (5 req/min per IP), or deferred due to Free plan.
+- [ ] Import endpoint rate limit rule is active (2 req/min per IP), or deferred due to Free plan.
 
 ### Cloudflare Access
 
