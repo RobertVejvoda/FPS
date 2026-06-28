@@ -1,4 +1,6 @@
+using System.Threading.RateLimiting;
 using FPS.Customer.Application;
+using FPS.Customer.Controllers;
 using FPS.Customer.Domain;
 using FPS.Customer.Identity;
 using FPS.Customer.Infrastructure;
@@ -17,6 +19,21 @@ builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>()
 builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
+// PLAT004: tenant-request intake (public onboarding). In-memory store is the eval baseline;
+// a durable Dapr store is a persist follow-up. Notifier logs the sales alert until SMTP is wired.
+builder.Services.AddSingleton<ITenantRequestRepository, InMemoryTenantRequestRepository>();
+builder.Services.AddSingleton<ITenantRequestNotifier, LoggingTenantRequestNotifier>();
+builder.Services.AddHttpClient<ITurnstileVerifier, HttpTurnstileVerifier>();
+builder.Services.AddScoped<TenantRequestService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Per-IP fixed window on the open intake path — Turnstile handles bot challenges; this caps abuse volume.
+    options.AddPolicy(TenantRequestRateLimit.PolicyName, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
+});
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
 builder.Services.AddScoped<TenantReadinessService>();
@@ -93,6 +110,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(options => options.WithTitle("Customer API"));
 }
 app.UseFpsMetrics();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

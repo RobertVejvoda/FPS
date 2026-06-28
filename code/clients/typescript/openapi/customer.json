@@ -694,6 +694,43 @@
           }
         ]
       }
+    },
+    "/tenant-requests": {
+      "post": {
+        "tags": [
+          "TenantRequestIntake"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTenantRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTenantRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTenantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -972,6 +1009,48 @@
           }
         }
       },
+      "SubmitTenantRequest": {
+        "required": [
+          "company",
+          "primaryDomain",
+          "contactEmail",
+          "message",
+          "turnstileToken"
+        ],
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "primaryDomain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "turnstileToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TransitionRequest": {
         "required": [
           "to",
@@ -1047,6 +1126,9 @@
     },
     {
       "name": "TenantReadiness"
+    },
+    {
+      "name": "TenantRequestIntake"
     }
   ]
 }
