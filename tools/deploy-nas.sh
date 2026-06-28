@@ -9,8 +9,11 @@
 #   1. Copy and fill code/infrastructure/nas.env from nas.env.example.
 #   2. Create the Cloudflare Tunnel and fill code/infrastructure/cloudflared/.env.nas.
 #   3. Configure Cloudflare public hostnames:
-#        app.<domain>  -> http://envoy-proxy:10000
-#        auth.<domain> -> http://keycloak:8080
+#        app.<domain>  -> http://fps-web:80     (web SPA; proxies /api/ to Envoy)
+#        auth.<domain> -> http://keycloak:8080  (Keycloak public login)
+#      The web container serves the SPA at "/" and reverse-proxies "/api/" to the
+#      Envoy gateway, so the browser uses a single origin. Set the web app's
+#      apiBaseUrl to https://app.<domain>/api via FPS_WEB_API_BASE_URL in nas.env.
 
 set -euo pipefail
 

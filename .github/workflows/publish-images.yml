@@ -1,0 +1,118 @@
+name: Publish Images
+
+# Build and push FairSpot service + web images to GitHub Container Registry (GHCR).
+# NAS pulls these images instead of building from source.
+#
+# Tags (per image):
+#   - sha-<full-commit-sha>   (always — immutable, what NAS should pin)
+#   - latest                  (only on the default branch)
+#   - <release tag> / semver  (on git tag pushes like v1.2.3)
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+    paths:
+      - 'code/**'
+      - '.github/workflows/publish-images.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# GHCR image repository names must be lowercase. github.repository_owner is
+# mixed-case (RobertVejvoda), so pin the lowercase owner once and reuse it so the
+# published image names match the NAS compose default (ghcr.io/robertvejvoda/...).
+env:
+  REGISTRY_OWNER: robertvejvoda
+
+jobs:
+  build-server:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: fps-audit,         service: Audit,         project: FPS.Audit,         port: '5161' }
+          - { name: fps-booking,       service: Booking,       project: FPS.Booking,       port: '5131' }
+          - { name: fps-configuration, service: Configuration, project: FPS.Configuration, port: '5141' }
+          - { name: fps-customer,      service: Customer,      project: FPS.Customer,      port: '5181' }
+          - { name: fps-datahub,       service: DataHub,       project: FPS.DataHub,       port: '5211' }
+          - { name: fps-identity,      service: Identity,      project: FPS.Identity,      port: '5192' }
+          - { name: fps-notification,  service: Notification,  project: FPS.Notification,  port: '5157' }
+          - { name: fps-profile,       service: Profile,       project: FPS.Profile,       port: '5197' }
+          - { name: fps-reporting,     service: Reporting,     project: FPS.Reporting,     port: '5171' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ env.REGISTRY_OWNER }}/${{ matrix.name }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: code/server
+          file: code/server/Dockerfile
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            PROJECT=${{ matrix.project }}
+            PORT=${{ matrix.port }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ env.REGISTRY_OWNER }}/fps-web
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+
+      - name: Build and push fps-web
+        uses: docker/build-push-action@v6
+        with:
+          context: code
+          file: code/web/fps-web/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=fps-web
+          cache-to: type=gha,mode=max,scope=fps-web

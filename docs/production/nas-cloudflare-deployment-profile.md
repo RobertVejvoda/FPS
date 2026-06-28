@@ -41,7 +41,7 @@ Cloudflare Edge (DNS proxy, TLS, WAF, DDoS, rate limiting)
     ▼
 cloudflared (Docker container on NAS)
     │
-    ├─ app.fairspot.net  → http://envoy-proxy:10000  (Envoy API gateway)
+    ├─ app.fairspot.net  → http://fps-web:80         (Web SPA; nginx proxies /api/ to Envoy)
     │
     └─ auth.fairspot.net → http://keycloak:8080      (Keycloak public login)
          (Keycloak admin console must NOT be published as a public hostname)
@@ -117,6 +117,7 @@ Before creating the tunnel, confirm no NAS service ports are exposed to the Inte
 | 9090 | TCP | Block inbound; Prometheus internal only |
 | 3000 | TCP | Block inbound; Grafana via Cloudflare Access if needed, not directly |
 | 5131–5197 | TCP | Block inbound; FPS service ports internal only |
+| 5200 | TCP | Block inbound; web SPA (fps-web) reached only through the Tunnel |
 | 3500 / 50001 | TCP | Block inbound; Dapr ports internal only |
 
 Apply these rules through the NAS firewall interface or Linux `iptables`/`ufw` before proceeding.
@@ -142,7 +143,7 @@ In the Cloudflare tunnel configuration, add these public hostname entries for Re
 
 | Public hostname | Type | URL | Notes |
 |---|---|---|---|
-| `app.fairspot.net` | HTTP | `http://envoy-proxy:10000` | FairSpot API gateway; public to authenticated users |
+| `app.fairspot.net` | HTTP | `http://fps-web:80` | Web SPA; nginx serves the UI and reverse-proxies `/api/` to the Envoy gateway (single origin, no CORS). Set `FPS_WEB_API_BASE_URL=https://app.fairspot.net/api`. |
 | `auth.fairspot.net` | HTTP | `http://keycloak:8080` | Keycloak public login only |
 
 **Do not add a public hostname for:**
@@ -242,9 +243,11 @@ The script starts these compose layers in order:
 | File | Contents |
 |---|---|
 | `docker-compose.yaml` | Infrastructure: MongoDB, RabbitMQ, Vault, MinIO, Keycloak, Envoy, observability |
-| `docker-compose.services.yml` | FairSpot app containers: 9 services, no host .NET required |
+| `docker-compose.services.images.yml` | FairSpot app containers (9 services + web) as **pulled images** — no build context. The NAS never builds from source. |
 | `docker-compose.dapr.yml` | Dapr system services (placement, scheduler), per-app sidecars, vault-init seed |
 | `docker-compose.nas.yml` | NAS overlay: restart-unless-stopped for all containers, required credential enforcement |
+
+> In `--nas` mode the script runs **pulled images** from a registry (GHCR by default) and never builds from source — so the NAS needs no .NET SDK, Node, npm, or Dapr CLI. It selects `docker-compose.services.images.yml` and `docker compose pull`s before starting. See [Publishing Images to GHCR](./ghcr-image-publishing.md) for the GHCR login, tag strategy (pin `sha-<commit>`), pull/run flow, and rollback.
 
 After startup the script:
 - Waits for infrastructure health checks (Vault, RabbitMQ, MongoDB, PostgreSQL)
