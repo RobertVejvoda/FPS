@@ -34,14 +34,31 @@ public sealed class TenantRoleMappingTests
     }
 
     [Fact]
-    public void MapToRoles_NoMappingConfigured_PassesThroughRoles()
+    public void MapToRoles_NoMappingConfigured_PassesNonPrivileged_StripsPrivileged()
     {
+        // PLAT001: with no explicit mapping and no allowlist, privileged roles are not
+        // granted implicitly from a raw claim; non-privileged (employee) still passes.
         var mapper = MapperWithConfig([]);
 
         var roles = mapper.MapToRoles("tenant-1", ["employee", "hr_manager"]);
 
         Assert.Contains("employee", roles);
+        Assert.DoesNotContain("hr_manager", roles);
+    }
+
+    [Fact]
+    public void MapToRoles_NoMapping_WithTrustedRealmRolesAllowlist_PassesPrivileged()
+    {
+        var mapper = MapperWithConfig(new Dictionary<string, string?>
+        {
+            ["Auth:TrustedRealmRoles"] = "admin, hr_manager",
+        });
+
+        var roles = mapper.MapToRoles("tenant-1", ["employee", "hr_manager", "admin"]);
+
+        Assert.Contains("employee", roles);
         Assert.Contains("hr_manager", roles);
+        Assert.Contains("admin", roles);
     }
 
     [Fact]

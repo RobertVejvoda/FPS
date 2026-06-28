@@ -31,4 +31,16 @@ public static class FpsRoles
     /// <summary>True when <paramref name="role"/> is a cross-tenant platform-plane role.</summary>
     public static bool IsPlatformRole(string? role) =>
         !string.IsNullOrEmpty(role) && role.StartsWith(PlatformPrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// True when <paramref name="role"/> is an elevated tenant-plane role. Privileged roles
+    /// are never granted implicitly from a raw token claim (PLAT001): they require an explicit
+    /// per-tenant mapping or a seeded <c>Auth:TrustedRealmRoles</c> allowlist. <c>employee</c>
+    /// is not privileged.
+    /// </summary>
+    public static bool IsPrivileged(string? role) =>
+        string.Equals(role, Admin, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(role, HrManager, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(role, Auditor, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(role, ReportViewer, StringComparison.OrdinalIgnoreCase);
 }

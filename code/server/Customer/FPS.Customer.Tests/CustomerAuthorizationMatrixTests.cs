@@ -44,6 +44,9 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
                 cfg.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Auth:PlatformIssuer"] = PlatformIssuer,
+                    // FairSpot-controlled realm: its admin/hr_manager/... realm roles may pass
+                    // through for tenants not yet explicitly mapped (PLAT001 seeded allowlist).
+                    ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
                 }));
             builder.ConfigureTestServices(services =>
             {

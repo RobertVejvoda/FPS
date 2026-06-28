@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -34,6 +35,14 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            // PLAT001 seeded allowlist: the FairSpot-controlled realm's admin/hr_manager/...
+            // roles may pass through for tenants not yet explicitly mapped, so these auth-gate
+            // tests reach the controller exactly as the demo profile does.
+            builder.ConfigureAppConfiguration((_, cfg) =>
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
+                }));
             builder.ConfigureTestServices(services =>
             {
                 // Swap Dapr-backed repos for the in-memory equivalents so the
