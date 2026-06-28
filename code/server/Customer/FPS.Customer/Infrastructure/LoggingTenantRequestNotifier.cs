@@ -1,26 +1,23 @@
 using FPS.Customer.Application;
 using FPS.Customer.Domain;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace FPS.Customer.Infrastructure;
 
 /// <summary>
-/// Default sales notifier: records that a sales alert was dispatched for a request, without
-/// emitting prospect PII to logs (the request id is non-identifying). A production profile swaps
-/// this for an SMTP / Notification-service implementation that emails the full request to the
-/// internal sales address; the prospect's details never leave the platform.
+/// Default record-only sales notifier: it notes that a tenant request awaits a sales alert but
+/// does <b>not</b> send email. Real delivery (Customer → Notification → <c>sales@fairspot.net</c>)
+/// ships in PLAT004b (#651), which swaps in a pub/sub implementation of this seam. Prospect PII is
+/// never written to logs (the request id is non-identifying).
 /// </summary>
 public sealed class LoggingTenantRequestNotifier(
-    IConfiguration configuration, ILogger<LoggingTenantRequestNotifier> logger) : ITenantRequestNotifier
+    ILogger<LoggingTenantRequestNotifier> logger) : ITenantRequestNotifier
 {
     public Task NotifySalesAsync(TenantRequest request, CancellationToken ct)
     {
-        var salesAddress = configuration["Onboarding:SalesEmail"] ?? "sales@fairspot.net";
         logger.LogInformation(
-            "Sales alert dispatched for tenant request {RequestId} (status {Status}) to the configured sales inbox.",
-            request.RequestId, request.Status);
-        _ = salesAddress; // routing target; not logged to avoid implying PII delivery in logs
+            "Tenant request {RequestId} recorded; sales-email delivery is not yet wired (PLAT004b #651) — no email sent.",
+            request.RequestId);
         return Task.CompletedTask;
     }
 }
