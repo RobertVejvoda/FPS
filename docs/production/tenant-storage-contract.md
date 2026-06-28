@@ -86,7 +86,7 @@ The shared-kernel `TenantStorageScope` (`FPS.SharedKernel.Infrastructure`) is th
 - `Collection(service, tenantKey)` — deterministic `fps-{tenant}-{service}` collection / partition / schema-safe names.
 - `KeyPrefix(entityType, tenantKey)` / `KeySegment(tenantKey)` — the Dapr state-key prefixes that scope a tenant's keys.
 
-Callers never supply storage names directly. `TenantProvisioningMetadata` records these per-service scopes (Customer, Booking, Notification, Profile, Audit, Configuration, DataHub, legacy Reporting) as durable provisioning evidence, derived from the tenant's provisioning slug so the evidence matches purge targets exactly. The slug is validated against this contract at provisioning time (3–63 chars, no reserved prefix).
+Callers never supply storage names directly. The **canonical storage key is the tenant id** — the same value services key their Dapr state under (`request:{tenantId}:…`) and that a purge scopes by. `TenantProvisioningMetadata` records the per-service scopes (Customer, Booking, Notification, Profile, Audit, Configuration, DataHub, legacy Reporting) derived from that tenant id, so provisioning evidence, service storage, and purge targets all match exactly. The tenant id is validated against this contract at provisioning time (3–63 chars, no reserved prefix); a generated GUID always conforms. `Collection()` is bounded to `MaxNameLength` (63) — a long tenant id is deterministically truncated with a short hash suffix, so a schema-based profile cannot overflow the identifier limit or collide.
 
 **Tenant purge contract.** A single-tenant purge is defined by:
 

@@ -23,19 +23,19 @@ public sealed record TenantProvisioningMetadata
 
     public static TenantProvisioningMetadata Generate(string tenantId, string slug)
     {
-        // Scope names derive from the readable, stable provisioning slug (the tenant id may be a
-        // generated GUID). A tenant purge scopes by the same slug, so this evidence matches the
-        // purge targets exactly. TenantStorageScope re-applies the canonical sanitisation contract.
-        var safe = Sanitize(slug);
+        // Scope names derive from the canonical tenant id — the same value services key their
+        // Dapr/storage by (request:{tenantId}:...) and that a tenant purge scopes by — so this
+        // evidence matches the purge targets and existing storage exactly. The tenant id must
+        // satisfy the storage contract (validated at provisioning); TenantStorageScope enforces it.
         var collections = TenantStorageScope.Services.ToDictionary(
             service => service,
-            service => TenantStorageScope.Collection(service, safe),
+            service => TenantStorageScope.Collection(service, tenantId),
             StringComparer.Ordinal);
 
         return new TenantProvisioningMetadata
         {
             TenantId = tenantId,
-            TenantSlug = safe,
+            TenantSlug = Sanitize(slug),
             GeneratedAt = DateTimeOffset.UtcNow,
             ServiceCollections = collections,
         };

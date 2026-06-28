@@ -217,7 +217,9 @@ public sealed class TenantControllerTests
         Assert.NotEmpty(response.ServiceCollections);
         Assert.Contains("booking", response.ServiceCollections.Keys);
         Assert.Contains("audit", response.ServiceCollections.Keys);
-        Assert.All(response.ServiceCollections.Values, v => Assert.Contains("my-corp", v));
+        // PLAT002: scope names derive from the canonical tenant id (the value services store
+        // under), not the display slug — so provisioning evidence matches the purge targets.
+        Assert.All(response.ServiceCollections.Values, v => Assert.Contains(response.TenantId, v));
     }
 
     [Fact]
@@ -234,7 +236,7 @@ public sealed class TenantControllerTests
         Assert.Equal(tenantId, prov.TenantId);
         Assert.All(prov.ServiceCollections.Values, v =>
         {
-            Assert.Contains("acme-co", v);
+            Assert.Contains(tenantId, v); // scopes derive from the canonical tenant id
             Assert.DoesNotContain("password", v);
             Assert.DoesNotContain("secret", v);
         });
@@ -255,7 +257,7 @@ public sealed class TenantControllerTests
     }
 
     [Fact]
-    public async Task GetProvisioning_CollectionNamesDeriveFromSlugNotCallerId()
+    public async Task GetProvisioning_CollectionNamesDeriveFromCanonicalTenantId()
     {
         var result1 = await controller.Create(new CreateTenantRequest("slug-a", "Co A", "eu", "UTC", []), CancellationToken.None);
         var id1 = ((TenantResponse)((CreatedAtActionResult)result1).Value!).TenantId;
@@ -266,9 +268,11 @@ public sealed class TenantControllerTests
         var prov1 = (ProvisioningResponse)((OkObjectResult)await controller.GetProvisioning(id1, CancellationToken.None)).Value!;
         var prov2 = (ProvisioningResponse)((OkObjectResult)await controller.GetProvisioning(id2, CancellationToken.None)).Value!;
 
+        // PLAT002: scope names derive from the canonical tenant id, so two tenants never collide
+        // and each scope addresses only its own tenant.
         Assert.NotEqual(prov1.ServiceCollections["booking"], prov2.ServiceCollections["booking"]);
-        Assert.Contains("slug-a", prov1.ServiceCollections["booking"]);
-        Assert.Contains("slug-b", prov2.ServiceCollections["booking"]);
+        Assert.Contains(id1, prov1.ServiceCollections["booking"]);
+        Assert.Contains(id2, prov2.ServiceCollections["booking"]);
     }
 
     // ── Branding endpoints (AUTH002) ─────────────────────────────────────────

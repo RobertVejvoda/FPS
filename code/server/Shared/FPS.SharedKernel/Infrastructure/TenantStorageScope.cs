@@ -23,12 +23,36 @@ public static class TenantStorageScope
     private static readonly Regex ServicePattern = new(@"^[a-z0-9][a-z0-9-]*$", RegexOptions.Compiled);
 
     /// <summary>
+    /// Maximum generated identifier length. PostgreSQL identifiers are capped at 63 bytes; this
+    /// is the binding limit across the supported stores (MongoDB collection names allow more).
+    /// </summary>
+    public const int MaxNameLength = 63;
+
+    /// <summary>
     /// Deterministic collection / partition / schema-safe name for a service's tenant data:
     /// <c>fps-{tenantId}-{service}</c>. Lowercase and hyphenated, so it is safe as a MongoDB
-    /// collection, a PostgreSQL schema, an object-storage prefix, or a DNS label.
+    /// collection, a PostgreSQL schema, an object-storage prefix, or a DNS label. When the
+    /// tenant id is long enough that the full name would exceed <see cref="MaxNameLength"/>, the
+    /// tenant segment is deterministically truncated and a short hash suffix keeps it unique.
     /// </summary>
-    public static string Collection(string service, string tenantId) =>
-        $"fps-{TenantStorageKey.Sanitise(tenantId)}-{NormaliseService(service)}";
+    public static string Collection(string service, string tenantId)
+    {
+        var tenant = TenantStorageKey.Sanitise(tenantId);
+        var svc = NormaliseService(service);
+        var name = $"fps-{tenant}-{svc}";
+        if (name.Length <= MaxNameLength)
+            return name;
+
+        var hash = ShortHash(tenant);
+        var fixedLength = "fps-".Length + 1 + hash.Length + 1 + svc.Length; // fps-{tPrefix}-{hash}-{svc}
+        var budget = MaxNameLength - fixedLength;
+        var prefix = budget > 0 ? tenant[..Math.Min(tenant.Length, budget)].TrimEnd('-') : string.Empty;
+        return prefix.Length > 0 ? $"fps-{prefix}-{hash}-{svc}" : $"fps-{hash}-{svc}";
+    }
+
+    private static string ShortHash(string value) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(value)))[..8].ToLowerInvariant();
 
     /// <summary>
     /// The Dapr state-key prefix that scopes a tenant's keys for an entity type:

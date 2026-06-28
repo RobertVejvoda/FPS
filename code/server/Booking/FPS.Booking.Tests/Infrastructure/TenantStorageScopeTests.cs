@@ -31,6 +31,23 @@ public sealed class TenantStorageScopeTests
         => Assert.Throws<ArgumentException>(() => TenantStorageScope.Collection("bad service!", "acme"));
 
     [Fact]
+    public void Collection_LongTenant_StaysWithinIdentifierLimit_DeterministicAndCollisionFree()
+    {
+        var tenant63 = new string('a', 63); // the contract's max-length tenant id
+
+        var name1 = TenantStorageScope.Collection("configuration", tenant63);
+        var name2 = TenantStorageScope.Collection("configuration", tenant63);
+
+        Assert.True(name1.Length <= TenantStorageScope.MaxNameLength,
+            $"'{name1}' ({name1.Length}) exceeds {TenantStorageScope.MaxNameLength}");
+        Assert.Equal(name1, name2); // deterministic
+
+        // A different long tenant must not collide on the same service.
+        var other = "b" + new string('a', 62);
+        Assert.NotEqual(name1, TenantStorageScope.Collection("configuration", other));
+    }
+
+    [Fact]
     public void KeyPrefix_AndSegment_ScopeToTenant()
     {
         Assert.Equal("request:acme:", TenantStorageScope.KeyPrefix("request", "ACME"));

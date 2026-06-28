@@ -30,10 +30,6 @@ public sealed class TenantService(
 
         var safeSlug = TenantProvisioningMetadata.Sanitize(slug);
         if (string.IsNullOrEmpty(safeSlug)) return (null, "Slug is required and must contain at least one alphanumeric character.");
-        // PLAT002: the slug is the tenant storage key, so it must satisfy the tenant-storage
-        // contract (3–63 chars, no reserved prefix). Reject gracefully at provisioning time.
-        try { _ = TenantStorageKey.Sanitise(safeSlug); }
-        catch (ArgumentException ex) { return (null, $"Slug '{safeSlug}' is not a valid tenant storage key: {ex.Message}"); }
         if (await repository.SlugExistsAsync(safeSlug, ct)) return (null, $"Slug '{safeSlug}' is already in use.");
 
         // Allow a deterministic tenant ID for provisioning tools; fall back to a generated GUID.
@@ -47,6 +43,12 @@ public sealed class TenantService(
                 return (null, $"Tenant ID '{safeTenantId}' is already in use.");
         }
         var tenantId = safeTenantId ?? Guid.NewGuid().ToString();
+        // PLAT002: the tenant id is the canonical storage key (service Dapr keys + provisioning
+        // scopes + purge all derive from it), so it must satisfy the tenant-storage contract
+        // (3–63 chars, no reserved prefix). A generated GUID always passes; reject an invalid
+        // requested id gracefully.
+        try { _ = TenantStorageKey.Sanitise(tenantId); }
+        catch (ArgumentException ex) { return (null, $"Tenant ID '{tenantId}' is not a valid tenant storage key: {ex.Message}"); }
         var tenant = new TenantWorkspace
         {
             TenantId = tenantId,
