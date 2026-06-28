@@ -8,15 +8,16 @@ namespace FPS.Customer.Controllers;
 
 /// <summary>
 /// PLAT004 — platform-operator triage of tenant requests. The queue holds cross-tenant prospect
-/// PII, so it is platform-plane only (<see cref="RequirePlatformAdminAttribute"/> from PLAT001):
-/// a tenant admin can never reach it. Approve/Reject advance the request; provisioning stays a
-/// separate, later step.
+/// PII, so it is platform-plane only (<see cref="RequirePlatformOperatorAttribute"/> from PLAT001):
+/// platform operators triage, platform admins are a superset, and a tenant admin can never reach
+/// it. Approve/Reject advance the request; provisioning stays a separate, later step.
 /// </summary>
 [ApiController]
-[RequirePlatformAdmin]
+[RequirePlatformOperator]
 public sealed class TenantRequestQueueController(TenantRequestService service, ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet("/tenant-requests")]
+    [ProducesResponseType(typeof(IReadOnlyList<TenantRequest>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(CancellationToken ct) => Ok(await service.ListAsync(ct));
 
     [HttpPost("/tenant-requests/{requestId}/approve")]

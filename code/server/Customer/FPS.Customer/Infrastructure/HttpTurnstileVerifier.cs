@@ -2,18 +2,21 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FPS.Customer.Application;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace FPS.Customer.Infrastructure;
 
 /// <summary>
-/// Verifies a Turnstile token against Cloudflare's siteverify endpoint. When no secret is
-/// configured (local/eval profiles), verification is skipped — the widget is not enforced — but
-/// every other path fails closed: a missing token, a non-2xx response, or an unreachable
-/// Cloudflare all return false.
+/// Verifies a Turnstile token against Cloudflare's siteverify endpoint. Verification is skipped
+/// only in <b>Development</b> when no secret is configured (so local/eval runs without the widget);
+/// in any other profile a missing secret is a misconfiguration that <b>fails closed</b> rather than
+/// exposing the public unauthenticated endpoint. Every other path also fails closed: a missing
+/// token, a non-2xx response, or an unreachable Cloudflare all return false.
 /// </summary>
 public sealed class HttpTurnstileVerifier(
-    HttpClient http, IConfiguration configuration, ILogger<HttpTurnstileVerifier> logger) : ITurnstileVerifier
+    HttpClient http, IConfiguration configuration, IHostEnvironment environment,
+    ILogger<HttpTurnstileVerifier> logger) : ITurnstileVerifier
 {
     private const string VerifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -22,8 +25,16 @@ public sealed class HttpTurnstileVerifier(
         var secret = configuration["Turnstile:Secret"];
         if (string.IsNullOrWhiteSpace(secret))
         {
-            logger.LogInformation("Turnstile secret not configured; skipping verification (non-production path).");
-            return true;
+            if (environment.IsDevelopment())
+            {
+                logger.LogWarning("Turnstile secret not configured; skipping verification (Development only).");
+                return true;
+            }
+
+            logger.LogError(
+                "Turnstile secret missing in '{Environment}' — failing closed on the public intake.",
+                environment.EnvironmentName);
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(token))

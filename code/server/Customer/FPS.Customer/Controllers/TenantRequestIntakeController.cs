@@ -16,6 +16,8 @@ public sealed class TenantRequestIntakeController(TenantRequestService service) 
 {
     [HttpPost("/tenant-requests")]
     [EnableRateLimiting(TenantRequestRateLimit.PolicyName)]
+    [ProducesResponseType(typeof(TenantRequestAcknowledgement), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Submit([FromBody] SubmitTenantRequest body, CancellationToken ct)
     {
         var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();

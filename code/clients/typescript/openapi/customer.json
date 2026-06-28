@@ -387,12 +387,7 @@
           "200": {
             "description": "OK"
           }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
+        }
       }
     },
     "/tenants/{tenantId}/identity-config": {
@@ -721,15 +716,47 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantRequestAcknowledgement"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantRequestAcknowledgement"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantRequestAcknowledgement"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
+        }
       },
       "get": {
         "tags": [
@@ -737,7 +764,33 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantRequest"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantRequest"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantRequest"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1007,6 +1060,44 @@
           }
         }
       },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RecordLocationRequest": {
         "required": [
           "locationId",
@@ -1200,6 +1291,73 @@
           }
         }
       },
+      "TenantRequest": {
+        "required": [
+          "requestId",
+          "company",
+          "primaryDomain",
+          "contactEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "primaryDomain": {
+            "type": "string"
+          },
+          "contactEmail": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TenantRequestStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decidedByHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decisionReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TenantRequestAcknowledgement": {
+        "required": [
+          "requestId",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "TenantRequestDecision": {
         "required": [
           "reason"
@@ -1213,6 +1371,9 @@
             ]
           }
         }
+      },
+      "TenantRequestStatus": {
+        "type": "integer"
       },
       "TransitionRequest": {
         "required": [

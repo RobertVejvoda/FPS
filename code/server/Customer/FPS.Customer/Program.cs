@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using FPS.Customer.Application;
 using FPS.Customer.Controllers;
+using Microsoft.AspNetCore.Authorization;
 using FPS.Customer.Domain;
 using FPS.Customer.Identity;
 using FPS.Customer.Infrastructure;
@@ -19,9 +20,10 @@ builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>()
 builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
-// PLAT004: tenant-request intake (public onboarding). In-memory store is the eval baseline;
-// a durable Dapr store is a persist follow-up. Notifier logs the sales alert until SMTP is wired.
-builder.Services.AddSingleton<ITenantRequestRepository, InMemoryTenantRequestRepository>();
+// PLAT004: tenant-request intake (public onboarding). Durable Dapr store is the system of
+// record; in-memory is used only by tests. Notifier records the sales alert; real email
+// delivery (Customer→Notification) ships in the PLAT004 email follow-up.
+builder.Services.AddSingleton<ITenantRequestRepository, DaprTenantRequestRepository>();
 builder.Services.AddSingleton<ITenantRequestNotifier, LoggingTenantRequestNotifier>();
 builder.Services.AddHttpClient<ITurnstileVerifier, HttpTurnstileVerifier>();
 builder.Services.AddScoped<TenantRequestService>();
@@ -67,6 +69,11 @@ builder.Services.AddOpenApi("v1", options =>
     });
     options.AddOperationTransformer((op, ctx, _) =>
     {
+        // Don't advertise Bearer security on [AllowAnonymous] endpoints (e.g. the public
+        // tenant-request intake) — the generated client contract must reflect the open path.
+        if (ctx.Description.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any())
+            return Task.CompletedTask;
+
         op.Security ??= [];
         op.Security.Add(new OpenApiSecurityRequirement
         {

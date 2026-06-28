@@ -681,7 +681,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["TenantRequest"][];
+                        "application/json": components["schemas"]["TenantRequest"][];
+                        "text/json": components["schemas"]["TenantRequest"][];
+                    };
                 };
             };
         };
@@ -701,12 +705,27 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description OK */
-                200: {
+                /** @description Accepted */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["TenantRequestAcknowledgement"];
+                        "application/json": components["schemas"]["TenantRequestAcknowledgement"];
+                        "text/json": components["schemas"]["TenantRequestAcknowledgement"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -827,6 +846,14 @@ export interface components {
             tenantId?: null | string;
             kind?: null | string;
         };
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
+        };
         RecordLocationRequest: {
             locationId: null | string;
             /** Format: int32 */
@@ -865,9 +892,28 @@ export interface components {
             message: null | string;
             turnstileToken: null | string;
         };
+        TenantRequest: {
+            requestId: string;
+            company: string;
+            primaryDomain: string;
+            contactEmail: string;
+            message?: string;
+            status?: components["schemas"]["TenantRequestStatus"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            decidedAt?: null | string;
+            decidedByHash?: null | string;
+            decisionReason?: null | string;
+        };
+        TenantRequestAcknowledgement: {
+            requestId: string;
+            status: string;
+        };
         TenantRequestDecision: {
             reason: null | string;
         };
+        TenantRequestStatus: number;
         TransitionRequest: {
             to: string;
             reason: null | string;
