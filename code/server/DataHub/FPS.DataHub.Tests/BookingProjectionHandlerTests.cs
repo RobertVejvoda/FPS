@@ -965,4 +965,66 @@ public sealed class BookingProjectionHandlerTests : IDisposable
         Assert.Equal(reqA, aRows[0].BookingRequestId);
         Assert.Equal(reqB, bRows[0].BookingRequestId);
     }
+
+    // ── DATAHUB004 #335: terminal lifecycle transitions ────────────────────────
+    // Coverage for the authoritative Release 1 producer event names that were
+    // previously untested at the handler level: usageConfirmed, noShowRecorded,
+    // requestCancelled, and requestExpired. Each is update-only (it transitions an
+    // existing outcome), so the test seeds a prior outcome via the real submitted
+    // path first.
+    //
+    // Note: booking.requestExpired is projection-supported here but is NOT yet
+    // emitted by the Booking producer in Release 1 (no expiry event publisher
+    // exists). This test proves the projection is ready if/when Booking emits it.
+
+    private Task SeedSubmittedAsync(string reqId, string tenant = "tenant-a") =>
+        _handler.HandleAsync(new BookingEventEnvelope(
+            EventId: $"evt-submitted-{reqId}", EventType: "booking.requestSubmitted", EventVersion: 1,
+            OccurredAt: DateTime.UtcNow.AddMinutes(-10), TenantId: tenant, CorrelationId: $"corr-{reqId}",
+            CausationId: null, ActorType: "employee", ActorId: "emp-x", Source: "booking",
+            Payload: new BookingEventPayload(reqId, "emp-x", "loc-hq", "2026-06-20", "08:00-17:00", null, "Submitted", null, null, null)),
+            CancellationToken.None);
+
+    private static BookingEventEnvelope TerminalEvent(string reqId, string eventType, string tenant = "tenant-a") =>
+        new(EventId: $"evt-{eventType}-{reqId}", EventType: eventType, EventVersion: 1,
+            OccurredAt: DateTime.UtcNow, TenantId: tenant, CorrelationId: $"corr-{reqId}",
+            CausationId: null, ActorType: "system", ActorId: null, Source: "booking",
+            Payload: new BookingEventPayload(reqId, "emp-x", "loc-hq", "2026-06-20", "08:00-17:00", "Allocated", null, "cutoff", "Cut-off passed", null));
+
+    [Theory]
+    [InlineData("booking.usageConfirmed", "Used")]
+    [InlineData("booking.noShowRecorded", "NoShow")]
+    [InlineData("booking.requestCancelled", "Cancelled")]
+    [InlineData("booking.requestExpired", "Expired")]
+    public async Task HandleTerminalEvent_TransitionsOutcomeToFinalStatus(string eventType, string expectedStatus)
+    {
+        var reqId = $"req-{expectedStatus.ToLowerInvariant()}";
+        await SeedSubmittedAsync(reqId);
+
+        await _handler.HandleAsync(TerminalEvent(reqId, eventType), CancellationToken.None);
+
+        var projection = await _db.BookingOutcomes.FirstOrDefaultAsync(b => b.BookingRequestId == reqId);
+        Assert.NotNull(projection);
+        Assert.Equal(expectedStatus, projection!.FinalStatus);
+        Assert.Equal("tenant-a", projection.TenantId);
+    }
+
+    [Theory]
+    [InlineData("booking.usageConfirmed", "Used")]
+    [InlineData("booking.noShowRecorded", "NoShow")]
+    [InlineData("booking.requestCancelled", "Cancelled")]
+    [InlineData("booking.requestExpired", "Expired")]
+    public async Task HandleTerminalEvent_DuplicateDelivery_IsIdempotent(string eventType, string expectedStatus)
+    {
+        var reqId = $"req-dup-{expectedStatus.ToLowerInvariant()}";
+        await SeedSubmittedAsync(reqId);
+
+        var evt = TerminalEvent(reqId, eventType);
+        await _handler.HandleAsync(evt, CancellationToken.None);
+        await _handler.HandleAsync(evt, CancellationToken.None);
+
+        var rows = await _db.BookingOutcomes.Where(b => b.BookingRequestId == reqId).ToListAsync();
+        Assert.Single(rows);
+        Assert.Equal(expectedStatus, rows[0].FinalStatus);
+    }
 }
