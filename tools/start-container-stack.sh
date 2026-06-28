@@ -285,16 +285,63 @@ ok "probe image: $CURL_IMAGE"
 
 hdr "Starting stack ($MODE mode)"
 
+# NAS server-mode Vault gate. In --nas mode Vault runs durable server mode (not
+# -dev): it boots sealed/uninitialized and only reports healthy once the operator
+# unseals it. vault-init has `depends_on: vault {condition: service_healthy}`, so
+# bringing the whole graph up at once would deadlock on a sealed Vault before we
+# could print instructions. The NAS path is therefore two-stage: start Vault
+# alone, gate here, then start the rest. Seal state is read from
+# /v1/sys/seal-status, which Vault serves even while sealed.
+require_vault_unsealed() {
+  printf "  Checking Vault seal status"
+  local seal="" vsleep=0
+  while [[ $vsleep -lt 30 ]]; do
+    seal="$(probe_net -s http://vault:8200/v1/sys/seal-status || true)"
+    [[ -n "$seal" ]] && break
+    printf "."
+    sleep 3
+    vsleep=$((vsleep + 3))
+  done
+  if printf '%s' "$seal" | grep -q '"initialized":false'; then
+    printf " — UNINITIALIZED\n"
+    echo
+    echo "Vault is in server mode and not yet initialized (first boot)."
+    echo "One-time setup (store the unseal shares + root token out of band):"
+    echo "  $COMPOSE_HUMAN exec vault vault operator init"
+    echo "  $COMPOSE_HUMAN exec vault vault operator unseal   # repeat with 3 key shares"
+    echo "  $COMPOSE_HUMAN exec vault vault secrets enable -path=secret kv-v2"
+    echo "  # provision a least-privilege token, set VAULT_TOKEN in nas.env, then re-run this script."
+    echo "See the NAS deployment runbook (Vault initialization) for details."
+    exit 1
+  elif printf '%s' "$seal" | grep -q '"sealed":true'; then
+    printf " — SEALED\n"
+    echo
+    echo "Vault is sealed. Unseal it, then re-run this script:"
+    echo "  $COMPOSE_HUMAN exec vault vault operator unseal   # repeat with 3 key shares"
+    exit 1
+  elif printf '%s' "$seal" | grep -q '"sealed":false'; then
+    printf " — unsealed\n"
+  else
+    printf " — (could not read seal status; continuing)\n"
+  fi
+}
+
 if [[ "$MODE" == "nas" ]]; then
   # NAS runs pre-built images from a registry — pull, then start (never build).
   echo "Registry: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}  Tag: ${FPS_IMAGE_TAG:-latest}"
   echo "If the packages are private, run 'docker login ghcr.io' first."
-  echo "Command: $COMPOSE_HUMAN pull && $COMPOSE_HUMAN up -d"
+  echo "Command: $COMPOSE_HUMAN pull, then a two-stage up -d (Vault first, then the rest)"
   echo
   if ! "${COMPOSE_CMD[@]}" pull; then
     echo "ERROR: image pull failed. Check the registry/tag and 'docker login ghcr.io' for private packages."
     exit 1
   fi
+  # Stage 1: Vault only — so vault-init cannot deadlock on a sealed Vault.
+  echo "Stage 1/2: starting Vault (server mode)…"
+  "${COMPOSE_CMD[@]}" up -d vault
+  require_vault_unsealed
+  # Stage 2: Vault is unsealed — start the rest of the graph, incl. vault-init.
+  echo "Stage 2/2: Vault unsealed — starting the full stack…"
   "${COMPOSE_CMD[@]}" up -d
 else
   echo "Command: $COMPOSE_HUMAN up -d --build"
