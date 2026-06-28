@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using FPS.SharedKernel.Infrastructure;
 
 namespace FPS.Customer.Domain;
 
@@ -8,8 +9,10 @@ public sealed record TenantProvisioningMetadata
     public string TenantId { get; init; } = string.Empty;
     public DateTimeOffset GeneratedAt { get; init; }
 
-    // Deterministic, tenant-scoped collection/store names derived from slug.
-    // These are evidence for operators — no actual provisioning occurs here.
+    // PLAT002: durable evidence of the per-service tenant storage scopes. Keys are the bounded-
+    // context service names; values are the deterministic, sanitised collection/partition names
+    // derived centrally from the trusted tenant id (TenantStorageScope) — so this evidence
+    // matches exactly what a tenant purge addresses. No actual provisioning occurs here.
     public IReadOnlyDictionary<string, string> ServiceCollections { get; init; } =
         new Dictionary<string, string>();
 
@@ -20,21 +23,19 @@ public sealed record TenantProvisioningMetadata
 
     public static TenantProvisioningMetadata Generate(string tenantId, string slug)
     {
-        var safe = Sanitize(slug);
-        var collections = new Dictionary<string, string>
-        {
-            ["customer"] = $"fps-{safe}-tenants",
-            ["booking"] = $"fps-{safe}-bookings",
-            ["notification"] = $"fps-{safe}-notifications",
-            ["profile"] = $"fps-{safe}-profiles",
-            ["audit"] = $"fps-{safe}-audit",
-            ["configuration"] = $"fps-{safe}-configuration",
-            ["reporting"] = $"fps-{safe}-reporting",
-        };
+        // Scope names derive from the canonical tenant id — the same value services key their
+        // Dapr/storage by (request:{tenantId}:...) and that a tenant purge scopes by — so this
+        // evidence matches the purge targets and existing storage exactly. The tenant id must
+        // satisfy the storage contract (validated at provisioning); TenantStorageScope enforces it.
+        var collections = TenantStorageScope.Services.ToDictionary(
+            service => service,
+            service => TenantStorageScope.Collection(service, tenantId),
+            StringComparer.Ordinal);
+
         return new TenantProvisioningMetadata
         {
             TenantId = tenantId,
-            TenantSlug = safe,
+            TenantSlug = Sanitize(slug),
             GeneratedAt = DateTimeOffset.UtcNow,
             ServiceCollections = collections,
         };

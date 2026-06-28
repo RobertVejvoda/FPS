@@ -211,7 +211,9 @@ public sealed class TenantServiceTests
         Assert.Equal(tenant.TenantId, p.TenantId);
         Assert.Equal("my-company", p.TenantSlug);
         Assert.NotEmpty(p.ServiceCollections);
-        Assert.All(p.ServiceCollections.Values, v => Assert.Contains("my-company", v));
+        // PLAT002: scopes key off the canonical tenant id (the same value services store under),
+        // not the display slug.
+        Assert.All(p.ServiceCollections.Values, v => Assert.Contains(tenant.TenantId, v));
     }
 
     [Fact]
@@ -221,8 +223,23 @@ public sealed class TenantServiceTests
         var (t2, _) = await service.CreateAsync("beta", "Beta", "eu", "UTC", [], CancellationToken.None);
 
         Assert.NotEqual(t1!.Provisioning.ServiceCollections["booking"], t2!.Provisioning.ServiceCollections["booking"]);
-        Assert.Contains("alpha", t1.Provisioning.ServiceCollections["booking"]);
-        Assert.Contains("beta", t2.Provisioning.ServiceCollections["booking"]);
+        Assert.Contains(t1.TenantId, t1.Provisioning.ServiceCollections["booking"]);
+        Assert.Contains(t2.TenantId, t2.Provisioning.ServiceCollections["booking"]);
+    }
+
+    [Fact]
+    public async Task Create_ProvisioningMetadata_IncludesAllPersistingServiceScopes()
+    {
+        // Explicit tenant id so the scope names are deterministic and readable in the assertion.
+        var (tenant, _) = await service.CreateAsync("acme-corp", "Acme", "eu", "UTC", [], CancellationToken.None, requestedTenantId: "acme-corp");
+
+        var scopes = tenant!.Provisioning.ServiceCollections;
+        // PLAT002: durable evidence must cover every bounded context that persists tenant data.
+        foreach (var service in new[] { "customer", "booking", "notification", "profile", "audit", "configuration", "datahub", "reporting" })
+        {
+            Assert.True(scopes.ContainsKey(service), $"provisioning metadata is missing the '{service}' scope");
+            Assert.Equal($"fps-acme-corp-{service}", scopes[service]);
+        }
     }
 
     [Fact]
@@ -391,8 +408,8 @@ public sealed class TenantServiceTests
     [Fact]
     public async Task RegisterDiscoveryDomain_SameDomainOnAnotherTenant_ReturnsError()
     {
-        var (t1, _) = await service.CreateAsync("t1", "T1", "eu", "UTC", [], CancellationToken.None);
-        var (t2, _) = await service.CreateAsync("t2", "T2", "eu", "UTC", [], CancellationToken.None);
+        var (t1, _) = await service.CreateAsync("ten1", "T1", "eu", "UTC", [], CancellationToken.None);
+        var (t2, _) = await service.CreateAsync("ten2", "T2", "eu", "UTC", [], CancellationToken.None);
         await service.RegisterDiscoveryDomainAsync(t1!.TenantId, "shared.example", "h", CancellationToken.None);
 
         var error = await service.RegisterDiscoveryDomainAsync(t2!.TenantId, "shared.example", "h", CancellationToken.None);
