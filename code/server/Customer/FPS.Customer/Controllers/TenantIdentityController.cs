@@ -1,5 +1,6 @@
 using FPS.Customer.Application;
 using FPS.Customer.Domain;
+using FPS.Customer.Identity;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace FPS.Customer.Controllers;
 
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize]
+[RequireTenantAdmin] // PLAT001: platform_admin (cross-tenant) or the tenant's own admin
 public sealed class TenantIdentityController(
     TenantIdentityService service,
     ICurrentUser currentUser) : ControllerBase

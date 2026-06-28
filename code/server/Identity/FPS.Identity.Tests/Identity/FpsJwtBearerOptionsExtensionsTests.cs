@@ -95,6 +95,86 @@ public sealed class FpsJwtBearerOptionsExtensionsTests
                 new TokenValidationParameters()));
     }
 
+    // ── PLAT001 multi-issuer (platform realm) ───────────────────────────────────
+
+    private const string CustomerAuthority = "https://auth.example/realms/fairspot";
+    private const string PlatformAuthority = "https://platform.example/realms/fps-platform";
+
+    private static JwtBearerOptions Configure(Dictionary<string, string?> values, string environment = "Production")
+    {
+        var options = new JwtBearerOptions();
+        options.ConfigureFpsJwtBearer(
+            new ConfigurationBuilder().AddInMemoryCollection(values).Build(),
+            new FakeHostEnvironment(environment));
+        return options;
+    }
+
+    [Fact]
+    public void PlatformAuthoritySet_AddsBothValidIssuers()
+    {
+        var options = Configure(new()
+        {
+            ["Auth:Authority"] = CustomerAuthority,
+            ["Auth:PlatformAuthority"] = PlatformAuthority,
+        });
+
+        var issuers = options.TokenValidationParameters.ValidIssuers?.ToList();
+        Assert.NotNull(issuers);
+        Assert.Contains(CustomerAuthority, issuers!);
+        Assert.Contains(PlatformAuthority, issuers!);
+    }
+
+    [Fact]
+    public void PlatformAuthoritySet_ConfiguresSigningKeyResolver()
+    {
+        var options = Configure(new()
+        {
+            ["Auth:Authority"] = CustomerAuthority,
+            ["Auth:PlatformAuthority"] = PlatformAuthority,
+        });
+
+        Assert.NotNull(options.TokenValidationParameters.IssuerSigningKeyResolver);
+    }
+
+    [Fact]
+    public void PlatformAuthorityUnset_DoesNotActivateMultiIssuer()
+    {
+        var options = Configure(new() { ["Auth:Authority"] = CustomerAuthority });
+
+        Assert.Null(options.TokenValidationParameters.ValidIssuers);
+        Assert.Null(options.TokenValidationParameters.IssuerSigningKeyResolver);
+    }
+
+    [Fact]
+    public void PlatformAuthoritySet_TrailingSlashIsNormalized()
+    {
+        var options = Configure(new()
+        {
+            ["Auth:Authority"] = CustomerAuthority + "/",
+            ["Auth:PlatformAuthority"] = PlatformAuthority + "/",
+        });
+
+        var issuers = options.TokenValidationParameters.ValidIssuers?.ToList();
+        Assert.NotNull(issuers);
+        Assert.Contains(CustomerAuthority, issuers!);
+        Assert.Contains(PlatformAuthority, issuers!);
+    }
+
+    [Fact]
+    public void LocalIssuerOverride_StillApplies_WithPlatformAuthority_InDevelopment()
+    {
+        var options = Configure(new()
+        {
+            ["Auth:Authority"] = CustomerAuthority,
+            ["Auth:PlatformAuthority"] = PlatformAuthority,
+            ["Auth:AllowLocalIssuerHostOverride"] = "true",
+        }, environment: "Development");
+
+        // The dev local-issuer override is preserved, and the platform issuer is still added.
+        Assert.NotNull(options.TokenValidationParameters.IssuerValidator);
+        Assert.Contains(PlatformAuthority, options.TokenValidationParameters.ValidIssuers!);
+    }
+
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = environmentName;

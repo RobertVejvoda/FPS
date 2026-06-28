@@ -79,7 +79,7 @@ builder.Services.AddSingleton(identityConfigStore);
 // Replace ConfiguredTenantRoleMapper with the API-backed store. When a tenant is
 // registered in the config store, only explicitly mapped roles are passed through.
 // Unconfigured tenants fall back to pass-through (backward-compatible).
-var roleMappingStore = new InMemoryTenantRoleMappingStore(identityConfigStore);
+var roleMappingStore = new InMemoryTenantRoleMappingStore(identityConfigStore, builder.Configuration);
 builder.Services.AddSingleton<ITenantRoleMapper>(roleMappingStore);
 builder.Services.AddSingleton(roleMappingStore);
 builder.Services.AddSingleton<IdentityStoreHydrator>();

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -34,6 +35,14 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            // PLAT001 seeded allowlist: the FairSpot-controlled realm's admin/hr_manager/...
+            // roles may pass through for tenants not yet explicitly mapped, so these auth-gate
+            // tests reach the controller exactly as the demo profile does.
+            builder.ConfigureAppConfiguration((_, cfg) =>
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
+                }));
             builder.ConfigureTestServices(services =>
             {
                 // Swap Dapr-backed repos for the in-memory equivalents so the
@@ -118,14 +127,24 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
     }
 
     [Fact]
-    public async Task GetBootstrap_AdminOtherTenant_PassesAuthGate()
+    public async Task GetBootstrap_AdminOtherTenant_IsForbidden()
     {
-        // Admin is intentionally cross-tenant — matches the rest of the
-        // Customer admin surface. Tenant isolation only applies to HR.
+        // PLAT001: admin is now tenant-scoped. A tenant-a admin cannot read
+        // tenant-b's bootstrap — cross-tenant access requires platform_admin.
         var client = ClientWithToken("user-1", "tenant-a", "admin");
         var response = await client.GetAsync("/tenants/tenant-b/parking-bootstrap");
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetBootstrap_CustomerTokenWithPlatformAdminClaim_IsForbiddenCrossTenant()
+    {
+        // A customer-issuer token can never reach the platform plane: even if its
+        // IdP injects a platform_admin claim, the claims transformation strips it,
+        // so it cannot cross tenants.
+        var client = ClientWithToken("user-1", "tenant-a", "platform_admin");
+        var response = await client.GetAsync("/tenants/tenant-b/parking-bootstrap");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ── POST /tenants/{tenantId}/parking-bootstrap/policy (mutating) ──────────

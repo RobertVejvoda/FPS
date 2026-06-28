@@ -2,6 +2,7 @@ using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -25,6 +26,13 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            // PLAT001 seeded allowlist: the FairSpot-controlled realm's privileged roles may
+            // pass through for tenants not yet explicitly mapped (matches the demo profile).
+            builder.ConfigureAppConfiguration((_, cfg) =>
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
+                }));
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();

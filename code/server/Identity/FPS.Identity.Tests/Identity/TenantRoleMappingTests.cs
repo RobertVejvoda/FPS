@@ -34,14 +34,31 @@ public sealed class TenantRoleMappingTests
     }
 
     [Fact]
-    public void MapToRoles_NoMappingConfigured_PassesThroughRoles()
+    public void MapToRoles_NoMappingConfigured_PassesNonPrivileged_StripsPrivileged()
     {
+        // PLAT001: with no explicit mapping and no allowlist, privileged roles are not
+        // granted implicitly from a raw claim; non-privileged (employee) still passes.
         var mapper = MapperWithConfig([]);
 
         var roles = mapper.MapToRoles("tenant-1", ["employee", "hr_manager"]);
 
         Assert.Contains("employee", roles);
+        Assert.DoesNotContain("hr_manager", roles);
+    }
+
+    [Fact]
+    public void MapToRoles_NoMapping_WithTrustedRealmRolesAllowlist_PassesPrivileged()
+    {
+        var mapper = MapperWithConfig(new Dictionary<string, string?>
+        {
+            ["Auth:TrustedRealmRoles"] = "admin, hr_manager",
+        });
+
+        var roles = mapper.MapToRoles("tenant-1", ["employee", "hr_manager", "admin"]);
+
+        Assert.Contains("employee", roles);
         Assert.Contains("hr_manager", roles);
+        Assert.Contains("admin", roles);
     }
 
     [Fact]
@@ -331,18 +348,121 @@ public sealed class TenantRoleMappingTests
     }
 
     [Fact]
-    public async Task Transform_EnforcementInactive_MissingTenantClaim_ReturnsOriginalUnchanged()
+    public async Task Transform_EnforcementInactive_MissingTenantClaim_StripsElevated_KeepsNonPrivileged()
     {
-        // Before any tenant configured (enforcement inactive) — backward-compatible pass-through.
+        // PLAT001: enforcement inactive + no tenant context → a customer-issued token can
+        // never keep elevated roles. Privileged (admin) is stripped; non-privileged
+        // (employee) is kept for dev/local compatibility; not deactivated.
         var store = new InMemoryTenantIdentityConfigStore(); // empty
 
         var transform = new TenantClaimsTransformation(
             new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
 
-        var principal = PrincipalWithClaims(("sub", "user-1"), (ClaimTypes.Role, "admin"));
+        var principal = PrincipalWithClaims(
+            ("sub", "user-1"), (ClaimTypes.Role, "admin"), (ClaimTypes.Role, "employee"));
 
         var result = await transform.TransformAsync(principal);
 
+        Assert.False(result.IsInRole("admin"));    // privileged — stripped without tenant context
+        Assert.True(result.IsInRole("employee"));  // non-privileged — kept
         Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
+    public async Task Transform_EnforcementInactive_MissingTenantClaim_StripsPlatformRole()
+    {
+        var store = new InMemoryTenantIdentityConfigStore(); // empty
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        var principal = PrincipalWithClaims(("sub", "user-1"), (ClaimTypes.Role, FpsRoles.PlatformAdmin));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.IsInRole(FpsRoles.PlatformAdmin)); // platform role never survives without the platform issuer
+    }
+
+    // ── PLAT001: platform-plane gating ─────────────────────────────────────────
+
+    private const string PlatformIssuer = "https://platform.example/realms/fps-platform";
+    private const string CustomerIssuer = "https://customer.example/realms/fairspot";
+
+    private static TenantClaimsTransformation TransformationWithPlatformIssuer(string platformIssuer) =>
+        new(MapperWithConfig([]), new InMemoryDeactivatedUserStore(), new InMemoryTenantIdentityConfigStore(),
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Auth:PlatformIssuer"] = platformIssuer })
+                .Build());
+
+    private static ClaimsPrincipal PrincipalWithIssuer(string issuer, string? tenantId, params string[] roles)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "op-1"), new("iss", issuer) };
+        if (tenantId is not null) claims.Add(new Claim("tenant_id", tenantId));
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
+    }
+
+    [Fact]
+    public async Task PlatformIssuerToken_KeepsPlatformRole_WithoutTenantId()
+    {
+        var transform = TransformationWithPlatformIssuer(PlatformIssuer);
+
+        var result = await transform.TransformAsync(
+            PrincipalWithIssuer(PlatformIssuer, tenantId: null, FpsRoles.PlatformAdmin));
+
+        Assert.True(result.IsInRole(FpsRoles.PlatformAdmin));
+        Assert.True(result.HasClaim("fps_platform", "true"));
+    }
+
+    [Fact]
+    public async Task PlatformIssuerToken_DropsTenantPlaneRoles()
+    {
+        var transform = TransformationWithPlatformIssuer(PlatformIssuer);
+
+        var result = await transform.TransformAsync(
+            PrincipalWithIssuer(PlatformIssuer, tenantId: null, FpsRoles.PlatformAdmin, FpsRoles.Admin));
+
+        Assert.True(result.IsInRole(FpsRoles.PlatformAdmin));
+        Assert.False(result.IsInRole(FpsRoles.Admin)); // tenant-plane role dropped on a platform token
+    }
+
+    [Fact]
+    public async Task CustomerIssuerToken_WithPlatformRoleClaim_IsStripped()
+    {
+        var transform = TransformationWithPlatformIssuer(PlatformIssuer);
+
+        // A customer-issuer token must never reach the platform plane, even if its
+        // IdP injects a platform_admin role claim.
+        var result = await transform.TransformAsync(
+            PrincipalWithIssuer(CustomerIssuer, tenantId: "acme", FpsRoles.PlatformAdmin));
+
+        Assert.False(result.IsInRole(FpsRoles.PlatformAdmin));
+        Assert.False(result.HasClaim("fps_platform", "true"));
+    }
+
+    [Fact]
+    public void Mapper_StripsPlatformRole_FromPassthrough()
+    {
+        var mapper = MapperWithConfig([]);
+
+        var roles = mapper.MapToRoles("acme", ["employee", FpsRoles.PlatformAdmin]);
+
+        Assert.Contains("employee", roles);
+        Assert.DoesNotContain(FpsRoles.PlatformAdmin, roles);
+    }
+
+    [Fact]
+    public void Mapper_RefusesToMapTenantGroup_ToPlatformRole()
+    {
+        var mapper = MapperWithConfig(new Dictionary<string, string?>
+        {
+            ["TenantRoleMapping:acme:ops_group"] = FpsRoles.PlatformAdmin, // misconfiguration attempt
+            ["TenantRoleMapping:acme:staff"] = "employee",
+        });
+
+        var roles = mapper.MapToRoles("acme", ["ops_group", "staff"]);
+
+        Assert.DoesNotContain(FpsRoles.PlatformAdmin, roles);
+        Assert.Contains("employee", roles);
     }
 }

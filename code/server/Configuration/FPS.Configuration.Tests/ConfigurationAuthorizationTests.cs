@@ -28,6 +28,14 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            // PLAT001 seeded allowlist (FairSpot-controlled realm) so privileged roles
+            // pass through for tenants not yet explicitly mapped — matches the demo profile.
+            builder.ConfigureAppConfiguration((_, cfg) =>
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
+                }));
+
             builder.ConfigureTestServices(services =>
             {
                 // Replace Dapr-backed repositories with in-memory stubs so tests

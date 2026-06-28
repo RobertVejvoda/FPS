@@ -287,11 +287,12 @@ public sealed class TenantIdentityServiceTests
     }
 
     [Fact]
-    public void RoleMapping_UnconfiguredTenant_PassesThrough()
+    public void RoleMapping_UnconfiguredTenant_PassesNonPrivileged_StripsPrivileged()
     {
-        // Enforcement not active — incoming roles pass through unchanged.
+        // PLAT001: an unconfigured tenant never grants a privileged role (admin) from a raw
+        // claim without an explicit mapping or seeded allowlist; non-privileged passes through.
         var result = roleMappingStore.MapToRoles("unconfigured-tenant", ["admin", "employee"]);
-        Assert.Equal(["admin", "employee"], result);
+        Assert.Equal(["employee"], result);
     }
 
     [Fact]
