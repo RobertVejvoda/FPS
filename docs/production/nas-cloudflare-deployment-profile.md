@@ -546,7 +546,7 @@ The following slices must be completed or explicitly deferred before allowing re
 | 4 | Vault in durable server mode (not dev) | #628 | Server mode done (manual unseal); dynamic secrets pending | **Yes** — durable Vault is in place; dynamic-secrets consolidation tracked in #628 |
 | 5 | Hosted smoke/readiness evidence | OPS013 #314 / OPS015C #604 | Tooling ready — `start-container-stack.sh` (local) + `smoke-hosted.sh` (public). Operator must attach a passing run. | **Yes** — proof that the public domain works end-to-end |
 | 6 | Dapr mTLS/service-identity evidence for hosted profile | — | Not started | **Yes** — service-to-service encryption or an approved equivalent must be evidenced |
-| 7 | NAS/store/backup encryption-at-rest evidence | — | Not started | **Yes** — hosted Confidential data must be encrypted at rest |
+| 7 | NAS/store/backup encryption-at-rest evidence | OPS019 #619 | Checklist defined — [nas-encryption-backup-evidence.md](./nas-encryption-backup-evidence.md); operator must complete and attach before customer data | **Yes** — hosted Confidential data must be encrypted at rest |
 | 8 | HR operations workspace | #310 | Not started | Recommended before HR users access the pilot |
 | 9 | Administrator default workspace | #311 | Not started | Recommended before admin users access the pilot |
 | 10 | Tenant onboarding hardening | CUST011 #319 | Not started | Required for production tenant creation |
