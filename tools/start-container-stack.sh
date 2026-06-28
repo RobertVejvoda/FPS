@@ -153,9 +153,17 @@ PUBLIC_REALM="${REALM_OVERRIDE:-fairspot}"
 
 # ── Build compose command ───────────────────────────────────────────────────────
 
+# NAS pulls pre-built images from the registry (no source build context or SDK);
+# local mode builds images from source.
+if [[ "$MODE" == "nas" ]]; then
+  SERVICES_FILE="docker-compose.services.images.yml"
+else
+  SERVICES_FILE="docker-compose.services.yml"
+fi
+
 COMPOSE_FILES=(
   "-f" "$INFRA_DIR/docker-compose.yaml"
-  "-f" "$INFRA_DIR/docker-compose.services.yml"
+  "-f" "$INFRA_DIR/$SERVICES_FILE"
   "-f" "$INFRA_DIR/docker-compose.dapr.yml"
 )
 if [[ "$MODE" == "nas" ]]; then
@@ -177,7 +185,7 @@ if [[ "$MODE" == "nas" ]]; then
 elif [[ -f "$ENV_FILE" ]]; then
   COMPOSE_HUMAN+=" --env-file code/infrastructure/local-docker.env"
 fi
-COMPOSE_HUMAN+=" -f docker-compose.yaml -f docker-compose.services.yml -f docker-compose.dapr.yml"
+COMPOSE_HUMAN+=" -f docker-compose.yaml -f $SERVICES_FILE -f docker-compose.dapr.yml"
 if [[ "$MODE" == "nas" ]]; then
   COMPOSE_HUMAN+=" -f docker-compose.nas.yml"
 fi
@@ -276,10 +284,23 @@ ok "probe image: $CURL_IMAGE"
 # ── Start the stack ──────────────────────────────────────────────────────────────
 
 hdr "Starting stack ($MODE mode)"
-echo "Command: $COMPOSE_HUMAN up -d --build"
-echo
 
-"${COMPOSE_CMD[@]}" up -d --build
+if [[ "$MODE" == "nas" ]]; then
+  # NAS runs pre-built images from a registry — pull, then start (never build).
+  echo "Registry: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}  Tag: ${FPS_IMAGE_TAG:-latest}"
+  echo "If the packages are private, run 'docker login ghcr.io' first."
+  echo "Command: $COMPOSE_HUMAN pull && $COMPOSE_HUMAN up -d"
+  echo
+  if ! "${COMPOSE_CMD[@]}" pull; then
+    echo "ERROR: image pull failed. Check the registry/tag and 'docker login ghcr.io' for private packages."
+    exit 1
+  fi
+  "${COMPOSE_CMD[@]}" up -d
+else
+  echo "Command: $COMPOSE_HUMAN up -d --build"
+  echo
+  "${COMPOSE_CMD[@]}" up -d --build
+fi
 
 # ── Wait for infrastructure health ───────────────────────────────────────────────
 

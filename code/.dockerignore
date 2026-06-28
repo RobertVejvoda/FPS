@@ -1,0 +1,29 @@
+# .dockerignore for builds that use `code/` as the context (the web image).
+# Keeps the build context small and prevents host artifacts/secrets from leaking
+# into the image. Server image builds use code/server/.dockerignore instead.
+
+# Node / build output
+**/node_modules/
+**/dist/
+**/build/
+**/.vite/
+
+# .NET build output (server tree is not needed by the web build)
+**/bin/
+**/obj/
+
+# Dapr local run state and logs
+**/.dapr/
+**/logs/
+
+# Local overrides and secrets — must never reach an image
+**/*.env
+**/*.env.*
+**/appsettings.Development.*
+**/appsettings.Local.*
+
+# IDE / OS noise
+**/.vs/
+**/.idea/
+**/.vscode/
+**/.DS_Store

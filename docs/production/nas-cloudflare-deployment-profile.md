@@ -242,9 +242,11 @@ The script starts these compose layers in order:
 | File | Contents |
 |---|---|
 | `docker-compose.yaml` | Infrastructure: MongoDB, RabbitMQ, Vault, MinIO, Keycloak, Envoy, observability |
-| `docker-compose.services.yml` | FairSpot app containers: 9 services, no host .NET required |
+| `docker-compose.services.images.yml` | FairSpot app containers (9 services + web) as **pulled images** — no build context. The NAS never builds from source. |
 | `docker-compose.dapr.yml` | Dapr system services (placement, scheduler), per-app sidecars, vault-init seed |
 | `docker-compose.nas.yml` | NAS overlay: restart-unless-stopped for all containers, required credential enforcement |
+
+> In `--nas` mode the script runs **pulled images** from a registry (GHCR by default) and never builds from source — so the NAS needs no .NET SDK, Node, npm, or Dapr CLI. It selects `docker-compose.services.images.yml` and `docker compose pull`s before starting. See [Publishing Images to GHCR](./ghcr-image-publishing.md) for the GHCR login, tag strategy (pin `sha-<commit>`), pull/run flow, and rollback.
 
 After startup the script:
 - Waits for infrastructure health checks (Vault, RabbitMQ, MongoDB, PostgreSQL)
