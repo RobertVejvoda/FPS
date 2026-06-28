@@ -306,6 +306,45 @@ fi
 
 hdr "Waiting for infrastructure health"
 
+# NAS server-mode Vault preflight. In --nas mode Vault runs durable server mode
+# (not -dev): it starts sealed/uninitialized and only reports healthy once the
+# operator unseals it. Detect that via /v1/sys/seal-status (served even while
+# sealed) and print the runbook step instead of waiting out the health timeout.
+if [[ "$MODE" == "nas" ]]; then
+  printf "  Checking Vault seal status"
+  seal=""
+  vsleep=0
+  while [[ $vsleep -lt 30 ]]; do
+    seal="$(probe_net -s http://vault:8200/v1/sys/seal-status || true)"
+    [[ -n "$seal" ]] && break
+    printf "."
+    sleep 3
+    vsleep=$((vsleep + 3))
+  done
+  if printf '%s' "$seal" | grep -q '"initialized":false'; then
+    printf " — UNINITIALIZED\n"
+    echo
+    echo "Vault is in server mode and not yet initialized (first boot)."
+    echo "One-time setup (store the unseal shares + root token out of band):"
+    echo "  $COMPOSE_HUMAN exec vault vault operator init"
+    echo "  $COMPOSE_HUMAN exec vault vault operator unseal   # repeat with 3 key shares"
+    echo "  $COMPOSE_HUMAN exec vault vault secrets enable -path=secret kv-v2"
+    echo "  # provision a least-privilege token, set VAULT_TOKEN in nas.env, then re-run this script."
+    echo "See the NAS deployment runbook (Vault initialization) for details."
+    exit 1
+  elif printf '%s' "$seal" | grep -q '"sealed":true'; then
+    printf " — SEALED\n"
+    echo
+    echo "Vault is sealed. Unseal it, then re-run this script:"
+    echo "  $COMPOSE_HUMAN exec vault vault operator unseal   # repeat with 3 key shares"
+    exit 1
+  elif printf '%s' "$seal" | grep -q '"sealed":false'; then
+    printf " — unsealed\n"
+  else
+    printf " — (could not read seal status; continuing to health checks)\n"
+  fi
+fi
+
 INFRA_TIMEOUT=120
 INFRA_INTERVAL=5
 

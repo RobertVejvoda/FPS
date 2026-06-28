@@ -222,6 +222,35 @@ Look for a line like `Connection registered connIndex=0` or `Registered tunnel c
 
 ## Step 6 — Start the FairSpot stack
 
+### 6a. Initialize Vault (one-time, NAS server mode)
+
+On NAS, Vault runs in **durable server mode** (not `-dev`): secrets persist across restarts and there is no auto-generated root token. On a clean Vault volume it starts **sealed and uninitialized**, so a one-time initialization is required before the stack can seed secrets. The start script (6b) detects this state and prints the same steps.
+
+Bring up the stack once; the start script will stop at the Vault check and tell you Vault is uninitialized. Then run the one-time sequence:
+
+```bash
+# 1. Initialize — this prints 5 unseal key shares and an initial root token.
+#    Store them OUT OF BAND (operator password manager / secrets manager).
+#    They are NEVER committed or written to nas.env.
+docker compose --project-directory code/infrastructure -f docker-compose.yaml -f docker-compose.nas.yml \
+  exec vault vault operator init
+
+# 2. Unseal — repeat three times, each with a different key share.
+docker compose --project-directory code/infrastructure -f docker-compose.yaml -f docker-compose.nas.yml \
+  exec vault vault operator unseal
+
+# 3. Enable the KV v2 engine the Dapr secret store reads from.
+docker compose --project-directory code/infrastructure -f docker-compose.yaml -f docker-compose.nas.yml \
+  exec vault vault secrets enable -path=secret kv-v2
+
+# 4. Provision a least-privilege token for the Dapr secret store + vault-init,
+#    and set it as VAULT_TOKEN in code/infrastructure/nas.env.
+```
+
+After this one-time setup, **the only repeated step is unseal** — after any Vault restart or NAS reboot, run `vault operator unseal` (×3) before the rest of the stack can read secrets. `restart: unless-stopped` brings the Vault container back, but it stays sealed until you unseal it. The unseal key shares and root token live with the operator, never in the repo or `nas.env`; `nas.env` holds only the provisioned `VAULT_TOKEN`.
+
+### 6b. Start the stack
+
 The Release 1 NAS stack runs entirely in Docker. **Do not install .NET SDK/runtime or the Dapr CLI on the NAS.** All FairSpot services, Dapr sidecars, state stores, broker, identity, gateway, and observability run as containers. The local developer flow (`dapr run -f dapr.yaml` or `./tools/start-with-dapr.sh`) is for developer machines only and is not used here.
 
 The preferred operator command is the NAS deployment wrapper:
@@ -458,9 +487,7 @@ The Vault token is mounted into Dapr sidecars as a Docker Compose secret file an
 Other notes:
 - `workflowstore` is the shared Dapr actor state store required by Dapr Workflow.
 - `fps-pubsub` uses RabbitMQ on the `fps_network` Docker network.
-- **Vault runs in dev mode.** Dev mode Vault does not persist state across container restarts. Before customer traffic, run Vault in server mode with a persistent volume (or replace the secret store component with a production-grade alternative) and re-run vault-init after each Vault restart.
-
-A Vault persistence upgrade and production-mode configuration are prerequisites for any customer data.
+- **Vault runs in durable server mode on NAS** (see Step 6a) — secrets persist across restarts on the `vault_data` volume and require a manual unseal after each restart. Local development still uses `-dev` mode for convenience. Secrets are still **static KV** today; moving the datastore credentials to Vault **dynamic secrets** (database secrets engine + Vault Agent) so only the Vault token is operator-managed is the next step — tracked in the security hardening backlog (#628).
 
 ---
 
@@ -473,7 +500,7 @@ The following slices must be completed or explicitly deferred before allowing re
 | 1 | WAF custom rules, rate limiting, origin hardening | SEC010 #315 | Not started | **Yes** — block internal paths and protect login endpoints |
 | 2 | Public-domain Keycloak/OIDC, Envoy CORS, redirect URIs | OPS012 #316 | Not started | **Yes** — auth cannot use localhost assumptions in production |
 | 3 | Persistent tenant-scoped storage (Booking key gaps, in-memory repos) | DATA010 #317 | Not started | **Yes** — no customer data in evaluation-grade stores |
-| 4 | Vault in production mode (not dev mode) | — | Not started | **Yes** — Vault dev mode loses secrets on restart |
+| 4 | Vault in durable server mode (not dev) | #628 | Server mode done (manual unseal); dynamic secrets pending | **Yes** — durable Vault is in place; dynamic-secrets consolidation tracked in #628 |
 | 5 | Hosted smoke/readiness evidence | OPS013 #314 / OPS015C #604 | Tooling ready — `start-container-stack.sh` (local) + `smoke-hosted.sh` (public). Operator must attach a passing run. | **Yes** — proof that the public domain works end-to-end |
 | 6 | Dapr mTLS/service-identity evidence for hosted profile | — | Not started | **Yes** — service-to-service encryption or an approved equivalent must be evidenced |
 | 7 | NAS/store/backup encryption-at-rest evidence | — | Not started | **Yes** — hosted Confidential data must be encrypted at rest |
