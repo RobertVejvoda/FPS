@@ -40,7 +40,7 @@ Every DataHub-consumed event should use a stable envelope.
 
 | Event Family | Source | Consumers | Status |
 | --- | --- | --- | --- |
-| `booking.requestSubmitted`, `booking.requestRejected`, `booking.requestAllocated`, `booking.requestCancelled`, `booking.requestUsed`, `booking.requestNoShow`, `booking.requestExpired` | Booking | Notification, Audit, DataHub | Partial |
+| `booking.requestSubmitted`, `booking.requestRejected`, `booking.slotAllocated`, `booking.requestCancelled`, `booking.usageConfirmed`, `booking.noShowRecorded`, `booking.requestExpired` | Booking | Notification, Audit, DataHub | Partial |
 | `booking.drawStarted`, `booking.drawCompleted`, `booking.drawFailed` | Booking | DataHub, Audit, HR/Admin UI | Partial |
 | `booking.penaltyApplied`, `booking.manualCorrectionApplied` | Booking | Audit, DataHub where approved | Placeholder |
 | `customer.tenantCreated`, `customer.tenantReadinessChanged` | Customer | DataHub, Audit, Admin UI | Placeholder |
@@ -48,6 +48,8 @@ Every DataHub-consumed event should use a stable envelope.
 | `profile.employeeChanged` | Profile | Booking where needed, DataHub | Placeholder |
 | `notification.deliveryChanged` | Notification | DataHub, Audit where required | Placeholder |
 | `audit.recordCreated` | Audit | DataHub | Placeholder |
+
+> Booking lifecycle names above are the authoritative Release 1 producer names. The DataHub projection handler also accepts the legacy alias `booking.requestAllocated` for `booking.slotAllocated`, and `booking.requestExpired` is projection-supported but not yet emitted by Booking. See the reconciliation note in [datahub.md](../../application-layer/datahub.md) (DATAHUB004 / #335).
 
 ## Outbox And Inbox Rules
 
