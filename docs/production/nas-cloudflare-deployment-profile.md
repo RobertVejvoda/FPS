@@ -228,24 +228,66 @@ On NAS, Vault runs in **durable server mode** (not `-dev`): secrets persist acro
 
 Bring up the stack once; the start script will stop at the Vault check and tell you Vault is uninitialized. Then run the one-time sequence:
 
+Run all commands from the **repo root**. Define the NAS compose invocation once
+so the `-f` paths resolve correctly regardless of `--project-directory`:
+
 ```bash
-# 1. Initialize — this prints 5 unseal key shares and an initial root token.
+COMPOSE="docker compose --project-directory code/infrastructure \
+  -f code/infrastructure/docker-compose.yaml \
+  -f code/infrastructure/docker-compose.nas.yml"
+
+# 1. Initialize (one-time) — prints 5 unseal key shares and an initial root token.
 #    Store them OUT OF BAND (operator password manager / secrets manager).
 #    They are NEVER committed or written to nas.env.
-docker compose --project-directory code/infrastructure -f docker-compose.yaml -f docker-compose.nas.yml \
-  exec vault vault operator init
+$COMPOSE exec vault vault operator init
 
-# 2. Unseal — repeat three times, each with a different key share.
-docker compose --project-directory code/infrastructure -f docker-compose.yaml -f docker-compose.nas.yml \
-  exec vault vault operator unseal
-
-# 3. Enable the KV v2 engine the Dapr secret store reads from.
-docker compose --project-directory code/infrastructure -f docker-compose.yaml -f docker-compose.nas.yml \
-  exec vault vault secrets enable -path=secret kv-v2
-
-# 4. Provision a least-privilege token for the Dapr secret store + vault-init,
-#    and set it as VAULT_TOKEN in code/infrastructure/nas.env.
+# 2. Unseal — run three times, each time with a different key share.
+$COMPOSE exec vault vault operator unseal   # repeat ×3
 ```
+
+The remaining one-time admin steps run inside a single shell session in the
+Vault container, so the root login persists across them (`VAULT_ADDR` is already
+set in the container):
+
+```bash
+$COMPOSE exec vault sh
+```
+
+```sh
+# --- inside the Vault container shell ---
+vault login <initial-root-token>
+
+# 3. Enable the KV v2 engine the Dapr secret store reads from:
+vault secrets enable -path=secret kv-v2
+
+# 4. Write the least-privilege policy. vault-init writes the seed credentials
+#    under secret/dapr/* and the Dapr sidecars read them back, so the shared
+#    token needs read + write on that subtree only:
+vault policy write fairspot-dapr - <<'POLICY'
+path "secret/data/dapr/*"     { capabilities = ["create", "update", "read"] }
+path "secret/metadata/dapr/*" { capabilities = ["create", "update", "read", "list"] }
+POLICY
+
+# 5. Create the token used by vault-init + the Dapr sidecars, and copy it.
+#    -orphan keeps it valid if the root token is later revoked; the long TTL is
+#    a pilot convenience — see the rotation note below.
+vault token create -policy=fairspot-dapr -orphan -ttl=8760h -field=token
+
+exit
+```
+
+```bash
+# 6. Put the token from step 5 into VAULT_TOKEN in code/infrastructure/nas.env.
+#    Keep the initial root token and the unseal key shares OUT OF BAND — never
+#    in the repo or nas.env.
+```
+
+> **Rotation / hardening note.** The `fairspot-dapr` token above is shared by
+> `vault-init` (write) and the Dapr sidecars (read), with a 1-year TTL for pilot
+> convenience — rotate it before expiry. The target hardening (#628) splits this
+> into a write-only token for `vault-init` and a read-only token for the sidecars,
+> and adds Vault Agent to renew/rotate automatically (and moves the datastore
+> credentials to dynamic secrets).
 
 After this one-time setup, **the only repeated step is unseal** — after any Vault restart or NAS reboot, run `vault operator unseal` (×3) before the rest of the stack can read secrets. `restart: unless-stopped` brings the Vault container back, but it stays sealed until you unseal it. The unseal key shares and root token live with the operator, never in the repo or `nas.env`; `nas.env` holds only the provisioned `VAULT_TOKEN`.
 
