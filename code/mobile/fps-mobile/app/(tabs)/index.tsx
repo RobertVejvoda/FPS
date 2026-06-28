@@ -11,23 +11,38 @@ import { displaySlot, STATUS_BADGE_LABEL, formatCutOffAt } from '@/displayLabels
 import { DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
 import { colors, radius, spacing } from '@/theme';
 
-function localDateStr(offsetDays = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
+function dateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function nextWeekdayLabel(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 2);
-  return d.toLocaleDateString(undefined, { weekday: 'long' });
+function isWorkday(d: Date): boolean {
+  const day = d.getDay();
+  return day >= 1 && day <= 5;
 }
 
-const DAYS = [
-  { label: 'Today', offset: 0 },
-  { label: 'Tomorrow', offset: 1 },
-  { label: nextWeekdayLabel(), offset: 2 },
-];
+// Four day focus cards: today, tomorrow, then the next two working days
+// (weekends skipped), matching the web My Spots model. Labels use Today/Tomorrow
+// then the weekday name — never D+2/D+3. Each card carries its real date + the
+// calendar offset used by the request form.
+function workdayCards(count = 4): Array<{ label: string; date: string; offset: number }> {
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  const out: Array<{ label: string; date: string; offset: number }> = [];
+  const cand = new Date(base);
+  while (out.length < count) {
+    if (isWorkday(cand)) {
+      const offset = Math.round((cand.getTime() - base.getTime()) / 86_400_000);
+      const label = offset === 0 ? 'Today'
+        : offset === 1 ? 'Tomorrow'
+        : cand.toLocaleDateString(undefined, { weekday: 'long' });
+      out.push({ label, date: dateStr(cand), offset });
+    }
+    cand.setDate(cand.getDate() + 1);
+  }
+  return out;
+}
+
+const DAYS = workdayCards(4);
 
 function bookingParams(item: BookingListItem) {
   return {
@@ -52,7 +67,7 @@ export default function HomeRoute() {
   const router = useRouter();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
   const { state, refresh } = useBookings('all');
-  const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([null, null, null]);
+  const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([]);
   const [drawLoading, setDrawLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -60,10 +75,10 @@ export default function HomeRoute() {
   useEffect(() => {
     let cancelled = false;
     setDrawLoading(true);
-    setDrawStatuses([null, null, null]);
+    setDrawStatuses(DAYS.map(() => null));
     Promise.all(
       DAYS.map(day => fetchDrawStatus({ apiBaseUrl, bearerToken }, {
-        date: localDateStr(day.offset),
+        date: day.date,
         locationId: DEMO_LOCATION_ID,
         timeSlotStart: DEFAULT_TIME_SLOT_START,
         timeSlotEnd: DEFAULT_TIME_SLOT_END,
@@ -167,7 +182,7 @@ export default function HomeRoute() {
 
         {/* Three day tiles */}
         {DAYS.map((day, i) => {
-          const date = localDateStr(day.offset);
+          const date = day.date;
           const booking = state.items.find(b => b.requestedDate === date) ?? null;
           const drawStatus = drawStatuses[i] ?? null;
           return (
