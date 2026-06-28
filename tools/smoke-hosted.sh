@@ -222,6 +222,21 @@ else
   else
     fail "AUTH_URL does not use HTTPS — TLS not active" "true"
   fi
+
+  # "Always Use HTTPS": the plain-HTTP app origin must redirect to https, not
+  # serve content. Derive the bare host (strip any /api suffix), swap the scheme.
+  APP_HOST="${APP_URL%/api}"
+  HTTP_APP="${APP_HOST/https:/http:}"
+  HTTP_STATUS=$(http_status "$HTTP_APP/")
+  if [[ "$HTTP_STATUS" == "301" || "$HTTP_STATUS" == "302" || "$HTTP_STATUS" == "308" ]]; then
+    pass "GET $HTTP_APP/ → HTTP $HTTP_STATUS (redirects to HTTPS)  [mandatory #9]"
+  elif [[ "$HTTP_STATUS" == "000" || -z "$HTTP_STATUS" ]]; then
+    pass "GET $HTTP_APP/ → no plain-HTTP response (HTTP not served)  [mandatory #9]"
+  elif [[ "$HTTP_STATUS" == "200" ]]; then
+    fail "GET $HTTP_APP/ → HTTP 200 over plain HTTP — enable Cloudflare 'Always Use HTTPS'" "true"
+  else
+    pending "GET $HTTP_APP/ → HTTP $HTTP_STATUS (confirm 'Always Use HTTPS' on the live domain)"
+  fi
 fi
 
 # ── Login ─────────────────────────────────────────────────────────────────────
@@ -458,6 +473,22 @@ else
   else
     fail "GET $AUTH_URL/admin → HTTP $KC_ADMIN_STATUS (expected 403/404 — WAF or Cloudflare Access rule needed)" "true"
   fi
+
+  # Additional internal/diagnostic surfaces that must not be publicly served via
+  # the API. NOTE: in the single-origin model the SPA history-fallback returns
+  # 200 for any unknown path at the app *root* by design (static SPA, no
+  # sensitive data); the meaningful checks target the /api/* surfaces proxied to
+  # the gateway, so APP_URL must include the /api prefix.
+  for ipath in "openapi/v1.json" "swagger" "swagger/index.html" "v1.0/healthz" "v1.0/metadata"; do
+    ISTATUS=$(http_status "$APP_URL/$ipath")
+    if [[ "$ISTATUS" == "401" || "$ISTATUS" == "403" || "$ISTATUS" == "404" ]]; then
+      pass "GET /api/$ipath → HTTP $ISTATUS (internal surface not publicly served)  [mandatory #10]"
+    elif [[ "$ISTATUS" == "200" ]]; then
+      fail "GET /api/$ipath → HTTP 200 (internal surface exposed through the public API)" "true"
+    else
+      pending "GET /api/$ipath → HTTP $ISTATUS (confirm against the live domain/WAF)"
+    fi
+  done
 fi
 
 # ── evidence file summary ─────────────────────────────────────────────────────

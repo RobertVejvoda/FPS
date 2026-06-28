@@ -205,9 +205,42 @@ Complete this checklist and attach the smoke evidence file to the release or PR 
 
 ---
 
+## Hosted encryption / public-boundary gate (SEC011)
+
+This is the hosted encryption gate referenced by the Release 1 checklist (#388). Run it against the public domain:
+
+```bash
+APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> \
+  OIDC_REALM=fairspot ./tools/smoke-hosted.sh
+```
+
+The smoke writes a redacted `smoke-evidence-*.txt` (tokens/headers never printed) that is safe to attach to a release PR.
+
+**Automatic checks (recorded PASS/FAIL/PENDING by the smoke):**
+
+| Area | Check |
+|---|---|
+| TLS [#9] | `APP_URL`/`AUTH_URL` are `https://`; plain-HTTP app origin redirects to HTTPS (Always Use HTTPS) |
+| Auth | public OIDC discovery resolves at `auth.<domain>` |
+| WAF / internal paths [#10] | `/metrics`, `auth/admin`, and `/api/{openapi/v1.json,swagger,v1.0/healthz,v1.0/metadata}` are **not** publicly served (expect 401/403/404; a 200 fails the gate) |
+
+> Single-origin note: at the app **root** the SPA history-fallback returns 200 for any unknown path by design (static SPA, no sensitive data). The blocking checks therefore target the `/api/*` surfaces proxied to the gateway, so `APP_URL` must include the `/api` prefix.
+
+**Operator-confirm items (not script-testable — verify in Cloudflare / Synology):**
+
+- Cloudflare WAF custom rules active for the internal paths above (see [SEC010](../security/cloudflare-waf-profile.md)).
+- `ops.<domain>` (Grafana) gated by a Cloudflare Access allow-list.
+- Synology/NAS volume encryption-at-rest and encrypted backups (see [OPS019](https://github.com/RobertVejvoda/fairspot/issues/619)).
+- TLS grade (e.g. via SSL Labs / `openssl s_client`).
+
+A FAIL on any automatic mandatory check, or an unconfirmed operator item, blocks enabling customer access.
+
+---
+
 ## Document change log
 
 | Date | Author | Change |
 |---|---|---|
 | 2026-05-29 | Claude | Initial runbook for issue #314 |
 | 2026-06-25 | Claude | OPS007: fix local AUTH_URL to 8180, add Dapr startup note, add DEFERRED status, add +3d booking note |
+| 2026-06-28 | Claude | SEC011: public-boundary gate — http→https redirect + /api internal-surface blocking checks; documented automatic vs operator-confirm items |
