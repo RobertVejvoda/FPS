@@ -53,9 +53,11 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
                 services.RemoveAll<ITenantRepository>();
                 services.RemoveAll<ITenantIdentityRepository>();
                 services.RemoveAll<ITenantParkingBootstrapRepository>();
+                services.RemoveAll<ITenantRequestRepository>();
                 services.AddSingleton<ITenantRepository, InMemoryTenantRepository>();
                 services.AddSingleton<ITenantIdentityRepository, InMemoryTenantIdentityRepository>();
                 services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
+                services.AddSingleton<ITenantRequestRepository, InMemoryTenantRequestRepository>();
                 services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {
@@ -123,6 +125,39 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
     {
         var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAdmin).GetAsync("/tenants/globex/readiness");
         Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
+    }
+
+    // ── GET /tenant-requests — platform-operator triage queue (RequirePlatformOperator) ──
+    // PLAT004: operators triage, admins are a superset, and a tenant admin must never reach it
+    // (the queue holds cross-tenant prospect PII).
+
+    [Fact]
+    public async Task TenantRequestQueue_PlatformOperator_PassesGate()
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformOperator).GetAsync("/tenant-requests");
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
+    }
+
+    [Fact]
+    public async Task TenantRequestQueue_PlatformAdmin_PassesGate()
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAdmin).GetAsync("/tenant-requests");
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
+    }
+
+    [Fact]
+    public async Task TenantRequestQueue_TenantAdmin_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.Admin).GetAsync("/tenant-requests");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task TenantRequestQueue_PlatformAuditor_IsForbidden()
+    {
+        // Auditor is read-only platform staff, not an operator — cannot reach the triage queue.
+        var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAuditor).GetAsync("/tenant-requests");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
     }
 
     [Theory]

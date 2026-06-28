@@ -1,4 +1,7 @@
+using System.Threading.RateLimiting;
 using FPS.Customer.Application;
+using FPS.Customer.Controllers;
+using Microsoft.AspNetCore.Authorization;
 using FPS.Customer.Domain;
 using FPS.Customer.Identity;
 using FPS.Customer.Infrastructure;
@@ -17,6 +20,27 @@ builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>()
 builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
+// PLAT004: tenant-request intake (public onboarding). Durable Dapr store is the system of
+// record; in-memory is used only by tests. Notifier records the sales alert; real email
+// delivery (Customer→Notification) ships in the PLAT004 email follow-up.
+builder.Services.AddSingleton<ITenantRequestRepository, DaprTenantRequestRepository>();
+builder.Services.AddSingleton<ITenantRequestNotifier, LoggingTenantRequestNotifier>();
+builder.Services.AddHttpClient<ITurnstileVerifier, HttpTurnstileVerifier>();
+builder.Services.AddScoped<TenantRequestService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Per-client fixed window on the open intake path. The partition key is the real client IP via
+    // Cloudflare's trusted CF-Connecting-IP (the boundary is Cloudflare-Tunnel-only), falling back
+    // to the socket peer locally — so this is genuinely per-client, not one global bucket behind
+    // the proxy. Turnstile handles bot challenges; this caps abuse volume.
+    options.AddPolicy(TenantRequestRateLimit.PolicyName, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            TenantRequestRateLimit.ClientPartitionKey(
+                httpContext.Request.Headers[TenantRequestRateLimit.CloudflareClientIpHeader].FirstOrDefault(),
+                httpContext.Connection.RemoteIpAddress),
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
+});
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
 builder.Services.AddScoped<TenantReadinessService>();
@@ -50,6 +74,11 @@ builder.Services.AddOpenApi("v1", options =>
     });
     options.AddOperationTransformer((op, ctx, _) =>
     {
+        // Don't advertise Bearer security on [AllowAnonymous] endpoints (e.g. the public
+        // tenant-request intake) — the generated client contract must reflect the open path.
+        if (ctx.Description.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any())
+            return Task.CompletedTask;
+
         op.Security ??= [];
         op.Security.Add(new OpenApiSecurityRequirement
         {
@@ -93,6 +122,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(options => options.WithTitle("Customer API"));
 }
 app.UseFpsMetrics();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

@@ -660,6 +660,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tenant-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantRequest"][];
+                        "application/json": components["schemas"]["TenantRequest"][];
+                        "text/json": components["schemas"]["TenantRequest"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SubmitTenantRequest"];
+                    "text/json": components["schemas"]["SubmitTenantRequest"];
+                    "application/*+json": components["schemas"]["SubmitTenantRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantRequestAcknowledgement"];
+                        "application/json": components["schemas"]["TenantRequestAcknowledgement"];
+                        "text/json": components["schemas"]["TenantRequestAcknowledgement"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenant-requests/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["TenantRequestDecision"];
+                    "text/json": null | components["schemas"]["TenantRequestDecision"];
+                    "application/*+json": null | components["schemas"]["TenantRequestDecision"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenant-requests/{requestId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["TenantRequestDecision"];
+                    "text/json": null | components["schemas"]["TenantRequestDecision"];
+                    "application/*+json": null | components["schemas"]["TenantRequestDecision"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -688,6 +845,14 @@ export interface components {
             supportContacts: components["schemas"]["ContactDto"][];
             tenantId?: null | string;
             kind?: null | string;
+        };
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
         };
         RecordLocationRequest: {
             locationId: null | string;
@@ -720,6 +885,35 @@ export interface components {
             /** @default LocalAccount */
             loginMode: string;
         };
+        SubmitTenantRequest: {
+            company: null | string;
+            primaryDomain: null | string;
+            contactEmail: null | string;
+            message: null | string;
+            turnstileToken: null | string;
+        };
+        TenantRequest: {
+            requestId: string;
+            company: string;
+            primaryDomain: string;
+            contactEmail: string;
+            message?: string;
+            status?: components["schemas"]["TenantRequestStatus"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            decidedAt?: null | string;
+            decidedByHash?: null | string;
+            decisionReason?: null | string;
+        };
+        TenantRequestAcknowledgement: {
+            requestId: string;
+            status: string;
+        };
+        TenantRequestDecision: {
+            reason: null | string;
+        };
+        TenantRequestStatus: number;
         TransitionRequest: {
             to: string;
             reason: null | string;
