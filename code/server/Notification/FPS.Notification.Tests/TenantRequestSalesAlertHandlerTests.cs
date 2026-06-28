@@ -1,5 +1,6 @@
 using FPS.Notification.Application;
 using FPS.Notification.Domain;
+using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -8,7 +9,7 @@ namespace FPS.Notification.Tests;
 
 public sealed class TenantRequestSalesAlertHandlerTests
 {
-    private static TenantRequestEvent Event() => new("req-1", "Acme", "acme.com", DateTimeOffset.UtcNow);
+    private static TenantRequestEvent Event(string id = "req-1") => new(id, "Acme", "acme.com", DateTimeOffset.UtcNow);
 
     private static IConfiguration Config(string? salesEmail = null)
     {
@@ -17,52 +18,70 @@ public sealed class TenantRequestSalesAlertHandlerTests
         return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
     }
 
-    private static (TenantRequestSalesAlertHandler handler, Mock<IEmailNotificationSender> sender, Func<NotificationRecord?> sent) Build(
-        IConfiguration config, EmailSendResult? result = null)
+    private static Mock<IEmailNotificationSender> OkSender(Action<NotificationRecord>? capture = null)
     {
-        NotificationRecord? captured = null;
         var sender = new Mock<IEmailNotificationSender>();
         sender.Setup(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
-            .Callback<NotificationRecord, CancellationToken>((r, _) => captured = r)
-            .ReturnsAsync(result ?? EmailSendResult.Ok());
-        var handler = new TenantRequestSalesAlertHandler(sender.Object, config, NullLogger<TenantRequestSalesAlertHandler>.Instance);
-        return (handler, sender, () => captured);
+            .Callback<NotificationRecord, CancellationToken>((r, _) => capture?.Invoke(r))
+            .ReturnsAsync(EmailSendResult.Ok());
+        return sender;
     }
+
+    private static TenantRequestSalesAlertHandler Handler(
+        INotificationRepository repo, IEmailNotificationSender sender, IConfiguration config) =>
+        new(repo, sender, config, NullLogger<TenantRequestSalesAlertHandler>.Instance);
 
     [Fact]
     public async Task Handle_EmailsConfiguredSalesAddress_WithAlertOnly()
     {
-        var (handler, _, sent) = Build(Config("ops@fairspot.net"));
+        NotificationRecord? sent = null;
+        var handler = Handler(new InMemoryNotificationRepository(), OkSender(r => sent = r).Object, Config("ops@fairspot.net"));
 
         await handler.HandleAsync(Event(), CancellationToken.None);
 
-        var record = sent();
-        Assert.NotNull(record);
-        Assert.Equal("ops@fairspot.net", record!.RecipientId);
-        Assert.Equal(NotificationChannel.Email, record.Channel);
-        Assert.Contains("Acme", record.MessageText);
-        Assert.Contains("req-1", record.MessageText);
+        Assert.NotNull(sent);
+        Assert.Equal("ops@fairspot.net", sent!.RecipientId);
+        Assert.Equal(NotificationChannel.Email, sent.Channel);
+        Assert.Contains("Acme", sent.MessageText);
+        Assert.Contains("req-1", sent.MessageText);
     }
 
     [Fact]
     public async Task Handle_DefaultsToSalesFairspot_WhenUnconfigured()
     {
-        var (handler, _, sent) = Build(Config());
+        NotificationRecord? sent = null;
+        var handler = Handler(new InMemoryNotificationRepository(), OkSender(r => sent = r).Object, Config());
 
         await handler.HandleAsync(Event(), CancellationToken.None);
 
-        Assert.Equal("sales@fairspot.net", sent()!.RecipientId);
+        Assert.Equal("sales@fairspot.net", sent!.RecipientId);
     }
 
     [Fact]
-    public async Task Handle_DeliveryThrows_IsSwallowed()
+    public async Task Handle_ReplayedEvent_SendsEmailOnce()
     {
+        var sender = OkSender();
+        var handler = Handler(new InMemoryNotificationRepository(), sender.Object, Config());
+
+        await handler.HandleAsync(Event("dup-1"), CancellationToken.None);
+        await handler.HandleAsync(Event("dup-1"), CancellationToken.None); // at-least-once replay of the same event
+
+        sender.Verify(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DeliveryFails_PersistsFailedRecord_WithoutThrowing()
+    {
+        var repo = new InMemoryNotificationRepository();
         var sender = new Mock<IEmailNotificationSender>();
         sender.Setup(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("smtp down"));
-        var handler = new TenantRequestSalesAlertHandler(sender.Object, Config(), NullLogger<TenantRequestSalesAlertHandler>.Instance);
+        var handler = Handler(repo, sender.Object, Config("ops@fairspot.net"));
 
-        // A delivery failure must not propagate (the request is already recorded + queued).
-        await handler.HandleAsync(Event(), CancellationToken.None);
+        await handler.HandleAsync(Event("fail-1"), CancellationToken.None); // must not throw
+
+        var saved = await repo.GetByRecipientAsync("platform", "ops@fairspot.net", cancellationToken: CancellationToken.None);
+        var record = Assert.Single(saved);
+        Assert.Equal(NotificationDeliveryStatus.Failed, record.DeliveryStatus);
     }
 }
