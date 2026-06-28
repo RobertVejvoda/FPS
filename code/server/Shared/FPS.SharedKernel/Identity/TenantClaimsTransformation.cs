@@ -68,9 +68,13 @@ public sealed class TenantClaimsTransformation : IClaimsTransformation
         // dormant and every token is treated as a customer-tenant token. The customer
         // path never yields platform_* roles (the role mapper strips them), so a
         // customer-issuer token can never reach the platform plane.
-        var platformIssuer = configuration["Auth:PlatformIssuer"];
+        // One config key drives both: Auth:PlatformAuthority activates the multi-issuer
+        // JWT and (here) the role gating; Auth:PlatformIssuer overrides only if the iss
+        // claim differs from the realm URL. Trailing slashes are normalized.
+        var platformIssuer = (configuration["Auth:PlatformIssuer"]
+            ?? configuration["Auth:PlatformAuthority"])?.TrimEnd('/');
         if (!string.IsNullOrEmpty(platformIssuer) &&
-            string.Equals(principal.FindFirstValue(IssuerClaim), platformIssuer, StringComparison.Ordinal))
+            string.Equals(principal.FindFirstValue(IssuerClaim)?.TrimEnd('/'), platformIssuer, StringComparison.Ordinal))
         {
             return TransformPlatform(principal);
         }
