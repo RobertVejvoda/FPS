@@ -247,6 +247,43 @@
           }
         ]
       }
+    },
+    "/notifications/tenant-request-events": {
+      "post": {
+        "tags": [
+          "TenantRequestEvents"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantRequestEvent"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantRequestEvent"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantRequestEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -470,6 +507,30 @@
           }
         }
       },
+      "TenantRequestEvent": {
+        "required": [
+          "requestId",
+          "company",
+          "primaryDomain",
+          "occurredAt"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "primaryDomain": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "UpdateNotificationPreferencesRequest": {
         "required": [
           "remindersEnabled",
@@ -514,6 +575,9 @@
     },
     {
       "name": "NotificationPreferences"
+    },
+    {
+      "name": "TenantRequestEvents"
     }
   ]
 }

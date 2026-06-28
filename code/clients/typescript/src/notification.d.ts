@@ -277,6 +277,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications/tenant-request-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TenantRequestEvent"];
+                    "text/json": components["schemas"]["TenantRequestEvent"];
+                    "application/*+json": components["schemas"]["TenantRequestEvent"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -323,6 +362,13 @@ export interface components {
             tenantId: string;
             targetActorHash: string;
             targetUserId?: null | string;
+        };
+        TenantRequestEvent: {
+            requestId: string;
+            company: string;
+            primaryDomain: string;
+            /** Format: date-time */
+            occurredAt: string;
         };
         UpdateNotificationPreferencesRequest: {
             remindersEnabled: boolean;
