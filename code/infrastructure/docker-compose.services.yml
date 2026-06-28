@@ -19,6 +19,10 @@ x-fps-service-auth-env: &fps-service-auth-env
   Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-fps-web-dev,fps-cli-dev}
   Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-true}
   Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-true}
+  # PLAT001: the FairSpot-controlled realm's privileged roles may pass through for tenants
+  # not yet explicitly mapped (the shared ConfiguredTenantRoleMapper strips privileged roles
+  # otherwise). Clear/override this for a brokered-customer deployment that maps roles per tenant.
+  Auth__TrustedRealmRoles: ${FPS_AUTH_TRUSTED_REALM_ROLES:-admin,hr_manager,auditor,report_viewer}
 
 services:
 

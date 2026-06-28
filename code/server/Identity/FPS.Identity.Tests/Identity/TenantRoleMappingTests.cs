@@ -348,19 +348,39 @@ public sealed class TenantRoleMappingTests
     }
 
     [Fact]
-    public async Task Transform_EnforcementInactive_MissingTenantClaim_ReturnsOriginalUnchanged()
+    public async Task Transform_EnforcementInactive_MissingTenantClaim_StripsElevated_KeepsNonPrivileged()
     {
-        // Before any tenant configured (enforcement inactive) — backward-compatible pass-through.
+        // PLAT001: enforcement inactive + no tenant context → a customer-issued token can
+        // never keep elevated roles. Privileged (admin) is stripped; non-privileged
+        // (employee) is kept for dev/local compatibility; not deactivated.
         var store = new InMemoryTenantIdentityConfigStore(); // empty
 
         var transform = new TenantClaimsTransformation(
             new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
 
-        var principal = PrincipalWithClaims(("sub", "user-1"), (ClaimTypes.Role, "admin"));
+        var principal = PrincipalWithClaims(
+            ("sub", "user-1"), (ClaimTypes.Role, "admin"), (ClaimTypes.Role, "employee"));
 
         var result = await transform.TransformAsync(principal);
 
+        Assert.False(result.IsInRole("admin"));    // privileged — stripped without tenant context
+        Assert.True(result.IsInRole("employee"));  // non-privileged — kept
         Assert.False(result.HasClaim("fps_deactivated", "true"));
+    }
+
+    [Fact]
+    public async Task Transform_EnforcementInactive_MissingTenantClaim_StripsPlatformRole()
+    {
+        var store = new InMemoryTenantIdentityConfigStore(); // empty
+
+        var transform = new TenantClaimsTransformation(
+            new InMemoryTenantRoleMappingStore(store), new InMemoryDeactivatedUserStore(), store);
+
+        var principal = PrincipalWithClaims(("sub", "user-1"), (ClaimTypes.Role, FpsRoles.PlatformAdmin));
+
+        var result = await transform.TransformAsync(principal);
+
+        Assert.False(result.IsInRole(FpsRoles.PlatformAdmin)); // platform role never survives without the platform issuer
     }
 
     // ── PLAT001: platform-plane gating ─────────────────────────────────────────

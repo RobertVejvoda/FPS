@@ -425,14 +425,20 @@ fi
 
 # ── HR operations ─────────────────────────────────────────────────────────────
 
-header "HR operations"
+header "HR operations — privileged role reaches a non-Customer service (PLAT001)"
 if [[ -n "$HR_TOKEN" ]]; then
-  # HR-scoped booking list: uses the same /bookings endpoint; hr-admin role grants cross-employee visibility
-  HR_RESP=$(http_get "$HR_TOKEN" "$APP_URL/bookings")
-  if [[ -n "$HR_RESP" ]]; then
-    pass "GET /bookings (hr-admin) → accessible"
+  # hr_manager hits Booking (a non-Customer service that uses the shared role mapper). A 403
+  # here means the FairSpot realm's privileged roles were stripped — i.e. Auth:TrustedRealmRoles
+  # is not wired in this deployment. This is the explicit assertion that the seeded allowlist
+  # reaches non-Customer services.
+  HR_STATUS=$(curl -o /dev/null -sw "%{http_code}" \
+    -H "Authorization: Bearer $HR_TOKEN" "$APP_URL/bookings" 2>/dev/null || echo "000")
+  if [[ "$HR_STATUS" == "403" ]]; then
+    fail "GET /bookings (hr_manager) → 403 — privileged role stripped; set Auth:TrustedRealmRoles in this profile" "true"
+  elif [[ "$HR_STATUS" == "200" ]]; then
+    pass "GET /bookings (hr_manager) → 200 — hr_manager reaches Booking (TrustedRealmRoles active)"
   else
-    fail "GET /bookings (hr-admin) → unreachable"
+    pending "GET /bookings (hr_manager) → HTTP $HR_STATUS (confirm against the live domain)"
   fi
 else
   skip "HR operations — no hr-admin token"

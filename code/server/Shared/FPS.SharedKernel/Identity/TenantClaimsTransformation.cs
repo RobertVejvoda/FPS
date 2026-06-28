@@ -84,7 +84,10 @@ public sealed class TenantClaimsTransformation : IClaimsTransformation
         // Step 1: extract tenant from default claim.
         var tenantId = principal.FindFirstValue(DefaultTenantClaim) ?? string.Empty;
         if (string.IsNullOrEmpty(tenantId))
-            return enforcement ? FailClosed(principal) : Task.FromResult(principal);
+            // PLAT001: a token with no tenant context never keeps elevated roles. When
+            // enforcement is active it fails closed; otherwise (dev/local) elevated
+            // (privileged + platform_*) roles are stripped, non-privileged kept.
+            return enforcement ? FailClosed(principal) : StripElevated(principal);
 
         // Step 2: per-tenant claim config (populated by Customer service on configure).
         var claimConfig = (identityConfigStore as InMemoryTenantIdentityConfigStore)
@@ -110,7 +113,7 @@ public sealed class TenantClaimsTransformation : IClaimsTransformation
         if (string.IsNullOrEmpty(userId))
             return (enforcement || claimConfig is not null)
                 ? FailClosed(principal)   // required stable subject absent → fail closed
-                : Task.FromResult(principal);
+                : StripElevated(principal); // dev/local: strip elevated roles, keep non-privileged
 
         // Step 5: clone and rebuild role claims.
         var cloned = principal.Clone();
@@ -185,6 +188,21 @@ public sealed class TenantClaimsTransformation : IClaimsTransformation
                 identity.RemoveClaim(role);
         }
         identity.AddClaim(new Claim(PlatformClaim, "true"));
+        identity.AddClaim(new Claim(TransformedClaim, "true"));
+        return Task.FromResult(cloned);
+    }
+
+    // PLAT001 — a token with no tenant/subject context (enforcement inactive) keeps only
+    // safe non-privileged roles; privileged (admin/hr_manager/...) and platform_* roles are
+    // stripped, so a customer-issued token without tenant context can never carry elevated
+    // roles. Marked fps_transformed so it is not reprocessed.
+    private static Task<ClaimsPrincipal> StripElevated(ClaimsPrincipal original)
+    {
+        var cloned = original.Clone();
+        var identity = (ClaimsIdentity)cloned.Identity!;
+        foreach (var role in identity.FindAll(ClaimTypes.Role).ToList())
+            if (FpsRoles.IsPlatformRole(role.Value) || FpsRoles.IsPrivileged(role.Value))
+                identity.RemoveClaim(role);
         identity.AddClaim(new Claim(TransformedClaim, "true"));
         return Task.FromResult(cloned);
     }
