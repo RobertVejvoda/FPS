@@ -32,7 +32,7 @@ Hosted profiles must encrypt authoritative stores, derived stores, object storag
 - Grafana/Loki/Prometheus/Jaeger data when retained;
 - NAS volumes and backups.
 
-FairSpot cannot prove NAS disk encryption from application code alone. The deployment runbook must record whether the Synology volume/shared folder and backup target are encrypted, who owns the recovery keys, and how restore evidence is captured.
+FairSpot cannot prove NAS disk encryption from application code alone. The deployment runbook must record whether the Synology volume/shared folder and backup target are encrypted, who owns the recovery keys, and how restore evidence is captured. Operators complete the [NAS encryption-at-rest and backup evidence checklist](../production/nas-encryption-backup-evidence.md) (OPS019) before any real customer data is processed.
 
 ## Secrets And Keys
 

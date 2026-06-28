@@ -40,7 +40,7 @@ Last updated: 2026-06-28.
 | Gap | Severity | Notes |
 |-----|----------|-------|
 | Hosted encryption gate not evidenced | High — production-blocking | NAS and later hosted profiles must prove HTTPS public URLs, Cloudflare/WAF boundary, blocked internal/admin endpoints, and no accidental public exposure of Dapr, stores, observability, or management ports. |
-| Encryption at rest not configured or evidenced | High — production-blocking | Services rely on infrastructure storage defaults. Hosted profiles must prove encrypted NAS volumes/shared folders, object storage, state stores, broker persistence where used, Keycloak state, and backup targets before real customer data. |
+| Encryption at rest not configured or evidenced | High — production-blocking; **evidence path defined (OPS019 #619)** | Services rely on infrastructure storage defaults. Hosted profiles must prove encrypted NAS volumes/shared folders, object storage, state stores, broker persistence where used, Keycloak state, and backup targets before real customer data. Operator evidence checklist: [nas-encryption-backup-evidence.md](../production/nas-encryption-backup-evidence.md). Encryption itself stays an operator/infrastructure task; the checklist records and gates it before customer data. |
 | Dapr mTLS/service identity not enabled for hosted profiles | High — production-blocking | Dapr mTLS is disabled in local config (`fps-config.yaml`). Local remains exempt, but NAS/client profiles must enable and evidence Dapr mTLS or document an approved equivalent service-to-service encryption boundary. |
 
 ---
@@ -49,7 +49,7 @@ Last updated: 2026-06-28.
 
 | Gap | Severity | Notes |
 |-----|----------|-------|
-| Hosted secret store still uses transitional Vault development mode | High — production-blocking | Local may use Vault dev mode. NAS/client profiles need hardened Vault or an approved equivalent secret store with persistent storage, proper unseal/recovery, least-privilege policies, and no reusable dev root token. |
+| Hosted secret store still uses transitional Vault development mode | **Resolved (Phase 1) — #630 / OPS018 #618** | NAS now runs Vault in durable **server mode** (raft persistence, manual unseal, least-privilege `fairspot-dapr` token sourced from `nas.env`, no reusable dev root token); see [nas-cloudflare-deployment-profile.md](../production/nas-cloudflare-deployment-profile.md) Step 6a. Local keeps dev mode. **Remaining (Phase 2):** move datastore credentials to Vault **dynamic secrets** (database secrets engine + Vault Agent) so only the Vault token is operator-managed — tracked in #628. |
 | Secret rotation is not automated | Medium | Documented as customer responsibility. No tooling or rotation schedule is provided by FairSpot. |
 
 ---
