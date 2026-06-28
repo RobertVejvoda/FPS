@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 
 namespace FPS.SharedKernel.Identity;
@@ -18,20 +19,61 @@ namespace FPS.SharedKernel.Identity;
 //
 // IClaimsTransformation may be invoked more than once; fps_transformed=true prevents
 // double-processing.
-public sealed class TenantClaimsTransformation(
-    ITenantRoleMapper roleMapper,
-    IDeactivatedUserStore deactivatedUsers,
-    ITenantIdentityConfigStore identityConfigStore) : IClaimsTransformation
+public sealed class TenantClaimsTransformation : IClaimsTransformation
 {
+    private readonly ITenantRoleMapper roleMapper;
+    private readonly IDeactivatedUserStore deactivatedUsers;
+    private readonly ITenantIdentityConfigStore identityConfigStore;
+    private readonly IConfiguration configuration;
+
+    public TenantClaimsTransformation(
+        ITenantRoleMapper roleMapper,
+        IDeactivatedUserStore deactivatedUsers,
+        ITenantIdentityConfigStore identityConfigStore,
+        IConfiguration configuration)
+    {
+        this.roleMapper = roleMapper;
+        this.deactivatedUsers = deactivatedUsers;
+        this.identityConfigStore = identityConfigStore;
+        this.configuration = configuration;
+    }
+
+    // Back-compat overload (no platform issuer configured → platform plane dormant).
+    // Used by unit tests and any caller that does not set Auth:PlatformIssuer. DI
+    // resolves the greedier 4-arg constructor in services.
+    public TenantClaimsTransformation(
+        ITenantRoleMapper roleMapper,
+        IDeactivatedUserStore deactivatedUsers,
+        ITenantIdentityConfigStore identityConfigStore)
+        : this(roleMapper, deactivatedUsers, identityConfigStore, new ConfigurationBuilder().Build())
+    {
+    }
+
     internal const string DeactivatedClaim = "fps_deactivated";
+    internal const string PlatformClaim = "fps_platform";
     private const string TransformedClaim = "fps_transformed";
     private const string DefaultTenantClaim = "tenant_id";
     private const string DefaultSubjectClaim = "sub";
+    private const string IssuerClaim = "iss";
 
     public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
         if (principal.HasClaim(TransformedClaim, "true"))
             return Task.FromResult(principal);
+
+        // PLAT001 — platform plane. A token from the trusted platform issuer carries
+        // cross-tenant platform_* roles and has no customer tenant_id, so it is handled
+        // before the tenant-extraction fail-closed path below (which would otherwise
+        // strip its roles). When no platform issuer is configured the platform plane is
+        // dormant and every token is treated as a customer-tenant token. The customer
+        // path never yields platform_* roles (the role mapper strips them), so a
+        // customer-issuer token can never reach the platform plane.
+        var platformIssuer = configuration["Auth:PlatformIssuer"];
+        if (!string.IsNullOrEmpty(platformIssuer) &&
+            string.Equals(principal.FindFirstValue(IssuerClaim), platformIssuer, StringComparison.Ordinal))
+        {
+            return TransformPlatform(principal);
+        }
 
         var enforcement = identityConfigStore.IsEnforcementActive;
 
@@ -116,6 +158,24 @@ public sealed class TenantClaimsTransformation(
             identity.AddClaim(new Claim(DeactivatedClaim, "true"));
         }
 
+        identity.AddClaim(new Claim(TransformedClaim, "true"));
+        return Task.FromResult(cloned);
+    }
+
+    // PLAT001 — platform-issuer token. Keeps only cross-tenant platform_* roles
+    // (the JWT layer has already validated they came from the trusted platform
+    // issuer), drops any tenant-plane role, and marks the principal fps_platform.
+    // No customer tenant_id is required.
+    private static Task<ClaimsPrincipal> TransformPlatform(ClaimsPrincipal original)
+    {
+        var cloned = original.Clone();
+        var identity = (ClaimsIdentity)cloned.Identity!;
+        foreach (var role in identity.FindAll(ClaimTypes.Role).ToList())
+        {
+            if (!FpsRoles.IsPlatformRole(role.Value))
+                identity.RemoveClaim(role);
+        }
+        identity.AddClaim(new Claim(PlatformClaim, "true"));
         identity.AddClaim(new Claim(TransformedClaim, "true"));
         return Task.FromResult(cloned);
     }
