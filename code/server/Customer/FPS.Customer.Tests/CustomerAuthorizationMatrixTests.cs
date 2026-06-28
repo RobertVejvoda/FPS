@@ -125,6 +125,23 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
         Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
     }
 
+    // ── GET /tenant-requests — platform-operator triage queue (RequirePlatformAdmin) ──
+    // PLAT004: the queue holds cross-tenant prospect PII, so a tenant admin must never reach it.
+
+    [Fact]
+    public async Task TenantRequestQueue_PlatformAdmin_PassesGate()
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAdmin).GetAsync("/tenant-requests");
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
+    }
+
+    [Fact]
+    public async Task TenantRequestQueue_TenantAdmin_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.Admin).GetAsync("/tenant-requests");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
     [Theory]
     [InlineData(FpsRoles.Employee)]
     [InlineData(FpsRoles.Auditor)]

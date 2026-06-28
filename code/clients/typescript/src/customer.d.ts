@@ -667,7 +667,24 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         put?: never;
         post: {
             parameters: {
@@ -681,6 +698,88 @@ export interface paths {
                     "application/json": components["schemas"]["SubmitTenantRequest"];
                     "text/json": components["schemas"]["SubmitTenantRequest"];
                     "application/*+json": components["schemas"]["SubmitTenantRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenant-requests/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["TenantRequestDecision"];
+                    "text/json": null | components["schemas"]["TenantRequestDecision"];
+                    "application/*+json": null | components["schemas"]["TenantRequestDecision"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenant-requests/{requestId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": null | components["schemas"]["TenantRequestDecision"];
+                    "text/json": null | components["schemas"]["TenantRequestDecision"];
+                    "application/*+json": null | components["schemas"]["TenantRequestDecision"];
                 };
             };
             responses: {
@@ -765,6 +864,9 @@ export interface components {
             contactEmail: null | string;
             message: null | string;
             turnstileToken: null | string;
+        };
+        TenantRequestDecision: {
+            reason: null | string;
         };
         TransitionRequest: {
             to: string;
