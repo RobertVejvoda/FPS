@@ -1,0 +1,37 @@
+name: Publish Packages
+
+# Publishes FairSpot internal NuGet packages (e.g. FairSpot.SharedKernel) to GitHub Packages
+# so the private fairspot-platform service can consume them. Manual-only for now — versioning
+# and publish cadence are deliberate, not on every push. Bump <Version> in the csproj first.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack only, do not push"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-sharedkernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Pack FairSpot.SharedKernel
+        run: dotnet pack code/server/Shared/FPS.SharedKernel/FPS.SharedKernel.csproj -c Release -o ${{ runner.temp }}/nupkg
+
+      - name: Push to GitHub Packages
+        if: ${{ !inputs.dry_run }}
+        run: >-
+          dotnet nuget push "${{ runner.temp }}/nupkg/*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key "${{ secrets.GITHUB_TOKEN }}"
+          --skip-duplicate
