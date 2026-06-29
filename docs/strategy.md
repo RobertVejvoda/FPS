@@ -9,6 +9,7 @@ Current strategy content is governed through:
 - [Principles](./architecture/principles) for durable architecture/product constraints.
 - [Roadmap](./roadmap) and [Transition Architectures](./architecture/architecture-states/transition-architectures) for sequencing and migration planning.
 - [Commercialisation](./strategy-layer/commercialisation) for paid services, licensing implications, and deferred Billing.
+- [Evaluation and Onboarding](./strategy-layer/evaluation-and-onboarding) for the guided pilot funnel, self-onboarding tiers, and the open-runtime / paid-platform (open-core) split.
 - [Versions and Decisions](./versions-and-decisions) for durable decisions.
 
 FairSpot starts with parking because parking is a concrete, high-friction reservation problem: demand often exceeds supply, allocation decisions affect employees directly, and manual coordination creates poor evidence. The strategic goal is to turn that process into a fair, auditable, tenant-isolated allocation platform for limited workplace resources.
@@ -25,6 +26,7 @@ Architecture scope, constraints, stakeholders, target state, and gaps are mainta
 | What is the adoption approach? | [Goals and Approach](./strategy-layer/approach) |
 | How is licensing handled? | [Licensing Policy](./strategy-layer/licensing) |
 | How will clients evaluate the product? | [Demo and Evaluation](./demo-and-evaluation) |
+| How do prospects evaluate and onboard (pilot funnel, open-core split)? | [Evaluation and Onboarding](./strategy-layer/evaluation-and-onboarding) |
 | What is the target architecture? | [Architecture Vision](./architecture/architecture-vision), [Target Architecture](./architecture/architecture-states/target-architecture) |
 | Where are known gaps tracked? | [Gap Analysis](./architecture/architecture-states/gap-analysis), [Migration Tracker](./architecture/migration-tracker) |
 
