@@ -65,36 +65,98 @@ public static class FpsJwtBearerOptionsExtensions
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var managers = authorities
-            .Select(a => new ConfigurationManager<OpenIdConnectConfiguration>(
+        // Bind each issuer to its own realm's metadata so signing keys are resolved from the
+        // realm that the token CLAIMS minted it — never the union of all realms' keys.
+        var managersByIssuer = authorities.ToDictionary(
+            a => a,
+            a => new ConfigurationManager<OpenIdConnectConfiguration>(
                 $"{a}/.well-known/openid-configuration",
                 new OpenIdConnectConfigurationRetriever(),
-                new HttpDocumentRetriever { RequireHttps = requireHttps }))
-            .ToArray();
+                new HttpDocumentRetriever { RequireHttps = requireHttps }),
+            StringComparer.Ordinal);
+
+        // Mirror the dev-only same-realm host override (Auth:AllowLocalIssuerHostOverride) so a
+        // token from the configured customer realm reached on a different host still resolves
+        // that realm's keys (see AliasLocalDevIssuer). Cross-realm issuers are never aliased.
+        var allowLocalOverride = environment.IsDevelopment()
+            && IsTruthy(configuration["Auth:AllowLocalIssuerHostOverride"]);
+        var customerAuthority = options.Authority?.TrimEnd('/');
 
         var tvp = options.TokenValidationParameters;
         tvp.ValidateIssuer = true;
         tvp.ValidIssuers = authorities;
-        // Resolve signing keys from every configured realm; a token validates if any
-        // realm's current JWKS holds its signing key. A temporarily unreachable realm
-        // does not block validation against the others.
-        tvp.IssuerSigningKeyResolver = (_, _, _, _) =>
+        // PLAT001 hardening: resolve signing keys ONLY from the realm named by the token's
+        // `iss`, not the union of all realms. Pooling keys across realms would let a token
+        // minted by one realm (e.g. the customer realm) validate while claiming another
+        // realm's issuer (the platform issuer) — TenantClaimsTransformation trusts `iss` to
+        // grant platform_* roles, so cross-realm key pooling is a tenant→platform escalation
+        // path. With keys bound to the issuer, a cross-realm-signed token fails signature
+        // validation. A temporarily unreachable realm only fails its own tokens.
+        tvp.IssuerSigningKeyResolver = (_, securityToken, kid, _) =>
+            ResolveKeysForIssuer(
+                AliasLocalDevIssuer(securityToken?.Issuer, customerAuthority, allowLocalOverride, authorities),
+                kid, SnapshotSigningKeys(managersByIssuer));
+    }
+
+    // Dev-only: when Auth:AllowLocalIssuerHostOverride is enabled, a token from the SAME Keycloak
+    // realm reached on a different host (e.g. a LAN IP instead of localhost) is mapped back to the
+    // configured customer authority so its keys resolve — mirroring the issuer-validator override.
+    // Cross-realm issuers are NEVER aliased, so the issuer→key binding (the security fix) holds:
+    // a token claiming a different realm still resolves only that realm's keys (or none).
+    internal static string? AliasLocalDevIssuer(
+        string? tokenIssuer, string? customerAuthority, bool allowLocalOverride,
+        IReadOnlyCollection<string> configuredAuthorities)
+    {
+        if (string.IsNullOrEmpty(tokenIssuer)) return tokenIssuer;
+        var issuer = tokenIssuer.TrimEnd('/');
+        if (!allowLocalOverride || string.IsNullOrEmpty(customerAuthority)) return issuer;
+        if (configuredAuthorities.Contains(issuer, StringComparer.Ordinal)) return issuer; // already configured
+        return IsSameRealmIssuer(customerAuthority, tokenIssuer) ? customerAuthority : issuer;
+    }
+
+    // Snapshots each realm's current signing keys keyed by issuer. A realm whose metadata is
+    // unreachable is omitted, so its tokens fail closed while other realms still validate.
+    private static IReadOnlyDictionary<string, IReadOnlyCollection<SecurityKey>> SnapshotSigningKeys(
+        IReadOnlyDictionary<string, ConfigurationManager<OpenIdConnectConfiguration>> managersByIssuer)
+    {
+        var snapshot = new Dictionary<string, IReadOnlyCollection<SecurityKey>>(StringComparer.Ordinal);
+        foreach (var (issuer, manager) in managersByIssuer)
         {
-            var keys = new List<SecurityKey>();
-            foreach (var manager in managers)
+            try
             {
-                try
-                {
-                    keys.AddRange(manager.GetConfigurationAsync(CancellationToken.None)
-                        .GetAwaiter().GetResult().SigningKeys);
-                }
-                catch
-                {
-                    // realm metadata unreachable right now — other realms can still validate
-                }
+                snapshot[issuer] = manager.GetConfigurationAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult().SigningKeys.ToList();
             }
-            return keys;
-        };
+            catch
+            {
+                // realm metadata unreachable right now — omit; its tokens fail closed
+            }
+        }
+        return snapshot;
+    }
+
+    // PLAT001 hardening (security-critical): return signing keys ONLY for the realm named by
+    // the token's `iss`. This binds the signature to the claimed issuer, so a token minted by
+    // one realm cannot validate while claiming another realm's issuer (a customer→platform
+    // escalation path if keys were pooled). Unknown issuer → no keys → token rejected.
+    internal static IList<SecurityKey> ResolveKeysForIssuer(
+        string? tokenIssuer, string? kid,
+        IReadOnlyDictionary<string, IReadOnlyCollection<SecurityKey>> keysByIssuer)
+    {
+        var issuer = tokenIssuer?.TrimEnd('/');
+        if (issuer is null || !keysByIssuer.TryGetValue(issuer, out var keys))
+            return [];
+        return FilterByKid(keys, kid);
+    }
+
+    // Returns the keys whose `kid` matches when any do (the common JWKS case), otherwise all
+    // of the realm's keys (covers rotation where a token's kid may not be individually
+    // matchable yet). The caller has already bound `keys` to the token's issuer.
+    private static IList<SecurityKey> FilterByKid(IReadOnlyCollection<SecurityKey> keys, string? kid)
+    {
+        if (string.IsNullOrEmpty(kid)) return keys.ToList();
+        var matched = keys.Where(k => string.Equals(k.KeyId, kid, StringComparison.Ordinal)).ToList();
+        return matched.Count > 0 ? matched : keys.ToList();
     }
 
     private static IReadOnlyList<string> ReadAudiences(IConfiguration configuration, string? primaryAudience)
