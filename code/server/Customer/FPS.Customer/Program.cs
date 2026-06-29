@@ -40,6 +40,18 @@ builder.Services.AddRateLimiter(options =>
                 httpContext.Request.Headers[TenantRequestRateLimit.CloudflareClientIpHeader].FirstOrDefault(),
                 httpContext.Connection.RemoteIpAddress),
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
+
+    // Global backstop on the public intake path: a single window across all clients, so even if
+    // the per-IP key is evaded (e.g. a spoofed CF-Connecting-IP on a misconfigured off-tunnel
+    // origin), total submission volume stays bounded. Applies ONLY to POST /tenant-requests;
+    // every other request (incl. the authenticated operator approve/reject) is unthrottled here.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        HttpMethods.IsPost(httpContext.Request.Method)
+        && httpContext.Request.Path.Equals(TenantRequestRateLimit.IntakePath, StringComparison.OrdinalIgnoreCase)
+            ? RateLimitPartition.GetFixedWindowLimiter(
+                TenantRequestRateLimit.GlobalPartitionKey,
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 100, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 })
+            : RateLimitPartition.GetNoLimiter("unthrottled"));
 });
 builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();

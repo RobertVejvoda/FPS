@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace FPS.SharedKernel.Filters;
 
@@ -57,9 +59,19 @@ public sealed class DaprInternalOnlyAttribute : Attribute, IResourceFilter
         }
 
         var incomingToken = context.HttpContext.Request.Headers[DaprTokenHeader].FirstOrDefault();
-        if (incomingToken != expectedToken)
+        if (!TokensMatch(incomingToken, expectedToken))
             context.Result = new ObjectResult("Forbidden: Dapr app token required.")
                 { StatusCode = StatusCodes.Status403Forbidden };
+    }
+
+    // Constant-time comparison so the shared APP_API_TOKEN can't be recovered byte-by-byte via
+    // a timing side-channel. An empty/missing incoming token never matches.
+    private static bool TokensMatch(string? incoming, string expected)
+    {
+        if (string.IsNullOrEmpty(incoming)) return false;
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(incoming),
+            Encoding.UTF8.GetBytes(expected));
     }
 
     public void OnResourceExecuted(ResourceExecutedContext context) { }
