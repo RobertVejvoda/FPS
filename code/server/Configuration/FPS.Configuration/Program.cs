@@ -89,17 +89,7 @@ static async Task SeedDevelopmentConfigurationAsync(WebApplication app)
                 PublicationReason = "Local demo seed",
             });
 
-            var slots = Enumerable.Range(1, 15).Select(i => new ParkingSlot
-            {
-                SlotId = (300 + i).ToString(),
-                TenantId = demoTenantId,
-                LocationId = "Prague",
-                IsActive = true,
-                HasCharger = i <= 3,
-                IsAccessible = i == 1,
-                IsCompanyCarOnly = false,
-                IsMotorcycleCapacity = false,
-            }).ToList();
+            var slots = DemoConfigurationSeed.BuildSlots(demoTenantId, "Prague");
 
             await slotRepo.ReplaceLocationSlotsAsync(demoTenantId, "Prague", slots);
             await slotChangeRepo.RecordAsync(new SlotChangeRecord

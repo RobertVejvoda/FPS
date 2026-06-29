@@ -65,28 +65,31 @@ internal static class GreenLogisticsDataset
     internal const string LocationId = "GL-HQ";
 
     // Company-car employee — has a fixed reserved slot below.
-    private const string AliceUserId = "a1a10001-0001-0001-0001-000000000001";
+    private const string CompanyCarUserId = "a1a10001-0001-0001-0001-000000000001";
 
+    // Green Logistics demo roster. Realistic Czech names without diacritics and CZ-style
+    // plates, with combined cases (an electric company car, an accessibility + EV driver,
+    // a two-vehicle employee) so a provisioned sandbox mirrors the local harness demo.
     internal static readonly IReadOnlyList<DemoEmployeeRecord> Employees =
     [
-        new(AliceUserId, "Alice Novák",      ["employee"],              null, LocationId, true,  true,  false, false,
-            [new("gl-veh-001", "3GL-AA01", "car",        IsElectric: false, IsDefault: true)]),
-        new("b2b20002-0002-0002-0002-000000000002", "Bob Dvořák",      ["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-002", "3GL-BB02", "car",        IsElectric: true,  IsDefault: true)]),
-        new("c3c30003-0003-0003-0003-000000000003", "Carol Horáček",   ["employee"],              null, LocationId, true,  false, true,  false,
-            [new("gl-veh-003", "3GL-CC03", "car",        IsElectric: false, IsDefault: true)]),
-        new("d4d40004-0004-0004-0004-000000000004", "David Navrátil",  ["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-004", "3GL-DD04", "car",        IsElectric: false, IsDefault: true),
-             new("gl-veh-005", "3GL-DD05", "motorcycle", IsElectric: false, IsDefault: false)]),
-        new("e5e50005-0005-0005-0005-000000000005", "Eva Procházka",   ["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-006", "3GL-EE06", "car",        IsElectric: false, IsDefault: true)]),
-        new("f6f60006-0006-0006-0006-000000000006", "Frank Kratochvíl",["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-007", "3GL-FF07", "car",        IsElectric: false, IsDefault: true)]),
-        new("a7a70007-0007-0007-0007-000000000007", "Gabi Krejčí",     ["employee"],              null, LocationId, false, false, false, false, []),
-        new("h8h80008-0008-0008-0008-000000000008", "Hana Pokorná",    ["employee","hr_manager"], null, LocationId, true,  false, false, false,
-            [new("gl-veh-008", "3GL-HH08", "car",        IsElectric: false, IsDefault: true)]),
-        new("i9i90009-0009-0009-0009-000000000009", "Ivan Blažek",     ["employee","admin"],      null, LocationId, true,  false, false, false,
-            [new("gl-veh-009", "3GL-II09", "car",        IsElectric: false, IsDefault: true)]),
+        new(CompanyCarUserId, "Jan Novak",            ["employee"],              null, LocationId, true,  true,  false, false,
+            [new("gl-veh-001", "1AB 2345", "car",        IsElectric: true,  IsDefault: true)]),
+        new("b2b20002-0002-0002-0002-000000000002", "Petra Svobodova",  ["employee"],              null, LocationId, true,  false, false, false,
+            [new("gl-veh-002", "2SC 4417", "car",        IsElectric: true,  IsDefault: true)]),
+        new("c3c30003-0003-0003-0003-000000000003", "Hana Vesela",      ["employee"],              null, LocationId, true,  false, true,  false,
+            [new("gl-veh-003", "5BL 6628", "car",        IsElectric: true,  IsDefault: true)]),
+        new("d4d40004-0004-0004-0004-000000000004", "Tomas Dvorak",     ["employee"],              null, LocationId, true,  false, false, false,
+            [new("gl-veh-004", "3AH 8820", "car",        IsElectric: false, IsDefault: true),
+             new("gl-veh-005", "3AH 0143", "motorcycle", IsElectric: false, IsDefault: false)]),
+        new("e5e50005-0005-0005-0005-000000000005", "Pavel Cerny",      ["employee"],              null, LocationId, true,  false, false, false,
+            [new("gl-veh-006", "4EK 1193", "car",        IsElectric: false, IsDefault: true)]),
+        new("f6f60006-0006-0006-0006-000000000006", "Martin Horak",     ["employee"],              null, LocationId, true,  false, false, false,
+            [new("gl-veh-007", "1AP 3092", "car",        IsElectric: false, IsDefault: true)]),
+        new("a7a70007-0007-0007-0007-000000000007", "Jana Kucerova",    ["employee"],              null, LocationId, false, false, false, false, []),
+        new("h8h80008-0008-0008-0008-000000000008", "Lucie Prochazkova",["employee","hr_manager"], null, LocationId, true,  false, false, false,
+            [new("gl-veh-008", "6CT 7741", "car",        IsElectric: false, IsDefault: true)]),
+        new("i9i90009-0009-0009-0009-000000000009", "Karel Urban",      ["employee","admin"],      null, LocationId, true,  false, false, false,
+            [new("gl-veh-009", "7AZ 2284", "car",        IsElectric: false, IsDefault: true)]),
     ];
 
     internal static readonly IReadOnlyList<DemoSlotRecord> Slots =
@@ -109,8 +112,8 @@ internal static class GreenLogisticsDataset
         new("gl-slot-014", IsActive: true,  HasCharger: true,  IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
         // Accessibility slot
         new("gl-slot-015", IsActive: true,  HasCharger: false, IsAccessible: true,  IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        // Company-car reserved slot (Alice Novák)
-        new("gl-slot-016", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: true,  IsMotorcycleCapacity: false, ReservedForUserId: AliceUserId),
+        // Company-car reserved slot (Jan Novak)
+        new("gl-slot-016", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: true,  IsMotorcycleCapacity: false, ReservedForUserId: CompanyCarUserId),
         // Motorcycle area (4 motorcycles share this slot)
         new("gl-slot-017", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: true,  null, MotorcycleCapacityUnits: 4),
         // 3 additional standard slots
