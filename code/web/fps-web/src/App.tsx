@@ -16,7 +16,9 @@ import {
   canAccessTenantAdmin,
   canControlSimulation,
   defaultRoute,
+  isPlatformPlane,
 } from './auth/roles';
+import { PlatformShell } from './platform/PlatformShell';
 import { SessionPage } from './pages/SessionPage';
 import { OidcCallbackPage } from './pages/OidcCallbackPage';
 import { BookingsPage } from './pages/BookingsPage';
@@ -144,6 +146,8 @@ function Shell() {
   const { isConfigured, logout, branding, roles } = useAuth();
 
   if (!isConfigured) return <Navigate to="/session" replace />;
+  // A platform-plane identity has no tenant surfaces — send it to the operator console.
+  if (isPlatformPlane(roles)) return <Navigate to="/platform/overview" replace />;
 
   const navItems = [
     canAccessBookings(roles) && { to: '/bookings', label: 'My Spots' },
@@ -224,6 +228,7 @@ export function App() {
         <Route path="/session" element={<SessionPage />} />
         <Route path="/auth/callback" element={<OidcCallbackPage />} />
         <Route path="/legal" element={<LegalPage />} />
+        <Route path="/platform/*" element={<PlatformShell />} />
         <Route path="/*" element={<Shell />} />
       </Routes>
     </BrowserRouter>
