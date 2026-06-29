@@ -75,6 +75,13 @@ public static class FpsJwtBearerOptionsExtensions
                 new HttpDocumentRetriever { RequireHttps = requireHttps }),
             StringComparer.Ordinal);
 
+        // Mirror the dev-only same-realm host override (Auth:AllowLocalIssuerHostOverride) so a
+        // token from the configured customer realm reached on a different host still resolves
+        // that realm's keys (see AliasLocalDevIssuer). Cross-realm issuers are never aliased.
+        var allowLocalOverride = environment.IsDevelopment()
+            && IsTruthy(configuration["Auth:AllowLocalIssuerHostOverride"]);
+        var customerAuthority = options.Authority?.TrimEnd('/');
+
         var tvp = options.TokenValidationParameters;
         tvp.ValidateIssuer = true;
         tvp.ValidIssuers = authorities;
@@ -86,7 +93,25 @@ public static class FpsJwtBearerOptionsExtensions
         // path. With keys bound to the issuer, a cross-realm-signed token fails signature
         // validation. A temporarily unreachable realm only fails its own tokens.
         tvp.IssuerSigningKeyResolver = (_, securityToken, kid, _) =>
-            ResolveKeysForIssuer(securityToken?.Issuer, kid, SnapshotSigningKeys(managersByIssuer));
+            ResolveKeysForIssuer(
+                AliasLocalDevIssuer(securityToken?.Issuer, customerAuthority, allowLocalOverride, authorities),
+                kid, SnapshotSigningKeys(managersByIssuer));
+    }
+
+    // Dev-only: when Auth:AllowLocalIssuerHostOverride is enabled, a token from the SAME Keycloak
+    // realm reached on a different host (e.g. a LAN IP instead of localhost) is mapped back to the
+    // configured customer authority so its keys resolve — mirroring the issuer-validator override.
+    // Cross-realm issuers are NEVER aliased, so the issuer→key binding (the security fix) holds:
+    // a token claiming a different realm still resolves only that realm's keys (or none).
+    internal static string? AliasLocalDevIssuer(
+        string? tokenIssuer, string? customerAuthority, bool allowLocalOverride,
+        IReadOnlyCollection<string> configuredAuthorities)
+    {
+        if (string.IsNullOrEmpty(tokenIssuer)) return tokenIssuer;
+        var issuer = tokenIssuer.TrimEnd('/');
+        if (!allowLocalOverride || string.IsNullOrEmpty(customerAuthority)) return issuer;
+        if (configuredAuthorities.Contains(issuer, StringComparer.Ordinal)) return issuer; // already configured
+        return IsSameRealmIssuer(customerAuthority, tokenIssuer) ? customerAuthority : issuer;
     }
 
     // Snapshots each realm's current signing keys keyed by issuer. A realm whose metadata is

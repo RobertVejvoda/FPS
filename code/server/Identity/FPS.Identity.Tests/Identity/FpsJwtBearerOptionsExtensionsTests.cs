@@ -255,6 +255,52 @@ public sealed class FpsJwtBearerOptionsExtensionsTests
         Assert.Equal([k2], keys);
     }
 
+    // ── Dev local-issuer host override preserved on top of the issuer-bound resolver ──────
+
+    // Same Keycloak realm reached on a different host than the configured authority.
+    private const string CustomerRealmAltHost = "https://192.168.1.10/realms/fairspot";
+
+    [Fact]
+    public void AliasLocalDevIssuer_SameRealmDifferentHost_ResolvesCustomerKeysOnly_NeverPlatform()
+    {
+        var map = TwoRealmKeys(out var customerKey, out var platformKey);
+        string[] configured = [CustomerAuthority, PlatformAuthority];
+
+        var aliased = FpsJwtBearerOptionsExtensions.AliasLocalDevIssuer(
+            CustomerRealmAltHost, CustomerAuthority, allowLocalOverride: true, configured);
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(aliased, kid: null, map);
+
+        // The dev override resolves the customer realm's keys (so local-host tokens still work)
+        // and never the platform realm's key — the security binding holds.
+        Assert.Contains(customerKey, keys);
+        Assert.DoesNotContain(platformKey, keys);
+    }
+
+    [Fact]
+    public void AliasLocalDevIssuer_CrossRealmIssuer_IsNotAliased_ResolvesNoKeys()
+    {
+        var map = TwoRealmKeys(out _, out _);
+        string[] configured = [CustomerAuthority, PlatformAuthority];
+        const string foreignRealm = "https://192.168.1.10/realms/evil";
+
+        var aliased = FpsJwtBearerOptionsExtensions.AliasLocalDevIssuer(
+            foreignRealm, CustomerAuthority, allowLocalOverride: true, configured);
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(aliased, kid: null, map);
+
+        Assert.Empty(keys);
+    }
+
+    [Fact]
+    public void AliasLocalDevIssuer_OverrideDisabled_DoesNotAlias()
+    {
+        string[] configured = [CustomerAuthority, PlatformAuthority];
+
+        var aliased = FpsJwtBearerOptionsExtensions.AliasLocalDevIssuer(
+            CustomerRealmAltHost, CustomerAuthority, allowLocalOverride: false, configured);
+
+        Assert.Equal(CustomerRealmAltHost, aliased);
+    }
+
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = environmentName;
