@@ -1,3 +1,4 @@
+import type { components } from '@fps/api-client/customer';
 import type { ApiClientConfig, FetchResult } from './client';
 
 export interface TenantDiscoveryResponse {
@@ -30,6 +31,69 @@ export async function discoverTenant(
     return { kind: 'ok', data: (await res.json()) as TenantDiscoveryResponse };
   } catch {
     return { kind: 'error' };
+  }
+}
+
+// Public "Start a FairSpot Pilot" evaluation request (PLAT004c). Anonymous POST — the
+// endpoint is bot-protected and rate-limited at the edge; no bearer token is sent and no
+// prospect data is persisted client-side. Typed against the generated client so the wire
+// shape (company / primaryDomain / contactEmail / message / turnstileToken) stays in sync.
+type SubmitPilotBody = components['schemas']['SubmitTenantRequest'];
+type PilotAcknowledgement = components['schemas']['TenantRequestAcknowledgement'];
+
+export interface PilotRequestInput {
+  companyName: string;
+  companyDomain: string;
+  workEmail: string;
+  message: string;
+  verificationToken: string;
+}
+
+export type PilotRequestResult =
+  | { kind: 'ok'; reference: string }
+  // Field-level problem surfaced by the API as a human-readable message we can show as-is.
+  | { kind: 'invalid'; message: string }
+  // Too many requests from this network in a short window.
+  | { kind: 'rate-limited' }
+  | { kind: 'error' };
+
+export async function submitPilotRequest(
+  apiBaseUrl: string,
+  input: PilotRequestInput,
+): Promise<PilotRequestResult> {
+  const body: SubmitPilotBody = {
+    company: input.companyName,
+    primaryDomain: input.companyDomain,
+    contactEmail: input.workEmail,
+    message: input.message,
+    turnstileToken: input.verificationToken || null,
+  };
+  try {
+    const res = await fetch(`${apiBaseUrl}/tenant-requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 202) {
+      const data = (await res.json()) as PilotAcknowledgement;
+      return { kind: 'ok', reference: data.requestId };
+    }
+    if (res.status === 429) return { kind: 'rate-limited' };
+    if (res.status === 400) {
+      return { kind: 'invalid', message: await readProblemDetail(res) };
+    }
+    return { kind: 'error' };
+  } catch {
+    return { kind: 'error' };
+  }
+}
+
+async function readProblemDetail(res: Response): Promise<string> {
+  try {
+    const problem = (await res.json()) as { detail?: string | null; title?: string | null };
+    return problem.detail || problem.title || 'Please check your details and try again.';
+  } catch {
+    return 'Please check your details and try again.';
   }
 }
 

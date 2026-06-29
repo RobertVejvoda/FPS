@@ -38,6 +38,7 @@ import { HrDrawHistoryPage } from './pages/HrDrawHistoryPage';
 import { HrEmployeeHistoryPage } from './pages/HrEmployeeHistoryPage';
 import { ParkingMapPage } from './pages/ParkingMapPage';
 import { LegalPage } from './pages/LegalPage';
+import { PilotPage } from './pages/PilotPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
   const { roles } = useAuth();
@@ -228,6 +229,7 @@ export function App() {
         <Route path="/session" element={<SessionPage />} />
         <Route path="/auth/callback" element={<OidcCallbackPage />} />
         <Route path="/legal" element={<LegalPage />} />
+        <Route path="/pilot" element={<PilotPage />} />
         <Route path="/platform/*" element={<PlatformShell />} />
         <Route path="/*" element={<Shell />} />
       </Routes>

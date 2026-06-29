@@ -17,5 +17,7 @@
   "devTokenFallbackEnabled": false,
   "environment": "Local",
   "simulationEnabled": true,
-  "appVersion": "0.1.0"
+  "appVersion": "0.1.0",
+  "turnstileSiteKey": "",
+  "demoUrl": "/session"
 }
