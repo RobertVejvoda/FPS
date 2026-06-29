@@ -9,6 +9,8 @@ public sealed partial class TenantRequestService(
     ITenantRequestNotifier notifier)
 {
     private const int MaxMessageLength = 2000;
+    private const int MaxEmailLength = 254;   // RFC 5321 address limit
+    private const int MaxDomainLength = 253;  // RFC 1035 hostname limit
 
     /// <summary>
     /// Public intake. Verifies the Turnstile token, then records a <see cref="TenantRequest"/> and
@@ -25,33 +27,40 @@ public sealed partial class TenantRequestService(
         message = (message ?? string.Empty).Trim();
 
         if (company.Length is 0 or > 200) return (null, "Company name is required.");
-        if (!EmailPattern().IsMatch(contactEmail)) return (null, "A valid contact email is required.");
-        if (!DomainPattern().IsMatch(primaryDomain)) return (null, "A valid primary domain is required.");
+        // Cap length before regex evaluation so the open path can't be fed unbounded input.
+        if (contactEmail.Length > MaxEmailLength || !EmailPattern().IsMatch(contactEmail))
+            return (null, "A valid contact email is required.");
+        if (primaryDomain.Length > MaxDomainLength || !DomainPattern().IsMatch(primaryDomain))
+            return (null, "A valid primary domain is required.");
         if (message.Length > MaxMessageLength) message = message[..MaxMessageLength];
 
         // Fail closed: an unverified token never creates a record.
         if (!await turnstile.VerifyAsync(turnstileToken, remoteIp, ct))
             return (null, "Could not verify the request. Please try again.");
 
-        // Soft anti-abuse: collapse repeat submissions from the same prospect while one is open.
+        // Soft anti-abuse without an email-existence oracle: when an open request already
+        // exists for this email, return the SAME accepted-style acknowledgement — but create
+        // no duplicate record and do not re-alert sales. A fresh opaque id means a caller
+        // cannot distinguish a new submission from a collapsed duplicate.
         if (await repository.HasOpenRequestForEmailAsync(contactEmail, ct))
-            return (null, "A request from this email is already being reviewed. We'll be in touch.");
+            return (NewRequest(company, primaryDomain, contactEmail, message), null);
 
-        var request = new TenantRequest
-        {
-            RequestId = Guid.NewGuid().ToString("n"),
-            Company = company,
-            PrimaryDomain = primaryDomain,
-            ContactEmail = contactEmail,
-            Message = message,
-            Status = TenantRequestStatus.Requested,
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-
+        var request = NewRequest(company, primaryDomain, contactEmail, message);
         await repository.SaveAsync(request, ct);
         await notifier.NotifySalesAsync(request, ct);
         return (request, null);
     }
+
+    private static TenantRequest NewRequest(string company, string primaryDomain, string contactEmail, string message) => new()
+    {
+        RequestId = Guid.NewGuid().ToString("n"),
+        Company = company,
+        PrimaryDomain = primaryDomain,
+        ContactEmail = contactEmail,
+        Message = message,
+        Status = TenantRequestStatus.Requested,
+        CreatedAt = DateTimeOffset.UtcNow,
+    };
 
     /// <summary>Platform-operator queue. Newest first.</summary>
     public async Task<IReadOnlyList<TenantRequest>> ListAsync(CancellationToken ct)

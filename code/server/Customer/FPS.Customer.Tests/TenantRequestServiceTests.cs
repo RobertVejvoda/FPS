@@ -67,14 +67,44 @@ public sealed class TenantRequestServiceTests
     }
 
     [Fact]
-    public async Task Submit_DuplicateOpenEmail_IsCollapsed()
+    public async Task Submit_DuplicateOpenEmail_IsCollapsed_WithNeutralAcknowledgement()
     {
-        await Submit();
-        var (request, error) = await Submit(); // same email, request still open
+        var (first, _) = await Submit();
+        var (second, error) = await Submit(); // same email, request still open
+
+        // No email-existence oracle: the duplicate gets an accepted-style ack (no error) but
+        // creates no second record and triggers no second sales alert. The id differs so a
+        // caller cannot tell it was collapsed.
+        Assert.Null(error);
+        Assert.NotNull(second);
+        Assert.NotEqual(first!.RequestId, second!.RequestId);
+        Assert.Single(await repo.ListAsync(CancellationToken.None));
+        Assert.Single(notifier.Notified);
+    }
+
+    [Fact]
+    public async Task Submit_OverlongEmail_IsRejected_NoRecord()
+    {
+        var email = new string('a', 250) + "@e.com"; // 256 chars > 254 cap
+
+        var (request, error) = await Submit(email: email);
 
         Assert.NotNull(error);
         Assert.Null(request);
-        Assert.Single(await repo.ListAsync(CancellationToken.None));
+        Assert.Empty(await repo.ListAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Submit_OverlongDomain_IsRejected_NoRecord()
+    {
+        var label = new string('a', 60);
+        var domain = string.Join('.', label, label, label, label, label); // 304 chars > 253 cap
+
+        var (request, error) = await Submit(domain: domain);
+
+        Assert.NotNull(error);
+        Assert.Null(request);
+        Assert.Empty(await repo.ListAsync(CancellationToken.None));
     }
 
     [Fact]

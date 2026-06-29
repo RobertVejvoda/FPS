@@ -42,6 +42,12 @@ public static class TenantRequestRateLimit
 {
     public const string PolicyName = "tenant-request-intake";
 
+    /// <summary>The public intake route (POST). Used to scope the global backstop limiter.</summary>
+    public const string IntakePath = "/tenant-requests";
+
+    /// <summary>Single partition key for the cross-client global backstop window.</summary>
+    public const string GlobalPartitionKey = "tenant-request-intake:global";
+
     /// <summary>
     /// Cloudflare's authoritative client-IP header. FairSpot's public boundary is reachable only
     /// through Cloudflare Tunnel (see docs/production/nas-cloudflare-deployment-profile.md and the
