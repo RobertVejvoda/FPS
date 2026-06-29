@@ -21,6 +21,8 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
     private static readonly SymmetricSecurityKey TestKey =
         new(Encoding.UTF8.GetBytes("fps-test-signing-key-at-least-32-chars!"));
 
+    private const string PlatformIssuer = "https://platform.test/realms/fps-platform";
+
     public MeControllerTests(WebApplicationFactory<Program> factory)
     {
         this.factory = factory.WithWebHostBuilder(builder =>
@@ -107,6 +109,33 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         var response = await client.GetAsync("/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMe_PlatformToken_NoTenant_ReturnsPlatformRoles()
+    {
+        // PLAT008A — a platform-issuer token is cross-tenant: platform_* roles, no tenant_id.
+        // The platform issuer is configured so TenantClaimsTransformation runs TransformPlatform,
+        // which keeps the platform role and marks fps_platform. /me must admit it (200) so the
+        // operator console can read its roles.
+        var platformFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, cfg) =>
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Auth:PlatformIssuer"] = PlatformIssuer,
+                })));
+
+        var client = platformFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreatePlatformToken("operator-1", "platform_admin"));
+
+        var response = await client.GetAsync("/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal("operator-1", json.GetProperty("userId").GetString());
+        Assert.Equal(string.Empty, json.GetProperty("tenantId").GetString());
+        Assert.Contains("platform_admin", json.GetProperty("roles").EnumerateArray().Select(r => r.GetString()));
     }
 
     [Fact]
@@ -198,6 +227,26 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
         var token = new JwtSecurityToken(
             claims: claims,
             expires: expires,
+            signingCredentials: new SigningCredentials(TestKey, SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    // PLAT008A — a platform-issuer token: cross-tenant platform_* roles, an iss that matches
+    // the configured Auth:PlatformIssuer, and deliberately no tenant_id.
+    private static string CreatePlatformToken(string userId, params string[] roles)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, userId),
+            new("sub", userId)
+        };
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+        var token = new JwtSecurityToken(
+            issuer: PlatformIssuer,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
             signingCredentials: new SigningCredentials(TestKey, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
