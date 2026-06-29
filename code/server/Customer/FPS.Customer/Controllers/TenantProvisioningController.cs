@@ -11,8 +11,12 @@ namespace FPS.Customer.Controllers;
 // operation (RequirePlatformAdmin), distinct from the tenant-scoped self-administration on
 // TenantController. It is isolated here so it can move to the private fairspot-platform
 // operator service (the open core bootstraps its single tenant via seed/config, not this API).
+// Tag pinned to "Tenant" so this isolation refactor keeps the public OpenAPI/generated
+// client byte-identical (the operation's contract is unchanged; only its hosting controller
+// moved). The default tag would otherwise become the controller name.
 [ApiController]
 [Authorize]
+[Tags("Tenant")]
 public sealed class TenantProvisioningController(TenantService service, ICurrentUser currentUser) : ControllerBase
 {
     [HttpPost("/tenants")]
