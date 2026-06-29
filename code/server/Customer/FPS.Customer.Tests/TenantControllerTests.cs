@@ -13,12 +13,17 @@ public sealed class TenantControllerTests
     private readonly InMemoryTenantRepository repository = new();
     private readonly Mock<ICurrentUser> currentUser = new();
     private readonly TenantController controller;
+    // Provisioning (create) moved to the platform-plane operator controller; both share one
+    // service over the same repository so create-then-read flows stay consistent.
+    private readonly TenantProvisioningController provisioning;
 
     public TenantControllerTests()
     {
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
         currentUser.Setup(u => u.UserId).Returns("admin-1");
-        controller = new TenantController(new TenantService(repository), currentUser.Object);
+        var service = new TenantService(repository);
+        controller = new TenantController(service, currentUser.Object);
+        provisioning = new TenantProvisioningController(service, currentUser.Object);
     }
 
     [Fact]
@@ -26,7 +31,7 @@ public sealed class TenantControllerTests
     {
         var request = new CreateTenantRequest("beta-corp", "Beta Corp", "us-east", "America/New_York", []);
 
-        var result = await controller.Create(request, CancellationToken.None);
+        var result = await provisioning.Create(request, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result);
         var response = Assert.IsType<TenantResponse>(created.Value);
@@ -38,7 +43,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Create_NullSlug_Returns400NotThrows()
     {
-        var result = await controller.Create(new CreateTenantRequest(null, "Corp", "eu", "UTC", []), CancellationToken.None);
+        var result = await provisioning.Create(new CreateTenantRequest(null, "Corp", "eu", "UTC", []), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -46,9 +51,9 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Create_DuplicateSlug_Returns400()
     {
-        await controller.Create(new CreateTenantRequest("dup", "Dup", "eu", "UTC", []), CancellationToken.None);
+        await provisioning.Create(new CreateTenantRequest("dup", "Dup", "eu", "UTC", []), CancellationToken.None);
 
-        var result = await controller.Create(new CreateTenantRequest("dup", "Dup2", "eu", "UTC", []), CancellationToken.None);
+        var result = await provisioning.Create(new CreateTenantRequest("dup", "Dup2", "eu", "UTC", []), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -56,7 +61,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Get_ExistingTenant_Returns200()
     {
-        var created = await controller.Create(new CreateTenantRequest("acme", "ACME", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("acme", "ACME", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.Get(tenantId, CancellationToken.None);
@@ -91,7 +96,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Transition_ValidState_Returns204()
     {
-        var created = await controller.Create(new CreateTenantRequest("xco", "XCo", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("xco", "XCo", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.Transition(tenantId, new TransitionRequest("Configured", "identity done", null), CancellationToken.None);
@@ -102,7 +107,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Transition_InvalidState_Returns400()
     {
-        var created = await controller.Create(new CreateTenantRequest("xco", "XCo", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("xco", "XCo", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.Transition(tenantId, new TransitionRequest("Ready", null, null), CancellationToken.None);
@@ -121,7 +126,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task GetTransitions_ReturnsHistory()
     {
-        var created = await controller.Create(new CreateTenantRequest("hist", "Hist", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("hist", "Hist", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
         await controller.Transition(tenantId, new TransitionRequest("Configured", "setup done", "evidence"), CancellationToken.None);
 
@@ -134,7 +139,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Update_ValidRequest_Returns204()
     {
-        var created = await controller.Create(new CreateTenantRequest("upd", "Original", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("upd", "Original", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.Update(tenantId,
@@ -152,7 +157,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Create_NoKindSpecified_DefaultsToProduction()
     {
-        var result = await controller.Create(new CreateTenantRequest("prod-co", "Prod Co", "eu", "UTC", []), CancellationToken.None);
+        var result = await provisioning.Create(new CreateTenantRequest("prod-co", "Prod Co", "eu", "UTC", []), CancellationToken.None);
 
         var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
         Assert.Equal("Production", response.Kind);
@@ -165,7 +170,7 @@ public sealed class TenantControllerTests
     public async Task Create_ExplicitKind_PersistedAndReturnedInResponse(string kind)
     {
         var slug = $"kind-{kind.ToLower()}";
-        var result = await controller.Create(new CreateTenantRequest(slug, "Co", "eu", "UTC", [], Kind: kind), CancellationToken.None);
+        var result = await provisioning.Create(new CreateTenantRequest(slug, "Co", "eu", "UTC", [], Kind: kind), CancellationToken.None);
 
         var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
         Assert.Equal(kind, response.Kind);
@@ -174,7 +179,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Create_UnknownKind_Returns400()
     {
-        var result = await controller.Create(new CreateTenantRequest("bad-kind", "Co", "eu", "UTC", [], Kind: "Enterprise"), CancellationToken.None);
+        var result = await provisioning.Create(new CreateTenantRequest("bad-kind", "Co", "eu", "UTC", [], Kind: "Enterprise"), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -182,7 +187,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task Get_AfterSandboxCreate_ReturnsSandboxKind()
     {
-        var created = await controller.Create(new CreateTenantRequest("sandbox-co", "Sandbox Co", "eu", "UTC", [], Kind: "Sandbox"), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("sandbox-co", "Sandbox Co", "eu", "UTC", [], Kind: "Sandbox"), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.Get(tenantId, CancellationToken.None);
@@ -195,7 +200,7 @@ public sealed class TenantControllerTests
     public async Task Get_KindPersistedThroughSave_SurvivesRoundTrip()
     {
         // Verify that Kind is preserved after a save (e.g., following an update).
-        var created = await controller.Create(new CreateTenantRequest("eval-co", "Eval Co", "eu", "UTC", [], Kind: "Evaluation"), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("eval-co", "Eval Co", "eu", "UTC", [], Kind: "Evaluation"), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
         await controller.Update(tenantId, new UpdateTenantRequest("Eval Co Updated", "UTC", []), CancellationToken.None);
 
@@ -210,7 +215,7 @@ public sealed class TenantControllerTests
     {
         var request = new CreateTenantRequest("my-corp", "My Corp", "eu", "UTC", []);
 
-        var result = await controller.Create(request, CancellationToken.None);
+        var result = await provisioning.Create(request, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result);
         var response = Assert.IsType<TenantResponse>(created.Value);
@@ -225,7 +230,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task GetProvisioning_ExistingTenant_ReturnsDeterministicCollectionNames()
     {
-        var created = await controller.Create(new CreateTenantRequest("acme-co", "ACME Co", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("acme-co", "ACME Co", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.GetProvisioning(tenantId, CancellationToken.None);
@@ -259,10 +264,10 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task GetProvisioning_CollectionNamesDeriveFromCanonicalTenantId()
     {
-        var result1 = await controller.Create(new CreateTenantRequest("slug-a", "Co A", "eu", "UTC", []), CancellationToken.None);
+        var result1 = await provisioning.Create(new CreateTenantRequest("slug-a", "Co A", "eu", "UTC", []), CancellationToken.None);
         var id1 = ((TenantResponse)((CreatedAtActionResult)result1).Value!).TenantId;
 
-        var result2 = await controller.Create(new CreateTenantRequest("slug-b", "Co B", "eu", "UTC", []), CancellationToken.None);
+        var result2 = await provisioning.Create(new CreateTenantRequest("slug-b", "Co B", "eu", "UTC", []), CancellationToken.None);
         var id2 = ((TenantResponse)((CreatedAtActionResult)result2).Value!).TenantId;
 
         var prov1 = (ProvisioningResponse)((OkObjectResult)await controller.GetProvisioning(id1, CancellationToken.None)).Value!;
@@ -280,7 +285,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task SetBranding_ValidRequest_Returns204()
     {
-        var created = await controller.Create(new CreateTenantRequest("brand-ctrl", "Brand Ctrl", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("brand-ctrl", "Brand Ctrl", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.SetBranding(tenantId,
@@ -295,7 +300,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task SetBranding_InvalidColor_Returns400()
     {
-        var created = await controller.Create(new CreateTenantRequest("brand-bad", "Brand Bad", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("brand-bad", "Brand Bad", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.SetBranding(tenantId,
@@ -318,7 +323,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task SetBranding_UnknownLoginMode_Returns400()
     {
-        var created = await controller.Create(new CreateTenantRequest("brand-mode", "Brand Mode", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("brand-mode", "Brand Mode", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.SetBranding(tenantId,
@@ -333,7 +338,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task RegisterDiscoveryDomain_ValidDomain_Returns204()
     {
-        var created = await controller.Create(new CreateTenantRequest("dom-ctrl", "Dom Ctrl", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("dom-ctrl", "Dom Ctrl", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.RegisterDiscoveryDomain(tenantId,
@@ -356,7 +361,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task UnregisterDiscoveryDomain_ExistingDomain_Returns204()
     {
-        var created = await controller.Create(new CreateTenantRequest("undom-ctrl", "UnDom", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("undom-ctrl", "UnDom", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
         await controller.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("undom.example"), CancellationToken.None);
 
@@ -368,7 +373,7 @@ public sealed class TenantControllerTests
     [Fact]
     public async Task UnregisterDiscoveryDomain_NonExistentDomain_Returns404()
     {
-        var created = await controller.Create(new CreateTenantRequest("undom-miss", "UnDom Miss", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("undom-miss", "UnDom Miss", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.UnregisterDiscoveryDomain(tenantId, "missing.example", CancellationToken.None);
@@ -384,6 +389,7 @@ public sealed class TenantDiscoveryControllerTests
     private readonly TenantDiscoveryController discoveryController;
     private readonly Mock<ICurrentUser> currentUser = new();
     private readonly TenantController tenantController;
+    private readonly TenantProvisioningController provisioning;
 
     public TenantDiscoveryControllerTests()
     {
@@ -392,12 +398,13 @@ public sealed class TenantDiscoveryControllerTests
         service = new TenantService(repository);
         discoveryController = new TenantDiscoveryController(service);
         tenantController = new TenantController(service, currentUser.Object);
+        provisioning = new TenantProvisioningController(service, currentUser.Object);
     }
 
     [Fact]
     public async Task Discover_RegisteredDomain_Returns200WithSafeFields()
     {
-        var created = await tenantController.Create(new CreateTenantRequest("green-co", "Green Co", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("green-co", "Green Co", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
         await tenantController.SetBranding(tenantId, new SetBrandingRequest("#00ff00", null, null, null, null, "CompanySso"), CancellationToken.None);
         await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("green.example"), CancellationToken.None);
@@ -431,7 +438,7 @@ public sealed class TenantDiscoveryControllerTests
     [Fact]
     public async Task Discover_ResponseDoesNotContainTenantId()
     {
-        var created = await tenantController.Create(new CreateTenantRequest("safe-disc", "Safe", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("safe-disc", "Safe", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
         await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("safe.example"), CancellationToken.None);
 
@@ -459,7 +466,7 @@ public sealed class TenantDiscoveryControllerTests
     [Fact]
     public async Task Discover_CaseInsensitiveDomain_Returns200()
     {
-        var created = await tenantController.Create(new CreateTenantRequest("ci-co", "CI Co", "eu", "UTC", []), CancellationToken.None);
+        var created = await provisioning.Create(new CreateTenantRequest("ci-co", "CI Co", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
         await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("ci.example"), CancellationToken.None);
 
