@@ -6,6 +6,29 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Publishable as an internal NuGet package (GitHub Packages) so the private
+       fairspot-platform operator service can consume the shared auth mechanism and
+       cross-cutting primitives. In-repo services keep using the ProjectReference.
+       License is AGPL (matches the repo); the platform service consumes it under the
+       copyright owner's own rights — the standard open-core arrangement. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>FairSpot.SharedKernel</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Robert Vejvoda</Authors>
+    <Company>FairSpot</Company>
+    <Description>FairSpot shared kernel — identity/auth mechanism (multi-issuer JWT, claims transformation, roles) and cross-cutting primitives shared by the open core and the FairSpot platform service.</Description>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/RobertVejvoda/fairspot</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>fairspot;identity;auth;shared-kernel</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Dapr.Client" Version="1.18.4" />
