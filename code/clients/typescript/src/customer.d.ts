@@ -4,45 +4,6 @@
  */
 
 export interface paths {
-    "/tenants": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateTenantRequest"];
-                    "text/json": components["schemas"]["CreateTenantRequest"];
-                    "application/*+json": components["schemas"]["CreateTenantRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/tenants/{tenantId}": {
         parameters: {
             query?: never;
@@ -605,6 +566,45 @@ export interface paths {
                     "application/json": components["schemas"]["RecordLocationRequest"];
                     "text/json": components["schemas"]["RecordLocationRequest"];
                     "application/*+json": components["schemas"]["RecordLocationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateTenantRequest"];
+                    "text/json": components["schemas"]["CreateTenantRequest"];
+                    "application/*+json": components["schemas"]["CreateTenantRequest"];
                 };
             };
             responses: {

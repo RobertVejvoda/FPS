@@ -7,31 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FPS.Customer.Controllers;
 
-// PLAT001: creating a tenant is a platform-plane operation (RequirePlatformAdmin);
-// every /tenants/{tenantId} operation is tenant-scoped (RequireTenantAdmin =
-// platform_admin cross-tenant, or the tenant's own admin).
+// Every /tenants/{tenantId} operation here is tenant-scoped self-administration
+// (RequireTenantAdmin = platform_admin cross-tenant, or the tenant's own admin). Creating a
+// tenant is a platform-plane operator operation and lives on TenantProvisioningController.
 [ApiController]
 [Authorize]
 public sealed class TenantController(TenantService service, ICurrentUser currentUser) : ControllerBase
 {
-    [HttpPost("/tenants")]
-    [RequirePlatformAdmin]
-    public async Task<IActionResult> Create([FromBody] CreateTenantRequest request, CancellationToken ct)
-    {
-        if (!currentUser.IsAuthenticated) return Unauthorized();
-
-        if (!Enum.TryParse<TenantKind>(request.Kind ?? "Production", ignoreCase: true, out var kind))
-            return BadRequest(new { error = $"Unknown tenant kind: {request.Kind}" });
-
-        var (tenant, error) = await service.CreateAsync(
-            request.Slug, request.DisplayName, request.Region, request.TimeZone,
-            request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct, request.TenantId, kind);
-
-        if (error is not null) return BadRequest(new { error });
-        return CreatedAtAction(nameof(Get), new { tenantId = tenant!.TenantId }, ToResponse(tenant));
-    }
-
     [HttpGet("/tenants/{tenantId}")]
     [RequireTenantAdmin]
     public async Task<IActionResult> Get(string tenantId, CancellationToken ct)
@@ -175,17 +157,6 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         t.Provisioning.ServiceCollections,
         t.CreatedAt, t.UpdatedAt);
 }
-
-public sealed record CreateTenantRequest(
-    string? Slug,
-    string DisplayName,
-    string Region,
-    string TimeZone,
-    IReadOnlyList<ContactDto> SupportContacts,
-    // Optional deterministic tenant ID for provisioning tools. If omitted, a GUID is generated.
-    string? TenantId = null,
-    // Tenant kind — defaults to Production for safety. Use Sandbox or Evaluation for demo tenants.
-    string? Kind = null);
 
 public sealed record UpdateTenantRequest(
     string DisplayName,
