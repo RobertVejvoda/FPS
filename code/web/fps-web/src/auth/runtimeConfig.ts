@@ -14,6 +14,11 @@ export type RuntimeConfig = {
   environment?: string;
   simulationEnabled?: boolean;
   appVersion?: string;
+  // Public site key for the bot-protection widget on the public pilot page (empty
+  // disables the widget; the API also skips verification in dev when no secret is set).
+  turnstileSiteKey: string;
+  // Where the "Explore the Green Logistics demo" CTA points. Defaults to the sign-in page.
+  demoUrl: string;
 };
 
 export type BrandingConfig = {
@@ -62,8 +67,13 @@ function validateConfig(raw: unknown): RuntimeConfig {
   const environment = typeof r['environment'] === 'string' ? r['environment'] : undefined;
   const simulationEnabled = typeof r['simulationEnabled'] === 'boolean' ? r['simulationEnabled'] : false;
   const appVersion = typeof r['appVersion'] === 'string' ? r['appVersion'] : undefined;
+  const turnstileSiteKey = optionalString(r, 'turnstileSiteKey', '');
+  const demoUrl = optionalString(r, 'demoUrl', '/session') || '/session';
   const branding = validateBranding(r['branding']);
-  return { apiBaseUrl, oidc, branding, devTokenFallbackEnabled, environment, simulationEnabled, appVersion };
+  return {
+    apiBaseUrl, oidc, branding, devTokenFallbackEnabled, environment,
+    simulationEnabled, appVersion, turnstileSiteKey, demoUrl,
+  };
 }
 
 function optionalString(obj: Record<string, unknown>, key: string, fallback: string): string {

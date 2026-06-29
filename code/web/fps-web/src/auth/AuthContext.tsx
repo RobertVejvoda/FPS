@@ -36,6 +36,8 @@ type AuthState = {
   environment: string;
   simulationEnabled: boolean;
   appVersion: string;
+  turnstileSiteKey: string;
+  demoUrl: string;
   login: (loginHint?: string) => Promise<void>;
   logout: () => Promise<void>;
   save: (apiBaseUrl: string, token: string) => Promise<void>;
@@ -90,6 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [environment, setEnvironment] = useState('');
   const [simulationEnabled, setSimulationEnabled] = useState(false);
   const [appVersion, setAppVersion] = useState('');
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
+  const [demoUrl, setDemoUrl] = useState('/session');
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setEnvironment(config.environment ?? '');
         setSimulationEnabled(config.simulationEnabled ?? false);
         setAppVersion(config.appVersion ?? '');
+        setTurnstileSiteKey(config.turnstileSiteKey);
+        setDemoUrl(config.demoUrl);
         applyBranding(config.branding);
 
         // On the callback page, handle the OIDC redirect inline.
@@ -262,12 +268,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       environment,
       simulationEnabled,
       appVersion,
+      turnstileSiteKey,
+      demoUrl,
       login,
       logout,
       save,
       clear,
     }),
-    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, branding, environment, simulationEnabled, appVersion, login, logout, save, clear],
+    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, branding, environment, simulationEnabled, appVersion, turnstileSiteKey, demoUrl, login, logout, save, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

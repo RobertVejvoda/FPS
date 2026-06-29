@@ -714,3 +714,104 @@ select {
   border-radius: 4px;
   font-size: 12px;
 }
+
+/* ── Public "Start a FairSpot Pilot" page (PLAT004c) ───────────────────────────
+   Reuses the marketing .session-* split layout; these add the value list, form
+   fields, verification slot, and success/error states. */
+.pilot-values {
+  margin: 20px 0 24px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.pilot-values li {
+  position: relative;
+  padding-left: 26px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.pilot-values li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.pilot-demo-cta {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.pilot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.pilot-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pilot-input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--text);
+  background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pilot-textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.5;
+}
+
+.pilot-verify {
+  min-height: 65px;
+}
+
+.pilot-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.pilot-submit {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 2px;
+}
+
+.pilot-fineprint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.pilot-success {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pilot-success .pilot-demo-cta {
+  margin-top: 6px;
+}
