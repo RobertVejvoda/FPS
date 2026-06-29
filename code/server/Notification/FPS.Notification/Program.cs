@@ -21,6 +21,7 @@ builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificatio
 builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
 builder.Services.AddSingleton<HrRosterConfigurationSeeder>();
 builder.Services.AddScoped<BookingEventNotificationHandler>();
+builder.Services.AddScoped<TenantRequestSalesAlertHandler>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 builder.Services.AddAuthentication("Bearer")

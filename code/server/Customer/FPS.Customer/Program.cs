@@ -21,10 +21,10 @@ builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRep
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
 // PLAT004: tenant-request intake (public onboarding). Durable Dapr store is the system of
-// record; in-memory is used only by tests. Notifier records the sales alert; real email
-// delivery (Customer→Notification) ships in the PLAT004 email follow-up.
+// record; in-memory is used only by tests. PLAT004b: the notifier publishes a sales alert to the
+// Notification pub/sub (which emails sales) — publish failures degrade gracefully without failing intake.
 builder.Services.AddSingleton<ITenantRequestRepository, DaprTenantRequestRepository>();
-builder.Services.AddSingleton<ITenantRequestNotifier, LoggingTenantRequestNotifier>();
+builder.Services.AddSingleton<ITenantRequestNotifier, DaprTenantRequestNotifier>();
 builder.Services.AddHttpClient<ITurnstileVerifier, HttpTurnstileVerifier>();
 builder.Services.AddScoped<TenantRequestService>();
 builder.Services.AddRateLimiter(options =>
