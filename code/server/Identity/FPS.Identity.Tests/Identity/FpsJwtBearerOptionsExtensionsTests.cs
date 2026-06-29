@@ -175,6 +175,86 @@ public sealed class FpsJwtBearerOptionsExtensionsTests
         Assert.Contains(PlatformAuthority, options.TokenValidationParameters.ValidIssuers!);
     }
 
+    // ── PLAT001 hardening: signing keys are bound to the token's issuer ─────────
+    // Guards the tenant→platform escalation path: a token whose `iss` claims one realm must
+    // only be verifiable with THAT realm's keys, never the union of all realms' keys.
+
+    private static SecurityKey Key(string id) =>
+        new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes($"{id}-signing-key-at-least-32-bytes!!")) { KeyId = id };
+
+    private static IReadOnlyDictionary<string, IReadOnlyCollection<SecurityKey>> TwoRealmKeys(
+        out SecurityKey customerKey, out SecurityKey platformKey)
+    {
+        customerKey = Key("customer-kid");
+        platformKey = Key("platform-kid");
+        return new Dictionary<string, IReadOnlyCollection<SecurityKey>>(StringComparer.Ordinal)
+        {
+            [CustomerAuthority] = [customerKey],
+            [PlatformAuthority] = [platformKey],
+        };
+    }
+
+    [Fact]
+    public void ResolveKeysForIssuer_PlatformIssuer_ReturnsOnlyPlatformKeys_NotCustomerKeys()
+    {
+        var map = TwoRealmKeys(out var customerKey, out var platformKey);
+
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(PlatformAuthority, kid: null, map);
+
+        // A token claiming the platform issuer can only be checked against the platform key,
+        // so a customer-realm-signed token claiming iss=platform fails signature validation.
+        Assert.Contains(platformKey, keys);
+        Assert.DoesNotContain(customerKey, keys);
+    }
+
+    [Fact]
+    public void ResolveKeysForIssuer_CustomerIssuer_ReturnsOnlyCustomerKeys()
+    {
+        var map = TwoRealmKeys(out var customerKey, out var platformKey);
+
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(CustomerAuthority, kid: null, map);
+
+        Assert.Contains(customerKey, keys);
+        Assert.DoesNotContain(platformKey, keys);
+    }
+
+    [Fact]
+    public void ResolveKeysForIssuer_TrailingSlashIssuer_StillBinds()
+    {
+        var map = TwoRealmKeys(out _, out var platformKey);
+
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(PlatformAuthority + "/", kid: null, map);
+
+        Assert.Contains(platformKey, keys);
+    }
+
+    [Theory]
+    [InlineData("https://attacker.example/realms/evil")]
+    [InlineData(null)]
+    public void ResolveKeysForIssuer_UnknownOrMissingIssuer_ReturnsNoKeys(string? issuer)
+    {
+        var map = TwoRealmKeys(out _, out _);
+
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(issuer, kid: null, map);
+
+        Assert.Empty(keys);
+    }
+
+    [Fact]
+    public void ResolveKeysForIssuer_WithKid_PrefersMatchingKey_ButStaysWithinIssuer()
+    {
+        var k1 = Key("kid-1");
+        var k2 = Key("kid-2");
+        var map = new Dictionary<string, IReadOnlyCollection<SecurityKey>>(StringComparer.Ordinal)
+        {
+            [PlatformAuthority] = [k1, k2],
+        };
+
+        var keys = FpsJwtBearerOptionsExtensions.ResolveKeysForIssuer(PlatformAuthority, kid: "kid-2", map);
+
+        Assert.Equal([k2], keys);
+    }
+
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = environmentName;

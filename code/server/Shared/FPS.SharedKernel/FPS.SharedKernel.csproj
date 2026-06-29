@@ -30,6 +30,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The shared-kernel auth tests live in the Identity test project. -->
+    <InternalsVisibleTo Include="FPS.Identity.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Dapr.Client" Version="1.18.4" />
     <PackageReference Include="Dapr.Workflow" Version="1.18.4" />
