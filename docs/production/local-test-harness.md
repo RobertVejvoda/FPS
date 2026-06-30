@@ -105,22 +105,22 @@ source ./tools/dev-env.sh
 Get a bearer token for a demo user when the mobile app or API smoke test needs one:
 
 ```sh
-./tools/dev-auth.sh employee1
+./tools/dev-auth.sh gl-employee1
 ```
 
 Available local users — login username and fictional display name:
 
 | Username | Display name | FairSpot roles | Main demo interest |
 | --- | --- | --- | --- |
-| `employee1` | Jan Novak | `employee` | Normal employee booking, EV and sedan vehicle selection, notifications, profile, mobile/web self-service. |
-| `employee2` | Petra Svobodova | `employee` | Company-car booking path; fleet vehicle (3AC 4567). |
-| `employee3` | Tomas Dvorak | `employee` | Accessibility-eligible booking; accessible spot priority. |
-| `hr-admin` | Lucie Prochazkova | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
-| `tenant-admin` | Karel Urban | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
-| `report-viewer` | Eva Kralova | `report_viewer` | Read-only reporting review. |
-| `auditor` | Martin Cerny | `auditor` | Audit query/evidence review. |
+| `gl-employee1` | Jan Novak | `employee` | Normal employee booking, EV and sedan vehicle selection, notifications, profile, mobile/web self-service. |
+| `gl-employee2` | Petra Svobodova | `employee` | Company-car booking path; fleet vehicle (3AC 4567). |
+| `gl-employee3` | Tomas Dvorak | `employee` | Accessibility-eligible booking; accessible spot priority. |
+| `gl-hr-admin` | Lucie Prochazkova | `employee`, `hr_manager` | HR/facilities operations: policy/slot management, employee bootstrap, operational reports. |
+| `gl-tenant-admin` | Karel Urban | `admin` | Tenant setup, identity setup, readiness checks, privileged configuration, audit administration. |
+| `gl-report-viewer` | Eva Kralova | `report_viewer` | Read-only reporting review. |
+| `gl-auditor` | Martin Cerny | `auditor` | Audit query/evidence review. |
 
-All display names are synthetic and fictional — no real employees, emails, or identifiers. Script usernames (`employee1`, `hr-admin`, …) are stable and safe to use in smoke commands.
+All display names are synthetic and fictional — no real employees, emails, or identifiers. Script usernames (`gl-employee1`, `gl-hr-admin`, …) are stable and safe to use in smoke commands.
 
 Treat generated bearer tokens as secrets: do not commit them, paste them into issues, or include them in screenshots.
 
@@ -183,15 +183,15 @@ After running `sh ./tools/start-smoke-web.sh`, the web app starts at `http://loc
 
 For business reports:
 
-1. Open `http://localhost:5200` and sign in with `hr-admin` or `report-viewer` using the OIDC login screen. Keycloak must be running (`docker compose up -d keycloak`) and the realm imported (`./tools/dev-setup-auth.sh`).
+1. Open `http://localhost:5200` and sign in with `gl-hr-admin` or `gl-report-viewer` using the OIDC login screen. Keycloak must be running (`docker compose up -d keycloak`) and the realm imported (`./tools/dev-setup-auth.sh`).
 
 2. Open **Reports**.
 3. The page shows total demand, allocations, allocation rate, rejections, cancellations, no-shows, daily trend, utilization by location, reason-code counts, fairness rows using pseudonymised requestor hashes, and CSV downloads.
 
-Direct API checks use an `hr-admin` or `report-viewer` token:
+Direct API checks use a `gl-hr-admin` or `gl-report-viewer` token:
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh hr-admin)
+TOKEN=$(./tools/dev-auth.sh gl-hr-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/dashboard
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/summary
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/reports/parking/fairness
@@ -299,7 +299,7 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
 ```
 
-`GET /profile/snapshot` returns `200` for seeded demo users after running the OPS006D seed script. Run `./tools/dev-seed.sh` after the services are started.
+`GET /profile/snapshot` returns `200` for seeded Green Logistics users after running the OPS006D seed script. Run `./tools/dev-seed.sh` after the services are started.
 
 ## Mobile Testing Implication
 
@@ -368,7 +368,7 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 **Full mobile E2E sequence:**
 
 - OPS006C (this page) resolves the Booking sidecar gap. `GET /bookings` returns `200` when Booking is started through `dapr run -f dapr.yaml` instead of plain `dotnet run`.
-- OPS006D resolves the profile seed gap. `GET /profile/snapshot` returns `200` for `employee1`, `employee2`, and `employee3` after `./tools/dev-seed.sh`.
+- OPS006D resolves the profile seed gap. `GET /profile/snapshot` returns `200` for `gl-employee1`, `gl-employee2`, and `gl-employee3` after `./tools/dev-seed.sh`.
 
 Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap. The remaining OPS006 parent work is coordinated startup and health/log visibility through the local harness.
 
@@ -414,12 +414,12 @@ After starting services (Identity + `dapr run -f dapr.yaml`), run the seed scrip
 ./tools/dev-seed.sh
 ```
 
-This seeds Profile snapshots for `employee1`, `employee2`, and `employee3` by:
+This seeds Profile snapshots for `gl-employee1`, `gl-employee2`, and `gl-employee3` (in the Green Logistics tenant) by:
 1. Getting a ROPC token per user from local Keycloak.
 2. Decoding the JWT `sub` claim to get the Dapr/service user ID.
 3. Calling `PUT /profile/admin/snapshot` (Development-only endpoint) with synthetic profile facts.
 
-**Configuration** (tenant policy + 10 parking slots at `Prague`) is seeded automatically by the Configuration service when it starts in `Development` mode.
+**Configuration** — `dev-seed.sh` seeds the Green Logistics tenant policy and 20 parking slots at `GL-HQ` (the seeded business data). The Configuration service also creates a default tenant policy + 10 parking slots at `Prague` for the bare `demo` scaffold when it starts in `Development` mode.
 
 **Bookings** — empty list (`GET /bookings` → `200 []`) is the documented local baseline. Submit a booking via the mobile app or Booking API to create entries.
 
@@ -429,13 +429,13 @@ This seeds Profile snapshots for `employee1`, `employee2`, and `employee3` by:
 
 | Username | Display name | ParkingEligible | CompanyCar | Vehicles | Accessibility |
 | --- | --- | --- | --- | --- | --- |
-| `employee1` | Jan Novak | ✓ | — | 1AA 2345 (sedan), 2AB 3456 (EV) | — |
-| `employee2` | Petra Svobodova | ✓ | ✓ | 3AC 4567 (fleet) | — |
-| `employee3` | Tomas Dvorak | ✓ | — | 4AD 5678 | ✓ |
-| `hr-admin` | Lucie Prochazkova | — | — | — | — |
-| `tenant-admin` | Karel Urban | — | — | — | — |
-| `report-viewer` | Eva Kralova | — | — | — | — |
-| `auditor` | Martin Cerny | — | — | — | — |
+| `gl-employee1` | Jan Novak | ✓ | — | 1AB 2345 (sedan), 2AB 3456 (EV) | — |
+| `gl-employee2` | Petra Svobodova | ✓ | ✓ | 3AC 4567 (fleet) | — |
+| `gl-employee3` | Tomas Dvorak | ✓ | — | 4AD 5678 | ✓ |
+| `gl-hr-admin` | Lucie Prochazkova | — | — | — | — |
+| `gl-tenant-admin` | Karel Urban | — | — | — | — |
+| `gl-report-viewer` | Eva Kralova | — | — | — | — |
+| `gl-auditor` | Martin Cerny | — | — | — | — |
 
 ### Reset / re-seed
 
@@ -457,7 +457,7 @@ For a full reset (clears all in-memory state including bookings):
 ### Post-seed smoke
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
@@ -508,7 +508,7 @@ After a full reset, re-run `./tools/start-local-harness.sh` to rebuild the Keycl
 Run in a separate shell after the harness is ready:
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
 curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
 curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count
@@ -522,8 +522,8 @@ All four should return `200`.
 The Customer service readiness endpoint combines tenant-local configuration checks with connected service probes:
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/tenants/demo/readiness
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/tenants/greenlogistics/readiness
 ```
 
 The local harness wires evaluation-grade HTTP health probes for Profile, Booking, Notification, Audit, and Reporting. If those services are running and healthy, `ProfileFacts`, `BookingSmokeTest`, `NotificationReachable`, `AuditEvidence`, and `ReportingEvidence` pass. If a service is stopped or unhealthy, the readiness report fails that check with the service health URL and status.
@@ -544,10 +544,10 @@ Web path:
    sh ./tools/start-smoke-web.sh
    ```
 
-2. Sign in as `tenant-admin`.
+2. Sign in as `gl-tenant-admin`.
 3. Open **Configuration**.
 4. In **Demo Draw**, choose:
-   - Location: `Prague`;
+   - Location: `GL-HQ`;
    - Parking date matching the pending seeded booking date;
    - Arrival/departure time, normally `08:00` to `18:00`;
    - Reason, for example `Demo on-demand Draw`.
@@ -558,12 +558,12 @@ The result shows allocated, rejected, and waitlisted counts. Running the same lo
 Direct API smoke:
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
 curl -s -X POST http://localhost:10000/draws/trigger \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "locationId": "Prague",
+    "locationId": "GL-HQ",
     "date": "2026-05-26",
     "timeSlotStart": "2026-05-26T08:00:00",
     "timeSlotEnd": "2026-05-26T18:00:00",

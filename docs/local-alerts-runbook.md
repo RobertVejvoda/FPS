@@ -55,12 +55,12 @@ To produce 5xx responses in the local harness, send malformed or oversized JSON 
 1. Stop the MongoDB container: `docker compose -f code/infrastructure/docker-compose.yaml stop mongodb`
 2. Send a booking submission that will fail at the persistence layer:
    ```bash
-   TOKEN=$(./tools/dev-auth.sh employee1)
+   TOKEN=$(./tools/dev-auth.sh gl-employee1)
    for i in $(seq 1 20); do
      curl -sf -X POST http://localhost:10000/bookings \
        -H "Authorization: Bearer $TOKEN" \
        -H "Content-Type: application/json" \
-       -d '{"facilityId":"00000000-0000-0000-0000-000000000001","locationId":"Prague","licensePlate":"EMP1001","vehicleType":"Sedan","isElectric":false,"requiresAccessibleSpot":false,"isCompanyCar":false,"plannedArrivalTime":"2099-01-01T08:00:00","plannedDepartureTime":"2099-01-01T18:00:00"}' \
+       -d '{"facilityId":"00000000-0000-0000-0000-000000000002","locationId":"GL-HQ","licensePlate":"EMP1001","vehicleType":"Sedan","isElectric":false,"requiresAccessibleSpot":false,"isCompanyCar":false,"plannedArrivalTime":"2099-01-01T08:00:00","plannedDepartureTime":"2099-01-01T18:00:00"}' \
        -o /dev/null -w "%{http_code}\n"
    done
    ```

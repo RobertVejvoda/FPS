@@ -318,7 +318,7 @@ printf ' Logs:            %s/\n' "$LOG_DIR"
 current_revision > "$REVISION_FILE"
 printf '\n'
 printf ' Smoke (run in a new shell):\n'
-printf '   TOKEN=$(./tools/dev-auth.sh employee1)\n'
+printf '   TOKEN=$(./tools/dev-auth.sh gl-employee1)\n'
 printf '   curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/me\n'
 printf '   curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings\n'
 printf '   curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/notifications/unread-count\n'

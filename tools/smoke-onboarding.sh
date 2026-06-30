@@ -8,7 +8,7 @@ set -euo pipefail
 
 GATEWAY="${GATEWAY_URL:-http://localhost:10000}"
 CUSTOMER_SVC="${CUSTOMER_URL:-http://localhost:5181}"
-DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
+GL_TENANT="${FPS_GL_TENANT_ID:-greenlogistics}"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
@@ -54,21 +54,21 @@ done
 # ── step 1: tenant workspace ─────────────────────────────────────────────────
 
 header "Step 1 — Tenant workspace (evaluation-grade: seeded on startup)"
-TOKEN=$(get_token tenant-admin)
+TOKEN=$(get_token gl-tenant-admin)
 if [[ -z "$TOKEN" ]]; then
-  fail "Could not obtain tenant-admin token"
+  fail "Could not obtain gl-tenant-admin token"
 else
-  TENANT_JSON=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT" 2>/dev/null || echo "UNREACHABLE")
+  TENANT_JSON=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$GL_TENANT" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$TENANT_JSON" != "UNREACHABLE" && "$TENANT_JSON" != "" ]]; then
     TENANT_ID=$(echo "$TENANT_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "MISSING")
     LC_STATE=$(echo "$TENANT_JSON"  | python3 -c "import sys,json; print(json.load(sys.stdin).get('lifecycleState','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
-    if [[ "$TENANT_ID" == "$DEMO_TENANT" ]]; then
-      pass "GET /tenants/$DEMO_TENANT: tenantId=$TENANT_ID lifecycleState=$LC_STATE"
+    if [[ "$TENANT_ID" == "$GL_TENANT" ]]; then
+      pass "GET /tenants/$GL_TENANT: tenantId=$TENANT_ID lifecycleState=$LC_STATE"
     else
-      fail "GET /tenants/$DEMO_TENANT: unexpected tenantId=$TENANT_ID"
+      fail "GET /tenants/$GL_TENANT: unexpected tenantId=$TENANT_ID"
     fi
   else
-    fail "GET /tenants/$DEMO_TENANT unreachable or missing"
+    fail "GET /tenants/$GL_TENANT unreachable or missing"
   fi
 fi
 skip "Tenant workspace created via POST /tenants (API implemented; no web form yet)"
@@ -76,42 +76,42 @@ skip "Tenant workspace created via POST /tenants (API implemented; no web form y
 # ── step 2: identity and role mapping ───────────────────────────────────────
 
 header "Step 2 — Identity and role mapping"
-TOKEN=$(get_token employee1)
+TOKEN=$(get_token gl-employee1)
 if [[ -n "$TOKEN" ]]; then
   ME=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/me" 2>/dev/null || echo "UNREACHABLE")
   ME_TENANT=$(echo "$ME" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tenantId','MISSING'))" 2>/dev/null || echo "PARSE_FAIL")
   ROLES=$(echo "$ME"    | python3 -c "import sys,json; print(','.join(json.load(sys.stdin).get('roles',[])))" 2>/dev/null || echo "PARSE_FAIL")
-  if [[ "$ME_TENANT" == "$DEMO_TENANT" && "$ROLES" == *"employee"* ]]; then
-    pass "GET /me for employee1: tenantId=$ME_TENANT roles=$ROLES"
+  if [[ "$ME_TENANT" == "$GL_TENANT" && "$ROLES" == *"employee"* ]]; then
+    pass "GET /me for gl-employee1: tenantId=$ME_TENANT roles=$ROLES"
   else
-    fail "GET /me for employee1: unexpected tenantId=$ME_TENANT or roles=$ROLES"
+    fail "GET /me for gl-employee1: unexpected tenantId=$ME_TENANT or roles=$ROLES"
   fi
 else
-  fail "Could not obtain employee1 token"
+  fail "Could not obtain gl-employee1 token"
 fi
 skip "Per-tenant OIDC client and group mapping UI — manual Keycloak configuration"
 
 # ── step 3: first administrator ──────────────────────────────────────────────
 
 header "Step 3 — First administrator"
-TOKEN=$(get_token tenant-admin)
+TOKEN=$(get_token gl-tenant-admin)
 if [[ -n "$TOKEN" ]]; then
   ME=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/me" 2>/dev/null || echo "UNREACHABLE")
   ROLES=$(echo "$ME" | python3 -c "import sys,json; print(','.join(json.load(sys.stdin).get('roles',[])))" 2>/dev/null || echo "PARSE_FAIL")
   if [[ "$ROLES" == *"admin"* ]]; then
-    pass "tenant-admin has admin role: $ROLES"
+    pass "gl-tenant-admin has admin role: $ROLES"
   else
-    fail "tenant-admin missing admin role: $ROLES"
+    fail "gl-tenant-admin missing admin role: $ROLES"
   fi
 else
-  fail "Could not obtain tenant-admin token"
+  fail "Could not obtain gl-tenant-admin token"
 fi
 skip "First-admin provisioning API (CUST004) — using Keycloak-pre-configured user"
 
 # ── step 4: parking bootstrap ────────────────────────────────────────────────
 
 header "Step 4 — Parking bootstrap (location, policy, slots)"
-TOKEN=$(get_token tenant-admin)
+TOKEN=$(get_token gl-tenant-admin)
 if [[ -n "$TOKEN" ]]; then
   POLICY=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/configuration/parking-policy" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$POLICY" != "UNREACHABLE" && "$POLICY" != "" ]]; then
@@ -121,7 +121,7 @@ if [[ -n "$TOKEN" ]]; then
     fail "Configuration policy unreachable"
   fi
 else
-  fail "Could not obtain tenant-admin token"
+  fail "Could not obtain gl-tenant-admin token"
 fi
 skip "Tenant admin web UI for location/slot setup — using seeded Configuration data"
 
@@ -134,17 +134,17 @@ deferred "Organization branding (CUST010) — FairSpot defaults used; no custom 
 # ── step 6: employee and profile bootstrap ───────────────────────────────────
 
 header "Step 6 — Employee and profile bootstrap"
-TOKEN=$(get_token employee1)
+TOKEN=$(get_token gl-employee1)
 if [[ -n "$TOKEN" ]]; then
   PROFILE=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/profile/snapshot" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$PROFILE" != "UNREACHABLE" && "$PROFILE" != "" ]]; then
     ELIGIBLE=$(echo "$PROFILE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('parkingEligible','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
-    pass "GET /profile/snapshot for employee1 (parkingEligible: $ELIGIBLE)"
+    pass "GET /profile/snapshot for gl-employee1 (parkingEligible: $ELIGIBLE)"
   else
-    fail "GET /profile/snapshot unreachable for employee1 — run ./tools/dev-seed.sh first"
+    fail "GET /profile/snapshot unreachable for gl-employee1 — run ./tools/dev-seed.sh first"
   fi
 else
-  fail "Could not obtain employee1 token"
+  fail "Could not obtain gl-employee1 token"
 fi
 
 if ./tools/validate-hr-import.sh tools/templates/demo-employees.csv tools/templates/demo-vehicles.csv > /dev/null 2>&1; then
@@ -157,9 +157,9 @@ skip "Web HR import upload (DATA002) — using dev-seed.sh and validate-hr-impor
 # ── step 7: readiness check ──────────────────────────────────────────────────
 
 header "Step 7 — Readiness check"
-TOKEN=$(get_token tenant-admin)
+TOKEN=$(get_token gl-tenant-admin)
 if [[ -n "$TOKEN" ]]; then
-  READINESS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$DEMO_TENANT/readiness" 2>/dev/null || echo "UNREACHABLE")
+  READINESS=$(curl -sf -H "Authorization: Bearer $TOKEN" "$CUSTOMER_SVC/tenants/$GL_TENANT/readiness" 2>/dev/null || echo "UNREACHABLE")
   if [[ "$READINESS" != "UNREACHABLE" && "$READINESS" != "" ]]; then
     IS_READY=$(echo "$READINESS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('isReady','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
     FAILED_CHECKS=$(echo "$READINESS" | python3 -c "
@@ -186,23 +186,23 @@ print(','.join(names) if names else 'none')
     fail "Readiness check endpoint unreachable"
   fi
 else
-  fail "Could not obtain tenant-admin token"
+  fail "Could not obtain gl-tenant-admin token"
 fi
 
 # ── step 8: first booking smoke ──────────────────────────────────────────────
 
 header "Step 8 — First booking smoke"
-TOKEN=$(get_token employee1)
+TOKEN=$(get_token gl-employee1)
 if [[ -n "$TOKEN" ]]; then
   TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d 2>/dev/null || echo "2099-01-01")
   BOOKING=$(curl -sf -X POST "$GATEWAY/bookings" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"locationId\":\"Prague\",\"date\":\"$TOMORROW\",\"reason\":\"onboarding smoke\"}" \
+    -d "{\"locationId\":\"GL-HQ\",\"date\":\"$TOMORROW\",\"reason\":\"onboarding smoke\"}" \
     2>/dev/null || echo "UNREACHABLE")
   if [[ "$BOOKING" != "UNREACHABLE" && "$BOOKING" != "" ]]; then
     B_STATUS=$(echo "$BOOKING" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
-    pass "POST /bookings for employee1 (status: $B_STATUS)"
+    pass "POST /bookings for gl-employee1 (status: $B_STATUS)"
   else
     fail "POST /bookings failed or unreachable"
   fi
@@ -215,13 +215,13 @@ if [[ -n "$TOKEN" ]]; then
     fail "GET /bookings returned 0 bookings after submission"
   fi
 else
-  fail "Could not obtain employee1 token"
+  fail "Could not obtain gl-employee1 token"
 fi
 
 # ── step 9: audit evidence ───────────────────────────────────────────────────
 
 header "Step 9 — Audit evidence"
-TOKEN=$(get_token auditor)
+TOKEN=$(get_token gl-auditor)
 if [[ -n "$TOKEN" ]]; then
   AUDIT=$(curl -sf -H "Authorization: Bearer $TOKEN" "$GATEWAY/audit" 2>/dev/null || echo "UNREACHABLE")
   COUNT=$(echo "$AUDIT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else d.get('total',0))" 2>/dev/null || echo "0")
@@ -231,7 +231,7 @@ if [[ -n "$TOKEN" ]]; then
     fail "GET /audit returned 0 records or is unreachable"
   fi
 else
-  fail "Could not obtain auditor token"
+  fail "Could not obtain gl-auditor token"
 fi
 
 # ── summary ──────────────────────────────────────────────────────────────────

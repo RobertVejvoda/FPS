@@ -26,14 +26,14 @@ AUTH_URL="${AUTH_URL:-http://localhost:8180}"
 OIDC_REALM="${OIDC_REALM:-fps-local}"
 OIDC_CLIENT_ID="${OIDC_CLIENT_ID:-fps-mobile-dev}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-Dev1234!}"
-SMOKE_EMPLOYEE="${SMOKE_EMPLOYEE:-employee1}"
-SMOKE_ADMIN="${SMOKE_ADMIN:-tenant-admin}"
-SMOKE_HR_ADMIN="${SMOKE_HR_ADMIN:-hr-admin}"
-SMOKE_TENANT="${SMOKE_TENANT:-demo}"
-# Vehicle and facility defaults match dev-seed.sh demo data; override if your pilot seed differs
-SMOKE_FACILITY_ID="${SMOKE_FACILITY_ID:-00000000-0000-0000-0000-000000000001}"
-SMOKE_LOCATION_ID="${SMOKE_LOCATION_ID:-Prague}"
-SMOKE_LICENSE_PLATE="${SMOKE_LICENSE_PLATE:-1AA 2345}"
+SMOKE_EMPLOYEE="${SMOKE_EMPLOYEE:-gl-employee1}"
+SMOKE_ADMIN="${SMOKE_ADMIN:-gl-tenant-admin}"
+SMOKE_HR_ADMIN="${SMOKE_HR_ADMIN:-gl-hr-admin}"
+SMOKE_TENANT="${SMOKE_TENANT:-greenlogistics}"
+# Vehicle and facility defaults match dev-seed.sh Green Logistics data; override if your pilot seed differs
+SMOKE_FACILITY_ID="${SMOKE_FACILITY_ID:-00000000-0000-0000-0000-000000000002}"
+SMOKE_LOCATION_ID="${SMOKE_LOCATION_ID:-GL-HQ}"
+SMOKE_LICENSE_PLATE="${SMOKE_LICENSE_PLATE:-1AB 2345}"
 SMOKE_VEHICLE_TYPE="${SMOKE_VEHICLE_TYPE:-Sedan}"
 
 RUN_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)

@@ -189,6 +189,49 @@ next_workday_offset() {
   return 1
 }
 
+# Seed the Green Logistics tenant default parking policy. The Configuration startup
+# seed only covers the bare `demo` scaffold, so the GL tenant needs its policy set
+# here for /configuration/parking-policy and the HR config views to resolve.
+configure_gl_policy() {
+  local admin_token http_code policy_body
+  admin_token=$(get_token "$TENANT_ADMIN_USER")
+  [ -z "$admin_token" ] && { err "No token for $TENANT_ADMIN_USER — run ./tools/dev-setup-auth.sh first"; return 1; }
+
+  policy_body='{
+    "timeZone": "Europe/Prague",
+    "dailyRequestCap": 100,
+    "drawCutOffTime": "18:00:00",
+    "allocationLookbackDays": 10,
+    "lateCancellationPenalty": 1,
+    "noShowPenalty": 2,
+    "sameDayBookingEnabled": true,
+    "sameDayUsesRequestCap": true,
+    "companyCarTier1Enabled": true,
+    "companyCarOverflowBehavior": "reject",
+    "automaticReallocationEnabled": true,
+    "manualAdjustmentEnabled": true,
+    "usageConfirmationRequired": false,
+    "usageConfirmationWindowMinutes": 0,
+    "usageConfirmationMethods": [],
+    "noShowDetectionEnabled": false,
+    "publicationReason": "Green Logistics demo seed"
+  }'
+
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X PUT "$CONFIG_URL/configuration/parking-policy" \
+    -H "Authorization: Bearer $admin_token" \
+    -H "Content-Type: application/json" \
+    -d "$policy_body" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
+
+  if [ "$http_code" = "204" ]; then
+    ok "Configured Green Logistics parking policy (cutoff 18:00, cap 100, company-car Tier-1 on)"
+  else
+    err "Green Logistics parking policy PUT HTTP $http_code"
+    return 1
+  fi
+}
+
 # Configure the 20 human-labelled GL-HQ parking slots. The SlotId is what the
 # parking map and HR views render (there is no separate label field), so the IDs
 # read as human labels. The feature mix exercises every allocation path.
@@ -694,6 +737,7 @@ reset_local_demo_state
 
 echo ""
 echo "-- Parking ($GL_LOCATION_ID) --"
+configure_gl_policy
 configure_gl_slots
 
 # ── profiles ─────────────────────────────────────────────────────────────────
