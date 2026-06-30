@@ -52,7 +52,7 @@ The two login paths an evaluator sees on the sign-in screen — **Company SSO** 
 
 The two `VIP-*` slots are stamped with the resolved Keycloak `sub` of the company-car employees during the seed (this drives the HR config and parking-map views).
 
-> **Known limitation (#665):** the Booking submission and Draw currently read slot capacity from the Booking service's own static `appsettings.AvailableSlots`, **not** the Configuration-service slots seeded here. So the curated 20-slot layout and the company-car reservations do **not** yet drive Draw allocation, and a live seed does not currently produce visible allocated/waitlisted Draw outcomes. Wiring the seeded slots/reservations into the Draw is tracked in #665.
+> **Slot source (#666):** Booking submission and the Draw read slot capacity from the Configuration-service slots seeded here, over Dapr — **not** the Booking service's static `appsettings.AvailableSlots`. So the curated 20-slot layout and the company-car reservations drive Draw allocation: a live seed produces visible allocated/waitlisted outcomes, and the `verify_demo_draw` gate asserts them (company-car Tier-1 holders pre-allocated to their `VIP-*` slots; everyone else allocated/waitlisted by the Draw).
 
 ---
 
@@ -68,7 +68,7 @@ A separate canonical provisioning sample (`gl-v1`) can be seeded into a freshly 
 
 After running `dev-seed.sh`, each of the 25 Green Logistics employees has one booking request for the `GL-HQ` facility, dated the next workday at least +2 days out (08:00–18:00). The script then triggers the Draw for that date.
 
-The **intended** allocation (subject to the #665 limitation above — not yet realised in the live Draw):
+The allocation (realised in the live Draw — #666; asserted by the `verify_demo_draw` gate):
 
 - **Company-car holders** (`gl-employee1`, `gl-employee8`) take their `VIP-*` Tier-1 fixed slot immediately on submission — not the Tier-2 fairness lottery.
 - **Everyone else** competes in the Draw for the general / EV / accessible slots, producing a mix of allocated, waitlisted, and rejected outcomes (demand > capacity).

@@ -259,7 +259,7 @@ curl -s -X POST http://localhost:10000/bookings \
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | python3 -m json.tool
 ```
 
-**Expected:** Booking accepted (`202`), request `Pending`. (Draw allocation / company-car Tier-1 fixed-slot precedence is pending the Booking slot-source unification — #665.)
+**Expected:** `gl-employee1` is a company-car holder with `VIP-01` reserved at seed time, so this `isCompanyCar: true` request is an immediate **Tier-1 fixed-slot allocation**: `200 OK` with `status: "Allocated"` and `allocatedSlotId: "VIP-01"` (no Draw needed). The booking then appears in the list as `Allocated`. Booking reads the seeded Configuration slots over Dapr (#666). (To demonstrate the `Pending` → Draw-queue path instead, submit as a non-company-car seeded user, e.g. `gl-employee3` with `isCompanyCar: false` → `202` / `Pending`.)
 
 ---
 

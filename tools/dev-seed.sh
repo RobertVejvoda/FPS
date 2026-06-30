@@ -29,10 +29,10 @@
 #              regular cars. Realistic CZ plates throughout.
 #   Bookings:  25 future Draw requests by default, one per employee, each carrying
 #              that employee's real attributes.
-#   Draw:      triggers the next future workday Draw over the seeded requests.
-#              NOTE: visible allocations / company-car Tier-1 precedence are not yet
-#              realised in the Draw (it reads the Booking service's static slot
-#              config, not the seeded Configuration slots) — see #665.
+#   Draw:      triggers the next future workday Draw over the seeded requests and
+#              asserts the outcome (verify_demo_draw). The Draw reads the seeded
+#              Configuration slots over Dapr (#666): company-car Tier-1 holders are
+#              pre-allocated to their VIP slots, the rest are allocated/waitlisted.
 #   Role profiles: gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor (no parking).
 #
 #   Notifications, audit records, reporting — populated via Dapr events from booking submissions.
@@ -377,9 +377,9 @@ license_plate_for_index() {
 #   #17 accessibility                      → prefers ACC-01
 #   #20 motorcycle                         → shared MOTO-01 area
 # Everyone else competes in the fair Tier-2 lottery on the general slots.
-# NOTE: the arrows above describe the intended allocation. The Draw currently reads
-# the Booking service's static slot config, not the seeded Configuration slots, so
-# these outcomes are not yet realised in the live Draw — see #665.
+# These outcomes are realised in the live Draw: Booking reads the seeded
+# Configuration slots over Dapr (#666), so company-car Tier-1 fixed slots and the
+# Tier-2 lottery drive the allocations above.
 has_company_car_for_index() { case "$1" in 1|8)      echo "true" ;; *) echo "false" ;; esac; }
 accessibility_for_index()   { case "$1" in 5|17)     echo "true" ;; *) echo "false" ;; esac; }
 is_electric_for_index()     { case "$1" in 2|5|8|10|15) echo "true" ;; *) echo "false" ;; esac; }
@@ -561,10 +561,9 @@ print(sum(1 for v in ('VIP-01', 'VIP-02') if v in vips))
 # the employees' Keycloak user IDs are not known until they exist; here — after the
 # profiles are seeded — we resolve each company-car employee's `sub` and stamp it
 # onto the next company-car-only slot (this drives the HR config / parking-map views).
-# NOTE: the Booking submission and Draw currently read slot capacity from the Booking
-# service's own static appsettings (ConfiguredAvailableSlotService), NOT these
-# Configuration-service slots, so this reservation does not yet drive Tier-1
-# allocation in the Draw. Wiring it through is tracked in #665.
+# Booking submission and the Draw read slot capacity from these Configuration-service
+# slots over Dapr (#666), so this reservation drives Tier-1 fixed-slot allocation:
+# the holder is allocated their VIP slot immediately at submission.
 reserve_company_car_slots() {
   local admin_token slots_json put_body http_code index token
   local subs=()
@@ -843,9 +842,9 @@ echo "-- Bookings (generates notifications, audit records, and reporting data) -
 # Dates start at the next workday at least +2 days out to stay clear of the
 # draw cutoff and keep the demo visible in the HR workday navigation.
 # Each request carries the employee's real attributes (company-car, accessibility,
-# EV, motorcycle). The Draw is triggered over them, but note the seeded slots do not
-# yet drive allocation (the Draw reads the Booking service's static slot config) —
-# so company-car Tier-1 precedence and visible draw outcomes are pending #665.
+# EV, motorcycle). The seeded Configuration slots drive allocation (#666): company-car
+# Tier-1 holders are allocated their VIP slot at submission and the rest are
+# allocated/waitlisted by the Draw — verified live by verify_demo_draw below.
 GL_DRAW_OFFSET=$(next_workday_offset "$GL_DRAW_MIN_OFFSET")
 GL_DRAW_DATE=$(future_date "$GL_DRAW_OFFSET")
 echo "Green Logistics Draw date: $GL_DRAW_DATE (+$GL_DRAW_OFFSET days, next workday)"
@@ -885,7 +884,7 @@ echo "Facility/location: $GL_FACILITY_LABEL / $GL_LOCATION_ID"
 echo "Vehicles: realistic CZ plates; two employees carry a second vehicle"
 echo "Parking: 20 labelled slots (A-01..A-13 general, EV-01..EV-03, ACC-01, VIP-01..VIP-02 company-car, MOTO-01)"
 echo "Bookings: $GL_BOOKING_COUNT employee requests; $GL_DRAW_DATE Draw triggered."
-echo "NOTE: the Draw reads the Booking service's static slot config, not the seeded Configuration slots, so visible allocations/company-car precedence are pending #665."
+echo "Draw: reads the seeded Configuration slots over Dapr (#666) — company-car Tier-1 holders are pre-allocated to their VIP slots at submission, and the rest are allocated/waitlisted by the Draw (verified above)."
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh gl-employee1)"
