@@ -1,5 +1,7 @@
 # Backup And Restore
 
+> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. This slice only classifies it; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks the public summary/replacement that will accompany the move. Nothing is moved or deleted here.
+
 Backups are only useful when restore has been tested. FairSpot production readiness requires both backup automation and documented restore evidence.
 
 ## Backup Scope

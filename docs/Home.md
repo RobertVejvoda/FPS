@@ -17,6 +17,12 @@ This site is the product and business-facing view of FairSpot: problem, goals, a
 
 Product strategy is not maintained as a separate public section. Strategy is expressed through this overview and then governed in the architecture and product artifacts: [Architecture Vision](./architecture/architecture-vision), [Principles](./architecture/principles), [Roadmap](./roadmap), [Commercialisation](./strategy-layer/commercialisation), and [Versions and Decisions](./versions-and-decisions). Older strategy pages remain source evidence until fully retired.
 
+## Open Core and the Platform Plane
+
+This site documents the **public open-core `fairspot`** product — the runtime, the fairness/Draw engine, tenant self-administration, and the architecture and security model. Everything needed to self-host and inspect a single organisation under AGPL stays here.
+
+The **hosted operator product** — cross-tenant platform operations, the operator console, hosted-deployment runbooks, onboarding-queue internals, and usage metering — is a separate, commercial **platform plane** planned for a private `fairspot-platform` repository. The commercial line is the platform plane, not the fairness engine. Some hosted-operator runbooks under [Operations](./production) are still in this repo and marked to move; see the [Open-Core Documentation Boundary](./strategy-layer/open-core-boundary) for the full public/private classification.
+
 ## Product Outcomes
 
 - **Fair access to scarce parking**: allocate spaces with explicit, auditable rules instead of first-come, first-served coordination.
@@ -48,7 +54,7 @@ Product strategy is not maintained as a separate public section. Strategy is exp
 | Product owner | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions), [Architecture Requirements](./architecture/requirements) | Understand priorities, durable decisions, and outcome coverage. |
 | Architect | [Architecture Repository](./architecture/), [Information Systems](./architecture/information-systems/), [Technology Architecture](./architecture/technology/) | Understand the capability model, bounded contexts, integration direction, and platform choices. |
 | Architecture governor | [TOGAF ADM Map](./architecture/togaf-adm-map), [Artifact Register](./architecture/artifact-register), [Gap Analysis](./architecture/architecture-states/gap-analysis) | Understand architecture phase coverage, artifact status, baseline/target versions, and known gaps. |
-| Security or client IT reviewer | [Security Architecture](./architecture/security/), [Deployment Profiles](./architecture/technology/deployment-profiles), [Operations Runbooks](./production) | Understand tenant isolation, privacy, auditability, deployment ownership, and operational evidence. |
+| Security or client IT reviewer | [Security Architecture](./architecture/security/), [Deployment Profiles](./architecture/technology/deployment-profiles), [Operations](./production) | Understand tenant isolation, privacy, auditability, deployment ownership, and operational evidence. Some operations docs are hosted-operator runbooks moving to the private platform — see the [Open-Core Documentation Boundary](./strategy-layer/open-core-boundary). |
 
 ## Site Scope
 

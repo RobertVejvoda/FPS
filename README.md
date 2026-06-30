@@ -34,7 +34,7 @@ FairSpot is still a product under active development. The current focus is demo 
 | See the roadmap and status | [Roadmap](./docs/roadmap.md), [Implementation Tracker](./docs/implementation-tracker.md), and [Delivery Board](./docs/delivery-board.md) |
 | Review the architecture | [Architecture Summary](./docs/architecture-views.md) and [Software Architecture](./docs/technology-layer/software-architecture.md) |
 | Review security, privacy, and audit | [Security Review Pack](./docs/security/security-review-pack.md), [Security Model](./docs/security/security-model.md), and [Logging and Monitoring](./docs/security/logging-monitoring.md) |
-| Run the demo (containers only, Release 1 path) | [Run The Demo](#run-the-demo) and [NAS / Cloudflare Deployment Profile](./docs/production/nas-cloudflare-deployment-profile.md) |
+| Run the demo (containers only, Release 1 path) | [Run The Demo](#run-the-demo), [Local Test Harness](./docs/production/local-test-harness.md), and [Demo Seed Data](./docs/demo-seed-data.md) |
 | Run the developer harness | [Local Test Harness](./docs/production/local-test-harness.md) and [Demo Seed Data](./docs/demo-seed-data.md) |
 | Work on implementation | [AGENTS.md](./AGENTS.md), [Development Plan](./docs/development-plan.md), and [Delivery Board](./docs/delivery-board.md) |
 
@@ -52,7 +52,7 @@ The Release 1 hosting profile is fully containerized: a technical evaluator or o
 ./tools/start-container-stack.sh
 ```
 
-For the NAS-behind-Cloudflare evaluation profile (required credentials enforced), use `--nas --env-file code/infrastructure/.env`. Both bring up every service, Dapr sidecar, gateway, identity, and data store as containers and are **Docker/Compose-only**. See the [NAS / Cloudflare Deployment Profile](./docs/production/nas-cloudflare-deployment-profile.md) for hosting a reviewable demo at a public HTTPS domain.
+This default path brings up every service, Dapr sidecar, gateway, identity, and data store as containers and is **Docker/Compose-only** — the public, open-core evaluation experience. Hosting a reviewable demo at a public HTTPS domain (the NAS-behind-Cloudflare profile, `--nas --env-file code/infrastructure/.env`) is a **hosted-operator** path classified as private-later; see the [Open-Core Documentation Boundary](./docs/strategy-layer/open-core-boundary.md).
 
 To also seed demo data and run the local end-to-end smoke (booking → notification → audit), add `--seed`:
 
@@ -111,6 +111,12 @@ Stop or reset:
 - **GitHub README**: short project front door for first-time visitors.
 - **Documentation site**: product, architecture, security, roadmap, demo, and client-evaluation material.
 - **GitHub issues and project board**: maintainer/operator workflow for implementation slices, agent handoffs, troubleshooting, and runbooks.
+
+## Open Core
+
+This repository is the **public open-core `fairspot`** product: the runtime, the fairness/Draw engine, tenant self-administration, and all customer-facing and architectural documentation — everything needed to self-host and inspect one organisation under AGPL.
+
+The **hosted operator product** — the cross-tenant platform console, hosted-deployment runbooks, onboarding-queue internals, usage metering, and sensitive operating procedures — is a separate, commercial **platform plane** planned for a private `fairspot-platform` repository; it is not part of this repo. Some hosted-operator runbooks still sit under `docs/production/` today and are marked for that move. See the [Open-Core Documentation Boundary](./docs/strategy-layer/open-core-boundary.md) for what is public versus private-later.
 
 ## License
 

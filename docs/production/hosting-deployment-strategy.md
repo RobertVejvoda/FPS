@@ -1,5 +1,7 @@
 # OPS000 Deployment Profile Strategy
 
+> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. This slice only classifies it; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks the public summary/replacement that will accompany the move. Nothing is moved or deleted here.
+
 **Status:** Baseline merged; provider-specific production choice remains client/environment dependent.
 
 **Prepared by:** Claude (FairSpot Implementer), 2026-05-14
