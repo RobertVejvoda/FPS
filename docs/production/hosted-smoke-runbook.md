@@ -227,14 +227,15 @@ The smoke writes a redacted `smoke-evidence-*.txt` (tokens/headers never printed
 |---|---|
 | TLS [#9] | `APP_URL`/`AUTH_URL` are `https://`; plain-HTTP app origin redirects to HTTPS (Always Use HTTPS) |
 | Auth | public OIDC discovery resolves at `auth.<domain>` |
-| WAF / internal paths [#10] | `/metrics`, `auth/admin`, and `/api/{openapi/v1.json,swagger,v1.0/healthz,v1.0/metadata}` are **not** publicly served (expect 401/403/404; a 200 fails the gate) |
+| WAF / internal paths [#10] | `/metrics`, `auth/admin`, and `/api/{openapi/v1.json,swagger,metrics,v1.0/healthz,v1.0/metadata,v1.0/invoke/*}` are **not** publicly served — covering the Dapr sidecar invoke path and the Prometheus scrape endpoint (expect 401/403/404; a 200 fails the gate) |
+| Internal infrastructure [#10] | conventional infra hostnames (`grafana.`, `prometheus.`, `jaeger.`, `minio.`, `mongo-express.` `<domain>`) are not publicly served — a served tool (200) means an accidental tunnel ingress and fails the gate |
 
 > Single-origin note: at the app **root** the SPA history-fallback returns 200 for any unknown path by design (static SPA, no sensitive data). The blocking checks therefore target the `/api/*` surfaces proxied to the gateway, so the public `APP_URL` targets the `/api` base — the script auto-normalizes a root public URL to `/api`. (Localhost mode hits the Envoy gateway directly, where the API is served at root, so no `/api` there.)
 
 **Operator-confirm items (not script-testable — verify in Cloudflare / Synology):**
 
 - Cloudflare WAF custom rules active for the internal paths above (see [SEC010](../security/cloudflare-waf-profile.md)).
-- `ops.<domain>` (Grafana) gated by a Cloudflare Access allow-list.
+- **Cloudflare tunnel ingress publishes only `app.<domain>` and `auth.<domain>`** — stores (Mongo), broker, object storage (MinIO), and observability (Grafana/Prometheus/Jaeger) stay LAN-only or behind a Cloudflare Access allow-list. The infra-hostname probe above catches an accidental public tunnel, but confirm the ingress list directly.
 - Synology/NAS volume encryption-at-rest and encrypted backups (see [OPS019](https://github.com/RobertVejvoda/fairspot/issues/619)).
 - TLS grade (e.g. via SSL Labs / `openssl s_client`).
 
@@ -249,3 +250,4 @@ A FAIL on any automatic mandatory check, or an unconfirmed operator item, blocks
 | 2026-05-29 | Claude | Initial runbook for issue #314 |
 | 2026-06-25 | Claude | OPS007: fix local AUTH_URL to 8180, add Dapr startup note, add DEFERRED status, add +3d booking note |
 | 2026-06-28 | Claude | SEC011: public-boundary gate — http→https redirect + /api internal-surface blocking checks; documented automatic vs operator-confirm items |
+| 2026-06-30 | Claude | SEC011: extend /api blocking to the Dapr invoke path + metrics; add internal-infrastructure-exposure checks (observability/stores/broker/object-storage hostnames not publicly tunneled) |

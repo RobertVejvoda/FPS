@@ -506,7 +506,11 @@ else
   # 200 for any unknown path at the app *root* by design (static SPA, no
   # sensitive data); the meaningful checks target the /api/* surfaces proxied to
   # the gateway, so APP_URL must include the /api prefix.
-  for ipath in "openapi/v1.json" "swagger" "swagger/index.html" "v1.0/healthz" "v1.0/metadata"; do
+  # Diagnostic/observability surfaces and Dapr sidecar control-plane paths must not be
+  # served through the public API. v1.0/invoke is the Dapr service-invocation entrypoint;
+  # metrics is the Prometheus scrape endpoint.
+  for ipath in "openapi/v1.json" "swagger" "swagger/index.html" "metrics" \
+               "v1.0/healthz" "v1.0/metadata" "v1.0/invoke/fps-booking/method/health"; do
     ISTATUS=$(http_status "$APP_URL/$ipath")
     if [[ "$ISTATUS" == "401" || "$ISTATUS" == "403" || "$ISTATUS" == "404" ]]; then
       pass "GET /api/$ipath → HTTP $ISTATUS (internal surface not publicly served)  [mandatory #10]"
@@ -516,6 +520,29 @@ else
       pending "GET /api/$ipath → HTTP $ISTATUS (confirm against the live domain/WAF)"
     fi
   done
+fi
+
+# ── Internal infrastructure not publicly exposed  [mandatory #10] ─────────────
+
+header "Internal infrastructure exposure  [mandatory #10]"
+if [[ "$IS_LOCALHOST" == "true" ]]; then
+  pending "Infra hostnames (observability/stores/broker/object-storage) — run against the public domain, then operator-confirm in Cloudflare"
+else
+  # Only app.<domain> (SPA + /api) and auth.<domain> are meant to be tunneled publicly.
+  # Stores, broker, object storage, and observability must never be reachable from the
+  # internet. Probe the conventional infra subdomains: a served tool (HTTP 200) means an
+  # accidental public tunnel; non-resolving/blocked hosts return non-200 (often 000) and
+  # pass. The final word is operator confirmation of the Cloudflare tunnel ingress.
+  BASE_DOMAIN="${APP_ORIGIN#https://}"; BASE_DOMAIN="${BASE_DOMAIN#http://}"; BASE_DOMAIN="${BASE_DOMAIN#app.}"
+  for host in grafana prometheus jaeger minio mongo-express; do
+    ISTATUS=$(http_status "https://$host.$BASE_DOMAIN/")
+    if [[ "$ISTATUS" == "200" ]]; then
+      fail "GET https://$host.$BASE_DOMAIN/ → HTTP 200 (internal infrastructure publicly reachable — remove its tunnel ingress)" "true"
+    else
+      pass "https://$host.$BASE_DOMAIN/ → HTTP $ISTATUS (not publicly served)  [mandatory #10]"
+    fi
+  done
+  pending "Operator-confirm: only app.<domain> and auth.<domain> are tunneled; stores/broker/object-storage/observability stay LAN-only or behind Cloudflare Access"
 fi
 
 # ── evidence file summary ─────────────────────────────────────────────────────
