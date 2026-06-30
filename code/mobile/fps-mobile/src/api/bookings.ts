@@ -119,13 +119,15 @@ export async function submitBooking(
     return { kind: 'unauthenticated' };
   }
 
-  if (response.status === 202 || response.status === 422) {
+  // Both 202 (Pending → queued for the Draw) and 200 (Allocated immediately — same-day
+  // slot or company-car Tier-1 fixed slot) are successful submits; only 422 is a rejection.
+  if (response.status === 200 || response.status === 202 || response.status === 422) {
     try {
       const data = (await response.json()) as SubmitBookingResponse;
-      if (response.status === 202) {
-        return { kind: 'accepted', requestId: data.requestId, status: data.status };
+      if (response.status === 422) {
+        return { kind: 'rejected', rejectionCode: data.rejectionCode, reason: data.reason };
       }
-      return { kind: 'rejected', rejectionCode: data.rejectionCode, reason: data.reason };
+      return { kind: 'accepted', requestId: data.requestId, status: data.status };
     } catch {
       return { kind: 'error', status: response.status, message: 'Invalid response body.' };
     }

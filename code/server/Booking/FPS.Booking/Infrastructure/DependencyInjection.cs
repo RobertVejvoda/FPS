@@ -27,7 +27,10 @@ public static class DependencyInjection
         services.AddScoped<IPenaltyRepository, DaprPenaltyRepository>();
         services.AddScoped<ICorrectionAuditRepository, DaprCorrectionAuditRepository>();
         services.AddSingleton<IEmployeeMetricsService, DaprEmployeeMetricsService>();
-        services.AddScoped<IAvailableSlotService, ConfiguredAvailableSlotService>();
+        // Configuration service is the authoritative slot source (#665); the appsettings-backed
+        // ConfiguredAvailableSlotService stays registered as the resilient fallback.
+        services.AddScoped<ConfiguredAvailableSlotService>();
+        services.AddScoped<IAvailableSlotService, ConfigurationSlotService>();
         services.AddHttpClient<IProfileSnapshotService, HttpProfileSnapshotService>(client =>
             client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fps-profile"));
         services.AddSingleton<DrawService>();

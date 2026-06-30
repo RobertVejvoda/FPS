@@ -49,6 +49,22 @@ public sealed class BookingControllerTests
     }
 
     [Fact]
+    public async Task SubmitBookingRequest_ImmediateAllocation_Returns200Ok()
+    {
+        // Company-car Tier-1 fixed slot (or same-day available slot) allocates at
+        // submission — a success, not an unprocessable entity.
+        mediator
+            .Setup(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SubmitBookingRequestResult(Guid.NewGuid(), "Allocated", null, null));
+
+        var result = await controller.SubmitBookingRequest(ValidSubmitBody(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<SubmitBookingResponse>(ok.Value);
+        Assert.Equal("Allocated", body.Status);
+    }
+
+    [Fact]
     public async Task SubmitBookingRequest_DuplicateRequest_Returns422()
     {
         mediator

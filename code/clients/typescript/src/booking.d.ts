@@ -55,6 +55,17 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SubmitBookingResponse"];
+                        "application/json": components["schemas"]["SubmitBookingResponse"];
+                        "text/json": components["schemas"]["SubmitBookingResponse"];
+                    };
+                };
                 /** @description Accepted */
                 202: {
                     headers: {

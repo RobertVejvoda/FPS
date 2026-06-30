@@ -29,10 +29,10 @@
 #              regular cars. Realistic CZ plates throughout.
 #   Bookings:  25 future Draw requests by default, one per employee, each carrying
 #              that employee's real attributes.
-#   Draw:      triggers the next future workday Draw over the seeded requests.
-#              NOTE: visible allocations / company-car Tier-1 precedence are not yet
-#              realised in the Draw (it reads the Booking service's static slot
-#              config, not the seeded Configuration slots) — see #665.
+#   Draw:      triggers the next future workday Draw over the seeded requests and
+#              asserts the outcome (verify_demo_draw). The Draw reads the seeded
+#              Configuration slots over Dapr (#666): company-car Tier-1 holders are
+#              pre-allocated to their VIP slots, the rest are allocated/waitlisted.
 #   Role profiles: gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor (no parking).
 #
 #   Notifications, audit records, reporting — populated via Dapr events from booking submissions.
@@ -257,7 +257,9 @@ def slot(slot_id, charger=False, accessible=False, company_car=False, motorcycle
 slots = [slot(f"A-{i:02d}") for i in range(1, 14)]      # 13 general
 slots += [slot(f"EV-{i:02d}", charger=True) for i in range(1, 4)]
 slots.append(slot("ACC-01", accessible=True))
-slots += [slot(f"VIP-{i:02d}", company_car=True) for i in range(1, 3)]
+# VIP-01 → company-car employee #1 (non-EV); VIP-02 → company-car employee #8 (EV combo),
+# so VIP-02 carries a charger or the EV company car can't use its reserved Tier-1 slot.
+slots += [slot("VIP-01", company_car=True), slot("VIP-02", company_car=True, charger=True)]
 slots.append(slot("MOTO-01", motorcycle=True, units=4))
 print(json.dumps({"slots": slots, "changeReason": "Green Logistics demo seed: parking layout"}))
 PYEOF
@@ -375,9 +377,9 @@ license_plate_for_index() {
 #   #17 accessibility                      → prefers ACC-01
 #   #20 motorcycle                         → shared MOTO-01 area
 # Everyone else competes in the fair Tier-2 lottery on the general slots.
-# NOTE: the arrows above describe the intended allocation. The Draw currently reads
-# the Booking service's static slot config, not the seeded Configuration slots, so
-# these outcomes are not yet realised in the live Draw — see #665.
+# These outcomes are realised in the live Draw: Booking reads the seeded
+# Configuration slots over Dapr (#666), so company-car Tier-1 fixed slots and the
+# Tier-2 lottery drive the allocations above.
 has_company_car_for_index() { case "$1" in 1|8)      echo "true" ;; *) echo "false" ;; esac; }
 accessibility_for_index()   { case "$1" in 5|17)     echo "true" ;; *) echo "false" ;; esac; }
 is_electric_for_index()     { case "$1" in 2|5|8|10|15) echo "true" ;; *) echo "false" ;; esac; }
@@ -448,8 +450,12 @@ seed_booking() {
 
   if [[ "$http_code" = "202" ]]; then
     ok "Booking $username $booking_date (202 Accepted → pending)"
+  elif [[ "$http_code" = "200" ]]; then
+    # Company-car Tier-1 fixed-slot holders are allocated immediately at submission
+    # against their reserved Configuration slot (no Draw needed) — 200, not 202.
+    ok "Booking $username $booking_date (200 OK → allocated immediately, company-car Tier-1)"
   else
-    err "Booking $username $booking_date HTTP $http_code (expected 202 — check policy cutoff, eligibility, or service logs)"
+    err "Booking $username $booking_date HTTP $http_code (expected 200/202 — check policy cutoff, eligibility, or service logs)"
     return 1
   fi
 }
@@ -485,10 +491,67 @@ trigger_demo_draw() {
     allocated=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('allocatedCount',0))")
     rejected=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('rejectedCount',0))")
     waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('waitlistedCount',0))")
-    ok "Green Logistics Draw $draw_date ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted"
+    ok "Green Logistics Draw $draw_date triggered ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted (async — verifying outcome)"
   else
     err "Green Logistics Draw $draw_date HTTP ${http_code:-000}"
     [ -n "$body" ] && echo "$body"
+    return 1
+  fi
+}
+
+# Gate: the Draw runs as an async workflow after the trigger returns, so poll the
+# lifecycle until it completes and assert the seeded slots actually drove visible
+# allocations — the runtime evidence #665 requires (static review can't catch a
+# Draw that loads 0 requests or ignores the curated Configuration slots).
+verify_demo_draw() {
+  local date_offset="$1"
+  local token draw_date start end status body allocated waitlisted vip_alloc
+
+  token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
+
+  draw_date=$(future_date "$date_offset")
+  start="${draw_date}T08:00:00"
+  end="${draw_date}T18:00:00"
+
+  status=""
+  for _ in $(seq 1 30); do
+    body=$(curl -sf -H "Authorization: Bearer $token" \
+      "$BOOKING_URL/draws/$draw_date/lifecycle?locationId=$GL_LOCATION_ID&timeSlotStart=$start&timeSlotEnd=$end" 2>/dev/null || true)
+    status=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+    [ "$status" = "Completed" ] && break
+    sleep 2
+  done
+
+  if [ "$status" != "Completed" ]; then
+    err "Green Logistics Draw did not reach Completed (last status: ${status:-none})"
+    return 1
+  fi
+
+  allocated=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('allocatedCount',0))")
+  waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('waitlistedCount',0))")
+  if [ "${allocated:-0}" -lt 1 ]; then
+    err "Green Logistics Draw completed but allocated 0 requests (expected visible allocations from the seeded slots)"
+    return 1
+  fi
+  ok "Green Logistics Draw completed: $allocated allocated, $waitlisted waitlisted"
+
+  # Tier-1 evidence: both company-car fixed slots must be held by their reserved
+  # owners (employee #1 → VIP-01, EV employee #8 → VIP-02).
+  local ops
+  ops=$(curl -sf -H "Authorization: Bearer $token" \
+    "$BOOKING_URL/bookings/operations?locationId=$GL_LOCATION_ID&from=$draw_date&to=$draw_date&pageSize=200" 2>/dev/null || true)
+  vip_alloc=$(printf '%s' "$ops" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+vips = {i.get('allocatedSlotId') for i in d.get('items', []) if i.get('status') == 'Allocated'}
+print(sum(1 for v in ('VIP-01', 'VIP-02') if v in vips))
+" 2>/dev/null || echo 0)
+
+  if [ "${vip_alloc:-0}" -eq 2 ]; then
+    ok "Company-car Tier-1: both VIP fixed slots pre-allocated to their reserved holders"
+  else
+    err "Company-car Tier-1: expected 2 VIP fixed-slot allocations, found ${vip_alloc:-0}"
     return 1
   fi
 }
@@ -498,10 +561,9 @@ trigger_demo_draw() {
 # the employees' Keycloak user IDs are not known until they exist; here — after the
 # profiles are seeded — we resolve each company-car employee's `sub` and stamp it
 # onto the next company-car-only slot (this drives the HR config / parking-map views).
-# NOTE: the Booking submission and Draw currently read slot capacity from the Booking
-# service's own static appsettings (ConfiguredAvailableSlotService), NOT these
-# Configuration-service slots, so this reservation does not yet drive Tier-1
-# allocation in the Draw. Wiring it through is tracked in #665.
+# Booking submission and the Draw read slot capacity from these Configuration-service
+# slots over Dapr (#666), so this reservation drives Tier-1 fixed-slot allocation:
+# the holder is allocated their VIP slot immediately at submission.
 reserve_company_car_slots() {
   local admin_token slots_json put_body http_code index token
   local subs=()
@@ -780,9 +842,9 @@ echo "-- Bookings (generates notifications, audit records, and reporting data) -
 # Dates start at the next workday at least +2 days out to stay clear of the
 # draw cutoff and keep the demo visible in the HR workday navigation.
 # Each request carries the employee's real attributes (company-car, accessibility,
-# EV, motorcycle). The Draw is triggered over them, but note the seeded slots do not
-# yet drive allocation (the Draw reads the Booking service's static slot config) —
-# so company-car Tier-1 precedence and visible draw outcomes are pending #665.
+# EV, motorcycle). The seeded Configuration slots drive allocation (#666): company-car
+# Tier-1 holders are allocated their VIP slot at submission and the rest are
+# allocated/waitlisted by the Draw — verified live by verify_demo_draw below.
 GL_DRAW_OFFSET=$(next_workday_offset "$GL_DRAW_MIN_OFFSET")
 GL_DRAW_DATE=$(future_date "$GL_DRAW_OFFSET")
 echo "Green Logistics Draw date: $GL_DRAW_DATE (+$GL_DRAW_OFFSET days, next workday)"
@@ -805,6 +867,7 @@ done
 echo ""
 echo "-- Green Logistics Draw ($GL_DRAW_DATE, $GL_LOCATION_ID 08:00-18:00) --"
 trigger_demo_draw "$GL_DRAW_OFFSET"
+verify_demo_draw "$GL_DRAW_OFFSET"
 
 echo ""
 echo "-- HR display names --"
@@ -821,7 +884,7 @@ echo "Facility/location: $GL_FACILITY_LABEL / $GL_LOCATION_ID"
 echo "Vehicles: realistic CZ plates; two employees carry a second vehicle"
 echo "Parking: 20 labelled slots (A-01..A-13 general, EV-01..EV-03, ACC-01, VIP-01..VIP-02 company-car, MOTO-01)"
 echo "Bookings: $GL_BOOKING_COUNT employee requests; $GL_DRAW_DATE Draw triggered."
-echo "NOTE: the Draw reads the Booking service's static slot config, not the seeded Configuration slots, so visible allocations/company-car precedence are pending #665."
+echo "Draw: reads the seeded Configuration slots over Dapr (#666) — company-car Tier-1 holders are pre-allocated to their VIP slots at submission, and the rest are allocated/waitlisted by the Draw (verified above)."
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh gl-employee1)"

@@ -28,6 +28,7 @@ public sealed class BookingController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(SubmitBookingResponse), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> SubmitBookingRequest(
@@ -58,9 +59,15 @@ public sealed class BookingController : ControllerBase
         var response = new SubmitBookingResponse(
             result.RequestId, result.Status, result.RejectionCode, result.Reason);
 
-        return result.Status == "Pending"
-            ? Accepted(response)
-            : UnprocessableEntity(response);
+        // Pending → queued for the Draw (202). Allocated → resolved immediately at
+        // submission (same-day slot or company-car Tier-1 fixed slot) — a success, not
+        // an unprocessable entity, so return 200. Rejected (validation) stays 422.
+        return result.Status switch
+        {
+            "Pending" => Accepted(response),
+            "Allocated" => Ok(response),
+            _ => UnprocessableEntity(response),
+        };
     }
 
     [HttpDelete("{requestId:guid}")]
