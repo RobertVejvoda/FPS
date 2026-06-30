@@ -618,43 +618,6 @@
         ]
       }
     },
-    "/tenants": {
-      "post": {
-        "tags": [
-          "Tenant"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
-      }
-    },
     "/tenants/{tenantId}/readiness": {
       "get": {
         "tags": [
@@ -757,181 +720,6 @@
             }
           }
         }
-      },
-      "get": {
-        "tags": [
-          "TenantRequestQueue"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantRequest"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantRequest"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantRequest"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
-      }
-    },
-    "/tenant-requests/{requestId}/approve": {
-      "post": {
-        "tags": [
-          "TenantRequestQueue"
-        ],
-        "parameters": [
-          {
-            "name": "requestId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TenantRequestDecision"
-                  }
-                ]
-              }
-            },
-            "text/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TenantRequestDecision"
-                  }
-                ]
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TenantRequestDecision"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
-      }
-    },
-    "/tenant-requests/{requestId}/reject": {
-      "post": {
-        "tags": [
-          "TenantRequestQueue"
-        ],
-        "parameters": [
-          {
-            "name": "requestId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TenantRequestDecision"
-                  }
-                ]
-              }
-            },
-            "text/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TenantRequestDecision"
-                  }
-                ]
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/TenantRequestDecision"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "Bearer": [ ]
-          }
-        ]
       }
     }
   },
@@ -1012,51 +800,6 @@
           },
           "role": {
             "type": "string"
-          }
-        }
-      },
-      "CreateTenantRequest": {
-        "required": [
-          "slug",
-          "displayName",
-          "region",
-          "timeZone",
-          "supportContacts"
-        ],
-        "type": "object",
-        "properties": {
-          "slug": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "region": {
-            "type": "string"
-          },
-          "timeZone": {
-            "type": "string"
-          },
-          "supportContacts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ContactDto"
-            }
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "kind": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -1291,58 +1034,6 @@
           }
         }
       },
-      "TenantRequest": {
-        "required": [
-          "requestId",
-          "company",
-          "primaryDomain",
-          "contactEmail"
-        ],
-        "type": "object",
-        "properties": {
-          "requestId": {
-            "type": "string"
-          },
-          "company": {
-            "type": "string"
-          },
-          "primaryDomain": {
-            "type": "string"
-          },
-          "contactEmail": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/TenantRequestStatus"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "decidedAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "decidedByHash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "decisionReason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "TenantRequestAcknowledgement": {
         "required": [
           "requestId",
@@ -1357,23 +1048,6 @@
             "type": "string"
           }
         }
-      },
-      "TenantRequestDecision": {
-        "required": [
-          "reason"
-        ],
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "TenantRequestStatus": {
-        "type": "integer"
       },
       "TransitionRequest": {
         "required": [
@@ -1453,9 +1127,6 @@
     },
     {
       "name": "TenantRequestIntake"
-    },
-    {
-      "name": "TenantRequestQueue"
     }
   ]
 }
