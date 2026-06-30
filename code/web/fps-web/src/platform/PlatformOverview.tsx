@@ -54,11 +54,9 @@ function OnboardingCard() {
   );
 }
 
-// Platform landing (platform-dashboard-ux.md §4). This shell slice renders the frame only:
-// the red-flags strip and the Tenants / Onboarding / Activity summary cards are honest
-// "Not wired yet" states naming the slice that will provide each source. No fake green/red
-// operational status, and no real $ cost — the cost line is platform-admin-internal and shows
-// "Not wired yet" even for admins in this slice.
+// Platform landing (platform-dashboard-ux.md §4). The overview mixes live platform slices with
+// honest "not wired yet" states that name the slice that will provide each missing source. No
+// fake green/red operational status, and no real $ cost until the usage ledger lands.
 export function PlatformOverview() {
   const { roles } = useAuth();
   const admin = isPlatformAdmin(roles);
@@ -68,7 +66,7 @@ export function PlatformOverview() {
       <section className="page-hero">
         <div>
           <h2>Platform overview</h2>
-          <p>FairSpot operator console — cross-tenant. Live data sources land in later slices.</p>
+          <p>FairSpot operator console — cross-tenant. Live data appears as platform slices land.</p>
         </div>
       </section>
 
@@ -91,8 +89,8 @@ export function PlatformOverview() {
             <NotWiredBadge availability="partial" slice="PLAT008B" />
           </div>
           <p className="plat-muted">
-            Tenant state summary (Ready / Provisioning / Suspended / Archived) is backed by the
-            Customer lifecycle API. The directory and counts land in PLAT008B.
+            Tenant directory data is backed by the Customer lifecycle API. Aggregate state counts
+            remain a later directory enhancement.
           </p>
         </article>
 
