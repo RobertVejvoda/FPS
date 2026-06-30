@@ -11,9 +11,14 @@ namespace FPS.Customer.Controllers;
 /// PII, so it is platform-plane only (<see cref="RequirePlatformOperatorAttribute"/> from PLAT001):
 /// platform operators triage, platform admins are a superset, and a tenant admin can never reach
 /// it. Approve/Reject advance the request; provisioning stays a separate, later step.
+///
+/// Excluded from the open OpenAPI document (ApiExplorerSettings.IgnoreApi) so the generated
+/// open <c>@fps/api-client</c> does not expose this platform-plane queue (#673); the public
+/// intake <c>POST /tenant-requests</c> (TenantRequestIntakeController) stays in the open client.
 /// </summary>
 [ApiController]
 [RequirePlatformOperator]
+[ApiExplorerSettings(IgnoreApi = true)]
 public sealed class TenantRequestQueueController(TenantRequestService service, ICurrentUser currentUser) : ControllerBase
 {
     [HttpGet("/tenant-requests")]

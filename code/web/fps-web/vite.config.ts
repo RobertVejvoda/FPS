@@ -6,6 +6,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@fps/api-client': '../../clients/typescript/src',
+      '@fps/ui': '../../clients/ui/src/index.ts',
     },
   },
   server: {

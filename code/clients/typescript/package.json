@@ -1,8 +1,17 @@
 {
   "name": "@fps/api-client",
   "version": "0.1.0",
-  "description": "Generated TypeScript API client for Fair Parking System — do not edit by hand",
+  "description": "Generated TypeScript API client for FairSpot (open-core customer/tenant services only) — do not edit by hand",
   "private": true,
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RobertVejvoda/fairspot"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "generate": "bash ../../../tools/generate-api-client.sh",
     "check-stale": "bash ../../../tools/check-api-client-stale.sh"

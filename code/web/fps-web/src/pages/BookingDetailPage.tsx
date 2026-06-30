@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
 import { displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw } from '../displayLabels';
-import { StatusBadge } from '../components/StatusBadge';
+import { StatusBadge } from '@fps/ui';
 
 const STATUS_MEANING: Record<string, string> = {
   Submitted: 'Waiting for allocation',

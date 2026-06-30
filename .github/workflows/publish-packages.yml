@@ -1,8 +1,13 @@
 name: Publish Packages
 
-# Publishes FairSpot internal NuGet packages (e.g. FairSpot.SharedKernel) to GitHub Packages
-# so the private fairspot-platform service can consume them. Manual-only for now — versioning
-# and publish cadence are deliberate, not on every push. Bump <Version> in the csproj first.
+# Packs (and optionally publishes) the FairSpot open-core shared surfaces the future private
+# fairspot-platform repo can consume: the FairSpot.SharedKernel NuGet package and the npm
+# packages @fps/api-client and @fps/ui. Manual-only (workflow_dispatch) — versioning and
+# publish cadence are deliberate, not on every push. Bump <Version> in the csproj first.
+#
+# NuGet (SharedKernel) can publish to GitHub Packages with the built-in GITHUB_TOKEN. The npm
+# packages are pack/dry-run only here (they are private:true and consumed in-repo via file:
+# deps); no extra secrets are required.
 on:
   workflow_dispatch:
     inputs:
@@ -35,3 +40,23 @@ jobs:
           --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           --api-key "${{ secrets.GITHUB_TOKEN }}"
           --skip-duplicate
+
+  pack-npm-packages:
+    # Validates the shared npm package surfaces (@fps/api-client, @fps/ui) by packing them.
+    # Dry-run only: both are private:true and consumed in-repo via file: deps, so nothing is
+    # published here and no secrets beyond the default token are needed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Pack @fps/api-client (dry run)
+        run: npm pack --dry-run
+        working-directory: code/clients/typescript
+
+      - name: Pack @fps/ui (dry run)
+        run: npm pack --dry-run
+        working-directory: code/clients/ui
