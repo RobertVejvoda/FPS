@@ -257,7 +257,9 @@ def slot(slot_id, charger=False, accessible=False, company_car=False, motorcycle
 slots = [slot(f"A-{i:02d}") for i in range(1, 14)]      # 13 general
 slots += [slot(f"EV-{i:02d}", charger=True) for i in range(1, 4)]
 slots.append(slot("ACC-01", accessible=True))
-slots += [slot(f"VIP-{i:02d}", company_car=True) for i in range(1, 3)]
+# VIP-01 → company-car employee #1 (non-EV); VIP-02 → company-car employee #8 (EV combo),
+# so VIP-02 carries a charger or the EV company car can't use its reserved Tier-1 slot.
+slots += [slot("VIP-01", company_car=True), slot("VIP-02", company_car=True, charger=True)]
 slots.append(slot("MOTO-01", motorcycle=True, units=4))
 print(json.dumps({"slots": slots, "changeReason": "Green Logistics demo seed: parking layout"}))
 PYEOF
@@ -448,8 +450,12 @@ seed_booking() {
 
   if [[ "$http_code" = "202" ]]; then
     ok "Booking $username $booking_date (202 Accepted → pending)"
+  elif [[ "$http_code" = "200" ]]; then
+    # Company-car Tier-1 fixed-slot holders are allocated immediately at submission
+    # against their reserved Configuration slot (no Draw needed) — 200, not 202.
+    ok "Booking $username $booking_date (200 OK → allocated immediately, company-car Tier-1)"
   else
-    err "Booking $username $booking_date HTTP $http_code (expected 202 — check policy cutoff, eligibility, or service logs)"
+    err "Booking $username $booking_date HTTP $http_code (expected 200/202 — check policy cutoff, eligibility, or service logs)"
     return 1
   fi
 }
@@ -485,10 +491,67 @@ trigger_demo_draw() {
     allocated=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('allocatedCount',0))")
     rejected=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('rejectedCount',0))")
     waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('waitlistedCount',0))")
-    ok "Green Logistics Draw $draw_date ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted"
+    ok "Green Logistics Draw $draw_date triggered ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted (async — verifying outcome)"
   else
     err "Green Logistics Draw $draw_date HTTP ${http_code:-000}"
     [ -n "$body" ] && echo "$body"
+    return 1
+  fi
+}
+
+# Gate: the Draw runs as an async workflow after the trigger returns, so poll the
+# lifecycle until it completes and assert the seeded slots actually drove visible
+# allocations — the runtime evidence #665 requires (static review can't catch a
+# Draw that loads 0 requests or ignores the curated Configuration slots).
+verify_demo_draw() {
+  local date_offset="$1"
+  local token draw_date start end status body allocated waitlisted vip_alloc
+
+  token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
+
+  draw_date=$(future_date "$date_offset")
+  start="${draw_date}T08:00:00"
+  end="${draw_date}T18:00:00"
+
+  status=""
+  for _ in $(seq 1 30); do
+    body=$(curl -sf -H "Authorization: Bearer $token" \
+      "$BOOKING_URL/draws/$draw_date/lifecycle?locationId=$GL_LOCATION_ID&timeSlotStart=$start&timeSlotEnd=$end" 2>/dev/null || true)
+    status=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+    [ "$status" = "Completed" ] && break
+    sleep 2
+  done
+
+  if [ "$status" != "Completed" ]; then
+    err "Green Logistics Draw did not reach Completed (last status: ${status:-none})"
+    return 1
+  fi
+
+  allocated=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('allocatedCount',0))")
+  waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('waitlistedCount',0))")
+  if [ "${allocated:-0}" -lt 1 ]; then
+    err "Green Logistics Draw completed but allocated 0 requests (expected visible allocations from the seeded slots)"
+    return 1
+  fi
+  ok "Green Logistics Draw completed: $allocated allocated, $waitlisted waitlisted"
+
+  # Tier-1 evidence: both company-car fixed slots must be held by their reserved
+  # owners (employee #1 → VIP-01, EV employee #8 → VIP-02).
+  local ops
+  ops=$(curl -sf -H "Authorization: Bearer $token" \
+    "$BOOKING_URL/bookings/operations?locationId=$GL_LOCATION_ID&from=$draw_date&to=$draw_date&pageSize=200" 2>/dev/null || true)
+  vip_alloc=$(printf '%s' "$ops" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+vips = {i.get('allocatedSlotId') for i in d.get('items', []) if i.get('status') == 'Allocated'}
+print(sum(1 for v in ('VIP-01', 'VIP-02') if v in vips))
+" 2>/dev/null || echo 0)
+
+  if [ "${vip_alloc:-0}" -eq 2 ]; then
+    ok "Company-car Tier-1: both VIP fixed slots pre-allocated to their reserved holders"
+  else
+    err "Company-car Tier-1: expected 2 VIP fixed-slot allocations, found ${vip_alloc:-0}"
     return 1
   fi
 }
@@ -805,6 +868,7 @@ done
 echo ""
 echo "-- Green Logistics Draw ($GL_DRAW_DATE, $GL_LOCATION_ID 08:00-18:00) --"
 trigger_demo_draw "$GL_DRAW_OFFSET"
+verify_demo_draw "$GL_DRAW_OFFSET"
 
 echo ""
 echo "-- HR display names --"
