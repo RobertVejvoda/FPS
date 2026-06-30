@@ -99,7 +99,7 @@ export FPS_MOBILE_API_BASE_URL="$MOBILE_API_BASE_URL"
 cd "$REPO_ROOT"
 ensure_smoke_harness
 
-TOKEN="$("$REPO_ROOT/tools/dev-auth.sh" employee1)"
+TOKEN="$("$REPO_ROOT/tools/dev-auth.sh" gl-employee1)"
 
 printf '\n'
 printf '================================================\n'
@@ -115,7 +115,7 @@ fi
 printf ' Selected mobile host:            %s\n' "$MOBILE_HOST"
 printf ' Mobile OIDC issuer:              %s\n' "$FPS_MOBILE_AUTH_ISSUER_URL"
 printf ' Mobile OIDC client:              %s\n' "$FPS_MOBILE_AUTH_CLIENT_ID"
-printf ' Demo user: employee1\n'
+printf ' Demo user: gl-employee1 (Green Logistics)\n'
 printf ' Demo password: %s\n' "${FPS_DEV_PASSWORD:-Dev1234!}"
 printf ' Bearer token: %s\n' "$TOKEN"
 printf '\n'

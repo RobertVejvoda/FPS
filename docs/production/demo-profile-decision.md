@@ -72,7 +72,7 @@ Demo component templates in `code/infrastructure/dapr/components/demo/` are **pa
 
 ### 1.5 Seed and Reset
 
-- `tools/dev-seed.sh` — loads demo tenant, users, parking data
+- `tools/dev-seed.sh` — loads Green Logistics tenant, users, parking data
 - `tools/demo-reset.sh` — drops and re-creates demo data without stopping infrastructure
 - `tools/dev-auth.sh <user>` — prints a bearer token for the named demo user
 

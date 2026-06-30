@@ -295,9 +295,9 @@
     {
       "username": "gl-employee1",
       "enabled": true,
-      "email": "alice.green@greenlogistics.example",
-      "firstName": "Alice",
-      "lastName": "Green",
+      "email": "jan.novak@greenlogistics.example",
+      "firstName": "Jan",
+      "lastName": "Novak",
       "attributes": {
         "tenant_id": [
           "greenlogistics"

@@ -38,7 +38,7 @@ Use synthetic demo data only unless a customer-approved pilot explicitly changes
 | Mobile (Expo) | `./tools/start-smoke-mobile.sh` |
 | Keycloak sign-in | `http://localhost:8180` (realm `fps-local`) |
 
-Demo users live in the `demo` tenant with password `Dev1234!`: `employee1` (standard), `employee2` (company car), `employee3` (accessible), `hr-admin`, `tenant-admin`, `report-viewer`, `auditor`. A second tenant, **Green Logistics** (`gl-*` users, `tenant_id=greenlogistics`), demonstrates company-SSO / work-email tenant discovery and tenant isolation. Full user list, roles, and seeded data: [Demo Seed Data](./demo-seed-data). The two sign-in paths (company SSO vs FairSpot account) are explained in [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes).
+Demo users live in the **Green Logistics** tenant (`tenant_id=greenlogistics`) with password `Dev1234!`: `gl-employee1` (company car), `gl-employee2` (EV), `gl-employee5` (accessible), `gl-hr-admin`, `gl-tenant-admin`, `gl-report-viewer`, `gl-auditor`. Green Logistics also demonstrates company-SSO / work-email tenant discovery (the `greenlogistics.example` domain). A second tenant, **demo**, remains a bare scaffold (no seeded booking data) used to demonstrate multi-tenant isolation. Full user list, roles, and seeded data: [Demo Seed Data](./demo-seed-data). The two sign-in paths (company SSO vs FairSpot account) are explained in [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes).
 
 | Step | Role | Demo action | Evidence to show |
 | --- | --- | --- | --- |

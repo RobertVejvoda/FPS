@@ -87,7 +87,7 @@ Local infrastructure and demo auth can be started for service-level verification
 docker compose -f code/infrastructure/docker-compose.yaml up -d
 ./tools/dev-setup-auth.sh
 source ./tools/dev-env.sh
-./tools/dev-auth.sh employee1
+./tools/dev-auth.sh gl-employee1
 ```
 
 Individual services can then be run from their projects when needed:
@@ -142,7 +142,7 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d
 sh ./tools/start-smoke-mobile.sh
 ```
 
-The script starts the backend services, runs local auth setup and demo seed, configures Expo with the local OIDC issuer/client/API base URL, prints a bearer token for `employee1`, and starts Expo in LAN mode. It prefers the development machine's Tailscale IPv4 address when available; otherwise it falls back to the LAN address. It leaves Docker infrastructure running when stopped with Ctrl-C.
+The script starts the backend services, runs local auth setup and demo seed, configures Expo with the local OIDC issuer/client/API base URL, prints a bearer token for `gl-employee1`, and starts Expo in LAN mode. It prefers the development machine's Tailscale IPv4 address when available; otherwise it falls back to the LAN address. It leaves Docker infrastructure running when stopped with Ctrl-C.
 
 For stable local overrides, copy `code/mobile/fps-mobile/mobile-env.sample` to `code/mobile/fps-mobile/.env.local`. The smoke script loads that file before deriving defaults. Use it for public runtime settings only:
 
@@ -179,9 +179,9 @@ That reapplies the `fps-mobile-dev` redirect allow-list.
 For developer smoke, use the Developer Session screen to paste:
 
 - API base URL;
-- development bearer token from `./tools/dev-auth.sh employee1`.
+- development bearer token from `./tools/dev-auth.sh gl-employee1`.
 
-Available local users are `employee1`, `employee2`, `employee3`, `hr-admin`, `tenant-admin`, `report-viewer`, and `auditor`. Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm. Mobile employee smoke testing should normally use an `employee*` account; web/admin smoke testing should use the role-specific operator accounts documented in [Local Test Harness](./local-test-harness).
+Available seeded local users are `gl-employee1`, `gl-employee2`, `gl-employee3`, `gl-hr-admin`, `gl-tenant-admin`, `gl-report-viewer`, and `gl-auditor` in the Green Logistics tenant. (The legacy `employee*` / role accounts in the bare `demo` scaffold still exist in Keycloak but are not seeded with profile/booking data.) Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm. Mobile employee smoke testing should normally use a `gl-employee*` account; web/admin smoke testing should use the role-specific operator accounts documented in [Local Test Harness](./local-test-harness).
 
 Clear the session after testing from the Profile screen or debug-session screen. Development token generation and seeded OIDC demo users should be documented before `MOB009` is accepted.
 

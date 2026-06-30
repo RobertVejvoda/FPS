@@ -4,8 +4,8 @@
 #
 # Usage:
 #   ./tools/dev-auth.sh <username>
-#   ./tools/dev-auth.sh employee1
-#   ./tools/dev-auth.sh hr-admin
+#   ./tools/dev-auth.sh gl-employee1
+#   ./tools/dev-auth.sh gl-hr-admin
 #
 # Environment:
 #   KEYCLOAK_URL       default: http://localhost:8180
@@ -22,7 +22,8 @@ DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 USERNAME="${1:-}"
 if [ -z "$USERNAME" ]; then
   echo "Usage: $0 <username>" >&2
-  echo "  Available: employee1..employee25  hr-admin  tenant-admin  report-viewer  auditor" >&2
+  echo "  Seeded (Green Logistics): gl-employee1..gl-employee25  gl-hr-admin  gl-tenant-admin  gl-report-viewer  gl-auditor" >&2
+  echo "  Unseeded scaffold (demo tenant, for isolation tests): employee1..employee25  hr-admin  tenant-admin  report-viewer  auditor" >&2
   exit 1
 fi
 

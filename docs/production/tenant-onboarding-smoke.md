@@ -8,7 +8,7 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 - 🟡 **Evaluation-grade** — exists but uses demo shortcuts not suitable for production
 - ❌ **Missing** — not yet implemented; blocker issue noted
 
-**Supported local demo tenant:** `demo` (default). This is the only tenant that works end-to-end in the local harness because the Keycloak realm fixture hardcodes `tenant_id=demo` for all seeded users. The `FPS_DEMO_TENANT_ID` environment variable controls where Customer, Configuration, and profile seed scripts land their data, but Keycloak tokens always carry `demo` from a static realm import — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) will only pass when `FPS_DEMO_TENANT_ID=demo`. A second tenant (`acme-corp`) can be provisioned via `tools/provision-tenant.sh tools/templates/tenants/acme-corp.json` but its users must be added to Keycloak manually for JWT-bearing smoke steps.
+**Supported local demo tenant:** `greenlogistics` (Green Logistics). This is the tenant that works end-to-end in the local harness because the Keycloak realm fixture issues `tenant_id=greenlogistics` for the seeded `gl-*` users and `dev-seed.sh` lands the Green Logistics business data there. The `FPS_GL_TENANT_ID` environment variable (default `greenlogistics`) controls where `dev-seed.sh` and `smoke-onboarding.sh` land their data, and the `gl-*` tokens carry `greenlogistics` — smoke checks that compare the token tenant (e.g. `GET /me → tenantId`) pass for the Green Logistics users. The bare `demo` scaffold (`FPS_DEMO_TENANT_ID`, default `demo`) still exists for tenant-isolation checks but is no longer seeded with profile/booking data. A second tenant (`acme-corp`) can be provisioned via `tools/provision-tenant.sh tools/templates/tenants/acme-corp.json` but its users must be added to Keycloak manually for JWT-bearing smoke steps.
 
 **Synthetic tenant for smoke steps:** `acme-corp` (documentation only), a company with 7 employees, 1 office location (`Prague`), and a limited-capacity parking setup.
 
@@ -16,13 +16,13 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 
 | Username | Display name | Role | Demo focus |
 | --- | --- | --- | --- |
-| `employee1` | Jan Novak | Employee | Standard booking path; two vehicles (sedan + EV) |
-| `employee2` | Petra Svobodova | Employee | Company-car booking; fleet vehicle |
-| `employee3` | Tomas Dvorak | Employee | Accessibility-eligible booking |
-| `hr-admin` | Lucie Prochazkova | HR Manager | Policy, slot management, employee bootstrap |
-| `tenant-admin` | Karel Urban | Admin | Tenant setup, readiness, configuration |
-| `report-viewer` | Eva Kralova | Report Viewer | Reporting and CSV export |
-| `auditor` | Martin Cerny | Auditor | Audit record query and evidence review |
+| `gl-employee1` | Jan Novak | Employee | Standard booking path; two vehicles (sedan + EV) |
+| `gl-employee2` | Petra Svobodova | Employee | Company-car booking; fleet vehicle |
+| `gl-employee3` | Tomas Dvorak | Employee | Accessibility-eligible booking |
+| `gl-hr-admin` | Lucie Prochazkova | HR Manager | Policy, slot management, employee bootstrap |
+| `gl-tenant-admin` | Karel Urban | Admin | Tenant setup, readiness, configuration |
+| `gl-report-viewer` | Eva Kralova | Report Viewer | Reporting and CSV export |
+| `gl-auditor` | Martin Cerny | Auditor | Audit record query and evidence review |
 
 ---
 
@@ -45,15 +45,15 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 
 **Status:** ✅ Implemented
 
-Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds `demo` on startup so the API is exercisable without a UI.
+Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds the **Green Logistics** tenant (`greenlogistics`) on startup so the API is exercisable without a UI.
 
 **Verify tenant exists:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo | python3 -m json.tool
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/greenlogistics | python3 -m json.tool
 ```
 
-**Expected:** Tenant record with `tenantId=demo`, `slug=demo-company`, lifecycle state `Seeded`.
+**Expected:** Tenant record with `tenantId=greenlogistics`, `slug=greenlogistics`, lifecycle state `Seeded`.
 
 ---
 
@@ -63,15 +63,15 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo | p
 
 The local Keycloak realm (`fps-local`) is imported from `code/infrastructure/keycloak/fps-local-realm.json` which pre-configures the OIDC client, roles, and demo users. This represents step 2 for evaluation.
 
-**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `demo` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
+**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `greenlogistics` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
 
 **Verify identity is wired:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
 ```
 
-**Expected:** `{"userId": "employee1", "tenantId": "demo", "roles": ["employee"]}`
+**Expected:** `{"userId": "<gl-employee1 sub>", "tenantId": "greenlogistics", "roles": ["employee"]}`
 
 **Blocker for production:** IdP configuration UI and documented per-tenant group-to-role mapping workflow.
 
@@ -81,15 +81,15 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-`tenant-admin` is pre-configured in Keycloak with the `admin` role for `demo`. This represents the first administrator for evaluation.
+`gl-tenant-admin` is pre-configured in Keycloak with the `admin` role for `greenlogistics`. This represents the first administrator for evaluation.
 
 **Verify:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
 ```
 
-**Expected:** `{"userId": "tenant-admin", "tenantId": "demo", "roles": ["admin"]}`
+**Expected:** `{"userId": "<gl-tenant-admin sub>", "tenantId": "greenlogistics", "roles": ["admin"]}`
 
 **Blocker for production:** Formal first-admin provisioning path (mapped SSO user or FairSpot-local break-glass account creation via API). Follow-up: CUST004 evidence.
 
@@ -99,11 +99,11 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-The Configuration service seed creates `Prague` with 10 parking slots and a default policy. This represents steps 4 for evaluation.
+`dev-seed.sh` configures the Green Logistics policy and 20 `GL-HQ` parking slots (and the Configuration service also seeds a default `Prague` location for the bare `demo` scaffold on startup). This represents step 4 for evaluation.
 
 **Verify:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/parking-policy | python3 -m json.tool
 ```
 
@@ -123,8 +123,8 @@ The Tenant Admin page shows this as an amber "(pilot deferred)" item in the read
 
 **Verify deferred status appears in readiness response:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/greenlogistics/readiness | python3 -m json.tool
 ```
 
 **Expected:** Readiness response includes `{ "name": "ObjectStorageReadiness", "status": "Deferred", "reason": "Pilot limitation: ..." }`.
@@ -143,8 +143,8 @@ The Tenant Admin page shows this as an amber "(pilot deferred)" item in the read
 
 **Verify deferred status appears in readiness response:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/greenlogistics/readiness | python3 -m json.tool
 ```
 
 **Expected:** Readiness response includes `{ "name": "BrandingReadiness", "status": "Deferred", "reason": "Pilot limitation: ..." }`.
@@ -157,7 +157,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/rea
 
 **Status:** 🟡 Evaluation-grade (seed) / ✅ Implemented (API)
 
-Profile service provides `POST /profile/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for `employee1`, `employee2`, `employee3`.
+Profile service provides `POST /profile/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for `gl-employee1`, `gl-employee2`, `gl-employee3` (in the Green Logistics tenant).
 
 **Run the employee seed:**
 ```bash
@@ -166,11 +166,11 @@ Profile service provides `POST /profile/bootstrap` for seeding employee profiles
 
 **Verify profiles exist:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapshot | python3 -m json.tool
 ```
 
-**Expected:** Profile snapshot with parking eligibility, vehicle details (for employee1), and accessibility flags.
+**Expected:** Profile snapshot with parking eligibility, vehicle details (for gl-employee1), and accessibility flags.
 
 **HR import template:** `tools/templates/demo-employees.csv` and `demo-vehicles.csv` define the full employee set matching Keycloak users. Run validation:
 ```bash
@@ -188,15 +188,15 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/profile/snapsho
 The Customer service exposes `GET /tenants/{tenantId}/readiness` which checks identity, policy, profile, booking, notification, audit, and reporting readiness probes.
 
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo/readiness | python3 -m json.tool
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/greenlogistics/readiness | python3 -m json.tool
 ```
 
 **Expected after all previous steps:** `isReady: true` with per-check pass/deferred breakdown.
 
 ```json
 {
-  "tenantId": "demo",
+  "tenantId": "greenlogistics",
   "isDryRun": false,
   "isReady": true,
   "checks": [
@@ -228,25 +228,38 @@ Note: The local demo wires evaluation-grade HTTP health probes for Profile, Book
 After the tenant is configured and employees are seeded, submit a booking request via the gateway.
 
 ```bash
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 
-# Submit a booking request for tomorrow at Prague
-TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d)
+# Next workday at least +2 days out (clear of the draw cutoff; skips weekends)
+BOOK_DATE=$(python3 - <<'PY'
+from datetime import date, timedelta
+d = date.today() + timedelta(days=2)
+while d.weekday() >= 5:
+    d += timedelta(days=1)
+print(d.isoformat())
+PY
+)
 
 curl -s -X POST http://localhost:10000/bookings \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"locationId\": \"Prague\",
-    \"date\": \"$TOMORROW\",
-    \"reason\": \"onboarding smoke test\"
+    \"facilityId\": \"00000000-0000-0000-0000-000000000002\",
+    \"locationId\": \"GL-HQ\",
+    \"licensePlate\": \"1AB 2345\",
+    \"vehicleType\": \"Sedan\",
+    \"isElectric\": false,
+    \"requiresAccessibleSpot\": false,
+    \"isCompanyCar\": true,
+    \"plannedArrivalTime\": \"${BOOK_DATE}T08:00:00\",
+    \"plannedDepartureTime\": \"${BOOK_DATE}T18:00:00\"
   }" | python3 -m json.tool
 
 # Verify booking appears in the list
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | python3 -m json.tool
 ```
 
-**Expected:** Booking request with status `Pending` and employee-visible reason.
+**Expected:** Booking accepted (`202`), request `Pending`. (Draw allocation / company-car Tier-1 fixed-slot precedence is pending the Booking slot-source unification — #665.)
 
 ---
 
@@ -257,7 +270,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | pyth
 Verify that admin and booking actions produced audit records.
 
 ```bash
-TOKEN=$(./tools/dev-auth.sh auditor)
+TOKEN=$(./tools/dev-auth.sh gl-auditor)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/audit | python3 -m json.tool
 ```
 

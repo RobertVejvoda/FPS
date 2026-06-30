@@ -79,7 +79,7 @@ printf 'Gateway:  http://localhost:10000\n'
 printf 'Keycloak: http://localhost:8180\n'
 printf 'Grafana:  http://localhost:3000\n'
 printf 'Mobile:   Expo started in %s mode. See logs/local-runtime/mobile.log for QR/output.\n' "$EXPO_MODE"
-printf '\nDemo users: employee1, hr-admin, tenant-admin, auditor, report-viewer\n'
+printf '\nDemo users (Green Logistics): gl-employee1, gl-hr-admin, gl-tenant-admin, gl-auditor, gl-report-viewer\n'
 printf 'Password:   %s\n' "${FPS_DEV_PASSWORD:-Dev1234!}"
 printf '\nStop:       ./tools/local-stop.sh\n'
 printf 'Reset data: ./tools/local-stop.sh --reset\n'

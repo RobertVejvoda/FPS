@@ -75,7 +75,7 @@ For day-to-day development, the host harness runs services directly and allows a
 In a second shell:
 
 ```bash
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
 curl -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
 ```
