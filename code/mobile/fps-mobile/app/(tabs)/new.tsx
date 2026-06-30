@@ -44,7 +44,7 @@ type FieldErrors = Partial<Record<'licensePlate' | 'vehicleType' | 'plannedDepar
 type SubmitStatus =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'accepted'; requestId: string; requestedDate: string }
+  | { kind: 'accepted'; requestId: string; requestedDate: string; status: string }
   | { kind: 'rejected'; rejectionCode: string | null; reason: string | null }
   | { kind: 'unreachable'; message: string }
   | { kind: 'error'; status: number; message: string };
@@ -258,7 +258,7 @@ export default function NewBookingRoute() {
       return;
     }
     if (result.kind === 'accepted') {
-      setSubmitStatus({ kind: 'accepted', requestId: result.requestId, requestedDate });
+      setSubmitStatus({ kind: 'accepted', requestId: result.requestId, requestedDate, status: result.status });
     } else {
       setSubmitStatus(result);
     }
@@ -266,12 +266,17 @@ export default function NewBookingRoute() {
 
   if (submitStatus.kind === 'accepted') {
     const ref = formatBookingRef(submitStatus.requestId, submitStatus.requestedDate);
+    // 'Allocated' = immediate same-day / company-car Tier-1 fixed-slot allocation;
+    // otherwise the request is Pending and queued for the next Draw.
+    const allocated = submitStatus.status === 'Allocated';
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successContainer}>
-          <Text style={styles.successTitle}>Request submitted</Text>
+          <Text style={styles.successTitle}>{allocated ? 'Spot allocated' : 'Request submitted'}</Text>
           <Text style={styles.successBody}>
-            Your spot request is waiting for the next allocation draw.
+            {allocated
+              ? 'Your spot is allocated — no draw needed.'
+              : 'Your spot request is waiting for the next allocation draw.'}
           </Text>
           <View style={styles.refCard}>
             <Text style={styles.refLabel}>Reference</Text>
