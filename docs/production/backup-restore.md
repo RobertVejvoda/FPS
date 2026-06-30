@@ -1,63 +1,23 @@
 # Backup And Restore
 
-> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. This slice only classifies it; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks the public summary/replacement that will accompany the move. Nothing is moved or deleted here.
+> **Moved private (#684):** the detailed hosted-operator backup/restore procedure now lives in the private `fairspot-platform` repository at `docs/runbooks/backup-restore.md`.
 
-Backups are only useful when restore has been tested. FairSpot production readiness requires both backup automation and documented restore evidence.
+This public page records the backup and recovery contract. Provider commands, schedules, credentials, storage locations, restore drill evidence, and operator escalation steps belong in the private runbook or a client-owned operations repository.
 
-## Backup Scope
+## Public Contract
 
-| Asset | Backup requirement | Notes |
-| --- | --- | --- |
-| Service-owned data stores | Scheduled snapshots plus point-in-time or equivalent recovery where the chosen hosting option supports it. | Tenant data is isolated by tenant-safe collections, partitions, or keys inside service-owned stores. |
-| Tenant storage indexes/metadata | Reproducible provisioning scripts or migrations. | Index and partition definitions must be recoverable without relying only on data snapshots. |
-| Dapr pub/sub configuration | Infrastructure as code or versioned component manifests. | Queued messages are operational data; durable delivery should survive broker/provider restart where configured. |
-| Dapr component manifests | Versioned configuration in repository or deployment artifact. | Do not store secret values in manifests. |
-| Identity provider configuration | Exported configuration or infrastructure-managed setup. | Secrets and signing keys are handled separately. |
-| Secret store metadata | Backup according to selected secret-store product. | Secret values require stricter access and recovery controls. |
-| Object storage | Versioning or scheduled backup for reports, exports, and future attachments. | Tenant-scoped paths are required for tenant-specific restore. |
-| CI/CD and deployment config | Repository history and protected environment settings. | Environment secrets must not be recoverable from Git. |
-| Observability config | Dashboards, alert rules, and log retention policies. | Dashboards and alerts should be versioned where practical. |
+| Area | Requirement |
+| --- | --- |
+| Scope | Backups cover service-owned state stores, read models, configuration, identity mappings required for operation, object storage, and deployment metadata needed for recovery. |
+| Tenant safety | Restore procedures must preserve tenant boundaries. Tenant-scoped restore should restore only the affected tenant scope, or restore to a temporary environment first and copy back the approved tenant data. |
+| Encryption | Backup artifacts are encrypted at rest and protected as Confidential or Secret data according to their content. |
+| Evidence | Restore drills are recorded with date, scope, result, operator, and follow-up actions. |
+| RTO/RPO | Recovery targets are defined in [RTO/RPO Requirements](./rto-rpo-requirements). |
+| Ownership | Client-owned deployments may use client backup systems, but they must still satisfy the FairSpot backup/restore contract. |
 
-## Restore Order
+## Public References
 
-1. Confirm incident scope and freeze affected writes if needed.
-2. Restore infrastructure and networking baseline.
-3. Restore secret store or re-create required secrets through approved rotation.
-4. Restore identity provider configuration.
-5. Restore service-owned data stores and tenant storage scopes.
-6. Restore object storage artifacts needed by the tenant or environment.
-7. Restore Dapr component configuration and broker connectivity.
-8. Deploy services from known-good images.
-9. Validate health checks, login, booking read/write, notification consumption, audit ingestion, and reporting projections.
-10. Record restore evidence, data-loss window, and follow-up actions.
-
-## Tenant-Scoped Restore
-
-Because FairSpot uses tenant-scoped storage boundaries inside service-owned stores, tenant-scoped restore must be planned explicitly. A targeted restore should restore only the affected tenant collections, partitions, keys, and indexes where possible. If the selected managed store cannot restore an individual tenant scope safely, the runbook must restore to a temporary store first, validate the data, then copy only the approved tenant scope back.
-
-Tenant-scoped restore must preserve:
-
-- tenant storage naming and sanitisation rules;
-- indexes and unique constraints;
-- audit evidence and pseudonymised actor mappings where legally allowed;
-- Booking, Notification, Audit, Reporting, Profile, Configuration, and Customer consistency for the same recovery point.
-
-## Restore Evidence
-
-Every restore drill should record:
-
-- date, environment, actor, and approver;
-- backup source and recovery point;
-- affected services and tenants;
-- commands or workflow used;
-- validation checks performed;
-- actual recovery time and data-loss window;
-- defects found and follow-up issues.
-
-## Open Decisions
-
-- Choose snapshot frequency and retention once `OPS000` selects the hosting path.
-- Decide whether point-in-time recovery is required for the first hosted pilot.
-- Define per-tenant restore tooling after tenant provisioning is implemented.
-- Define backup encryption key ownership and recovery process.
-- Per-service backup scope is defined in [OPS008 persistence profile](./ops008-persistence-profile.md) for each PERSIST slice. Restore procedures for Configuration, Profile, Audit, Notification, and Booking fairness metrics should be added here once durable stores are implemented.
+- [RTO/RPO Requirements](./rto-rpo-requirements)
+- [Availability Model](./availability-model)
+- [Security Architecture](../architecture/security/)
+- [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary)

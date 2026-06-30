@@ -60,12 +60,14 @@ FairSpot production runtime is expected to contain:
 
 ## Operational Pages
 
+Detailed hosted-operator runbooks for the FairSpot-operated pilot live in the private `fairspot-platform` repository after #684. The public pages below keep stable responsibility contracts, readiness expectations, and customer/self-hosting architecture references.
+
 - [Availability Model](./production/availability-model): service, data, broker, identity, and deployment failure assumptions.
 - [RTO/RPO Requirements](./production/rto-rpo-requirements): recovery time and recovery point targets by capability.
-- [Backup And Restore](./production/backup-restore): backup scope, restore order, tenant-scoped restore, and restore evidence.
+- [Backup And Restore](./production/backup-restore): public backup/restore responsibility contract; private operator procedure lives in `fairspot-platform`.
 - [Monitoring](./production/monitoring): metrics, logs, traces, dashboards, alerts, and cloud-provider monitoring options.
-- [Incident Handling](./production/incident-handling): incident lifecycle, severity, communication, evidence, and follow-up.
-- [Maintenance](./production/maintenance): patching, upgrades, rollbacks, secret rotation, and operational upkeep.
+- [Incident Handling](./production/incident-handling): public incident classification and communication contract; private operator procedure lives in `fairspot-platform`.
+- [Maintenance](./production/maintenance): public maintenance responsibility model; private operator procedure lives in `fairspot-platform`.
 
 ## Cloud And Environment Notes
 
