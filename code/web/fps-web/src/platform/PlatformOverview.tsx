@@ -1,6 +1,58 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { isPlatformAdmin } from '../auth/roles';
+import { canTriagePlatformOnboarding, isPlatformAdmin } from '../auth/roles';
+import { fetchTenantRequests, type TenantRequestStatus } from '../api/platform';
 import { NotWiredBadge } from './NotWiredBadge';
+
+type CountsState =
+  | { kind: 'loading' }
+  | { kind: 'unavailable' }
+  | { kind: 'ok'; counts: Record<TenantRequestStatus, number> };
+
+// Onboarding summary card — live request counts from the TenantRequest store (PLAT008C) for
+// admins/operators. Auditors can't read prospect data, and any load failure falls back to an
+// honest "unavailable" state rather than a fake figure.
+function OnboardingCard() {
+  const { apiBaseUrl, bearerToken, roles } = useAuth();
+  const canTriage = canTriagePlatformOnboarding(roles);
+  const [state, setState] = useState<CountsState>(canTriage ? { kind: 'loading' } : { kind: 'unavailable' });
+
+  useEffect(() => {
+    if (!canTriage) { setState({ kind: 'unavailable' }); return; }
+    let active = true;
+    void fetchTenantRequests({ apiBaseUrl, bearerToken }).then((r) => {
+      if (!active) return;
+      if (r.kind !== 'ok') { setState({ kind: 'unavailable' }); return; }
+      const counts: Record<TenantRequestStatus, number> = { Requested: 0, Approved: 0, Rejected: 0 };
+      for (const it of r.data) counts[it.status] += 1;
+      setState({ kind: 'ok', counts });
+    });
+    return () => { active = false; };
+  }, [canTriage, apiBaseUrl, bearerToken]);
+
+  return (
+    <article className="plat-card">
+      <div className="plat-card-head">
+        <h3>Onboarding</h3>
+        {state.kind === 'ok' ? null : <NotWiredBadge availability="partial" slice="PLAT008C" />}
+      </div>
+      {state.kind === 'loading' && <p className="plat-muted">Loading request counts…</p>}
+      {state.kind === 'ok' && (
+        <p className="plat-muted">
+          Requested <strong>{state.counts.Requested}</strong> · Approved <strong>{state.counts.Approved}</strong> · Rejected <strong>{state.counts.Rejected}</strong>.
+          {' '}Triage them in the Onboarding queue.
+        </p>
+      )}
+      {state.kind === 'unavailable' && (
+        <p className="plat-muted">
+          {canTriage
+            ? 'Request counts are unavailable right now. Open the Onboarding queue to retry.'
+            : 'Request counts hold prospect data and are restricted for platform_auditor.'}
+        </p>
+      )}
+    </article>
+  );
+}
 
 // Platform landing (platform-dashboard-ux.md §4). This shell slice renders the frame only:
 // the red-flags strip and the Tenants / Onboarding / Activity summary cards are honest
@@ -44,15 +96,7 @@ export function PlatformOverview() {
           </p>
         </article>
 
-        <article className="plat-card">
-          <div className="plat-card-head">
-            <h3>Onboarding</h3>
-            <NotWiredBadge slice="PLAT008C" />
-          </div>
-          <p className="plat-muted">
-            Intake counts come from the TenantRequest store. The triage queue lands in PLAT008C.
-          </p>
-        </article>
+        <OnboardingCard />
 
         <article className="plat-card">
           <div className="plat-card-head">

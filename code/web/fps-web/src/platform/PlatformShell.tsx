@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { canAccessPlatformConsole, canTriagePlatformOnboarding, formatRoles } from '../auth/roles';
+import { canAccessPlatformConsole, formatRoles } from '../auth/roles';
 import { PlatformAccessDenied } from './PlatformAccessDenied';
 import { PlatformOverview } from './PlatformOverview';
 import { PlatformPlaceholderPage } from './PlatformPlaceholderPage';
 import { TenantsDirectoryPage } from './TenantsDirectoryPage';
 import { TenantDetailPage } from './TenantDetailPage';
+import { OnboardingQueuePage } from './OnboardingQueuePage';
 
 // Active nav targets in this shell slice. Order follows the design's left-nav
 // (platform-dashboard-ux.md §3): Overview · Tenants · Onboarding · Health · … · Audit.
@@ -45,8 +46,6 @@ export function PlatformShell() {
   // Auth gate: only a platform-plane identity may reach the console. A tenant/customer token
   // (even tenant admin) carries no platform_* role and is rejected with a clear state.
   if (!canAccessPlatformConsole(roles)) return <PlatformAccessDenied />;
-
-  const canTriage = canTriagePlatformOnboarding(roles);
 
   return (
     <div className="platform-shell app-shell">
@@ -91,28 +90,7 @@ export function PlatformShell() {
           <Route path="overview" element={<PlatformOverview />} />
           <Route path="tenants" element={<TenantsDirectoryPage />} />
           <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
-          <Route
-            path="onboarding"
-            element={(
-              <PlatformPlaceholderPage
-                title="Onboarding queue"
-                description="Tenant-request triage funnel (Requested → Approved → Provisioning → Ready)."
-                slice="PLAT008C"
-              >
-                {canTriage ? (
-                  <p className="plat-muted">
-                    Approve / reject controls (operator &amp; admin) will appear here once the
-                    TenantRequest queue is wired.
-                  </p>
-                ) : (
-                  <p className="plat-muted">
-                    Read-only for <strong>platform_auditor</strong>: triage actions are limited to
-                    platform_operator and platform_admin.
-                  </p>
-                )}
-              </PlatformPlaceholderPage>
-            )}
-          />
+          <Route path="onboarding" element={<OnboardingQueuePage />} />
           <Route
             path="health"
             element={(

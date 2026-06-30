@@ -968,3 +968,9 @@ select {
   .plat-table tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
   .plat-table td { border: 0; padding: 4px 0; }
 }
+
+/* ── PLAT008C onboarding queue ─────────────────────────────────────────────── */
+.plat-queue-group { margin-top: 8px; }
+.plat-queue-head { font-size: 15px; margin: 0 0 8px; }
+.plat-queue-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.plat-queue-actions .plat-input { flex: 1 1 180px; }
