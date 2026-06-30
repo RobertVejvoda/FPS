@@ -259,7 +259,7 @@ curl -s -X POST http://localhost:10000/bookings \
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | python3 -m json.tool
 ```
 
-**Expected:** Booking accepted (`202`); `gl-employee1` is a company-car holder, so it takes a `VIP-*` Tier-1 fixed slot.
+**Expected:** Booking accepted (`202`), request `Pending`. (Draw allocation / company-car Tier-1 fixed-slot precedence is pending the Booking slot-source unification — #665.)
 
 ---
 

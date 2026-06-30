@@ -373,6 +373,9 @@ license_plate_for_index() {
 #   #17 accessibility                      → prefers ACC-01
 #   #20 motorcycle                         → shared MOTO-01 area
 # Everyone else competes in the fair Tier-2 lottery on the general slots.
+# NOTE: the arrows above describe the intended allocation. The Draw currently reads
+# the Booking service's static slot config, not the seeded Configuration slots, so
+# these outcomes are not yet realised in the live Draw — see #665.
 has_company_car_for_index() { case "$1" in 1|8)      echo "true" ;; *) echo "false" ;; esac; }
 accessibility_for_index()   { case "$1" in 5|17)     echo "true" ;; *) echo "false" ;; esac; }
 is_electric_for_index()     { case "$1" in 2|5|8|10|15) echo "true" ;; *) echo "false" ;; esac; }
@@ -488,12 +491,15 @@ trigger_demo_draw() {
   fi
 }
 
-# Reserve the company-car fixed slots for the seeded company-car employees.
-# The VIP-* slots are configured without an owner because the employees' Keycloak
-# user IDs are not known until they exist. Here — after the profiles are seeded —
-# we resolve each company-car employee's Keycloak `sub` and stamp it onto the next
-# company-car-only slot, so their scheduled requests resolve a Tier-1 guaranteed
-# fixed slot instead of falling into the general draw.
+# Reserve the company-car fixed slots for the seeded company-car employees, in the
+# Configuration service. The VIP-* slots are configured without an owner because
+# the employees' Keycloak user IDs are not known until they exist; here — after the
+# profiles are seeded — we resolve each company-car employee's `sub` and stamp it
+# onto the next company-car-only slot (this drives the HR config / parking-map views).
+# NOTE: the Booking submission and Draw currently read slot capacity from the Booking
+# service's own static appsettings (ConfiguredAvailableSlotService), NOT these
+# Configuration-service slots, so this reservation does not yet drive Tier-1
+# allocation in the Draw. Wiring it through is tracked in #665.
 reserve_company_car_slots() {
   local admin_token slots_json put_body http_code index token
   local subs=()
@@ -811,7 +817,8 @@ echo "Profiles: $GL_EMPLOYEE_COUNT employees with display names (2 company-car i
 echo "Facility/location: $GL_FACILITY_LABEL / $GL_LOCATION_ID"
 echo "Vehicles: realistic CZ plates; two employees carry a second vehicle"
 echo "Parking: 20 labelled slots (A-01..A-13 general, EV-01..EV-03, ACC-01, VIP-01..VIP-02 company-car, MOTO-01)"
-echo "Bookings: $GL_BOOKING_COUNT employee requests; $GL_DRAW_DATE Draw has already run — company-car holders take VIP fixed slots, the rest compete for the ~18 general/EV/accessible slots with visible waitlist pressure"
+echo "Bookings: $GL_BOOKING_COUNT employee requests; $GL_DRAW_DATE Draw triggered."
+echo "NOTE: the Draw reads the Booking service's static slot config, not the seeded Configuration slots, so visible allocations/company-car precedence are pending #665."
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh gl-employee1)"

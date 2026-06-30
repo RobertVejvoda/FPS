@@ -22,7 +22,7 @@ The target is not full client-owned enterprise production yet. The target is a c
 | Capability | Current implementation evidence | Customer-readiness assessment |
 | --- | --- | --- |
 | Local full-stack harness | `docs/production/local-test-harness.md`, `tools/start-local-harness.sh`, seeded users, gateway on `localhost:10000`. | Good developer baseline; not yet a public domain deployment profile. |
-| Demo seed and Draw evidence | `tools/dev-seed.sh` seeds Green Logistics (`GL-HQ`) demo data and now runs a Draw with visible outcomes. | Useful for demos; needs hosted smoke evidence and reset runbook. |
+| Demo seed and Draw evidence | `tools/dev-seed.sh` seeds Green Logistics (`GL-HQ`) demo data and triggers a Draw. | Visible Draw allocations are pending the Booking slot-source unification (#665); also needs hosted smoke evidence and reset runbook. |
 | Employee booking and My Spots | Booking APIs/mobile flows implemented; UX work is tracked by `UX007` / issue #303. | Mostly usable; customer pilot depends on final mobile/web polish and hosted validation. |
 | Default vehicle | PR #312 implemented `IsDefault` and default mobile preselection. | Merged; ready for the next seed/demo pass. |
 | HR operations design | Issue #310 documents HR needs: operational workspace, Draw visibility/run action, cancellation with notification. | Not complete until implementation PR is validated and merged. |

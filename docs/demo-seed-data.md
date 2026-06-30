@@ -50,7 +50,9 @@ The two login paths an evaluator sees on the sign-in screen — **Company SSO** 
 | `VIP-01`..`VIP-02` | 2 | Company-car only — reserved per company-car employee at seed time |
 | `MOTO-01` | 1 | Motorcycle area (holds 4) |
 
-The two `VIP-*` slots are stamped with the resolved Keycloak `sub` of the company-car employees during the seed, so their scheduled requests resolve a **Tier-1 guaranteed fixed slot** instead of entering the general Draw.
+The two `VIP-*` slots are stamped with the resolved Keycloak `sub` of the company-car employees during the seed (this drives the HR config and parking-map views).
+
+> **Known limitation (#665):** the Booking submission and Draw currently read slot capacity from the Booking service's own static `appsettings.AvailableSlots`, **not** the Configuration-service slots seeded here. So the curated 20-slot layout and the company-car reservations do **not** yet drive Draw allocation, and a live seed does not currently produce visible allocated/waitlisted Draw outcomes. Wiring the seeded slots/reservations into the Draw is tracked in #665.
 
 ---
 
@@ -64,10 +66,12 @@ A separate canonical provisioning sample (`gl-v1`) can be seeded into a freshly 
 
 ## Seeded bookings
 
-After running `dev-seed.sh`, each of the 25 Green Logistics employees has one booking request for the `GL-HQ` facility, dated the next workday at least +2 days out (08:00–18:00). The script then runs the Draw for that date.
+After running `dev-seed.sh`, each of the 25 Green Logistics employees has one booking request for the `GL-HQ` facility, dated the next workday at least +2 days out (08:00–18:00). The script then triggers the Draw for that date.
 
-- **Company-car holders** (`gl-employee1`, `gl-employee8`) take their `VIP-*` Tier-1 fixed slot immediately on submission — they do **not** participate in the Tier-2 fairness lottery.
-- **Everyone else** competes in the Draw for the ~18 general / EV / accessible slots, producing a visible mix of allocated, waitlisted, and rejected outcomes (demand > capacity).
+The **intended** allocation (subject to the #665 limitation above — not yet realised in the live Draw):
+
+- **Company-car holders** (`gl-employee1`, `gl-employee8`) take their `VIP-*` Tier-1 fixed slot immediately on submission — not the Tier-2 fairness lottery.
+- **Everyone else** competes in the Draw for the general / EV / accessible slots, producing a mix of allocated, waitlisted, and rejected outcomes (demand > capacity).
 - The **accessibility** request (`gl-employee5`) prefers `ACC-01`; **EV** requests prefer the `EV-*` charger slots; the **motorcycle** request (`gl-employee20`) takes `MOTO-01`.
 
 All bookings use dates ≥+2 days to stay clear of the draw cutoff that applies to same-day/+1 requests, ensuring they enter the Draw regardless of time of day.
