@@ -27,7 +27,9 @@ FairSpot follows an open-core split (the Dapr / Diagrid pattern — see [Evaluat
 
 ## What moves private later (migration inventory)
 
-These are **candidates** — hosted-operator / platform-control-plane / commercial-internal content. They stay in the public repo **for now** (this slice deletes nothing); when the private repo lands (#660) each row moves there and the **public summary/replacement** keeps what a customer or self-hoster actually needs.
+These are **candidates** — hosted-operator / platform-control-plane / commercial-internal content. They stay in the public repo **for now** (this slice deletes nothing); when the private repo lands (#660) each row moves there and a public summary/replacement keeps what a customer or self-hoster actually needs.
+
+The **Public summary / replacement** column records the *planned* public destination for each item — linked where a public doc already exists, otherwise described as the summary that will accompany the move. This slice classifies and redirects; it does not yet write the full replacement docs.
 
 | Doc (current path under `docs/`) | Why it is private-later | Public summary / replacement |
 |---|---|---|

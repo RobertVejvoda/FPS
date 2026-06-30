@@ -1,6 +1,6 @@
 # SEC010 Cloudflare WAF and Origin Hardening Profile
 
-> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. Self-hosters: the public summary/contract is the replacement (see the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md)). No move happens in this slice.
+> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. This slice only classifies it; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks the public summary/replacement that will accompany the move. Nothing is moved or deleted here.
 
 **Status:** Ready for operator use — plan-dependent features noted throughout.
 **Prepared by:** Claude (FPS Implementer), 2026-05-29
