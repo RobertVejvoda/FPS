@@ -4,14 +4,22 @@
 # Run once after `docker compose up` when Keycloak is ready.
 #
 # Usage:
-#   ./tools/dev-setup-auth.sh
+#   ./tools/dev-setup-auth.sh                              # Green Logistics only (default)
 #   FPS_DEV_PASSWORD=MyPass123 ./tools/dev-setup-auth.sh
-#   FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh   # add more GL employees for PERF001 load tests
+#   FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh     # add more GL employees for PERF001 load tests
+#   FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh    # also add the opt-in `demo` isolation fixture
+#
+# The default setup provisions only the Green Logistics tenant — the seeded showcase
+# (./tools/dev-seed.sh). The legacy `demo` tenant is an opt-in, mostly-empty cross-tenant
+# isolation fixture (#668): a single demo tenant-admin with no profile/booking/draw data.
 #
 # Environment variables:
-#   FPS_DEMO_EMPLOYEE_COUNT   number of demo-tenant employees (default 25, max supported 25)
 #   FPS_GL_EMPLOYEE_COUNT     number of Green Logistics employees (default 25 — the guided-pilot
 #                             demo roster; gl-employee1 is always present)
+#   FPS_INCLUDE_DEMO_TENANT   set to 1 to provision the `demo` isolation fixture (default off):
+#                             one demo tenant-admin, no profiles/bookings/draws
+#   FPS_DEMO_EMPLOYEE_COUNT   demo-tenant employees to add to the fixture (default 0; any value
+#                             > 0 also enables FPS_INCLUDE_DEMO_TENANT). Max supported 25.
 #
 # Default dev password: Dev1234!  (local only, never commit real passwords)
 set -eu
@@ -20,25 +28,37 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 ADMIN_USER="${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-admin}}"
 ADMIN_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
-DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
 GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-25}"
+# Green Logistics is the default seeded showcase tenant. The legacy `demo` tenant is an
+# opt-in, mostly-empty cross-tenant isolation fixture (#668): off unless explicitly
+# requested. Asking for demo employees implicitly enables the fixture.
+DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-0}"
+INCLUDE_DEMO_TENANT="${FPS_INCLUDE_DEMO_TENANT:-0}"
+if [ "$DEMO_EMPLOYEE_COUNT" -gt 0 ]; then
+  INCLUDE_DEMO_TENANT=1
+fi
 REALM="fps-local"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
 IMPORT_REALM_FILE="$REALM_FILE"
 TMP_REALM_FILE=""
-USERS="employee1 employee2 employee3 hr-admin tenant-admin report-viewer auditor gl-employee1 gl-tenant-admin gl-hr-admin gl-auditor gl-report-viewer"
 
-if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ]; then
-  for i in $(seq 4 "$DEMO_EMPLOYEE_COUNT"); do
-    USERS="$USERS employee$i"
-  done
-fi
-
+# Default: Green Logistics users only. The opt-in demo isolation fixture adds a single
+# demo tenant-admin (plus FPS_DEMO_EMPLOYEE_COUNT employees, default 0).
+USERS="gl-employee1 gl-tenant-admin gl-hr-admin gl-auditor gl-report-viewer"
 if [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
   for i in $(seq 2 "$GL_EMPLOYEE_COUNT"); do
     USERS="$USERS gl-employee$i"
   done
+fi
+
+if [ "$INCLUDE_DEMO_TENANT" = "1" ]; then
+  USERS="$USERS tenant-admin"
+  if [ "$DEMO_EMPLOYEE_COUNT" -gt 0 ]; then
+    for i in $(seq 1 "$DEMO_EMPLOYEE_COUNT"); do
+      USERS="$USERS employee$i"
+    done
+  fi
 fi
 
 cleanup() {
@@ -186,15 +206,17 @@ if [ "$EXISTING" = "200" ]; then
     "$KEYCLOAK_URL/admin/realms/$REALM"
 fi
 
-if [ "$DEMO_EMPLOYEE_COUNT" -gt 3 ] || [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
-  TMP_REALM_FILE="$(mktemp)"
-  python3 - "$REALM_FILE" "$TMP_REALM_FILE" "$DEMO_EMPLOYEE_COUNT" "$GL_EMPLOYEE_COUNT" << 'PYEOF'
+# Preprocess the realm: filter tenants per the demo opt-in and expand the employee
+# rosters. Always runs so the default import is Green Logistics-only.
+TMP_REALM_FILE="$(mktemp)"
+python3 - "$REALM_FILE" "$TMP_REALM_FILE" "$DEMO_EMPLOYEE_COUNT" "$GL_EMPLOYEE_COUNT" "$INCLUDE_DEMO_TENANT" << 'PYEOF'
 import json
 import sys
 
-source, target, demo_count_arg, gl_count_arg = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+source, target, demo_count_arg, gl_count_arg, include_demo_arg = sys.argv[1:6]
 demo_count = int(demo_count_arg)
 gl_count = int(gl_count_arg)
+include_demo = include_demo_arg == "1"
 
 demo_names = {
     4: ("Pavel", "Cerny"),
@@ -254,24 +276,53 @@ gl_names = {
 with open(source, encoding="utf-8") as f:
     realm = json.load(f)
 
-users = realm.setdefault("users", [])
+
+def tenant_of(u):
+    tid = (u.get("attributes") or {}).get("tenant_id") or [None]
+    return tid[0] if tid else None
+
+
+# Filter the baked-in users: keep all Green Logistics; keep the `demo` tenant only as the
+# opt-in isolation fixture (its tenant-admin, plus employee1..demo_count when requested).
+kept = []
+for u in realm.get("users", []):
+    tid = tenant_of(u)
+    name = u.get("username", "")
+    if tid == "greenlogistics":
+        kept.append(u)
+    elif tid == "demo":
+        if not include_demo:
+            continue
+        if name == "tenant-admin":
+            kept.append(u)
+        elif name.startswith("employee") and name[len("employee"):].isdigit() \
+                and 1 <= int(name[len("employee"):]) <= demo_count:
+            kept.append(u)
+        # demo hr-admin/report-viewer/auditor are intentionally dropped: the isolation
+        # fixture only needs a tenant-admin principal in a second tenant.
+    else:
+        kept.append(u)
+
+realm["users"] = users = kept
 existing = {u.get("username") for u in users}
 
-for index in range(4, demo_count + 1):
-    username = f"employee{index}"
-    if username in existing:
-        continue
-    first, last = demo_names.get(index, ("Demo", f"Employee{index}"))
-    users.append({
-        "username": username,
-        "enabled": True,
-        "email": f"{username}@demo-company.local",
-        "firstName": first,
-        "lastName": last,
-        "attributes": {"tenant_id": ["demo"]},
-        "realmRoles": ["employee"],
-        "credentials": []
-    })
+# Extended demo employees (4..demo_count) only when the fixture is enabled.
+if include_demo:
+    for index in range(4, demo_count + 1):
+        username = f"employee{index}"
+        if username in existing:
+            continue
+        first, last = demo_names.get(index, ("Demo", f"Employee{index}"))
+        users.append({
+            "username": username,
+            "enabled": True,
+            "email": f"{username}@demo-company.local",
+            "firstName": first,
+            "lastName": last,
+            "attributes": {"tenant_id": ["demo"]},
+            "realmRoles": ["employee"],
+            "credentials": []
+        })
 
 for index in range(2, gl_count + 1):
     username = f"gl-employee{index}"
@@ -293,8 +344,7 @@ with open(target, "w", encoding="utf-8") as f:
     json.dump(realm, f, indent=2)
     f.write("\n")
 PYEOF
-  IMPORT_REALM_FILE="$TMP_REALM_FILE"
-fi
+IMPORT_REALM_FILE="$TMP_REALM_FILE"
 
 echo "Importing realm '$REALM'..."
 curl -sf -X POST \
@@ -325,32 +375,28 @@ for USERNAME in $USERS; do
   echo "Password set: $USERNAME"
 done
 
-echo "Validating demo token claims..."
-for USERNAME in employee1 employee4; do
-  TOKEN=$(get_user_token "$USERNAME")
-  if [ -z "$TOKEN" ]; then
-    echo "ERROR: Could not get validation token for '$USERNAME'."
-    exit 1
+if [ "$INCLUDE_DEMO_TENANT" = "1" ]; then
+  echo "Validating demo isolation-fixture token claims..."
+  # tenant-admin is always present in the fixture; employee1 only when demo employees
+  # were requested (FPS_DEMO_EMPLOYEE_COUNT > 0).
+  DEMO_VALIDATE_USERS="tenant-admin"
+  if [ "$DEMO_EMPLOYEE_COUNT" -gt 0 ]; then
+    DEMO_VALIDATE_USERS="$DEMO_VALIDATE_USERS employee1"
   fi
-  TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
-  if [ "$TENANT_ID" != "demo" ]; then
-    echo "ERROR: Token for '$USERNAME' has tenant_id='$TENANT_ID' (expected demo)."
-    exit 1
-  fi
-done
-for USERNAME in hr-admin tenant-admin report-viewer auditor; do
-  TOKEN=$(get_user_token "$USERNAME")
-  if [ -z "$TOKEN" ]; then
-    echo "ERROR: Could not get validation token for '$USERNAME'."
-    exit 1
-  fi
-  TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
-  if [ "$TENANT_ID" != "demo" ]; then
-    echo "ERROR: Token for '$USERNAME' has tenant_id='$TENANT_ID' (expected demo)."
-    exit 1
-  fi
-done
-echo "Demo token claims: ok"
+  for USERNAME in $DEMO_VALIDATE_USERS; do
+    TOKEN=$(get_user_token "$USERNAME")
+    if [ -z "$TOKEN" ]; then
+      echo "ERROR: Could not get validation token for '$USERNAME'."
+      exit 1
+    fi
+    TENANT_ID=$(jwt_claim "$TOKEN" tenant_id)
+    if [ "$TENANT_ID" != "demo" ]; then
+      echo "ERROR: Token for '$USERNAME' has tenant_id='$TENANT_ID' (expected demo)."
+      exit 1
+    fi
+  done
+  echo "Demo token claims: ok"
+fi
 
 echo "Validating Green Logistics token claims..."
 for USERNAME in gl-employee1 gl-tenant-admin gl-hr-admin gl-auditor gl-report-viewer; do
@@ -389,7 +435,7 @@ echo "Realm:    $REALM"
 echo "Users:    $USERS"
 echo "Password: \$FPS_DEV_PASSWORD (default: Dev1234!)"
 echo ""
-echo "Green Logistics tenant (tenant_id=greenlogistics) — the seeded demo (./tools/dev-seed.sh):"
+echo "Green Logistics tenant (tenant_id=greenlogistics) — the seeded showcase (./tools/dev-seed.sh):"
 echo "  ./tools/dev-auth.sh gl-employee1"
 echo "  ./tools/dev-auth.sh gl-tenant-admin"
 echo "  ./tools/dev-auth.sh gl-hr-admin"
@@ -399,8 +445,16 @@ if [ "$GL_EMPLOYEE_COUNT" -gt 1 ]; then
   echo "  (plus gl-employee2..gl-employee$GL_EMPLOYEE_COUNT from FPS_GL_EMPLOYEE_COUNT=$GL_EMPLOYEE_COUNT)"
 fi
 echo ""
-echo "Demo tenant (tenant_id=demo) — bare scaffold for tenant-isolation tests (not seeded with profile/booking data):"
-echo "  ./tools/dev-auth.sh employee1"
+if [ "$INCLUDE_DEMO_TENANT" = "1" ]; then
+  echo "Demo tenant (tenant_id=demo) — opt-in cross-tenant isolation fixture (no profile/booking/draw data):"
+  echo "  ./tools/dev-auth.sh tenant-admin"
+  if [ "$DEMO_EMPLOYEE_COUNT" -gt 0 ]; then
+    echo "  (plus employee1..employee$DEMO_EMPLOYEE_COUNT from FPS_DEMO_EMPLOYEE_COUNT=$DEMO_EMPLOYEE_COUNT)"
+  fi
+else
+  echo "Demo tenant (tenant_id=demo) — not provisioned. It is an opt-in isolation fixture only:"
+  echo "  FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh"
+fi
 echo ""
 echo "For load-test seed (PERF001):"
 echo "  FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh"
