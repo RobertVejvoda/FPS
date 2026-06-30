@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchPlatformTenants, fetchPlatformTenantDetail } from './platform';
+import {
+  fetchPlatformTenants,
+  fetchPlatformTenantDetail,
+  fetchTenantRequests,
+  decideTenantRequest,
+  normalizeRequestStatus,
+  isDecidable,
+} from './platform';
 
 // PLAT008B — the platform directory/detail API maps HTTP outcomes to FetchResult kinds the
 // pages render as loading/ok/empty/error/unauthenticated states, and sends the platform bearer.
@@ -58,5 +65,63 @@ describe('fetchPlatformTenantDetail', () => {
     vi.stubGlobal('fetch', fetchMock);
     await fetchPlatformTenantDetail(cfg, 'a/b');
     expect(fetchMock.mock.calls[0][0]).toBe('http://api/platform/tenants/a%2Fb');
+  });
+});
+
+// PLAT008C onboarding queue
+
+describe('normalizeRequestStatus / isDecidable', () => {
+  it('maps the numeric enum (and string fallback) to a status label', () => {
+    expect(normalizeRequestStatus(0)).toBe('Requested');
+    expect(normalizeRequestStatus(1)).toBe('Approved');
+    expect(normalizeRequestStatus(2)).toBe('Rejected');
+    expect(normalizeRequestStatus('Approved')).toBe('Approved');
+  });
+  it('only Requested items are decidable', () => {
+    expect(isDecidable('Requested')).toBe(true);
+    expect(isDecidable('Approved')).toBe(false);
+    expect(isDecidable('Rejected')).toBe(false);
+  });
+});
+
+describe('fetchTenantRequests', () => {
+  it('normalizes status and drops the raw actor hash from the typed result', async () => {
+    const wire = [{
+      requestId: 'r1', company: 'Globex', primaryDomain: 'globex.com', contactEmail: 'a@globex.com',
+      message: 'hi', status: 0, createdAt: '2026-06-30T00:00:00Z', decidedAt: null, decisionReason: null,
+      decidedByHash: 'SHOULD-NOT-SURFACE',
+    }];
+    vi.stubGlobal('fetch', mockFetch(200, wire));
+    const r = await fetchTenantRequests(cfg);
+    expect(r.kind).toBe('ok');
+    if (r.kind === 'ok') {
+      expect(r.data[0].status).toBe('Requested');
+      expect(JSON.stringify(r.data[0])).not.toContain('decidedByHash');
+      expect(JSON.stringify(r.data[0])).not.toContain('SHOULD-NOT-SURFACE');
+    }
+  });
+
+  it('maps 403 (auditor / unauthorized) to unauthenticated', async () => {
+    vi.stubGlobal('fetch', mockFetch(403, {}));
+    expect((await fetchTenantRequests(cfg)).kind).toBe('unauthenticated');
+  });
+});
+
+describe('decideTenantRequest', () => {
+  it('POSTs the reason to the approve/reject path with the bearer token', async () => {
+    const fetchMock = mockFetch(200, {});
+    vi.stubGlobal('fetch', fetchMock);
+    await decideTenantRequest(cfg, 'r1', 'approve', 'looks good');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api/tenant-requests/r1/approve');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ reason: 'looks good' });
+    expect(init.headers.Authorization).toBe('Bearer plat-token');
+  });
+
+  it('surfaces the backend error detail on a 400', async () => {
+    vi.stubGlobal('fetch', mockFetch(400, { error: 'Request already decided.' }));
+    const r = await decideTenantRequest(cfg, 'r1', 'reject', '');
+    expect(r).toEqual({ kind: 'error', status: 400, message: 'Request already decided.' });
   });
 });
