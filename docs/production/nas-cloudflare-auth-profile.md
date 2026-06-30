@@ -1,5 +1,7 @@
 # OPS012 NAS Cloudflare Auth and Gateway Profile
 
+> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. Self-hosters: the public summary/contract is the replacement (see the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md)). No move happens in this slice.
+
 **Status:** Ready for operator use — complete all steps before allowing customer traffic.
 **Prepared by:** Claude (FPS Implementer), 2026-05-29
 **Tracks:** Issue #316

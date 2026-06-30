@@ -1,5 +1,7 @@
 # OPS000 Deployment Profile Strategy
 
+> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. Self-hosters: the public summary/contract is the replacement (see the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md)). No move happens in this slice.
+
 **Status:** Baseline merged; provider-specific production choice remains client/environment dependent.
 
 **Prepared by:** Claude (FairSpot Implementer), 2026-05-14

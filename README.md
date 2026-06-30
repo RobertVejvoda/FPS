@@ -112,6 +112,12 @@ Stop or reset:
 - **Documentation site**: product, architecture, security, roadmap, demo, and client-evaluation material.
 - **GitHub issues and project board**: maintainer/operator workflow for implementation slices, agent handoffs, troubleshooting, and runbooks.
 
+## Open Core
+
+This repository is the **public open-core `fairspot`** product: the runtime, the fairness/Draw engine, tenant self-administration, and all customer-facing and architectural documentation — everything needed to self-host and inspect one organisation under AGPL.
+
+The **hosted operator product** — the cross-tenant platform console, hosted-deployment runbooks, onboarding-queue internals, usage metering, and sensitive operating procedures — is a separate, commercial **platform plane** planned for a private `fairspot-platform` repository; it is not part of this repo. Some hosted-operator runbooks still sit under `docs/production/` today and are marked for that move. See the [Open-Core Documentation Boundary](./docs/strategy-layer/open-core-boundary.md) for what is public versus private-later.
+
 ## License
 
 FairSpot is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](./LICENSE).
