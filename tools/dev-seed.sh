@@ -1,34 +1,39 @@
 #!/usr/bin/env bash
-# dev-seed.sh — Seed local demo data for FPS smoke testing.
+# dev-seed.sh — Seed the local Green Logistics demo for FPS smoke testing.
+#
+# This is the single guided-pilot demo: the Green Logistics tenant (tenant_id
+# greenlogistics, location GL-HQ) with login-capable gl-* users. A fresh seed
+# gives a fresh evaluator a believable, multi-combi Green Logistics workspace.
 #
 # Requires:
-#   - Services running: Identity (:5192), Profile (:5197), Booking (:5131)
-#   - ./tools/dev-setup-auth.sh completed (Keycloak clients configured)
+#   - Services running: Identity (:5192), Profile (:5197), Booking (:5131), Configuration (:5141)
+#   - ./tools/dev-setup-auth.sh completed with 25 GL users
+#     (FPS_GL_EMPLOYEE_COUNT defaults to 25)
 #
 # Usage:
-#   ./tools/dev-seed.sh   — seed all demo data
+#   ./tools/dev-seed.sh   — seed the Green Logistics demo
 #
 # Idempotency:
-#   Local demo runtime state is cleared by default before seeding.
+#   Local runtime state is cleared by default before seeding.
 #   Profile seeding is idempotent (overwrites existing snapshot).
 #   Set FPS_DEV_SEED_RESET_STATE=false to append to existing local state.
 #
-# What is seeded:
-#   Profiles:  25 demo employees by default, plus role users. The roster mixes
-#              2 company-car holders, 1 accessibility user, 3 EV drivers, and 1
-#              motorcycle; the rest are regular cars.
-#   Vehicles:  one vehicle per employee with a realistic CZ plate (EV/motorcycle
-#              where the roster calls for it)
-#   Bookings:  25 future Draw requests by default, one per profiled employee, each
-#              carrying that employee's real attributes
+# What is seeded (all synthetic, demo-only):
+#   Parking:   20 human-labelled GL-HQ slots — A-01..A-13 general, EV-01..EV-03
+#              chargers, ACC-01 accessible, VIP-01..VIP-02 company-car, MOTO-01
+#              motorcycle (holds 4).
+#   Profiles:  25 Green Logistics employees by default, plus role users. The
+#              roster mixes — and combines — the special cases: 2 company-car
+#              holders (one electric), 2 accessibility users (one electric), 5 EV
+#              drivers, 1 motorcycle, and 2 multi-vehicle employees; the rest are
+#              regular cars. Realistic CZ plates throughout.
+#   Bookings:  25 future Draw requests by default, one per employee, each carrying
+#              that employee's real attributes.
 #   Draw:      runs the next future workday Draw so the demo immediately shows
-#              company-car Tier-1 fixed slots plus allocated/waitlisted draw outcomes
-#   Admin profiles: hr-admin, tenant-admin, report-viewer, auditor (no parking)
+#              company-car Tier-1 fixed slots plus allocated/waitlisted outcomes.
+#   Role profiles: gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor (no parking).
 #
-#   Configuration (policy + slots) — seeded automatically by Configuration service on startup
-#   Notifications, audit records, reporting — populated via Dapr events from booking submissions
-#
-# Seed data is demo-only. For pilot use, seed via tools/validate-hr-import.sh + POST /profile/bootstrap.
+#   Notifications, audit records, reporting — populated via Dapr events from booking submissions.
 
 set -euo pipefail
 
@@ -36,13 +41,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROFILE_URL="${PROFILE_URL:-http://localhost:5197}"
 BOOKING_URL="${BOOKING_URL:-http://localhost:5131}"
 CONFIG_URL="${CONFIG_URL:-http://localhost:5141}"
-DEMO_TENANT="${FPS_DEMO_TENANT_ID:-demo}"
-DEMO_FACILITY_ID="${FPS_DEMO_FACILITY_ID:-00000000-0000-0000-0000-000000000001}"
-DEMO_FACILITY_LABEL="${FPS_DEMO_FACILITY_LABEL:-Headquarters}"
-DEMO_LOCATION_ID="${FPS_DEMO_LOCATION_ID:-Prague}"
-DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
-DEMO_BOOKING_COUNT="${FPS_DEMO_BOOKING_COUNT:-$DEMO_EMPLOYEE_COUNT}"
-DEMO_DRAW_MIN_OFFSET="${FPS_DEMO_DRAW_MIN_OFFSET:-2}"
+GL_TENANT="${FPS_GL_TENANT_ID:-greenlogistics}"
+GL_FACILITY_ID="${FPS_GL_FACILITY_ID:-00000000-0000-0000-0000-000000000002}"
+GL_FACILITY_LABEL="${FPS_GL_FACILITY_LABEL:-Green Logistics HQ}"
+GL_LOCATION_ID="${FPS_GL_LOCATION_ID:-GL-HQ}"
+GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-25}"
+GL_BOOKING_COUNT="${FPS_GL_BOOKING_COUNT:-$GL_EMPLOYEE_COUNT}"
+GL_DRAW_MIN_OFFSET="${FPS_GL_DRAW_MIN_OFFSET:-2}"
 IDENTITY_URL="${IDENTITY_URL:-http://localhost:5192}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
@@ -50,13 +55,20 @@ CLIENT_ID="${FPS_LOCAL_CLIENT:-fps-mobile-dev}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 RESET_DEMO_STATE="${FPS_DEV_SEED_RESET_STATE:-true}"
 
+# Green Logistics login users (the gl-* realm users created by dev-setup-auth.sh).
+EMPLOYEE_PREFIX="gl-employee"
+TENANT_ADMIN_USER="gl-tenant-admin"
+HR_ADMIN_USER="gl-hr-admin"
+REPORT_VIEWER_USER="gl-report-viewer"
+AUDITOR_USER="gl-auditor"
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 ok()  { echo -e "  ${GREEN}OK${NC}  $1"; }
 err() { echo -e "  ${RED}ERR${NC} $1"; }
 
-echo "== FPS local demo seed =="
+echo "== FPS Green Logistics demo seed =="
 
 # Check required services
 for check_url in "$IDENTITY_URL/openapi/v1.json" "$PROFILE_URL/openapi/v1.json" "$BOOKING_URL/openapi/v1.json" "$CONFIG_URL/openapi/v1.json"; do
@@ -177,6 +189,49 @@ next_workday_offset() {
   return 1
 }
 
+# Configure the 20 human-labelled GL-HQ parking slots. The SlotId is what the
+# parking map and HR views render (there is no separate label field), so the IDs
+# read as human labels. The feature mix exercises every allocation path.
+configure_gl_slots() {
+  local admin_token slots_json http_code
+  admin_token=$(get_token "$TENANT_ADMIN_USER")
+  [ -z "$admin_token" ] && { err "No token for $TENANT_ADMIN_USER — run ./tools/dev-setup-auth.sh first"; return 1; }
+
+  slots_json=$(python3 << 'PYEOF'
+import json
+
+def slot(slot_id, charger=False, accessible=False, company_car=False, motorcycle=False, units=None):
+    return {
+        "slotId": slot_id, "isActive": True, "hasCharger": charger,
+        "isAccessible": accessible, "isCompanyCarOnly": company_car,
+        "isMotorcycleCapacity": motorcycle, "reservedForUserId": None,
+        "motorcycleCapacityUnits": units,
+    }
+
+slots = [slot(f"A-{i:02d}") for i in range(1, 14)]      # 13 general
+slots += [slot(f"EV-{i:02d}", charger=True) for i in range(1, 4)]
+slots.append(slot("ACC-01", accessible=True))
+slots += [slot(f"VIP-{i:02d}", company_car=True) for i in range(1, 3)]
+slots.append(slot("MOTO-01", motorcycle=True, units=4))
+print(json.dumps({"slots": slots, "changeReason": "Green Logistics demo seed: parking layout"}))
+PYEOF
+)
+
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X PUT "$CONFIG_URL/configuration/locations/$GL_LOCATION_ID/slots" \
+    -H "Authorization: Bearer $admin_token" \
+    -H "Content-Type: application/json" \
+    -d "$slots_json" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
+
+  if [ "$http_code" = "204" ]; then
+    ok "Configured 20 $GL_LOCATION_ID slots (13 general, 3 EV, 1 accessible, 2 company-car, 1 motorcycle)"
+  else
+    err "GL-HQ slot configuration PUT HTTP $http_code"
+    return 1
+  fi
+}
+
 seed_profile() {
   local username="$1" display_name="$2" has_company_car="$3" accessibility="$4" vehicles="$5"
 
@@ -189,14 +244,14 @@ seed_profile() {
   user_id=$(jwt_sub "$token")
 
   local parking_eligible="true"
-  [[ "$username" == "tenant-admin" || "$username" == "report-viewer" || "$username" == "auditor" ]] && parking_eligible="false"
+  [[ "$username" == "$TENANT_ADMIN_USER" || "$username" == "$REPORT_VIEWER_USER" || "$username" == "$AUDITOR_USER" ]] && parking_eligible="false"
 
   local http_code
   http_code=$(curl -s -o /dev/null -w "%{http_code}" \
     -X PUT "$PROFILE_URL/profile/admin/snapshot" \
     -H "Content-Type: application/json" \
     -d "{
-      \"tenantId\": \"$DEMO_TENANT\",
+      \"tenantId\": \"$GL_TENANT\",
       \"userId\": \"$user_id\",
       \"displayName\": \"$display_name\",
       \"parkingEligible\": $parking_eligible,
@@ -242,7 +297,7 @@ display_name_for_index() {
     23) echo "Zuzana Krejci" ;;
     24) echo "Milan Tichy" ;;
     25) echo "Ivana Ruzickova" ;;
-    *) printf 'Demo Employee %02d\n' "$1" ;;
+    *) printf 'GL Employee %02d\n' "$1" ;;
   esac
 }
 
@@ -262,9 +317,8 @@ license_plate_for_index() {
 }
 
 # ── Green Logistics population mix (multi-combi) ──────────────────────────────
-# The single Green Logistics demo deliberately spreads — and combines — the
-# special cases across the roster so one Draw exercises every allocation path and
-# every realistic combination:
+# The demo deliberately spreads — and combines — the special cases across the
+# roster so one Draw exercises every allocation path and every realistic combo:
 #   #1  company-car                        → Tier-1 fixed slot (VIP-*)
 #   #2  EV                                 → prefers a charger slot (EV-*)
 #   #3  two vehicles (car + motorcycle)    → books the default car
@@ -299,9 +353,9 @@ vehicle_json_for_index() {
   esac
 }
 
-seed_demo_employee_profile() {
+seed_gl_employee_profile() {
   local index="$1" username display_name vehicles company_car accessibility
-  username="employee$index"
+  username="${EMPLOYEE_PREFIX}$index"
   display_name=$(display_name_for_index "$index")
   vehicles=$(vehicle_json_for_index "$index")
   company_car=$(has_company_car_for_index "$index")
@@ -331,8 +385,8 @@ seed_booking() {
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
     -d "{
-      \"facilityId\": \"$DEMO_FACILITY_ID\",
-      \"locationId\": \"$DEMO_LOCATION_ID\",
+      \"facilityId\": \"$GL_FACILITY_ID\",
+      \"locationId\": \"$GL_LOCATION_ID\",
       \"licensePlate\": \"$license_plate\",
       \"vehicleType\": \"$vehicle_type\",
       \"isElectric\": $is_electric,
@@ -355,8 +409,8 @@ trigger_demo_draw() {
   local date_offset="$1"
 
   local token draw_date start end response http_code body allocated rejected waitlisted status
-  token=$(get_token "tenant-admin")
-  [ -z "$token" ] && { err "No token for tenant-admin"; return 1; }
+  token=$(get_token "$TENANT_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $TENANT_ADMIN_USER"; return 1; }
 
   draw_date=$(future_date "$date_offset")
   start="${draw_date}T08:00:00"
@@ -367,11 +421,11 @@ trigger_demo_draw() {
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
     -d "{
-      \"locationId\": \"$DEMO_LOCATION_ID\",
+      \"locationId\": \"$GL_LOCATION_ID\",
       \"date\": \"$draw_date\",
       \"timeSlotStart\": \"$start\",
       \"timeSlotEnd\": \"$end\",
-      \"reason\": \"Local demo seed Draw\"
+      \"reason\": \"Green Logistics demo seed Draw\"
     }" 2>/dev/null || true)
 
   http_code=$(printf '%s' "$response" | tail -n 1)
@@ -382,28 +436,28 @@ trigger_demo_draw() {
     allocated=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('allocatedCount',0))")
     rejected=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('rejectedCount',0))")
     waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('waitlistedCount',0))")
-    ok "Demo Draw $draw_date ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted"
+    ok "Green Logistics Draw $draw_date ($status): $allocated allocated, $rejected rejected, $waitlisted waitlisted"
   else
-    err "Demo Draw $draw_date HTTP ${http_code:-000}"
+    err "Green Logistics Draw $draw_date HTTP ${http_code:-000}"
     [ -n "$body" ] && echo "$body"
     return 1
   fi
 }
 
 # Reserve the company-car fixed slots for the seeded company-car employees.
-# The Configuration startup seed creates the company-car-only slots (VIP-*) without an
-# owner, because the employees' Keycloak user IDs are not known until they exist. Here —
-# after the profiles are seeded — we resolve each company-car employee's Keycloak `sub`
-# and stamp it onto the next company-car-only slot, so their scheduled requests resolve a
-# Tier-1 guaranteed fixed slot instead of falling into the general draw.
+# The VIP-* slots are configured without an owner because the employees' Keycloak
+# user IDs are not known until they exist. Here — after the profiles are seeded —
+# we resolve each company-car employee's Keycloak `sub` and stamp it onto the next
+# company-car-only slot, so their scheduled requests resolve a Tier-1 guaranteed
+# fixed slot instead of falling into the general draw.
 reserve_company_car_slots() {
   local admin_token slots_json put_body http_code index token
   local subs=()
 
-  for index in $(seq 1 "$DEMO_EMPLOYEE_COUNT"); do
+  for index in $(seq 1 "$GL_EMPLOYEE_COUNT"); do
     if [ "$(has_company_car_for_index "$index")" = "true" ]; then
-      token=$(get_token "employee$index")
-      [ -z "$token" ] && { err "No token for employee$index (company-car)"; return 1; }
+      token=$(get_token "${EMPLOYEE_PREFIX}$index")
+      [ -z "$token" ] && { err "No token for ${EMPLOYEE_PREFIX}$index (company-car)"; return 1; }
       subs+=("$(jwt_sub "$token")")
     fi
   done
@@ -413,13 +467,13 @@ reserve_company_car_slots() {
     return 0
   fi
 
-  admin_token=$(get_token "tenant-admin")
-  [ -z "$admin_token" ] && { err "No token for tenant-admin"; return 1; }
+  admin_token=$(get_token "$TENANT_ADMIN_USER")
+  [ -z "$admin_token" ] && { err "No token for $TENANT_ADMIN_USER"; return 1; }
 
   slots_json=$(curl -sf -H "Authorization: Bearer $admin_token" \
-    "$CONFIG_URL/configuration/locations/$DEMO_LOCATION_ID/slots" 2>/dev/null || true)
+    "$CONFIG_URL/configuration/locations/$GL_LOCATION_ID/slots" 2>/dev/null || true)
   if [ -z "$slots_json" ]; then
-    err "Could not read slots from Configuration ($CONFIG_URL/configuration/locations/$DEMO_LOCATION_ID/slots)"
+    err "Could not read slots from Configuration ($CONFIG_URL/configuration/locations/$GL_LOCATION_ID/slots)"
     return 1
   fi
 
@@ -455,12 +509,12 @@ for s in slots:
         "reservedForUserId": s.get("__reserved") or field(s, "reservedForUserId", "ReservedForUserId"),
         "motorcycleCapacityUnits": field(s, "motorcycleCapacityUnits", "MotorcycleCapacityUnits"),
     })
-print(json.dumps({"slots": out, "changeReason": "Demo seed: company-car fixed-slot reservations"}))
+print(json.dumps({"slots": out, "changeReason": "Green Logistics demo seed: company-car fixed-slot reservations"}))
 PYEOF
 )
 
   http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X PUT "$CONFIG_URL/configuration/locations/$DEMO_LOCATION_ID/slots" \
+    -X PUT "$CONFIG_URL/configuration/locations/$GL_LOCATION_ID/slots" \
     -H "Authorization: Bearer $admin_token" \
     -H "Content-Type: application/json" \
     -d "$put_body" 2>/dev/null || true)
@@ -476,28 +530,28 @@ PYEOF
 
 verify_hr_display_names() {
   local hr_token
-  hr_token=$(get_token "hr-admin")
-  [ -z "$hr_token" ] && { err "No token for hr-admin"; return 1; }
+  hr_token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$hr_token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
   if [ -z "$(jwt_claim "$hr_token" tenant_id)" ]; then
-    err "Token for hr-admin has no tenant_id claim — rerun ./tools/dev-setup-auth.sh"
+    err "Token for $HR_ADMIN_USER has no tenant_id claim — rerun ./tools/dev-setup-auth.sh"
     return 1
   fi
 
   local sample_indices=("1")
-  if [ "$DEMO_EMPLOYEE_COUNT" -ge 4 ]; then
+  if [ "$GL_EMPLOYEE_COUNT" -ge 4 ]; then
     sample_indices+=("4")
   fi
-  if [ "$DEMO_EMPLOYEE_COUNT" -ge 25 ]; then
+  if [ "$GL_EMPLOYEE_COUNT" -ge 25 ]; then
     sample_indices+=("25")
-  elif [ "$DEMO_EMPLOYEE_COUNT" -gt 4 ]; then
-    sample_indices+=("$DEMO_EMPLOYEE_COUNT")
+  elif [ "$GL_EMPLOYEE_COUNT" -gt 4 ]; then
+    sample_indices+=("$GL_EMPLOYEE_COUNT")
   fi
 
   local user_ids=()
   local expected_pairs=()
   local index username token user_id display_name
   for index in "${sample_indices[@]}"; do
-    username="employee$index"
+    username="${EMPLOYEE_PREFIX}$index"
     token=$(get_token "$username")
     [ -z "$token" ] && { err "No token for $username while verifying display names"; return 1; }
     user_id=$(jwt_sub "$token")
@@ -549,13 +603,13 @@ PYEOF
 verify_hr_booking_display_names() {
   local draw_date="$1"
   local hr_token
-  hr_token=$(get_token "hr-admin")
-  [ -z "$hr_token" ] && { err "No token for hr-admin"; return 1; }
+  hr_token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$hr_token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
 
   local response http_code body requestor_refs_json
   response=$(curl -s -w "\n%{http_code}" \
     -H "Authorization: Bearer $hr_token" \
-    "$BOOKING_URL/bookings/operations?locationId=$DEMO_LOCATION_ID&from=$draw_date&to=$draw_date&pageSize=200" 2>/dev/null || true)
+    "$BOOKING_URL/bookings/operations?locationId=$GL_LOCATION_ID&from=$draw_date&to=$draw_date&pageSize=200" 2>/dev/null || true)
 
   http_code=$(printf '%s' "$response" | tail -n 1)
   body=$(printf '%s' "$response" | sed '$d')
@@ -634,23 +688,28 @@ PYEOF
   ok "HR Parking Requests rows resolve requestor names ($requestor_count requestors)"
 }
 
-# ── profiles ─────────────────────────────────────────────────────────────────
+# ── parking ──────────────────────────────────────────────────────────────────
 
 reset_local_demo_state
 
 echo ""
+echo "-- Parking ($GL_LOCATION_ID) --"
+configure_gl_slots
+
+# ── profiles ─────────────────────────────────────────────────────────────────
+
+echo ""
 echo "-- Profiles --"
 
-for index in $(seq 1 "$DEMO_EMPLOYEE_COUNT"); do
-  seed_demo_employee_profile "$index"
+for index in $(seq 1 "$GL_EMPLOYEE_COUNT"); do
+  seed_gl_employee_profile "$index"
 done
 
 # Role users — parking not eligible, no vehicles
-# Lucie Prochazkova (hr-admin), Karel Urban (tenant-admin), Eva Kralova (report-viewer), Martin Cerny (auditor)
-seed_profile "hr-admin"      "Lucie Prochazkova" "false" "false" '[]'
-seed_profile "tenant-admin"  "Karel Urban" "false" "false" '[]'
-seed_profile "report-viewer" "Eva Kralova" "false" "false" '[]'
-seed_profile "auditor"       "Martin Cerny" "false" "false" '[]'
+seed_profile "$HR_ADMIN_USER"      "Lucie Prochazkova" "false" "false" '[]'
+seed_profile "$TENANT_ADMIN_USER"  "Karel Urban" "false" "false" '[]'
+seed_profile "$REPORT_VIEWER_USER" "Eva Kralova" "false" "false" '[]'
+seed_profile "$AUDITOR_USER"       "Martin Cerny" "false" "false" '[]'
 
 # ── company-car reservations ─────────────────────────────────────────────────
 # Must run after profiles (needs the employees to exist) and before bookings (so
@@ -670,58 +729,59 @@ echo "-- Bookings (generates notifications, audit records, and reporting data) -
 # Each request carries the employee's real attributes (company-car, accessibility,
 # EV, motorcycle) so the seeded Draw shows every allocation path: company-car
 # holders take Tier-1 fixed slots immediately, everyone else competes in the draw.
-DEMO_DRAW_OFFSET=$(next_workday_offset "$DEMO_DRAW_MIN_OFFSET")
-DEMO_DRAW_DATE=$(future_date "$DEMO_DRAW_OFFSET")
-echo "Demo Draw date: $DEMO_DRAW_DATE (+$DEMO_DRAW_OFFSET days, next workday)"
+GL_DRAW_OFFSET=$(next_workday_offset "$GL_DRAW_MIN_OFFSET")
+GL_DRAW_DATE=$(future_date "$GL_DRAW_OFFSET")
+echo "Green Logistics Draw date: $GL_DRAW_DATE (+$GL_DRAW_OFFSET days, next workday)"
 
-for index in $(seq 1 "$DEMO_BOOKING_COUNT"); do
-  if [ "$index" -gt "$DEMO_EMPLOYEE_COUNT" ]; then
+for index in $(seq 1 "$GL_BOOKING_COUNT"); do
+  if [ "$index" -gt "$GL_EMPLOYEE_COUNT" ]; then
     break
   fi
-  seed_booking "employee$index" \
+  seed_booking "${EMPLOYEE_PREFIX}$index" \
     "$(license_plate_for_index "$index")" \
     "$(vehicle_type_for_index "$index")" \
     "$(is_electric_for_index "$index")" \
     "$(has_company_car_for_index "$index")" \
     "$(accessibility_for_index "$index")" \
-    "$DEMO_DRAW_OFFSET"
+    "$GL_DRAW_OFFSET"
 done
 
-# ── demo Draw ────────────────────────────────────────────────────────────────
+# ── Draw ─────────────────────────────────────────────────────────────────────
 
 echo ""
-echo "-- Demo Draw ($DEMO_DRAW_DATE, $DEMO_LOCATION_ID 08:00-18:00) --"
-trigger_demo_draw "$DEMO_DRAW_OFFSET"
+echo "-- Green Logistics Draw ($GL_DRAW_DATE, $GL_LOCATION_ID 08:00-18:00) --"
+trigger_demo_draw "$GL_DRAW_OFFSET"
 
 echo ""
 echo "-- HR display names --"
 verify_hr_display_names
-verify_hr_booking_display_names "$DEMO_DRAW_DATE"
+verify_hr_booking_display_names "$GL_DRAW_DATE"
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
 echo ""
 echo "== Seed complete =="
-echo "Profiles: $DEMO_EMPLOYEE_COUNT employees with display names (2 company-car incl. 1 EV, 2 accessibility incl. 1 EV, 5 EV, 1 motorcycle, 2 multi-vehicle, rest regular), plus Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
-echo "Facility/location: $DEMO_FACILITY_LABEL / $DEMO_LOCATION_ID"
+echo "Tenant: $GL_TENANT (Green Logistics)"
+echo "Profiles: $GL_EMPLOYEE_COUNT employees with display names (2 company-car incl. 1 EV, 2 accessibility incl. 1 EV, 5 EV, 1 motorcycle, 2 multi-vehicle, rest regular), plus Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
+echo "Facility/location: $GL_FACILITY_LABEL / $GL_LOCATION_ID"
 echo "Vehicles: realistic CZ plates; two employees carry a second vehicle"
 echo "Parking: 20 labelled slots (A-01..A-13 general, EV-01..EV-03, ACC-01, VIP-01..VIP-02 company-car, MOTO-01)"
-echo "Bookings: $DEMO_BOOKING_COUNT employee requests; $DEMO_DRAW_DATE demo Draw has already run — company-car holders take VIP fixed slots, the rest compete for the ~18 general/EV/accessible slots with visible waitlist pressure"
+echo "Bookings: $GL_BOOKING_COUNT employee requests; $GL_DRAW_DATE Draw has already run — company-car holders take VIP fixed slots, the rest compete for the ~18 general/EV/accessible slots with visible waitlist pressure"
 echo ""
 echo "Verify:"
-echo "  TOKEN=\$(./tools/dev-auth.sh employee1)"
+echo "  TOKEN=\$(./tools/dev-auth.sh gl-employee1)"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/profile/snapshot"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/bookings"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/notifications/unread-count"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/me"
-echo "  TOKEN=\$(./tools/dev-auth.sh tenant-admin)"
-echo "  DATE=$DEMO_DRAW_DATE"
-echo "  curl -H \"Authorization: Bearer \$TOKEN\" \"http://localhost:10000/draws/\$DATE/status?locationId=$DEMO_LOCATION_ID&timeSlotStart=\${DATE}T08:00:00&timeSlotEnd=\${DATE}T18:00:00\""
+echo "  TOKEN=\$(./tools/dev-auth.sh $TENANT_ADMIN_USER)"
+echo "  DATE=$GL_DRAW_DATE"
+echo "  curl -H \"Authorization: Bearer \$TOKEN\" \"http://localhost:10000/draws/\$DATE/status?locationId=$GL_LOCATION_ID&timeSlotStart=\${DATE}T08:00:00&timeSlotEnd=\${DATE}T18:00:00\""
 echo ""
 echo "Admin/reporting:"
-echo "  TOKEN=\$(./tools/dev-auth.sh tenant-admin)"
-echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/tenants/$DEMO_TENANT/readiness"
-echo "  TOKEN=\$(./tools/dev-auth.sh report-viewer)"
+echo "  TOKEN=\$(./tools/dev-auth.sh $TENANT_ADMIN_USER)"
+echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/tenants/$GL_TENANT/readiness"
+echo "  TOKEN=\$(./tools/dev-auth.sh $REPORT_VIEWER_USER)"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/reports/parking/summary"
-echo "  TOKEN=\$(./tools/dev-auth.sh auditor)"
+echo "  TOKEN=\$(./tools/dev-auth.sh $AUDITOR_USER)"
 echo "  curl -H \"Authorization: Bearer \$TOKEN\" http://localhost:10000/audit"

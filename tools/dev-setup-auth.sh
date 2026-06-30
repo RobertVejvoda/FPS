@@ -6,11 +6,12 @@
 # Usage:
 #   ./tools/dev-setup-auth.sh
 #   FPS_DEV_PASSWORD=MyPass123 ./tools/dev-setup-auth.sh
-#   FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh   # add 50 GL employees for PERF001 load tests
+#   FPS_GL_EMPLOYEE_COUNT=50 ./tools/dev-setup-auth.sh   # add more GL employees for PERF001 load tests
 #
 # Environment variables:
 #   FPS_DEMO_EMPLOYEE_COUNT   number of demo-tenant employees (default 25, max supported 25)
-#   FPS_GL_EMPLOYEE_COUNT     number of Green Logistics employees (default 1, gl-employee1 is always present)
+#   FPS_GL_EMPLOYEE_COUNT     number of Green Logistics employees (default 25 — the guided-pilot
+#                             demo roster; gl-employee1 is always present)
 #
 # Default dev password: Dev1234!  (local only, never commit real passwords)
 set -eu
@@ -20,7 +21,7 @@ ADMIN_USER="${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-admin}}"
 ADMIN_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 DEMO_EMPLOYEE_COUNT="${FPS_DEMO_EMPLOYEE_COUNT:-25}"
-GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-1}"
+GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-25}"
 REALM="fps-local"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$(dirname "$0")/../code/infrastructure/keycloak/fps-local-realm.json"
@@ -220,32 +221,34 @@ demo_names = {
     25: ("Ivana", "Ruzickova"),
 }
 
-# GL employee names (indices 2..N; index 1 is gl-employee1 = Alice Green in realm JSON)
+# GL employee names (indices 2..N; index 1 is gl-employee1 = Jan Novak in realm JSON).
+# These mirror the curated Green Logistics demo roster seeded by dev-seed.sh, so the
+# Keycloak login name matches the Profile display name. Czech names, no diacritics.
 gl_names = {
-    2:  ("Carla",   "Novak"),
-    3:  ("David",   "Maly"),
-    4:  ("Eva",     "Kratka"),
-    5:  ("Filip",   "Dlouhy"),
-    6:  ("Gabriela","Silna"),
-    7:  ("Hana",    "Bílá"),
-    8:  ("Ivan",    "Cerny"),
-    9:  ("Jana",    "Ruda"),
-    10: ("Karel",   "Zeleny"),
-    11: ("Lenka",   "Modra"),
-    12: ("Milan",   "Zlaty"),
-    13: ("Nina",    "Stribr"),
-    14: ("Ondrej",  "Horni"),
-    15: ("Petra",   "Dolni"),
-    16: ("Radek",   "Levy"),
-    17: ("Sandra",  "Pravy"),
-    18: ("Tomas",   "Velky"),
-    19: ("Ula",     "Maly"),
-    20: ("Vaclav",  "Stary"),
-    21: ("Wendy",   "Novy"),
-    22: ("Xena",    "Prvni"),
-    23: ("Yuri",    "Druhy"),
-    24: ("Zuzana",  "Treti"),
-    25: ("Adam",    "Ctvrty"),
+    2:  ("Petra",     "Svobodova"),
+    3:  ("Tomas",     "Dvorak"),
+    4:  ("Pavel",     "Cerny"),
+    5:  ("Hana",      "Vesela"),
+    6:  ("Martin",    "Horak"),
+    7:  ("Jana",      "Kucerova"),
+    8:  ("Petr",      "Svoboda"),
+    9:  ("Lenka",     "Maresova"),
+    10: ("Michal",    "Prochazka"),
+    11: ("Veronika",  "Dvorakova"),
+    12: ("Tomas",     "Kral"),
+    13: ("Barbora",   "Urbanova"),
+    14: ("Filip",     "Sedlak"),
+    15: ("Lucie",     "Novakova"),
+    16: ("Jakub",     "Sima"),
+    17: ("Alena",     "Pokorna"),
+    18: ("Radek",     "Fiala"),
+    19: ("Marketa",   "Blazkova"),
+    20: ("David",     "Vacek"),
+    21: ("Katerina",  "Hruba"),
+    22: ("Ondrej",    "Marek"),
+    23: ("Zuzana",    "Krejci"),
+    24: ("Milan",     "Tichy"),
+    25: ("Ivana",     "Ruzickova"),
 }
 
 with open(source, encoding="utf-8") as f:
