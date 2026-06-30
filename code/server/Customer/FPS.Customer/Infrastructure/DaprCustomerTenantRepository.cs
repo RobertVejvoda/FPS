@@ -7,6 +7,7 @@ namespace FPS.Customer.Infrastructure;
 public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenantRepository
 {
     private const string Store = "customerstore";
+    private const int MaxRetries = 5;
 
     public async Task<TenantWorkspace?> GetAsync(string tenantId, CancellationToken ct)
     {
@@ -75,14 +76,30 @@ public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenan
         await daprClient.SaveStateAsync(Store, CustomerStorageKey.TenantSlug(tenant.Slug), tenant.TenantId, cancellationToken: ct);
 
         // Maintain the enumeration index used by the platform tenant directory (ListAsync).
-        var index = await daprClient.GetStateAsync<List<string>>(Store, CustomerStorageKey.TenantIndex(), cancellationToken: ct) ?? [];
-        if (!index.Contains(tenant.TenantId))
-        {
-            index.Add(tenant.TenantId);
-            await daprClient.SaveStateAsync(Store, CustomerStorageKey.TenantIndex(), index, cancellationToken: ct);
-        }
+        await AddToTenantIndexAsync(tenant.TenantId, ct);
 
         foreach (var dd in tenant.DiscoveryDomains)
             await daprClient.SaveStateAsync(Store, CustomerStorageKey.DiscoveryDomain(dd.Domain), tenant.TenantId, cancellationToken: ct);
+    }
+
+    // ETag compare-and-swap retry loop so concurrent tenant writes can't lose an index entry —
+    // a plain read/modify/write would last-write-win and silently drop a tenant from the
+    // directory. Mirrors the identity and tenant-request index helpers.
+    private async Task AddToTenantIndexAsync(string tenantId, CancellationToken ct)
+    {
+        var key = CustomerStorageKey.TenantIndex();
+        for (var attempt = 1; attempt <= MaxRetries; attempt++)
+        {
+            var (existing, etag) = await daprClient.GetStateAndETagAsync<List<string>>(Store, key, cancellationToken: ct);
+            var ids = existing ?? [];
+            if (ids.Contains(tenantId, StringComparer.OrdinalIgnoreCase))
+                return;
+            var updated = ids.Append(tenantId).ToList();
+            if (await daprClient.TrySaveStateAsync(Store, key, updated, etag, cancellationToken: ct))
+                return;
+            if (attempt < MaxRetries)
+                await Task.Delay(20 * attempt, ct);
+        }
+        throw new InvalidOperationException($"Failed to update tenant index for tenant '{tenantId}' after {MaxRetries} attempts.");
     }
 }
