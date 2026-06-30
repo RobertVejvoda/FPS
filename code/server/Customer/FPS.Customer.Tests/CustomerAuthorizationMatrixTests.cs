@@ -178,6 +178,77 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
         Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
     }
 
+    // ── GET /platform/tenants(+/{id}) — read-only platform directory/detail (RequirePlatformReader) ──
+    // PLAT008B: platform_admin / operator / auditor may read; a tenant/customer token never can,
+    // and authorization never uses tenant claims.
+
+    [Theory]
+    [InlineData(FpsRoles.PlatformAdmin)]
+    [InlineData(FpsRoles.PlatformOperator)]
+    [InlineData(FpsRoles.PlatformAuditor)]
+    public async Task PlatformTenantDirectory_PlatformRoles_PassGate(string role)
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, role).GetAsync("/platform/tenants");
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
+    }
+
+    [Theory]
+    [InlineData(FpsRoles.PlatformAdmin)]
+    [InlineData(FpsRoles.PlatformOperator)]
+    [InlineData(FpsRoles.PlatformAuditor)]
+    public async Task PlatformTenantDetail_PlatformRoles_PassGate(string role)
+    {
+        // Unknown tenant → 404, which still means the auth gate was passed (not 401/403).
+        var r = await Client(PlatformIssuer, tenantId: null, role).GetAsync("/platform/tenants/globex");
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-403/401, got {r.StatusCode}");
+    }
+
+    [Fact]
+    public async Task PlatformTenantDirectory_TenantAdmin_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.Admin).GetAsync("/platform/tenants");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlatformTenantDetail_TenantAdmin_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.Admin).GetAsync("/platform/tenants/acme");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlatformTenantDirectory_CustomerTokenWithForgedPlatformAuditorClaim_IsForbidden()
+    {
+        // A platform_auditor role minted by the customer issuer is stripped → no platform plane.
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.PlatformAuditor).GetAsync("/platform/tenants");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlatformTenantDirectory_Unauthenticated_IsUnauthorized()
+    {
+        var r = await factory.CreateClient().GetAsync("/platform/tenants");
+        Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlatformTenantDirectory_ListsCreatedTenant()
+    {
+        // End-to-end: a platform_admin creates a tenant, then it appears in the directory list
+        // (exercises the enumeration index + ListAsync through the platform read endpoint).
+        var admin = Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAdmin);
+        var create = await admin.PostAsync("/tenants",
+            new StringContent("""{"slug":"globex","displayName":"Globex","region":"eu","timeZone":"Europe/Prague","supportContacts":[]}""",
+                Encoding.UTF8, "application/json"));
+        Assert.True(PassedAuthGate(create.StatusCode), $"create gate, got {create.StatusCode}");
+
+        var list = await admin.GetAsync("/platform/tenants");
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        var body = await list.Content.ReadAsStringAsync();
+        Assert.Contains("globex", body);
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────────
 
     private HttpClient Client(string issuer, string? tenantId, params string[] roles)

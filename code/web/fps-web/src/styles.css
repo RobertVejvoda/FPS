@@ -935,3 +935,36 @@ select {
   .site-form-row { grid-template-columns: 1fr; }
   .site-topnav a:not(.btn-green) { display: none; }
 }
+
+/* ── PLAT008B platform tenant directory + detail ──────────────────────────── */
+.plat-page { display: flex; flex-direction: column; gap: 16px; }
+.plat-page-head h1 { margin: 0 0 4px; font-size: 22px; }
+.plat-page-head p { margin: 0; }
+.plat-filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.plat-input {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 14px; background: #fff; color: var(--text); min-width: 220px;
+}
+.plat-input:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 1px; }
+.plat-error { color: var(--danger); font-size: 14px; margin: 0; }
+.plat-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.plat-table th, .plat-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.plat-table th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+.plat-table a { color: var(--brand-accent); font-weight: 650; text-decoration: none; }
+.plat-table a:hover { text-decoration: underline; }
+.plat-sub { font-size: 12px; }
+.plat-na { color: var(--muted); font-style: italic; font-size: 13px; margin: 0; }
+.plat-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); }
+.plat-tab { padding: 8px 14px; border: 0; background: transparent; color: var(--muted); font-weight: 650; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
+.plat-tab:hover { color: var(--text); }
+.plat-tab-active { color: var(--brand-accent); border-bottom-color: var(--brand-accent); }
+.plat-dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+.plat-dl dt { color: var(--muted); }
+.plat-dl dd { margin: 0; color: var(--text); }
+.plat-checks { margin: 6px 0 0; padding-left: 18px; font-size: 14px; color: var(--text); display: grid; gap: 4px; }
+@media (max-width: 640px) {
+  .plat-table thead { display: none; }
+  .plat-table, .plat-table tbody, .plat-table tr, .plat-table td { display: block; width: 100%; }
+  .plat-table tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
+  .plat-table td { border: 0; padding: 4px 0; }
+}

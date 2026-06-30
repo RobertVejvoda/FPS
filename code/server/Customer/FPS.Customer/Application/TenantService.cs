@@ -68,6 +68,9 @@ public sealed class TenantService(
     public async Task<TenantWorkspace?> GetAsync(string tenantId, CancellationToken ct) =>
         await repository.GetAsync(tenantId, ct);
 
+    public async Task<IReadOnlyList<TenantWorkspace>> ListAsync(CancellationToken ct) =>
+        await repository.ListAsync(ct);
+
     public async Task<string?> UpdateAsync(
         string tenantId, string displayName, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,

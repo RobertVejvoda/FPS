@@ -5,6 +5,7 @@ namespace FPS.Customer.Application;
 public interface ITenantRepository
 {
     Task<TenantWorkspace?> GetAsync(string tenantId, CancellationToken ct);
+    Task<IReadOnlyList<TenantWorkspace>> ListAsync(CancellationToken ct);
     Task<bool> SlugExistsAsync(string slug, CancellationToken ct);
     Task SaveAsync(TenantWorkspace tenant, CancellationToken ct);
     Task<TenantWorkspace?> FindByDiscoveryDomainAsync(string domain, CancellationToken ct);

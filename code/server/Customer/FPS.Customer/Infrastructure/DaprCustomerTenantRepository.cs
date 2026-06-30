@@ -14,6 +14,20 @@ public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenan
         return dto?.ToDomain();
     }
 
+    // Enumerate tenants via the index maintained in SaveAsync (the Dapr KV store has no
+    // native enumeration). Missing/stale ids are skipped so the index self-heals.
+    public async Task<IReadOnlyList<TenantWorkspace>> ListAsync(CancellationToken ct)
+    {
+        var index = await daprClient.GetStateAsync<List<string>>(Store, CustomerStorageKey.TenantIndex(), cancellationToken: ct) ?? [];
+        var tenants = new List<TenantWorkspace>(index.Count);
+        foreach (var id in index)
+        {
+            var tenant = await GetAsync(id, ct);
+            if (tenant is not null) tenants.Add(tenant);
+        }
+        return tenants;
+    }
+
     public async Task<bool> SlugExistsAsync(string slug, CancellationToken ct)
     {
         var result = await daprClient.GetStateAsync<string>(Store, CustomerStorageKey.TenantSlug(slug), cancellationToken: ct);
@@ -59,6 +73,14 @@ public sealed class DaprCustomerTenantRepository(DaprClient daprClient) : ITenan
         var dto = TenantWorkspaceDto.FromDomain(tenant);
         await daprClient.SaveStateAsync(Store, CustomerStorageKey.Tenant(tenant.TenantId), dto, cancellationToken: ct);
         await daprClient.SaveStateAsync(Store, CustomerStorageKey.TenantSlug(tenant.Slug), tenant.TenantId, cancellationToken: ct);
+
+        // Maintain the enumeration index used by the platform tenant directory (ListAsync).
+        var index = await daprClient.GetStateAsync<List<string>>(Store, CustomerStorageKey.TenantIndex(), cancellationToken: ct) ?? [];
+        if (!index.Contains(tenant.TenantId))
+        {
+            index.Add(tenant.TenantId);
+            await daprClient.SaveStateAsync(Store, CustomerStorageKey.TenantIndex(), index, cancellationToken: ct);
+        }
 
         foreach (var dd in tenant.DiscoveryDomains)
             await daprClient.SaveStateAsync(Store, CustomerStorageKey.DiscoveryDomain(dd.Domain), tenant.TenantId, cancellationToken: ct);
