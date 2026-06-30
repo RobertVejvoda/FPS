@@ -134,7 +134,7 @@ FairSpot ships **two** local demo tenants. **Green Logistics** is the out-of-the
 | Tenant id | `greenlogistics` (the out-of-the-box seeded demo tenant; `demo` remains a bare isolation scaffold) |
 | Email domain | `greenlogistics.example` (reserved `.example` domain for demo) |
 | Login path | FairSpot-local accounts for local demo; company-SSO broker when an external IdP is configured |
-| Demo users | `gl-employee1` (Alice Green), `gl-tenant-admin`, `gl-hr-admin`, `gl-auditor`, `gl-report-viewer` — all `tenant_id=greenlogistics` |
+| Demo users | `gl-employee1` (Jan Novak), `gl-tenant-admin`, `gl-hr-admin`, `gl-auditor`, `gl-report-viewer` — all `tenant_id=greenlogistics` |
 | Identity seeding | Provisioned by `tools/dev-setup-auth.sh` in the `fps-local` realm. |
 | Data seeding | `dev-seed.sh` seeds the canonical `gl-v1` dataset (employees, vehicles, ~20 GL-HQ slots, policy) and runs a Draw with visible outcomes. |
 

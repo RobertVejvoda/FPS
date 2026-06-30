@@ -230,23 +230,36 @@ After the tenant is configured and employees are seeded, submit a booking reques
 ```bash
 TOKEN=$(./tools/dev-auth.sh gl-employee1)
 
-# Submit a booking request for tomorrow at GL-HQ
-TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d)
+# Next workday at least +2 days out (clear of the draw cutoff; skips weekends)
+BOOK_DATE=$(python3 - <<'PY'
+from datetime import date, timedelta
+d = date.today() + timedelta(days=2)
+while d.weekday() >= 5:
+    d += timedelta(days=1)
+print(d.isoformat())
+PY
+)
 
 curl -s -X POST http://localhost:10000/bookings \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
+    \"facilityId\": \"00000000-0000-0000-0000-000000000002\",
     \"locationId\": \"GL-HQ\",
-    \"date\": \"$TOMORROW\",
-    \"reason\": \"onboarding smoke test\"
+    \"licensePlate\": \"1AB 2345\",
+    \"vehicleType\": \"Sedan\",
+    \"isElectric\": false,
+    \"requiresAccessibleSpot\": false,
+    \"isCompanyCar\": true,
+    \"plannedArrivalTime\": \"${BOOK_DATE}T08:00:00\",
+    \"plannedDepartureTime\": \"${BOOK_DATE}T18:00:00\"
   }" | python3 -m json.tool
 
 # Verify booking appears in the list
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings | python3 -m json.tool
 ```
 
-**Expected:** Booking request with status `Pending` and employee-visible reason.
+**Expected:** Booking accepted (`202`); `gl-employee1` is a company-car holder, so it takes a `VIP-*` Tier-1 fixed slot.
 
 ---
 
