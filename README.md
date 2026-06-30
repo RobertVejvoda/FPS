@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://www.vejvoda.net/fairspot/" aria-label="Open the FairSpot documentation site">
+  <a href="./docs/Home.md" aria-label="Open the FairSpot documentation">
     <img src="docs/images/brand/fairspot-logo.svg" alt="FairSpot" width="420">
   </a>
 </p>
@@ -30,7 +30,7 @@ FairSpot is still a product under active development. The current focus is demo 
 
 | I want to... | Start here |
 | --- | --- |
-| Understand the product | [Documentation site](https://www.vejvoda.net/fairspot/) and [Client Evaluation Pack](./docs/client-evaluation-pack.md) |
+| Understand the product | [Documentation index](./docs/Home.md) and [Client Evaluation Pack](./docs/client-evaluation-pack.md) |
 | See the roadmap and status | [Roadmap](./docs/roadmap.md), [Implementation Tracker](./docs/implementation-tracker.md), and [Delivery Board](./docs/delivery-board.md) |
 | Review the architecture | [Architecture Summary](./docs/architecture-views.md) and [Software Architecture](./docs/technology-layer/software-architecture.md) |
 | Review security, privacy, and audit | [Security Review Pack](./docs/security/security-review-pack.md), [Security Model](./docs/security/security-model.md), and [Logging and Monitoring](./docs/security/logging-monitoring.md) |
@@ -103,7 +103,7 @@ Stop or reset:
 | Directory | Description |
 | --- | --- |
 | `code/` | Application source code for backend services, web, mobile, and infrastructure. |
-| `docs/` | Product, architecture, security, production, and delivery documentation. Published at [vejvoda.net/fairspot](https://www.vejvoda.net/fairspot/). |
+| `docs/` | Product, architecture, security, production, and delivery documentation. Start with [docs/Home.md](./docs/Home.md). |
 | `tools/` | Local harness, smoke, validation, seeding, auth, and generated-client scripts. |
 
 ## Documentation Model
