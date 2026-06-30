@@ -595,7 +595,7 @@ Definitions live in `tools/templates/tenants/`. Two synthetic definitions are in
 
 | File | Tenant | Purpose |
 | --- | --- | --- |
-| `demo.json` | `demo` | Default local demo tenant (seeded automatically on service startup). |
+| `demo.json` | `demo` | Opt-in cross-tenant isolation fixture (#668). Customer/Configuration seed its config on startup, but no business data; the demo `tenant-admin` login needs `FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh`. Green Logistics is the default seeded showcase (`./tools/dev-seed.sh`). |
 | `acme-corp.json` | `acme-corp` | Second synthetic tenant proving provisioning is not hardcoded. |
 
 ### Running provisioning
@@ -611,7 +611,7 @@ Definitions live in `tools/templates/tenants/`. Two synthetic definitions are in
 FPS_DEMO_TENANT_ID=my-test ./tools/provision-tenant.sh tools/templates/tenants/demo.json
 ```
 
-Provisioning is idempotent: re-running it creates the tenant workspace if absent, updates identity config, and checks readiness. Profile and booking seed data are created by `./tools/dev-seed.sh` after provisioning.
+Provisioning is idempotent: re-running it creates the tenant workspace if absent, updates identity config, and checks readiness. Profile and booking seed data for the **Green Logistics** showcase are created by `./tools/dev-seed.sh`; the `demo` fixture is never seeded with business data.
 
 ### Adding a new tenant locally
 
@@ -634,7 +634,7 @@ The same definition format drives the provisioning contract defined in [Tenant S
 
 ### Known limitations
 
-- **Configuration for non-default tenants**: `PUT /configuration/parking-policy` and `/locations/{id}/slots` use the tenant from the JWT claim. The provisioning script can only apply Configuration for the tenant that the `ADMIN_USER` token belongs to. For the `demo` tenant with `tenant-admin`, this works end-to-end. For `acme-corp` (no Keycloak users in local realm), Configuration is provisioned on the next step when an `acme-corp` admin token is available.
+- **Configuration for non-default tenants**: `PUT /configuration/parking-policy` and `/locations/{id}/slots` use the tenant from the JWT claim. The provisioning script can only apply Configuration for the tenant that the `ADMIN_USER` token belongs to. For the `demo` tenant the `tenant-admin` Keycloak login is opt-in (`FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh`); once present, its tenant-scoped Configuration works end-to-end. For `acme-corp` (no Keycloak users in local realm), Configuration is provisioned on the next step when an `acme-corp` admin token is available.
 - **Keycloak user creation**: `provision-tenant.sh` does not create Keycloak users. Use `./tools/dev-setup-auth.sh` for the local realm import; cross-tenant user provisioning via Keycloak Admin API requires a separate step.
 
 ## Testing Split

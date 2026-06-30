@@ -244,7 +244,7 @@ seed_vault_secret "minio-credentials" '{"data":{"accessKey":"minioadmin","secret
 
 # ── Auth setup ────────────────────────────────────────────────────────────────
 
-log "Running dev-setup-auth.sh (realm import + demo users)..."
+log "Running dev-setup-auth.sh (realm import + Green Logistics users; demo fixture opt-in)..."
 "$REPO_ROOT/tools/dev-setup-auth.sh"
 
 # Source auth env vars so child processes inherit them

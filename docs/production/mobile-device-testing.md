@@ -181,7 +181,7 @@ For developer smoke, use the Developer Session screen to paste:
 - API base URL;
 - development bearer token from `./tools/dev-auth.sh gl-employee1`.
 
-Available seeded local users are `gl-employee1`, `gl-employee2`, `gl-employee3`, `gl-hr-admin`, `gl-tenant-admin`, `gl-report-viewer`, and `gl-auditor` in the Green Logistics tenant. (The legacy `employee*` / role accounts in the bare `demo` scaffold still exist in Keycloak but are not seeded with profile/booking data.) Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm. Mobile employee smoke testing should normally use a `gl-employee*` account; web/admin smoke testing should use the role-specific operator accounts documented in [Local Test Harness](./local-test-harness).
+Available seeded local users are `gl-employee1`, `gl-employee2`, `gl-employee3`, `gl-hr-admin`, `gl-tenant-admin`, `gl-report-viewer`, and `gl-auditor` in the Green Logistics tenant. (The legacy `demo` tenant is now opt-in only — `FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh` adds just a demo `tenant-admin`; the old `employee*` / role accounts are no longer created on the default path. See #668.) Source `./tools/dev-env.sh` in each service shell so backend services validate tokens issued by the local `fps-local` Keycloak realm. Mobile employee smoke testing should normally use a `gl-employee*` account; web/admin smoke testing should use the role-specific operator accounts documented in [Local Test Harness](./local-test-harness).
 
 Clear the session after testing from the Profile screen or debug-session screen. Development token generation and seeded OIDC demo users should be documented before `MOB009` is accepted.
 

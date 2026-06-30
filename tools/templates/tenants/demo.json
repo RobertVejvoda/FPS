@@ -48,6 +48,6 @@
       "accessibleSlots": 1
     }
   ],
-  "smokeUsers": ["employee1", "tenant-admin"],
-  "notes": "Default local demo tenant. Seeded automatically by Customer and Configuration services on startup. Run ./tools/dev-seed.sh to add profile and booking data."
+  "smokeUsers": ["tenant-admin"],
+  "notes": "Opt-in cross-tenant isolation fixture (#668) — NOT the default local demo; Green Logistics is the seeded showcase. The Customer/Configuration services still seed demo config (policy/slots) on startup, but no profile/booking/draw data and no demo Keycloak login exist by default. Provision the demo tenant-admin login with FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh (add employees via FPS_DEMO_EMPLOYEE_COUNT=<n>). ./tools/dev-seed.sh seeds Green Logistics, not demo."
 }
