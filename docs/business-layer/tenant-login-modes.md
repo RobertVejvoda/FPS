@@ -127,11 +127,11 @@ See [Customer Integration](./customer-data-import.md) → *Local Account Fallbac
 
 ## Green Logistics Demo Tenant
 
-FairSpot ships **two** local demo tenants. **Green Logistics** is the out-of-the-box one — `dev-seed.sh` populates its profiles, vehicles, bookings, and Draw for the full employee booking/Draw/notification/audit flow, and it also demonstrates company-SSO / work-email tenant discovery (the `greenlogistics.example` domain). The `demo` tenant remains a **bare scaffold** (the Customer/Configuration startup seed creates it, but no profile/booking/draw data is seeded into it) used only for multi-tenant isolation and SSO-contrast checks.
+The default local setup is **Green Logistics only** (#668). `dev-setup-auth.sh` provisions Green Logistics users and `dev-seed.sh` populates its profiles, vehicles, bookings, and Draw for the full employee booking/Draw/notification/audit flow; it also demonstrates company-SSO / work-email tenant discovery (the `greenlogistics.example` domain). The `demo` tenant is an **opt-in isolation fixture** — `FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh` adds a single `demo` `tenant-admin` (no profile/booking/draw data) for multi-tenant isolation and SSO-contrast checks. Without that flag, no `demo` login exists.
 
 | Aspect | Detail |
 |---|---|
-| Tenant id | `greenlogistics` (the out-of-the-box seeded demo tenant; `demo` remains a bare isolation scaffold) |
+| Tenant id | `greenlogistics` (the out-of-the-box seeded demo tenant; `demo` is an opt-in isolation fixture — `FPS_INCLUDE_DEMO_TENANT=1`) |
 | Email domain | `greenlogistics.example` (reserved `.example` domain for demo) |
 | Login path | FairSpot-local accounts for local demo; company-SSO broker when an external IdP is configured |
 | Demo users | `gl-employee1` (Jan Novak), `gl-tenant-admin`, `gl-hr-admin`, `gl-auditor`, `gl-report-viewer` — all `tenant_id=greenlogistics` |

@@ -35,6 +35,7 @@ This document records the end-to-end onboarding path for one synthetic company i
 | Tenant provisioning metadata for dependent services | 🟡 Evaluation-grade | Services seed their own demo state on startup; no explicit cross-service provisioning call |
 
 **Automation:** `./tools/dev-auth.sh tenant-admin` + `GET http://localhost:5181/tenants/demo`
+(the `demo` `tenant-admin` login is the opt-in isolation fixture — provision it first with `FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh`; see #668)
 
 ---
 

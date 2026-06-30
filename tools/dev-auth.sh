@@ -22,8 +22,8 @@ DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 USERNAME="${1:-}"
 if [ -z "$USERNAME" ]; then
   echo "Usage: $0 <username>" >&2
-  echo "  Seeded (Green Logistics): gl-employee1..gl-employee25  gl-hr-admin  gl-tenant-admin  gl-report-viewer  gl-auditor" >&2
-  echo "  Unseeded scaffold (demo tenant, for isolation tests): employee1..employee25  hr-admin  tenant-admin  report-viewer  auditor" >&2
+  echo "  Green Logistics (seeded showcase): gl-employee1..gl-employee25  gl-hr-admin  gl-tenant-admin  gl-report-viewer  gl-auditor" >&2
+  echo "  Demo isolation fixture (opt-in only — re-run 'FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh'): tenant-admin" >&2
   exit 1
 fi
 

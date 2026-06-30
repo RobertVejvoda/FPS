@@ -553,7 +553,7 @@ if [[ "$SEED" == "true" ]]; then
     exit 1
   fi
 
-  echo "Configuring Keycloak realm and demo/Green Logistics users..."
+  echo "Configuring Keycloak realm and Green Logistics users (demo tenant fixture opt-in)..."
   if "$REPO_ROOT/tools/dev-setup-auth.sh"; then
     ok "Keycloak realm + users configured (dev-setup-auth.sh)"
   else

@@ -56,9 +56,15 @@ The two `VIP-*` slots are stamped with the resolved Keycloak `sub` of the compan
 
 ---
 
-## The `demo` tenant (isolation scaffold)
+## The `demo` tenant (opt-in isolation fixture)
 
-FairSpot still provisions a second tenant, **`demo`** (`tenant_id=demo`, users `employee1..25` / `hr-admin` / `tenant-admin` / `report-viewer` / `auditor`), but it is **not** seeded with profile/booking/draw data. It exists as a bare scaffold so tenant-isolation behaviour can be demonstrated (a `greenlogistics` user must never see `demo` data, and vice-versa). Use it only for isolation/SSO-discovery testing — the seeded booking/Draw evidence lives entirely in Green Logistics.
+The default `./tools/dev-setup-auth.sh` provisions **only Green Logistics** — the legacy `demo` employee population is no longer part of the normal evaluator experience (#668). The `demo` tenant (`tenant_id=demo`) is an **opt-in cross-tenant isolation fixture**, enabled with:
+
+```bash
+FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh
+```
+
+When enabled it adds a single `demo` **`tenant-admin`** (no profile/booking/draw data) — enough to prove tenant isolation (a `greenlogistics` user must never see `demo` data, and vice-versa). It is never seeded with business data; the seeded booking/Draw evidence lives entirely in Green Logistics. If a test genuinely needs `demo` employees, add them explicitly with `FPS_DEMO_EMPLOYEE_COUNT=<n>` (which also enables the fixture).
 
 A separate canonical provisioning sample (`gl-v1`) can be seeded into a freshly provisioned **Sandbox/Evaluation** tenant via the tenant-admin endpoint `POST /tenants/{tenantId}/demo-seed` (Customer service); it does not auto-create bookings/draws.
 
