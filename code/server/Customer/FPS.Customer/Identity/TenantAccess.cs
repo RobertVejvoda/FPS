@@ -26,6 +26,14 @@ public static class TenantAccess
     public static bool IsPlatformOperator(this ICurrentUser user) =>
         user.IsInRole(FpsRoles.PlatformOperator) || user.IsPlatformAdmin();
 
+    /// <summary>
+    /// Any platform-plane reader: <c>platform_auditor</c>, <c>platform_operator</c>, or
+    /// <c>platform_admin</c>. Used for read-only cross-tenant platform surfaces (the tenant
+    /// directory/detail); a tenant/customer token never carries a platform_* role.
+    /// </summary>
+    public static bool IsPlatformReader(this ICurrentUser user) =>
+        user.IsInRole(FpsRoles.PlatformAuditor) || user.IsPlatformOperator();
+
     public static bool CanAdministerTenant(this ICurrentUser user, string? routeTenantId) =>
         user.IsPlatformAdmin()
         || (user.IsInRole(FpsRoles.Admin)
@@ -83,6 +91,24 @@ public sealed class RequirePlatformOperatorAttribute : Attribute, IAuthorization
         if (!user.IsAuthenticated) { context.Result = new UnauthorizedResult(); return; }
 
         if (!user.IsPlatformOperator())
+            context.Result = new ForbidResult();
+    }
+}
+
+/// <summary>
+/// Authorization filter: the caller must be any platform-plane reader — <c>platform_auditor</c>,
+/// <c>platform_operator</c>, or <c>platform_admin</c>. Used for read-only cross-tenant platform
+/// surfaces such as the tenant directory/detail; a tenant/customer token can never reach it.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+public sealed class RequirePlatformReaderAttribute : Attribute, IAuthorizationFilter
+{
+    public void OnAuthorization(AuthorizationFilterContext context)
+    {
+        var user = context.HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!user.IsAuthenticated) { context.Result = new UnauthorizedResult(); return; }
+
+        if (!user.IsPlatformReader())
             context.Result = new ForbidResult();
     }
 }

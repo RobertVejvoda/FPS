@@ -5,6 +5,8 @@ import { canAccessPlatformConsole, canTriagePlatformOnboarding, formatRoles } fr
 import { PlatformAccessDenied } from './PlatformAccessDenied';
 import { PlatformOverview } from './PlatformOverview';
 import { PlatformPlaceholderPage } from './PlatformPlaceholderPage';
+import { TenantsDirectoryPage } from './TenantsDirectoryPage';
+import { TenantDetailPage } from './TenantDetailPage';
 
 // Active nav targets in this shell slice. Order follows the design's left-nav
 // (platform-dashboard-ux.md §3): Overview · Tenants · Onboarding · Health · … · Audit.
@@ -87,16 +89,8 @@ export function PlatformShell() {
         <Routes>
           <Route index element={<Navigate to="/platform/overview" replace />} />
           <Route path="overview" element={<PlatformOverview />} />
-          <Route
-            path="tenants"
-            element={(
-              <PlatformPlaceholderPage
-                title="Tenant directory"
-                description="Cross-tenant directory: state, region, modules, usage, health."
-                slice="PLAT008B"
-              />
-            )}
-          />
+          <Route path="tenants" element={<TenantsDirectoryPage />} />
+          <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
           <Route
             path="onboarding"
             element={(

@@ -13,6 +13,9 @@ public sealed class InMemoryTenantRepository : ITenantRepository
     public Task<TenantWorkspace?> GetAsync(string tenantId, CancellationToken ct) =>
         Task.FromResult(byId.TryGetValue(tenantId, out var t) ? t : null);
 
+    public Task<IReadOnlyList<TenantWorkspace>> ListAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<TenantWorkspace>>(byId.Values.ToList());
+
     public Task<bool> SlugExistsAsync(string slug, CancellationToken ct) =>
         Task.FromResult(slugToId.ContainsKey(slug));
 
