@@ -194,11 +194,29 @@ fi
 header "Step 8 — First booking smoke"
 TOKEN=$(get_token gl-employee1)
 if [[ -n "$TOKEN" ]]; then
-  TOMORROW=$(date -v+1d +%Y-%m-%d 2>/dev/null || date -d tomorrow +%Y-%m-%d 2>/dev/null || echo "2099-01-01")
+  # Next workday at least +2 days out, to stay clear of the draw cutoff.
+  BOOK_DATE=$(python3 - << 'PYEOF'
+from datetime import date, timedelta
+d = date.today() + timedelta(days=2)
+while d.weekday() >= 5:
+    d += timedelta(days=1)
+print(d.isoformat())
+PYEOF
+)
   BOOKING=$(curl -sf -X POST "$GATEWAY/bookings" \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"locationId\":\"GL-HQ\",\"date\":\"$TOMORROW\",\"reason\":\"onboarding smoke\"}" \
+    -d "{
+      \"facilityId\": \"00000000-0000-0000-0000-000000000002\",
+      \"locationId\": \"GL-HQ\",
+      \"licensePlate\": \"1AB 2345\",
+      \"vehicleType\": \"Sedan\",
+      \"isElectric\": false,
+      \"requiresAccessibleSpot\": false,
+      \"isCompanyCar\": true,
+      \"plannedArrivalTime\": \"${BOOK_DATE}T08:00:00\",
+      \"plannedDepartureTime\": \"${BOOK_DATE}T18:00:00\"
+    }" \
     2>/dev/null || echo "UNREACHABLE")
   if [[ "$BOOKING" != "UNREACHABLE" && "$BOOKING" != "" ]]; then
     B_STATUS=$(echo "$BOOKING" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")

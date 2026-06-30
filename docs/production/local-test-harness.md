@@ -286,7 +286,7 @@ To use durable local state (MongoDB + RabbitMQ + Vault), change `resourcesPath` 
 After starting Identity and `dapr run -f dapr.yaml`:
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 
 # Gateway auth passthrough — expects 401 / 200
 curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
@@ -355,7 +355,7 @@ Run after `docker compose up`, `dev-setup-auth.sh`, `dev-env.sh`, and all four s
 **What passes today (gateway routing + auth passthrough):**
 
 ```sh
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 
 # Should return 401 without token
 curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me

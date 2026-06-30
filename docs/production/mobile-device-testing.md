@@ -87,7 +87,7 @@ Local infrastructure and demo auth can be started for service-level verification
 docker compose -f code/infrastructure/docker-compose.yaml up -d
 ./tools/dev-setup-auth.sh
 source ./tools/dev-env.sh
-./tools/dev-auth.sh employee1
+./tools/dev-auth.sh gl-employee1
 ```
 
 Individual services can then be run from their projects when needed:

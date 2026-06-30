@@ -45,15 +45,15 @@ This document defines the end-to-end smoke scenario for onboarding a synthetic c
 
 **Status:** ✅ Implemented
 
-Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds `demo` on startup so the API is exercisable without a UI.
+Customer service exposes `POST /tenants` for tenant creation. The local demo pre-seeds the **Green Logistics** tenant (`greenlogistics`) on startup so the API is exercisable without a UI.
 
 **Verify tenant exists:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo | python3 -m json.tool
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/greenlogistics | python3 -m json.tool
 ```
 
-**Expected:** Tenant record with `tenantId=demo`, `slug=demo-company`, lifecycle state `Seeded`.
+**Expected:** Tenant record with `tenantId=greenlogistics`, `slug=greenlogistics`, lifecycle state `Seeded`.
 
 ---
 
@@ -63,15 +63,15 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/demo | p
 
 The local Keycloak realm (`fps-local`) is imported from `code/infrastructure/keycloak/fps-local-realm.json` which pre-configures the OIDC client, roles, and demo users. This represents step 2 for evaluation.
 
-**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `demo` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
+**Role mapping:** The Customer service seed registers a `TenantRoleMapping` for `greenlogistics` that maps Keycloak realm roles directly to FairSpot roles (pass-through). In a real onboarding, this mapping would be configured via an admin API call.
 
 **Verify identity is wired:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh employee1)
+TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
 ```
 
-**Expected:** `{"userId": "employee1", "tenantId": "demo", "roles": ["employee"]}`
+**Expected:** `{"userId": "<gl-employee1 sub>", "tenantId": "greenlogistics", "roles": ["employee"]}`
 
 **Blocker for production:** IdP configuration UI and documented per-tenant group-to-role mapping workflow.
 
@@ -81,15 +81,15 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-`tenant-admin` is pre-configured in Keycloak with the `admin` role for `demo`. This represents the first administrator for evaluation.
+`gl-tenant-admin` is pre-configured in Keycloak with the `admin` role for `greenlogistics`. This represents the first administrator for evaluation.
 
 **Verify:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m json.tool
 ```
 
-**Expected:** `{"userId": "tenant-admin", "tenantId": "demo", "roles": ["admin"]}`
+**Expected:** `{"userId": "<gl-tenant-admin sub>", "tenantId": "greenlogistics", "roles": ["admin"]}`
 
 **Blocker for production:** Formal first-admin provisioning path (mapped SSO user or FairSpot-local break-glass account creation via API). Follow-up: CUST004 evidence.
 
@@ -99,11 +99,11 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-The Configuration service seed creates `Prague` with 10 parking slots and a default policy. This represents steps 4 for evaluation.
+`dev-seed.sh` configures the Green Logistics policy and 20 `GL-HQ` parking slots (and the Configuration service also seeds a default `Prague` location for the bare `demo` scaffold on startup). This represents step 4 for evaluation.
 
 **Verify:**
 ```bash
-TOKEN=$(./tools/dev-auth.sh tenant-admin)
+TOKEN=$(./tools/dev-auth.sh gl-tenant-admin)
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/configuration/parking-policy | python3 -m json.tool
 ```
 
