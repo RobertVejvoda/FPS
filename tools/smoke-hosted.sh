@@ -17,8 +17,9 @@
 # API probes never accidentally hit the SPA root.
 # Note: local Keycloak Docker container maps internal :8080 to host :8180.
 #
-# See docs/production/hosted-smoke-runbook.md for full context and the
-# mandatory-checks table.
+# See docs/production/hosted-smoke-runbook.md for public readiness context.
+# The detailed mandatory-checks table is operator material in the private
+# fairspot-platform docs/runbooks/hosted-smoke-runbook.md runbook.
 set -euo pipefail
 
 APP_URL="${APP_URL:-http://localhost:10000}"
@@ -579,7 +580,7 @@ if [[ "$REQUIRED_FAILURES" -gt 0 ]]; then
   echo
   echo -e "${RED}$REQUIRED_FAILURES mandatory check(s) FAILED.${NC}"
   echo "Customer access must not be enabled until all mandatory checks pass."
-  echo "See docs/production/hosted-smoke-runbook.md for the mandatory-checks table."
+  echo "See private fairspot-platform docs/runbooks/hosted-smoke-runbook.md for the mandatory-checks table."
   exit 1
 fi
 
