@@ -17,6 +17,22 @@ FairSpot should recover cost without weakening the open, inspectable fairness en
 | License posture | AGPL open core remains the default. Future dual licensing needs explicit legal and business approval. |
 | Open-core line | The open core (runtime + fairness + tenant self-administration) stays public and AGPL. The commercial line is the **platform plane** — the hosted operator product in a future private `fairspot-platform` repo (#660, #633, #642). See the [Open-Core Documentation Boundary](./open-core-boundary). |
 
+## Licensing Decision (2026-06-28)
+
+Robert confirmed the licensing posture; this resolves the dual-licensing open question previously listed below.
+
+- **Stay open — AGPL-3.0.** FairSpot is not going closed. The repository stays AGPL-3.0-or-later (see [Licensing](./licensing)); the open core's credibility depends on being inspectable.
+- **Open core** — the fairness/Draw engine, audit/evidence, and the employee- and tenant-facing application. These stay open.
+- **Commercial layer = the platform plane** — multi-tenant orchestration, the hosted control plane, billing, usage metering, onboarding/tenant-lifecycle, and advanced resource **modules** (chairs/desks/lockers). Kept structured so it can be proprietary or separately/commercially licensed. The tenant/platform-plane split in epic #633 is the open-core seam; the public/private classification is the [Open-Core Documentation Boundary](./open-core-boundary).
+- **Monetize** via hosting + services + modules + a **dual license** (a commercial license for AGPL-averse enterprises).
+- **Dual licensing: yes, to be offered** as a future commercial option for enterprises that cannot accept AGPL — but only as an explicit, separate decision. **Actual terms are TBD with legal**; do not publish or imply license terms before then.
+- **Keep contributor IP clean** (solo / CLA) to preserve relicensing optionality.
+- **Revisit trigger only:** re-open this decision only on a real trigger — a damaging competitor fork, or a concrete deal blocked purely by AGPL.
+
+**Build constraint for the platform epic (#633):** PLAT slices must keep the platform / billing / usage-metering / module layer **structured so it can live in the private `fairspot-platform` / commercial layer** — do not fold it into the AGPL open core by accident. Generic runtime, fairness, audit, and tenant code stays open; platform-plane control, metering, billing, and paid modules stay separable and proprietary-able.
+
+Follow-up (separate, legal): draft the actual dual-license terms before any commercial license is offered.
+
 ## Free And Open Core Boundary
 
 The free/open core must be useful enough for a company to evaluate and run a normal tenant. Do not make the fairness story depend on paid unlocks.
@@ -90,5 +106,5 @@ Validate commercial value before implementing Billing:
 - What support response targets are commercially realistic?
 - Is a hosted demo worth the operational and data-protection burden?
 - Which enhanced reports would a sponsor actually pay for?
-- Should dual licensing be offered, and under what legal terms?
+- **Resolved (2026-06-28):** dual licensing *will* be offered as a future commercial option for AGPL-averse enterprises; actual terms are TBD with legal. See [Licensing Decision (2026-06-28)](#licensing-decision-2026-06-28).
 - Does FairSpot need in-product Billing, or is external contract/accounting workflow enough?
