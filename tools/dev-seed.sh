@@ -70,8 +70,9 @@ err() { echo -e "  ${RED}ERR${NC} $1"; }
 
 echo "== FPS Green Logistics demo seed =="
 
-# Check required services
-for check_url in "$IDENTITY_URL/openapi/v1.json" "$PROFILE_URL/openapi/v1.json" "$BOOKING_URL/openapi/v1.json" "$CONFIG_URL/openapi/v1.json"; do
+# Check required services. Configuration does not expose /openapi (no OpenAPI
+# mapping), so probe its /health instead.
+for check_url in "$IDENTITY_URL/openapi/v1.json" "$PROFILE_URL/openapi/v1.json" "$BOOKING_URL/openapi/v1.json" "$CONFIG_URL/health"; do
   if ! curl -sf "$check_url" > /dev/null 2>&1; then
     echo "ERROR: Service not reachable at $check_url"
     echo "  Start all services: ./tools/start-local-harness.sh"
