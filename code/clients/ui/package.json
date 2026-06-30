@@ -1,0 +1,30 @@
+{
+  "name": "@fps/ui",
+  "version": "0.1.0",
+  "description": "FairSpot shared UI primitives — neutral, presentational design components shared by the open web app and (later) the private platform console. Open-core surface only; no platform-plane UI.",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RobertVejvoda/fairspot"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "typescript": "~5.9.2"
+  }
+}

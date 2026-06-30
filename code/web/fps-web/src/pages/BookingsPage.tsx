@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
 import { displaySlot, formatCutOffAt } from '../displayLabels';
-import { StatusBadge } from '../components/StatusBadge';
+import { StatusBadge } from '@fps/ui';
 import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';

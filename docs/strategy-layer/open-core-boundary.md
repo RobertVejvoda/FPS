@@ -54,6 +54,18 @@ The **Public summary / replacement** column records the *planned* public destina
 
 > Secrets, tokens, Cloudflare account details, and credentials belong in **neither** repo's docs — they live only in the private operator vault (`fairspot-ops`).
 
+## Shared packages (private-platform consumption)
+
+The open core exposes a small, explicit set of packages the future private `fairspot-platform` repo can consume **without linking to FairSpot internals** (#673, PLAT009A):
+
+| Package | Location | Surface | Consumed how |
+|---|---|---|---|
+| `FairSpot.SharedKernel` (NuGet) | `code/server/Shared/FPS.SharedKernel` | Identity/auth mechanism (multi-issuer JWT, claims, roles) + cross-cutting primitives | In-repo via `ProjectReference`; the platform service via GitHub Packages (NuGet). `dotnet pack` validated. |
+| `@fps/api-client` (npm) | `code/clients/typescript` | Generated TS API types for the **customer/tenant** services only (identity, booking, profile, notification, customer) — **no** platform-plane endpoints | In-repo via `file:` dep + Vite alias / tsconfig path; pack validated with `npm pack --dry-run` |
+| `@fps/ui` (npm) | `code/clients/ui` | Neutral, presentational UI primitives (e.g. `StatusBadge`) — **no** operator-console UI | Same `file:`-dep pattern as `@fps/api-client`; `npm pack --dry-run` validated |
+
+Validation is wired into [`publish-packages.yml`](https://github.com/RobertVejvoda/fairspot/blob/master/.github/workflows/publish-packages.yml) (`workflow_dispatch`): it packs `FairSpot.SharedKernel` and dry-run-packs both npm packages. NuGet can publish to GitHub Packages with the built-in token; npm publishing stays manual/disabled (both packages are `private:true` and consumed via `file:` deps today). **A future private repo references these by package, never by reaching into `code/` internals** — that boundary is the point of this slice.
+
 ## How to apply (for contributors)
 
 - Adding hosted-operator or runbook detail? Put the public **contract/summary** in the public docs and keep operator specifics for `fairspot-platform`.
