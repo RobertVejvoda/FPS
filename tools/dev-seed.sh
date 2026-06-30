@@ -29,8 +29,10 @@
 #              regular cars. Realistic CZ plates throughout.
 #   Bookings:  25 future Draw requests by default, one per employee, each carrying
 #              that employee's real attributes.
-#   Draw:      runs the next future workday Draw so the demo immediately shows
-#              company-car Tier-1 fixed slots plus allocated/waitlisted outcomes.
+#   Draw:      triggers the next future workday Draw over the seeded requests.
+#              NOTE: visible allocations / company-car Tier-1 precedence are not yet
+#              realised in the Draw (it reads the Booking service's static slot
+#              config, not the seeded Configuration slots) — see #665.
 #   Role profiles: gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor (no parking).
 #
 #   Notifications, audit records, reporting — populated via Dapr events from booking submissions.
@@ -778,8 +780,9 @@ echo "-- Bookings (generates notifications, audit records, and reporting data) -
 # Dates start at the next workday at least +2 days out to stay clear of the
 # draw cutoff and keep the demo visible in the HR workday navigation.
 # Each request carries the employee's real attributes (company-car, accessibility,
-# EV, motorcycle) so the seeded Draw shows every allocation path: company-car
-# holders take Tier-1 fixed slots immediately, everyone else competes in the draw.
+# EV, motorcycle). The Draw is triggered over them, but note the seeded slots do not
+# yet drive allocation (the Draw reads the Booking service's static slot config) —
+# so company-car Tier-1 precedence and visible draw outcomes are pending #665.
 GL_DRAW_OFFSET=$(next_workday_offset "$GL_DRAW_MIN_OFFSET")
 GL_DRAW_DATE=$(future_date "$GL_DRAW_OFFSET")
 echo "Green Logistics Draw date: $GL_DRAW_DATE (+$GL_DRAW_OFFSET days, next workday)"
