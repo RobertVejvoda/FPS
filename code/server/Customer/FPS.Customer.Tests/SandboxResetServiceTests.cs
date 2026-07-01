@@ -35,6 +35,13 @@ public sealed class SandboxResetServiceTests
             => Task.FromResult((slots.Count, (string?)null));
     }
 
+    // A reseed client that fails AFTER the guard passes, to prove a mid-flow failure classifies as Failed.
+    private sealed class FailingProfileClient : IDemoSeedProfileClient
+    {
+        public Task<(int profilesSeeded, string? error)> SeedAsync(string authorizationHeader, string tenantId, IReadOnlyList<DemoEmployeeRecord> employees, CancellationToken ct)
+            => Task.FromResult((0, (string?)"Profile service unreachable"));
+    }
+
     private sealed class SpyAudit : ISandboxResetAudit
     {
         public bool Started { get; private set; }
@@ -80,13 +87,14 @@ public sealed class SandboxResetServiceTests
         var (svc, purger, audit, evidence, repo) = Build();
         await repo.SaveAsync(Tenant("acme", TenantKind.Production, resettable: false), default);
 
-        var (summary, error) = await svc.ResetAsync("acme", "actor", "manual", "Bearer x", default);
+        var (summary, error, status) = await svc.ResetAsync("acme", "actor", "manual", "Bearer x", default);
 
         Assert.Null(summary);
         Assert.Contains("not a resettable sandbox", error);
         Assert.False(purger.Ran, "purge must not run for a non-sandbox tenant");
         Assert.False(audit.Started, "no reset should even start for a non-sandbox tenant");
         Assert.Null(evidence.Last); // a security refusal is not recorded as reset evidence
+        Assert.Equal(SandboxResetStatus.Refused, status);
     }
 
     [Fact]
@@ -96,21 +104,23 @@ public sealed class SandboxResetServiceTests
         // Kind==Sandbox but the durable resettable flag is false → still refused (defence in depth).
         await repo.SaveAsync(Tenant("shadow", TenantKind.Sandbox, resettable: false), default);
 
-        var (_, error) = await svc.ResetAsync("shadow", "actor", "manual", "Bearer x", default);
+        var (_, error, status) = await svc.ResetAsync("shadow", "actor", "manual", "Bearer x", default);
 
         Assert.Contains("not a resettable sandbox", error);
         Assert.False(purger.Ran);
         Assert.Null(evidence.Last);
+        Assert.Equal(SandboxResetStatus.Refused, status);
     }
 
     [Fact]
     public async Task Reset_UnknownTenant_AbortsBeforePurge()
     {
         var (svc, purger, _, evidence, _) = Build();
-        var (_, error) = await svc.ResetAsync("nope", "actor", "manual", "Bearer x", default);
+        var (_, error, status) = await svc.ResetAsync("nope", "actor", "manual", "Bearer x", default);
         Assert.Contains("Unknown", error);
         Assert.False(purger.Ran);
         Assert.Null(evidence.Last);
+        Assert.Equal(SandboxResetStatus.Refused, status);
     }
 
     [Fact]
@@ -119,7 +129,7 @@ public sealed class SandboxResetServiceTests
         var (svc, purger, audit, evidence, repo) = Build();
         await repo.SaveAsync(Tenant("greenlogistics", TenantKind.Sandbox, resettable: true), default);
 
-        var (summary, error) = await svc.ResetAsync("greenlogistics", "actor", "manual", "Bearer x", default);
+        var (summary, error, status) = await svc.ResetAsync("greenlogistics", "actor", "manual", "Bearer x", default);
 
         Assert.Null(error);
         Assert.NotNull(summary);
@@ -132,6 +142,7 @@ public sealed class SandboxResetServiceTests
         Assert.Equal("manual", evidence.Last.Source);
         Assert.NotNull(evidence.Last.SnapshotVersion);
         Assert.NotNull(evidence.Last.CompletedAt);
+        Assert.Equal(SandboxResetStatus.Succeeded, status);
     }
 
     [Fact]
@@ -145,7 +156,7 @@ public sealed class SandboxResetServiceTests
         // No purgers registered → must not purge/reseed and must not report a fake success.
         var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([]), [], seed, audit, evidence, Config(enabled: true));
 
-        var (summary, error) = await svc.ResetAsync("greenlogistics", "actor", "manual", "Bearer x", default);
+        var (summary, error, status) = await svc.ResetAsync("greenlogistics", "actor", "manual", "Bearer x", default);
 
         Assert.Null(summary);
         Assert.StartsWith("unavailable", error);
@@ -154,6 +165,7 @@ public sealed class SandboxResetServiceTests
         // feature is not active yet (no purge/audit happened, but evidence shows Unavailable).
         Assert.NotNull(evidence.Last);
         Assert.Equal("Unavailable", evidence.Last!.Status);
+        Assert.Equal(SandboxResetStatus.Unavailable, status);
     }
 
     [Fact]
@@ -163,12 +175,37 @@ public sealed class SandboxResetServiceTests
         var (svc, purger, audit, evidence, repo) = Build(enabled: false);
         await repo.SaveAsync(Tenant("greenlogistics", TenantKind.Sandbox, resettable: true), default);
 
-        var (summary, error) = await svc.ResetAsync("greenlogistics", "actor", "manual", "Bearer x", default);
+        var (summary, error, status) = await svc.ResetAsync("greenlogistics", "actor", "manual", "Bearer x", default);
 
         Assert.Null(summary);
         Assert.StartsWith("unavailable", error);
         Assert.False(purger.Ran, "adding a purger must not enable the reset without SandboxReset:Enabled");
         Assert.False(audit.Started);
         Assert.Equal("Unavailable", evidence.Last!.Status);
+        Assert.Equal(SandboxResetStatus.Unavailable, status);
+    }
+
+    [Fact]
+    public async Task Reset_ResettableSandbox_ReseedFails_ClassifiesAsFailedNotRefused()
+    {
+        // A failure AFTER the guard passes (mid-flow reseed) must classify as Failed — never Refused,
+        // which is reserved for the pre-purge security guard. The gate and operator evidence depend on
+        // this distinction (a mislabelled Refused hid a real DataHub purge failure during the C3 gate).
+        var repo = new InMemoryTenantRepository();
+        await repo.SaveAsync(Tenant("greenlogistics", TenantKind.Sandbox, resettable: true), default);
+        var purger = new SpyPurger();
+        var audit = new SpyAudit();
+        var evidence = new SpyEvidence();
+        var seed = new TenantDemoSeedService(repo, new FailingProfileClient(), new FakeConfigClient());
+        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([purger]), [purger], seed, audit, evidence, Config(enabled: true));
+
+        var (summary, error, status) = await svc.ResetAsync("greenlogistics", "actor", "scheduled", "", default);
+
+        Assert.Null(summary);
+        Assert.NotNull(error);
+        Assert.Equal(SandboxResetStatus.Failed, status);
+        Assert.NotEqual(SandboxResetStatus.Refused, status);
+        Assert.True(purger.Ran, "the guard passed, so the purge ran before the reseed failed");
+        Assert.Equal("Failed", evidence.Last!.Status); // evidence agrees it Failed, not Refused
     }
 }

@@ -49,18 +49,20 @@ public sealed class SandboxResetService(
     /// resettable sandbox (Succeeded/Failed/Unavailable) — never for a non-sandbox guard rejection, which is a
     /// security refusal, not a reset.
     /// </summary>
-    public async Task<(SandboxResetSummary? summary, string? error)> ResetAsync(
+    public async Task<(SandboxResetSummary? summary, string? error, SandboxResetStatus status)> ResetAsync(
         string tenantId, string actorHash, string source, string authorizationHeader, CancellationToken ct)
     {
         // ── Guard: fail closed BEFORE any destructive action ──────────────────────────────
-        if (string.IsNullOrWhiteSpace(tenantId)) return (null, "Tenant id is required.");
+        // A guard rejection is a security refusal (Refused), distinct from a mid-flow purge/reseed
+        // failure (Failed) once the guard has passed — callers must not conflate the two.
+        if (string.IsNullOrWhiteSpace(tenantId)) return (null, "Tenant id is required.", SandboxResetStatus.Refused);
 
         TenantWorkspace? tenant;
         try { tenant = await repository.GetAsync(tenantId, ct); }
-        catch (ArgumentException) { return (null, "Unknown tenant."); } // invalid id shape
-        if (tenant is null) return (null, "Unknown tenant.");
+        catch (ArgumentException) { return (null, "Unknown tenant.", SandboxResetStatus.Refused); } // invalid id shape
+        if (tenant is null) return (null, "Unknown tenant.", SandboxResetStatus.Refused);
         if (tenant.Kind != TenantKind.Sandbox || !tenant.IsResettableSandbox)
-            return (null, "Refusing to reset: tenant is not a resettable sandbox.");
+            return (null, "Refusing to reset: tenant is not a resettable sandbox.", SandboxResetStatus.Refused);
 
         // Past the guard: this is a legitimate resettable sandbox, so every outcome from here is recorded
         // as operator evidence (no PII/secrets — actor hash + aggregate counts only).
@@ -80,7 +82,7 @@ public sealed class SandboxResetService(
             await evidence.RecordAsync(new SandboxResetEvidence(
                 tenantId, "Unavailable", source, actorHash, startedAt, DateTimeOffset.UtcNow,
                 SnapshotVersion: null, FailureReason: unavailable, Purged: null), ct);
-            return (null, unavailable);
+            return (null, unavailable, SandboxResetStatus.Unavailable);
         }
 
         await audit.StartedAsync(actorHash, tenantId, ct);
@@ -94,7 +96,7 @@ public sealed class SandboxResetService(
                 await evidence.RecordAsync(new SandboxResetEvidence(
                     tenantId, "Failed", source, actorHash, startedAt, DateTimeOffset.UtcNow,
                     SnapshotVersion: null, FailureReason: seedError, Purged: purged), ct);
-                return (null, $"Reset re-seed failed: {seedError}");
+                return (null, $"Reset re-seed failed: {seedError}", SandboxResetStatus.Failed);
             }
 
             var summary = new SandboxResetSummary(
@@ -103,7 +105,7 @@ public sealed class SandboxResetService(
             await evidence.RecordAsync(new SandboxResetEvidence(
                 tenantId, "Succeeded", source, actorHash, startedAt, summary.CompletedAt,
                 SnapshotVersion: seedResult.DatasetVersion, FailureReason: null, Purged: purged), ct);
-            return (summary, null);
+            return (summary, null, SandboxResetStatus.Succeeded);
         }
         catch (Exception ex)
         {
@@ -111,7 +113,21 @@ public sealed class SandboxResetService(
             await evidence.RecordAsync(new SandboxResetEvidence(
                 tenantId, "Failed", source, actorHash, startedAt, DateTimeOffset.UtcNow,
                 SnapshotVersion: null, FailureReason: ex.Message, Purged: null), ct);
-            return (null, "Reset failed; see audit evidence.");
+            return (null, "Reset failed; see audit evidence.", SandboxResetStatus.Failed);
         }
     }
+}
+
+/// <summary>
+/// Outcome of a sandbox reset. <see cref="Refused"/> is a pre-purge guard rejection (unknown or
+/// non-resettable-sandbox tenant — a security refusal); <see cref="Failed"/> is a mid-flow purge or
+/// reseed failure after the guard has already passed; <see cref="Unavailable"/> is the inert state
+/// (not activated). These must not be conflated in operator-facing evidence or gate diagnostics.
+/// </summary>
+public enum SandboxResetStatus
+{
+    Succeeded,
+    Refused,
+    Unavailable,
+    Failed,
 }

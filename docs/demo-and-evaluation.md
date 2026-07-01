@@ -70,7 +70,7 @@ The gate triggers the reset and asserts `status=Succeeded` for `greenlogistics` 
 - Local: the gate prints `PASS` and the customer log line `Scheduled sandbox reset: tenant=greenlogistics status=Succeeded`.
 - Hosted: platform readers (incl. auditors) inspect `GET /platform/tenants/greenlogistics/reset-sandbox` for status / source / started + completed timestamps / snapshot version / aggregate purge counts, and the Audit trail carries an immutable `platform.sandboxReset` record. Neither surface exposes secrets, tokens, raw user ids, or PII.
 
-**Re-running.** The reset is idempotent and dedup-leased per UTC day: a second trigger the same day is `Skipped` (the machinery is armed; the earlier reset stands). Restart the stack or wait for the next UTC window to see a fresh `Succeeded`.
+**Re-running.** The reset is idempotent and dedup-leased per UTC day. `reset-sandbox-gate.sh` **clears the day's lease before it triggers**, so every gate run drives a real reset. A *manual* re-trigger of `POST /sandbox-reset-scheduler` without clearing the lease is a no-op the scheduler logs as `already claimed … skipping` (the earlier reset stands); the gate treats that as a failure by default (pass `ALLOW_SKIPPED=1` to accept it). To force a fresh run manually, clear the lease (`DELETE /v1.0/state/customerstore/sandbox-reset:lease` on the customer Dapr sidecar) or wait for the next UTC window.
 
 ## Demo Tracks
 
