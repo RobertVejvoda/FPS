@@ -29,10 +29,12 @@ public sealed class ProfileDemoSeedController(
         if (string.IsNullOrWhiteSpace(request.TenantId))
             return BadRequest(new { error = "TenantId is required." });
 
-        try { TenantStorageKey.Sanitise(request.TenantId); }
+        // Use the normalized (trimmed, lower-cased) tenant id for stored records so domain data is
+        // canonical and matches how the storage keys normalize; a malformed id 400s here, not a 500.
+        string tenantId;
+        try { tenantId = TenantStorageKey.Sanitise(request.TenantId); }
         catch (ArgumentException) { return BadRequest(new { error = "Invalid tenant id." }); }
 
-        var tenantId = request.TenantId;
         var seeded = 0;
 
         foreach (var emp in request.Employees)

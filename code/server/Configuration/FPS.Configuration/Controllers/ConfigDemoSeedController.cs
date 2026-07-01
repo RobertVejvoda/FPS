@@ -33,10 +33,11 @@ public sealed class ConfigDemoSeedController(
         if (string.IsNullOrWhiteSpace(request.TenantId))
             return BadRequest(new { error = "TenantId is required." });
 
-        try { TenantStorageKey.Sanitise(request.TenantId); }
+        // Use the normalized (trimmed, lower-cased) tenant id for stored slots/policy/change records so
+        // domain data is canonical and matches how the storage keys normalize; a malformed id 400s here.
+        string tenantId;
+        try { tenantId = TenantStorageKey.Sanitise(request.TenantId); }
         catch (ArgumentException) { return BadRequest(new { error = "Invalid tenant id." }); }
-
-        var tenantId = request.TenantId;
         var actor = currentUser.IsAuthenticated && !string.IsNullOrEmpty(currentUser.UserId)
             ? currentUser.UserId
             : SeedActor;
