@@ -22,8 +22,10 @@ namespace FPS.DataHub.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class PlatformUsageStatsController(DataHubDbContext db) : ControllerBase
 {
-    // GET /platform/datahub/usage-stats?month=YYYY-MM[&tenantId=...]
-    [HttpGet("/platform/datahub/usage-stats")]
+    // GET /datahub/platform/usage-stats?month=YYYY-MM[&tenantId=...]
+    // Under the /datahub gateway prefix so it is reachable through Envoy (the platform surface
+    // for DataHub lives beneath the service's own route, not a separate /platform route).
+    [HttpGet("/datahub/platform/usage-stats")]
     public async Task<IActionResult> Get(
         [FromQuery] string month,
         [FromQuery] string? tenantId,

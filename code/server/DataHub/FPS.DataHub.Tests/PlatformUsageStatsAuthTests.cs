@@ -25,7 +25,7 @@ public sealed class PlatformUsageStatsAuthTests : IClassFixture<WebApplicationFa
 {
     private const string PlatformIssuer = "https://platform.test/realms/fps-platform";
     private const string CustomerIssuer = "https://auth.test/realms/fairspot";
-    private const string Path = "/platform/datahub/usage-stats?month=2026-06";
+    private const string Path = "/datahub/platform/usage-stats?month=2026-06";
 
     private static readonly SymmetricSecurityKey TestKey =
         new(Encoding.UTF8.GetBytes("fps-datahub-test-signing-key-at-least-32!!"));
@@ -40,6 +40,13 @@ public sealed class PlatformUsageStatsAuthTests : IClassFixture<WebApplicationFa
             builder.ConfigureAppConfiguration((_, cfg) =>
                 cfg.AddInMemoryCollection(new Dictionary<string, string?>
                 {
+                    // Same config shape as the deployment: Auth:PlatformAuthority is what activates
+                    // the multi-issuer JWT + platform-role gating (Auth:PlatformIssuer overrides the
+                    // issuer if it differs from the authority). The JWKS-backed acceptance of the
+                    // platform realm is ConfigureFpsJwtBearer's job (covered in SharedKernel); here
+                    // we sign with a test key + ValidateIssuer=false to exercise the DataHub endpoint's
+                    // role gating and the claims transformation that strips forged platform roles.
+                    ["Auth:PlatformAuthority"] = PlatformIssuer,
                     ["Auth:PlatformIssuer"] = PlatformIssuer,
                     ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
                 }));
@@ -126,7 +133,7 @@ public sealed class PlatformUsageStatsAuthTests : IClassFixture<WebApplicationFa
         }
 
         var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAuditor)
-            .GetAsync("/platform/datahub/usage-stats?month=2026-06&tenantId=tenant-a");
+            .GetAsync("/datahub/platform/usage-stats?month=2026-06&tenantId=tenant-a");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         var body = await r.Content.ReadAsStringAsync();
         Assert.Contains("\"bookingRequestCount\":9", body);
