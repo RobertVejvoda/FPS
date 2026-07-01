@@ -85,6 +85,20 @@ RabbitMQ (port 15692) is scraped from within the Docker network — the promethe
 - `process_cpu_seconds_total` — CPU time
 - `process_working_set_bytes` — RSS memory
 
+## Filtering metrics by tenant
+
+Metrics are **intentionally not labelled with `tenant_id`** (PLAT005B). The HTTP metrics are already
+`{method, route, code}`; adding a per-tenant label would multiply every series by the tenant count and
+risk a cardinality explosion, and the logging/monitoring contract forbids raw tenant IDs as metric
+labels. So the tenant dimension lives in **logs and traces**, not metrics:
+
+- **Per-tenant activity / errors:** filter the `FPS.Request` logs in Loki/Grafana by `tenant_id` (e.g.
+  `{job="fps-booking"} |= "tenant_id=greenlogistics"`), or search Jaeger traces by the `tenant_id` span tag.
+- **Fleet health (all tenants):** use the tenant-agnostic metrics above — they answer "is the service
+  healthy / fast / erroring" without needing a tenant label.
+- If a genuinely per-tenant *metric* is ever needed, use a **low-cardinality** proxy label such as
+  `tenantKind` (Sandbox/Production/Evaluation), never the raw tenant id.
+
 ---
 
 ## Prometheus UI

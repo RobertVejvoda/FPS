@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -49,8 +51,8 @@ public static class FpsObservabilityExtensions
     }
 
     // Middleware that logs the active TraceId and SpanId at the start of each
-    // request. Call after UseRouting() and after the OTel SDK is registered so
-    // Activity.Current is populated by AspNetCore instrumentation.
+    // request. Call after UseRouting()/UseAuthentication() and after the OTel SDK is
+    // registered so Activity.Current is populated and the validated tenant claim is available.
     public static IApplicationBuilder UseFpsRequestTraceLogging(this IApplicationBuilder app)
     {
         return app.Use(async (context, next) =>
@@ -58,15 +60,23 @@ public static class FpsObservabilityExtensions
             var activity = Activity.Current;
             if (activity is not null)
             {
+                // PLAT005B — tenant observability dimension. The tenant id comes ONLY from the
+                // validated claim via ICurrentUser (never a caller-supplied header/body). Platform,
+                // health, and unauthenticated requests log the __none__ sentinel and leave the span
+                // tag unset. traceId/spanId correlation is unchanged.
+                var tenantId = TenantTelemetry.Resolve(context.RequestServices.GetService<ICurrentUser>());
+                TenantTelemetry.SetTenantTag(activity, tenantId);
+
                 var logger = context.RequestServices
                     .GetRequiredService<ILoggerFactory>()
                     .CreateLogger("FPS.Request");
                 logger.LogInformation(
-                    "{Method} {Path} TraceId={TraceId} SpanId={SpanId}",
+                    "{Method} {Path} TraceId={TraceId} SpanId={SpanId} tenant_id={TenantId}",
                     context.Request.Method,
                     context.Request.Path,
                     activity.TraceId,
-                    activity.SpanId);
+                    activity.SpanId,
+                    tenantId);
             }
             await next(context);
         });

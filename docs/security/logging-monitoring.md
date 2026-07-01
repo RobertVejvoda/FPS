@@ -17,7 +17,7 @@ Technical logs should include:
 
 - stable message names suitable for filtering;
 - service name, environment, endpoint, action, dependency, result, status code, duration, and safe reason code where useful;
-- `TraceId` and `SpanId` from the current request or consumer span;
+- `TraceId` and `SpanId` from the current request or consumer span, plus the `tenant_id` operator dimension when a trusted tenant context exists (see "Tenant observability dimension" below);
 - source event ID, business event ID, or command ID when that identifier is non-sensitive and useful for correlation;
 - exception category and safe failure classification, not raw provider payloads or stack traces unless the deployment's security policy permits them for operators.
 
@@ -58,6 +58,17 @@ Trace data should include:
 - safe correlation attributes such as `sourceEventId`, `businessEventId`, or `auditRecordId` where cardinality and retention are acceptable.
 
 Trace attributes must follow the same redaction rules as logs. Authorization headers and credential-bearing attributes must be dropped by application instrumentation or the OpenTelemetry collector.
+
+## Tenant observability dimension (`tenant_id`)
+
+`tenant_id` is a technical/operator dimension that lets operators filter live logs and traces by tenant. It is not billing, not a business report, and not a substitute for the Audit or DataHub tenant views (those are business-accountability surfaces; this is operational telemetry).
+
+Contract:
+
+- **Trusted source only.** `tenant_id` is taken from the validated JWT tenant claim (via `ICurrentUser`, established by `TenantClaimsTransformation`, which fails closed) for HTTP requests, or from a Dapr-delivered event envelope's tenant for internal handlers. It is **never** derived from a request body, query string, or caller-supplied header — a forged `tenant_id` header cannot reach telemetry.
+- **Logs and traces carry it; metrics do not.** The `FPS.Request` log line and the request/event span carry `tenant_id`. Metrics stay tenant-agnostic — a raw `tenant_id` metric label would multiply the already route-labelled HTTP series per tenant (cardinality explosion), which the Metrics rules above forbid. Filter per-tenant activity through Loki/Jaeger; use `tenantKind` only if a low-cardinality per-tenant metric is ever required.
+- **No PII.** Only the tenant *identifier* is added — never user names, emails, license plates, actor hashes, tokens, or payloads. The tenant id itself is not personal data.
+- **Platform / no-tenant operations.** Health checks, `/platform/*` platform-plane endpoints, unauthenticated intake, and internal schedulers have no customer tenant. Their logs use the sentinel `tenant_id=__none__` (structurally impossible as a real tenant id, so it cannot be confused with a customer) and their spans leave the `tenant_id` attribute unset.
 
 ## Business Activity Records
 

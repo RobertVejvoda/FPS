@@ -1,7 +1,9 @@
 using FPS.DataHub.Domain;
 using FPS.DataHub.Infrastructure;
+using FPS.SharedKernel.Observability;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace FPS.DataHub.Application;
@@ -31,6 +33,8 @@ public sealed class BookingProjectionHandler(
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken ct)
     {
+        // PLAT005B — tag the projection span with the trusted envelope tenant. No PII.
+        TenantTelemetry.SetTenantTag(Activity.Current, envelope.TenantId);
         logger.LogInformation("Handling {EventType} for tenant {TenantId}", envelope.EventType, envelope.TenantId);
 
         switch (envelope.EventType)

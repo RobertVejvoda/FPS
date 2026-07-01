@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using FPS.Audit.Domain;
+using FPS.SharedKernel.Observability;
 using Microsoft.Extensions.Logging;
 
 namespace FPS.Audit.Application;
@@ -31,6 +32,10 @@ public sealed class BookingEventAuditHandler(
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
+        // PLAT005B — tag the event-processing span with the trusted envelope tenant (from the
+        // [DaprInternalOnly] publisher, not external input). No PII: tenant id only.
+        TenantTelemetry.SetTenantTag(Activity.Current, envelope.TenantId);
+
         if (await repository.ExistsAsync(envelope.EventId, envelope.TenantId, cancellationToken))
         {
             logger.LogDebug(
