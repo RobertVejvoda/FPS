@@ -5,6 +5,8 @@
   "displayName": "Green Logistics",
   "region": "EU",
   "timezone": "Europe/Prague",
+  "kind": "Sandbox",
+  "resettableSandbox": true,
   "supportContacts": [
     { "name": "GL Facilities", "email": "facilities@greenlogistics.example", "role": "Facilities" },
     { "name": "GL IT Support", "email": "it@greenlogistics.example",         "role": "Identity"  }

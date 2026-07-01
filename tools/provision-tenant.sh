@@ -72,6 +72,8 @@ print(f"TENANT_SLUG={sh(d.get('slug', d['tenantId']))}")
 print(f"TENANT_DISPLAY={sh(d['displayName'])}")
 print(f"TENANT_REGION={sh(d['region'])}")
 print(f"TENANT_TZ={sh(d['timezone'])}")
+print(f"TENANT_KIND={sh(d.get('kind', 'Production'))}")
+print(f"TENANT_RESETTABLE={sh('true' if d.get('resettableSandbox') else 'false')}")
 
 contacts = d.get('supportContacts', [])
 contacts_json = json.dumps(contacts)
@@ -165,6 +167,8 @@ print(json.dumps({
   'displayName': '$TENANT_DISPLAY',
   'region': '$TENANT_REGION',
   'timeZone': '$TENANT_TZ',
+  'kind': '$TENANT_KIND',
+  'resettableSandbox': '$TENANT_RESETTABLE' == 'true',
   'supportContacts': $TENANT_CONTACTS_JSON
 }))
 ")

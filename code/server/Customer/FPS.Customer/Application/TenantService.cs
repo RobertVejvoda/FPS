@@ -22,7 +22,8 @@ public sealed class TenantService(
         IReadOnlyList<TenantSupportContact> supportContacts,
         CancellationToken ct,
         string? requestedTenantId = null,
-        TenantKind kind = TenantKind.Production)
+        TenantKind kind = TenantKind.Production,
+        bool isResettableSandbox = false)
     {
         if (string.IsNullOrWhiteSpace(displayName)) return (null, "Display name is required.");
         if (string.IsNullOrWhiteSpace(region)) return (null, "Region is required.");
@@ -58,6 +59,8 @@ public sealed class TenantService(
             TimeZone = timeZone.Trim(),
             SupportContacts = supportContacts,
             Kind = kind,
+            // PLAT003A: only a Sandbox tenant can be marked resettable — never a Production tenant.
+            IsResettableSandbox = isResettableSandbox && kind == TenantKind.Sandbox,
             Provisioning = TenantProvisioningMetadata.Generate(tenantId, safeSlug),
         };
 

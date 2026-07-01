@@ -19,6 +19,11 @@ public sealed class TenantWorkspace
     public string TimeZone { get; set; } = string.Empty;
     public IReadOnlyList<TenantSupportContact> SupportContacts { get; set; } = [];
     public TenantKind Kind { get; init; } = TenantKind.Production;
+    // PLAT003A — durable, defense-in-depth marker for the resettable evaluation sandbox
+    // (Green Logistics). A destructive sandbox reset requires Kind==Sandbox AND this flag; a
+    // normal customer tenant leaves it false and can never be reset by the platform reset path.
+    // Read only from stored metadata — a caller can never pass it in a reset request.
+    public bool IsResettableSandbox { get; init; }
     public TenantLifecycleState LifecycleState { get; private set; } = TenantLifecycleState.Draft;
     public IReadOnlyList<TenantStateTransition> Transitions => transitions.AsReadOnly();
     public IReadOnlyList<TenantDemoSeedEvent> SeedEvents => seedEvents.AsReadOnly();
@@ -83,6 +88,7 @@ public sealed class TenantWorkspace
         string tenantId, string slug, string displayName, string region, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,
         TenantKind kind,
+        bool isResettableSandbox,
         TenantLifecycleState lifecycleState,
         IReadOnlyList<TenantStateTransition> storedTransitions,
         TenantProvisioningMetadata provisioning,
@@ -95,7 +101,7 @@ public sealed class TenantWorkspace
         {
             TenantId = tenantId, Slug = slug, DisplayName = displayName,
             Region = region, TimeZone = timeZone, SupportContacts = supportContacts,
-            Kind = kind, Provisioning = provisioning, CreatedAt = createdAt,
+            Kind = kind, IsResettableSandbox = isResettableSandbox, Provisioning = provisioning, CreatedAt = createdAt,
         };
         ws.transitions.AddRange(storedTransitions);
         ws.LifecycleState = lifecycleState;

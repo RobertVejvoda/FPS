@@ -249,6 +249,41 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
         Assert.Contains("globex", body);
     }
 
+    // ── POST /platform/tenants/{id}/reset-sandbox — platform-operator sandbox reset (PLAT003A) ──
+    // Operators/admins may reset the evaluation sandbox; auditor is read-only and tenant/customer
+    // tokens (incl. a forged platform role) can never reach it. An unknown tenant → 404, which
+    // still means the auth gate was passed (not 401/403).
+
+    [Theory]
+    [InlineData(FpsRoles.PlatformAdmin)]
+    [InlineData(FpsRoles.PlatformOperator)]
+    public async Task SandboxReset_PlatformOperatorRoles_PassGate(string role)
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, role).PostAsync("/platform/tenants/greenlogistics/reset-sandbox", null);
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-401/403, got {r.StatusCode}");
+    }
+
+    [Fact]
+    public async Task SandboxReset_PlatformAuditor_IsForbidden()
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, FpsRoles.PlatformAuditor).PostAsync("/platform/tenants/greenlogistics/reset-sandbox", null);
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task SandboxReset_TenantAdmin_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.Admin).PostAsync("/platform/tenants/acme/reset-sandbox", null);
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task SandboxReset_CustomerTokenWithForgedPlatformRole_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.PlatformOperator).PostAsync("/platform/tenants/acme/reset-sandbox", null);
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────────
 
     private HttpClient Client(string issuer, string? tenantId, params string[] roles)

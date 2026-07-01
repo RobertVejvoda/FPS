@@ -20,6 +20,12 @@ builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>()
 builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
+// PLAT003A — sandbox reset. TenantPurgeOrchestrator reuses the #635 tenant-scoped purge primitive;
+// per-service ITenantStorePurger implementations are registered as they land (the orchestrator
+// safely no-ops over an empty set today). The reset re-seeds via the existing TenantDemoSeedService.
+builder.Services.AddScoped<FPS.SharedKernel.Infrastructure.TenantPurgeOrchestrator>();
+builder.Services.AddScoped<SandboxResetService>();
+builder.Services.AddSingleton<ISandboxResetAudit, DaprSandboxResetAudit>();
 // PLAT004: tenant-request intake (public onboarding). Durable Dapr store is the system of
 // record; in-memory is used only by tests. PLAT004b: the notifier publishes a sales alert to the
 // Notification pub/sub (which emails sales) — publish failures degrade gracefully without failing intake.
