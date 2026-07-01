@@ -31,9 +31,11 @@ public sealed class PlatformSandboxResetController(SandboxResetService reset, IC
         var (summary, error) = await reset.ResetAsync(tenantId, actorHash, authorizationHeader, ct);
 
         if (error is not null)
-            return error.Contains("Unknown", StringComparison.OrdinalIgnoreCase)
-                ? NotFound(new { error })
-                : BadRequest(new { error });
+            return error.StartsWith("unavailable", StringComparison.OrdinalIgnoreCase)
+                ? StatusCode(StatusCodes.Status503ServiceUnavailable, new { error })
+                : error.Contains("Unknown", StringComparison.OrdinalIgnoreCase)
+                    ? NotFound(new { error })
+                    : BadRequest(new { error });
 
         return Ok(new
         {

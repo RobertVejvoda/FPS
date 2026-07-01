@@ -56,7 +56,7 @@ public sealed class SandboxResetServiceTests
         var purger = new SpyPurger();
         var audit = new SpyAudit();
         var seed = new TenantDemoSeedService(repo, new FakeProfileClient(), new FakeConfigClient());
-        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([purger]), seed, audit);
+        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([purger]), [purger], seed, audit);
         return (svc, purger, audit, repo);
     }
 
@@ -109,5 +109,22 @@ public sealed class SandboxResetServiceTests
         Assert.True(purger.Ran, "purge should run for a resettable sandbox");
         Assert.True(audit.Started && audit.Completed);
         Assert.True(summary!.ProfilesSeeded > 0 && summary.SlotsSeeded > 0);
+    }
+
+    [Fact]
+    public async Task Reset_ResettableSandbox_NoPurgersRegistered_FailsClosed()
+    {
+        var repo = new InMemoryTenantRepository();
+        await repo.SaveAsync(Tenant("greenlogistics", TenantKind.Sandbox, resettable: true), default);
+        var audit = new SpyAudit();
+        var seed = new TenantDemoSeedService(repo, new FakeProfileClient(), new FakeConfigClient());
+        // No purgers registered → must not purge/reseed and must not report a fake success.
+        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([]), [], seed, audit);
+
+        var (summary, error) = await svc.ResetAsync("greenlogistics", "actor", "Bearer x", default);
+
+        Assert.Null(summary);
+        Assert.StartsWith("unavailable", error);
+        Assert.False(audit.Started, "a fail-closed reset must not start or audit a destructive run");
     }
 }

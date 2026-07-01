@@ -36,6 +36,7 @@ public interface ISandboxResetAudit
 public sealed class SandboxResetService(
     ITenantRepository repository,
     TenantPurgeOrchestrator purge,
+    IEnumerable<ITenantStorePurger> purgers,
     TenantDemoSeedService seed,
     ISandboxResetAudit audit)
 {
@@ -51,6 +52,15 @@ public sealed class SandboxResetService(
         if (tenant is null) return (null, "Unknown tenant.");
         if (tenant.Kind != TenantKind.Sandbox || !tenant.IsResettableSandbox)
             return (null, "Refusing to reset: tenant is not a resettable sandbox.");
+
+        // Fail closed: a destructive reset must never purge (or report success) when it cannot
+        // actually rebuild the golden state. #635 shipped only the purge framework, so until the
+        // per-service ITenantStorePurger implementations are registered the reset stays inert —
+        // it never purges-then-fails-to-reseed, and never returns a fake empty-purge "success".
+        // The same slice that registers purgers must also carry the internal (tenant-scoped)
+        // reseed path so re-seed auth is proven before purge for platform callers.
+        if (!purgers.Any())
+            return (null, "unavailable: sandbox reset is not active yet — no tenant-store purgers are registered.");
 
         await audit.StartedAsync(actorHash, tenantId, ct);
         try
