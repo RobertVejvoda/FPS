@@ -32,7 +32,7 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
         var (tenant, error) = await service.CreateAsync(
             request.Slug, request.DisplayName, request.Region, request.TimeZone,
             request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct, request.TenantId, kind);
+            ct, request.TenantId, kind, request.ResettableSandbox);
 
         if (error is not null) return BadRequest(new { error });
         // Location points at the tenant-scoped read on TenantController ("Tenant" controller, "Get" action).
@@ -58,4 +58,7 @@ public sealed record CreateTenantRequest(
     // Optional deterministic tenant ID for provisioning tools. If omitted, a GUID is generated.
     string? TenantId = null,
     // Tenant kind — defaults to Production for safety. Use Sandbox or Evaluation for demo tenants.
-    string? Kind = null);
+    string? Kind = null,
+    // PLAT003A: mark this tenant as the resettable evaluation sandbox (Green Logistics). Only
+    // honored when Kind==Sandbox; defaults false so real customer tenants are never resettable.
+    bool ResettableSandbox = false);

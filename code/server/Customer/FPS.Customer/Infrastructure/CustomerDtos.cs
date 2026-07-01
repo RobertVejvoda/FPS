@@ -11,6 +11,7 @@ internal sealed class TenantWorkspaceDto
     public string TimeZone { get; set; } = string.Empty;
     public List<TenantSupportContact> SupportContacts { get; set; } = [];
     public TenantKind Kind { get; set; } = TenantKind.Production;
+    public bool IsResettableSandbox { get; set; }
     public TenantLifecycleState LifecycleState { get; set; }
     public List<TenantStateTransition> Transitions { get; set; } = [];
     public TenantProvisioningMetadata Provisioning { get; set; } = new();
@@ -22,7 +23,7 @@ internal sealed class TenantWorkspaceDto
 
     public TenantWorkspace ToDomain() => TenantWorkspace.Restore(
         TenantId, Slug, DisplayName, Region, TimeZone, SupportContacts,
-        Kind, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, SeedEvents, CreatedAt, UpdatedAt);
+        Kind, IsResettableSandbox, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, SeedEvents, CreatedAt, UpdatedAt);
 
     public static TenantWorkspaceDto FromDomain(TenantWorkspace ws) => new()
     {
@@ -33,6 +34,7 @@ internal sealed class TenantWorkspaceDto
         TimeZone = ws.TimeZone,
         SupportContacts = ws.SupportContacts.ToList(),
         Kind = ws.Kind,
+        IsResettableSandbox = ws.IsResettableSandbox,
         LifecycleState = ws.LifecycleState,
         Transitions = ws.Transitions.ToList(),
         Provisioning = ws.Provisioning,

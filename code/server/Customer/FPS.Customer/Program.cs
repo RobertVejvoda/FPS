@@ -20,6 +20,12 @@ builder.Services.AddSingleton<ITenantRepository, DaprCustomerTenantRepository>()
 builder.Services.AddSingleton<ITenantIdentityRepository, DaprCustomerIdentityRepository>();
 builder.Services.AddSingleton<ITenantParkingBootstrapRepository, DaprCustomerParkingBootstrapRepository>();
 builder.Services.AddScoped<TenantService>();
+// PLAT003A — sandbox reset. TenantPurgeOrchestrator reuses the #635 tenant-scoped purge primitive;
+// per-service ITenantStorePurger implementations are registered as they land (the orchestrator
+// safely no-ops over an empty set today). The reset re-seeds via the existing TenantDemoSeedService.
+builder.Services.AddScoped<FPS.SharedKernel.Infrastructure.TenantPurgeOrchestrator>();
+builder.Services.AddScoped<SandboxResetService>();
+builder.Services.AddSingleton<ISandboxResetAudit, DaprSandboxResetAudit>();
 // PLAT004: tenant-request intake (public onboarding). Durable Dapr store is the system of
 // record; in-memory is used only by tests. PLAT004b: the notifier publishes a sales alert to the
 // Notification pub/sub (which emails sales) — publish failures degrade gracefully without failing intake.
@@ -271,8 +277,23 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
     const string discoveryDomain = "greenlogistics.example";
 
     var tenantRepository = services.GetRequiredService<ITenantRepository>();
-    if (await tenantRepository.GetAsync(tenantId, CancellationToken.None) is not null)
+    var existing = await tenantRepository.GetAsync(tenantId, CancellationToken.None);
+    if (existing is not null)
+    {
+        // PLAT003A repair: upgrade an already-seeded Green Logistics tenant to the resettable
+        // sandbox marker so it satisfies the reset guard (local/harness state may predate the
+        // flag). Never touches a non-sandbox tenant.
+        if (existing.Kind == TenantKind.Sandbox && !existing.IsResettableSandbox)
+        {
+            var repaired = TenantWorkspace.Restore(
+                existing.TenantId, existing.Slug, existing.DisplayName, existing.Region, existing.TimeZone,
+                existing.SupportContacts, existing.Kind, isResettableSandbox: true, existing.LifecycleState,
+                existing.Transitions, existing.Provisioning, existing.Branding, existing.DiscoveryDomains,
+                existing.SeedEvents, existing.CreatedAt, existing.UpdatedAt);
+            await tenantRepository.SaveAsync(repaired, CancellationToken.None);
+        }
         return;
+    }
 
     var now = DateTimeOffset.UtcNow;
     var tenant = new TenantWorkspace
@@ -283,6 +304,7 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
         Region = "EU",
         TimeZone = "Europe/Prague",
         Kind = TenantKind.Sandbox,
+        IsResettableSandbox = true,
         SupportContacts =
         [
             new TenantSupportContact("GL Facilities", "facilities@greenlogistics.example", "Facilities"),
