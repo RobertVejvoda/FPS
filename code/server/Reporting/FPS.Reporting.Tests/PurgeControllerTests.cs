@@ -7,13 +7,19 @@ namespace FPS.Reporting.Tests;
 
 public sealed class PurgeControllerTests
 {
-    private readonly PurgeController controller = new(new ReportingTenantStorePurger());
+    private readonly InMemoryReportingRepository repository = new();
+    private readonly PurgeController controller;
+
+    public PurgeControllerTests()
+    {
+        controller = new PurgeController(new ReportingTenantStorePurger(repository));
+    }
 
     [Fact]
-    public async Task PurgeTenant_ValidTenant_ReturnsOkWithZeroCount()
+    public async Task PurgeTenant_TenantWithNoData_ReturnsOkWithZeroCount()
     {
-        // Reporting is an in-memory evaluation stub with no durable per-tenant store, so the
-        // purger reports 0 — it exists for evidence symmetry in the platform purge fan-out.
+        // The purger now delegates to the in-memory repository; a tenant that holds no rows
+        // yields a real count of 0 (idempotent no-op), not a hard-coded stub 0.
         var request = new TenantPurgeRequest("tenant-1", SandboxReset: false);
 
         var result = await controller.PurgeTenant(request, CancellationToken.None);
@@ -21,6 +27,21 @@ public sealed class PurgeControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var payload = Assert.IsType<TenantPurgeResponse>(ok.Value);
         Assert.Equal(new TenantPurgeResponse("reporting", 0), payload);
+    }
+
+    [Fact]
+    public async Task PurgeTenant_TenantWithData_ReturnsOkWithRemovedRowCount()
+    {
+        // Seed one metric row + one fairness row for the tenant, then purge via the endpoint.
+        await repository.ApplyMetricsAsync("tenant-1", "2026-06-01", "loc-1", "09:00-17:00", m => m.IncrementDemand());
+        await repository.ApplyFairnessAsync("tenant-1", "user-1", "2026-06-01", "loc-1", f => f.IncrementRequest());
+        var request = new TenantPurgeRequest("tenant-1", SandboxReset: true);
+
+        var result = await controller.PurgeTenant(request, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var payload = Assert.IsType<TenantPurgeResponse>(ok.Value);
+        Assert.Equal(new TenantPurgeResponse("reporting", 2), payload);
     }
 
     [Fact]

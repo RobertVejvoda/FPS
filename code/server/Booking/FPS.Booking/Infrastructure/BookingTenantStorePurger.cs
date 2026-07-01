@@ -8,12 +8,20 @@ namespace FPS.Booking.Infrastructure;
 /// booking state, not immutable evidence, so it runs on a normal tenant purge as well as a
 /// sandbox reset.
 /// </summary>
-public sealed class BookingTenantStorePurger(IBookingQueryRepository repository) : ITenantStorePurger
+public sealed class BookingTenantStorePurger(
+    IBookingQueryRepository repository,
+    IDrawRepository drawRepository,
+    ICorrectionAuditRepository correctionAuditRepository) : ITenantStorePurger
 {
     public string Service => "booking";
 
     public bool IsImmutableEvidence => false;
 
     public async Task<int> PurgeAsync(TenantPurgeScope scope, bool sandboxReset, CancellationToken ct)
-        => await repository.PurgeTenantAsync(scope.TenantId, ct);
+    {
+        var requests = await repository.PurgeTenantAsync(scope.TenantId, ct);
+        var draws = await drawRepository.PurgeTenantAsync(scope.TenantId, ct);
+        var corrections = await correctionAuditRepository.PurgeTenantAsync(scope.TenantId, ct);
+        return requests + draws + corrections;
+    }
 }

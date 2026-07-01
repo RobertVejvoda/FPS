@@ -17,7 +17,7 @@ public sealed class BookingEventReportingHandler(IReportingRepository repository
             return;
         }
 
-        await repository.RecordEventIdAsync(envelope.EventId, cancellationToken);
+        await repository.RecordEventIdAsync(envelope.TenantId, envelope.EventId, cancellationToken);
 
         logger.LogInformation(
             "Reporting projection event consumed. TenantId={TenantId} EventType={EventType} SourceEventId={SourceEventId}",

@@ -18,4 +18,11 @@ public interface IDrawRepository
     /// false if there was a concurrency conflict (ETag mismatch).
     /// </summary>
     Task<bool> TrySaveAsync(DrawAttemptDto attempt, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Destructively purges every draw attempt for the tenant (PLAT003C) via the per-tenant
+    /// draw index, then removes the index itself. Returns the number of attempts deleted.
+    /// Idempotent: a re-run over an already-purged tenant returns 0.
+    /// </summary>
+    Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 }

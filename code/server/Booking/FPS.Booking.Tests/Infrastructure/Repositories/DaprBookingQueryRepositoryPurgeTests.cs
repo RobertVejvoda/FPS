@@ -1,6 +1,5 @@
 using Dapr.Client;
 using FPS.Booking.Application.Models;
-using FPS.Booking.Domain.ValueObjects;
 using FPS.Booking.Infrastructure.Repositories;
 using FPS.SharedKernel.Infrastructure;
 using Moq;
@@ -109,9 +108,8 @@ public sealed class DaprBookingQueryRepositoryPurgeTests
             Id = Guid.NewGuid(), RequestId = requestId, TenantId = Tenant, RequestorId = requestor, Type = "NoShow"
         };
 
-        var timeSlot = TimeSlot.Create(dto.PlannedArrivalTime, dto.PlannedDepartureTime);
-        var drawKey = DrawKey.Create(Tenant, dto.LocationId!, DateOnly.FromDateTime(dto.PlannedArrivalTime), timeSlot);
-        store[drawKey.ToStoreKey()] = new DrawAttemptDto { DrawKey = drawKey.ToStoreKey(), TenantId = Tenant };
+        // Draw attempts are no longer purged by the query repository — DaprDrawRepository owns them
+        // via its own per-tenant draw index (see DaprDrawRepositoryPurgeTests).
 
         store[TenantStorageKey.For("metrics", Tenant, requestor)] = new List<string> { "2026-06-02" };
         store[$"count:{Tenant}:2026-06-02"] = 1;

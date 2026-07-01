@@ -335,7 +335,6 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         var requestIds = opsIndex?.RequestIds ?? [];
 
         var requestorIds = new HashSet<string>(StringComparer.Ordinal);
-        var drawKeys = new HashSet<string>(StringComparer.Ordinal);
         var countKeys = new HashSet<string>(StringComparer.Ordinal);
         var removed = 0;
 
@@ -352,18 +351,8 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
 
                 countKeys.Add(CountKey(tenantId, dto.PlannedArrivalTime));
 
-                // Draw attempts have no tenant index; reconstruct the store key exactly as
-                // CancelBookingHandler does (location + arrival date + arrival/departure slot).
-                // A key that does not exist is a harmless no-op delete, and the key is tenant
-                // scoped, so this can never reach another tenant's data.
-                if (!string.IsNullOrWhiteSpace(dto.LocationId)
-                    && dto.PlannedDepartureTime > dto.PlannedArrivalTime)
-                {
-                    var timeSlot = TimeSlot.Create(dto.PlannedArrivalTime, dto.PlannedDepartureTime);
-                    var drawKey = DrawKey.Create(
-                        tenantId, dto.LocationId, DateOnly.FromDateTime(dto.PlannedArrivalTime), timeSlot);
-                    drawKeys.Add(drawKey.ToStoreKey());
-                }
+                // Draw attempts are owned and purged by DaprDrawRepository.PurgeTenantAsync via the
+                // per-tenant draw index, so this repository no longer reconstructs draw keys here.
 
                 await daprClient.DeleteStateAsync(BookingStore, requestKey, cancellationToken: cancellationToken);
                 removed++;
@@ -378,10 +367,6 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
                     TenantStorageKey.For("penalty", tenantId, $"{requestId}:{penaltyType}"),
                     cancellationToken: cancellationToken);
         }
-
-        // Draw attempts reconstructed from the requests above.
-        foreach (var drawKey in drawKeys)
-            await daprClient.DeleteStateAsync(BookingStore, drawKey, cancellationToken: cancellationToken);
 
         // Per-requestor keys: the fairness metrics history (DaprEmployeeMetricsService) and the
         // user request index maintained by this repository.

@@ -15,11 +15,14 @@ namespace FPS.Booking.Tests.Controllers;
 public sealed class PurgeControllerTests
 {
     private readonly Mock<IBookingQueryRepository> repository = new();
+    private readonly Mock<IDrawRepository> drawRepository = new();
+    private readonly Mock<ICorrectionAuditRepository> correctionAuditRepository = new();
     private readonly PurgeController controller;
 
     public PurgeControllerTests()
     {
-        var purger = new BookingTenantStorePurger(repository.Object);
+        var purger = new BookingTenantStorePurger(
+            repository.Object, drawRepository.Object, correctionAuditRepository.Object);
         controller = new PurgeController(purger);
     }
 
