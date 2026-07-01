@@ -6,6 +6,7 @@ scopes:
 - fps-booking
 - fps-notification
 - fps-audit
+- fps-customer
 - fps-reporting
 - fps-datahub
 spec:

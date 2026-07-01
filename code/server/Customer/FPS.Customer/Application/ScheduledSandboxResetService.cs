@@ -60,7 +60,10 @@ public sealed class ScheduledSandboxResetService(
             var status = error is null
                 ? "Succeeded"
                 : error.StartsWith("unavailable", StringComparison.OrdinalIgnoreCase) ? "Unavailable" : "Refused";
-            logger.LogInformation("Scheduled sandbox reset: tenant={TenantId} status={Status}", tenantId, status);
+            if (error is null)
+                logger.LogInformation("Scheduled sandbox reset: tenant={TenantId} status={Status}", tenantId, status);
+            else
+                logger.LogWarning("Scheduled sandbox reset: tenant={TenantId} status={Status} detail={Detail}", tenantId, status, error);
             outcomes.Add(new ScheduledResetOutcome(tenantId, status));
         }
         return outcomes;

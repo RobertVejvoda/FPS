@@ -46,6 +46,32 @@ Green Logistics is the primary hosted sandbox tenant. Its demo data should be pr
 
 The detailed hosted-operator procedure belongs in the private platform runbooks. This public page records the product and safety contract only.
 
+### Activating and verifying the reset (PLAT003C)
+
+**Where the flag lives.** Activation is env-gated and OFF by default (fail closed). The container/hosted compose files (`docker-compose.services.yml`, `docker-compose.services.images.yml`) read on `fps-customer`:
+
+- `SandboxReset__Enabled=${FPS_SANDBOX_RESET_ENABLED:-false}` — arms the destructive purge/reseed.
+- `SandboxReset__Scheduler__Enabled=${FPS_SANDBOX_RESET_SCHEDULER_ENABLED:-false}` — arms the nightly cron tick.
+
+Set `FPS_SANDBOX_RESET_ENABLED=true` (and `FPS_SANDBOX_RESET_SCHEDULER_ENABLED=true` for the scheduler) **only** in a demo / Green Logistics evaluation profile. Do **not** enable it in `appsettings.Development.json` or a generic developer profile — the reset is destructive. A non-sandbox tenant is always refused before any purge, from stored metadata, so real customer tenants can never be reset through this path.
+
+**Local live gate (seed → reset → reseed).** From a machine with Docker + host `curl`/`python3`:
+
+```
+FPS_SANDBOX_RESET_ENABLED=true FPS_SANDBOX_RESET_SCHEDULER_ENABLED=true \
+  ./tools/start-container-stack.sh --seed        # stack up + Green Logistics seeded (Development)
+./tools/reset-sandbox-gate.sh                    # trigger a reset and assert the full cycle
+```
+
+The gate triggers the reset and asserts `status=Succeeded` for `greenlogistics` (seed → purge fan-out → reseed of the golden dataset). It uses the internal scheduler route (`POST /sandbox-reset-scheduler`), which is the reproducible local trigger: the manual platform endpoint needs a `platform_operator` token and the platform plane is dormant in the local realm, whereas the internal route is `[DaprInternalOnly]` and, in Development with `APP_API_TOKEN` unset, is reachable in-cluster for the gate.
+
+**Verifying success.**
+
+- Local: the gate prints `PASS` and the customer log line `Scheduled sandbox reset: tenant=greenlogistics status=Succeeded`.
+- Hosted: platform readers (incl. auditors) inspect `GET /platform/tenants/greenlogistics/reset-sandbox` for status / source / started + completed timestamps / snapshot version / aggregate purge counts, and the Audit trail carries an immutable `platform.sandboxReset` record. Neither surface exposes secrets, tokens, raw user ids, or PII.
+
+**Re-running.** The reset is idempotent and dedup-leased per UTC day: a second trigger the same day is `Skipped` (the machinery is armed; the earlier reset stands). Restart the stack or wait for the next UTC window to see a fresh `Succeeded`.
+
 ## Demo Tracks
 
 | Track | Goal |
