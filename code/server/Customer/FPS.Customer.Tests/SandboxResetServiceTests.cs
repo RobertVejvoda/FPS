@@ -2,6 +2,7 @@ using FPS.Customer.Application;
 using FPS.Customer.Domain;
 using FPS.Customer.Infrastructure;
 using FPS.SharedKernel.Infrastructure;
+using Microsoft.Extensions.Configuration;
 
 namespace FPS.Customer.Tests;
 
@@ -50,13 +51,18 @@ public sealed class SandboxResetServiceTests
         Kind = kind, IsResettableSandbox = resettable,
     };
 
-    private static (SandboxResetService svc, SpyPurger purger, SpyAudit audit, InMemoryTenantRepository repo) Build()
+    private static IConfiguration Config(bool enabled) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["SandboxReset:Enabled"] = enabled ? "true" : "false" })
+            .Build();
+
+    private static (SandboxResetService svc, SpyPurger purger, SpyAudit audit, InMemoryTenantRepository repo) Build(bool enabled = true)
     {
         var repo = new InMemoryTenantRepository();
         var purger = new SpyPurger();
         var audit = new SpyAudit();
         var seed = new TenantDemoSeedService(repo, new FakeProfileClient(), new FakeConfigClient());
-        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([purger]), [purger], seed, audit);
+        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([purger]), [purger], seed, audit, Config(enabled));
         return (svc, purger, audit, repo);
     }
 
@@ -119,12 +125,27 @@ public sealed class SandboxResetServiceTests
         var audit = new SpyAudit();
         var seed = new TenantDemoSeedService(repo, new FakeProfileClient(), new FakeConfigClient());
         // No purgers registered → must not purge/reseed and must not report a fake success.
-        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([]), [], seed, audit);
+        var svc = new SandboxResetService(repo, new TenantPurgeOrchestrator([]), [], seed, audit, Config(enabled: true));
 
         var (summary, error) = await svc.ResetAsync("greenlogistics", "actor", "Bearer x", default);
 
         Assert.Null(summary);
         Assert.StartsWith("unavailable", error);
         Assert.False(audit.Started, "a fail-closed reset must not start or audit a destructive run");
+    }
+
+    [Fact]
+    public async Task Reset_PurgerRegisteredButNotExplicitlyEnabled_FailsClosed()
+    {
+        // A registered purger must NOT activate the destructive path without the explicit opt-in.
+        var (svc, purger, audit, repo) = Build(enabled: false);
+        await repo.SaveAsync(Tenant("greenlogistics", TenantKind.Sandbox, resettable: true), default);
+
+        var (summary, error) = await svc.ResetAsync("greenlogistics", "actor", "Bearer x", default);
+
+        Assert.Null(summary);
+        Assert.StartsWith("unavailable", error);
+        Assert.False(purger.Ran, "adding a purger must not enable the reset without SandboxReset:Enabled");
+        Assert.False(audit.Started);
     }
 }

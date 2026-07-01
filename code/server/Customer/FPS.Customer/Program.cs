@@ -277,8 +277,23 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
     const string discoveryDomain = "greenlogistics.example";
 
     var tenantRepository = services.GetRequiredService<ITenantRepository>();
-    if (await tenantRepository.GetAsync(tenantId, CancellationToken.None) is not null)
+    var existing = await tenantRepository.GetAsync(tenantId, CancellationToken.None);
+    if (existing is not null)
+    {
+        // PLAT003A repair: upgrade an already-seeded Green Logistics tenant to the resettable
+        // sandbox marker so it satisfies the reset guard (local/harness state may predate the
+        // flag). Never touches a non-sandbox tenant.
+        if (existing.Kind == TenantKind.Sandbox && !existing.IsResettableSandbox)
+        {
+            var repaired = TenantWorkspace.Restore(
+                existing.TenantId, existing.Slug, existing.DisplayName, existing.Region, existing.TimeZone,
+                existing.SupportContacts, existing.Kind, isResettableSandbox: true, existing.LifecycleState,
+                existing.Transitions, existing.Provisioning, existing.Branding, existing.DiscoveryDomains,
+                existing.SeedEvents, existing.CreatedAt, existing.UpdatedAt);
+            await tenantRepository.SaveAsync(repaired, CancellationToken.None);
+        }
         return;
+    }
 
     var now = DateTimeOffset.UtcNow;
     var tenant = new TenantWorkspace
@@ -289,6 +304,7 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
         Region = "EU",
         TimeZone = "Europe/Prague",
         Kind = TenantKind.Sandbox,
+        IsResettableSandbox = true,
         SupportContacts =
         [
             new TenantSupportContact("GL Facilities", "facilities@greenlogistics.example", "Facilities"),

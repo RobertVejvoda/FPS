@@ -1,5 +1,6 @@
 using FPS.Customer.Domain;
 using FPS.SharedKernel.Infrastructure;
+using Microsoft.Extensions.Configuration;
 
 namespace FPS.Customer.Application;
 
@@ -38,7 +39,8 @@ public sealed class SandboxResetService(
     TenantPurgeOrchestrator purge,
     IEnumerable<ITenantStorePurger> purgers,
     TenantDemoSeedService seed,
-    ISandboxResetAudit audit)
+    ISandboxResetAudit audit,
+    IConfiguration configuration)
 {
     public async Task<(SandboxResetSummary? summary, string? error)> ResetAsync(
         string tenantId, string actorHash, string authorizationHeader, CancellationToken ct)
@@ -53,14 +55,16 @@ public sealed class SandboxResetService(
         if (tenant.Kind != TenantKind.Sandbox || !tenant.IsResettableSandbox)
             return (null, "Refusing to reset: tenant is not a resettable sandbox.");
 
-        // Fail closed: a destructive reset must never purge (or report success) when it cannot
-        // actually rebuild the golden state. #635 shipped only the purge framework, so until the
-        // per-service ITenantStorePurger implementations are registered the reset stays inert —
-        // it never purges-then-fails-to-reseed, and never returns a fake empty-purge "success".
-        // The same slice that registers purgers must also carry the internal (tenant-scoped)
-        // reseed path so re-seed auth is proven before purge for platform callers.
-        if (!purgers.Any())
-            return (null, "unavailable: sandbox reset is not active yet — no tenant-store purgers are registered.");
+        // Fail closed until the reset is EXPLICITLY activated (default off). Activation requires
+        // BOTH an explicit opt-in (SandboxReset:Enabled) — the operator asserting the internal
+        // tenant-scoped reseed path and durable audit ingestion are wired — AND at least one
+        // registered ITenantStorePurger. So the destructive path can never turn on merely as a
+        // side effect of adding a purger, and never purges-then-fails-to-reseed or returns a fake
+        // empty-purge "success". #635 shipped only the purge framework; the slice that registers
+        // purgers + internal reseed + audit ingestion flips SandboxReset:Enabled on together.
+        var enabled = configuration.GetValue<bool>("SandboxReset:Enabled");
+        if (!enabled || !purgers.Any())
+            return (null, "unavailable: sandbox reset is not active yet (requires explicit SandboxReset:Enabled plus registered tenant-store purgers).");
 
         await audit.StartedAsync(actorHash, tenantId, ct);
         try
