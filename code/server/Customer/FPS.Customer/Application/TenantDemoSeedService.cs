@@ -25,12 +25,12 @@ public sealed class TenantDemoSeedService(
         var seedAt = DateTimeOffset.UtcNow;
 
         var (profilesSeeded, profileError) = await profileClient.SeedAsync(
-            authorizationHeader, GreenLogisticsDataset.Employees, ct);
+            authorizationHeader, tenantId, GreenLogisticsDataset.Employees, ct);
         if (profileError is not null)
             return (null, $"Profile seed failed: {profileError}");
 
         var (slotsSeeded, configError) = await configClient.SeedAsync(
-            authorizationHeader, GreenLogisticsDataset.LocationId,
+            authorizationHeader, tenantId, GreenLogisticsDataset.LocationId,
             GreenLogisticsDataset.Slots, GreenLogisticsDataset.Policy, ct);
         if (configError is not null)
             return (null, $"Configuration seed failed: {configError}");

@@ -96,8 +96,10 @@ builder.Services.AddScoped<TenantIdentityService>();
 builder.Services.AddScoped<TenantParkingBootstrapService>();
 builder.Services.AddScoped<TenantReadinessService>();
 builder.Services.AddScoped<TenantDemoSeedService>();
-builder.Services.AddHttpClient<IDemoSeedProfileClient, HttpDemoSeedProfileClient>();
-builder.Services.AddHttpClient<IDemoSeedConfigurationClient, HttpDemoSeedConfigurationClient>();
+// PLAT003C-C2: reseed over Dapr service invocation so the Profile/Config demo-seed endpoints can be
+// [DaprInternalOnly] (a real internal boundary), not key-only anonymous HTTP.
+builder.Services.AddScoped<IDemoSeedProfileClient, DaprDemoSeedProfileClient>();
+builder.Services.AddScoped<IDemoSeedConfigurationClient, DaprDemoSeedConfigurationClient>();
 builder.Services.AddHttpClient<IProfileReadinessProbe, HttpProfileReadinessProbe>();
 builder.Services.AddHttpClient<IBookingReadinessProbe, HttpBookingReadinessProbe>();
 builder.Services.AddHttpClient<INotificationReadinessProbe, HttpNotificationReadinessProbe>();

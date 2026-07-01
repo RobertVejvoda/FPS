@@ -1,44 +1,40 @@
 using FPS.Profile.Application;
 using FPS.Profile.Domain;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
-using Microsoft.AspNetCore.Authorization;
+using FPS.SharedKernel.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.Extensions.Configuration;
 
 namespace FPS.Profile.Controllers;
 
-// Internal demo-seed endpoint — upserts a batch of employee profiles for a sandbox
-// or evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). The caller
-// (Customer service) validates TenantKind before issuing this request; this
-// endpoint only re-checks that the actor is an authenticated admin.
+// Internal demo-seed endpoint — upserts a batch of employee profiles for a sandbox or evaluation
+// tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: gated by [DaprInternalOnly] (the
+// dapr-api-token boundary the /erasure and pub/sub endpoints use), so gateway-routed external traffic
+// can't reach it. The tenant is taken from the request body because a scheduled sandbox reset has no
+// operator JWT; the id is shape-validated before any persistence so a malformed id returns 400.
 [ApiController]
 [Route("profile/admin")]
-[Authorize(Roles = "admin")]
+[DaprInternalOnly]
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class ProfileDemoSeedController(
     IProfileRepository repository,
-    IDeactivatedUserStore deactivatedUserStore,
-    ICurrentUser currentUser,
-    IConfiguration config) : ControllerBase
+    IDeactivatedUserStore deactivatedUserStore) : ControllerBase
 {
     [HttpPost("demo-seed")]
     public async Task<IActionResult> DemoSeed(
         [FromBody] ProfileDemoSeedRequest request,
         CancellationToken ct)
     {
-        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
-            return Unauthorized();
+        if (string.IsNullOrWhiteSpace(request.TenantId))
+            return BadRequest(new { error = "TenantId is required." });
 
-        var expectedKey = config["DemoSeed:InternalKey"];
-        if (string.IsNullOrEmpty(expectedKey))
-            return StatusCode(503, new { error = "Demo seed internal key not configured." });
+        // Use the normalized (trimmed, lower-cased) tenant id for stored records so domain data is
+        // canonical and matches how the storage keys normalize; a malformed id 400s here, not a 500.
+        string tenantId;
+        try { tenantId = TenantStorageKey.Sanitise(request.TenantId); }
+        catch (ArgumentException) { return BadRequest(new { error = "Invalid tenant id." }); }
 
-        var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
-        if (providedKey != expectedKey)
-            return Unauthorized();
-
-        var tenantId = currentUser.TenantId;
         var seeded = 0;
 
         foreach (var emp in request.Employees)
@@ -90,7 +86,7 @@ public sealed class ProfileDemoSeedController(
     }
 }
 
-public sealed record ProfileDemoSeedRequest(IReadOnlyList<DemoEmployeeSpec> Employees);
+public sealed record ProfileDemoSeedRequest(string TenantId, IReadOnlyList<DemoEmployeeSpec> Employees);
 
 public sealed record DemoEmployeeSpec(
     string UserId,

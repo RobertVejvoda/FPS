@@ -1,46 +1,24 @@
 using FPS.Profile.Controllers;
 using FPS.Profile.Domain;
 using FPS.Profile.Infrastructure;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Moq;
 
 namespace FPS.Profile.Tests;
 
 public sealed class ProfileDemoSeedControllerTests
 {
+    private const string Tenant = "demo-tenant";
     private readonly InMemoryProfileRepository repository = new();
     private readonly InMemoryDeactivatedUserStore deactivatedStore = new();
-    private readonly Mock<ICurrentUser> currentUser = new();
     private readonly ProfileDemoSeedController controller;
-
-    private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();
-
-    private static IConfiguration KeyConfig(string key) =>
-        new ConfigurationBuilder()
-            .AddInMemoryCollection([new KeyValuePair<string, string?>("DemoSeed:InternalKey", key)])
-            .Build();
 
     public ProfileDemoSeedControllerTests()
     {
-        currentUser.Setup(u => u.IsAuthenticated).Returns(true);
-        currentUser.Setup(u => u.TenantId).Returns("demo-tenant");
-        var ctx = new DefaultHttpContext();
-        ctx.Request.Headers["X-FPS-Seed-Key"] = "test-key";
-        controller = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, KeyConfig("test-key"));
-        controller.ControllerContext = new ControllerContext { HttpContext = ctx };
-    }
-
-    private ProfileDemoSeedController BuildWithKey(string key, string? headerValue = null)
-    {
-        var c = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, KeyConfig(key));
-        var ctx = new DefaultHttpContext();
-        if (headerValue is not null)
-            ctx.Request.Headers["X-FPS-Seed-Key"] = headerValue;
-        c.ControllerContext = new ControllerContext { HttpContext = ctx };
-        return c;
+        controller = new ProfileDemoSeedController(repository, deactivatedStore);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static ProfileDemoSeedRequest BasicRequest(int count = 1)
@@ -57,7 +35,7 @@ public sealed class ProfileDemoSeedControllerTests
             ReservedSpaceEligible: false,
             Vehicles: [new($"veh-{i:D4}", $"PL{i:D4}AA", "car", IsElectric: false, IsDefault: true)]
         )).ToList();
-        return new ProfileDemoSeedRequest(employees);
+        return new ProfileDemoSeedRequest(Tenant, employees);
     }
 
     [Fact]
@@ -66,7 +44,7 @@ public sealed class ProfileDemoSeedControllerTests
         var result = await controller.DemoSeed(BasicRequest(3), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
-        var profile = await repository.GetAsync("demo-tenant", "user-0001");
+        var profile = await repository.GetAsync(Tenant, "user-0001");
         Assert.NotNull(profile);
         Assert.Equal("Employee 1", profile.DisplayName);
         Assert.Equal("demo-seed", profile.FactSource);
@@ -88,7 +66,7 @@ public sealed class ProfileDemoSeedControllerTests
     {
         await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "user-0001");
+        var profile = await repository.GetAsync(Tenant, "user-0001");
         Assert.Equal("demo-seed", profile!.FactSource);
         Assert.Equal("demo-seed-v1", profile.SnapshotVersion);
     }
@@ -99,7 +77,7 @@ public sealed class ProfileDemoSeedControllerTests
         await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
         await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "user-0001");
+        var profile = await repository.GetAsync(Tenant, "user-0001");
         Assert.NotNull(profile);
         Assert.Equal("Employee 1", profile.DisplayName);
     }
@@ -107,7 +85,7 @@ public sealed class ProfileDemoSeedControllerTests
     [Fact]
     public async Task DemoSeed_WithVehicles_VehiclesStored()
     {
-        var request = new ProfileDemoSeedRequest(
+        var request = new ProfileDemoSeedRequest(Tenant,
         [
             new("cc-user", "Alice", ["employee"], null, "HQ", true, true, false, false,
             [
@@ -117,7 +95,7 @@ public sealed class ProfileDemoSeedControllerTests
 
         await controller.DemoSeed(request, CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "cc-user");
+        var profile = await repository.GetAsync(Tenant, "cc-user");
         Assert.NotNull(profile);
         Assert.True(profile.HasCompanyCar);
         Assert.Single(profile.Vehicles);
@@ -128,7 +106,7 @@ public sealed class ProfileDemoSeedControllerTests
     [Fact]
     public async Task DemoSeed_MultipleVehicles_NormalizesDefault()
     {
-        var request = new ProfileDemoSeedRequest(
+        var request = new ProfileDemoSeedRequest(Tenant,
         [
             new("mc-user", "David", ["employee"], null, "HQ", true, false, false, false,
             [
@@ -139,7 +117,7 @@ public sealed class ProfileDemoSeedControllerTests
 
         await controller.DemoSeed(request, CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "mc-user");
+        var profile = await repository.GetAsync(Tenant, "mc-user");
         Assert.Equal(2, profile!.Vehicles.Count);
         Assert.Single(profile.Vehicles, v => v.IsDefault);
         Assert.Equal("veh-car", profile.Vehicles.Single(v => v.IsDefault).VehicleId);
@@ -148,69 +126,44 @@ public sealed class ProfileDemoSeedControllerTests
     [Fact]
     public async Task DemoSeed_NoVehicles_ProfileStillCreated()
     {
-        var request = new ProfileDemoSeedRequest(
+        var request = new ProfileDemoSeedRequest(Tenant,
         [
             new("no-car-user", "Gabi", ["employee"], null, "HQ", false, false, false, false, [])
         ]);
 
         await controller.DemoSeed(request, CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "no-car-user");
+        var profile = await repository.GetAsync(Tenant, "no-car-user");
         Assert.NotNull(profile);
         Assert.Empty(profile.Vehicles);
         Assert.False(profile.ParkingEligible);
     }
 
     [Fact]
-    public async Task DemoSeed_UnauthenticatedUser_Returns401()
+    public async Task DemoSeed_MissingTenantId_Returns400()
     {
-        currentUser.Setup(u => u.IsAuthenticated).Returns(false);
-        currentUser.Setup(u => u.TenantId).Returns(string.Empty);
+        var result = await controller.DemoSeed(BasicRequest(1) with { TenantId = "" }, CancellationToken.None);
 
-        var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
-    public async Task DemoSeed_InternalKeyNotConfigured_Returns503()
+    public async Task DemoSeed_MalformedTenantId_Returns400()
     {
-        var c = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, EmptyConfig());
-        c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        // A tenant id that fails TenantStorageKey.Sanitise must 400 at the boundary, not bubble a 500.
+        var result = await controller.DemoSeed(BasicRequest(1) with { TenantId = "Bad Tenant!" }, CancellationToken.None);
 
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        var obj = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(503, obj.StatusCode);
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_MissingHeader_Returns401()
+    public void Controller_IsDaprInternalOnly()
     {
-        var c = BuildWithKey("secret-key", headerValue: null);
+        // The internal boundary: only Dapr-delivered traffic (dapr-api-token) reaches this endpoint;
+        // gateway-routed external callers cannot, so key-only anonymous access is no longer possible.
+        var attribute = Attribute.GetCustomAttribute(
+            typeof(ProfileDemoSeedController), typeof(DaprInternalOnlyAttribute));
 
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_WrongHeader_Returns401()
-    {
-        var c = BuildWithKey("secret-key", headerValue: "wrong-key");
-
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_CorrectHeader_Succeeds()
-    {
-        var c = BuildWithKey("secret-key", headerValue: "secret-key");
-
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(attribute);
     }
 }

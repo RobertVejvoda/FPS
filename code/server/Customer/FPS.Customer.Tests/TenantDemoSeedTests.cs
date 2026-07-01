@@ -29,9 +29,9 @@ public sealed class TenantDemoSeedTests
             HttpContext = new DefaultHttpContext()
         };
 
-        profileClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()))
+        profileClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((9, (string?)null));
-        configClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoSlotRecord>>(), It.IsAny<DemoPolicyRecord>(), It.IsAny<CancellationToken>()))
+        configClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoSlotRecord>>(), It.IsAny<DemoPolicyRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((20, (string?)null));
     }
 
@@ -132,7 +132,7 @@ public sealed class TenantDemoSeedTests
     public async Task DemoSeed_ProfileSeedFails_Returns400()
     {
         var tenantId = await CreateSandboxTenantAsync();
-        profileClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()))
+        profileClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((0, "Profile service unreachable: connection refused"));
 
         var result = await controller.DemoSeed(tenantId, CancellationToken.None);
@@ -145,7 +145,7 @@ public sealed class TenantDemoSeedTests
     public async Task DemoSeed_ConfigSeedFails_Returns400()
     {
         var tenantId = await CreateSandboxTenantAsync();
-        configClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoSlotRecord>>(), It.IsAny<DemoPolicyRecord>(), It.IsAny<CancellationToken>()))
+        configClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoSlotRecord>>(), It.IsAny<DemoPolicyRecord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((0, "Configuration service unreachable"));
 
         var result = await controller.DemoSeed(tenantId, CancellationToken.None);
@@ -177,7 +177,7 @@ public sealed class TenantDemoSeedTests
         var result = await controller.DemoSeed(tenantId, CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
-        profileClient.Verify(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        profileClient.Verify(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

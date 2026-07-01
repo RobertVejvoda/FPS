@@ -1,12 +1,20 @@
-using Microsoft.Extensions.Configuration;
+using System.Net.Http;
 using System.Net.Http.Json;
+using Dapr.Client;
 
 namespace FPS.Customer.Application;
 
+// PLAT003C-C2: the demo-seed reseed calls Profile/Configuration over Dapr service invocation (via a
+// Dapr invoke HttpClient) so the receiving endpoints can enforce [DaprInternalOnly] (dapr-api-token) —
+// a real internal boundary the gateway can't reach — instead of a key-only anonymous HTTP endpoint.
+// The tenant id travels in the body because a scheduled reset has no operator JWT. authorizationHeader
+// is retained on the contract for the operator-initiated seed path but is NOT used for transport auth
+// (the Dapr sidecar injects the token on invocation).
 public interface IDemoSeedProfileClient
 {
     Task<(int profilesSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         IReadOnlyList<DemoEmployeeRecord> employees,
         CancellationToken ct);
 }
@@ -15,37 +23,29 @@ public interface IDemoSeedConfigurationClient
 {
     Task<(int slotsSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         string locationId,
         IReadOnlyList<DemoSlotRecord> slots,
         DemoPolicyRecord policy,
         CancellationToken ct);
 }
 
-public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration config) : IDemoSeedProfileClient
+public sealed class DaprDemoSeedProfileClient : IDemoSeedProfileClient
 {
     public async Task<(int profilesSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         IReadOnlyList<DemoEmployeeRecord> employees,
         CancellationToken ct)
     {
-        var baseUrl = config["DemoSeed:ProfileBaseUrl"] ?? "http://localhost:5197";
-        var url = $"{baseUrl.TrimEnd('/')}/profile/admin/demo-seed";
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        if (!string.IsNullOrEmpty(authorizationHeader))
-            request.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
-        var internalKey = config["DemoSeed:InternalKey"];
-        if (!string.IsNullOrEmpty(internalKey))
-            request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
-        request.Content = JsonContent.Create(new { employees });
-
         try
         {
-            using var response = await http.SendAsync(request, ct);
-            if (response.IsSuccessStatusCode)
-                return (employees.Count, null);
-            var body = await response.Content.ReadAsStringAsync(ct);
-            return (0, $"HTTP {(int)response.StatusCode}: {body}");
+            using var http = DaprClient.CreateInvokeHttpClient("fps-profile");
+            using var response = await http.PostAsJsonAsync(
+                "profile/admin/demo-seed", new { tenantId, employees }, ct);
+            return response.IsSuccessStatusCode
+                ? (employees.Count, null)
+                : (0, $"Profile seed failed: HTTP {(int)response.StatusCode}");
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -54,33 +54,24 @@ public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration co
     }
 }
 
-public sealed class HttpDemoSeedConfigurationClient(HttpClient http, IConfiguration config) : IDemoSeedConfigurationClient
+public sealed class DaprDemoSeedConfigurationClient : IDemoSeedConfigurationClient
 {
     public async Task<(int slotsSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         string locationId,
         IReadOnlyList<DemoSlotRecord> slots,
         DemoPolicyRecord policy,
         CancellationToken ct)
     {
-        var baseUrl = config["DemoSeed:ConfigurationBaseUrl"] ?? "http://localhost:5141";
-        var url = $"{baseUrl.TrimEnd('/')}/configuration/admin/demo-seed";
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        if (!string.IsNullOrEmpty(authorizationHeader))
-            request.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
-        var internalKey = config["DemoSeed:InternalKey"];
-        if (!string.IsNullOrEmpty(internalKey))
-            request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
-        request.Content = JsonContent.Create(new { locationId, slots, policy });
-
         try
         {
-            using var response = await http.SendAsync(request, ct);
-            if (response.IsSuccessStatusCode)
-                return (slots.Count, null);
-            var body = await response.Content.ReadAsStringAsync(ct);
-            return (0, $"HTTP {(int)response.StatusCode}: {body}");
+            using var http = DaprClient.CreateInvokeHttpClient("fps-configuration");
+            using var response = await http.PostAsJsonAsync(
+                "configuration/admin/demo-seed", new { tenantId, locationId, slots, policy }, ct);
+            return response.IsSuccessStatusCode
+                ? (slots.Count, null)
+                : (0, $"Configuration seed failed: HTTP {(int)response.StatusCode}");
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {

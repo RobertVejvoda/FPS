@@ -1,43 +1,46 @@
 using FPS.Configuration.Application;
 using FPS.Configuration.Domain;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
-using Microsoft.AspNetCore.Authorization;
+using FPS.SharedKernel.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.Extensions.Configuration;
 
 namespace FPS.Configuration.Controllers;
 
-// Internal demo-seed endpoint — replaces slots and policy for a location within a
-// sandbox or evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). The
-// caller (Customer service) validates TenantKind before issuing this request.
+// Internal demo-seed endpoint — replaces slots and policy for a location within a sandbox or
+// evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: gated by
+// [DaprInternalOnly] (the dapr-api-token boundary), so gateway-routed external traffic can't reach it.
+// The tenant is taken from the request body (a scheduled reset has no operator JWT) and shape-validated
+// before persistence. When an operator JWT is present its user id is used for publish attribution;
+// otherwise a system "demo-seed" actor is used.
 [ApiController]
 [Route("configuration/admin")]
-[Authorize(Roles = "admin")]
+[DaprInternalOnly]
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class ConfigDemoSeedController(
     ParkingSlotService slotService,
     ParkingPolicyService policyService,
-    ICurrentUser currentUser,
-    IConfiguration config) : ControllerBase
+    ICurrentUser currentUser) : ControllerBase
 {
+    private const string SeedActor = "demo-seed";
+
     [HttpPost("demo-seed")]
     public async Task<IActionResult> DemoSeed(
         [FromBody] ConfigDemoSeedRequest request,
         CancellationToken ct)
     {
-        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
-            return Unauthorized();
+        if (string.IsNullOrWhiteSpace(request.TenantId))
+            return BadRequest(new { error = "TenantId is required." });
 
-        var expectedKey = config["DemoSeed:InternalKey"];
-        if (string.IsNullOrEmpty(expectedKey))
-            return StatusCode(503, new { error = "Demo seed internal key not configured." });
-
-        var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
-        if (providedKey != expectedKey)
-            return Unauthorized();
-
-        var tenantId = currentUser.TenantId;
+        // Use the normalized (trimmed, lower-cased) tenant id for stored slots/policy/change records so
+        // domain data is canonical and matches how the storage keys normalize; a malformed id 400s here.
+        string tenantId;
+        try { tenantId = TenantStorageKey.Sanitise(request.TenantId); }
+        catch (ArgumentException) { return BadRequest(new { error = "Invalid tenant id." }); }
+        var actor = currentUser.IsAuthenticated && !string.IsNullOrEmpty(currentUser.UserId)
+            ? currentUser.UserId
+            : SeedActor;
 
         var slots = request.Slots
             .Select(s => new ParkingSlot
@@ -56,7 +59,7 @@ public sealed class ConfigDemoSeedController(
             .ToList();
 
         var slotErrors = await slotService.ReplaceAsync(
-            tenantId, request.LocationId, slots, currentUser.UserId, "demo-seed", ct);
+            tenantId, request.LocationId, slots, actor, "demo-seed", ct);
         if (slotErrors.Count > 0)
             return BadRequest(new { errors = slotErrors });
 
@@ -79,7 +82,7 @@ public sealed class ConfigDemoSeedController(
             NoShowDetectionEnabled = request.Policy.NoShowDetectionEnabled,
             CompanyCarTier1Enabled = request.Policy.CompanyCarTier1Enabled,
             CompanyCarOverflowBehavior = request.Policy.CompanyCarOverflowBehavior,
-            PublishedByUserId = currentUser.UserId,
+            PublishedByUserId = actor,
             PublishedAt = DateTimeOffset.UtcNow,
             PublicationReason = "demo-seed",
         };
@@ -93,6 +96,7 @@ public sealed class ConfigDemoSeedController(
 }
 
 public sealed record ConfigDemoSeedRequest(
+    string TenantId,
     string LocationId,
     IReadOnlyList<DemoSlotSpec> Slots,
     DemoPolicySpec Policy);
