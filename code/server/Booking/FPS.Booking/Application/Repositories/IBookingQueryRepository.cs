@@ -71,4 +71,13 @@ public interface IBookingQueryRepository
         string locationId,
         DateOnly date,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Destructive tenant purge (PLAT003C): removes every booking request for the tenant plus
+    /// its derived per-entity keys (penalties, fairness metrics, reconstructed draw attempts,
+    /// per-date counters) and the tenant-wide ops/pending/user indexes. Idempotent — a second
+    /// run over an already-empty tenant returns 0 and throws nothing. Returns the number of
+    /// booking requests removed.
+    /// </summary>
+    Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 }

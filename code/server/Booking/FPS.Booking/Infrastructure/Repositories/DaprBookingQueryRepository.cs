@@ -1,6 +1,7 @@
 using Dapr.Client;
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
+using FPS.Booking.Domain.ValueObjects;
 
 namespace FPS.Booking.Infrastructure.Repositories;
 
@@ -322,6 +323,90 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
             await daprClient.SaveStateAsync(BookingStore, key, index, cancellationToken: cancellationToken);
         }
     }
+
+    public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        // The tenant ops index is the master list of every booking request for the tenant —
+        // SubmitBookingRequestHandler adds every request to it — so enumerating it reaches
+        // every per-request record without a query-capable store scan.
+        var opsKey = OpsIndexKey(tenantId);
+        var opsIndex = await daprClient.GetStateAsync<TenantOpsIndex>(
+            BookingStore, opsKey, cancellationToken: cancellationToken);
+        var requestIds = opsIndex?.RequestIds ?? [];
+
+        var requestorIds = new HashSet<string>(StringComparer.Ordinal);
+        var drawKeys = new HashSet<string>(StringComparer.Ordinal);
+        var countKeys = new HashSet<string>(StringComparer.Ordinal);
+        var removed = 0;
+
+        foreach (var requestId in requestIds)
+        {
+            var requestKey = TenantStorageKey.For("request", tenantId, requestId);
+            var dto = await daprClient.GetStateAsync<BookingRequestDto>(
+                BookingStore, requestKey, cancellationToken: cancellationToken);
+
+            if (dto is not null)
+            {
+                if (!string.IsNullOrEmpty(dto.RequestedBy))
+                    requestorIds.Add(dto.RequestedBy);
+
+                countKeys.Add(CountKey(tenantId, dto.PlannedArrivalTime));
+
+                // Draw attempts have no tenant index; reconstruct the store key exactly as
+                // CancelBookingHandler does (location + arrival date + arrival/departure slot).
+                // A key that does not exist is a harmless no-op delete, and the key is tenant
+                // scoped, so this can never reach another tenant's data.
+                if (!string.IsNullOrWhiteSpace(dto.LocationId)
+                    && dto.PlannedDepartureTime > dto.PlannedArrivalTime)
+                {
+                    var timeSlot = TimeSlot.Create(dto.PlannedArrivalTime, dto.PlannedDepartureTime);
+                    var drawKey = DrawKey.Create(
+                        tenantId, dto.LocationId, DateOnly.FromDateTime(dto.PlannedArrivalTime), timeSlot);
+                    drawKeys.Add(drawKey.ToStoreKey());
+                }
+
+                await daprClient.DeleteStateAsync(BookingStore, requestKey, cancellationToken: cancellationToken);
+                removed++;
+            }
+
+            // Penalties are keyed penalty:{tenant}:{requestId}:{type} with no index, so delete
+            // the key for every known penalty type (mirrors DaprPenaltyRepository.Key). Runs for
+            // every id in the index — even a stale one whose request record is already gone.
+            foreach (var penaltyType in Enum.GetNames<PenaltyType>())
+                await daprClient.DeleteStateAsync(
+                    BookingStore,
+                    TenantStorageKey.For("penalty", tenantId, $"{requestId}:{penaltyType}"),
+                    cancellationToken: cancellationToken);
+        }
+
+        // Draw attempts reconstructed from the requests above.
+        foreach (var drawKey in drawKeys)
+            await daprClient.DeleteStateAsync(BookingStore, drawKey, cancellationToken: cancellationToken);
+
+        // Per-requestor keys: the fairness metrics history (DaprEmployeeMetricsService) and the
+        // user request index maintained by this repository.
+        foreach (var requestorId in requestorIds)
+        {
+            await daprClient.DeleteStateAsync(
+                BookingStore, TenantStorageKey.For("metrics", tenantId, requestorId), cancellationToken: cancellationToken);
+            await daprClient.DeleteStateAsync(
+                BookingStore, UserIndexKey(tenantId, requestorId), cancellationToken: cancellationToken);
+        }
+
+        // Per-date submission counters (keyed by planned arrival date, mirroring DaprBookingRepository).
+        foreach (var countKey in countKeys)
+            await daprClient.DeleteStateAsync(BookingStore, countKey, cancellationToken: cancellationToken);
+
+        // Finally the tenant-wide indexes themselves. Removing the ops index last makes the purge
+        // idempotent: a re-run finds no index, enumerates nothing, and returns 0.
+        await daprClient.DeleteStateAsync(BookingStore, PendingIndexKey(tenantId), cancellationToken: cancellationToken);
+        await daprClient.DeleteStateAsync(BookingStore, opsKey, cancellationToken: cancellationToken);
+
+        return removed;
+    }
+
+    private static string CountKey(string tenantId, DateTime plannedArrival)
+        => $"count:{TenantStorageKey.Sanitise(tenantId)}:{plannedArrival:yyyy-MM-dd}";
 
     private static string OpsIndexKey(string tenantId)
         => $"ops:{TenantStorageKey.Sanitise(tenantId)}";

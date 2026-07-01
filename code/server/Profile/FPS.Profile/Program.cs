@@ -13,6 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDaprClient();
 builder.Services.AddSingleton<IProfileRepository, DaprProfileRepository>();
+builder.Services.AddScoped<ProfileTenantStorePurger>();
 builder.Services.AddScoped<EmployeeBootstrapService>();
 builder.Services.AddScoped<HrImportService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

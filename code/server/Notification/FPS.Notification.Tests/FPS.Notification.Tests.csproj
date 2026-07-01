@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Required so PurgeControllerTests can reference ControllerBase / MVC result types. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FPS.Notification\FPS.Notification.csproj" />
   </ItemGroup>
 

@@ -90,6 +90,28 @@ public sealed class DaprAuditRepository : IAuditRepository, IAuditQueryRepositor
         return toDelete.Count;
     }
 
+    public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken ct = default)
+    {
+        var indexKey = IndexKey(tenantId);
+        var index = await daprClient.GetStateAsync<List<string>>(StoreName, indexKey, cancellationToken: ct) ?? [];
+
+        var removed = 0;
+        foreach (var id in index)
+        {
+            // Load the record to recover its SourceEventId so the dedup marker is deleted too.
+            var record = await daprClient.GetStateAsync<AuditRecord>(StoreName, RecordKey(tenantId, id), cancellationToken: ct);
+            await daprClient.DeleteStateAsync(StoreName, RecordKey(tenantId, id), cancellationToken: ct);
+            if (record is not null)
+            {
+                await daprClient.DeleteStateAsync(StoreName, SrcKey(tenantId, record.SourceEventId), cancellationToken: ct);
+                removed++;
+            }
+        }
+
+        await daprClient.DeleteStateAsync(StoreName, indexKey, cancellationToken: ct);
+        return removed;
+    }
+
     public async Task<IReadOnlyList<AuditRecord>> GetRangeAsync(
         string tenantId, DateTime from, DateTime to, int maxRecords, CancellationToken ct = default)
     {

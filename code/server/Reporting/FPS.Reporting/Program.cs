@@ -18,6 +18,7 @@ builder.Services.AddSingleton<IReportingQueryRepository>(inMemoryRepo);
 builder.Services.AddScoped<BookingEventReportingHandler>();
 builder.Services.AddScoped<ReportingQueryService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<ReportingTenantStorePurger>();
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>

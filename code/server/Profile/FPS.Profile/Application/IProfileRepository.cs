@@ -12,4 +12,9 @@ public interface IProfileRepository
     // warning. Kept as a single bulk read so the in-memory store stays simple
     // and the future Dapr/MongoDB swap is just one query per tenant.
     Task<IReadOnlyList<UserProfile>> ListByTenantAsync(string tenantId, CancellationToken cancellationToken = default);
+
+    // PLAT003C: destructive single-tenant purge. Deletes every profile document,
+    // employee-id index entry, and the tenant index for the tenant. Idempotent —
+    // an empty tenant returns 0 without throwing. Returns the profiles removed.
+    Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 }

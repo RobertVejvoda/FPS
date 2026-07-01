@@ -69,6 +69,28 @@ public sealed class DaprHrRosterStore : IHrRosterStore
         }
     }
 
+    public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        // DESTRUCTIVE single-tenant purge (PLAT003C). The roster is directly addressable per tenant
+        // (notif-roster:{tenantId}:all) and deregistered from the global registry so a later hydrate
+        // does not resurrect it. Also drops the in-memory cache entry so fan-out stops immediately.
+        // Idempotent: returns 0 when the tenant has no roster.
+        var roster = await daprClient.GetStateAsync<List<string>>(StoreName, RosterKey(tenantId), cancellationToken: cancellationToken);
+        var removed = 0;
+        if (roster is not null)
+        {
+            await daprClient.DeleteStateAsync(StoreName, RosterKey(tenantId), cancellationToken: cancellationToken);
+            removed = 1;
+        }
+
+        var registry = await daprClient.GetStateAsync<List<string>>(StoreName, RegistryKey, cancellationToken: cancellationToken) ?? [];
+        if (registry.RemoveAll(t => string.Equals(t, tenantId, StringComparison.OrdinalIgnoreCase)) > 0)
+            await daprClient.SaveStateAsync(StoreName, RegistryKey, registry, cancellationToken: cancellationToken);
+
+        cache.Remove(tenantId);
+        return removed;
+    }
+
     private async Task PersistAsync(string tenantId, List<string> hrUserIds)
     {
         // No try/catch — exceptions propagate to Set() which owns error classification.

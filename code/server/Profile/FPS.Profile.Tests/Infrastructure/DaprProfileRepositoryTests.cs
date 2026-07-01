@@ -55,6 +55,12 @@ public sealed class DaprProfileRepositoryTests
             .ReturnsAsync((string _, string key, ConsistencyMode? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
                 store.TryGetValue(key, out var val) ? val as List<string> : null);
 
+        mock.Setup(c => c.DeleteStateAsync(
+                StoreName, It.IsAny<string>(), null, null, It.IsAny<CancellationToken>()))
+            .Callback<string, string, StateOptions?, IReadOnlyDictionary<string, string>?, CancellationToken>(
+                (_, key, _, _, _) => store.Remove(key))
+            .Returns(Task.CompletedTask);
+
         return new DaprProfileRepository(mock.Object);
     }
 
@@ -202,5 +208,60 @@ public sealed class DaprProfileRepositoryTests
 
         var list = await repo.ListByTenantAsync("demo");
         Assert.Single(list);
+    }
+
+    // ── PurgeTenantAsync (PLAT003C destructive purge) ─────────────────────────
+
+    [Fact]
+    public async Task PurgeTenantAsync_SeededTenant_RemovesAllProfilesAndReturnsCount()
+    {
+        var repo = BuildRepo();
+        await repo.SaveAsync(MakeProfile("demo", "user-1", employeeId: "EMP-001"));
+        await repo.SaveAsync(MakeProfile("demo", "user-2", employeeId: "EMP-002"));
+        await repo.SaveAsync(MakeProfile("demo", "user-3"));
+
+        var removed = await repo.PurgeTenantAsync("demo");
+
+        Assert.Equal(3, removed);
+        Assert.Empty(store); // every key (profiles, emp indices, tenant index) gone
+        Assert.Empty(await repo.ListByTenantAsync("demo"));
+        Assert.Null(await repo.GetAsync("demo", "user-1"));
+        Assert.False(await repo.EmployeeIdExistsAsync("demo", "EMP-001"));
+    }
+
+    [Fact]
+    public async Task PurgeTenantAsync_SecondCall_ReturnsZero()
+    {
+        var repo = BuildRepo();
+        await repo.SaveAsync(MakeProfile("demo", "user-1"));
+        await repo.SaveAsync(MakeProfile("demo", "user-2"));
+
+        Assert.Equal(2, await repo.PurgeTenantAsync("demo"));
+        Assert.Equal(0, await repo.PurgeTenantAsync("demo")); // idempotent
+    }
+
+    [Fact]
+    public async Task PurgeTenantAsync_EmptyTenant_ReturnsZero()
+    {
+        var repo = BuildRepo();
+        Assert.Equal(0, await repo.PurgeTenantAsync("demo"));
+    }
+
+    [Fact]
+    public async Task PurgeTenantAsync_TenantIsolation_LeavesOtherTenantIntact()
+    {
+        var repo = BuildRepo();
+        await repo.SaveAsync(MakeProfile("demo", "user-1", employeeId: "EMP-001"));
+        await repo.SaveAsync(MakeProfile("other-co", "user-99", employeeId: "EMP-999"));
+
+        var removed = await repo.PurgeTenantAsync("demo");
+
+        Assert.Equal(1, removed);
+        Assert.Empty(await repo.ListByTenantAsync("demo"));
+
+        var otherList = await repo.ListByTenantAsync("other-co");
+        Assert.Single(otherList);
+        Assert.Equal("user-99", otherList[0].UserId);
+        Assert.True(await repo.EmployeeIdExistsAsync("other-co", "EMP-999"));
     }
 }

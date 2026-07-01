@@ -14,4 +14,7 @@ public interface INotificationRepository
     Task<int> GetUnreadCountAsync(string tenantId, string recipientId, CancellationToken cancellationToken = default);
     Task<bool> MarkReadAsync(Guid notificationId, string tenantId, string recipientId, CancellationToken cancellationToken = default);
     Task<int> DeleteByRecipientIdAsync(string tenantId, string recipientId, CancellationToken cancellationToken = default);
+
+    /// <summary>DESTRUCTIVE (PLAT003C): deletes every notification record for a tenant; returns the count removed.</summary>
+    Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 }
