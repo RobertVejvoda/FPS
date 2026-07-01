@@ -1,10 +1,10 @@
 using FPS.Profile.Controllers;
 using FPS.Profile.Domain;
 using FPS.Profile.Infrastructure;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 
 namespace FPS.Profile.Tests;
 
@@ -15,29 +15,10 @@ public sealed class ProfileDemoSeedControllerTests
     private readonly InMemoryDeactivatedUserStore deactivatedStore = new();
     private readonly ProfileDemoSeedController controller;
 
-    private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();
-
-    private static IConfiguration KeyConfig(string key) =>
-        new ConfigurationBuilder()
-            .AddInMemoryCollection([new KeyValuePair<string, string?>("DemoSeed:InternalKey", key)])
-            .Build();
-
     public ProfileDemoSeedControllerTests()
     {
-        var ctx = new DefaultHttpContext();
-        ctx.Request.Headers["X-FPS-Seed-Key"] = "test-key";
-        controller = new ProfileDemoSeedController(repository, deactivatedStore, KeyConfig("test-key"));
-        controller.ControllerContext = new ControllerContext { HttpContext = ctx };
-    }
-
-    private ProfileDemoSeedController BuildWithKey(string key, string? headerValue = null)
-    {
-        var c = new ProfileDemoSeedController(repository, deactivatedStore, KeyConfig(key));
-        var ctx = new DefaultHttpContext();
-        if (headerValue is not null)
-            ctx.Request.Headers["X-FPS-Seed-Key"] = headerValue;
-        c.ControllerContext = new ControllerContext { HttpContext = ctx };
-        return c;
+        controller = new ProfileDemoSeedController(repository, deactivatedStore);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static ProfileDemoSeedRequest BasicRequest(int count = 1)
@@ -159,17 +140,6 @@ public sealed class ProfileDemoSeedControllerTests
     }
 
     [Fact]
-    public async Task DemoSeed_NoJwt_ValidKeyAndBodyTenant_Succeeds()
-    {
-        // PLAT003C-C2: no operator JWT is required — a valid seed key plus a body tenant id
-        // authorizes the endpoint (the scheduled-reset reseed path).
-        var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
-        Assert.NotNull(await repository.GetAsync(Tenant, "user-0001"));
-    }
-
-    [Fact]
     public async Task DemoSeed_MissingTenantId_Returns400()
     {
         var result = await controller.DemoSeed(BasicRequest(1) with { TenantId = "" }, CancellationToken.None);
@@ -178,44 +148,22 @@ public sealed class ProfileDemoSeedControllerTests
     }
 
     [Fact]
-    public async Task DemoSeed_InternalKeyNotConfigured_Returns503()
+    public async Task DemoSeed_MalformedTenantId_Returns400()
     {
-        var c = new ProfileDemoSeedController(repository, deactivatedStore, EmptyConfig());
-        c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        // A tenant id that fails TenantStorageKey.Sanitise must 400 at the boundary, not bubble a 500.
+        var result = await controller.DemoSeed(BasicRequest(1) with { TenantId = "Bad Tenant!" }, CancellationToken.None);
 
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        var obj = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(503, obj.StatusCode);
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_MissingHeader_Returns401()
+    public void Controller_IsDaprInternalOnly()
     {
-        var c = BuildWithKey("secret-key", headerValue: null);
+        // The internal boundary: only Dapr-delivered traffic (dapr-api-token) reaches this endpoint;
+        // gateway-routed external callers cannot, so key-only anonymous access is no longer possible.
+        var attribute = Attribute.GetCustomAttribute(
+            typeof(ProfileDemoSeedController), typeof(DaprInternalOnlyAttribute));
 
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_WrongHeader_Returns401()
-    {
-        var c = BuildWithKey("secret-key", headerValue: "wrong-key");
-
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_CorrectHeader_Succeeds()
-    {
-        var c = BuildWithKey("secret-key", headerValue: "secret-key");
-
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(attribute);
     }
 }

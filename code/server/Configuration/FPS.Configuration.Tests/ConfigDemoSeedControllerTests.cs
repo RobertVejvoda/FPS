@@ -2,10 +2,10 @@ using FPS.Configuration.Application;
 using FPS.Configuration.Controllers;
 using FPS.Configuration.Domain;
 using FPS.Configuration.Infrastructure;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Moq;
 
 namespace FPS.Configuration.Tests;
@@ -18,37 +18,15 @@ public sealed class ConfigDemoSeedControllerTests
     private readonly Mock<ICurrentUser> currentUser = new();
     private readonly ConfigDemoSeedController controller;
 
-    private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();
-
-    private static IConfiguration KeyConfig(string key) =>
-        new ConfigurationBuilder()
-            .AddInMemoryCollection([new KeyValuePair<string, string?>("DemoSeed:InternalKey", key)])
-            .Build();
-
     public ConfigDemoSeedControllerTests()
     {
         currentUser.Setup(u => u.IsAuthenticated).Returns(true);
-        currentUser.Setup(u => u.TenantId).Returns("demo-tenant");
         currentUser.Setup(u => u.UserId).Returns("admin-1");
 
-        var ctx = new DefaultHttpContext();
-        ctx.Request.Headers["X-FPS-Seed-Key"] = "test-key";
         var slotService = new ParkingSlotService(slotRepo, changeRepo);
         var policyService = new ParkingPolicyService(policyRepo);
-        controller = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, KeyConfig("test-key"));
-        controller.ControllerContext = new ControllerContext { HttpContext = ctx };
-    }
-
-    private ConfigDemoSeedController BuildWithKey(string key, string? headerValue = null)
-    {
-        var slotService = new ParkingSlotService(slotRepo, changeRepo);
-        var policyService = new ParkingPolicyService(policyRepo);
-        var c = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, KeyConfig(key));
-        var ctx = new DefaultHttpContext();
-        if (headerValue is not null)
-            ctx.Request.Headers["X-FPS-Seed-Key"] = headerValue;
-        c.ControllerContext = new ControllerContext { HttpContext = ctx };
-        return c;
+        controller = new ConfigDemoSeedController(slotService, policyService, currentUser.Object);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
     }
 
     private static ConfigDemoSeedRequest BasicRequest(int slotCount = 5) => new(
@@ -141,22 +119,6 @@ public sealed class ConfigDemoSeedControllerTests
     }
 
     [Fact]
-    public async Task DemoSeed_NoJwt_ValidKeyAndBodyTenant_Succeeds()
-    {
-        // PLAT003C-C2: a scheduled reset has no operator JWT. A valid seed key plus a body tenant id
-        // is sufficient — the endpoint no longer requires an authenticated admin.
-        currentUser.Setup(u => u.IsAuthenticated).Returns(false);
-        currentUser.Setup(u => u.TenantId).Returns(string.Empty);
-        currentUser.Setup(u => u.UserId).Returns(string.Empty);
-
-        var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
-        var slots = await slotRepo.GetByLocationAsync("demo-tenant", "GL-HQ", CancellationToken.None);
-        Assert.Single(slots);
-    }
-
-    [Fact]
     public async Task DemoSeed_MissingTenantId_Returns400()
     {
         var request = BasicRequest(1) with { TenantId = "" };
@@ -167,46 +129,24 @@ public sealed class ConfigDemoSeedControllerTests
     }
 
     [Fact]
-    public async Task DemoSeed_InternalKeyNotConfigured_Returns503()
+    public async Task DemoSeed_MalformedTenantId_Returns400()
     {
-        var slotService = new ParkingSlotService(slotRepo, changeRepo);
-        var policyService = new ParkingPolicyService(policyRepo);
-        var c = new ConfigDemoSeedController(slotService, policyService, currentUser.Object, EmptyConfig());
-        c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        // A tenant id that fails TenantStorageKey.Sanitise must 400 at the boundary, not bubble a 500.
+        var request = BasicRequest(1) with { TenantId = "Bad Tenant!" };
 
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
+        var result = await controller.DemoSeed(request, CancellationToken.None);
 
-        var obj = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(503, obj.StatusCode);
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_MissingHeader_Returns401()
+    public void Controller_IsDaprInternalOnly()
     {
-        var c = BuildWithKey("secret-key", headerValue: null);
+        // The internal boundary: only Dapr-delivered traffic (dapr-api-token) reaches this endpoint;
+        // gateway-routed external callers cannot, so key-only anonymous access is no longer possible.
+        var attribute = Attribute.GetCustomAttribute(
+            typeof(ConfigDemoSeedController), typeof(DaprInternalOnlyAttribute));
 
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_WrongHeader_Returns401()
-    {
-        var c = BuildWithKey("secret-key", headerValue: "wrong-key");
-
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<UnauthorizedResult>(result);
-    }
-
-    [Fact]
-    public async Task DemoSeed_InternalKeyConfigured_CorrectHeader_Succeeds()
-    {
-        var c = BuildWithKey("secret-key", headerValue: "secret-key");
-
-        var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(attribute);
     }
 }

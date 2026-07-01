@@ -1,42 +1,36 @@
 using FPS.Profile.Application;
 using FPS.Profile.Domain;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
-using Microsoft.AspNetCore.Authorization;
+using FPS.SharedKernel.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.Extensions.Configuration;
 
 namespace FPS.Profile.Controllers;
 
 // Internal demo-seed endpoint — upserts a batch of employee profiles for a sandbox or evaluation
-// tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: a valid X-FPS-Seed-Key alone
-// authorizes this endpoint and the tenant is taken from the request body — a scheduled sandbox
-// reset has no operator JWT to derive a tenant claim from. The key is a strong internal secret
-// (fail-closed when unset); the endpoint is IgnoreApi and admin-routed (reachable in-cluster only).
+// tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: gated by [DaprInternalOnly] (the
+// dapr-api-token boundary the /erasure and pub/sub endpoints use), so gateway-routed external traffic
+// can't reach it. The tenant is taken from the request body because a scheduled sandbox reset has no
+// operator JWT; the id is shape-validated before any persistence so a malformed id returns 400.
 [ApiController]
 [Route("profile/admin")]
-[AllowAnonymous]
+[DaprInternalOnly]
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class ProfileDemoSeedController(
     IProfileRepository repository,
-    IDeactivatedUserStore deactivatedUserStore,
-    IConfiguration config) : ControllerBase
+    IDeactivatedUserStore deactivatedUserStore) : ControllerBase
 {
     [HttpPost("demo-seed")]
     public async Task<IActionResult> DemoSeed(
         [FromBody] ProfileDemoSeedRequest request,
         CancellationToken ct)
     {
-        var expectedKey = config["DemoSeed:InternalKey"];
-        if (string.IsNullOrEmpty(expectedKey))
-            return StatusCode(503, new { error = "Demo seed internal key not configured." });
-
-        var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
-        if (providedKey != expectedKey)
-            return Unauthorized();
-
         if (string.IsNullOrWhiteSpace(request.TenantId))
             return BadRequest(new { error = "TenantId is required." });
+
+        try { TenantStorageKey.Sanitise(request.TenantId); }
+        catch (ArgumentException) { return BadRequest(new { error = "Invalid tenant id." }); }
 
         var tenantId = request.TenantId;
         var seeded = 0;

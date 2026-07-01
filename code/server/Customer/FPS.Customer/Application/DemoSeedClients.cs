@@ -1,8 +1,13 @@
-using Microsoft.Extensions.Configuration;
-using System.Net.Http.Json;
+using System.Net.Http;
+using Dapr.Client;
 
 namespace FPS.Customer.Application;
 
+// PLAT003C-C2: the demo-seed reseed calls Profile/Configuration over Dapr service invocation so the
+// receiving endpoints can enforce [DaprInternalOnly] (dapr-api-token) — a real internal boundary the
+// gateway can't reach — instead of a key-only anonymous HTTP endpoint. The tenant id travels in the
+// body because a scheduled reset has no operator JWT. authorizationHeader is retained on the contract
+// for the operator-initiated seed path but is NOT used for transport auth (Dapr injects the token).
 public interface IDemoSeedProfileClient
 {
     Task<(int profilesSeeded, string? error)> SeedAsync(
@@ -23,7 +28,7 @@ public interface IDemoSeedConfigurationClient
         CancellationToken ct);
 }
 
-public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration config) : IDemoSeedProfileClient
+public sealed class DaprDemoSeedProfileClient(DaprClient dapr) : IDemoSeedProfileClient
 {
     public async Task<(int profilesSeeded, string? error)> SeedAsync(
         string authorizationHeader,
@@ -31,33 +36,20 @@ public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration co
         IReadOnlyList<DemoEmployeeRecord> employees,
         CancellationToken ct)
     {
-        var baseUrl = config["DemoSeed:ProfileBaseUrl"] ?? "http://localhost:5197";
-        var url = $"{baseUrl.TrimEnd('/')}/profile/admin/demo-seed";
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        if (!string.IsNullOrEmpty(authorizationHeader))
-            request.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
-        var internalKey = config["DemoSeed:InternalKey"];
-        if (!string.IsNullOrEmpty(internalKey))
-            request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
-        request.Content = JsonContent.Create(new { tenantId, employees });
-
         try
         {
-            using var response = await http.SendAsync(request, ct);
-            if (response.IsSuccessStatusCode)
-                return (employees.Count, null);
-            var body = await response.Content.ReadAsStringAsync(ct);
-            return (0, $"HTTP {(int)response.StatusCode}: {body}");
+            await dapr.InvokeMethodAsync(
+                "fps-profile", "profile/admin/demo-seed", new { tenantId, employees }, ct);
+            return (employees.Count, null);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is InvocationException or HttpRequestException or TaskCanceledException)
         {
-            return (0, $"Profile service unreachable: {ex.Message}");
+            return (0, $"Profile seed failed: {ex.Message}");
         }
     }
 }
 
-public sealed class HttpDemoSeedConfigurationClient(HttpClient http, IConfiguration config) : IDemoSeedConfigurationClient
+public sealed class DaprDemoSeedConfigurationClient(DaprClient dapr) : IDemoSeedConfigurationClient
 {
     public async Task<(int slotsSeeded, string? error)> SeedAsync(
         string authorizationHeader,
@@ -67,28 +59,16 @@ public sealed class HttpDemoSeedConfigurationClient(HttpClient http, IConfigurat
         DemoPolicyRecord policy,
         CancellationToken ct)
     {
-        var baseUrl = config["DemoSeed:ConfigurationBaseUrl"] ?? "http://localhost:5141";
-        var url = $"{baseUrl.TrimEnd('/')}/configuration/admin/demo-seed";
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        if (!string.IsNullOrEmpty(authorizationHeader))
-            request.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
-        var internalKey = config["DemoSeed:InternalKey"];
-        if (!string.IsNullOrEmpty(internalKey))
-            request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
-        request.Content = JsonContent.Create(new { tenantId, locationId, slots, policy });
-
         try
         {
-            using var response = await http.SendAsync(request, ct);
-            if (response.IsSuccessStatusCode)
-                return (slots.Count, null);
-            var body = await response.Content.ReadAsStringAsync(ct);
-            return (0, $"HTTP {(int)response.StatusCode}: {body}");
+            await dapr.InvokeMethodAsync(
+                "fps-configuration", "configuration/admin/demo-seed",
+                new { tenantId, locationId, slots, policy }, ct);
+            return (slots.Count, null);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is InvocationException or HttpRequestException or TaskCanceledException)
         {
-            return (0, $"Configuration service unreachable: {ex.Message}");
+            return (0, $"Configuration seed failed: {ex.Message}");
         }
     }
 }

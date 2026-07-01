@@ -1,27 +1,27 @@
 using FPS.Configuration.Application;
 using FPS.Configuration.Domain;
+using FPS.SharedKernel.Filters;
 using FPS.SharedKernel.Identity;
-using Microsoft.AspNetCore.Authorization;
+using FPS.SharedKernel.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.Extensions.Configuration;
 
 namespace FPS.Configuration.Controllers;
 
 // Internal demo-seed endpoint — replaces slots and policy for a location within a sandbox or
-// evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: a valid X-FPS-Seed-Key
-// alone authorizes this endpoint and the tenant is taken from the request body — a scheduled sandbox
-// reset has no operator JWT. See ProfileDemoSeedController for the rationale. When an operator JWT is
-// present its user id is used for publish attribution; otherwise a system "demo-seed" actor is used.
+// evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: gated by
+// [DaprInternalOnly] (the dapr-api-token boundary), so gateway-routed external traffic can't reach it.
+// The tenant is taken from the request body (a scheduled reset has no operator JWT) and shape-validated
+// before persistence. When an operator JWT is present its user id is used for publish attribution;
+// otherwise a system "demo-seed" actor is used.
 [ApiController]
 [Route("configuration/admin")]
-[AllowAnonymous]
+[DaprInternalOnly]
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class ConfigDemoSeedController(
     ParkingSlotService slotService,
     ParkingPolicyService policyService,
-    ICurrentUser currentUser,
-    IConfiguration config) : ControllerBase
+    ICurrentUser currentUser) : ControllerBase
 {
     private const string SeedActor = "demo-seed";
 
@@ -30,16 +30,11 @@ public sealed class ConfigDemoSeedController(
         [FromBody] ConfigDemoSeedRequest request,
         CancellationToken ct)
     {
-        var expectedKey = config["DemoSeed:InternalKey"];
-        if (string.IsNullOrEmpty(expectedKey))
-            return StatusCode(503, new { error = "Demo seed internal key not configured." });
-
-        var providedKey = HttpContext.Request.Headers["X-FPS-Seed-Key"].ToString();
-        if (providedKey != expectedKey)
-            return Unauthorized();
-
         if (string.IsNullOrWhiteSpace(request.TenantId))
             return BadRequest(new { error = "TenantId is required." });
+
+        try { TenantStorageKey.Sanitise(request.TenantId); }
+        catch (ArgumentException) { return BadRequest(new { error = "Invalid tenant id." }); }
 
         var tenantId = request.TenantId;
         var actor = currentUser.IsAuthenticated && !string.IsNullOrEmpty(currentUser.UserId)
