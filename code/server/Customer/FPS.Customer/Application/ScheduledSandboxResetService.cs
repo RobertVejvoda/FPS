@@ -56,11 +56,16 @@ public sealed class ScheduledSandboxResetService(
             // authorizationHeader is empty: a scheduled reset has no operator token. While the reset is
             // inert (default off) this never reaches the reseed; the activation slice (PLAT003C) wires an
             // internal tenant-scoped reseed path so scheduled resets never forward an operator token.
-            var (_, error) = await reset.ResetAsync(tenantId, ScheduledActor, source: "scheduled", authorizationHeader: string.Empty, ct);
-            var status = error is null
-                ? "Succeeded"
-                : error.StartsWith("unavailable", StringComparison.OrdinalIgnoreCase) ? "Unavailable" : "Refused";
-            logger.LogInformation("Scheduled sandbox reset: tenant={TenantId} status={Status}", tenantId, status);
+            // Use the reset's own classification — never re-derive it from the error string. A
+            // Refused is a pre-purge guard rejection; a Failed is a mid-flow purge/reseed failure
+            // (e.g. a store purge throwing) after the guard has already passed. Conflating them makes
+            // the evidence and the gate diagnosis misleading.
+            var (_, error, resetStatus) = await reset.ResetAsync(tenantId, ScheduledActor, source: "scheduled", authorizationHeader: string.Empty, ct);
+            var status = resetStatus.ToString();
+            if (error is null)
+                logger.LogInformation("Scheduled sandbox reset: tenant={TenantId} status={Status}", tenantId, status);
+            else
+                logger.LogWarning("Scheduled sandbox reset: tenant={TenantId} status={Status} detail={Detail}", tenantId, status, error);
             outcomes.Add(new ScheduledResetOutcome(tenantId, status));
         }
         return outcomes;

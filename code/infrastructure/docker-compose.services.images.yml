@@ -86,6 +86,12 @@ services:
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
       DemoSeed__ProfileBaseUrl: "http://fps-profile:5197"
       DemoSeed__ConfigurationBaseUrl: "http://fps-configuration:5141"
+      # PLAT003C-C3: sandbox-reset activation for the hosted/NAS demo. OFF by default (fail closed);
+      # set FPS_SANDBOX_RESET_ENABLED=true in the hosted env only for a Green Logistics demo profile.
+      # The reset refuses any tenant that is not a stored resettable sandbox. The scheduler flag arms
+      # the nightly sandbox-reset-scheduler cron tick (a safe no-op while Enabled is false).
+      SandboxReset__Enabled: ${FPS_SANDBOX_RESET_ENABLED:-false}
+      SandboxReset__Scheduler__Enabled: ${FPS_SANDBOX_RESET_SCHEDULER_ENABLED:-false}
       Readiness__ProfileBaseUrl: "http://fps-profile:5197"
       Readiness__BookingBaseUrl: "http://fps-booking:5131"
       Readiness__NotificationBaseUrl: "http://fps-notification:5157"

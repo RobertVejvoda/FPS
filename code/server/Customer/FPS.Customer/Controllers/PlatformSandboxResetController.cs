@@ -32,7 +32,7 @@ public sealed class PlatformSandboxResetController(
 
         var actorHash = Hash(currentUser.UserId);
         var authorizationHeader = Request.Headers.Authorization.ToString();
-        var (summary, error) = await reset.ResetAsync(tenantId, actorHash, source: "manual", authorizationHeader, ct);
+        var (summary, error, _) = await reset.ResetAsync(tenantId, actorHash, source: "manual", authorizationHeader, ct);
 
         if (error is not null)
             return error.StartsWith("unavailable", StringComparison.OrdinalIgnoreCase)
