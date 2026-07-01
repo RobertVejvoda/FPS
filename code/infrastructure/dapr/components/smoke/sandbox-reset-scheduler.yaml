@@ -1,0 +1,15 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: sandbox-reset-scheduler
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  # PLAT003B — fires the nightly Green Logistics sandbox reset at 02:00 UTC. The reset itself is a
+  # no-op unless SandboxReset:Scheduler:Enabled AND SandboxReset:Enabled are set (default off), so this
+  # binding is safe to ship everywhere. Set to "@disabled" or remove this file to stop the tick locally.
+  - name: schedule
+    value: "0 2 * * *"
+scopes:
+- fps-customer

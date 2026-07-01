@@ -30,6 +30,22 @@ The demo should prove that FairSpot is more than a booking form. It should show 
 | Enough requests to exceed capacity | Shows why fairness and Draw are needed. |
 | Notifications and reporting examples | Shows operational evidence after the allocation flow. |
 
+## Green Logistics Sandbox Reset
+
+Green Logistics is the primary hosted sandbox tenant. Its demo data should be predictable enough for repeated customer evaluation, but reset controls must never apply to real customer tenants.
+
+| Topic | Release 1 behavior |
+| --- | --- |
+| Schedule | Nightly reset window is 02:00 UTC through the `sandbox-reset-scheduler` Dapr cron binding. |
+| Activation | The scheduler and destructive reset are both fail-closed. `SandboxReset__Scheduler__Enabled=true` enables the scheduled tick. Actual purge/reseed requires `SandboxReset__Enabled=true` and registered tenant-store purgers. |
+| Target | The default scheduled target is `greenlogistics`. The reset service must verify that the tenant is a resettable sandbox before any purge work starts. |
+| Manual path | Platform operators may trigger `POST /platform/tenants/greenlogistics/reset-sandbox` when a manual reset is needed. |
+| Evidence | Platform readers, including auditors, can inspect `GET /platform/tenants/greenlogistics/reset-sandbox` for the last status, timestamps, source, snapshot version, and aggregate purge counts. Evidence must not expose secrets or raw personal data. |
+| Missed run | A missed nightly run is not caught up automatically. Operators verify the latest reset timestamp and run a manual reset if the demo environment must be refreshed before a customer session. |
+| Credentials | Demo account passwords are not rotated automatically in Release 1. If a demo password must be changed, rotate it manually in the identity provider and do not commit or log generated credentials. |
+
+The detailed hosted-operator procedure belongs in the private platform runbooks. This public page records the product and safety contract only.
+
 ## Demo Tracks
 
 | Track | Goal |

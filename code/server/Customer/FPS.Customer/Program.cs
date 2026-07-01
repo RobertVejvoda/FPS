@@ -26,6 +26,16 @@ builder.Services.AddScoped<TenantService>();
 builder.Services.AddScoped<FPS.SharedKernel.Infrastructure.TenantPurgeOrchestrator>();
 builder.Services.AddScoped<SandboxResetService>();
 builder.Services.AddSingleton<ISandboxResetAudit, DaprSandboxResetAudit>();
+builder.Services.AddSingleton<ISandboxResetEvidenceStore, DaprSandboxResetEvidenceStore>();
+// PLAT003B — nightly scheduled sandbox reset. Driven by the "sandbox-reset-scheduler" Dapr cron
+// binding; the per-window lease dedupes across replicas and the reset stays inert (no-op) until
+// SandboxReset:Enabled is set. Default OFF — the hosting profile opts the scheduler in.
+builder.Services.AddSingleton<ISandboxResetLease, DaprSandboxResetLease>();
+builder.Services.AddSingleton<FPS.SharedKernel.Time.ISystemClock, FPS.SharedKernel.Time.SystemClock>();
+var sandboxResetSchedulerOptions = new SandboxResetSchedulerOptions();
+builder.Configuration.GetSection(SandboxResetSchedulerOptions.SectionName).Bind(sandboxResetSchedulerOptions);
+builder.Services.AddSingleton(sandboxResetSchedulerOptions);
+builder.Services.AddScoped<ScheduledSandboxResetService>();
 // PLAT004: tenant-request intake (public onboarding). Durable Dapr store is the system of
 // record; in-memory is used only by tests. PLAT004b: the notifier publishes a sales alert to the
 // Notification pub/sub (which emails sales) — publish failures degrade gracefully without failing intake.
