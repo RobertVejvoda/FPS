@@ -33,6 +33,12 @@ x-fps-service-auth-env: &fps-service-auth-env
   # not yet explicitly mapped (the shared ConfiguredTenantRoleMapper strips privileged roles
   # otherwise). Clear/override this for a brokered-customer deployment that maps roles per tenant.
   Auth__TrustedRealmRoles: ${FPS_AUTH_TRUSTED_REALM_ROLES:-admin,hr_manager,auditor,report_viewer}
+  # PLAT001 platform plane: setting a platform realm authority makes ConfigureFpsJwtBearer accept
+  # BOTH the customer realm and the platform realm, and confines platform_* roles to the platform
+  # issuer (TenantClaimsTransformation). Empty by default → platform plane dormant. Set these to
+  # deploy platform-plane surfaces (e.g. the DataHub usage-stats API, the Customer tenant console).
+  Auth__PlatformAuthority: ${FPS_AUTH_PLATFORM_AUTHORITY:-}
+  Auth__PlatformIssuer: ${FPS_AUTH_PLATFORM_ISSUER:-}
 
 services:
 

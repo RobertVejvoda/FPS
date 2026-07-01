@@ -29,6 +29,9 @@ builder.Services.AddDbContext<DataHubDbContext>(options =>
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<EventInboxService>();
 builder.Services.AddScoped<IProjectionHandler, BookingProjectionHandler>();
+// PLAT005A — registered after BookingProjectionHandler so the recompute sees the upstream
+// outcome/draw write for the same event (dispatch is sequential in registration order).
+builder.Services.AddScoped<IProjectionHandler, UsageStatsProjectionHandler>();
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>

@@ -11,6 +11,7 @@ public sealed class DataHubDbContext(DbContextOptions<DataHubDbContext> options)
     public DbSet<ProjectionCheckpoint> ProjectionCheckpoints => Set<ProjectionCheckpoint>();
     public DbSet<DrawHistoryProjection> DrawHistory => Set<DrawHistoryProjection>();
     public DbSet<BookingOutcomeProjection> BookingOutcomes => Set<BookingOutcomeProjection>();
+    public DbSet<TenantUsageStatsProjection> TenantUsageStats => Set<TenantUsageStatsProjection>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -86,6 +87,16 @@ public sealed class DataHubDbContext(DbContextOptions<DataHubDbContext> options)
             e.HasIndex(x => new { x.TenantId, x.RequestorId, x.Date }).HasDatabaseName("ix_booking_outcome_tenant_requestor_date");
             e.HasIndex(x => new { x.TenantId, x.LocationId, x.Date }).HasDatabaseName("ix_booking_outcome_tenant_location_date");
             e.HasIndex(x => x.DrawAttemptId).HasDatabaseName("ix_booking_outcome_draw_attempt");
+        });
+
+        model.Entity<TenantUsageStatsProjection>(e =>
+        {
+            e.ToTable("datahub_tenant_usage_stats");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).UseIdentityByDefaultColumn();
+            e.Property(x => x.TenantId).IsRequired().HasMaxLength(100);
+            // One row per tenant per month — the upsert key.
+            e.HasIndex(x => new { x.TenantId, x.PeriodMonth }).IsUnique().HasDatabaseName("ux_usage_stats_tenant_period");
         });
     }
 }
