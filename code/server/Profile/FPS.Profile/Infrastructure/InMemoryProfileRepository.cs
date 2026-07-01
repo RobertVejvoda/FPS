@@ -39,6 +39,19 @@ public sealed class InMemoryProfileRepository : IProfileRepository
         return Task.FromResult(list);
     }
 
+    public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        var removed = 0;
+        foreach (var profile in store.Values.Where(p => string.Equals(p.TenantId, tenantId, StringComparison.Ordinal)).ToList())
+        {
+            if (store.TryRemove(ProfileKey(profile.TenantId, profile.UserId), out _))
+                removed++;
+            if (profile.EmployeeId is not null)
+                employeeIdIndex.TryRemove(EmpKey(profile.TenantId, profile.EmployeeId), out _);
+        }
+        return Task.FromResult(removed);
+    }
+
     private static string ProfileKey(string tenantId, string userId) => $"{tenantId}:{userId}";
     private static string EmpKey(string tenantId, string employeeId) => $"{tenantId}:{employeeId}";
 }

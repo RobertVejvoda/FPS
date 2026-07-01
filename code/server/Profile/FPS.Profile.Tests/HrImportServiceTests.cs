@@ -601,4 +601,7 @@ file sealed class NthCallNullRepository(
 
     public Task<IReadOnlyList<UserProfile>> ListByTenantAsync(string tenantId, CancellationToken ct) =>
         inner.ListByTenantAsync(tenantId, ct);
+
+    public Task<int> PurgeTenantAsync(string tenantId, CancellationToken ct) =>
+        inner.PurgeTenantAsync(tenantId, ct);
 }

@@ -3,11 +3,17 @@ namespace FPS.Reporting.Domain;
 public interface IReportingRepository
 {
     Task<bool> EventExistsAsync(string eventId, CancellationToken cancellationToken = default);
-    Task RecordEventIdAsync(string eventId, CancellationToken cancellationToken = default);
+    Task RecordEventIdAsync(string tenantId, string eventId, CancellationToken cancellationToken = default);
     Task ApplyMetricsAsync(string tenantId, string date, string locationId, string timeSlot,
         Action<ParkingMetrics> apply, CancellationToken cancellationToken = default);
     Task ApplyFairnessAsync(string tenantId, string requestorRef, string date, string locationId,
         Action<FairnessRecord> apply, CancellationToken cancellationToken = default);
+
+    // Sandbox/tenant purge (PLAT003C): remove ALL live per-tenant state Reporting holds while the
+    // process runs (metrics rows, fairness rows, and the tenant's seen-event dedup markers) so a
+    // reset without restarting Reporting leaves no stale Reports/Fairness visible. Idempotent:
+    // an unknown tenant removes nothing and returns 0. Returns the number of metric + fairness rows removed.
+    Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 
     // Erasure removes all fairness rows for the given requestor reference.
     // The caller now passes the raw user id (the same one Profile uses); rows

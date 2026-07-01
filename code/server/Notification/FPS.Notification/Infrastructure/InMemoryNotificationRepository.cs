@@ -76,4 +76,15 @@ public sealed class InMemoryNotificationRepository : INotificationRepository
             store.TryRemove(key, out _);
         return Task.FromResult(keys.Count);
     }
+
+    public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        var keys = store.Values
+            .Where(r => r.TenantId == tenantId)
+            .Select(r => r.DeduplicationKey)
+            .ToList();
+        foreach (var key in keys)
+            store.TryRemove(key, out _);
+        return Task.FromResult(keys.Count);
+    }
 }

@@ -49,6 +49,35 @@ public sealed class DaprProfileRepository : IProfileRepository
         return results;
     }
 
+    public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        var indexKey = TenantIndexKey(tenantId);
+        var userIds = await daprClient.GetStateAsync<List<string>>(
+                          StoreName, indexKey, cancellationToken: cancellationToken)
+                      ?? [];
+
+        var removed = 0;
+        foreach (var userId in userIds)
+        {
+            var profileKey = ProfileKey(tenantId, userId);
+            var profile = await daprClient.GetStateAsync<UserProfile>(
+                StoreName, profileKey, cancellationToken: cancellationToken);
+
+            if (profile is null)
+                continue; // stale index entry — nothing to remove
+
+            if (profile.EmployeeId is not null)
+                await daprClient.DeleteStateAsync(
+                    StoreName, EmpIdKey(tenantId, profile.EmployeeId), cancellationToken: cancellationToken);
+
+            await daprClient.DeleteStateAsync(StoreName, profileKey, cancellationToken: cancellationToken);
+            removed++;
+        }
+
+        await daprClient.DeleteStateAsync(StoreName, indexKey, cancellationToken: cancellationToken);
+        return removed;
+    }
+
     private async Task AddToTenantIndexAsync(string tenantId, string userId, CancellationToken cancellationToken)
     {
         var key = TenantIndexKey(tenantId);

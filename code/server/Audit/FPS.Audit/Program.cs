@@ -28,6 +28,7 @@ builder.Services.AddScoped<AuditIntegrityService>();
 builder.Services.AddScoped<IErasureWorkflowClient, DaprErasureWorkflowClient>();
 builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<AuditTenantStorePurger>();
 
 // Dapr Workflow: erasure orchestration and service-owned activities
 builder.Services.AddDaprWorkflow(options =>

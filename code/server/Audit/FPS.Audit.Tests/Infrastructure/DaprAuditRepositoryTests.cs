@@ -199,6 +199,62 @@ public sealed class DaprAuditRepositoryTests
         Assert.Equal(2, count);
     }
 
+    // ── Tenant purge (sandbox reset) ──────────────────────────────────────────
+
+    [Fact]
+    public async Task PurgeTenantAsync_RemovesAllRecords_ReturnsCount()
+    {
+        var repo = BuildRepo();
+        var records = new[] { MakeRecord(), MakeRecord(), MakeRecord() };
+        foreach (var record in records)
+            await repo.AppendAsync(record);
+
+        var removed = await repo.PurgeTenantAsync("demo");
+
+        Assert.Equal(3, removed);
+
+        // Every record, dedup marker and the index key are gone.
+        var (items, total) = await repo.QueryAsync(new AuditQueryRequest(), "demo");
+        Assert.Equal(0, total);
+        Assert.Empty(items);
+        foreach (var record in records)
+            Assert.False(await repo.ExistsAsync(record.SourceEventId, "demo"));
+        Assert.Empty(store);
+    }
+
+    [Fact]
+    public async Task PurgeTenantAsync_OnlyPurgesTargetTenant()
+    {
+        var repo = BuildRepo();
+        await repo.AppendAsync(MakeRecord("demo"));
+        await repo.AppendAsync(MakeRecord("other-co"));
+
+        var removed = await repo.PurgeTenantAsync("demo");
+
+        Assert.Equal(1, removed);
+        var (_, demoTotal) = await repo.QueryAsync(new AuditQueryRequest(), "demo");
+        var (_, otherTotal) = await repo.QueryAsync(new AuditQueryRequest(), "other-co");
+        Assert.Equal(0, demoTotal);
+        Assert.Equal(1, otherTotal);
+    }
+
+    [Fact]
+    public async Task PurgeTenantAsync_Idempotent_SecondCallReturnsZero()
+    {
+        var repo = BuildRepo();
+        await repo.AppendAsync(MakeRecord());
+
+        Assert.Equal(1, await repo.PurgeTenantAsync("demo"));
+        Assert.Equal(0, await repo.PurgeTenantAsync("demo"));
+    }
+
+    [Fact]
+    public async Task PurgeTenantAsync_EmptyTenant_ReturnsZero()
+    {
+        var repo = BuildRepo();
+        Assert.Equal(0, await repo.PurgeTenantAsync("never-seen"));
+    }
+
     [Fact]
     public async Task GetRangeAsync_ReturnsRecordsInRange()
     {

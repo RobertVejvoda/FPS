@@ -20,6 +20,7 @@ builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroa
 builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
 builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
 builder.Services.AddSingleton<HrRosterConfigurationSeeder>();
+builder.Services.AddScoped<NotificationTenantStorePurger>();
 builder.Services.AddScoped<BookingEventNotificationHandler>();
 builder.Services.AddScoped<TenantRequestSalesAlertHandler>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

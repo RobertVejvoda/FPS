@@ -44,6 +44,11 @@ public sealed class DaprParkingPolicyRepository : IParkingPolicyRepository
         if (list.Count > MaxVersionsRetained)
             list.RemoveRange(0, list.Count - MaxVersionsRetained);
         await daprClient.SaveStateAsync(ConfigStore, key, list, cancellationToken: cancellationToken);
+
+        // A location override is the first time a location-scoped policy key is written, so record
+        // the location in the per-tenant index the destructive purge relies on to find these keys.
+        if (policy.LocationId is not null)
+            await ConfigLocationIndex.AddAsync(daprClient, policy.TenantId, policy.LocationId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ParkingPolicy>> GetHistoryAsync(
@@ -59,9 +64,9 @@ public sealed class DaprParkingPolicyRepository : IParkingPolicyRepository
     private async Task<List<ParkingPolicy>> LoadVersionsAsync(string key, CancellationToken cancellationToken)
         => await daprClient.GetStateAsync<List<ParkingPolicy>>(ConfigStore, key, cancellationToken: cancellationToken) ?? [];
 
-    private static string TenantDefaultKey(string tenantId)
+    internal static string TenantDefaultKey(string tenantId)
         => TenantStorageKey.For("config-policy", tenantId, "tenant-default");
 
-    private static string LocationOverrideKey(string tenantId, string locationId)
+    internal static string LocationOverrideKey(string tenantId, string locationId)
         => TenantStorageKey.For("config-policy-location", tenantId, locationId.ToLowerInvariant());
 }

@@ -28,10 +28,14 @@ public sealed class DaprParkingSlotRepository : IParkingSlotRepository
     {
         await daprClient.SaveStateAsync(
             ConfigStore, SlotListKey(tenantId, locationId), slots.ToList(), cancellationToken: cancellationToken);
+
+        // Writing a location's slot list is a first-write of a location-scoped key: record the
+        // location in the per-tenant index the destructive purge uses to discover these keys.
+        await ConfigLocationIndex.AddAsync(daprClient, tenantId, locationId, cancellationToken);
     }
 
     // Slots for a location are stored as a single list at config-slots:{tenantId}:{locationId}.
     // ReplaceLocationSlotsAsync atomically overwrites all slots in one write.
-    private static string SlotListKey(string tenantId, string locationId)
+    internal static string SlotListKey(string tenantId, string locationId)
         => TenantStorageKey.For("config-slots", tenantId, locationId.ToLowerInvariant());
 }

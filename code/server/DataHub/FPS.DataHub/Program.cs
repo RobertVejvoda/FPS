@@ -33,6 +33,9 @@ builder.Services.AddScoped<IProjectionHandler, BookingProjectionHandler>();
 // outcome/draw write for the same event (dispatch is sequential in registration order).
 builder.Services.AddScoped<IProjectionHandler, UsageStatsProjectionHandler>();
 
+// PLAT003C — destructive single-tenant purge of DataHub read models (invoked over Dapr).
+builder.Services.AddScoped<DataHubTenantStorePurger>();
+
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {

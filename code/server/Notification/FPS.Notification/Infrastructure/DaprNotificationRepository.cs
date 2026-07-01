@@ -25,9 +25,13 @@ public sealed class DaprNotificationRepository : INotificationRepository
         if (await daprClient.GetStateAsync<bool>(StoreName, dedupKey, cancellationToken: cancellationToken))
             return;
 
-        // Write order: record → index → dedup marker (so a failed index write leaves the record re-retriable)
+        // Write order: record → per-recipient index → tenant recipient index → dedup marker
+        // (so a failed index write leaves the record re-retriable).
         await daprClient.SaveStateAsync(StoreName, RecordKey(record.TenantId, record.RecipientId, record.Id), record, cancellationToken: cancellationToken);
         await AddToIndexAsync(record.TenantId, record.RecipientId, record.Id, cancellationToken);
+        // The one unavoidable write-path addition (PLAT003C): Dapr KV cannot enumerate keys by
+        // prefix, so record the recipient in a per-tenant index the tenant purge can read.
+        await NotificationRecipientIndex.AddAsync(daprClient, StoreName, record.TenantId, record.RecipientId, cancellationToken);
         await daprClient.SaveStateAsync(StoreName, dedupKey, true, cancellationToken: cancellationToken);
     }
 
@@ -87,6 +91,26 @@ public sealed class DaprNotificationRepository : INotificationRepository
         if (ids.Count > 0)
             await daprClient.DeleteStateAsync(StoreName, indexKey, cancellationToken: cancellationToken);
         return ids.Count;
+    }
+
+    public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        // DESTRUCTIVE single-tenant purge (PLAT003C). Enumerate the tenant's recipients from the
+        // per-tenant recipient index and delete each recipient's records + per-recipient index via
+        // the existing erasure path, then drop the recipient index itself. Idempotent: a second
+        // call reads an empty index and returns 0.
+        var recipients = await NotificationRecipientIndex.ReadAsync(daprClient, StoreName, tenantId, cancellationToken);
+        var total = 0;
+        foreach (var recipientId in recipients)
+            total += await DeleteByRecipientIdAsync(tenantId, recipientId, cancellationToken);
+        await NotificationRecipientIndex.DeleteAsync(daprClient, StoreName, tenantId, cancellationToken);
+
+        // SAFE RESIDUE: notif-dedup:{tenantId}:{key} markers are intentionally left behind. Dapr KV
+        // cannot enumerate them (no per-tenant dedup index) and each marker is keyed by an
+        // event-unique deduplication key. A sandbox reseed creates no notifications, so a leftover
+        // marker can never suppress a post-reset live notification; a normal GDPR erasure targets a
+        // recipient, not dedup keys. Leaving them is therefore safe and avoids a second write-path index.
+        return total;
     }
 
     private async Task AddToIndexAsync(string tenantId, string recipientId, Guid notificationId, CancellationToken ct)

@@ -61,6 +61,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(_ => new DaprClientBuilder().Build());
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+// PLAT003C destructive tenant purge — resolved by PurgeController for the platform purge fan-out.
+builder.Services.AddScoped<FPS.Booking.Infrastructure.BookingTenantStorePurger>();
 
 var schedulerOptions = builder.Configuration
     .GetSection(FPS.Booking.Application.Services.DrawSchedulerOptions.SectionName)

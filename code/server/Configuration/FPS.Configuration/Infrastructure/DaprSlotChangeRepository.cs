@@ -24,6 +24,10 @@ public sealed class DaprSlotChangeRepository : ISlotChangeRepository
         if (list.Count > MaxChangesRetained)
             list.RemoveRange(0, list.Count - MaxChangesRetained);
         await daprClient.SaveStateAsync(ConfigStore, key, list, cancellationToken: cancellationToken);
+
+        // Recording a slot change writes a location-scoped key: record the location in the
+        // per-tenant index the destructive purge uses to discover these keys.
+        await ConfigLocationIndex.AddAsync(daprClient, change.TenantId, change.LocationId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<SlotChangeRecord>> GetHistoryAsync(
@@ -36,6 +40,6 @@ public sealed class DaprSlotChangeRepository : ISlotChangeRepository
     private async Task<List<SlotChangeRecord>> LoadChangesAsync(string key, CancellationToken cancellationToken)
         => await daprClient.GetStateAsync<List<SlotChangeRecord>>(ConfigStore, key, cancellationToken: cancellationToken) ?? [];
 
-    private static string SlotChangeKey(string tenantId, string locationId)
+    internal static string SlotChangeKey(string tenantId, string locationId)
         => TenantStorageKey.For("config-slotchange", tenantId, locationId.ToLowerInvariant());
 }

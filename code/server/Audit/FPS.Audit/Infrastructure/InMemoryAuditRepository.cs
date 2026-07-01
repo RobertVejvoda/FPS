@@ -86,6 +86,19 @@ public sealed class InMemoryAuditRepository : IAuditRepository, IAuditQueryRepos
         return Task.FromResult(toDelete.Count);
     }
 
+    public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        var toDelete = store.Values
+            .Where(r => r.TenantId == tenantId)
+            .Select(r => r.SourceEventId)
+            .ToList();
+
+        foreach (var id in toDelete)
+            store.TryRemove(id, out _);
+
+        return Task.FromResult(toDelete.Count);
+    }
+
     public Task<IReadOnlyList<AuditRecord>> GetRangeAsync(
         string tenantId, DateTime from, DateTime to, int maxRecords, CancellationToken cancellationToken = default)
     {

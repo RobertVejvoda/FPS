@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Dapr.Client;
 using FPS.Customer.Application;
 using FPS.Customer.Controllers;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,28 @@ builder.Services.AddScoped<TenantService>();
 // per-service ITenantStorePurger implementations are registered as they land (the orchestrator
 // safely no-ops over an empty set today). The reset re-seeds via the existing TenantDemoSeedService.
 builder.Services.AddScoped<FPS.SharedKernel.Infrastructure.TenantPurgeOrchestrator>();
+// PLAT003C-C1 — activate the tenant-store purge fan-out. The in-process orchestrator resolves every
+// ITenantStorePurger: Customer's own store is purged in-process (a no-op — its control-plane records
+// must survive a reset), and each other store is purged over Dapr service invocation to that
+// service's internal /purge/tenant endpoint (reusing the #635 erasure transport). Any RPC/non-success
+// throws, so a partial purge fails the reset closed rather than reseeding over stale data. The reset
+// itself stays inert until SandboxReset:Enabled is set (activated in PLAT003C-C3).
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger, CustomerTenantStorePurger>();
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-booking", "booking", isImmutableEvidence: false));
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-profile", "profile", isImmutableEvidence: false));
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-configuration", "configuration", isImmutableEvidence: false));
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-notification", "notification", isImmutableEvidence: false));
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-datahub", "datahub", isImmutableEvidence: false));
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-reporting", "reporting", isImmutableEvidence: false));
+// Audit holds immutable evidence — the orchestrator skips it unless sandboxReset, the endpoint self-gates too.
+builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-audit", "audit", isImmutableEvidence: true));
 builder.Services.AddScoped<SandboxResetService>();
 builder.Services.AddSingleton<ISandboxResetAudit, DaprSandboxResetAudit>();
 builder.Services.AddSingleton<ISandboxResetEvidenceStore, DaprSandboxResetEvidenceStore>();

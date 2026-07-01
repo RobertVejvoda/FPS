@@ -17,6 +17,9 @@ builder.Services.AddSingleton<IParkingPolicyRepository, DaprParkingPolicyReposit
 builder.Services.AddSingleton<IParkingSlotRepository, DaprParkingSlotRepository>();
 builder.Services.AddSingleton<ISlotChangeRepository, DaprSlotChangeRepository>();
 
+builder.Services.AddScoped<IConfigurationTenantPurger, ConfigurationTenantPurger>();
+builder.Services.AddScoped<ConfigurationTenantStorePurger>();
+
 builder.Services.AddScoped<ParkingPolicyService>();
 builder.Services.AddScoped<ParkingSlotService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();

@@ -5,16 +5,18 @@ namespace FPS.Reporting.Infrastructure;
 
 public sealed class InMemoryReportingRepository : IReportingRepository, IReportingQueryRepository
 {
-    private readonly ConcurrentDictionary<string, bool> _seenEvents = new(StringComparer.OrdinalIgnoreCase);
+    // eventId -> owning tenantId. Global dedup keeps its eventId key, but tracking the owning tenant
+    // lets PurgeTenantAsync drop only that tenant's markers.
+    private readonly ConcurrentDictionary<string, string> _seenEvents = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, ParkingMetrics> _metrics = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, FairnessRecord> _fairness = new(StringComparer.OrdinalIgnoreCase);
 
     public Task<bool> EventExistsAsync(string eventId, CancellationToken cancellationToken = default) =>
         Task.FromResult(_seenEvents.ContainsKey(eventId));
 
-    public Task RecordEventIdAsync(string eventId, CancellationToken cancellationToken = default)
+    public Task RecordEventIdAsync(string tenantId, string eventId, CancellationToken cancellationToken = default)
     {
-        _seenEvents.TryAdd(eventId, true);
+        _seenEvents.TryAdd(eventId, tenantId);
         return Task.CompletedTask;
     }
 
@@ -88,5 +90,36 @@ public sealed class InMemoryReportingRepository : IReportingRepository, IReporti
         foreach (var key in keys)
             _fairness.TryRemove(key, out _);
         return Task.FromResult(keys.Count);
+    }
+
+    public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        // Match the tenant the same way the query paths do: by the row's stored TenantId, not by
+        // string-splitting the composite key. Composite keys are {tenantId}:... but the record
+        // itself carries TenantId, which is the authoritative, prefix-collision-free field.
+        var metricKeys = _metrics
+            .Where(kv => kv.Value.TenantId == tenantId)
+            .Select(kv => kv.Key)
+            .ToList();
+        foreach (var key in metricKeys)
+            _metrics.TryRemove(key, out _);
+
+        var fairnessKeys = _fairness
+            .Where(kv => kv.Value.TenantId == tenantId)
+            .Select(kv => kv.Key)
+            .ToList();
+        foreach (var key in fairnessKeys)
+            _fairness.TryRemove(key, out _);
+
+        // Drop the tenant's seen-event dedup markers so a re-seed after reset re-projects cleanly.
+        var eventKeys = _seenEvents
+            .Where(kv => kv.Value == tenantId)
+            .Select(kv => kv.Key)
+            .ToList();
+        foreach (var key in eventKeys)
+            _seenEvents.TryRemove(key, out _);
+
+        // Count reflects the visible Reports/Fairness rows removed; dedup markers are internal.
+        return Task.FromResult(metricKeys.Count + fairnessKeys.Count);
     }
 }
