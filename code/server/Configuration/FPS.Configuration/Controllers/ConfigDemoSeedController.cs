@@ -8,12 +8,14 @@ using Microsoft.Extensions.Configuration;
 
 namespace FPS.Configuration.Controllers;
 
-// Internal demo-seed endpoint — replaces slots and policy for a location within a
-// sandbox or evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). The
-// caller (Customer service) validates TenantKind before issuing this request.
+// Internal demo-seed endpoint — replaces slots and policy for a location within a sandbox or
+// evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: a valid X-FPS-Seed-Key
+// alone authorizes this endpoint and the tenant is taken from the request body — a scheduled sandbox
+// reset has no operator JWT. See ProfileDemoSeedController for the rationale. When an operator JWT is
+// present its user id is used for publish attribution; otherwise a system "demo-seed" actor is used.
 [ApiController]
 [Route("configuration/admin")]
-[Authorize(Roles = "admin")]
+[AllowAnonymous]
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class ConfigDemoSeedController(
     ParkingSlotService slotService,
@@ -21,14 +23,13 @@ public sealed class ConfigDemoSeedController(
     ICurrentUser currentUser,
     IConfiguration config) : ControllerBase
 {
+    private const string SeedActor = "demo-seed";
+
     [HttpPost("demo-seed")]
     public async Task<IActionResult> DemoSeed(
         [FromBody] ConfigDemoSeedRequest request,
         CancellationToken ct)
     {
-        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
-            return Unauthorized();
-
         var expectedKey = config["DemoSeed:InternalKey"];
         if (string.IsNullOrEmpty(expectedKey))
             return StatusCode(503, new { error = "Demo seed internal key not configured." });
@@ -37,7 +38,13 @@ public sealed class ConfigDemoSeedController(
         if (providedKey != expectedKey)
             return Unauthorized();
 
-        var tenantId = currentUser.TenantId;
+        if (string.IsNullOrWhiteSpace(request.TenantId))
+            return BadRequest(new { error = "TenantId is required." });
+
+        var tenantId = request.TenantId;
+        var actor = currentUser.IsAuthenticated && !string.IsNullOrEmpty(currentUser.UserId)
+            ? currentUser.UserId
+            : SeedActor;
 
         var slots = request.Slots
             .Select(s => new ParkingSlot
@@ -56,7 +63,7 @@ public sealed class ConfigDemoSeedController(
             .ToList();
 
         var slotErrors = await slotService.ReplaceAsync(
-            tenantId, request.LocationId, slots, currentUser.UserId, "demo-seed", ct);
+            tenantId, request.LocationId, slots, actor, "demo-seed", ct);
         if (slotErrors.Count > 0)
             return BadRequest(new { errors = slotErrors });
 
@@ -79,7 +86,7 @@ public sealed class ConfigDemoSeedController(
             NoShowDetectionEnabled = request.Policy.NoShowDetectionEnabled,
             CompanyCarTier1Enabled = request.Policy.CompanyCarTier1Enabled,
             CompanyCarOverflowBehavior = request.Policy.CompanyCarOverflowBehavior,
-            PublishedByUserId = currentUser.UserId,
+            PublishedByUserId = actor,
             PublishedAt = DateTimeOffset.UtcNow,
             PublicationReason = "demo-seed",
         };
@@ -93,6 +100,7 @@ public sealed class ConfigDemoSeedController(
 }
 
 public sealed record ConfigDemoSeedRequest(
+    string TenantId,
     string LocationId,
     IReadOnlyList<DemoSlotSpec> Slots,
     DemoPolicySpec Policy);

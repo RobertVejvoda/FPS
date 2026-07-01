@@ -21,6 +21,7 @@ builder.Services.AddSingleton<IPiiMappingRepository, DaprPiiMappingRepository>()
 builder.Services.AddSingleton<IErasureRequestRepository, DaprErasureRequestRepository>();
 
 builder.Services.AddScoped<BookingEventAuditHandler>();
+builder.Services.AddScoped<SandboxResetAuditHandler>();
 builder.Services.AddScoped<AuditQueryService>();
 builder.Services.AddScoped<PiiErasureService>();
 builder.Services.AddScoped<AuditRetentionService>();

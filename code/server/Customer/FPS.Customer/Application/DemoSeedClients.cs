@@ -7,6 +7,7 @@ public interface IDemoSeedProfileClient
 {
     Task<(int profilesSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         IReadOnlyList<DemoEmployeeRecord> employees,
         CancellationToken ct);
 }
@@ -15,6 +16,7 @@ public interface IDemoSeedConfigurationClient
 {
     Task<(int slotsSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         string locationId,
         IReadOnlyList<DemoSlotRecord> slots,
         DemoPolicyRecord policy,
@@ -25,6 +27,7 @@ public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration co
 {
     public async Task<(int profilesSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         IReadOnlyList<DemoEmployeeRecord> employees,
         CancellationToken ct)
     {
@@ -37,7 +40,7 @@ public sealed class HttpDemoSeedProfileClient(HttpClient http, IConfiguration co
         var internalKey = config["DemoSeed:InternalKey"];
         if (!string.IsNullOrEmpty(internalKey))
             request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
-        request.Content = JsonContent.Create(new { employees });
+        request.Content = JsonContent.Create(new { tenantId, employees });
 
         try
         {
@@ -58,6 +61,7 @@ public sealed class HttpDemoSeedConfigurationClient(HttpClient http, IConfigurat
 {
     public async Task<(int slotsSeeded, string? error)> SeedAsync(
         string authorizationHeader,
+        string tenantId,
         string locationId,
         IReadOnlyList<DemoSlotRecord> slots,
         DemoPolicyRecord policy,
@@ -72,7 +76,7 @@ public sealed class HttpDemoSeedConfigurationClient(HttpClient http, IConfigurat
         var internalKey = config["DemoSeed:InternalKey"];
         if (!string.IsNullOrEmpty(internalKey))
             request.Headers.TryAddWithoutValidation("X-FPS-Seed-Key", internalKey);
-        request.Content = JsonContent.Create(new { locationId, slots, policy });
+        request.Content = JsonContent.Create(new { tenantId, locationId, slots, policy });
 
         try
         {

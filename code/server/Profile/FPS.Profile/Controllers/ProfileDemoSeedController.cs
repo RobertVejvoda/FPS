@@ -8,18 +8,18 @@ using Microsoft.Extensions.Configuration;
 
 namespace FPS.Profile.Controllers;
 
-// Internal demo-seed endpoint — upserts a batch of employee profiles for a sandbox
-// or evaluation tenant. Not in the OpenAPI spec (IgnoreApi = true). The caller
-// (Customer service) validates TenantKind before issuing this request; this
-// endpoint only re-checks that the actor is an authenticated admin.
+// Internal demo-seed endpoint — upserts a batch of employee profiles for a sandbox or evaluation
+// tenant. Not in the OpenAPI spec (IgnoreApi = true). PLAT003C-C2: a valid X-FPS-Seed-Key alone
+// authorizes this endpoint and the tenant is taken from the request body — a scheduled sandbox
+// reset has no operator JWT to derive a tenant claim from. The key is a strong internal secret
+// (fail-closed when unset); the endpoint is IgnoreApi and admin-routed (reachable in-cluster only).
 [ApiController]
 [Route("profile/admin")]
-[Authorize(Roles = "admin")]
+[AllowAnonymous]
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class ProfileDemoSeedController(
     IProfileRepository repository,
     IDeactivatedUserStore deactivatedUserStore,
-    ICurrentUser currentUser,
     IConfiguration config) : ControllerBase
 {
     [HttpPost("demo-seed")]
@@ -27,9 +27,6 @@ public sealed class ProfileDemoSeedController(
         [FromBody] ProfileDemoSeedRequest request,
         CancellationToken ct)
     {
-        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId))
-            return Unauthorized();
-
         var expectedKey = config["DemoSeed:InternalKey"];
         if (string.IsNullOrEmpty(expectedKey))
             return StatusCode(503, new { error = "Demo seed internal key not configured." });
@@ -38,7 +35,10 @@ public sealed class ProfileDemoSeedController(
         if (providedKey != expectedKey)
             return Unauthorized();
 
-        var tenantId = currentUser.TenantId;
+        if (string.IsNullOrWhiteSpace(request.TenantId))
+            return BadRequest(new { error = "TenantId is required." });
+
+        var tenantId = request.TenantId;
         var seeded = 0;
 
         foreach (var emp in request.Employees)
@@ -90,7 +90,7 @@ public sealed class ProfileDemoSeedController(
     }
 }
 
-public sealed record ProfileDemoSeedRequest(IReadOnlyList<DemoEmployeeSpec> Employees);
+public sealed record ProfileDemoSeedRequest(string TenantId, IReadOnlyList<DemoEmployeeSpec> Employees);
 
 public sealed record DemoEmployeeSpec(
     string UserId,

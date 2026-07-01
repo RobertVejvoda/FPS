@@ -25,13 +25,13 @@ public sealed class SandboxResetServiceTests
 
     private sealed class FakeProfileClient : IDemoSeedProfileClient
     {
-        public Task<(int profilesSeeded, string? error)> SeedAsync(string authorizationHeader, IReadOnlyList<DemoEmployeeRecord> employees, CancellationToken ct)
+        public Task<(int profilesSeeded, string? error)> SeedAsync(string authorizationHeader, string tenantId, IReadOnlyList<DemoEmployeeRecord> employees, CancellationToken ct)
             => Task.FromResult((employees.Count, (string?)null));
     }
 
     private sealed class FakeConfigClient : IDemoSeedConfigurationClient
     {
-        public Task<(int slotsSeeded, string? error)> SeedAsync(string authorizationHeader, string locationId, IReadOnlyList<DemoSlotRecord> slots, DemoPolicyRecord policy, CancellationToken ct)
+        public Task<(int slotsSeeded, string? error)> SeedAsync(string authorizationHeader, string tenantId, string locationId, IReadOnlyList<DemoSlotRecord> slots, DemoPolicyRecord policy, CancellationToken ct)
             => Task.FromResult((slots.Count, (string?)null));
     }
 

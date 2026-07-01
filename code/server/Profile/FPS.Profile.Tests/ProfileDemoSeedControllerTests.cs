@@ -5,15 +5,14 @@ using FPS.SharedKernel.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Moq;
 
 namespace FPS.Profile.Tests;
 
 public sealed class ProfileDemoSeedControllerTests
 {
+    private const string Tenant = "demo-tenant";
     private readonly InMemoryProfileRepository repository = new();
     private readonly InMemoryDeactivatedUserStore deactivatedStore = new();
-    private readonly Mock<ICurrentUser> currentUser = new();
     private readonly ProfileDemoSeedController controller;
 
     private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();
@@ -25,17 +24,15 @@ public sealed class ProfileDemoSeedControllerTests
 
     public ProfileDemoSeedControllerTests()
     {
-        currentUser.Setup(u => u.IsAuthenticated).Returns(true);
-        currentUser.Setup(u => u.TenantId).Returns("demo-tenant");
         var ctx = new DefaultHttpContext();
         ctx.Request.Headers["X-FPS-Seed-Key"] = "test-key";
-        controller = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, KeyConfig("test-key"));
+        controller = new ProfileDemoSeedController(repository, deactivatedStore, KeyConfig("test-key"));
         controller.ControllerContext = new ControllerContext { HttpContext = ctx };
     }
 
     private ProfileDemoSeedController BuildWithKey(string key, string? headerValue = null)
     {
-        var c = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, KeyConfig(key));
+        var c = new ProfileDemoSeedController(repository, deactivatedStore, KeyConfig(key));
         var ctx = new DefaultHttpContext();
         if (headerValue is not null)
             ctx.Request.Headers["X-FPS-Seed-Key"] = headerValue;
@@ -57,7 +54,7 @@ public sealed class ProfileDemoSeedControllerTests
             ReservedSpaceEligible: false,
             Vehicles: [new($"veh-{i:D4}", $"PL{i:D4}AA", "car", IsElectric: false, IsDefault: true)]
         )).ToList();
-        return new ProfileDemoSeedRequest(employees);
+        return new ProfileDemoSeedRequest(Tenant, employees);
     }
 
     [Fact]
@@ -66,7 +63,7 @@ public sealed class ProfileDemoSeedControllerTests
         var result = await controller.DemoSeed(BasicRequest(3), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
-        var profile = await repository.GetAsync("demo-tenant", "user-0001");
+        var profile = await repository.GetAsync(Tenant, "user-0001");
         Assert.NotNull(profile);
         Assert.Equal("Employee 1", profile.DisplayName);
         Assert.Equal("demo-seed", profile.FactSource);
@@ -88,7 +85,7 @@ public sealed class ProfileDemoSeedControllerTests
     {
         await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "user-0001");
+        var profile = await repository.GetAsync(Tenant, "user-0001");
         Assert.Equal("demo-seed", profile!.FactSource);
         Assert.Equal("demo-seed-v1", profile.SnapshotVersion);
     }
@@ -99,7 +96,7 @@ public sealed class ProfileDemoSeedControllerTests
         await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
         await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "user-0001");
+        var profile = await repository.GetAsync(Tenant, "user-0001");
         Assert.NotNull(profile);
         Assert.Equal("Employee 1", profile.DisplayName);
     }
@@ -107,7 +104,7 @@ public sealed class ProfileDemoSeedControllerTests
     [Fact]
     public async Task DemoSeed_WithVehicles_VehiclesStored()
     {
-        var request = new ProfileDemoSeedRequest(
+        var request = new ProfileDemoSeedRequest(Tenant,
         [
             new("cc-user", "Alice", ["employee"], null, "HQ", true, true, false, false,
             [
@@ -117,7 +114,7 @@ public sealed class ProfileDemoSeedControllerTests
 
         await controller.DemoSeed(request, CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "cc-user");
+        var profile = await repository.GetAsync(Tenant, "cc-user");
         Assert.NotNull(profile);
         Assert.True(profile.HasCompanyCar);
         Assert.Single(profile.Vehicles);
@@ -128,7 +125,7 @@ public sealed class ProfileDemoSeedControllerTests
     [Fact]
     public async Task DemoSeed_MultipleVehicles_NormalizesDefault()
     {
-        var request = new ProfileDemoSeedRequest(
+        var request = new ProfileDemoSeedRequest(Tenant,
         [
             new("mc-user", "David", ["employee"], null, "HQ", true, false, false, false,
             [
@@ -139,7 +136,7 @@ public sealed class ProfileDemoSeedControllerTests
 
         await controller.DemoSeed(request, CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "mc-user");
+        var profile = await repository.GetAsync(Tenant, "mc-user");
         Assert.Equal(2, profile!.Vehicles.Count);
         Assert.Single(profile.Vehicles, v => v.IsDefault);
         Assert.Equal("veh-car", profile.Vehicles.Single(v => v.IsDefault).VehicleId);
@@ -148,34 +145,42 @@ public sealed class ProfileDemoSeedControllerTests
     [Fact]
     public async Task DemoSeed_NoVehicles_ProfileStillCreated()
     {
-        var request = new ProfileDemoSeedRequest(
+        var request = new ProfileDemoSeedRequest(Tenant,
         [
             new("no-car-user", "Gabi", ["employee"], null, "HQ", false, false, false, false, [])
         ]);
 
         await controller.DemoSeed(request, CancellationToken.None);
 
-        var profile = await repository.GetAsync("demo-tenant", "no-car-user");
+        var profile = await repository.GetAsync(Tenant, "no-car-user");
         Assert.NotNull(profile);
         Assert.Empty(profile.Vehicles);
         Assert.False(profile.ParkingEligible);
     }
 
     [Fact]
-    public async Task DemoSeed_UnauthenticatedUser_Returns401()
+    public async Task DemoSeed_NoJwt_ValidKeyAndBodyTenant_Succeeds()
     {
-        currentUser.Setup(u => u.IsAuthenticated).Returns(false);
-        currentUser.Setup(u => u.TenantId).Returns(string.Empty);
-
+        // PLAT003C-C2: no operator JWT is required — a valid seed key plus a body tenant id
+        // authorizes the endpoint (the scheduled-reset reseed path).
         var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
-        Assert.IsType<UnauthorizedResult>(result);
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(await repository.GetAsync(Tenant, "user-0001"));
+    }
+
+    [Fact]
+    public async Task DemoSeed_MissingTenantId_Returns400()
+    {
+        var result = await controller.DemoSeed(BasicRequest(1) with { TenantId = "" }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
     public async Task DemoSeed_InternalKeyNotConfigured_Returns503()
     {
-        var c = new ProfileDemoSeedController(repository, deactivatedStore, currentUser.Object, EmptyConfig());
+        var c = new ProfileDemoSeedController(repository, deactivatedStore, EmptyConfig());
         c.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var result = await c.DemoSeed(BasicRequest(1), CancellationToken.None);

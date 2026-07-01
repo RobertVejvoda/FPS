@@ -52,6 +52,7 @@ public sealed class ConfigDemoSeedControllerTests
     }
 
     private static ConfigDemoSeedRequest BasicRequest(int slotCount = 5) => new(
+        TenantId: "demo-tenant",
         LocationId: "GL-HQ",
         Slots: Enumerable.Range(1, slotCount)
             .Select(i => new DemoSlotSpec($"slot-{i:D3}", IsActive: true,
@@ -98,6 +99,7 @@ public sealed class ConfigDemoSeedControllerTests
     public async Task DemoSeed_CompanyCarReservedSlot_Stored()
     {
         var request = new ConfigDemoSeedRequest(
+            TenantId: "demo-tenant",
             LocationId: "GL-HQ",
             Slots:
             [
@@ -119,6 +121,7 @@ public sealed class ConfigDemoSeedControllerTests
     public async Task DemoSeed_MotorcycleSlot_CapacityUnitsStored()
     {
         var request = new ConfigDemoSeedRequest(
+            TenantId: "demo-tenant",
             LocationId: "GL-HQ",
             Slots:
             [
@@ -138,15 +141,29 @@ public sealed class ConfigDemoSeedControllerTests
     }
 
     [Fact]
-    public async Task DemoSeed_UnauthenticatedUser_Returns401()
+    public async Task DemoSeed_NoJwt_ValidKeyAndBodyTenant_Succeeds()
     {
+        // PLAT003C-C2: a scheduled reset has no operator JWT. A valid seed key plus a body tenant id
+        // is sufficient — the endpoint no longer requires an authenticated admin.
         currentUser.Setup(u => u.IsAuthenticated).Returns(false);
         currentUser.Setup(u => u.TenantId).Returns(string.Empty);
         currentUser.Setup(u => u.UserId).Returns(string.Empty);
 
         var result = await controller.DemoSeed(BasicRequest(1), CancellationToken.None);
 
-        Assert.IsType<UnauthorizedResult>(result);
+        Assert.IsType<OkObjectResult>(result);
+        var slots = await slotRepo.GetByLocationAsync("demo-tenant", "GL-HQ", CancellationToken.None);
+        Assert.Single(slots);
+    }
+
+    [Fact]
+    public async Task DemoSeed_MissingTenantId_Returns400()
+    {
+        var request = BasicRequest(1) with { TenantId = "" };
+
+        var result = await controller.DemoSeed(request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
