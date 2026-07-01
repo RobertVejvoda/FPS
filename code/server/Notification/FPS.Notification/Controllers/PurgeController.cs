@@ -13,6 +13,7 @@ namespace FPS.Notification.Controllers;
 /// </summary>
 [ApiController]
 [DaprInternalOnly]
+[ApiExplorerSettings(IgnoreApi = true)]
 public sealed class PurgeController(NotificationTenantStorePurger purger) : ControllerBase
 {
     [HttpPost("/purge/tenant")]

@@ -12,6 +12,7 @@ namespace FPS.DataHub.Controllers;
 /// </summary>
 [ApiController]
 [DaprInternalOnly]
+[ApiExplorerSettings(IgnoreApi = true)]
 public sealed class PurgeController(DataHubTenantStorePurger purger) : ControllerBase
 {
     [HttpPost("/purge/tenant")]

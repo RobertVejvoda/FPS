@@ -12,6 +12,7 @@ namespace FPS.Audit.Controllers;
 /// </summary>
 [ApiController]
 [DaprInternalOnly]
+[ApiExplorerSettings(IgnoreApi = true)]
 public sealed class PurgeController(AuditTenantStorePurger purger) : ControllerBase
 {
     [HttpPost("/purge/tenant")]
