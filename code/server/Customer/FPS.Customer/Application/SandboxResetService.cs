@@ -40,10 +40,17 @@ public sealed class SandboxResetService(
     IEnumerable<ITenantStorePurger> purgers,
     TenantDemoSeedService seed,
     ISandboxResetAudit audit,
+    ISandboxResetEvidenceStore evidence,
     IConfiguration configuration)
 {
+    /// <summary>
+    /// Resets a resettable sandbox to its golden state. <paramref name="source"/> ("manual" | "scheduled")
+    /// is recorded on the operator evidence. Evidence is written for every outcome that reaches a legitimate
+    /// resettable sandbox (Succeeded/Failed/Unavailable) — never for a non-sandbox guard rejection, which is a
+    /// security refusal, not a reset.
+    /// </summary>
     public async Task<(SandboxResetSummary? summary, string? error)> ResetAsync(
-        string tenantId, string actorHash, string authorizationHeader, CancellationToken ct)
+        string tenantId, string actorHash, string source, string authorizationHeader, CancellationToken ct)
     {
         // ── Guard: fail closed BEFORE any destructive action ──────────────────────────────
         if (string.IsNullOrWhiteSpace(tenantId)) return (null, "Tenant id is required.");
@@ -55,6 +62,10 @@ public sealed class SandboxResetService(
         if (tenant.Kind != TenantKind.Sandbox || !tenant.IsResettableSandbox)
             return (null, "Refusing to reset: tenant is not a resettable sandbox.");
 
+        // Past the guard: this is a legitimate resettable sandbox, so every outcome from here is recorded
+        // as operator evidence (no PII/secrets — actor hash + aggregate counts only).
+        var startedAt = DateTimeOffset.UtcNow;
+
         // Fail closed until the reset is EXPLICITLY activated (default off). Activation requires
         // BOTH an explicit opt-in (SandboxReset:Enabled) — the operator asserting the internal
         // tenant-scoped reseed path and durable audit ingestion are wired — AND at least one
@@ -64,7 +75,13 @@ public sealed class SandboxResetService(
         // purgers + internal reseed + audit ingestion flips SandboxReset:Enabled on together.
         var enabled = configuration.GetValue<bool>("SandboxReset:Enabled");
         if (!enabled || !purgers.Any())
-            return (null, "unavailable: sandbox reset is not active yet (requires explicit SandboxReset:Enabled plus registered tenant-store purgers).");
+        {
+            const string unavailable = "unavailable: sandbox reset is not active yet (requires explicit SandboxReset:Enabled plus registered tenant-store purgers).";
+            await evidence.RecordAsync(new SandboxResetEvidence(
+                tenantId, "Unavailable", source, actorHash, startedAt, DateTimeOffset.UtcNow,
+                SnapshotVersion: null, FailureReason: unavailable, Purged: null), ct);
+            return (null, unavailable);
+        }
 
         await audit.StartedAsync(actorHash, tenantId, ct);
         try
@@ -74,17 +91,26 @@ public sealed class SandboxResetService(
             if (seedError is not null)
             {
                 await audit.FailedAsync(actorHash, tenantId, seedError, ct);
+                await evidence.RecordAsync(new SandboxResetEvidence(
+                    tenantId, "Failed", source, actorHash, startedAt, DateTimeOffset.UtcNow,
+                    SnapshotVersion: null, FailureReason: seedError, Purged: purged), ct);
                 return (null, $"Reset re-seed failed: {seedError}");
             }
 
             var summary = new SandboxResetSummary(
                 tenantId, purged, seedResult!.ProfilesSeeded, seedResult.SlotsSeeded, DateTimeOffset.UtcNow);
             await audit.CompletedAsync(actorHash, tenantId, summary, ct);
+            await evidence.RecordAsync(new SandboxResetEvidence(
+                tenantId, "Succeeded", source, actorHash, startedAt, summary.CompletedAt,
+                SnapshotVersion: seedResult.DatasetVersion, FailureReason: null, Purged: purged), ct);
             return (summary, null);
         }
         catch (Exception ex)
         {
             await audit.FailedAsync(actorHash, tenantId, ex.Message, ct);
+            await evidence.RecordAsync(new SandboxResetEvidence(
+                tenantId, "Failed", source, actorHash, startedAt, DateTimeOffset.UtcNow,
+                SnapshotVersion: null, FailureReason: ex.Message, Purged: null), ct);
             return (null, "Reset failed; see audit evidence.");
         }
     }

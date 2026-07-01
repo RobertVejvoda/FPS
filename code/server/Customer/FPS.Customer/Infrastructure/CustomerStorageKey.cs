@@ -31,4 +31,6 @@ internal static class CustomerStorageKey
     internal static string IdentityIndex() => "identity:index";
     internal static string TenantIndex() => "tenant:index";
     internal static string DiscoveryDomain(string domain) => $"tenant:discovery-domain:{domain.Trim().ToLowerInvariant()}";
+    internal static string SandboxResetLease() => "sandbox-reset:lease";
+    internal static string SandboxResetEvidence(string tenantId) => $"sandbox-reset:evidence:{Sanitise(tenantId)}";
 }

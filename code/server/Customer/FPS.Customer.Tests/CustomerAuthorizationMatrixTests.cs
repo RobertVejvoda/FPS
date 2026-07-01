@@ -59,6 +59,10 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
                 services.AddSingleton<ITenantParkingBootstrapRepository, InMemoryTenantParkingBootstrapRepository>();
                 services.AddSingleton<ITenantRequestRepository, InMemoryTenantRequestRepository>();
                 services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
+                // PLAT003B — in-memory evidence store so the GET reset-sandbox evidence endpoint returns a
+                // clean 404 (no recorded evidence) instead of reaching for a Dapr sidecar in the auth harness.
+                services.RemoveAll<ISandboxResetEvidenceStore>();
+                services.AddSingleton<ISandboxResetEvidenceStore, InMemorySandboxResetEvidenceStore>();
                 services.PostConfigureAll<JwtBearerOptions>(options =>
                 {
                     options.Authority = null;
@@ -284,7 +288,41 @@ public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicat
         Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
     }
 
+    // ── GET /platform/tenants/{id}/reset-sandbox — last-reset evidence (RequirePlatformReader, PLAT003B) ──
+    // Read-only surface: any platform reader (auditor included) passes; tenant/customer tokens (incl. a
+    // forged platform role) are refused. With no recorded evidence the gate-passing result is a 404.
+
+    [Theory]
+    [InlineData(FpsRoles.PlatformAdmin)]
+    [InlineData(FpsRoles.PlatformOperator)]
+    [InlineData(FpsRoles.PlatformAuditor)]
+    public async Task SandboxResetEvidence_PlatformReaderRoles_PassGate(string role)
+    {
+        var r = await Client(PlatformIssuer, tenantId: null, role).GetAsync("/platform/tenants/greenlogistics/reset-sandbox");
+        Assert.True(PassedAuthGate(r.StatusCode), $"expected not-401/403, got {r.StatusCode}");
+    }
+
+    [Fact]
+    public async Task SandboxResetEvidence_TenantAdmin_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.Admin).GetAsync("/platform/tenants/acme/reset-sandbox");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task SandboxResetEvidence_CustomerTokenWithForgedPlatformRole_IsForbidden()
+    {
+        var r = await Client(CustomerIssuer, "acme", FpsRoles.PlatformAuditor).GetAsync("/platform/tenants/acme/reset-sandbox");
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────────
+
+    private sealed class InMemorySandboxResetEvidenceStore : ISandboxResetEvidenceStore
+    {
+        public Task RecordAsync(SandboxResetEvidence e, CancellationToken ct) => Task.CompletedTask;
+        public Task<SandboxResetEvidence?> GetLatestAsync(string tenantId, CancellationToken ct) => Task.FromResult<SandboxResetEvidence?>(null);
+    }
 
     private HttpClient Client(string issuer, string? tenantId, params string[] roles)
     {
