@@ -5,6 +5,7 @@ import { canAccessPlatformConsole, formatRoles } from '../auth/roles';
 import { PlatformAccessDenied } from './PlatformAccessDenied';
 import { PlatformOverview } from './PlatformOverview';
 import { PlatformPlaceholderPage } from './PlatformPlaceholderPage';
+import { HealthStrip } from './HealthStrip';
 import { TenantsDirectoryPage } from './TenantsDirectoryPage';
 import { TenantDetailPage } from './TenantDetailPage';
 import { OnboardingQueuePage } from './OnboardingQueuePage';
@@ -91,16 +92,7 @@ export function PlatformShell() {
           <Route path="tenants" element={<TenantsDirectoryPage />} />
           <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
           <Route path="onboarding" element={<OnboardingQueuePage />} />
-          <Route
-            path="health"
-            element={(
-              <PlatformPlaceholderPage
-                title="Platform health"
-                description="Red-flags and operational health across the platform."
-                slice="PLAT008D"
-              />
-            )}
-          />
+          <Route path="health" element={<HealthStrip />} />
           <Route
             path="audit"
             element={(
