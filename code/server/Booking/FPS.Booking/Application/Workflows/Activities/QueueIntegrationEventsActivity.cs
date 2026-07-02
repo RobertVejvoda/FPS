@@ -49,7 +49,11 @@ public sealed class QueueIntegrationEventsActivity(
             var decisionPublisher = eventPublisher.WithContext(new BookingPublishContext(
                 input.TenantId, Guid.NewGuid().ToString(), "system", null,
                 SubjectRequestorId: decision.RequestorId,
-                AllocationSource: "draw"));
+                AllocationSource: "draw",
+                // PLAT-seats (#710) — carry the request's resource type so the outcome projection
+                // records Seats even when a draw allocation event is processed before the submitted
+                // event created the projection.
+                ResourceType: dto.ResourceType));
 
             switch (decision.Outcome)
             {

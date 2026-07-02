@@ -49,6 +49,19 @@ function Guard({ allowed, children }: { allowed: boolean; children: React.ReactN
   return <>{children}</>;
 }
 
+// PLAT-seats (#710) — guard for seat routes. Unlike the plain Guard, it does NOT redirect while the
+// tenant's modules are still loading, so a direct link / refresh to /seats on a Seats-enabled tenant
+// isn't bounced away before GET /tenants/{id}/modules resolves. Redirect only once Seats is
+// confirmed disabled (or the role isn't allowed).
+function SeatsGuard({ roleAllowed, children }: { roleAllowed: boolean; children: React.ReactNode }) {
+  const { roles } = useAuth();
+  const { hasSeats, loading } = useTenantModules();
+  if (!roleAllowed) return <Navigate to={defaultRoute(roles)} replace />;
+  if (loading) return <div className="page-stack"><p className="plat-muted">Loading…</p></div>;
+  if (!hasSeats) return <Navigate to={defaultRoute(roles)} replace />;
+  return <>{children}</>;
+}
+
 function AppFooter() {
   const { apiBaseUrl, bearerToken, environment, simulationEnabled, appVersion, roles } = useAuth();
   const cfg = { apiBaseUrl, bearerToken };
@@ -209,8 +222,8 @@ function Shell() {
           <Route path="/bookings/history" element={<Guard allowed={canAccessBookings(roles)}><BookingHistoryPage /></Guard>} />
           <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
           <Route path="/bookings/:requestId" element={<Guard allowed={canAccessBookings(roles)}><BookingDetailPage /></Guard>} />
-          <Route path="/seats" element={<Guard allowed={canAccessBookings(roles) && hasSeats}><SeatsPage /></Guard>} />
-          <Route path="/seat-operations" element={<Guard allowed={canAccessHrOperations(roles) && hasSeats}><SeatOperationsPage /></Guard>} />
+          <Route path="/seats" element={<SeatsGuard roleAllowed={canAccessBookings(roles)}><SeatsPage /></SeatsGuard>} />
+          <Route path="/seat-operations" element={<SeatsGuard roleAllowed={canAccessHrOperations(roles)}><SeatOperationsPage /></SeatsGuard>} />
           <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
           <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
           <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />

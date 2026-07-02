@@ -9,6 +9,7 @@ public sealed class SubmitBookingRequestHandlerTests
     private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly Mock<IProfileSnapshotService> profileService = new();
     private readonly Mock<IBookingEventPublisher> publisher = new();
+    private readonly Mock<ITenantModulesService> tenantModulesService = new();
     private readonly SubmitBookingRequestHandler handler;
 
     private static readonly ProfileSnapshot DefaultProfile = new(
@@ -38,7 +39,14 @@ public sealed class SubmitBookingRequestHandlerTests
         handler = new SubmitBookingRequestHandler(
             repository.Object, queryRepository.Object, slotService.Object,
             metricsService.Object, policyService.Object, profileService.Object, publisher.Object,
+            tenantModulesService.Object,
             NullLogger<SubmitBookingRequestHandler>.Instance, new SystemClock());
+
+        // Default: the tenant runs both modules, so seats tests are accepted; parking tests never
+        // consult this. Individual tests override it to prove the disabled-tenant rejection.
+        tenantModulesService
+            .Setup(s => s.GetEnabledModulesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["Parking", "Seats"]);
 
         profileService
             .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -886,6 +894,40 @@ public sealed class SubmitBookingRequestHandlerTests
 
         Assert.Equal("Pending", result.Status);
         Assert.Null(result.RejectionCode);
+    }
+
+    [Fact]
+    public async Task Handle_SeatsRequest_SeatsModuleDisabled_IsRejected()
+    {
+        // The module boundary must hold on the server: a Parking-only tenant cannot create seat state.
+        tenantModulesService
+            .Setup(s => s.GetEnabledModulesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["Parking"]);
+
+        var result = await handler.Handle(SeatsCommand(), CancellationToken.None);
+
+        Assert.Equal("Rejected", result.Status);
+        Assert.Contains("seats module is not enabled", result.Reason);
+        repository.Verify(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_SeatsRequest_SeatsModuleEnabled_IsAccepted()
+    {
+        tenantModulesService
+            .Setup(s => s.GetEnabledModulesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["Parking", "Seats"]);
+
+        var result = await handler.Handle(SeatsCommand(), CancellationToken.None);
+
+        Assert.Equal("Pending", result.Status);
+    }
+
+    [Fact]
+    public async Task Handle_ParkingRequest_DoesNotConsultModules()
+    {
+        await handler.Handle(FutureCommand(), CancellationToken.None);
+        tenantModulesService.Verify(s => s.GetEnabledModulesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

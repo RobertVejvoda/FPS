@@ -68,7 +68,8 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     NewStatus: "Rejected",
                     ReasonCode: e.RejectionCode.ToString(),
                     ReasonText: e.Reason,
-                    AffectedRecipientIds: null),
+                    AffectedRecipientIds: null,
+                    ResourceType: ctx.ResourceType),
 
                 BookingRequestCancelledEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),

@@ -1027,4 +1027,43 @@ public sealed class BookingProjectionHandlerTests : IDisposable
         Assert.Single(rows);
         Assert.Equal(expectedStatus, rows[0].FinalStatus);
     }
+
+    // PLAT-seats (#710) — a draw allocation event can be processed before the submitted event
+    // created the projection; the fallback-created outcome must still record the resource type.
+    [Fact]
+    public async Task HandleRequestAllocated_BeforeSubmitted_PreservesSeatsResourceType()
+    {
+        var envelope = new BookingEventEnvelope(
+            EventId: "evt-seat-alloc-first",
+            EventType: "booking.slotAllocated",
+            EventVersion: 1,
+            OccurredAt: DateTime.UtcNow,
+            TenantId: "tenant-a",
+            CorrelationId: "corr-seat-1",
+            CausationId: null,
+            ActorType: "system",
+            ActorId: null,
+            Source: "booking",
+            Payload: new BookingEventPayload(
+                BookingRequestId: "req-seat-alloc",
+                RequestorId: "user-1",
+                LocationId: "GL-TEAMS",
+                Date: "2026-07-08",
+                TimeSlot: "08:00-18:00",
+                PreviousStatus: null,
+                NewStatus: "Allocated",
+                ReasonCode: null,
+                ReasonText: null,
+                AffectedRecipientIds: null,
+                AllocationId: "alloc-seat-1",
+                SlotId: "HQ-TEAM-A-01",
+                AllocationSource: "draw",
+                ResourceType: "Seats"));
+
+        await _handler.HandleAsync(envelope, CancellationToken.None);
+
+        var outcome = await _db.BookingOutcomes.SingleAsync(b => b.BookingRequestId == "req-seat-alloc");
+        Assert.Equal("Allocated", outcome.FinalStatus);
+        Assert.Equal("Seats", outcome.ResourceType);
+    }
 }

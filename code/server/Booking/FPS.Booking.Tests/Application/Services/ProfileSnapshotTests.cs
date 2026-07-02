@@ -19,6 +19,7 @@ public sealed class ProfileSnapshotTests
     private readonly Mock<ITenantPolicyService> policyService = new();
     private readonly Mock<IProfileSnapshotService> profileService = new();
     private readonly Mock<IBookingEventPublisher> publisher = new();
+    private readonly Mock<ITenantModulesService> tenantModulesService = new();
     private readonly SubmitBookingRequestHandler handler;
 
     private static readonly TenantPolicy DefaultPolicy = new(
@@ -35,7 +36,11 @@ public sealed class ProfileSnapshotTests
         handler = new SubmitBookingRequestHandler(
             repository.Object, queryRepository.Object, slotService.Object,
             metricsService.Object, policyService.Object, profileService.Object, publisher.Object,
+            tenantModulesService.Object,
             NullLogger<SubmitBookingRequestHandler>.Instance, new SystemClock());
+
+        tenantModulesService.Setup(s => s.GetEnabledModulesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["Parking", "Seats"]);
 
         policyService.Setup(s => s.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultPolicy);

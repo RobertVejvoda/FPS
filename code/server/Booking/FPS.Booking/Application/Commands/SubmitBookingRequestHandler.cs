@@ -22,6 +22,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     private readonly ITenantPolicyService policyService;
     private readonly IProfileSnapshotService profileSnapshotService;
     private readonly IBookingEventPublisher eventPublisher;
+    private readonly ITenantModulesService tenantModulesService;
     private readonly ILogger<SubmitBookingRequestHandler> logger;
     private readonly ISystemClock clock;
 
@@ -33,6 +34,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         ITenantPolicyService policyService,
         IProfileSnapshotService profileSnapshotService,
         IBookingEventPublisher eventPublisher,
+        ITenantModulesService tenantModulesService,
         ILogger<SubmitBookingRequestHandler> logger,
         ISystemClock clock)
     {
@@ -43,6 +45,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         ArgumentNullException.ThrowIfNull(policyService);
         ArgumentNullException.ThrowIfNull(profileSnapshotService);
         ArgumentNullException.ThrowIfNull(eventPublisher);
+        ArgumentNullException.ThrowIfNull(tenantModulesService);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(clock);
         this.repository = repository;
@@ -52,6 +55,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
         this.policyService = policyService;
         this.profileSnapshotService = profileSnapshotService;
         this.eventPublisher = eventPublisher;
+        this.tenantModulesService = tenantModulesService;
         this.logger = logger;
         this.clock = clock;
     }
@@ -85,6 +89,24 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                 isSeats
                     ? "You are not eligible to request a seat under current policy."
                     : "You are not eligible for parking under current policy.");
+        }
+
+        // PLAT-seats (#710) — the module boundary is enforced on the server, not just the web nav:
+        // a Seats request is rejected unless the tenant has the Seats module enabled, so a
+        // Parking-only tenant can't create seat state by posting directly to /bookings. The lookup
+        // fails closed to Parking-only.
+        if (isSeats)
+        {
+            var enabledModules = await tenantModulesService.GetEnabledModulesAsync(cmd.TenantId, cancellationToken);
+            if (!enabledModules.Contains("Seats", StringComparer.OrdinalIgnoreCase))
+            {
+                logger.LogInformation(
+                    "Seat request rejected — Seats module not enabled. TenantId={TenantId} RejectionCode={RejectionCode}",
+                    cmd.TenantId, BookingRejectionCode.RequestorIneligible);
+                return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
+                    BookingRejectionCode.RequestorIneligible.ToString(),
+                    "The seats module is not enabled for your organisation.");
+            }
         }
 
         var policy = await policyService.GetEffectivePolicyAsync(cmd.TenantId, cmd.LocationId, cancellationToken);
