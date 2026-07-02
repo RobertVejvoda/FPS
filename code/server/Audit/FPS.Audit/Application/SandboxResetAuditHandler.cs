@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using FPS.Audit.Domain;
+using FPS.SharedKernel.Observability;
 using Microsoft.Extensions.Logging;
 
 namespace FPS.Audit.Application;
@@ -16,6 +18,9 @@ public sealed class SandboxResetAuditHandler(
 
     public async Task HandleAsync(TenantResetEventEnvelope e, CancellationToken cancellationToken = default)
     {
+        // PLAT005B — tag the event-processing span with the trusted envelope tenant. No PII.
+        TenantTelemetry.SetTenantTag(Activity.Current, e.TenantId);
+
         // Deterministic id so a redelivery of the same event (same tenant,
         // action, and instant) collapses onto one immutable record.
         var sourceEventId = $"platform.sandboxReset:{e.TenantId}:{e.Action}:{e.OccurredAt:o}";

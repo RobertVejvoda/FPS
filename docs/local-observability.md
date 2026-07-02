@@ -26,14 +26,23 @@ Each service emits:
 
 ## Log correlation
 
-Each service logs a line per request containing `TraceId` and `SpanId`:
+Each service logs a line per request containing `TraceId`, `SpanId`, and the `tenant_id` operator dimension:
 
 ```
 info: FPS.Request[0]
-      GET /me TraceId=4bf92f3577b34da6a3ce929d0e0e4736 SpanId=00f067aa0ba902b7
+      GET /me TraceId=4bf92f3577b34da6a3ce929d0e0e4736 SpanId=00f067aa0ba902b7 tenant_id=greenlogistics
 ```
 
 Use the `TraceId` value to find the corresponding trace in Jaeger UI.
+
+## Tenant observability dimension (`tenant_id`)
+
+`tenant_id` is a technical/operator dimension so operators can filter live logs and traces by tenant — it is not a business report and not billing (see the DataHub usage ledger for that).
+
+- **Source of truth (trusted only):** the value comes from the validated JWT tenant claim via `ICurrentUser` for HTTP requests, or a Dapr-delivered event envelope's tenant for internal handlers. It is **never** read from a request body, query string, or header supplied by an external caller, so a forged `tenant_id` header cannot poison telemetry.
+- **Where it appears:** the `FPS.Request` log line (above) and, for the same request/event, an OpenTelemetry span attribute `tenant_id`. Find a tenant's traces in Jaeger by adding the tag `tenant_id=<tenant>` to the search.
+- **Platform / no-tenant requests** (health checks, `/platform/*` platform-plane endpoints, unauthenticated intake, internal schedulers with no tenant): the log carries the sentinel `tenant_id=__none__` and the span attribute is left unset. `__none__` cannot be a real tenant id (tenant ids are lowercase alphanumeric + hyphens, no underscores), so operators select customer traffic with `tenant_id != "__none__"`.
+- **Event-driven spans:** the Audit (`booking-events`, `tenant-reset-events`) and DataHub projection handlers tag their processing span with the trusted envelope tenant.
 
 ## Business activity correlation
 
@@ -90,4 +99,7 @@ Or in `appsettings.json` / `appsettings.Development.json`:
 
 ## What is NOT logged
 
-No secrets, bearer tokens, or tenant data are included in trace attributes or log messages. The OTLP exporter sends span metadata only (method, path, status, duration, error flag).
+Traces and logs carry span metadata (method, path, status, duration, error flag) plus the `tenant_id`
+operator dimension. They must **not** carry secrets, bearer tokens, raw user/actor/recipient IDs,
+names, emails, license plates, or full request payloads. `tenant_id` is a tenant *identifier* (an
+operator filter), not tenant business data or PII.
