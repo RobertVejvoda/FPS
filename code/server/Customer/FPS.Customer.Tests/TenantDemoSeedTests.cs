@@ -29,10 +29,12 @@ public sealed class TenantDemoSeedTests
             HttpContext = new DefaultHttpContext()
         };
 
+        // Echo the actual dataset sizes so the summary assertions verify the real showcase
+        // roster/slot counts rather than a hardcoded mock value.
         profileClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoEmployeeRecord>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((9, (string?)null));
+            .ReturnsAsync((string _, string _, IReadOnlyList<DemoEmployeeRecord> employees, CancellationToken _) => (employees.Count, (string?)null));
         configClient.Setup(c => c.SeedAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<DemoSlotRecord>>(), It.IsAny<DemoPolicyRecord>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((20, (string?)null));
+            .ReturnsAsync((string _, string _, string _, IReadOnlyList<DemoSlotRecord> slots, DemoPolicyRecord _, CancellationToken _) => (slots.Count, (string?)null));
     }
 
     private async Task<string> CreateSandboxTenantAsync()
@@ -94,8 +96,8 @@ public sealed class TenantDemoSeedTests
         var response = Assert.IsType<DemoSeedResult>(ok.Value);
         Assert.Equal(tenantId, response.TenantId);
         Assert.Equal("gl-v1", response.DatasetVersion);
-        Assert.Equal(9, response.ProfilesSeeded);
-        Assert.Equal(20, response.SlotsSeeded);
+        Assert.Equal(10, response.ProfilesSeeded);
+        Assert.Equal(6, response.SlotsSeeded);
         Assert.NotEmpty(response.GapReport);
     }
 

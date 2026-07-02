@@ -14,8 +14,9 @@
 # isolation fixture (#668): a single demo tenant-admin with no profile/booking/draw data.
 #
 # Environment variables:
-#   FPS_GL_EMPLOYEE_COUNT     number of Green Logistics employees (default 25 — the guided-pilot
-#                             demo roster; gl-employee1 is always present)
+#   FPS_GL_EMPLOYEE_COUNT     number of Green Logistics employees (default 10 — the showcase
+#                             roster; gl-employee1 is always present). Larger counts stay opt-in
+#                             for local isolation / PERF001 load tests only.
 #   FPS_INCLUDE_DEMO_TENANT   set to 1 to provision the `demo` isolation fixture (default off):
 #                             one demo tenant-admin, no profiles/bookings/draws
 #   FPS_DEMO_EMPLOYEE_COUNT   demo-tenant employees to add to the fixture (default 0; any value
@@ -28,7 +29,7 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 ADMIN_USER="${KC_BOOTSTRAP_ADMIN_USERNAME:-${KEYCLOAK_ADMIN:-admin}}"
 ADMIN_PASS="${KC_BOOTSTRAP_ADMIN_PASSWORD:-${KEYCLOAK_ADMIN_PASSWORD:-admin}}"
 DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
-GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-25}"
+GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-10}"
 # Green Logistics is the default seeded showcase tenant. The legacy `demo` tenant is an
 # opt-in, mostly-empty cross-tenant isolation fixture (#668): off unless explicitly
 # requested. Asking for demo employees implicitly enables the fixture.
