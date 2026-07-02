@@ -232,6 +232,36 @@ public sealed class TenantControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    // PLAT-seats (#710) — any member of the tenant may read their tenant's modules; a member of
+    // another tenant may not.
+    [Fact]
+    public async Task GetModules_OwnTenant_ReturnsPrimaryAndEnabled()
+    {
+        var created = await provisioning.Create(
+            new CreateTenantRequest("mod-read", "Co", "eu", "UTC", [], PrimaryModule: "Parking", EnabledModules: ["Parking", "Seats"]),
+            CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        currentUser.Setup(u => u.TenantId).Returns(tenantId);
+        var result = await controller.GetModules(tenantId, CancellationToken.None);
+
+        var response = Assert.IsType<TenantModulesResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Parking", response.PrimaryModule);
+        Assert.Equal(["Parking", "Seats"], response.EnabledModules);
+    }
+
+    [Fact]
+    public async Task GetModules_OtherTenant_Forbidden()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("mod-other", "Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        currentUser.Setup(u => u.TenantId).Returns("some-other-tenant");
+        var result = await controller.GetModules(tenantId, CancellationToken.None);
+
+        Assert.IsType<ForbidResult>(result);
+    }
+
     [Fact]
     public async Task Get_AfterSandboxCreate_ReturnsSandboxKind()
     {

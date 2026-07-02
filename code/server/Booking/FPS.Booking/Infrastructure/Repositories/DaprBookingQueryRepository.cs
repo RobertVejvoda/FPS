@@ -414,7 +414,12 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
         NextAction: NextActionFor(dto.Status),
         CreatedAt: dto.RequestedAt,
-        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt,
+        ResourceType: NormalizeResourceType(dto.ResourceType));
+
+    // Requests persisted before PLAT-seats have no resource type and are Parking by definition.
+    private static string NormalizeResourceType(string? resourceType) =>
+        string.IsNullOrWhiteSpace(resourceType) ? "Parking" : resourceType;
 
     private static HrBookingListItem ToHrListItem(BookingRequestDto dto) => new(
         RequestId: dto.RequestId,
@@ -428,7 +433,8 @@ public sealed class DaprBookingQueryRepository : IBookingQueryRepository
         Reason: HrReasonFor(dto),
         AllocatedSlotId: dto.AllocatedSlotId?.ToString(),
         CreatedAt: dto.RequestedAt,
-        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt);
+        LastStatusChangedAt: dto.LastStatusChangedAt == default ? dto.RequestedAt : dto.LastStatusChangedAt,
+        ResourceType: NormalizeResourceType(dto.ResourceType));
 
     private static HrSlotHistoryItem ToHrSlotHistoryItem(BookingRequestDto dto) => new(
         RequestId: dto.RequestId,

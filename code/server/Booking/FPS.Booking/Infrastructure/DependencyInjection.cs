@@ -31,6 +31,8 @@ public static class DependencyInjection
         // ConfiguredAvailableSlotService stays registered as the resilient fallback.
         services.AddScoped<ConfiguredAvailableSlotService>();
         services.AddScoped<IAvailableSlotService, ConfigurationSlotService>();
+        // PLAT-seats (#710) — server-side module boundary: resolve a tenant's enabled modules from Customer.
+        services.AddScoped<ITenantModulesService, DaprTenantModulesService>();
         services.AddHttpClient<IProfileSnapshotService, HttpProfileSnapshotService>(client =>
             client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fps-profile"));
         services.AddSingleton<DrawService>();

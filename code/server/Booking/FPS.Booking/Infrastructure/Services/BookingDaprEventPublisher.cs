@@ -57,7 +57,8 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
                     VehicleLicensePlate: ctx.VehicleLicensePlate,
                     VehicleType: ctx.VehicleType,
-                    VehicleIsElectric: ctx.VehicleIsElectric),
+                    VehicleIsElectric: ctx.VehicleIsElectric,
+                    ResourceType: ctx.ResourceType),
 
                 BookingRequestRejectedEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
@@ -67,7 +68,8 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     NewStatus: "Rejected",
                     ReasonCode: e.RejectionCode.ToString(),
                     ReasonText: e.Reason,
-                    AffectedRecipientIds: null),
+                    AffectedRecipientIds: null,
+                    ResourceType: ctx.ResourceType),
 
                 BookingRequestCancelledEvent e => new(
                     BookingRequestId: e.RequestId.Value.ToString(),
@@ -90,7 +92,8 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     ReasonCode: null, ReasonText: null, AffectedRecipientIds: null,
                     AllocationId: e.AllocationId.Value.ToString(),
                     SlotId: e.SlotId.Value.ToString(),
-                    AllocationSource: ctx.AllocationSource ?? "unknown"),
+                    AllocationSource: ctx.AllocationSource ?? "unknown",
+                    ResourceType: ctx.ResourceType),
 
                 BookingRequestReallocatedEvent e => new(
                     BookingRequestId: e.NewRequestId.Value.ToString(),

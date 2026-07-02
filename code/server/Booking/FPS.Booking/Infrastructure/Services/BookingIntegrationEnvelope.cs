@@ -44,7 +44,9 @@ public sealed record BookingIntegrationPayload(
     // can store auditor-safe facts without a second Profile lookup.
     string? VehicleLicensePlate = null,
     string? VehicleType = null,
-    bool? VehicleIsElectric = null);
+    bool? VehicleIsElectric = null,
+    // PLAT-seats (#710) — "Parking" or "Seats" so outcome evidence distinguishes the resource type.
+    string? ResourceType = null);
 
 /// <summary>
 /// Safe, serialisable representation of one Draw workflow lifecycle step.

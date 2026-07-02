@@ -1259,6 +1259,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             lastStatusChangedAt: string;
+            /** @default Parking */
+            resourceType: string;
         };
         ConfirmUsageRequest: {
             confirmationSource: string;
@@ -1413,6 +1415,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             lastStatusChangedAt: string;
+            /** @default Parking */
+            resourceType: string;
         };
         HrCancelRequest: {
             reason: string;
@@ -1593,6 +1597,7 @@ export interface components {
             plannedArrivalTime: string;
             /** Format: date-time */
             plannedDepartureTime: string;
+            resourceType?: null | string;
         };
         SubmitBookingResponse: {
             /** Format: uuid */

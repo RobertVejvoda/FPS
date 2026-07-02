@@ -17,4 +17,7 @@ public sealed record BookingPublishContext(
     string? LocationId = null,
     string? VehicleLicensePlate = null,
     string? VehicleType = null,
-    bool? VehicleIsElectric = null);
+    bool? VehicleIsElectric = null,
+    // PLAT-seats (#710) — "Parking" or "Seats", so DataHub outcome evidence distinguishes the
+    // resource type. Null is treated as Parking downstream.
+    string? ResourceType = null);

@@ -1005,3 +1005,24 @@ select {
 .plat-queue-head { font-size: 15px; margin: 0 0 8px; }
 .plat-queue-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
 .plat-queue-actions .plat-input { flex: 1 1 180px; }
+
+/* PLAT-seats (#710) — module switch + seat surfaces */
+.module-switch { display: inline-flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px; margin-bottom: 4px; }
+.module-tab { padding: 5px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.module-tab-active { background: var(--brand-primary); color: #fff; }
+
+.seat-request-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.seat-request-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.seat-request-row input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; }
+
+.seat-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.seat-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; background: var(--surface); }
+.seat-card.seat-ok { border-left-color: var(--success); }
+.seat-card.seat-wait { border-left-color: #fbbf24; }
+.seat-card.seat-off { border-left-color: var(--border); }
+.seat-date { font-weight: 700; }
+.seat-status { color: var(--muted); font-size: 14px; }
+
+.seat-metric { font-size: 30px; font-weight: 800; margin: 6px 0 0; }
+.seat-chip-row { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.seat-chip { padding: 4px 10px; border-radius: 999px; background: #dcfce7; border: 1px solid #86efac; color: var(--success); font-size: 12px; font-weight: 700; }

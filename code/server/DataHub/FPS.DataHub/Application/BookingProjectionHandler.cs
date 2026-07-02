@@ -316,6 +316,7 @@ public sealed class BookingProjectionHandler(
                 VehicleLicensePlate = payload.VehicleLicensePlate,
                 VehicleType = payload.VehicleType,
                 VehicleIsElectric = payload.VehicleIsElectric,
+                ResourceType = payload.ResourceType,
             };
             db.BookingOutcomes.Add(projection);
             await db.SaveChangesAsync(ct);
@@ -357,7 +358,8 @@ public sealed class BookingProjectionHandler(
                 DrawAttemptId = payload.DrawAttemptId,
                 SubmittedAt = envelope.OccurredAt,
                 DecidedAt = envelope.OccurredAt,
-                LastUpdatedAt = DateTimeOffset.UtcNow
+                LastUpdatedAt = DateTimeOffset.UtcNow,
+                ResourceType = payload.ResourceType,
             };
             db.BookingOutcomes.Add(projection);
             logger.LogInformation("Created BookingOutcome projection with Allocated status for {RequestId}", payload.BookingRequestId);
@@ -371,6 +373,8 @@ public sealed class BookingProjectionHandler(
             projection.DrawAttemptId = payload.DrawAttemptId;
             projection.DecidedAt = envelope.OccurredAt;
             projection.LastUpdatedAt = DateTimeOffset.UtcNow;
+            // Preserve the resource type set at submission; only fill it if the allocated event carries it.
+            projection.ResourceType ??= payload.ResourceType;
             logger.LogInformation("Updated BookingOutcome projection to Allocated for {RequestId}", payload.BookingRequestId);
         }
 
@@ -405,7 +409,8 @@ public sealed class BookingProjectionHandler(
                 SafeReasonText = payload.ReasonText,
                 SubmittedAt = envelope.OccurredAt,
                 DecidedAt = envelope.OccurredAt,
-                LastUpdatedAt = DateTimeOffset.UtcNow
+                LastUpdatedAt = DateTimeOffset.UtcNow,
+                ResourceType = payload.ResourceType,
             };
             db.BookingOutcomes.Add(projection);
             logger.LogInformation("Created BookingOutcome projection with Rejected status for {RequestId}", payload.BookingRequestId);
@@ -417,6 +422,7 @@ public sealed class BookingProjectionHandler(
             projection.SafeReasonText = payload.ReasonText;
             projection.DecidedAt = envelope.OccurredAt;
             projection.LastUpdatedAt = DateTimeOffset.UtcNow;
+            projection.ResourceType ??= payload.ResourceType;
             logger.LogInformation("Updated BookingOutcome projection to Rejected for {RequestId}", payload.BookingRequestId);
         }
 

@@ -7,6 +7,7 @@ import { StatusBadge } from '@fps/ui';
 import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
+import { ModuleSwitch } from '../tenant/ModuleSwitch';
 
 const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
@@ -92,6 +93,7 @@ export function BookingsPage() {
 
   return (
     <div className="page-stack">
+      <ModuleSwitch active="parking" />
       <section className="page-hero">
         <h2>My Spots</h2>
       </section>
