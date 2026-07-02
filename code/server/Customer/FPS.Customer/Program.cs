@@ -324,7 +324,8 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
                 existing.TenantId, existing.Slug, existing.DisplayName, existing.Region, existing.TimeZone,
                 existing.SupportContacts, existing.Kind, isResettableSandbox: true, existing.LifecycleState,
                 existing.Transitions, existing.Provisioning, existing.Branding, existing.DiscoveryDomains,
-                existing.SeedEvents, existing.CreatedAt, existing.UpdatedAt);
+                existing.SeedEvents, existing.CreatedAt, existing.UpdatedAt,
+                existing.PrimaryModule, existing.EnabledModules);
             await tenantRepository.SaveAsync(repaired, CancellationToken.None);
         }
         return;

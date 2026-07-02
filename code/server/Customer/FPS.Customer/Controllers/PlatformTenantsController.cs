@@ -57,12 +57,17 @@ public sealed class PlatformTenantsController(
 
     private static PlatformTenantRow ToRow(TenantWorkspace t) => new(
         t.TenantId, t.Slug, t.DisplayName, t.Region, t.TimeZone,
-        t.Kind.ToString(), t.LifecycleState.ToString(), t.CreatedAt, t.UpdatedAt);
+        t.Kind.ToString(), t.LifecycleState.ToString(),
+        t.PrimaryModule.ToString(), t.EnabledModules.Select(m => m.ToString()).ToList(),
+        t.CreatedAt, t.UpdatedAt);
 }
 
 public sealed record PlatformTenantRow(
     string TenantId, string Slug, string DisplayName, string Region, string TimeZone,
-    string Kind, string LifecycleState, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    string Kind, string LifecycleState,
+    // PLAT007B — primary module and all enabled modules (primary first) for operator visibility.
+    string PrimaryModule, IReadOnlyList<string> EnabledModules,
+    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
 public sealed record PlatformReadinessCheck(string Name, string Status, string? Reason);
 public sealed record PlatformReadiness(bool IsReady, IReadOnlyList<PlatformReadinessCheck> Checks);

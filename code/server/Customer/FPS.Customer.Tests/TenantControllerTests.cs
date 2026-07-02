@@ -184,6 +184,54 @@ public sealed class TenantControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    // PLAT007B — module selection during provisioning.
+
+    [Fact]
+    public async Task Create_NoModuleSpecified_DefaultsToParking()
+    {
+        var result = await provisioning.Create(new CreateTenantRequest("mod-default", "Co", "eu", "UTC", []), CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
+        Assert.Equal("Parking", response.PrimaryModule);
+        Assert.Equal(["Parking"], response.EnabledModules);
+    }
+
+    [Fact]
+    public async Task Create_SeatsPrimary_PersistedAndReturned()
+    {
+        var result = await provisioning.Create(
+            new CreateTenantRequest("mod-seats", "Co", "eu", "UTC", [], PrimaryModule: "Seats", EnabledModules: ["Parking", "Seats"]),
+            CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
+        Assert.Equal("Seats", response.PrimaryModule);
+        // Primary stored first.
+        Assert.Equal(["Seats", "Parking"], response.EnabledModules);
+    }
+
+    [Theory]
+    [InlineData("999")]
+    [InlineData("Desks")]
+    public async Task Create_UndefinedPrimaryModule_Returns400(string module)
+    {
+        // Enum.TryParse accepts a numeric string like "999"; the controller must still reject it.
+        var result = await provisioning.Create(
+            new CreateTenantRequest("mod-bad", "Co", "eu", "UTC", [], PrimaryModule: module),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Create_UndefinedEnabledModule_Returns400()
+    {
+        var result = await provisioning.Create(
+            new CreateTenantRequest("mod-bad-enabled", "Co", "eu", "UTC", [], EnabledModules: ["Parking", "999"]),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
     [Fact]
     public async Task Get_AfterSandboxCreate_ReturnsSandboxKind()
     {

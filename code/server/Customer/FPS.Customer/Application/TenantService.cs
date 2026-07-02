@@ -23,7 +23,9 @@ public sealed class TenantService(
         CancellationToken ct,
         string? requestedTenantId = null,
         TenantKind kind = TenantKind.Production,
-        bool isResettableSandbox = false)
+        bool isResettableSandbox = false,
+        TenantModule primaryModule = TenantModule.Parking,
+        IReadOnlyList<TenantModule>? enabledModules = null)
     {
         if (string.IsNullOrWhiteSpace(displayName)) return (null, "Display name is required.");
         if (string.IsNullOrWhiteSpace(region)) return (null, "Region is required.");
@@ -63,6 +65,11 @@ public sealed class TenantService(
             IsResettableSandbox = isResettableSandbox && kind == TenantKind.Sandbox,
             Provisioning = TenantProvisioningMetadata.Generate(tenantId, safeSlug),
         };
+
+        // PLAT007B — exactly-one-primary is enforced here; an invalid selection fails creation
+        // rather than persisting a tenant with no valid module.
+        var moduleError = tenant.SetModules(primaryModule, enabledModules);
+        if (moduleError is not null) return (null, moduleError);
 
         await repository.SaveAsync(tenant, ct);
         return (tenant, null);

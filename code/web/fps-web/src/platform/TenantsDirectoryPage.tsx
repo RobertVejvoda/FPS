@@ -49,7 +49,7 @@ export function TenantsDirectoryPage() {
     <section className="plat-page">
       <header className="plat-page-head">
         <h1>Tenant directory</h1>
-        <p className="plat-muted">Cross-tenant, read-only. State, region, and timestamps are live; modules, usage, health, and last activity are not wired yet.</p>
+        <p className="plat-muted">Cross-tenant, read-only. State, region, timestamps, and modules are live; usage, health, and last activity are not wired yet.</p>
       </header>
 
       <div className="plat-filters">
@@ -85,7 +85,7 @@ export function TenantsDirectoryPage() {
                 <td><Link to={`/platform/tenants/${encodeURIComponent(r.tenantId)}`}>{r.displayName}</Link><div className="plat-muted plat-sub">{r.slug}</div></td>
                 <td>{r.lifecycleState}</td>
                 <td>{r.region || '—'}</td>
-                <td className="plat-na" title="Module licensing not wired yet (PLAT007)">Not wired yet</td>
+                <td title={`Enabled: ${(r.enabledModules.length > 0 ? r.enabledModules : [r.primaryModule]).join(', ')}`}>{r.primaryModule}{r.enabledModules.length > 1 ? ` +${r.enabledModules.length - 1}` : ''}</td>
                 <td className="plat-na" title="Usage ledger not wired yet (PLAT005)">Not wired yet</td>
                 <td className="plat-na" title="Composite health not wired yet">Not wired yet</td>
                 <td className="plat-na" title="Activity feed not wired yet (DataHub)">Not wired yet</td>

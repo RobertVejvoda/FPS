@@ -29,15 +29,35 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
         if (!Enum.TryParse<TenantKind>(request.Kind ?? "Production", ignoreCase: true, out var kind))
             return BadRequest(new { error = $"Unknown tenant kind: {request.Kind}" });
 
+        // PLAT007B — primary module defaults to Parking; enabled modules default to just the primary.
+        if (!TryParseModule(request.PrimaryModule ?? nameof(TenantModule.Parking), out var primaryModule))
+            return BadRequest(new { error = $"Unknown module: {request.PrimaryModule}" });
+        List<TenantModule>? enabledModules = null;
+        if (request.EnabledModules is { Count: > 0 })
+        {
+            enabledModules = [];
+            foreach (var name in request.EnabledModules)
+            {
+                if (!TryParseModule(name, out var m))
+                    return BadRequest(new { error = $"Unknown module: {name}" });
+                enabledModules.Add(m);
+            }
+        }
+
         var (tenant, error) = await service.CreateAsync(
             request.Slug, request.DisplayName, request.Region, request.TimeZone,
             request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct, request.TenantId, kind, request.ResettableSandbox);
+            ct, request.TenantId, kind, request.ResettableSandbox, primaryModule, enabledModules);
 
         if (error is not null) return BadRequest(new { error });
         // Location points at the tenant-scoped read on TenantController ("Tenant" controller, "Get" action).
         return CreatedAtAction("Get", "Tenant", new { tenantId = tenant!.TenantId }, ToResponse(tenant));
     }
+
+    // Enum.TryParse accepts undefined numeric strings such as "999", so pair it with Enum.IsDefined
+    // to allow only the supported module names/values (Parking, Seats).
+    private static bool TryParseModule(string value, out TenantModule module) =>
+        Enum.TryParse(value, ignoreCase: true, out module) && Enum.IsDefined(module);
 
     private static TenantResponse ToResponse(TenantWorkspace t) => new(
         t.TenantId, t.Slug, t.DisplayName, t.Region, t.TimeZone,
@@ -45,6 +65,8 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
         t.LifecycleState.ToString(),
         t.SupportContacts.Select(c => new ContactDto(c.Name, c.Email, c.Role)).ToList(),
         t.Provisioning.ServiceCollections,
+        t.PrimaryModule.ToString(),
+        t.EnabledModules.Select(m => m.ToString()).ToList(),
         t.CreatedAt, t.UpdatedAt);
 }
 
@@ -61,4 +83,8 @@ public sealed record CreateTenantRequest(
     string? Kind = null,
     // PLAT003A: mark this tenant as the resettable evaluation sandbox (Green Logistics). Only
     // honored when Kind==Sandbox; defaults false so real customer tenants are never resettable.
-    bool ResettableSandbox = false);
+    bool ResettableSandbox = false,
+    // PLAT007B: the primary module (default Parking) and any additional enabled modules. The
+    // primary must be among the enabled set; omit EnabledModules to enable just the primary.
+    string? PrimaryModule = null,
+    IReadOnlyList<string>? EnabledModules = null);

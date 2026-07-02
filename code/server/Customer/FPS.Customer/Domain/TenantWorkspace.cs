@@ -11,6 +11,10 @@ public sealed class TenantWorkspace
     private readonly List<TenantStateTransition> transitions = [];
     private readonly List<TenantDiscoveryDomain> discoveryDomains = [];
     private readonly List<TenantDemoSeedEvent> seedEvents = [];
+    // PLAT007B — module selection. Default: Parking primary, Parking the only enabled module, so a
+    // tenant created (or restored) without explicit modules is a Parking tenant. Primary is always
+    // the first entry in EnabledModules.
+    private readonly List<TenantModule> enabledModules = [TenantModule.Parking];
 
     public string TenantId { get; init; } = string.Empty;
     public string Slug { get; init; } = string.Empty;
@@ -28,6 +32,10 @@ public sealed class TenantWorkspace
     public IReadOnlyList<TenantStateTransition> Transitions => transitions.AsReadOnly();
     public IReadOnlyList<TenantDemoSeedEvent> SeedEvents => seedEvents.AsReadOnly();
     public TenantProvisioningMetadata Provisioning { get; init; } = new();
+    // PLAT007B — the primary module drives default landing / navigation emphasis. Exactly one
+    // primary is structural (a single value), and it is always present in EnabledModules.
+    public TenantModule PrimaryModule { get; private set; } = TenantModule.Parking;
+    public IReadOnlyList<TenantModule> EnabledModules => enabledModules.AsReadOnly();
     public TenantBrandingConfig Branding { get; private set; } = new();
     public IReadOnlyList<TenantDiscoveryDomain> DiscoveryDomains => discoveryDomains.AsReadOnly();
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
@@ -43,6 +51,43 @@ public sealed class TenantWorkspace
         LifecycleState = to;
         UpdatedAt = transition.OccurredAt;
         return null;
+    }
+
+    /// <summary>
+    /// PLAT007B — choose the tenant's modules. Exactly one primary; the primary must be enabled;
+    /// duplicates are collapsed; the primary is stored first. Passing no enabled modules defaults
+    /// them to just the primary. Returns an error string when the selection is invalid.
+    /// </summary>
+    public string? SetModules(TenantModule primary, IReadOnlyList<TenantModule>? enabled)
+    {
+        // Reject undefined enum values (e.g. a numeric (TenantModule)999 that Enum.TryParse would
+        // otherwise accept) so no caller — controller or not — can persist an unsupported module.
+        if (!Enum.IsDefined(primary)) return $"Unknown module: {(int)primary}.";
+        foreach (var module in enabled ?? [])
+            if (!Enum.IsDefined(module)) return $"Unknown module: {(int)module}.";
+
+        var normalized = NormalizeModules(primary, enabled, out var error);
+        if (error is not null) return error;
+        enabledModules.Clear();
+        enabledModules.AddRange(normalized);
+        PrimaryModule = primary;
+        Touch();
+        return null;
+    }
+
+    // Primary first, then the remaining distinct enabled modules in their given order. An empty
+    // enabled list means "only the primary". Used by SetModules and by Restore's backfill.
+    private static List<TenantModule> NormalizeModules(
+        TenantModule primary, IReadOnlyList<TenantModule>? enabled, out string? error)
+    {
+        error = null;
+        var rest = (enabled ?? [])
+            .Where(m => m != primary)
+            .Distinct()
+            .ToList();
+        if (enabled is { Count: > 0 } && !enabled.Contains(primary))
+            error = $"The primary module ({primary}) must be one of the enabled modules.";
+        return [primary, .. rest];
     }
 
     public string? SetBranding(TenantBrandingConfig config)
@@ -95,7 +140,9 @@ public sealed class TenantWorkspace
         TenantBrandingConfig branding,
         IReadOnlyList<TenantDiscoveryDomain> storedDiscoveryDomains,
         IReadOnlyList<TenantDemoSeedEvent> storedSeedEvents,
-        DateTimeOffset createdAt, DateTimeOffset updatedAt)
+        DateTimeOffset createdAt, DateTimeOffset updatedAt,
+        TenantModule primaryModule,
+        IReadOnlyList<TenantModule> enabledModules)
     {
         var ws = new TenantWorkspace
         {
@@ -108,6 +155,12 @@ public sealed class TenantWorkspace
         ws.Branding = branding;
         ws.discoveryDomains.AddRange(storedDiscoveryDomains);
         ws.seedEvents.AddRange(storedSeedEvents);
+        // PLAT007B — backfill: a tenant persisted before module selection has no enabled modules,
+        // so it safely restores as a Parking tenant. NormalizeModules also repairs any stored set
+        // that is missing its primary (defensive), and keeps the primary first.
+        ws.enabledModules.Clear();
+        ws.enabledModules.AddRange(NormalizeModules(primaryModule, enabledModules, out _));
+        ws.PrimaryModule = primaryModule;
         ws.UpdatedAt = updatedAt;
         return ws;
     }

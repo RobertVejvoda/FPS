@@ -143,7 +143,9 @@ describe('decideTenantRequest', () => {
 function tenant(overrides: Partial<PlatformTenantRow>): PlatformTenantRow {
   return {
     tenantId: 't', slug: 't', displayName: 'T', region: 'eu', timeZone: 'Europe/Prague',
-    kind: 'Production', lifecycleState: 'Ready', createdAt: '', updatedAt: '', ...overrides,
+    kind: 'Production', lifecycleState: 'Ready',
+    primaryModule: 'Parking', enabledModules: ['Parking'],
+    createdAt: '', updatedAt: '', ...overrides,
   };
 }
 
