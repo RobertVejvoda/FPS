@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# dev-seed.sh — Seed the local Green Logistics demo for FPS smoke testing.
+# dev-seed.sh — Seed the Green Logistics showcase demo (DEMOSEED003 / #704).
 #
-# This is the single guided-pilot demo: the Green Logistics tenant (tenant_id
-# greenlogistics, location GL-HQ) with login-capable gl-* users. A fresh seed
-# gives a fresh evaluator a believable, multi-combi Green Logistics workspace.
+# The default evaluation showcase: the Green Logistics tenant (tenant_id
+# greenlogistics, location GL-HQ) told as one small, legible fairness story you can
+# understand in a single screen — 6 named slots, 10 named people, a visible waitlist,
+# and one reallocation. Bulk/load-test data lives on a separate explicit path
+# (tools/perf-seed-greenlogistics.sh), never in this default showcase.
 #
 # Requires:
 #   - Services running: Identity (:5192), Profile (:5197), Booking (:5131), Configuration (:5141)
-#   - ./tools/dev-setup-auth.sh completed with 25 GL users
-#     (FPS_GL_EMPLOYEE_COUNT defaults to 25)
+#   - ./tools/dev-setup-auth.sh completed (FPS_GL_EMPLOYEE_COUNT defaults to 10)
 #
 # Usage:
-#   ./tools/dev-seed.sh   — seed the Green Logistics demo
+#   ./tools/dev-seed.sh   — seed the Green Logistics showcase
 #
 # Idempotency:
 #   Local runtime state is cleared by default before seeding.
@@ -19,20 +20,26 @@
 #   Set FPS_DEV_SEED_RESET_STATE=false to append to existing local state.
 #
 # What is seeded (all synthetic, demo-only):
-#   Parking:   20 human-labelled GL-HQ slots — A-01..A-13 general, EV-01..EV-03
-#              chargers, ACC-01 accessible, VIP-01..VIP-02 company-car, MOTO-01
-#              motorcycle (holds 4).
-#   Profiles:  25 Green Logistics employees by default, plus role users. The
-#              roster mixes — and combines — the special cases: 2 company-car
-#              holders (one electric), 2 accessibility users (one electric), 5 EV
-#              drivers, 1 motorcycle, and 2 multi-vehicle employees; the rest are
-#              regular cars. Realistic CZ plates throughout.
-#   Bookings:  25 future Draw requests by default, one per employee, each carrying
-#              that employee's real attributes.
-#   Draw:      triggers the next future workday Draw over the seeded requests and
-#              asserts the outcome (verify_demo_draw). The Draw reads the seeded
-#              Configuration slots over Dapr (#666): company-car Tier-1 holders are
-#              pre-allocated to their VIP slots, the rest are allocated/waitlisted.
+#   Parking:   6 human-labelled GL-HQ slots — A-01, A-02 general, EV-01 charger,
+#              ACC-01 accessible, MOTO-01 motorcycle, VIP-01 company-car (reserved).
+#   Profiles:  10 Green Logistics employees plus role users. Four special-need
+#              personas — company-car (#1), EV (#2), accessible (#3), motorcycle
+#              (#4) — and six general drivers (#5..#10) who compete for the two
+#              general slots. Realistic CZ plates; two general personas carry a
+#              seeded fairness history (see below).
+#   History:   Before the showcase Draw, one earlier real Draw gives the "recent
+#              winner" (#7) an allocation on record and the "penalised" persona (#8)
+#              an active late-cancellation penalty (via a real allocate-then-cancel).
+#              This is real event history — no direct projection seeding — so the
+#              showcase Draw's fair outcome is explainable in HR/reports/audit.
+#   Bookings:  10 requests for the showcase Draw date, one per employee, each
+#              carrying that employee's real attributes.
+#   Draw:      triggers the next future workday Draw and asserts the outcome
+#              (verify_demo_draw): the company-car holder takes VIP-01 (Tier-1) at
+#              submission, the motorcycle takes MOTO-01, and the general lottery
+#              allocates the scarce slots and leaves a visible waitlist.
+#   Reallocation: one allocated general request is cancelled; the fair next
+#              waitlisted driver is promoted automatically (verify_reallocation).
 #   Role profiles: gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor (no parking).
 #
 #   Notifications, audit records, reporting — populated via Dapr events from booking submissions.
@@ -47,9 +54,14 @@ GL_TENANT="${FPS_GL_TENANT_ID:-greenlogistics}"
 GL_FACILITY_ID="${FPS_GL_FACILITY_ID:-00000000-0000-0000-0000-000000000002}"
 GL_FACILITY_LABEL="${FPS_GL_FACILITY_LABEL:-Green Logistics HQ}"
 GL_LOCATION_ID="${FPS_GL_LOCATION_ID:-GL-HQ}"
-GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-25}"
+# Showcase default: 10 named people. Larger counts stay opt-in for local isolation
+# only (the extra indices are plain general drivers); bulk/load data has its own path.
+GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-10}"
 GL_BOOKING_COUNT="${FPS_GL_BOOKING_COUNT:-$GL_EMPLOYEE_COUNT}"
 GL_DRAW_MIN_OFFSET="${FPS_GL_DRAW_MIN_OFFSET:-2}"
+# Fairness-history personas (indices into the showcase roster).
+GL_RECENT_WINNER_INDEX="${FPS_GL_RECENT_WINNER_INDEX:-7}"
+GL_PENALISED_INDEX="${FPS_GL_PENALISED_INDEX:-8}"
 IDENTITY_URL="${IDENTITY_URL:-http://localhost:5192}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8180}"
 REALM="${FPS_LOCAL_REALM:-fps-local}"
@@ -235,9 +247,11 @@ configure_gl_policy() {
   fi
 }
 
-# Configure the 20 human-labelled GL-HQ parking slots. The SlotId is what the
-# parking map and HR views render (there is no separate label field), so the IDs
-# read as human labels. The feature mix exercises every allocation path.
+# Configure the 6 human-labelled GL-HQ parking slots. The SlotId is what the parking
+# map and HR views render (there is no separate label field), so the IDs read as human
+# labels. Six slots keep the showcase understandable in one screen while still exercising
+# every allocation path: company-car Tier-1, EV charger, accessible, motorcycle, and the
+# fair general lottery. MOTO-01 holds a single unit so the layout reads as exactly six slots.
 configure_gl_slots() {
   local admin_token slots_json http_code
   admin_token=$(get_token "$TENANT_ADMIN_USER")
@@ -254,14 +268,15 @@ def slot(slot_id, charger=False, accessible=False, company_car=False, motorcycle
         "motorcycleCapacityUnits": units,
     }
 
-slots = [slot(f"A-{i:02d}") for i in range(1, 14)]      # 13 general
-slots += [slot(f"EV-{i:02d}", charger=True) for i in range(1, 4)]
-slots.append(slot("ACC-01", accessible=True))
-# VIP-01 → company-car employee #1 (non-EV); VIP-02 → company-car employee #8 (EV combo),
-# so VIP-02 carries a charger or the EV company car can't use its reserved Tier-1 slot.
-slots += [slot("VIP-01", company_car=True), slot("VIP-02", company_car=True, charger=True)]
-slots.append(slot("MOTO-01", motorcycle=True, units=4))
-print(json.dumps({"slots": slots, "changeReason": "Green Logistics demo seed: parking layout"}))
+slots = [
+    slot("A-01"),                          # general
+    slot("A-02"),                          # general
+    slot("EV-01", charger=True),           # EV charger
+    slot("ACC-01", accessible=True),       # accessible
+    slot("MOTO-01", motorcycle=True, units=1),  # motorcycle (single unit)
+    slot("VIP-01", company_car=True),      # company-car reserved (owner stamped after profiles)
+]
+print(json.dumps({"slots": slots, "changeReason": "Green Logistics showcase seed: parking layout"}))
 PYEOF
 )
 
@@ -273,7 +288,7 @@ PYEOF
   [ -n "$http_code" ] || http_code="000"
 
   if [ "$http_code" = "204" ]; then
-    ok "Configured 20 $GL_LOCATION_ID slots (13 general, 3 EV, 1 accessible, 2 company-car, 1 motorcycle)"
+    ok "Configured 6 $GL_LOCATION_ID slots (A-01, A-02 general, EV-01 charger, ACC-01 accessible, MOTO-01 motorcycle, VIP-01 company-car)"
   else
     err "GL-HQ slot configuration PUT HTTP $http_code"
     return 1
@@ -318,16 +333,23 @@ seed_profile() {
   fi
 }
 
+# Indices 1..10 mirror the provisioning showcase roster
+# (TenantDemoSeedService.GreenLogisticsDataset) exactly — same name, persona, and plate
+# per index — so a provisioned sandbox tells the identical named-person story. The two
+# paths differ only in how operator roles are modelled: provisioning attaches hr_manager
+# to #9 and admin to #10, whereas the local harness provisions dedicated role accounts
+# (gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor) below, so here #9/#10 are
+# plain general drivers. Indices 11+ are extra generic drivers for the opt-in larger roster.
 display_name_for_index() {
   case "$1" in
     1) echo "Jan Novak" ;;
     2) echo "Petra Svobodova" ;;
-    3) echo "Tomas Dvorak" ;;
-    4) echo "Pavel Cerny" ;;
-    5) echo "Hana Vesela" ;;
+    3) echo "Hana Vesela" ;;
+    4) echo "Tomas Dvorak" ;;
+    5) echo "Pavel Cerny" ;;
     6) echo "Martin Horak" ;;
     7) echo "Jana Kucerova" ;;
-    8) echo "Petr Svoboda" ;;
+    8) echo "Petr Novotny" ;;
     9) echo "Lenka Maresova" ;;
     10) echo "Michal Prochazka" ;;
     11) echo "Veronika Dvorakova" ;;
@@ -352,10 +374,10 @@ display_name_for_index() {
 # Realistic, varied CZ-style plates (digit + two letters + four digits) per employee.
 license_plate_for_index() {
   case "$1" in
-    1) echo "1AB 2345" ;;   2) echo "2SC 4417" ;;   3) echo "3AH 8820" ;;
-    4) echo "4EK 1193" ;;   5) echo "5BL 6628" ;;   6) echo "1AP 3092" ;;
-    7) echo "6CT 7741" ;;   8) echo "2SD 5510" ;;   9) echo "7AZ 2284" ;;
-    10) echo "3BM 9087" ;;  11) echo "4EH 4451" ;;  12) echo "8AK 6673" ;;
+    1) echo "1AB 2345" ;;   2) echo "2SC 4417" ;;   3) echo "5BL 6628" ;;
+    4) echo "3AH 8820" ;;   5) echo "4EK 1193" ;;   6) echo "1AP 3092" ;;
+    7) echo "6CT 7741" ;;   8) echo "7AZ 2284" ;;   9) echo "3BM 9087" ;;
+    10) echo "4EH 4451" ;;  11) echo "2SD 5510" ;;  12) echo "8AK 6673" ;;
     13) echo "1AN 1208" ;;  14) echo "5BX 3390" ;;  15) echo "2SE 7715" ;;
     16) echo "9AT 4462" ;;  17) echo "3BR 8829" ;;  18) echo "4EP 1147" ;;
     19) echo "6CV 5583" ;;  20) echo "7AM 9921" ;;  21) echo "1AS 2034" ;;
@@ -364,44 +386,34 @@ license_plate_for_index() {
   esac
 }
 
-# ── Green Logistics population mix (multi-combi) ──────────────────────────────
-# The demo deliberately spreads — and combines — the special cases across the
-# roster so one Draw exercises every allocation path and every realistic combo:
-#   #1  company-car                        → Tier-1 fixed slot (VIP-*)
-#   #2  EV                                 → prefers a charger slot (EV-*)
-#   #3  two vehicles (car + motorcycle)    → books the default car
-#   #5  accessibility + EV (combo)         → prefers ACC-01, electric
-#   #8  company-car + EV (combo)           → Tier-1 fixed slot, electric company car
-#   #10,#15 EV                             → charger preference
-#   #13 two vehicles (two cars)            → books the default car
-#   #17 accessibility                      → prefers ACC-01
-#   #20 motorcycle                         → shared MOTO-01 area
-# Everyone else competes in the fair Tier-2 lottery on the general slots.
-# These outcomes are realised in the live Draw: Booking reads the seeded
-# Configuration slots over Dapr (#666), so company-car Tier-1 fixed slots and the
-# Tier-2 lottery drive the allocations above.
-has_company_car_for_index() { case "$1" in 1|8)      echo "true" ;; *) echo "false" ;; esac; }
-accessibility_for_index()   { case "$1" in 5|17)     echo "true" ;; *) echo "false" ;; esac; }
-is_electric_for_index()     { case "$1" in 2|5|8|10|15) echo "true" ;; *) echo "false" ;; esac; }
-vehicle_type_for_index()    { case "$1" in 20)       echo "Motorcycle" ;; *) echo "Sedan" ;; esac; }
+# ── Green Logistics showcase personas ─────────────────────────────────────────
+# Ten named people, each a clear persona so one Draw exercises every allocation path
+# and the fair outcome is explainable:
+#   #1  company-car        → VIP-01 fixed slot at submission (Tier-1, guaranteed)
+#   #2  EV                 → the charger slot (EV-01)
+#   #3  accessibility      → the accessible slot (ACC-01)
+#   #4  motorcycle         → the motorcycle area (MOTO-01, only motorcycles fit)
+#   #5,#6  general         → fair lottery for the two general slots (A-01, A-02)
+#   #7  recent winner      → seeded recent allocation history → lower fair weight
+#   #8  penalised          → seeded active penalty → lower fair weight
+#   #9,#10 general         → fair lottery (no history → full weight, incl. "unlucky")
+# The special personas' slots and the general lottery are realised in the live Draw:
+# Booking reads the seeded Configuration slots over Dapr (#666). Only #1 (Tier-1) and
+# #4 (motorcycle-only) are deterministic; the general slots are a genuine fair lottery,
+# which is the point — recent winners and penalised drivers are less likely to win again.
+has_company_car_for_index() { case "$1" in 1) echo "true" ;; *) echo "false" ;; esac; }
+accessibility_for_index()   { case "$1" in 3) echo "true" ;; *) echo "false" ;; esac; }
+is_electric_for_index()     { case "$1" in 2) echo "true" ;; *) echo "false" ;; esac; }
+vehicle_type_for_index()    { case "$1" in 4) echo "Motorcycle" ;; *) echo "Sedan" ;; esac; }
 
-# One vehicle per employee by default; a couple of employees carry a second
-# vehicle (the default — used for the booking — is listed first). Secondary
-# plates stay distinct from every primary plate above.
+# One vehicle per employee — a single, business-readable vehicle keeps the showcase legible.
 vehicle_json_for_index() {
   local index="$1" plate vehicle_type is_electric
   plate=$(license_plate_for_index "$index")
   vehicle_type=$(vehicle_type_for_index "$index")
   is_electric=$(is_electric_for_index "$index")
-  case "$index" in
-    3)  # car (default) + motorcycle
-      printf '[{"vehicleId":"VEH-003A","licensePlate":"%s","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":true},{"vehicleId":"VEH-003B","licensePlate":"3AH 0143","vehicleType":"Motorcycle","isElectric":false,"isActive":true,"isDefault":false}]' "$plate" ;;
-    13) # two cars (default first)
-      printf '[{"vehicleId":"VEH-013A","licensePlate":"%s","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":true},{"vehicleId":"VEH-013B","licensePlate":"1AN 7781","vehicleType":"Sedan","isElectric":false,"isActive":true,"isDefault":false}]' "$plate" ;;
-    *)
-      printf '[{"vehicleId":"VEH-%03d","licensePlate":"%s","vehicleType":"%s","isElectric":%s,"isActive":true,"isDefault":true}]' \
-        "$index" "$plate" "$vehicle_type" "$is_electric" ;;
-  esac
+  printf '[{"vehicleId":"VEH-%03d","licensePlate":"%s","vehicleType":"%s","isElectric":%s,"isActive":true,"isDefault":true}]' \
+    "$index" "$plate" "$vehicle_type" "$is_electric"
 }
 
 seed_gl_employee_profile() {
@@ -536,8 +548,16 @@ verify_demo_draw() {
   fi
   ok "Green Logistics Draw completed: $allocated allocated, $waitlisted waitlisted"
 
-  # Tier-1 evidence: both company-car fixed slots must be held by their reserved
-  # owners (employee #1 → VIP-01, EV employee #8 → VIP-02).
+  # A visible waitlist is part of the story: with six slots and ten people, the general
+  # lottery must leave at least one driver waiting (otherwise the scarcity story is lost).
+  if [ "${waitlisted:-0}" -lt 1 ]; then
+    err "Green Logistics Draw completed but left an empty waitlist (expected a visible waitlist from scarce general slots)"
+    return 1
+  fi
+  ok "Visible waitlist present: $waitlisted driver(s) waiting on scarce general slots"
+
+  # Tier-1 evidence: the single company-car fixed slot (VIP-01) must be held by its
+  # reserved owner (employee #1), allocated at submission outside the lottery.
   local ops
   ops=$(curl -sf -H "Authorization: Bearer $token" \
     "$BOOKING_URL/bookings/operations?locationId=$GL_LOCATION_ID&from=$draw_date&to=$draw_date&pageSize=200" 2>/dev/null || true)
@@ -545,13 +565,13 @@ verify_demo_draw() {
 import json, sys
 d = json.load(sys.stdin)
 vips = {i.get('allocatedSlotId') for i in d.get('items', []) if i.get('status') == 'Allocated'}
-print(sum(1 for v in ('VIP-01', 'VIP-02') if v in vips))
+print(1 if 'VIP-01' in vips else 0)
 " 2>/dev/null || echo 0)
 
-  if [ "${vip_alloc:-0}" -eq 2 ]; then
-    ok "Company-car Tier-1: both VIP fixed slots pre-allocated to their reserved holders"
+  if [ "${vip_alloc:-0}" -eq 1 ]; then
+    ok "Company-car Tier-1: VIP-01 fixed slot pre-allocated to its reserved holder"
   else
-    err "Company-car Tier-1: expected 2 VIP fixed-slot allocations, found ${vip_alloc:-0}"
+    err "Company-car Tier-1: expected VIP-01 to be allocated to its reserved holder, found ${vip_alloc:-0}"
     return 1
   fi
 }
@@ -802,6 +822,160 @@ PYEOF
   ok "HR Parking Requests rows resolve requestor names ($requestor_count requestors)"
 }
 
+# ── showcase draw / history / reallocation helpers ────────────────────────────
+
+# Submit one employee's request for a given date offset, carrying that persona's real
+# attributes. Shared by the history draws and the showcase draw.
+book_employee_for_offset() {
+  local index="$1" offset="$2"
+  seed_booking "${EMPLOYEE_PREFIX}$index" \
+    "$(license_plate_for_index "$index")" \
+    "$(vehicle_type_for_index "$index")" \
+    "$(is_electric_for_index "$index")" \
+    "$(has_company_car_for_index "$index")" \
+    "$(accessibility_for_index "$index")" \
+    "$offset"
+}
+
+# Poll a Draw's lifecycle until Completed. Echoes "allocated waitlisted"; returns 1 on timeout.
+wait_for_draw_complete() {
+  local date_offset="$1"
+  local token draw_date start end status body
+  token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
+
+  draw_date=$(future_date "$date_offset")
+  start="${draw_date}T08:00:00"
+  end="${draw_date}T18:00:00"
+
+  status=""
+  for _ in $(seq 1 30); do
+    body=$(curl -sf -H "Authorization: Bearer $token" \
+      "$BOOKING_URL/draws/$draw_date/lifecycle?locationId=$GL_LOCATION_ID&timeSlotStart=$start&timeSlotEnd=$end" 2>/dev/null || true)
+    status=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+    [ "$status" = "Completed" ] && break
+    sleep 2
+  done
+  [ "$status" != "Completed" ] && { err "Draw $draw_date did not reach Completed (last: ${status:-none})"; return 1; }
+
+  local allocated waitlisted
+  allocated=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('allocatedCount',0))")
+  waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('waitlistedCount',0))")
+  echo "$allocated $waitlisted"
+}
+
+# Run one earlier real Draw for a subset of employees, so their wins land as genuine
+# allocation history for the later showcase Draw. This is real event history, not a
+# projection write.
+history_draw() {
+  local date_offset="$1"; shift
+  local draw_date index
+  draw_date=$(future_date "$date_offset")
+  echo "  History Draw $draw_date (+$date_offset days): employees $*"
+  for index in "$@"; do
+    book_employee_for_offset "$index" "$date_offset" || return 1
+  done
+  trigger_demo_draw "$date_offset" || return 1
+  wait_for_draw_complete "$date_offset" > /dev/null || return 1
+}
+
+# Cancel an employee's own Allocated booking on a date. Cancelling an allocated request
+# applies a real late-cancellation penalty (policy.LateCancellationPenalty) via a live
+# event — the honest way to give the "penalised" persona an active penalty. Echoes the
+# cancelled requestId.
+cancel_own_allocated_booking() {
+  local username="$1" date="$2" max_tries="${3:-1}"
+  local token body req_id http_code
+  token=$(get_token "$username")
+  [ -z "$token" ] && { err "No token for $username (cancel)"; return 1; }
+
+  # Poll for the Allocated booking: the Draw's lifecycle can report Completed a moment
+  # before the booking read-model reflects the persisted allocation, so retry briefly
+  # when the caller expects an allocation to be settling (max_tries > 1).
+  req_id=""
+  for _ in $(seq 1 "$max_tries"); do
+    body=$(curl -sf -H "Authorization: Bearer $token" "$BOOKING_URL/bookings?pageSize=100" 2>/dev/null || true)
+    req_id=$(python3 - "$date" "$body" << 'PYEOF'
+import json, sys
+date = sys.argv[1]
+try:
+    items = (json.loads(sys.argv[2]).get("items") or [])
+except Exception:
+    items = []
+for it in items:
+    if str(it.get("requestedDate")) == date and it.get("status") == "Allocated":
+        print(it.get("requestId")); break
+PYEOF
+)
+    [ -n "$req_id" ] && break
+    sleep 2
+  done
+  [ -z "$req_id" ] && { err "$username has no Allocated booking on $date to cancel"; return 1; }
+
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X DELETE "$BOOKING_URL/bookings/$req_id?reason=Green%20Logistics%20demo%20late%20cancellation" \
+    -H "Authorization: Bearer $token" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
+  [ "$http_code" != "200" ] && { err "Cancel $username booking $req_id HTTP $http_code"; return 1; }
+  echo "$req_id"
+}
+
+# The showcase reallocation finale: cancel the first Allocated general booking on the
+# showcase date. Cancelling releases the general slot, and the policy's automatic
+# reallocation promotes the next fair waitlisted driver (BookingRequestReallocatedEvent).
+# Echoes the general index that was cancelled.
+cancel_first_allocated_general() {
+  local date="$1" index
+  for index in $(general_indices); do
+    # Decide on the exit status only. cancel_own_allocated_booking prints diagnostic
+    # ok/err text to stdout even when it fails, so capturing its stdout would mistake a
+    # "no allocated booking" message for a real cancellation. Discarding stdout/stderr and
+    # testing the exit code means only a genuine 200 DELETE (exit 0) is accepted, and the
+    # scan continues past waitlisted general drivers.
+    if cancel_own_allocated_booking "${EMPLOYEE_PREFIX}$index" "$date" >/dev/null 2>&1; then
+      echo "$index"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Confirm the reallocation happened: the cancelled slot is filled by a promoted driver,
+# so the allocated count is unchanged and the waitlist shrank by one.
+verify_reallocation() {
+  local date="$1" allocated_before="$2" waitlisted_before="$3"
+  local token body allocated_now waitlisted_now
+  token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
+
+  body=$(curl -sf -H "Authorization: Bearer $token" \
+    "$BOOKING_URL/bookings/operations?locationId=$GL_LOCATION_ID&from=$date&to=$date&pageSize=200" 2>/dev/null || true)
+  # The operations view reports still-waiting (waitlisted) requests as "Pending" once the
+  # Draw has completed, so count both as "waiting".
+  allocated_now=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(1 for i in d.get('items',[]) if i.get('status')=='Allocated'))" 2>/dev/null || echo -1)
+  waitlisted_now=$(printf '%s' "$body" | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(1 for i in d.get('items',[]) if i.get('status') in ('Waitlisted','Pending')))" 2>/dev/null || echo -1)
+
+  if [ "${allocated_now:-0}" -eq "${allocated_before:-0}" ] && [ "${waitlisted_now:-0}" -eq $(( waitlisted_before - 1 )) ]; then
+    ok "Reallocation: released general slot promoted the next fair waiting driver (allocated stays $allocated_now, waiting $waitlisted_before → $waitlisted_now)"
+  else
+    err "Reallocation not observed: allocated $allocated_before → ${allocated_now}, waiting $waitlisted_before → ${waitlisted_now} (expected allocated unchanged, waiting -1)"
+    return 1
+  fi
+}
+
+# Indices of general drivers (no company-car / accessibility / EV / motorcycle persona).
+general_indices() {
+  local index
+  for index in $(seq 1 "$GL_EMPLOYEE_COUNT"); do
+    if [ "$(has_company_car_for_index "$index")" = "false" ] \
+      && [ "$(accessibility_for_index "$index")" = "false" ] \
+      && [ "$(is_electric_for_index "$index")" = "false" ] \
+      && [ "$(vehicle_type_for_index "$index")" = "Sedan" ]; then
+      echo "$index"
+    fi
+  done
+}
+
 # ── parking ──────────────────────────────────────────────────────────────────
 
 reset_local_demo_state
@@ -834,40 +1008,70 @@ echo ""
 echo "-- Company-car fixed-slot reservations --"
 reserve_company_car_slots
 
+# ── dates ──────────────────────────────────────────────────────────────────
+# The showcase Draw sits at least +2 workdays out (clear of the cutoff, visible in the
+# HR workday navigation). One earlier workday carries the fairness-history Draw so the
+# recent-winner/penalised personas already have real history when the showcase runs.
+GL_HISTORY_OFFSET=$(next_workday_offset "$GL_DRAW_MIN_OFFSET")
+GL_DRAW_OFFSET=$(next_workday_offset "$((GL_HISTORY_OFFSET + 1))")
+GL_HISTORY_DATE=$(future_date "$GL_HISTORY_OFFSET")
+GL_DRAW_DATE=$(future_date "$GL_DRAW_OFFSET")
+
+# ── fairness history (real prior Draw) ───────────────────────────────────────
+# Give the fair showcase Draw an explainable backstory using only real events:
+#   • the recent winner (#7) wins the earlier Draw → an allocation on record;
+#   • the penalised persona (#8) wins then late-cancels → an active penalty.
+# Both lower their fair weight going into the showcase Draw. No projection is written
+# directly, so HR/reports/audit stay internally consistent.
+echo ""
+echo "-- Fairness history ($GL_HISTORY_DATE) --"
+history_draw "$GL_HISTORY_OFFSET" "$GL_RECENT_WINNER_INDEX" "$GL_PENALISED_INDEX"
+if cancel_own_allocated_booking "${EMPLOYEE_PREFIX}${GL_PENALISED_INDEX}" "$GL_HISTORY_DATE" 20 > /dev/null; then
+  ok "Penalised persona (${EMPLOYEE_PREFIX}${GL_PENALISED_INDEX}) late-cancelled its earlier allocation → active penalty"
+else
+  err "Could not seed the penalised persona's late-cancellation penalty"
+  exit 1
+fi
+ok "Recent winner (${EMPLOYEE_PREFIX}${GL_RECENT_WINNER_INDEX}) holds an allocation from the earlier Draw"
+
 # ── bookings ─────────────────────────────────────────────────────────────────
 
 echo ""
-echo "-- Bookings (generates notifications, audit records, and reporting data) --"
-
-# Dates start at the next workday at least +2 days out to stay clear of the
-# draw cutoff and keep the demo visible in the HR workday navigation.
-# Each request carries the employee's real attributes (company-car, accessibility,
-# EV, motorcycle). The seeded Configuration slots drive allocation (#666): company-car
-# Tier-1 holders are allocated their VIP slot at submission and the rest are
-# allocated/waitlisted by the Draw — verified live by verify_demo_draw below.
-GL_DRAW_OFFSET=$(next_workday_offset "$GL_DRAW_MIN_OFFSET")
-GL_DRAW_DATE=$(future_date "$GL_DRAW_OFFSET")
-echo "Green Logistics Draw date: $GL_DRAW_DATE (+$GL_DRAW_OFFSET days, next workday)"
+echo "-- Bookings ($GL_DRAW_DATE — generates notifications, audit records, and reporting data) --"
+echo "Green Logistics showcase Draw date: $GL_DRAW_DATE (+$GL_DRAW_OFFSET days, next workday)"
 
 for index in $(seq 1 "$GL_BOOKING_COUNT"); do
   if [ "$index" -gt "$GL_EMPLOYEE_COUNT" ]; then
     break
   fi
-  seed_booking "${EMPLOYEE_PREFIX}$index" \
-    "$(license_plate_for_index "$index")" \
-    "$(vehicle_type_for_index "$index")" \
-    "$(is_electric_for_index "$index")" \
-    "$(has_company_car_for_index "$index")" \
-    "$(accessibility_for_index "$index")" \
-    "$GL_DRAW_OFFSET"
+  book_employee_for_offset "$index" "$GL_DRAW_OFFSET"
 done
 
 # ── Draw ─────────────────────────────────────────────────────────────────────
 
 echo ""
-echo "-- Green Logistics Draw ($GL_DRAW_DATE, $GL_LOCATION_ID 08:00-18:00) --"
+echo "-- Green Logistics showcase Draw ($GL_DRAW_DATE, $GL_LOCATION_ID 08:00-18:00) --"
 trigger_demo_draw "$GL_DRAW_OFFSET"
 verify_demo_draw "$GL_DRAW_OFFSET"
+
+# ── reallocation finale ──────────────────────────────────────────────────────
+# Cancel one allocated general request; the policy's automatic reallocation promotes the
+# next fair waitlisted driver into the freed slot — one small, visible fairness story.
+echo ""
+echo "-- Reallocation finale --"
+GL_OPS_BEFORE=$(curl -sf -H "Authorization: Bearer $(get_token "$HR_ADMIN_USER")" \
+  "$BOOKING_URL/bookings/operations?locationId=$GL_LOCATION_ID&from=$GL_DRAW_DATE&to=$GL_DRAW_DATE&pageSize=200" 2>/dev/null || true)
+GL_ALLOC_BEFORE=$(printf '%s' "$GL_OPS_BEFORE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(1 for i in d.get('items',[]) if i.get('status')=='Allocated'))" 2>/dev/null || echo 0)
+GL_WAIT_BEFORE=$(printf '%s' "$GL_OPS_BEFORE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(1 for i in d.get('items',[]) if i.get('status') in ('Waitlisted','Pending')))" 2>/dev/null || echo 0)
+
+GL_CANCELLED_INDEX=$(cancel_first_allocated_general "$GL_DRAW_DATE" || true)
+if [ -n "$GL_CANCELLED_INDEX" ]; then
+  ok "Cancelled ${EMPLOYEE_PREFIX}${GL_CANCELLED_INDEX}'s allocated general request (freed a general slot)"
+  verify_reallocation "$GL_DRAW_DATE" "$GL_ALLOC_BEFORE" "$GL_WAIT_BEFORE"
+else
+  err "No allocated general request found to cancel for the reallocation finale"
+  exit 1
+fi
 
 echo ""
 echo "-- HR display names --"
@@ -878,13 +1082,14 @@ verify_hr_booking_display_names "$GL_DRAW_DATE"
 
 echo ""
 echo "== Seed complete =="
-echo "Tenant: $GL_TENANT (Green Logistics)"
-echo "Profiles: $GL_EMPLOYEE_COUNT employees with display names (2 company-car incl. 1 EV, 2 accessibility incl. 1 EV, 5 EV, 1 motorcycle, 2 multi-vehicle, rest regular), plus Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
+echo "Tenant: $GL_TENANT (Green Logistics showcase)"
+echo "Profiles: $GL_EMPLOYEE_COUNT employees (1 company-car, 1 EV, 1 accessible, 1 motorcycle, 6 general incl. a recent winner and a penalised driver), plus Lucie Prochazkova, Karel Urban, Eva Kralova, Martin Cerny (roles)"
 echo "Facility/location: $GL_FACILITY_LABEL / $GL_LOCATION_ID"
-echo "Vehicles: realistic CZ plates; two employees carry a second vehicle"
-echo "Parking: 20 labelled slots (A-01..A-13 general, EV-01..EV-03, ACC-01, VIP-01..VIP-02 company-car, MOTO-01)"
-echo "Bookings: $GL_BOOKING_COUNT employee requests; $GL_DRAW_DATE Draw triggered."
-echo "Draw: reads the seeded Configuration slots over Dapr (#666) — company-car Tier-1 holders are pre-allocated to their VIP slots at submission, and the rest are allocated/waitlisted by the Draw (verified above)."
+echo "Parking: 6 named slots (A-01, A-02 general, EV-01 charger, ACC-01 accessible, MOTO-01 motorcycle, VIP-01 company-car)"
+echo "History: earlier Draw on $GL_HISTORY_DATE gave the recent winner an allocation and the penalised driver an active late-cancellation penalty (real events)."
+echo "Bookings: $GL_BOOKING_COUNT requests for $GL_DRAW_DATE; showcase Draw triggered."
+echo "Draw: company-car takes VIP-01 (Tier-1) at submission; motorcycle takes MOTO-01; the general lottery allocates the scarce slots and leaves a visible waitlist (verified above)."
+echo "Reallocation: one allocated general request was cancelled and the next fair waitlisted driver was promoted (verified above)."
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh gl-employee1)"

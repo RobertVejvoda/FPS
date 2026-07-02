@@ -57,69 +57,72 @@ public sealed record DemoSeedResult(
     int SlotsSeeded,
     IReadOnlyList<string> GapReport);
 
-// ── Green Logistics canonical demo dataset ─────────────────────────────────────
-// Stable user IDs and slot IDs are intentional — they must match on every reset
-// so foreign key references (e.g. company-car reserved slot) stay consistent.
+// ── Green Logistics showcase demo dataset (DEMOSEED003 / #704) ──────────────────
+// A small, legible evaluation showcase: 10 named people and 6 named, business-readable
+// slots — understandable in one screen without inspecting a large roster. Stable user IDs
+// and slot IDs are intentional so they match on every reset and foreign-key references
+// (the company-car reserved slot) stay consistent. This mirrors the local harness seed
+// (tools/dev-seed.sh); bulk/load-test data lives on the explicit perf-seed path, never here.
+//
+// The provisioning path seeds profiles + slots + policy only. Fairness *history* (recent
+// allocations, penalties) and the reallocation finale are produced by live draws in the
+// local harness seed, not fabricated here — see the GapReport returned by SeedAsync.
 internal static class GreenLogisticsDataset
 {
     internal const string LocationId = "GL-HQ";
 
-    // Company-car employee — has a fixed reserved slot below.
+    // Company-car employee — guaranteed the fixed VIP-01 slot (Tier-1) outside the lottery.
     private const string CompanyCarUserId = "a1a10001-0001-0001-0001-000000000001";
 
-    // Green Logistics demo roster. Realistic Czech names without diacritics and CZ-style
-    // plates, with combined cases (an electric company car, an accessibility + EV driver,
-    // a two-vehicle employee) so a provisioned sandbox mirrors the local harness demo.
+    // The showcase roster. Four special-need personas (company-car, EV, accessible,
+    // motorcycle) plus six general drivers who compete in the fair lottery for the two
+    // general slots — enough demand for a visible waitlist. Realistic CZ plates, no diacritics.
     internal static readonly IReadOnlyList<DemoEmployeeRecord> Employees =
     [
+        // Company-car (VIP-01, Tier-1 fixed). Non-electric so it needs no charger.
         new(CompanyCarUserId, "Jan Novak",            ["employee"],              null, LocationId, true,  true,  false, false,
-            [new("gl-veh-001", "1AB 2345", "car",        IsElectric: true,  IsDefault: true)]),
+            [new("gl-veh-001", "1AB 2345", "car",        IsElectric: false, IsDefault: true)]),
+        // EV driver — prefers the charger slot (EV-01).
         new("b2b20002-0002-0002-0002-000000000002", "Petra Svobodova",  ["employee"],              null, LocationId, true,  false, false, false,
             [new("gl-veh-002", "2SC 4417", "car",        IsElectric: true,  IsDefault: true)]),
+        // Accessibility need — requires the accessible slot (ACC-01).
         new("c3c30003-0003-0003-0003-000000000003", "Hana Vesela",      ["employee"],              null, LocationId, true,  false, true,  false,
-            [new("gl-veh-003", "5BL 6628", "car",        IsElectric: true,  IsDefault: true)]),
+            [new("gl-veh-003", "5BL 6628", "car",        IsElectric: false, IsDefault: true)]),
+        // Motorcycle — only the motorcycle area (MOTO-01) fits it.
         new("d4d40004-0004-0004-0004-000000000004", "Tomas Dvorak",     ["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-004", "3AH 8820", "car",        IsElectric: false, IsDefault: true),
-             new("gl-veh-005", "3AH 0143", "motorcycle", IsElectric: false, IsDefault: false)]),
+            [new("gl-veh-004", "3AH 8820", "motorcycle", IsElectric: false, IsDefault: true)]),
+        // General drivers — compete for the two general slots (A-01, A-02).
         new("e5e50005-0005-0005-0005-000000000005", "Pavel Cerny",      ["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-006", "4EK 1193", "car",        IsElectric: false, IsDefault: true)]),
+            [new("gl-veh-005", "4EK 1193", "car",        IsElectric: false, IsDefault: true)]),
         new("f6f60006-0006-0006-0006-000000000006", "Martin Horak",     ["employee"],              null, LocationId, true,  false, false, false,
-            [new("gl-veh-007", "1AP 3092", "car",        IsElectric: false, IsDefault: true)]),
-        new("a7a70007-0007-0007-0007-000000000007", "Jana Kucerova",    ["employee"],              null, LocationId, false, false, false, false, []),
-        new("h8h80008-0008-0008-0008-000000000008", "Lucie Prochazkova",["employee","hr_manager"], null, LocationId, true,  false, false, false,
-            [new("gl-veh-008", "6CT 7741", "car",        IsElectric: false, IsDefault: true)]),
-        new("i9i90009-0009-0009-0009-000000000009", "Karel Urban",      ["employee","admin"],      null, LocationId, true,  false, false, false,
-            [new("gl-veh-009", "7AZ 2284", "car",        IsElectric: false, IsDefault: true)]),
+            [new("gl-veh-006", "1AP 3092", "car",        IsElectric: false, IsDefault: true)]),
+        // Recent frequent winner — the local seed gives this persona recent allocation history.
+        new("a7a70007-0007-0007-0007-000000000007", "Jana Kucerova",    ["employee"],              null, LocationId, true,  false, false, false,
+            [new("gl-veh-007", "6CT 7741", "car",        IsElectric: false, IsDefault: true)]),
+        // Penalised persona — the local seed gives this persona an active late-cancellation penalty.
+        new("b8b80008-0008-0008-0008-000000000008", "Petr Novotny",     ["employee"],              null, LocationId, true,  false, false, false,
+            [new("gl-veh-008", "7AZ 2284", "car",        IsElectric: false, IsDefault: true)]),
+        // Unlucky history — no recent wins, so the highest fair weight going into the draw.
+        // #9/#10 also carry the operator roles so a provisioned sandbox is self-sufficient. The
+        // local harness instead provisions dedicated role accounts (gl-hr-admin, gl-tenant-admin,
+        // …), so there #9/#10 are plain general drivers — the only intentional difference from the
+        // otherwise identical named-person roster in tools/dev-seed.sh.
+        new("c9c90009-0009-0009-0009-000000000009", "Lenka Maresova",   ["employee","hr_manager"], null, LocationId, true,  false, false, false,
+            [new("gl-veh-009", "3BM 9087", "car",        IsElectric: false, IsDefault: true)]),
+        new("d0d00010-0010-0010-0010-000000000010", "Michal Prochazka", ["employee","admin"],      null, LocationId, true,  false, false, false,
+            [new("gl-veh-010", "4EH 4451", "car",        IsElectric: false, IsDefault: true)]),
     ];
 
+    // Six named, business-readable slots. IsMotorcycleCapacity units = 1 keeps MOTO-01 a single
+    // named unit so the layout reads as exactly six slots.
     internal static readonly IReadOnlyList<DemoSlotRecord> Slots =
     [
-        // 13 standard active slots
-        new("gl-slot-001", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-002", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-003", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-004", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-005", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-006", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-007", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-008", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-009", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-010", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-011", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-012", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-013", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        // EV charger slot
-        new("gl-slot-014", IsActive: true,  HasCharger: true,  IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        // Accessibility slot
-        new("gl-slot-015", IsActive: true,  HasCharger: false, IsAccessible: true,  IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        // Company-car reserved slot (Jan Novak)
-        new("gl-slot-016", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: true,  IsMotorcycleCapacity: false, ReservedForUserId: CompanyCarUserId),
-        // Motorcycle area (4 motorcycles share this slot)
-        new("gl-slot-017", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: true,  null, MotorcycleCapacityUnits: 4),
-        // 3 additional standard slots
-        new("gl-slot-018", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-019", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
-        new("gl-slot-020", IsActive: true,  HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
+        new("A-01",    IsActive: true, HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
+        new("A-02",    IsActive: true, HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
+        new("EV-01",   IsActive: true, HasCharger: true,  IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
+        new("ACC-01",  IsActive: true, HasCharger: false, IsAccessible: true,  IsCompanyCarOnly: false, IsMotorcycleCapacity: false, null),
+        new("MOTO-01", IsActive: true, HasCharger: false, IsAccessible: false, IsCompanyCarOnly: false, IsMotorcycleCapacity: true,  null, MotorcycleCapacityUnits: 1),
+        new("VIP-01",  IsActive: true, HasCharger: false, IsAccessible: false, IsCompanyCarOnly: true,  IsMotorcycleCapacity: false, ReservedForUserId: CompanyCarUserId),
     ];
 
     internal static readonly DemoPolicyRecord Policy = new(
@@ -132,7 +135,9 @@ internal static class GreenLogisticsDataset
         ManualAdjustmentEnabled: false,
         SameDayBookingEnabled: false,
         SameDayUsesRequestCap: false,
-        AutomaticReallocationEnabled: false,
+        // Cancelling an allocated request promotes the next fair waitlisted driver — this drives
+        // the local seed's reallocation finale.
+        AutomaticReallocationEnabled: true,
         UsageConfirmationRequired: false,
         UsageConfirmationWindowMinutes: 0,
         UsageConfirmationMethods: [],
