@@ -1,6 +1,7 @@
 using FPS.Booking.Application.Models;
 using FPS.Booking.Application.Repositories;
 using FPS.Booking.Application.Services;
+using FPS.Booking.Domain;
 using FPS.Booking.Domain.Aggregates.BookingRequestAggregate;
 using FPS.Booking.Domain.Services;
 using FPS.Booking.Domain.ValueObjects;
@@ -70,49 +71,67 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
                 "Profile data is unavailable. Please try again later.");
         }
 
-        if (snapshot.ProfileStatus != "Active" || !snapshot.ParkingEligible)
+        // PLAT-seats (#710) — seats are a separate resource with no vehicle. Parking keeps its
+        // vehicle-eligibility and license-plate rules; seats only require an active profile.
+        var isSeats = cmd.ResourceType == ResourceType.Seats;
+
+        if (snapshot.ProfileStatus != "Active" || (!isSeats && !snapshot.ParkingEligible))
         {
             logger.LogInformation(
                 "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode}",
                 cmd.TenantId, BookingRejectionCode.RequestorIneligible);
             return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
                 BookingRejectionCode.RequestorIneligible.ToString(),
-                "You are not eligible for parking under current policy.");
-        }
-
-        var profileVehicle = snapshot.Vehicles.FirstOrDefault(v =>
-            v.LicensePlate.Equals(cmd.LicensePlate, StringComparison.OrdinalIgnoreCase) && v.IsActive);
-        if (profileVehicle is null)
-        {
-            logger.LogInformation(
-                "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode}",
-                cmd.TenantId, BookingRejectionCode.VehicleConstraintUnmatched);
-            return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
-                BookingRejectionCode.VehicleConstraintUnmatched.ToString(),
-                "The requested vehicle is not registered or is inactive in your profile.");
+                isSeats
+                    ? "You are not eligible to request a seat under current policy."
+                    : "You are not eligible for parking under current policy.");
         }
 
         var policy = await policyService.GetEffectivePolicyAsync(cmd.TenantId, cmd.LocationId, cancellationToken);
         var requestedPeriod = TimeSlot.Create(cmd.PlannedArrivalTime, cmd.PlannedDepartureTime);
         var requestorId = UserId.FromString(cmd.RequestorId);
 
-        // Profile facts take precedence over request body fields
-        if (!TryMapVehicleType(profileVehicle.VehicleType, out var mappedVehicleType))
+        VehicleInformation vehicle;
+        if (isSeats)
         {
-            logger.LogWarning(
-                "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode} VehicleType={VehicleType}",
-                cmd.TenantId, BookingRejectionCode.VehicleConstraintUnmatched, profileVehicle.VehicleType);
-            return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
-                BookingRejectionCode.VehicleConstraintUnmatched.ToString(),
-                $"Vehicle type '{profileVehicle.VehicleType}' is not supported for booking.");
+            // A seat needs no vehicle. This sentinel carries no capabilities, so the resource-agnostic
+            // Draw treats every seat slot as compatible (Tier-2 fair lottery) and every company-car /
+            // vehicle-capability branch self-skips (IsCompanyCar / IsElectric / accessible all false).
+            // The "SEAT" plate never leaves the service — the DTO/outcome persist no plate.
+            vehicle = VehicleInformation.Create("SEAT", VehicleType.Sedan, isElectric: false, requiresAccessibleSpot: false, isCompanyCar: false);
         }
+        else
+        {
+            var profileVehicle = snapshot.Vehicles.FirstOrDefault(v =>
+                v.LicensePlate.Equals(cmd.LicensePlate, StringComparison.OrdinalIgnoreCase) && v.IsActive);
+            if (profileVehicle is null)
+            {
+                logger.LogInformation(
+                    "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode}",
+                    cmd.TenantId, BookingRejectionCode.VehicleConstraintUnmatched);
+                return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
+                    BookingRejectionCode.VehicleConstraintUnmatched.ToString(),
+                    "The requested vehicle is not registered or is inactive in your profile.");
+            }
 
-        var vehicle = VehicleInformation.Create(
-            profileVehicle.LicensePlate,
-            mappedVehicleType,
-            profileVehicle.IsElectric,
-            snapshot.AccessibilityEligible,
-            snapshot.HasCompanyCar);
+            // Profile facts take precedence over request body fields
+            if (!TryMapVehicleType(profileVehicle.VehicleType, out var mappedVehicleType))
+            {
+                logger.LogWarning(
+                    "Booking request rejected. TenantId={TenantId} Status=Rejected RejectionCode={RejectionCode} VehicleType={VehicleType}",
+                    cmd.TenantId, BookingRejectionCode.VehicleConstraintUnmatched, profileVehicle.VehicleType);
+                return new SubmitBookingRequestResult(Guid.Empty, "Rejected",
+                    BookingRejectionCode.VehicleConstraintUnmatched.ToString(),
+                    $"Vehicle type '{profileVehicle.VehicleType}' is not supported for booking.");
+            }
+
+            vehicle = VehicleInformation.Create(
+                profileVehicle.LicensePlate,
+                mappedVehicleType,
+                profileVehicle.IsElectric,
+                snapshot.AccessibilityEligible,
+                snapshot.HasCompanyCar);
+        }
 
         var now = clock.GetTenantUtcNow(cmd.TenantId);
         var isSameDay = IsSameDay(policy, requestedPeriod.Start, now);
@@ -184,9 +203,11 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             cmd.TenantId, Guid.NewGuid().ToString(), "employee", cmd.RequestorId,
             SubjectRequestorId: cmd.RequestorId,
             LocationId: cmd.LocationId ?? cmd.FacilityId,
-            VehicleLicensePlate: vehicle.LicensePlate,
-            VehicleType: vehicle.Type.ToString(),
-            VehicleIsElectric: vehicle.IsElectric);
+            // Seats carry no vehicle facts into evidence — only the resource type.
+            VehicleLicensePlate: isSeats ? null : vehicle.LicensePlate,
+            VehicleType: isSeats ? null : vehicle.Type.ToString(),
+            VehicleIsElectric: !isSeats && vehicle.IsElectric,
+            ResourceType: cmd.ResourceType.ToString());
         var publisher = eventPublisher.WithContext(publishCtx);
 
         var request = BookingRequest.Submit(requestorId, requestedPeriod, vehicle, context, publisher);
@@ -216,7 +237,7 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
 
         await repository.CreateBookingRequestAsync(
             ToDto(request, cmd.TenantId, cmd.FacilityId, cmd.LocationId, snapshot.SnapshotVersion, vehicle,
-                sameDaySlot ?? scheduledCompanyCarSlot, effectiveRejectionReason));
+                cmd.ResourceType, sameDaySlot ?? scheduledCompanyCarSlot, effectiveRejectionReason));
         await queryRepository.AddToUserIndexAsync(cmd.TenantId, cmd.RequestorId, request.Id.Value, cancellationToken);
         await queryRepository.AddToTenantOpsIndexAsync(cmd.TenantId, request.Id.Value, cancellationToken);
         if (request.Status == BookingRequestStatus.Pending)
@@ -268,15 +289,18 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
     }
 
     private static BookingRequestDto ToDto(BookingRequest request, string tenantId, string facilityId,
-        string? locationId, string snapshotVersion, VehicleInformation vehicle, AvailableSlot? slot = null,
-        string? rejectionReason = null)
-        => new()
+        string? locationId, string snapshotVersion, VehicleInformation vehicle, ResourceType resourceType,
+        AvailableSlot? slot = null, string? rejectionReason = null)
+    {
+        var isSeats = resourceType == ResourceType.Seats;
+        return new()
         {
             RequestId = request.Id.Value,
             TenantId = tenantId,
             VehicleId = Guid.Empty,
             FacilityId = Guid.TryParse(facilityId, out var fid) ? fid : Guid.Empty,
             LocationId = locationId ?? facilityId,
+            ResourceType = resourceType.ToString(),
             PlannedArrivalTime = request.RequestedPeriod.Start,
             PlannedDepartureTime = request.RequestedPeriod.End,
             RequestedBy = request.RequestorId.Value.ToString(),
@@ -285,11 +309,13 @@ public sealed class SubmitBookingRequestHandler : IRequestHandler<SubmitBookingR
             RejectionCode = request.RejectionCode?.ToString(),
             RejectionReason = rejectionReason ?? request.RejectionReason,
             ProfileSnapshotVersion = snapshotVersion,
-            VehicleType = vehicle.Type.ToString(),
-            VehicleIsElectric = vehicle.IsElectric,
-            RequiresAccessibleSpot = vehicle.RequiresAccessibleSpot,
-            VehicleIsCompanyCar = vehicle.IsCompanyCar,
+            // Seats persist no vehicle facts.
+            VehicleType = isSeats ? null : vehicle.Type.ToString(),
+            VehicleIsElectric = !isSeats && vehicle.IsElectric,
+            RequiresAccessibleSpot = !isSeats && vehicle.RequiresAccessibleSpot,
+            VehicleIsCompanyCar = !isSeats && vehicle.IsCompanyCar,
             // Slot id is a free-form string (e.g. "M1-1" for motorcycle units), not a Guid.
             AllocatedSlotId = slot?.SlotId.Value
         };
+    }
 }

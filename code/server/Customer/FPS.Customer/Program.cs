@@ -356,6 +356,10 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
         AccentColor = "#a5d6a7",
         LoginMode = TenantLoginMode.Both,
     });
+    // PLAT-seats (#710) — Green Logistics runs Parking as its primary module with Seats enabled as
+    // a secondary module, so the showcase exercises the multi-module UI (primary first, in-page
+    // module switch) without changing parking's primary landing.
+    tenant.SetModules(TenantModule.Parking, [TenantModule.Parking, TenantModule.Seats]);
     tenant.AddDiscoveryDomain(discoveryDomain, "local-seed");
 
     tenant.TryTransition(TenantLifecycleState.Configured, "local-seed", "Green Logistics demo tenant setup", "Development seed");

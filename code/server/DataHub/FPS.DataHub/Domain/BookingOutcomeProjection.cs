@@ -62,4 +62,9 @@ public sealed class BookingOutcomeProjection
     public string? VehicleLicensePlate { get; set; }
     public string? VehicleType { get; set; }
     public bool? VehicleIsElectric { get; set; }
+
+    // PLAT-seats (#710): resource type ("Parking" or "Seats") so outcome evidence and HR/reporting
+    // never mix parking and seat allocations. Null for rows projected before this field — treated
+    // as Parking when read.
+    public string? ResourceType { get; set; }
 }

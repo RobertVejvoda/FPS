@@ -42,7 +42,9 @@ public sealed record BookingEventPayload(
     // AUD008: vehicle and location facts captured at submission time for the auditor read model.
     string? VehicleLicensePlate = null,
     string? VehicleType = null,
-    bool? VehicleIsElectric = null)
+    bool? VehicleIsElectric = null,
+    // PLAT-seats (#710): "Parking" or "Seats" so outcome evidence distinguishes the resource type.
+    string? ResourceType = null)
 {
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? AdditionalData { get; init; }

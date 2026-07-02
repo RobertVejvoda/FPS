@@ -12,7 +12,9 @@ public record BookingListItem(
     string? AllocatedSlotId,
     string NextAction,
     DateTime CreatedAt,
-    DateTime LastStatusChangedAt);
+    DateTime LastStatusChangedAt,
+    // PLAT-seats (#710) — "Parking" or "Seats", so the employee umbrella can split the two.
+    string ResourceType = "Parking");
 
 public record BookingListResult(
     IReadOnlyList<BookingListItem> Items,
@@ -32,7 +34,9 @@ public record HrBookingListItem(
     string? Reason,
     string? AllocatedSlotId,
     DateTime CreatedAt,
-    DateTime LastStatusChangedAt);
+    DateTime LastStatusChangedAt,
+    // PLAT-seats (#710) — "Parking" or "Seats" so HR/facilities reports never mix resource types.
+    string ResourceType = "Parking");
 
 public record HrBookingListResult(
     IReadOnlyList<HrBookingListItem> Items,

@@ -41,6 +41,13 @@ public sealed class BookingController : ControllerBase
         if (!Guid.TryParse(body.FacilityId, out _))
             return BadRequest(new { error = "FacilityId must be a valid UUID." });
 
+        // PLAT-seats (#710) — default Parking; reject any value that is not a defined resource type
+        // (Enum.TryParse alone would accept undefined numeric strings — see PLAT007B).
+        var resourceType = FPS.Booking.Domain.ResourceType.Parking;
+        if (!string.IsNullOrWhiteSpace(body.ResourceType) &&
+            !(Enum.TryParse(body.ResourceType, ignoreCase: true, out resourceType) && Enum.IsDefined(resourceType)))
+            return BadRequest(new { error = $"Unknown resource type: {body.ResourceType}" });
+
         var command = new SubmitBookingRequestCommand(
             TenantId: currentUser.TenantId,
             RequestorId: currentUser.UserId,
@@ -52,7 +59,8 @@ public sealed class BookingController : ControllerBase
             RequiresAccessibleSpot: body.RequiresAccessibleSpot,
             IsCompanyCar: body.IsCompanyCar,
             PlannedArrivalTime: body.PlannedArrivalTime,
-            PlannedDepartureTime: body.PlannedDepartureTime);
+            PlannedDepartureTime: body.PlannedDepartureTime,
+            ResourceType: resourceType);
 
         var result = await mediator.Send(command, cancellationToken);
 

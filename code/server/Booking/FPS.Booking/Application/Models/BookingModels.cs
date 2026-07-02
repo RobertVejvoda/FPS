@@ -7,6 +7,9 @@ public class BookingRequestDto
     public Guid VehicleId { get; set; }
     public Guid FacilityId { get; set; }
     public string? LocationId { get; set; }
+    // PLAT-seats (#710) — "Parking" (default) or "Seats". Requests persisted before this field
+    // deserialise with null and are treated as Parking everywhere they are read.
+    public string? ResourceType { get; set; }
     public DateTime PlannedArrivalTime { get; set; }
     public DateTime PlannedDepartureTime { get; set; }
     public string RequestedBy { get; set; } = string.Empty;

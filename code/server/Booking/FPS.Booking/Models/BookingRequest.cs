@@ -9,4 +9,7 @@ public record SubmitBookingRequest(
     bool RequiresAccessibleSpot,
     bool IsCompanyCar,
     DateTime PlannedArrivalTime,
-    DateTime PlannedDepartureTime);
+    DateTime PlannedDepartureTime,
+    // PLAT-seats (#710) — "Parking" (default) or "Seats". Seat requests carry no vehicle fields;
+    // the vehicle fields above are ignored for seats.
+    string? ResourceType = null);
