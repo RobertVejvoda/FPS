@@ -25,10 +25,11 @@ const REPO_URL = 'https://github.com/RobertVejvoda/fairspot';
 type SubmitState = 'idle' | 'sending';
 type Scenario = 'Parking' | 'Seats' | 'Both';
 
-// Public, unauthenticated FairSpot entry page (SITE002). One-page scroll: positive
-// positioning, parking as the working scenario, seats/desks as planned, and a
-// request-based pilot form wired to the tenant-request intake. No live demo, no
-// instant provisioning, no customer-facing AI messaging.
+// Public, unauthenticated FairSpot product tour (SITE003). One-page scroll: positive
+// positioning, how fair allocation works, the Green Logistics showcase story (static,
+// synthetic), Parking and Seats presented as the two supported modules today, and a
+// request-based pilot form wired to the tenant-request intake. No live demo, no instant
+// provisioning, no customer-facing AI messaging, no internal/architecture links.
 export function PilotPage() {
   const { apiBaseUrl, branding, turnstileSiteKey } = useAuth();
 
@@ -157,10 +158,10 @@ export function PilotPage() {
       <section className="site-hero">
         <div className="site-hero-inner">
           <p className="site-eyebrow">Fair allocation for limited workplace resources</p>
-          <h1>Give everyone a fair shot at limited parking.</h1>
+          <h1>Give everyone a fair shot at scarce workplace resources.</h1>
           <p className="site-lede">
-            Clear rules and a transparent, automated allocation decide every space — and every
-            outcome is easy to explain. The same model extends to desks and seats.
+            Clear rules and a transparent, automated draw decide every parking space and every
+            team seat — and every outcome is easy to explain. One fair model, whatever&rsquo;s scarce.
           </p>
           <div className="site-cta-row">
             <a href="#start" className="btn-green">Start a free pilot</a>
@@ -190,18 +191,18 @@ export function PilotPage() {
         </div>
       </section>
 
-      {/* How it works — parking today */}
+      {/* How fair allocation works */}
       <section className="site-section site-section-alt" id="how">
-        <h2>How it works — parking, today</h2>
-        <p className="site-section-lede">Parking is the working scenario in FairSpot today. Here's the flow:</p>
+        <h2>How fair allocation works</h2>
+        <p className="site-section-lede">The same five steps run whether you&rsquo;re allocating parking spaces or team seats:</p>
         <ol className="site-steps">
-          <li><strong>Employees request a spot</strong> for the days they need it.</li>
-          <li><strong>Clear rules &amp; a cut-off time</strong> are set by HR — caps, priorities, accessibility, EV, company cars.</li>
-          <li><strong>A fair automated allocation</strong> assigns limited spaces; guaranteed holders are honored first, the rest by transparent fairness.</li>
+          <li><strong>Employees request what they need</strong> — a parking space or a team seat — for the days they need it.</li>
+          <li><strong>Clear rules &amp; a cut-off time</strong> are set by HR — capacity, priorities, and any special needs like accessibility, EV, or company cars.</li>
+          <li><strong>A fair automated draw</strong> assigns the limited resources; guaranteed holders are honored first, the rest by transparent fairness.</li>
           <li><strong>Everyone sees the outcome</strong> — allocated, waitlisted, or a clearly explained reason.</li>
           <li><strong>Audit evidence is kept</strong> for every decision, so it can be reviewed later.</li>
         </ol>
-        <p className="site-note">Want a closer look? We'll walk you through a real Green Logistics example during your pilot — no sign-up wall, no canned sales demo.</p>
+        <p className="site-note">Want a closer look? We&rsquo;ll walk you through a real Green Logistics example during your pilot — no sign-up wall, no canned sales demo.</p>
       </section>
 
       {/* Why it's fair (trust) */}
@@ -238,15 +239,51 @@ export function PilotPage() {
         </div>
       </section>
 
-      {/* What's next */}
+      {/* See it in action — Green Logistics showcase (static, synthetic) */}
       <section className="site-section">
-        <span className="site-badge">Planned</span>
-        <h2>Next: desks &amp; seats</h2>
+        <h2>See it in action: Green Logistics</h2>
         <p className="site-section-lede">
-          Hybrid teams need predictable workspace access. The same request, rules, allocation, and
-          evidence model that powers parking today will extend to shared desks and seats. Parking
-          works now; desks and seats are on the roadmap, not yet available.
+          Green Logistics is our showcase company. Here&rsquo;s the kind of story a fair draw tells —
+          all illustrative, using synthetic demo data only.
         </p>
+        <div className="site-grid site-grid-2">
+          <div className="site-card">
+            <h3>Named spaces, real constraints</h3>
+            <p>A company-car holder keeps their reserved space, the EV driver gets a charger bay, and the accessible bay and motorcycle area are honored first — then the general spaces go to a fair draw.</p>
+          </div>
+          <div className="site-card">
+            <h3>A visible waitlist</h3>
+            <p>When more people want a space than there are spaces, everyone else forms a transparent waitlist — no guessing who&rsquo;s next in line.</p>
+          </div>
+          <div className="site-card">
+            <h3>Automatic reallocation</h3>
+            <p>Someone cancels? The freed space goes to the next fair person on the waitlist automatically — nobody has to chase it down.</p>
+          </div>
+          <div className="site-card">
+            <h3>Evidence for every decision</h3>
+            <p>HR and auditors can see who requested, who was allocated, and why — an audit trail that holds up to questions later.</p>
+          </div>
+        </div>
+        <p className="site-note">Team seats tell the same story: employees request a seat for a workday, and the same fair draw fills a limited set of team seats and waitlists the rest.</p>
+      </section>
+
+      {/* Parking + Seats — one model, both available */}
+      <section className="site-section site-section-alt">
+        <h2>Parking and seats, one fair model</h2>
+        <p className="site-section-lede">FairSpot allocates both today, using the very same request, rules, draw, and evidence:</p>
+        <div className="site-grid site-grid-2">
+          <div className="site-card">
+            <span className="site-badge">Available now</span>
+            <h3>Parking</h3>
+            <p>Limited spaces allocated with priorities and special needs — company cars, EV charging, accessible bays, and motorcycles — all by transparent fairness.</p>
+          </div>
+          <div className="site-card">
+            <span className="site-badge">Available now</span>
+            <h3>Team seats</h3>
+            <p>Hybrid teams request a seat for a workday; the same draw fills a limited set of team seats and forms a fair waitlist when a day is popular.</p>
+          </div>
+        </div>
+        <p className="site-note">Same idea, more resources over time — the model is built to extend to other shared workplace resources.</p>
       </section>
 
       {/* Get started — pilot form */}
@@ -285,8 +322,8 @@ export function PilotPage() {
                 <label className="site-label">
                   What would you like to allocate?
                   <select className="site-input" value={scenario} onChange={(e) => setScenario(e.target.value as Scenario)}>
-                    <option value="Parking">Parking (available now)</option>
-                    <option value="Seats">Desks / seats (planned)</option>
+                    <option value="Parking">Parking</option>
+                    <option value="Seats">Team seats</option>
                     <option value="Both">Both</option>
                   </select>
                 </label>
