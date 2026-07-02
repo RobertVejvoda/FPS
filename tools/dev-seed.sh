@@ -54,6 +54,10 @@ GL_TENANT="${FPS_GL_TENANT_ID:-greenlogistics}"
 GL_FACILITY_ID="${FPS_GL_FACILITY_ID:-00000000-0000-0000-0000-000000000002}"
 GL_FACILITY_LABEL="${FPS_GL_FACILITY_LABEL:-Green Logistics HQ}"
 GL_LOCATION_ID="${FPS_GL_LOCATION_ID:-GL-HQ}"
+# PLAT-seats (#710) — Seats is the secondary module. Team seats live at their own location so the
+# resource-agnostic Draw isolates them from parking. 8 seats, more demand than capacity → a waitlist.
+GL_SEATS_LOCATION="${FPS_GL_SEATS_LOCATION:-GL-TEAMS}"
+GL_SEATS_COUNT="${FPS_GL_SEATS_COUNT:-8}"
 # Showcase default: 10 named people. Larger counts stay opt-in for local isolation
 # only (the extra indices are plain general drivers); bulk/load data has its own path.
 GL_EMPLOYEE_COUNT="${FPS_GL_EMPLOYEE_COUNT:-10}"
@@ -976,6 +980,124 @@ general_indices() {
   done
 }
 
+# ── seats (PLAT-seats #710) ───────────────────────────────────────────────────
+# Configure the team seats as plain slots at their own location. Seats carry no vehicle
+# capabilities, so the resource-agnostic Draw allocates them in a pure fair lottery.
+configure_gl_seats() {
+  local admin_token slots_json http_code
+  admin_token=$(get_token "$TENANT_ADMIN_USER")
+  [ -z "$admin_token" ] && { err "No token for $TENANT_ADMIN_USER"; return 1; }
+
+  slots_json=$(GL_SEATS_COUNT="$GL_SEATS_COUNT" python3 << 'PYEOF'
+import json, os
+n = int(os.environ["GL_SEATS_COUNT"])
+slots = [{
+    "slotId": f"HQ-TEAM-A-{i:02d}", "isActive": True, "hasCharger": False,
+    "isAccessible": False, "isCompanyCarOnly": False, "isMotorcycleCapacity": False,
+    "reservedForUserId": None, "motorcycleCapacityUnits": None,
+} for i in range(1, n + 1)]
+print(json.dumps({"slots": slots, "changeReason": "Green Logistics showcase seed: team seats"}))
+PYEOF
+)
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X PUT "$CONFIG_URL/configuration/locations/$GL_SEATS_LOCATION/slots" \
+    -H "Authorization: Bearer $admin_token" -H "Content-Type: application/json" \
+    -d "$slots_json" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
+  if [ "$http_code" = "204" ]; then
+    ok "Configured $GL_SEATS_COUNT $GL_SEATS_LOCATION seats (HQ-TEAM-A-01..$(printf '%02d' "$GL_SEATS_COUNT"))"
+  else
+    err "Seats configuration PUT HTTP $http_code"
+    return 1
+  fi
+}
+
+# Submit one employee's seat request for a workday. No vehicle fields matter for seats — the body
+# carries a placeholder plate that the server ignores and never persists for resourceType=Seats.
+seed_seat_request() {
+  local username="$1" date_offset="$2"
+  local token booking_date arrival departure http_code
+  token=$(get_token "$username")
+  [ -z "$token" ] && { err "No token for $username (seat)"; return 1; }
+
+  booking_date=$(future_date "$date_offset")
+  arrival="${booking_date}T08:00:00"; departure="${booking_date}T18:00:00"
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "$BOOKING_URL/bookings" \
+    -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+    -d "{
+      \"facilityId\": \"$GL_FACILITY_ID\",
+      \"locationId\": \"$GL_SEATS_LOCATION\",
+      \"resourceType\": \"Seats\",
+      \"licensePlate\": \"N/A\",
+      \"vehicleType\": \"Sedan\",
+      \"isElectric\": false,
+      \"requiresAccessibleSpot\": false,
+      \"isCompanyCar\": false,
+      \"plannedArrivalTime\": \"$arrival\",
+      \"plannedDepartureTime\": \"$departure\"
+    }" 2>/dev/null || true)
+  [ -n "$http_code" ] || http_code="000"
+  if [[ "$http_code" = "202" || "$http_code" = "200" ]]; then
+    ok "Seat request $username $booking_date ($http_code)"
+  else
+    err "Seat request $username $booking_date HTTP $http_code"
+    return 1
+  fi
+}
+
+trigger_seats_draw() {
+  local date_offset="$1"
+  local token draw_date start end response http_code body allocated waitlisted status
+  token=$(get_token "$TENANT_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $TENANT_ADMIN_USER"; return 1; }
+  draw_date=$(future_date "$date_offset"); start="${draw_date}T08:00:00"; end="${draw_date}T18:00:00"
+  response=$(curl -s -w "\n%{http_code}" \
+    -X POST "$BOOKING_URL/draws/trigger" \
+    -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+    -d "{
+      \"locationId\": \"$GL_SEATS_LOCATION\",
+      \"date\": \"$draw_date\",
+      \"timeSlotStart\": \"$start\",
+      \"timeSlotEnd\": \"$end\",
+      \"reason\": \"Green Logistics seats Draw\"
+    }" 2>/dev/null || true)
+  http_code=$(printf '%s' "$response" | tail -n 1)
+  if [[ "$http_code" = "200" || "$http_code" = "202" ]]; then
+    ok "Seats Draw $draw_date triggered (async — verifying)"
+  else
+    err "Seats Draw $draw_date HTTP ${http_code:-000}"; return 1
+  fi
+}
+
+# Poll the seats Draw to Completed and assert it allocated seats and left a visible waitlist.
+verify_seats_draw() {
+  local date_offset="$1"
+  local token draw_date start end status body allocated waitlisted
+  token=$(get_token "$HR_ADMIN_USER")
+  [ -z "$token" ] && { err "No token for $HR_ADMIN_USER"; return 1; }
+  draw_date=$(future_date "$date_offset"); start="${draw_date}T08:00:00"; end="${draw_date}T18:00:00"
+  status=""
+  for _ in $(seq 1 30); do
+    body=$(curl -sf -H "Authorization: Bearer $token" \
+      "$BOOKING_URL/draws/$draw_date/lifecycle?locationId=$GL_SEATS_LOCATION&timeSlotStart=$start&timeSlotEnd=$end" 2>/dev/null || true)
+    status=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+    [ "$status" = "Completed" ] && break
+    sleep 2
+  done
+  [ "$status" != "Completed" ] && { err "Seats Draw did not reach Completed (last: ${status:-none})"; return 1; }
+  allocated=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('allocatedCount',0))")
+  waitlisted=$(printf '%s' "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('waitlistedCount',0))")
+  if [ "${allocated:-0}" -lt 1 ]; then
+    err "Seats Draw completed but allocated 0 seats"; return 1
+  fi
+  ok "Seats Draw completed: $allocated seats allocated, $waitlisted waitlisted"
+  if [ "${waitlisted:-0}" -lt 1 ]; then
+    err "Seats Draw left an empty waitlist (expected demand > $GL_SEATS_COUNT seats)"; return 1
+  fi
+  ok "Visible seats waitlist present: $waitlisted employee(s) waiting"
+}
+
 # ── parking ──────────────────────────────────────────────────────────────────
 
 reset_local_demo_state
@@ -1078,6 +1200,28 @@ echo "-- HR display names --"
 verify_hr_display_names
 verify_hr_booking_display_names "$GL_DRAW_DATE"
 
+# ── seats module scenario (PLAT-seats #710) ──────────────────────────────────
+# A separate workday (so a seat request never clashes with a parking request for the same person/
+# time). All 10 employees request one of 8 team seats → 8 allocated, 2 on the waitlist. Same fair
+# Draw, seat-specific location and evidence.
+GL_SEATS_OFFSET=$(next_workday_offset "$((GL_DRAW_OFFSET + 1))")
+GL_SEATS_DATE=$(future_date "$GL_SEATS_OFFSET")
+
+echo ""
+echo "-- Team seats ($GL_SEATS_LOCATION) --"
+configure_gl_seats
+
+echo ""
+echo "-- Seat requests ($GL_SEATS_DATE) --"
+for index in $(seq 1 "$GL_EMPLOYEE_COUNT"); do
+  seed_seat_request "${EMPLOYEE_PREFIX}$index" "$GL_SEATS_OFFSET"
+done
+
+echo ""
+echo "-- Green Logistics seats Draw ($GL_SEATS_DATE, $GL_SEATS_LOCATION 08:00-18:00) --"
+trigger_seats_draw "$GL_SEATS_OFFSET"
+verify_seats_draw "$GL_SEATS_OFFSET"
+
 # ── summary ──────────────────────────────────────────────────────────────────
 
 echo ""
@@ -1090,6 +1234,7 @@ echo "History: earlier Draw on $GL_HISTORY_DATE gave the recent winner an alloca
 echo "Bookings: $GL_BOOKING_COUNT requests for $GL_DRAW_DATE; showcase Draw triggered."
 echo "Draw: company-car takes VIP-01 (Tier-1) at submission; motorcycle takes MOTO-01; the general lottery allocates the scarce slots and leaves a visible waitlist (verified above)."
 echo "Reallocation: one allocated general request was cancelled and the next fair waitlisted driver was promoted (verified above)."
+echo "Seats: $GL_SEATS_COUNT team seats at $GL_SEATS_LOCATION; $GL_EMPLOYEE_COUNT seat requests for $GL_SEATS_DATE drawn — allocations + waitlist (verified above). Parking (primary) is unchanged; Seats is the enabled secondary module."
 echo ""
 echo "Verify:"
 echo "  TOKEN=\$(./tools/dev-auth.sh gl-employee1)"
