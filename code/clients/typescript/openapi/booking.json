@@ -1949,6 +1949,10 @@
           "lastStatusChangedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "resourceType": {
+            "type": "string",
+            "default": "Parking"
           }
         }
       },
@@ -2554,6 +2558,10 @@
           "lastStatusChangedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "resourceType": {
+            "type": "string",
+            "default": "Parking"
           }
         }
       },
@@ -3265,6 +3273,12 @@
           "plannedDepartureTime": {
             "type": "string",
             "format": "date-time"
+          },
+          "resourceType": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
