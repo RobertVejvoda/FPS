@@ -871,6 +871,71 @@ public sealed class SubmitBookingRequestHandlerTests
         PlannedArrivalTime: DateTime.UtcNow.AddDays(1).Date.AddHours(9),
         PlannedDepartureTime: DateTime.UtcNow.AddDays(1).Date.AddHours(17));
 
+    // ── PLAT-seats (#710): seat requests reuse the fair Draw but bypass all parking rules ─────
+
+    [Fact]
+    public async Task Handle_SeatsRequest_NoParkingEligibilityOrVehicle_ReturnsPending()
+    {
+        // A profile that is NOT parking-eligible and has no vehicles must still be able to request
+        // a seat — the only seats gate is an active profile.
+        profileService
+            .Setup(p => p.GetSnapshotAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultProfile with { ParkingEligible = false, Vehicles = [] });
+
+        var result = await handler.Handle(SeatsCommand(), CancellationToken.None);
+
+        Assert.Equal("Pending", result.Status);
+        Assert.Null(result.RejectionCode);
+    }
+
+    [Fact]
+    public async Task Handle_SeatsRequest_PersistsSeatsResourceType_WithoutVehicleFacts()
+    {
+        BookingRequestDto? saved = null;
+        repository.Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(d => saved = d)
+            .Returns(Task.CompletedTask);
+
+        await handler.Handle(SeatsCommand(), CancellationToken.None);
+
+        Assert.NotNull(saved);
+        Assert.Equal("Seats", saved!.ResourceType);
+        // Seats persist no vehicle facts and never the sentinel plate.
+        Assert.Null(saved.VehicleType);
+        Assert.False(saved.VehicleIsElectric);
+        Assert.False(saved.VehicleIsCompanyCar);
+        Assert.False(saved.RequiresAccessibleSpot);
+    }
+
+    [Fact]
+    public async Task Handle_ParkingRequest_StillPersistsParkingResourceType()
+    {
+        BookingRequestDto? saved = null;
+        repository.Setup(r => r.CreateBookingRequestAsync(It.IsAny<BookingRequestDto>()))
+            .Callback<BookingRequestDto>(d => saved = d)
+            .Returns(Task.CompletedTask);
+
+        await handler.Handle(FutureCommand(), CancellationToken.None);
+
+        Assert.Equal("Parking", saved!.ResourceType);
+        Assert.Equal("Sedan", saved.VehicleType);
+    }
+
+    private static SubmitBookingRequestCommand SeatsCommand() => new(
+        TenantId: "tenant-1",
+        RequestorId: Guid.NewGuid().ToString(),
+        FacilityId: Guid.NewGuid().ToString(),
+        LocationId: "GL-TEAMS",
+        // Vehicle fields are ignored for seats.
+        LicensePlate: "N/A",
+        VehicleType: "Sedan",
+        IsElectric: false,
+        RequiresAccessibleSpot: false,
+        IsCompanyCar: false,
+        PlannedArrivalTime: DateTime.UtcNow.AddDays(1).Date.AddHours(9),
+        PlannedDepartureTime: DateTime.UtcNow.AddDays(1).Date.AddHours(17),
+        ResourceType: FPS.Booking.Domain.ResourceType.Seats);
+
     private static SubmitBookingRequestCommand FutureCommand() => new(
         TenantId: "tenant-1",
         RequestorId: Guid.NewGuid().ToString(),

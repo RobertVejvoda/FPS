@@ -96,6 +96,36 @@ public sealed class BookingControllerTests
         mediator.Verify(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // PLAT-seats (#710) — only defined resource types are accepted; Enum.TryParse alone would let
+    // an undefined numeric string like "999" through.
+    [Theory]
+    [InlineData("999")]
+    [InlineData("Desks")]
+    public async Task SubmitBookingRequest_UnknownResourceType_Returns400(string resourceType)
+    {
+        var body = ValidSubmitBody() with { ResourceType = resourceType };
+        var result = await controller.SubmitBookingRequest(body, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        mediator.Verify(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Seats")]
+    [InlineData("seats")]
+    [InlineData("Parking")]
+    public async Task SubmitBookingRequest_KnownResourceType_IsAccepted(string resourceType)
+    {
+        mediator
+            .Setup(m => m.Send(It.IsAny<SubmitBookingRequestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SubmitBookingRequestResult(Guid.NewGuid(), "Pending", null, null));
+
+        var body = ValidSubmitBody() with { ResourceType = resourceType };
+        var result = await controller.SubmitBookingRequest(body, CancellationToken.None);
+
+        Assert.IsType<AcceptedResult>(result);
+    }
+
     [Fact]
     public async Task SubmitBookingRequest_MapsCommandFieldsFromCurrentUser()
     {
