@@ -105,7 +105,11 @@ export function TenantDetailPage() {
                 </div>
                 <div className="plat-card">
                   <h3>Modules</h3>
-                  <NotWired reason="module licensing (PLAT007)" />
+                  <dl className="plat-dl">
+                    <dt>Primary</dt><dd>{d.overview.primaryModule}</dd>
+                    <dt>Enabled</dt><dd>{(d.overview.enabledModules.length > 0 ? d.overview.enabledModules : [d.overview.primaryModule]).join(', ')}</dd>
+                  </dl>
+                  <p className="plat-muted">Module selection only — licensing/billing is out of scope.</p>
                 </div>
               </div>
             )}

@@ -132,3 +132,24 @@ export function defaultRoute(roles: string[]): string {
   if (canAccessAudit(roles)) return '/auditor-workspace';
   return '/profile';
 }
+
+// ── Tenant modules (PLAT007B) ───────────────────────────────────────────────
+// A tenant's product modules. Parking is the default and, today, the only implemented module;
+// Seats is the contract the seats slice (#710) builds on.
+export type TenantModule = 'Parking' | 'Seats';
+
+// Landing route for one module's primary experience (for a tenant user). Parking is the whole
+// tenant app today, so it maps to the role-based default; Seats gets its own surface with #710.
+export function moduleLandingRoute(primaryModule: string, roles: string[]): string {
+  if (primaryModule === 'Seats') return '/seats';
+  return defaultRoute(roles);
+}
+
+// Default landing for a tenant user that honours the primary module — but ONLY when more than one
+// module is enabled. Per PLAT007B a single-module tenant shows no module selector and behaves
+// exactly as before, so a Parking-only tenant (including Green Logistics) always gets the plain
+// role-based defaultRoute. This is the routing contract #710 wires once module data reaches the
+// session and a Seats surface exists.
+export function tenantLandingRoute(roles: string[], primaryModule: string, enabledModules: string[]): string {
+  return enabledModules.length > 1 ? moduleLandingRoute(primaryModule, roles) : defaultRoute(roles);
+}

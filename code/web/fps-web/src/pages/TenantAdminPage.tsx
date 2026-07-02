@@ -216,6 +216,13 @@ export function TenantAdminPage() {
             <Row label="Slug" value={tenantState.tenant.slug} />
             <Row label="Region" value={tenantState.tenant.region} />
             <Row label="Time zone" value={tenantState.tenant.timeZone} />
+            {/* PLAT007B — primary module drives the default landing experience. Only surface the
+                additional-modules row when more than one is enabled (a single-module tenant needs
+                no module selector). */}
+            <Row label="Primary module" value={tenantState.tenant.primaryModule} />
+            {tenantState.tenant.enabledModules.length > 1 && (
+              <Row label="Enabled modules" value={tenantState.tenant.enabledModules.join(', ')} />
+            )}
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <span style={rowLabel}>Lifecycle</span>
               <LifecycleBadge state={tenantState.tenant.lifecycleState} />

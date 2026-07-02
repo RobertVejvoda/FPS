@@ -12,6 +12,10 @@ export type PlatformTenantRow = {
   timeZone: string;
   kind: string;
   lifecycleState: string;
+  // PLAT007B — primary module (default landing / navigation emphasis) and all enabled modules
+  // (primary first), for operator visibility. Business-readable names, e.g. "Parking", "Seats".
+  primaryModule: string;
+  enabledModules: string[];
   createdAt: string;
   updatedAt: string;
 };

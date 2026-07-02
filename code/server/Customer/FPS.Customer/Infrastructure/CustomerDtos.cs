@@ -18,12 +18,18 @@ internal sealed class TenantWorkspaceDto
     public TenantBrandingConfig Branding { get; set; } = new();
     public List<TenantDiscoveryDomain> DiscoveryDomains { get; set; } = [];
     public List<TenantDemoSeedEvent> SeedEvents { get; set; } = [];
+    // PLAT007B — module selection. PrimaryModule defaults to Parking (enum 0), so a tenant
+    // persisted before this field deserialises as Parking. EnabledModules deserialises empty for
+    // those tenants and Restore backfills it to [Parking].
+    public TenantModule PrimaryModule { get; set; } = TenantModule.Parking;
+    public List<TenantModule> EnabledModules { get; set; } = [];
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
     public TenantWorkspace ToDomain() => TenantWorkspace.Restore(
         TenantId, Slug, DisplayName, Region, TimeZone, SupportContacts,
-        Kind, IsResettableSandbox, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, SeedEvents, CreatedAt, UpdatedAt);
+        Kind, IsResettableSandbox, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, SeedEvents, CreatedAt, UpdatedAt,
+        PrimaryModule, EnabledModules);
 
     public static TenantWorkspaceDto FromDomain(TenantWorkspace ws) => new()
     {
@@ -41,6 +47,8 @@ internal sealed class TenantWorkspaceDto
         Branding = ws.Branding,
         DiscoveryDomains = ws.DiscoveryDomains.ToList(),
         SeedEvents = ws.SeedEvents.ToList(),
+        PrimaryModule = ws.PrimaryModule,
+        EnabledModules = ws.EnabledModules.ToList(),
         CreatedAt = ws.CreatedAt,
         UpdatedAt = ws.UpdatedAt,
     };

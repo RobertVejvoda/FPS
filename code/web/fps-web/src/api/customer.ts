@@ -112,6 +112,10 @@ export interface TenantResponse {
   lifecycleState: string;
   supportContacts: TenantContactDto[];
   serviceCollections: Record<string, string>;
+  // PLAT007B — the tenant's primary module (default landing / navigation emphasis) and every
+  // enabled module (primary first). Business-readable names, e.g. "Parking", "Seats".
+  primaryModule: string;
+  enabledModules: string[];
   createdAt: string;
   updatedAt: string;
 }

@@ -155,6 +155,8 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         t.LifecycleState.ToString(),
         t.SupportContacts.Select(c => new ContactDto(c.Name, c.Email, c.Role)).ToList(),
         t.Provisioning.ServiceCollections,
+        t.PrimaryModule.ToString(),
+        t.EnabledModules.Select(m => m.ToString()).ToList(),
         t.CreatedAt, t.UpdatedAt);
 }
 
@@ -177,6 +179,10 @@ public sealed record TenantResponse(
     string LifecycleState,
     IReadOnlyList<ContactDto> SupportContacts,
     IReadOnlyDictionary<string, string> ServiceCollections,
+    // PLAT007B — primary module (default landing / navigation emphasis) and all enabled modules
+    // (primary first). Business-readable module names, e.g. "Parking", "Seats".
+    string PrimaryModule,
+    IReadOnlyList<string> EnabledModules,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
