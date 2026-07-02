@@ -103,9 +103,13 @@ internal static class GreenLogisticsDataset
         new("b8b80008-0008-0008-0008-000000000008", "Petr Novotny",     ["employee"],              null, LocationId, true,  false, false, false,
             [new("gl-veh-008", "7AZ 2284", "car",        IsElectric: false, IsDefault: true)]),
         // Unlucky history — no recent wins, so the highest fair weight going into the draw.
-        new("c9c90009-0009-0009-0009-000000000009", "Lucie Prochazkova",["employee","hr_manager"], null, LocationId, true,  false, false, false,
+        // #9/#10 also carry the operator roles so a provisioned sandbox is self-sufficient. The
+        // local harness instead provisions dedicated role accounts (gl-hr-admin, gl-tenant-admin,
+        // …), so there #9/#10 are plain general drivers — the only intentional difference from the
+        // otherwise identical named-person roster in tools/dev-seed.sh.
+        new("c9c90009-0009-0009-0009-000000000009", "Lenka Maresova",   ["employee","hr_manager"], null, LocationId, true,  false, false, false,
             [new("gl-veh-009", "3BM 9087", "car",        IsElectric: false, IsDefault: true)]),
-        new("d0d00010-0010-0010-0010-000000000010", "Karel Urban",      ["employee","admin"],      null, LocationId, true,  false, false, false,
+        new("d0d00010-0010-0010-0010-000000000010", "Michal Prochazka", ["employee","admin"],      null, LocationId, true,  false, false, false,
             [new("gl-veh-010", "4EH 4451", "car",        IsElectric: false, IsDefault: true)]),
     ];
 

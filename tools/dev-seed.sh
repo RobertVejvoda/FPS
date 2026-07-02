@@ -333,16 +333,23 @@ seed_profile() {
   fi
 }
 
+# Indices 1..10 mirror the provisioning showcase roster
+# (TenantDemoSeedService.GreenLogisticsDataset) exactly — same name, persona, and plate
+# per index — so a provisioned sandbox tells the identical named-person story. The two
+# paths differ only in how operator roles are modelled: provisioning attaches hr_manager
+# to #9 and admin to #10, whereas the local harness provisions dedicated role accounts
+# (gl-hr-admin, gl-tenant-admin, gl-report-viewer, gl-auditor) below, so here #9/#10 are
+# plain general drivers. Indices 11+ are extra generic drivers for the opt-in larger roster.
 display_name_for_index() {
   case "$1" in
     1) echo "Jan Novak" ;;
     2) echo "Petra Svobodova" ;;
-    3) echo "Tomas Dvorak" ;;
-    4) echo "Pavel Cerny" ;;
-    5) echo "Hana Vesela" ;;
+    3) echo "Hana Vesela" ;;
+    4) echo "Tomas Dvorak" ;;
+    5) echo "Pavel Cerny" ;;
     6) echo "Martin Horak" ;;
     7) echo "Jana Kucerova" ;;
-    8) echo "Petr Svoboda" ;;
+    8) echo "Petr Novotny" ;;
     9) echo "Lenka Maresova" ;;
     10) echo "Michal Prochazka" ;;
     11) echo "Veronika Dvorakova" ;;
@@ -367,10 +374,10 @@ display_name_for_index() {
 # Realistic, varied CZ-style plates (digit + two letters + four digits) per employee.
 license_plate_for_index() {
   case "$1" in
-    1) echo "1AB 2345" ;;   2) echo "2SC 4417" ;;   3) echo "3AH 8820" ;;
-    4) echo "4EK 1193" ;;   5) echo "5BL 6628" ;;   6) echo "1AP 3092" ;;
-    7) echo "6CT 7741" ;;   8) echo "2SD 5510" ;;   9) echo "7AZ 2284" ;;
-    10) echo "3BM 9087" ;;  11) echo "4EH 4451" ;;  12) echo "8AK 6673" ;;
+    1) echo "1AB 2345" ;;   2) echo "2SC 4417" ;;   3) echo "5BL 6628" ;;
+    4) echo "3AH 8820" ;;   5) echo "4EK 1193" ;;   6) echo "1AP 3092" ;;
+    7) echo "6CT 7741" ;;   8) echo "7AZ 2284" ;;   9) echo "3BM 9087" ;;
+    10) echo "4EH 4451" ;;  11) echo "2SD 5510" ;;  12) echo "8AK 6673" ;;
     13) echo "1AN 1208" ;;  14) echo "5BX 3390" ;;  15) echo "2SE 7715" ;;
     16) echo "9AT 4462" ;;  17) echo "3BR 8829" ;;  18) echo "4EP 1147" ;;
     19) echo "6CV 5583" ;;  20) echo "7AM 9921" ;;  21) echo "1AS 2034" ;;
@@ -918,10 +925,14 @@ PYEOF
 # reallocation promotes the next fair waitlisted driver (BookingRequestReallocatedEvent).
 # Echoes the general index that was cancelled.
 cancel_first_allocated_general() {
-  local date="$1" index req_id
+  local date="$1" index
   for index in $(general_indices); do
-    req_id=$(cancel_own_allocated_booking "${EMPLOYEE_PREFIX}$index" "$date" 2>/dev/null) || true
-    if [ -n "$req_id" ]; then
+    # Decide on the exit status only. cancel_own_allocated_booking prints diagnostic
+    # ok/err text to stdout even when it fails, so capturing its stdout would mistake a
+    # "no allocated booking" message for a real cancellation. Discarding stdout/stderr and
+    # testing the exit code means only a genuine 200 DELETE (exit 0) is accepted, and the
+    # scan continues past waitlisted general drivers.
+    if cancel_own_allocated_booking "${EMPLOYEE_PREFIX}$index" "$date" >/dev/null 2>&1; then
       echo "$index"
       return 0
     fi
