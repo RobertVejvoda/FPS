@@ -687,6 +687,37 @@ select {
   opacity: 0.8;
 }
 
+/* PLAT008D — platform health strip */
+.health-strip-head { margin-bottom: 4px; }
+.health-strip-head h3 { margin: 0; font-size: 15px; }
+
+.health-card { display: flex; flex-direction: column; }
+.health-card-body { flex: 1; }
+
+.health-source {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.health-pill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.health-ok { background: #dcfce7; border-color: #86efac; color: var(--success); }
+.health-warning { background: #fef9c3; border-color: #fbbf24; color: #92400e; }
+.health-unavailable { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
+.health-not-wired { background: #f1f5f9; border-color: var(--border); color: #475569; }
+
 .plat-access-denied {
   max-width: 560px;
   margin: 64px auto;

@@ -6,6 +6,18 @@ import {
   decideTenantRequest,
   normalizeRequestStatus,
   isDecidable,
+  fetchPlatformUsageStats,
+  fetchSandboxResetEvidence,
+  currentMonthKey,
+  summarizeTenantReadiness,
+  tenantReadinessStatus,
+  summarizeUsage,
+  findSandboxTenant,
+  sandboxFreshnessStatus,
+  formatRelativeAge,
+  type PlatformTenantRow,
+  type PlatformUsageRow,
+  type SandboxResetEvidence,
 } from './platform';
 
 // PLAT008B — the platform directory/detail API maps HTTP outcomes to FetchResult kinds the
@@ -123,5 +135,99 @@ describe('decideTenantRequest', () => {
     vi.stubGlobal('fetch', mockFetch(400, { error: 'Request already decided.' }));
     const r = await decideTenantRequest(cfg, 'r1', 'reject', '');
     expect(r).toEqual({ kind: 'error', status: 400, message: 'Request already decided.' });
+  });
+});
+
+// PLAT008D — platform health strip sources + status normalization.
+
+function tenant(overrides: Partial<PlatformTenantRow>): PlatformTenantRow {
+  return {
+    tenantId: 't', slug: 't', displayName: 'T', region: 'eu', timeZone: 'Europe/Prague',
+    kind: 'Production', lifecycleState: 'Ready', createdAt: '', updatedAt: '', ...overrides,
+  };
+}
+
+describe('currentMonthKey', () => {
+  it('formats the UTC year-month as YYYY-MM', () => {
+    expect(currentMonthKey(new Date('2026-07-02T12:00:00Z'))).toBe('2026-07');
+    expect(currentMonthKey(new Date('2026-01-31T23:59:59Z'))).toBe('2026-01');
+  });
+});
+
+describe('summarizeTenantReadiness / tenantReadinessStatus', () => {
+  it('counts states and only flags Suspended tenants as a warning', () => {
+    const rows = [tenant({ lifecycleState: 'Ready' }), tenant({ lifecycleState: 'Ready' }), tenant({ lifecycleState: 'Draft' })];
+    const s = summarizeTenantReadiness(rows);
+    expect(s).toMatchObject({ total: 3, ready: 2, suspended: 0 });
+    expect(s.byState).toEqual({ Ready: 2, Draft: 1 });
+    expect(tenantReadinessStatus(s)).toBe('ok');
+  });
+
+  it('warns when any tenant is Suspended', () => {
+    const s = summarizeTenantReadiness([tenant({ lifecycleState: 'Ready' }), tenant({ lifecycleState: 'Suspended' })]);
+    expect(s.suspended).toBe(1);
+    expect(tenantReadinessStatus(s)).toBe('warning');
+  });
+
+  it('an empty directory is OK, not a warning', () => {
+    expect(tenantReadinessStatus(summarizeTenantReadiness([]))).toBe('ok');
+  });
+});
+
+describe('summarizeUsage', () => {
+  it('sums activity across tenants and counts tenants with any activity', () => {
+    const rows: PlatformUsageRow[] = [
+      { tenantId: 'a', period: '2026-07', activeRequestorCount: 3, bookingRequestCount: 5, drawRunCount: 1, allocatedCount: 0, rejectedCount: 0, cancelledCount: 0, expiredCount: 0, noShowCount: 0, usedCount: 0, lastUpdatedAt: '' },
+      { tenantId: 'b', period: '2026-07', activeRequestorCount: 0, bookingRequestCount: 0, drawRunCount: 0, allocatedCount: 0, rejectedCount: 0, cancelledCount: 0, expiredCount: 0, noShowCount: 0, usedCount: 0, lastUpdatedAt: '' },
+    ];
+    expect(summarizeUsage(rows)).toEqual({ activeRequestors: 3, bookingRequests: 5, drawRuns: 1, tenantsWithActivity: 1 });
+  });
+});
+
+describe('findSandboxTenant', () => {
+  it('finds the tenant whose kind is Sandbox (no hard-coded slug)', () => {
+    const rows = [tenant({ tenantId: 'prod', kind: 'Production' }), tenant({ tenantId: 'gl', kind: 'Sandbox' })];
+    expect(findSandboxTenant(rows)?.tenantId).toBe('gl');
+  });
+  it('returns null when no sandbox tenant exists', () => {
+    expect(findSandboxTenant([tenant({ kind: 'Production' })])).toBeNull();
+  });
+});
+
+describe('sandboxFreshnessStatus', () => {
+  const base: SandboxResetEvidence = { tenantId: 'gl', status: 'Succeeded', source: 'manual', startedAt: '', completedAt: '', snapshotVersion: 'gl-v1', failureReason: null };
+  it('OK only for a Succeeded reset', () => {
+    expect(sandboxFreshnessStatus(base)).toBe('ok');
+    expect(sandboxFreshnessStatus({ ...base, status: 'Failed' })).toBe('warning');
+    expect(sandboxFreshnessStatus({ ...base, status: 'Unavailable' })).toBe('warning');
+  });
+});
+
+describe('formatRelativeAge', () => {
+  const now = new Date('2026-07-10T00:00:00Z');
+  it('renders coarse day-level ages', () => {
+    expect(formatRelativeAge('2026-07-10T00:00:00Z', now)).toBe('today');
+    expect(formatRelativeAge('2026-07-09T00:00:00Z', now)).toBe('yesterday');
+    expect(formatRelativeAge('2026-07-07T00:00:00Z', now)).toBe('3 days ago');
+    expect(formatRelativeAge('not-a-date', now)).toBe('unknown');
+  });
+});
+
+describe('fetchPlatformUsageStats', () => {
+  it('requests the month-scoped platform usage endpoint with the bearer token', async () => {
+    const fetchMock = mockFetch(200, []);
+    vi.stubGlobal('fetch', fetchMock);
+    await fetchPlatformUsageStats(cfg, '2026-07');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api/datahub/platform/usage-stats?month=2026-07');
+    expect(init.headers.Authorization).toBe('Bearer plat-token');
+  });
+});
+
+describe('fetchSandboxResetEvidence', () => {
+  it('maps 404 (no reset recorded) to a not-found error the card treats as no-evidence', async () => {
+    vi.stubGlobal('fetch', mockFetch(404, {}));
+    const r = await fetchSandboxResetEvidence(cfg, 'gl');
+    expect(r).toEqual({ kind: 'error', status: 404, message: 'Not found.' });
   });
 });
