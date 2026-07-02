@@ -30,7 +30,7 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
             return BadRequest(new { error = $"Unknown tenant kind: {request.Kind}" });
 
         // PLAT007B — primary module defaults to Parking; enabled modules default to just the primary.
-        if (!Enum.TryParse<TenantModule>(request.PrimaryModule ?? nameof(TenantModule.Parking), ignoreCase: true, out var primaryModule))
+        if (!TryParseModule(request.PrimaryModule ?? nameof(TenantModule.Parking), out var primaryModule))
             return BadRequest(new { error = $"Unknown module: {request.PrimaryModule}" });
         List<TenantModule>? enabledModules = null;
         if (request.EnabledModules is { Count: > 0 })
@@ -38,7 +38,7 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
             enabledModules = [];
             foreach (var name in request.EnabledModules)
             {
-                if (!Enum.TryParse<TenantModule>(name, ignoreCase: true, out var m))
+                if (!TryParseModule(name, out var m))
                     return BadRequest(new { error = $"Unknown module: {name}" });
                 enabledModules.Add(m);
             }
@@ -53,6 +53,11 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
         // Location points at the tenant-scoped read on TenantController ("Tenant" controller, "Get" action).
         return CreatedAtAction("Get", "Tenant", new { tenantId = tenant!.TenantId }, ToResponse(tenant));
     }
+
+    // Enum.TryParse accepts undefined numeric strings such as "999", so pair it with Enum.IsDefined
+    // to allow only the supported module names/values (Parking, Seats).
+    private static bool TryParseModule(string value, out TenantModule module) =>
+        Enum.TryParse(value, ignoreCase: true, out module) && Enum.IsDefined(module);
 
     private static TenantResponse ToResponse(TenantWorkspace t) => new(
         t.TenantId, t.Slug, t.DisplayName, t.Region, t.TimeZone,

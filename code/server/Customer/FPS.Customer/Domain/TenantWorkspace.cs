@@ -60,6 +60,12 @@ public sealed class TenantWorkspace
     /// </summary>
     public string? SetModules(TenantModule primary, IReadOnlyList<TenantModule>? enabled)
     {
+        // Reject undefined enum values (e.g. a numeric (TenantModule)999 that Enum.TryParse would
+        // otherwise accept) so no caller — controller or not — can persist an unsupported module.
+        if (!Enum.IsDefined(primary)) return $"Unknown module: {(int)primary}.";
+        foreach (var module in enabled ?? [])
+            if (!Enum.IsDefined(module)) return $"Unknown module: {(int)module}.";
+
         var normalized = NormalizeModules(primary, enabled, out var error);
         if (error is not null) return error;
         enabledModules.Clear();

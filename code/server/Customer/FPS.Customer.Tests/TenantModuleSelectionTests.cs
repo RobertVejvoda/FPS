@@ -72,6 +72,31 @@ public sealed class TenantModuleSelectionTests
         Assert.Equal([TenantModule.Parking], tenant.EnabledModules);
     }
 
+    [Fact]
+    public void SetModules_UndefinedPrimary_ReturnsError_AndDoesNotMutate()
+    {
+        var tenant = new TenantWorkspace { TenantId = "t", Slug = "t" };
+
+        // A numeric value that Enum.TryParse would accept but is not a defined module.
+        var error = tenant.SetModules((TenantModule)999, [(TenantModule)999]);
+
+        Assert.NotNull(error);
+        Assert.Contains("Unknown module", error);
+        Assert.Equal(TenantModule.Parking, tenant.PrimaryModule);
+        Assert.Equal([TenantModule.Parking], tenant.EnabledModules);
+    }
+
+    [Fact]
+    public void SetModules_UndefinedInEnabled_ReturnsError()
+    {
+        var tenant = new TenantWorkspace { TenantId = "t", Slug = "t" };
+
+        var error = tenant.SetModules(TenantModule.Parking, [TenantModule.Parking, (TenantModule)42]);
+
+        Assert.NotNull(error);
+        Assert.Contains("Unknown module", error);
+    }
+
     // ── Persistence backfill ──────────────────────────────────────────────────
 
     [Fact]
@@ -141,5 +166,17 @@ public sealed class TenantModuleSelectionTests
         Assert.Null(tenant);
         Assert.NotNull(error);
         Assert.Contains("primary module", error);
+    }
+
+    [Fact]
+    public async Task Create_UndefinedModule_FailsWithoutPersisting()
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "bad", "Bad Co", "eu", "Europe/London", [], CancellationToken.None,
+            primaryModule: (TenantModule)999);
+
+        Assert.Null(tenant);
+        Assert.NotNull(error);
+        Assert.Contains("Unknown module", error);
     }
 }
