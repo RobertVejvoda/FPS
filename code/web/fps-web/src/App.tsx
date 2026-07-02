@@ -19,6 +19,9 @@ import {
   isPlatformPlane,
 } from './auth/roles';
 import { PlatformShell } from './platform/PlatformShell';
+import { TenantModulesProvider, useTenantModules } from './tenant/TenantModulesContext';
+import { SeatsPage } from './pages/SeatsPage';
+import { SeatOperationsPage } from './pages/SeatOperationsPage';
 import { SessionPage } from './pages/SessionPage';
 import { OidcCallbackPage } from './pages/OidcCallbackPage';
 import { BookingsPage } from './pages/BookingsPage';
@@ -145,6 +148,8 @@ function AppFooter() {
 
 function Shell() {
   const { isConfigured, logout, branding, roles } = useAuth();
+  // PLAT-seats (#710) — only surface seat nav entries when the tenant actually enables Seats.
+  const { hasSeats } = useTenantModules();
 
   if (!isConfigured) return <Navigate to="/session" replace />;
   // A platform-plane identity has no tenant surfaces — send it to the operator console.
@@ -152,10 +157,12 @@ function Shell() {
 
   const navItems = [
     canAccessBookings(roles) && { to: '/bookings', label: 'My Spots' },
+    canAccessBookings(roles) && hasSeats && { to: '/seats', label: 'Team Seats' },
     canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
     canAccessParkingMap(roles) && { to: '/parking-map', label: 'Parking Map' },
     canAccessHrOperations(roles) && { to: '/hr-operations', label: 'Parking Requests' },
+    canAccessHrOperations(roles) && hasSeats && { to: '/seat-operations', label: 'Seat Requests' },
     canAccessHrOperations(roles) && { to: '/hr-draw-history', label: 'Draws' },
     canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
     canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
@@ -202,6 +209,8 @@ function Shell() {
           <Route path="/bookings/history" element={<Guard allowed={canAccessBookings(roles)}><BookingHistoryPage /></Guard>} />
           <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
           <Route path="/bookings/:requestId" element={<Guard allowed={canAccessBookings(roles)}><BookingDetailPage /></Guard>} />
+          <Route path="/seats" element={<Guard allowed={canAccessBookings(roles) && hasSeats}><SeatsPage /></Guard>} />
+          <Route path="/seat-operations" element={<Guard allowed={canAccessHrOperations(roles) && hasSeats}><SeatOperationsPage /></Guard>} />
           <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
           <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
           <Route path="/reporting" element={<Guard allowed={canAccessReporting(roles)}><ReportingPage /></Guard>} />
@@ -231,7 +240,7 @@ export function App() {
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/pilot" element={<PilotPage />} />
         <Route path="/platform/*" element={<PlatformShell />} />
-        <Route path="/*" element={<Shell />} />
+        <Route path="/*" element={<TenantModulesProvider><Shell /></TenantModulesProvider>} />
       </Routes>
     </BrowserRouter>
   );

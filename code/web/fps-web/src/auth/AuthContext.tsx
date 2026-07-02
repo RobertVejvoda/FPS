@@ -30,6 +30,8 @@ type AuthState = {
   apiBaseUrl: string;
   bearerToken: string;
   roles: string[];
+  // PLAT-seats (#710) — the signed-in tenant, so the app can look up which modules the tenant runs.
+  tenantId: string;
   isConfigured: boolean;
   devFallbackEnabled: boolean;
   branding: BrandingConfig;
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [apiBaseUrl, setApiBaseUrl] = useState('');
   const [bearerToken, setBearerToken] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
+  const [tenantId, setTenantId] = useState('');
   const [devFallbackEnabled, setDevFallbackEnabled] = useState(false);
   const [branding, setBranding] = useState<BrandingConfig>(DEFAULT_BRANDING);
   const [environment, setEnvironment] = useState('');
@@ -130,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (result.kind === 'ok') {
               setBearerToken(user.access_token);
               setRoles(result.data.roles as string[]);
+              setTenantId((result.data.tenantId as string) ?? "");
               setPhase('authenticated');
             } else if (result.kind === 'unreachable') {
               setPhaseError(result.message);
@@ -159,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setApiBaseUrl(storedBase);
               setBearerToken(storedToken);
               setRoles(result.data.roles as string[]);
+              setTenantId((result.data.tenantId as string) ?? "");
               setPhase('authenticated');
               return;
             }
@@ -185,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result.kind === 'ok') {
           setBearerToken(user.access_token);
           setRoles(result.data.roles as string[]);
+              setTenantId((result.data.tenantId as string) ?? "");
           setPhase('authenticated');
         } else if (result.kind === 'unreachable') {
           setPhaseError(result.message);
@@ -238,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await fetchMe({ apiBaseUrl: normalizedBase, bearerToken: normalizedToken });
     if (result.kind === 'ok') {
       setRoles(result.data.roles as string[]);
+              setTenantId((result.data.tenantId as string) ?? "");
       setPhase('authenticated');
     } else if (result.kind === 'unreachable') {
       setPhaseError(result.message);
@@ -251,6 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearCredentials();
     setBearerToken('');
     setRoles([]);
+    setTenantId('');
     setApiBaseUrl(configRef.current?.apiBaseUrl ?? '');
     setPhase('unauthenticated');
   }, []);
@@ -262,6 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiBaseUrl,
       bearerToken,
       roles,
+      tenantId,
       isConfigured: phase === 'authenticated',
       devFallbackEnabled,
       branding,
@@ -275,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       save,
       clear,
     }),
-    [phase, phaseError, apiBaseUrl, bearerToken, roles, devFallbackEnabled, branding, environment, simulationEnabled, appVersion, turnstileSiteKey, demoUrl, login, logout, save, clear],
+    [phase, phaseError, apiBaseUrl, bearerToken, roles, tenantId, devFallbackEnabled, branding, environment, simulationEnabled, appVersion, turnstileSiteKey, demoUrl, login, logout, save, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

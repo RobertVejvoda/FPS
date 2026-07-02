@@ -33,6 +33,30 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         }
     }
 
+    // PLAT-seats (#710) — module selection for the tenant app. Any authenticated member of the
+    // tenant may read which modules their tenant runs (the employee UI needs this to decide whether
+    // to show a module switch), so this is intentionally broader than RequireTenantAdmin — but a
+    // member can only read their OWN tenant's modules. No PII; just Parking/Seats.
+    [HttpGet("/tenants/{tenantId}/modules")]
+    public async Task<IActionResult> GetModules(string tenantId, CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated) return Unauthorized();
+        if (!string.Equals(currentUser.TenantId, tenantId, StringComparison.Ordinal)) return Forbid();
+
+        try
+        {
+            var tenant = await service.GetAsync(tenantId, ct);
+            if (tenant is null) return NotFound();
+            return Ok(new TenantModulesResponse(
+                tenant.PrimaryModule.ToString(),
+                tenant.EnabledModules.Select(m => m.ToString()).ToList()));
+        }
+        catch (ArgumentException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpPut("/tenants/{tenantId}")]
     [RequireTenantAdmin]
     public async Task<IActionResult> Update(string tenantId, [FromBody] UpdateTenantRequest request, CancellationToken ct)
@@ -185,6 +209,9 @@ public sealed record TenantResponse(
     IReadOnlyList<string> EnabledModules,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+// PLAT-seats (#710) — the tenant's module selection for the tenant app UI.
+public sealed record TenantModulesResponse(string PrimaryModule, IReadOnlyList<string> EnabledModules);
 
 public sealed record ProvisioningResponse(
     string TenantId,

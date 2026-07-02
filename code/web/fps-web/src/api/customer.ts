@@ -152,6 +152,31 @@ export async function fetchTenant(
   }
 }
 
+// PLAT-seats (#710) — which modules the signed-in tenant runs, so the tenant app can decide
+// whether to show a module switch (only when more than one module is enabled). Readable by any
+// authenticated member of the tenant.
+export interface TenantModulesResponse {
+  primaryModule: string;
+  enabledModules: string[];
+}
+
+export async function fetchTenantModules(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  tenantId: string,
+): Promise<FetchResult<TenantModulesResponse>> {
+  if (!apiBaseUrl || !bearerToken || !tenantId) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/tenants/${encodeURIComponent(tenantId)}/modules`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants/{tenantId}/modules returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as TenantModulesResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 // Tenant-level parking bootstrap — used by the Configuration page (#477)
 // to auto-discover known locations instead of asking HR to type a Location
 // id into a free-text box.
