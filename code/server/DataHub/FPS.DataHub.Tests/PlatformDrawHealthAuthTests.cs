@@ -129,6 +129,8 @@ public sealed class PlatformDrawHealthAuthTests : IClassFixture<WebApplicationFa
         Assert.Contains("\"failedCount\":1", body);
         Assert.Contains("\"stuckCount\":1", body);
         Assert.Contains("\"completedCount\":1", body);
+        Assert.Contains("\"hasEvidence\":true", body);
+        Assert.Contains("\"stale\":false", body);
         // Aggregate only — never a draw attempt id, tenant/location id, actor, or raw failure text.
         Assert.DoesNotContain("d-fail", body);
         Assert.DoesNotContain("seed-only-reason", body);

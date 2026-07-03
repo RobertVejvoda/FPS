@@ -249,23 +249,23 @@ function DrawHealthCard() {
     <HealthCard title="Draw health" status={status} source="DataHub draw history">
       {state.kind === 'loading' && <p className="plat-muted">Checking recent draws…</p>}
       {state.kind === 'unavailable' && <p className="plat-muted">Draw health is unavailable right now.</p>}
-      {state.kind === 'ok' && (() => {
+      {state.kind === 'ok' && !state.data.hasEvidence && (
+        <p className="plat-muted">No draw projection evidence recorded yet — draw health can&rsquo;t be confirmed.</p>
+      )}
+      {state.kind === 'ok' && state.data.hasEvidence && (() => {
         const d = state.data;
-        const total = d.completedCount + d.failedCount + d.runningCount;
-        const clean = d.failedCount === 0 && d.stuckCount === 0;
+        const clean = d.failedCount === 0 && d.stuckCount === 0 && !d.stale;
         return (
           <p className="plat-muted">
-            {total === 0
-              ? `No draws recorded in the last ${d.windowDays} days.`
-              : (
-                <>
-                  Last {d.windowDays}d: <strong>{d.completedCount}</strong> completed
-                  {d.failedCount > 0 ? <> · <strong>{d.failedCount}</strong> failed</> : null}
-                  {d.stuckCount > 0 ? <> · <strong>{d.stuckCount}</strong> stuck</> : null}
-                  {clean ? '. No failed or stuck draws.' : ' — needs attention.'}
-                </>
-              )}
-            {d.lastActivityAt ? <> Last draw activity {formatRelativeAge(d.lastActivityAt)}.</> : null}
+            Last {d.windowDays}d: <strong>{d.completedCount}</strong> completed
+            {d.failedCount > 0 ? <> · <strong>{d.failedCount}</strong> failed</> : null}
+            {d.stuckCount > 0 ? <> · <strong>{d.stuckCount}</strong> stuck (any age)</> : null}
+            {clean
+              ? '. No failed or stuck draws.'
+              : d.stale && d.failedCount === 0 && d.stuckCount === 0
+                ? ' — no recent draw activity; projection may be stale.'
+                : ' — needs attention.'}
+            {d.lastActivityAt ? <> Last activity {formatRelativeAge(d.lastActivityAt)}.</> : null}
           </p>
         );
       })()}

@@ -33,35 +33,53 @@ public sealed class PlatformDrawHealthController(DataHubDbContext db) : Controll
         var since = now.AddDays(-days).UtcDateTime;
         var stuckBefore = now.Subtract(StuckThreshold).UtcDateTime;
 
-        // Consider draws that saw activity within the window (projection freshness is LastUpdatedAt).
-        var recent = db.DrawHistory.AsNoTracking().Where(d => d.LastUpdatedAt >= since);
+        var all = db.DrawHistory.AsNoTracking();
 
+        // Whether the projection has ANY draw evidence at all. When false, draw health cannot be
+        // proven, and the strip shows "not wired" rather than a false green.
+        var hasEvidence = await all.AnyAsync(ct);
+
+        // Recent outcome counts (projection freshness is LastUpdatedAt).
+        var recent = all.Where(d => d.LastUpdatedAt >= since);
         var completedCount = await recent.CountAsync(d => d.Status == "Completed", ct);
         var failedCount = await recent.CountAsync(d => d.Status == "Failed", ct);
-        var runningCount = await recent.CountAsync(d => d.Status == "Running", ct);
-        // Stuck: still Running (never completed/failed) and started long enough ago to be abnormal.
-        var stuckCount = await recent.CountAsync(
+
+        // Running / stuck are NOT window-filtered: a draw that started but never completed is a red
+        // flag no matter how long ago — filtering it out by the recent window would hide it.
+        var runningCount = await all.CountAsync(d => d.Status == "Running" && d.CompletedAt == null, ct);
+        var stuckCount = await all.CountAsync(
             d => d.Status == "Running" && d.CompletedAt == null && d.StartedAt != null && d.StartedAt < stuckBefore, ct);
 
-        var lastFailureAt = await db.DrawHistory.AsNoTracking()
+        var lastFailureAt = await all
             .Where(d => d.Status == "Failed" && d.CompletedAt != null)
             .OrderByDescending(d => d.CompletedAt)
             .Select(d => (DateTime?)d.CompletedAt)
             .FirstOrDefaultAsync(ct);
 
-        var lastActivityAt = await db.DrawHistory.AsNoTracking()
+        var lastActivityAt = await all
             .OrderByDescending(d => d.LastUpdatedAt)
             .Select(d => (DateTimeOffset?)d.LastUpdatedAt)
             .FirstOrDefaultAsync(ct);
 
+        // Stale: evidence exists but nothing has updated within the window, so freshness cannot be
+        // shown as healthy — the strip surfaces it instead of a green OK.
+        var stale = hasEvidence && (lastActivityAt is null || lastActivityAt.Value.UtcDateTime < since);
+
         return Ok(new DrawHealthDto(
-            days, completedCount, failedCount, runningCount, stuckCount, lastFailureAt, lastActivityAt));
+            days, hasEvidence, stale, completedCount, failedCount, runningCount, stuckCount, lastFailureAt, lastActivityAt));
     }
 }
 
-/// <summary>Aggregate-only Draw health over a recent window. No PII, ids, or raw failure text.</summary>
+/// <summary>
+/// Aggregate-only Draw health over a recent window. No PII, ids, or raw failure text.
+/// HasEvidence=false → no draw projection rows at all (health can't be proven → not wired).
+/// Stale=true → evidence exists but nothing updated within the window (freshness can't be proven).
+/// Neither state may render as a healthy green.
+/// </summary>
 public sealed record DrawHealthDto(
     int WindowDays,
+    bool HasEvidence,
+    bool Stale,
     int CompletedCount,
     int FailedCount,
     int RunningCount,

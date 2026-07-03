@@ -183,6 +183,10 @@ export const fetchSandboxResetEvidence = (cfg: ApiClientConfig, tenantId: string
 // Counts only, no tenant/location/draw ids or raw failure text.
 export type PlatformDrawHealth = {
   windowDays: number;
+  // No draw projection rows at all → health can't be proven (shown as "not wired", never green).
+  hasEvidence: boolean;
+  // Evidence exists but nothing updated within the window → freshness can't be proven (never green).
+  stale: boolean;
   completedCount: number;
   failedCount: number;
   runningCount: number;
@@ -195,9 +199,12 @@ export type PlatformDrawHealth = {
 export const fetchPlatformDrawHealth = (cfg: ApiClientConfig, windowDays = 7) =>
   getJson<PlatformDrawHealth>(cfg, `/datahub/platform/draw-health?windowDays=${windowDays}`);
 
-// Recent draw failures or stuck/incomplete draws are the red flags; everything else is OK.
+// Never a false green: missing draw evidence is "not wired", stale/failed/stuck are "warning", and
+// only fresh, clean evidence is "ok".
 export function drawHealthStatus(h: PlatformDrawHealth): HealthStatus {
-  return h.failedCount > 0 || h.stuckCount > 0 ? 'warning' : 'ok';
+  if (!h.hasEvidence) return 'not-wired';
+  if (h.failedCount > 0 || h.stuckCount > 0 || h.stale) return 'warning';
+  return 'ok';
 }
 
 // Current calendar month in the ledger's YYYY-MM period key, in UTC to match the server.
