@@ -179,6 +179,27 @@ export const fetchPlatformUsageStats = (cfg: ApiClientConfig, month: string) =>
 export const fetchSandboxResetEvidence = (cfg: ApiClientConfig, tenantId: string) =>
   getJson<SandboxResetEvidence>(cfg, `/platform/tenants/${encodeURIComponent(tenantId)}/reset-sandbox`);
 
+// PLAT008E — aggregate Draw health for the operator health strip (DataHub, platform-role gated).
+// Counts only, no tenant/location/draw ids or raw failure text.
+export type PlatformDrawHealth = {
+  windowDays: number;
+  completedCount: number;
+  failedCount: number;
+  runningCount: number;
+  stuckCount: number;
+  lastFailureAt: string | null;
+  lastActivityAt: string | null;
+};
+
+// GET /datahub/platform/draw-health — all platform roles may read (auditor included).
+export const fetchPlatformDrawHealth = (cfg: ApiClientConfig, windowDays = 7) =>
+  getJson<PlatformDrawHealth>(cfg, `/datahub/platform/draw-health?windowDays=${windowDays}`);
+
+// Recent draw failures or stuck/incomplete draws are the red flags; everything else is OK.
+export function drawHealthStatus(h: PlatformDrawHealth): HealthStatus {
+  return h.failedCount > 0 || h.stuckCount > 0 ? 'warning' : 'ok';
+}
+
 // Current calendar month in the ledger's YYYY-MM period key, in UTC to match the server.
 export function currentMonthKey(now: Date = new Date()): string {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;

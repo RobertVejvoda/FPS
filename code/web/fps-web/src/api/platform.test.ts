@@ -15,9 +15,12 @@ import {
   findSandboxTenant,
   sandboxFreshnessStatus,
   formatRelativeAge,
+  drawHealthStatus,
+  fetchPlatformDrawHealth,
   type PlatformTenantRow,
   type PlatformUsageRow,
   type SandboxResetEvidence,
+  type PlatformDrawHealth,
 } from './platform';
 
 // PLAT008B — the platform directory/detail API maps HTTP outcomes to FetchResult kinds the
@@ -202,6 +205,31 @@ describe('sandboxFreshnessStatus', () => {
     expect(sandboxFreshnessStatus(base)).toBe('ok');
     expect(sandboxFreshnessStatus({ ...base, status: 'Failed' })).toBe('warning');
     expect(sandboxFreshnessStatus({ ...base, status: 'Unavailable' })).toBe('warning');
+  });
+});
+
+// PLAT008E — draw health status derivation + fetcher path.
+describe('drawHealthStatus', () => {
+  const base: PlatformDrawHealth = { windowDays: 7, completedCount: 5, failedCount: 0, runningCount: 0, stuckCount: 0, lastFailureAt: null, lastActivityAt: null };
+  it('OK when there are no failed or stuck draws', () => {
+    expect(drawHealthStatus(base)).toBe('ok');
+    expect(drawHealthStatus({ ...base, completedCount: 0 })).toBe('ok');
+    expect(drawHealthStatus({ ...base, runningCount: 2 })).toBe('ok'); // running (not yet stuck) is fine
+  });
+  it('warns on any failed or stuck draw', () => {
+    expect(drawHealthStatus({ ...base, failedCount: 1 })).toBe('warning');
+    expect(drawHealthStatus({ ...base, stuckCount: 1 })).toBe('warning');
+  });
+});
+
+describe('fetchPlatformDrawHealth', () => {
+  it('requests the platform draw-health endpoint with the window and bearer token', async () => {
+    const fetchMock = mockFetch(200, { windowDays: 7, completedCount: 3, failedCount: 0, runningCount: 0, stuckCount: 0, lastFailureAt: null, lastActivityAt: null });
+    vi.stubGlobal('fetch', fetchMock);
+    await fetchPlatformDrawHealth(cfg, 14);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api/datahub/platform/draw-health?windowDays=14');
+    expect(init.headers.Authorization).toBe('Bearer plat-token');
   });
 });
 
