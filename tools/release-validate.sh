@@ -5,12 +5,11 @@
 # pass/fail evidence summary you can paste into the Release 1 tracking issue (#388), and
 # documents (but does not execute) the NAS / Cloudflare HOSTED path.
 #
-# This script only ORCHESTRATES the existing gates — it does not re-implement checks:
-#   • ./tools/validate.sh                     .NET build + every server test suite
-#                                             (DataHub projections, Draw, notifications,
-#                                              reports, audit, and the platform-health
-#                                              endpoints are all covered by their tests)
-#   • code/web/fps-web  typecheck + build     the web app (not in CI — validated here)
+# It only ORCHESTRATES the existing gates — it never re-implements a check.
+#
+# DEFAULT PATH IS DOCKER-ONLY. A clean checkout runs the Release 1 gate with only Docker
+# Engine + Compose on the host (plus curl + python3, standard on macOS/Linux). It does NOT
+# require host .NET, Dapr, or Node SDKs. The default gate validates the running product:
 #   • ./tools/start-container-stack.sh --seed  container stack health + auth/OIDC + Green
 #                                             Logistics seed (draw / waitlist / reallocation
 #                                             + HR names) + booking→notification→audit E2E
@@ -18,15 +17,24 @@
 #   • ./tools/smoke-gateway-health.sh          per-service health through the Envoy gateway
 #   • seeded-state area probes                 reports / audit / notifications / draw outcomes
 #
+# HOST-SDK DEVELOPER CHECKS ARE OPT-IN. Server unit tests (./tools/validate.sh, needs host
+# .NET) and the web typecheck+build (code/web/fps-web, needs host Node/npm) are NOT part of
+# the Docker-only release gate — they are a developer-workstation gate, also enforced by CI.
+# Add them alongside the Docker gate with --with-host-tests, or run them alone with --quick.
+#
 # Evidence: written to release-evidence-<UTC-timestamp>.md (git-ignored; tokens never written).
 # No secrets or environment-specific values are stored.
 #
 # Usage:
-#   ./tools/release-validate.sh                LOCAL / container gate (default). Runs everything.
-#   ./tools/release-validate.sh --quick        Fast gate: unit + web only (skips the container stack).
-#   ./tools/release-validate.sh --skip-unit    Skip ./tools/validate.sh (e.g. already run in CI).
-#   ./tools/release-validate.sh --hosted       Print the NAS / Cloudflare hosted runbook and exit
-#                                              (documented steps to run ON the NAS host).
+#   ./tools/release-validate.sh                    Docker-only Release 1 gate (default): container
+#                                                  stack + seed + E2E + gateway health + probes.
+#   ./tools/release-validate.sh --with-host-tests  Also run host-SDK checks (.NET server tests +
+#                                                  Node web build) alongside the Docker-only gate.
+#   ./tools/release-validate.sh --quick            Host-SDK developer checks only (.NET tests +
+#                                                  Node web build); skips the container stack.
+#   ./tools/release-validate.sh --skip-unit        Skip ./tools/validate.sh where host tests run.
+#   ./tools/release-validate.sh --hosted           Print the NAS / Cloudflare hosted runbook and
+#                                                  exit (documented steps to run ON the NAS host).
 #   ./tools/release-validate.sh --help
 #
 # Exit code: 0 when there are no BLOCKER failures; 1 when any blocker failed.
@@ -51,12 +59,16 @@ DEV_PASSWORD="${FPS_DEV_PASSWORD:-Dev1234!}"
 MODE="local"
 QUICK=0
 SKIP_UNIT=0
+WITH_HOST_TESTS=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --hosted) MODE="hosted" ;;
     --quick) QUICK=1 ;;
+    --with-host-tests) WITH_HOST_TESTS=1 ;;
     --skip-unit) SKIP_UNIT=1 ;;
-    --help|-h) sed -n '2,48p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    # Print only the leading comment header (stop at the first non-comment line) so --help never
+    # bleeds into implementation code, regardless of how long the header grows.
+    --help|-h) awk 'NR==1{next} /^#/{s=$0; sub(/^#[[:space:]]?/,"",s); print s; next} {exit}' "$0"; exit 0 ;;
     *) echo "Unknown flag: $1 (see --help)"; exit 1 ;;
   esac
   shift
@@ -161,61 +173,78 @@ Seeding a hosted environment is a separate, credentialed follow-up.
 RUNBOOK
 }
 
+# ── host-SDK developer checks (OPT-IN; require host .NET / Node — not part of the Docker gate) ──
+run_host_checks() {
+  # Server build + every suite (DataHub/Draw/notifications/reports/audit/platform-health tests).
+  if [ "$SKIP_UNIT" = "0" ]; then
+    run_gate "Server tests (validate.sh)" "requires host .NET SDK — run ./tools/validate.sh and read the failing suite" ./tools/validate.sh
+  else
+    record "Server tests (validate.sh)" SKIP "skipped via --skip-unit"
+  fi
+  # Web app typecheck + build (fps-web is not in CI; needs host Node/npm).
+  run_gate "Web app (typecheck+build)" "requires host Node/npm — cd code/web/fps-web && npm run typecheck && npm run build" \
+    bash -c 'cd code/web/fps-web && npm run typecheck && npm run build'
+}
+
 # ── main ──────────────────────────────────────────────────────────────────────
 if [ "$MODE" = "hosted" ]; then
   print_hosted_runbook
   exit 0
 fi
 
-echo "== FairSpot Release 1 validation gate (LOCAL / container) =="
+echo "== FairSpot Release 1 validation gate (LOCAL / container — Docker-only default) =="
 echo "Evidence → $EVIDENCE_FILE"
 
-# 1. Host prerequisites (Docker only for the container path).
-run_gate "Prerequisites" "install Docker Engine + Compose v2" bash -c 'command -v docker >/dev/null && docker compose version >/dev/null 2>&1'
+# Host prerequisites. The default gate is Docker-only: Docker Engine + Compose (curl + python3
+# are standard on macOS/Linux). It does NOT require host .NET / Dapr / Node SDKs.
+run_gate "Prerequisites" "install Docker Engine + Compose v2 (Docker-only path; no host .NET/Dapr/Node)" \
+  bash -c 'command -v docker >/dev/null && docker compose version >/dev/null 2>&1 && command -v curl >/dev/null && command -v python3 >/dev/null'
 
-# 2. Server unit gate — build + every test suite (covers DataHub/Draw/notifications/reports/audit/platform-health).
-if [ "$SKIP_UNIT" = "0" ]; then
-  run_gate "Server tests (validate.sh)" "run ./tools/validate.sh and read the failing suite" ./tools/validate.sh
+if [ "$QUICK" = "1" ]; then
+  # Developer host-SDK quick path: host .NET/Node checks only, no container stack.
+  run_host_checks
+  record "Container stack + seed + E2E" SKIP "skipped in --quick (host-only developer path) — run the default Docker-only gate before release"
+  record "Gateway service health" SKIP "skipped in --quick"
+  record "Area probes" SKIP "skipped in --quick"
 else
-  record "Server tests (validate.sh)" SKIP "skipped via --skip-unit"
-fi
-
-# 3. Web app — typecheck + build (fps-web is not in CI).
-run_gate "Web app (typecheck+build)" "cd code/web/fps-web && npm run typecheck && npm run build" \
-  bash -c 'cd code/web/fps-web && npm run typecheck && npm run build'
-
-# 4. Mobile — readiness note (built + tested in CI; store publishing is out of scope).
-record "Mobile readiness" RESIDUAL "fps-mobile builds/tests in CI; store publishing out of scope (see docs/production/hosted-mobile-build-plan.md)"
-
-# 5. Platform health — verified via the DataHub platform-health endpoint tests in step 2
-#    (no platform-issuer realm exists locally to mint a live platform token).
-record "Platform health" PASS "platform draw-health + usage-stats endpoints covered by server tests (validate.sh); honest not-wired states verified there"
-
-if [ "$QUICK" = "0" ]; then
-  # 6. Container stack + auth + GL seed + booking→notification→audit E2E + boundary smoke.
+  # Default DOCKER-ONLY release gate — validate the running containerised product.
+  # Container stack + auth + GL seed + booking→notification→audit E2E + boundary smoke.
   run_gate "Container stack + seed + E2E" "re-run ./tools/start-container-stack.sh --seed and read FAIL lines" \
     ./tools/start-container-stack.sh --seed
 
-  # 7. Per-service gateway health.
+  # Per-service gateway health, then seeded-state area probes for granular evidence.
   run_gate "Gateway service health" "./tools/smoke-gateway-health.sh (stack must be up)" ./tools/smoke-gateway-health.sh
-
-  # 8. Seeded-state area probes for granular evidence.
   probe_areas
-else
-  record "Container stack + seed + E2E" SKIP "skipped in --quick mode — run the full gate before release"
-  record "Gateway service health" SKIP "skipped in --quick mode"
-  record "Area probes" SKIP "skipped in --quick mode"
+
+  # Host-SDK checks are OPT-IN (also enforced by CI) so the default stays Docker-only.
+  if [ "$WITH_HOST_TESTS" = "1" ]; then
+    run_host_checks
+  else
+    record "Server tests (validate.sh)" SKIP "host .NET SDK check — opt in with --with-host-tests (also gated by CI)"
+    record "Web app (typecheck+build)" SKIP "host Node/npm check — opt in with --with-host-tests (also gated by CI)"
+  fi
 fi
+
+# Mobile — readiness note (built + tested in CI; store publishing is out of scope).
+record "Mobile readiness" RESIDUAL "fps-mobile builds/tests in CI; store publishing out of scope (see docs/production/hosted-mobile-build-plan.md)"
+
+# Platform health — platform-plane endpoints (draw-health/usage-stats) need a platform-issuer
+# token that isn't mintable locally; covered by CI server tests (PlatformDrawHealthTests).
+record "Platform health" RESIDUAL "platform draw-health/usage-stats covered by CI server tests (PlatformDrawHealthTests); not locally live-probable (no platform issuer)"
 
 # ── evidence summary ──────────────────────────────────────────────────────────
 blockers=0
 for r in "${RESULTS[@]}"; do [ "$r" = "BLOCKER" ] && blockers=$((blockers+1)); done
 overall="PASS"; [ "$blockers" -gt 0 ] && overall="FAIL"
 
+profile="local / container (Docker-only)"
+[ "$QUICK" = "1" ] && profile="local / host-SDK developer checks (--quick)"
+[ "$WITH_HOST_TESTS" = "1" ] && profile="local / container (Docker-only) + host-SDK checks"
+
 {
   echo "# FairSpot Release 1 validation evidence"
   echo ""
-  echo "- **Profile:** local / container"
+  echo "- **Profile:** $profile"
   echo "- **When (UTC):** $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "- **Commit:** $(git rev-parse --short HEAD 2>/dev/null || echo unknown) ($(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?'))"
   echo "- **Overall:** $overall ($blockers blocker(s))"
