@@ -3,6 +3,8 @@ import { useAuth } from '../auth/AuthContext';
 import { canTriagePlatformOnboarding } from '../auth/roles';
 import {
   currentMonthKey,
+  drawHealthStatus,
+  fetchPlatformDrawHealth,
   fetchPlatformTenants,
   fetchPlatformUsageStats,
   fetchSandboxResetEvidence,
@@ -14,6 +16,7 @@ import {
   summarizeUsage,
   tenantReadinessStatus,
   type HealthStatus,
+  type PlatformDrawHealth,
   type TenantRequestStatus,
 } from '../api/platform';
 import { HealthStatusPill } from './HealthStatusPill';
@@ -217,10 +220,62 @@ function SandboxCard() {
   );
 }
 
+// ── Draw health (live — DataHub draw history) ────────────────────────────────
+type DrawHealthState =
+  | { kind: 'loading' }
+  | { kind: 'unavailable' }
+  | { kind: 'ok'; data: PlatformDrawHealth };
+
+function DrawHealthCard() {
+  const { apiBaseUrl, bearerToken } = useAuth();
+  const [state, setState] = useState<DrawHealthState>({ kind: 'loading' });
+
+  useEffect(() => {
+    let active = true;
+    void fetchPlatformDrawHealth({ apiBaseUrl, bearerToken }).then((r) => {
+      if (!active) return;
+      if (r.kind !== 'ok') { setState({ kind: 'unavailable' }); return; }
+      setState({ kind: 'ok', data: r.data });
+    });
+    return () => { active = false; };
+  }, [apiBaseUrl, bearerToken]);
+
+  const status: HealthStatus =
+    state.kind === 'ok' ? drawHealthStatus(state.data)
+      : state.kind === 'loading' ? 'ok'
+        : 'unavailable';
+
+  return (
+    <HealthCard title="Draw health" status={status} source="DataHub draw history">
+      {state.kind === 'loading' && <p className="plat-muted">Checking recent draws…</p>}
+      {state.kind === 'unavailable' && <p className="plat-muted">Draw health is unavailable right now.</p>}
+      {state.kind === 'ok' && !state.data.hasEvidence && (
+        <p className="plat-muted">No draw projection evidence recorded yet — draw health can&rsquo;t be confirmed.</p>
+      )}
+      {state.kind === 'ok' && state.data.hasEvidence && (() => {
+        const d = state.data;
+        const clean = d.failedCount === 0 && d.stuckCount === 0 && !d.stale;
+        return (
+          <p className="plat-muted">
+            Last {d.windowDays}d: <strong>{d.completedCount}</strong> completed
+            {d.failedCount > 0 ? <> · <strong>{d.failedCount}</strong> failed</> : null}
+            {d.stuckCount > 0 ? <> · <strong>{d.stuckCount}</strong> stuck (any age)</> : null}
+            {clean
+              ? '. No failed or stuck draws.'
+              : d.stale && d.failedCount === 0 && d.stuckCount === 0
+                ? ' — no recent draw activity; projection may be stale.'
+                : ' — needs attention.'}
+            {d.lastActivityAt ? <> Last activity {formatRelativeAge(d.lastActivityAt)}.</> : null}
+          </p>
+        );
+      })()}
+    </HealthCard>
+  );
+}
+
 // ── Not-wired-yet operational signals ────────────────────────────────────────
-// Draw health, Vault seal, backups, and boundary smoke have no safe platform-plane read source in
-// this slice. We show them honestly rather than inventing a status. Raw operational detail belongs
-// in Grafana / ops runbooks; we do not build a Grafana replacement here.
+// Hosted-boundary evidence has no platform-plane read source yet — it's a release smoke artifact
+// (see PLAT008E). We keep it an honest "not wired yet" rather than inventing a green it can't back.
 function NotWiredCard({ title, source, children }: { title: string; source: string; children: ReactNode }) {
   return (
     <HealthCard title={title} status="not-wired" source={source}>
@@ -243,14 +298,14 @@ export function HealthStrip() {
         <TenantReadinessCard />
         <OnboardingCard />
         <ActivityCard />
+        <DrawHealthCard />
         <SandboxCard />
-        <NotWiredCard title="Draw health" source="DataHub (draw failures)">
-          Draw run counts are shown under Activity, but there is no reliable draw-failure/health read
-          source yet. This lands with a dedicated draw-health signal, not from run counts alone.
-        </NotWiredCard>
-        <NotWiredCard title="Infrastructure" source="Vault · backups · boundary smoke">
-          Vault seal status, backup evidence, and public-boundary smoke have no safe platform-plane
-          API in this slice. Check Grafana / ops runbooks for raw operational detail.
+        <NotWiredCard title="Hosted boundary" source="Release smoke evidence">
+          Public app/auth reachability and the internal-exposure boundary are verified by the hosted
+          smoke as a release artifact, not yet a platform-plane read — so this stays not wired yet
+          rather than showing a green it can&rsquo;t back. See the{' '}
+          <a href="https://github.com/RobertVejvoda/fairspot/blob/master/docs/production/hosted-smoke-runbook.md"
+             target="_blank" rel="noopener noreferrer">hosted smoke runbook</a>.
         </NotWiredCard>
       </div>
     </section>

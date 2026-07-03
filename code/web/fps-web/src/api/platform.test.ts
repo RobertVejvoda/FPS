@@ -15,9 +15,12 @@ import {
   findSandboxTenant,
   sandboxFreshnessStatus,
   formatRelativeAge,
+  drawHealthStatus,
+  fetchPlatformDrawHealth,
   type PlatformTenantRow,
   type PlatformUsageRow,
   type SandboxResetEvidence,
+  type PlatformDrawHealth,
 } from './platform';
 
 // PLAT008B — the platform directory/detail API maps HTTP outcomes to FetchResult kinds the
@@ -202,6 +205,36 @@ describe('sandboxFreshnessStatus', () => {
     expect(sandboxFreshnessStatus(base)).toBe('ok');
     expect(sandboxFreshnessStatus({ ...base, status: 'Failed' })).toBe('warning');
     expect(sandboxFreshnessStatus({ ...base, status: 'Unavailable' })).toBe('warning');
+  });
+});
+
+// PLAT008E — draw health status derivation + fetcher path. Never a false green when evidence is
+// missing or stale.
+describe('drawHealthStatus', () => {
+  const base: PlatformDrawHealth = { windowDays: 7, hasEvidence: true, stale: false, completedCount: 5, failedCount: 0, runningCount: 0, stuckCount: 0, lastFailureAt: null, lastActivityAt: null };
+  it('OK only for fresh, clean evidence', () => {
+    expect(drawHealthStatus(base)).toBe('ok');
+    expect(drawHealthStatus({ ...base, runningCount: 2 })).toBe('ok'); // running (not yet stuck) is fine
+  });
+  it('not-wired when there is no draw projection evidence at all', () => {
+    expect(drawHealthStatus({ ...base, hasEvidence: false, completedCount: 0 })).toBe('not-wired');
+  });
+  it('warns on failed, stuck, or stale evidence — never green', () => {
+    expect(drawHealthStatus({ ...base, failedCount: 1 })).toBe('warning');
+    expect(drawHealthStatus({ ...base, stuckCount: 1 })).toBe('warning');
+    // Stale: evidence exists but no recent activity → surfaced, not green.
+    expect(drawHealthStatus({ ...base, stale: true, completedCount: 0 })).toBe('warning');
+  });
+});
+
+describe('fetchPlatformDrawHealth', () => {
+  it('requests the platform draw-health endpoint with the window and bearer token', async () => {
+    const fetchMock = mockFetch(200, { windowDays: 7, hasEvidence: true, stale: false, completedCount: 3, failedCount: 0, runningCount: 0, stuckCount: 0, lastFailureAt: null, lastActivityAt: null });
+    vi.stubGlobal('fetch', fetchMock);
+    await fetchPlatformDrawHealth(cfg, 14);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api/datahub/platform/draw-health?windowDays=14');
+    expect(init.headers.Authorization).toBe('Bearer plat-token');
   });
 });
 
