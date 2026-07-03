@@ -239,32 +239,50 @@ export function PilotPage() {
         </div>
       </section>
 
-      {/* See it in action — Green Logistics showcase (static, synthetic) */}
+      {/* See it in action — Green Logistics showcase (static, synthetic seeded story) */}
       <section className="site-section">
         <h2>See it in action: Green Logistics</h2>
         <p className="site-section-lede">
-          Green Logistics is our showcase company. Here&rsquo;s the kind of story a fair draw tells —
-          all illustrative, using synthetic demo data only.
+          Green Logistics is our showcase company — illustrative, using synthetic demo data only.
+          Here&rsquo;s one day, decided by a fair draw.
         </p>
         <div className="site-grid site-grid-2">
+          {/* Concrete parking allocation */}
           <div className="site-card">
-            <h3>Named spaces, real constraints</h3>
-            <p>A company-car holder keeps their reserved space, the EV driver gets a charger bay, and the accessible bay and motorcycle area are honored first — then the general spaces go to a fair draw.</p>
+            <h3>Parking — 6 named spaces, 10 drivers</h3>
+            <table className="site-alloc">
+              <tbody>
+                <tr><td>Company car</td><td><span className="site-slot">VIP-01</span> <em>reserved</em></td></tr>
+                <tr><td>Electric vehicle</td><td><span className="site-slot">EV-01</span> <em>charger bay</em></td></tr>
+                <tr><td>Accessible</td><td><span className="site-slot">ACC-01</span></td></tr>
+                <tr><td>Motorcycle</td><td><span className="site-slot">MOTO-01</span></td></tr>
+                <tr><td>Fair draw</td><td><span className="site-slot">A-01</span> <span className="site-slot">A-02</span></td></tr>
+                <tr><td>Waitlist</td><td>4 drivers waiting</td></tr>
+              </tbody>
+            </table>
+            <p className="site-alloc-note">
+              A driver holding <span className="site-slot">A-01</span> cancels &rarr; the next fair
+              person on the waitlist is given it automatically. Nobody has to chase it down.
+            </p>
           </div>
+
+          {/* Concrete team-seats allocation */}
           <div className="site-card">
-            <h3>A visible waitlist</h3>
-            <p>When more people want a space than there are spaces, everyone else forms a transparent waitlist — no guessing who&rsquo;s next in line.</p>
-          </div>
-          <div className="site-card">
-            <h3>Automatic reallocation</h3>
-            <p>Someone cancels? The freed space goes to the next fair person on the waitlist automatically — nobody has to chase it down.</p>
-          </div>
-          <div className="site-card">
-            <h3>Evidence for every decision</h3>
-            <p>HR and auditors can see who requested, who was allocated, and why — an audit trail that holds up to questions later.</p>
+            <h3>Team seats — 8 seats, 10 requests</h3>
+            <div className="site-stat-row">
+              <div className="site-stat"><strong>8</strong><span>seats filled</span></div>
+              <div className="site-stat"><strong>2</strong><span>on the waitlist</span></div>
+            </div>
+            <p className="site-alloc-note">
+              Seats <span className="site-slot">HQ-TEAM-A-01</span> &hellip; <span className="site-slot">HQ-TEAM-A-08</span>
+              {' '}fill by the same fair draw; the two extra requests wait for a seat to free up.
+            </p>
+            <p className="site-alloc-note">
+              Every request and decision is recorded — HR and auditors can see who got a space or
+              seat, and why. An audit trail that holds up to questions later.
+            </p>
           </div>
         </div>
-        <p className="site-note">Team seats tell the same story: employees request a seat for a workday, and the same fair draw fills a limited set of team seats and waitlists the rest.</p>
       </section>
 
       {/* Parking + Seats — one model, both available */}
