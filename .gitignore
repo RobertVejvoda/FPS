@@ -31,6 +31,8 @@ logs/
 
 # Smoke evidence files (runtime output; attach to PRs but do not commit)
 smoke-evidence-*.txt
+release-evidence-*.md
+release-step-*.log
 
 # Claude Code — exclude everything except project settings
 .claude/**
