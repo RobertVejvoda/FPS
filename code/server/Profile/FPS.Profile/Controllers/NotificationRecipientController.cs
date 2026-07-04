@@ -17,6 +17,9 @@ namespace FPS.Profile.Controllers;
 /// </summary>
 [ApiController]
 [DaprInternalOnly]
+// Internal service-to-service endpoint — kept out of the public OpenAPI/generated web client, matching
+// the other Dapr-only controllers (e.g. PurgeController). The web frontend never calls this.
+[ApiExplorerSettings(IgnoreApi = true)]
 public sealed class NotificationRecipientController(IProfileRepository repository) : ControllerBase
 {
     private static readonly HashSet<string> TrustedFactSources = new(StringComparer.OrdinalIgnoreCase)
