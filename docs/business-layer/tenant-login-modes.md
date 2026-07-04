@@ -136,7 +136,7 @@ The default local setup is **Green Logistics only** (#668). `dev-setup-auth.sh` 
 | Login path | FairSpot-local accounts for local demo; company-SSO broker when an external IdP is configured |
 | Demo users | `gl-employee1` (Jan Novak), `gl-tenant-admin`, `gl-hr-admin`, `gl-auditor`, `gl-report-viewer` — all `tenant_id=greenlogistics` |
 | Identity seeding | Provisioned by `tools/dev-setup-auth.sh` in the `fps-local` realm. |
-| Data seeding | `dev-seed.sh` seeds the canonical `gl-v1` dataset (employees, vehicles, ~20 GL-HQ slots, policy) and triggers a Draw. (The Draw reads the seeded Configuration slots over Dapr and produces visible allocations — Booking slot-source unification, #666.) |
+| Data seeding | `dev-seed.sh` seeds the small Green Logistics showcase (10 employees, vehicles, six `GL-HQ` parking slots, policy, fairness history, reallocation, and Seats example) and triggers Draws. The Draw reads seeded Configuration slots over Dapr and produces visible allocations/waitlists — Booking slot-source unification, #666. |
 
 See [Demo Seed Data](../demo-seed-data) for the full user list, password, and the "which tenant to use" guidance. For local/demo runs without an external IdP, Green Logistics users sign in through the FairSpot-account path; the SSO broker path requires a configured external IdP.
 
