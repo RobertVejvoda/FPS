@@ -12,7 +12,7 @@ FairSpot should instrument services with OpenTelemetry-compatible metrics, logs,
 | Demo | Low-cost dashboards and trace/log retention sufficient for evaluation. | Prove usage, performance, error rate, notification delivery, draw duration, and audit/reporting behavior. |
 | Client production | Client observability platform through OpenTelemetry Collector/exporters. | Integrate with existing client operations, alerting, SIEM, and incident processes. |
 
-Client production examples include Dynatrace, Azure Monitor/Application Insights, Grafana/Prometheus, Splunk, Datadog, New Relic, CloudWatch, or equivalent. FairSpot should not require one vendor-specific SDK in application code.
+Client production examples include Dynatrace, Grafana/Prometheus, Splunk, Datadog, New Relic, DigitalOcean Monitoring, or equivalent. FairSpot should not require one vendor-specific SDK in application code.
 
 ## Required Signals
 
@@ -92,7 +92,7 @@ FairSpot services use ASP.NET Core's built-in request logging (`ILogger`) which 
    export OTEL_SERVICE_NAME=fps-booking   # one per service
    ```
 
-Once the SDK is registered, pointing `OTEL_EXPORTER_OTLP_ENDPOINT` at a client's OpenTelemetry Collector (Dynatrace, Azure Monitor, Grafana, Splunk, etc.) requires only a config change — no application code change.
+Once the SDK is registered, pointing `OTEL_EXPORTER_OTLP_ENDPOINT` at a client's OpenTelemetry Collector (Dynatrace, Grafana, Splunk, Datadog, New Relic, or equivalent) requires only a config change — no application code change.
 
 **Redaction:** configure the OTLP collector to drop `http.request.header.authorization` and similar credential-bearing attributes. See [Integration Evidence](./integration-evidence) for redaction guidance.
 
@@ -111,63 +111,15 @@ Jaeger is an open-source, end-to-end distributed tracing tool. It is used for mo
 
 ---
 
-## Monitoring in Amazon AWS
+## Hosted Provider Monitoring
 
-The monitoring of the application hosted in AWS is performed using various AWS services and tools. Below are the key components used for monitoring:
+Release 1 NAS/Cloudflare and the DigitalOcean cloud follow-up may use provider/resource monitoring for host health, network traffic, disk pressure, load balancers, and platform events. Application telemetry remains FairSpot-owned through OpenTelemetry-compatible metrics, logs, and traces. Business activity remains in the Audit service, not in provider logs.
 
-### Amazon CloudWatch
-Amazon CloudWatch is used to monitor the application's performance and operational health. It collects and tracks metrics, collects and monitors log files, and sets alarms.
+Provider monitoring is therefore supporting evidence only. A hosted profile is acceptable when operators can see:
 
-### AWS CloudTrail
-AWS CloudTrail is used to log, continuously monitor, and retain account activity related to actions across the AWS infrastructure.
-
-### AWS X-Ray
-AWS X-Ray helps with analyzing and debugging production, distributed applications, such as those built using a microservices architecture.
-
-### Amazon SNS
-Amazon Simple Notification Service (SNS) is used to send notifications from CloudWatch alarms to the operations team.
-
-### AWS Config
-AWS Config provides a detailed view of the configuration of AWS resources in the account. It helps with compliance auditing, security analysis, and resource change tracking.
-
-### AWS Trusted Advisor
-AWS Trusted Advisor provides real-time guidance to help provision resources following AWS best practices. It helps optimize the AWS environment by reducing costs, increasing performance, and improving security.
-
-### Third-Party Tools
-In addition to AWS native tools, third-party monitoring tools such as Dynatrace, Datadog, New Relic, and Splunk can be integrated through OpenTelemetry exporters where possible.
-
-### Custom Dashboards
-Custom dashboards can be created in CloudWatch or third-party tools to visualize key metrics and logs for better insight into the application's performance and health.
-
-### Incident Response
-Automated incident response can be set up using AWS Lambda to trigger specific actions based on CloudWatch alarms.
-
----
-
-## Monitoring in MS Azure
-
-Azure provides a comprehensive set of monitoring tools and services to ensure the performance and health of applications hosted in the Azure cloud. Below are some key Azure monitoring tools:
-
-### Azure Monitor
-Azure Monitor collects and analyzes telemetry data from Azure resources, applications, and on-premises environments. It provides insights into the performance and health of your applications and infrastructure.
-
-### Azure Log Analytics
-Azure Log Analytics is a service within Azure Monitor that helps collect and analyze log data from various sources. It enables you to query and visualize log data to gain insights into your system's operations.
-
-### Azure Application Insights
-Azure Application Insights is an application performance management (APM) service that monitors live applications. It helps detect and diagnose performance issues and understand how users interact with your application.
-
-### Azure Security Center
-Azure Security Center provides advanced threat protection across your hybrid workloads in the cloud and on-premises. It helps detect and respond to threats and provides security recommendations.
-
-### Azure Service Health
-Azure Service Health provides personalized alerts and guidance when Azure service issues affect you. It helps you stay informed about the health of your Azure services.
-
-### Azure Automation
-Azure Automation allows you to automate frequent, time-consuming, and error-prone cloud management tasks. It can be used to create runbooks for automated incident response and remediation.
-
-### Azure Sentinel
-Azure Sentinel is a scalable, cloud-native security information and event management (SIEM) and security orchestration automated response (SOAR) solution. It provides intelligent security analytics and threat intelligence across the enterprise.
-
-### Azure Network Watcher
-Azure Network Watcher provides tools to monitor, diagnose, and gain insights into your network performance and health. It helps with network troubleshooting and diagnostics.
+- service/container health and restarts;
+- CPU, memory, storage, and network saturation;
+- ingress/WAF and rate-limit events;
+- Dapr sidecar/component health where exposed;
+- backup/restore and scheduled-job outcomes;
+- an OpenTelemetry path for application traces and metrics.

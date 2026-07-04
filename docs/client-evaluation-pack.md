@@ -11,7 +11,7 @@ This pack gives a new evaluator enough context to decide whether FairSpot is wor
 | Primary user value | Employees can request, view, cancel, and confirm parking from mobile without seeing hidden allocation internals or other employees' data. |
 | Business value | HR/facilities teams can configure policy and capacity, reduce manual coordination, and explain allocation outcomes using audit and reporting evidence. |
 | Trust value | Allocation rules, notifications, audit, GDPR erasure behavior, and tenant isolation are explicit rather than implicit operational habits. |
-| Deployment posture | FairSpot is designed for local development, a low-cost hosted demo, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
+| Deployment posture | FairSpot is designed for local development, NAS/Cloudflare Release 1 evaluation, a DigitalOcean cloud-hosted follow-up profile, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
 | Current status | Release 1 evaluation baseline: employee mobile journey, web employee + HR/admin/reporting/audit surfaces, booking/Draw lifecycle, notifications, audit, reporting, durable Dapr persistence (PERSIST001–006), and the containerized NAS/Cloudflare hosting path are implemented. The [Roadmap → Release 1 Scope](./roadmap#release-1-scope) is the authoritative status. |
 | Near-term gaps | Mobile vehicle management and UX polish, broader tenant administration, client-owned production handoff, and pilot-specific evidence. See the [Roadmap](./roadmap) for the live gap list. |
 
@@ -83,7 +83,7 @@ Key architecture links:
 | --- | --- | --- | --- |
 | Local | FairSpot delivery team | Development and validation. | Local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
 | NAS / Cloudflare (Release 1 evaluation) | FairSpot delivery team / evaluator operator | Self-hosted, reviewable demo at a public HTTPS domain. | Fully containerized Docker Compose stack (services, Dapr sidecars, gateway, identity, stores) reached through a Cloudflare Tunnel. Needs only Docker + Compose on the host — no host .NET SDK or Dapr CLI. Started with `./tools/start-container-stack.sh`. |
-| Demo | FairSpot delivery team | Evaluation environment and operational evidence. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
+| DigitalOcean demo | FairSpot delivery team | Cloud-hosted evaluation environment and operational evidence after the NAS/Cloudflare Release 1 path. | Low-cost hosted profile with synthetic data, HTTPS ingress, Dapr components, OIDC, smoke tests, reset/teardown, and cost evidence. |
 | Client production | Client IT / operations | Real operation under client controls. | Client-owned platform, IdP, persistence, secrets, observability, backups, incident process, and release controls. |
 
 The NAS/Cloudflare evaluation profile — the Release 1 hosting target — is documented in the [NAS / Cloudflare Deployment Profile](./production/nas-cloudflare-deployment-profile). The demo environment baseline is documented in [Demo Environment Baseline](./production/demo-environment-baseline). Client production handoff remains a later slice; FairSpot should not promise managed production operation until that model is explicitly approved.
@@ -128,7 +128,7 @@ Provider prices change frequently. Do not present numeric cost commitments witho
 | Does FairSpot store company passwords? | No. Company passwords must stay with the IdP. FairSpot-local credential verifiers are fallback Secret data only. |
 | Can employees see other employees or lottery internals? | Employee views must remain safe: own bookings, own notifications, and understandable reasons without exposing other employees or hidden allocation internals. |
 | Who operates production? | The current direction is client-owned production. FairSpot provides architecture, deployment guidance, component boundaries, and evidence; managed operation is not promised. |
-| Can a client use Azure, AWS, Kubernetes, or another platform? | Yes. The design keeps provider choices behind Dapr, OIDC, service-owned persistence, secret-management, object-storage, and OpenTelemetry boundaries. Each provider still needs tested component manifests and runbooks. |
+| Can a client use its own cloud, Kubernetes, or on-premises platform? | Yes. The design keeps client provider choices behind Dapr, OIDC, service-owned persistence, secret-management, object-storage, and OpenTelemetry boundaries. FairSpot's own cloud-hosted follow-up target is DigitalOcean, not AWS or Azure. |
 | Is billing implemented? | No. Commercialisation and billing are later decisions. The current AGPL project can still support paid implementation, support, and client-specific integration services. |
 | What is needed before a client pilot? | Hosted demo evidence, mobile polish/profile/draw visibility, web/admin surfaces where needed, observability and backup/restore evidence, and a client-owned production handoff model. |
 

@@ -1,32 +1,33 @@
 # Network Security
 
-Protects the network infrastructure of applications hosted in Azure from unauthorized access, misuse, or theft. This includes Azure-native firewalls, intrusion detection/prevention systems (IDS/IPS), and secure network architecture design tailored for cloud environments.
+Network security protects public entry points, internal service traffic, state stores, brokers, secret stores, object storage, and observability surfaces from unauthorized access. It is defined by profile capabilities, not by a single cloud provider.
 
-## Azure Firewalls
+## Public Edge
 
-Azure Firewalls act as a barrier between trusted and untrusted networks, filtering incoming and outgoing traffic based on predefined security rules. They are fully stateful, scalable, and managed by Azure. Azure Firewalls use various techniques such as packet filtering, stateful inspection, and application rules to control network traffic and prevent unauthorized access.
+- Public endpoints must use HTTPS.
+- Release 1 uses Cloudflare Tunnel/WAF for the hosted evaluation path.
+- The DigitalOcean follow-up may keep Cloudflare in front or use a DigitalOcean Load Balancer only when the profile explicitly requires it.
+- WAF/rate-limit rules must protect login, API, admin, and debug-sensitive paths.
 
-### Types of Azure Firewalls
-- **Azure Firewall**: A managed, cloud-based network security service that protects Azure Virtual Network resources.
-- **Network Security Groups (NSGs)**: Filter network traffic to and from Azure resources in an Azure Virtual Network.
-- **Application Security Groups (ASGs)**: Simplify the management of network security by grouping VMs and defining security policies based on those groups.
+## Internal Boundary
 
-## Azure Intrusion Detection/Prevention Systems (IDS/IPS)
+- Internal services, Dapr sidecars, databases, brokers, secret stores, Keycloak admin, and observability backends must not be public.
+- Service-to-service traffic should use Dapr mTLS or an approved equivalent for hosted profiles.
+- Administrative access must be local, VPN/tunnel-protected, Cloudflare Access-protected, or client-approved.
 
-Azure IDS and IPS are critical components for monitoring network traffic for suspicious activity and potential threats. Azure offers services like Azure Security Center and Azure Sentinel for threat detection and response.
+## Segmentation
 
-### IDS/IPS Techniques in Azure
-- **Signature-Based Detection**: Compares network traffic against a database of known threat signatures using Azure Security Center.
-- **Anomaly-Based Detection**: Establishes a baseline of normal network behavior and alerts on deviations from this baseline using Azure Sentinel.
-- **Hybrid Detection**: Combines signature-based and anomaly-based techniques to improve detection accuracy using Azure's advanced threat protection services.
+- Separate public ingress from internal service networks.
+- Keep state stores, brokers, cache/session stores, object storage, and secret stores reachable only by approved services.
+- Client-owned production may use the client's VPC/VNet/Kubernetes/network-segmentation model as long as the same boundaries are enforced.
 
-## Secure Network Architecture Design in Azure
+## Monitoring
 
-Designing a secure network architecture in Azure involves implementing multiple layers of security controls to protect network resources. Key principles include segmentation, redundancy, and the principle of least privilege.
+Operators should monitor:
 
-### Key Components in Azure
-- **Network Segmentation**: Uses Virtual Networks (VNets) and Subnets to divide the network into smaller, isolated segments to limit the spread of potential threats.
-- **Redundancy**: Ensures network availability and reliability by duplicating critical components and paths using Azure's global infrastructure.
-- **Least Privilege**: Restricts access rights for users and systems to the minimum necessary to perform their functions, reducing the attack surface using Azure Role-Based Access Control (RBAC).
-
-By implementing these network security measures in Azure, organizations can significantly enhance their defense against cyber threats and protect their critical infrastructure hosted in the cloud.
+- ingress/WAF/rate-limit events;
+- unusual authentication failures;
+- unexpected public port exposure;
+- Dapr sidecar/component health;
+- database, broker, secret-store, and object-storage connection failures;
+- network saturation and suspicious egress.

@@ -20,7 +20,7 @@ Customer integration should answer three questions:
 
 ## Contract Boundaries
 
-This contract defines what FairSpot expects from customer identity and profile integration. It is intentionally provider-neutral: Azure Entra ID, Keycloak, Okta, Google Workspace, and other OIDC-compatible providers can be used if they can emit the required claims or be mapped through trusted tenant configuration.
+This contract defines what FairSpot expects from customer identity and profile integration. It is intentionally provider-neutral: Microsoft Entra ID, Keycloak, Okta, Google Workspace, and other OIDC-compatible providers can be used if they can emit the required claims or be mapped through trusted tenant configuration.
 
 | Boundary | Contract |
 | --- | --- |
@@ -182,7 +182,7 @@ Future implementation slices that consume this contract must preserve these cons
 
 ## Open Questions
 
-- Which IdP should be tested first for demo/customer validation: Azure Entra ID, Okta, Google Workspace, or another provider?
+- Which IdP should be tested first for demo/customer validation: Microsoft Entra ID, Okta, Google Workspace, or another provider?
 - Which claims can a typical customer provide without custom HR integration?
 - Is license plate required for v1 parking policy, or can vehicles be identified by type/capability only?
 - Who is allowed to edit company-car and accessibility eligibility after import?

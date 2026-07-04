@@ -183,7 +183,7 @@ Each bounded context that persists data must satisfy the following provisioning 
 
 ### Object Storage
 
-FairSpot uses object storage for tenant-owned binary content and generated evidence. Local and demo profiles use MinIO; production profiles may use MinIO, S3, Azure Blob, or another S3-compatible/object-storage equivalent as defined by the deployment profile.
+FairSpot uses object storage for tenant-owned binary content and generated evidence. Local and NAS profiles use MinIO; the DigitalOcean cloud follow-up may use Spaces where hosted object storage is needed. Client-owned production may use client-approved object storage or an S3-compatible equivalent as defined by the deployment profile.
 
 | Requirement | Detail |
 | --- | --- |
