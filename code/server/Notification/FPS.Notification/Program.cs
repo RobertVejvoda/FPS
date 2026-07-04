@@ -24,6 +24,16 @@ builder.Services.Configure<DaprSendGridEmailOptions>(
 var emailProvider = builder.Configuration["Notification:Email:Provider"];
 if (DaprSendGridEmailNotificationSender.IsConfiguredProvider(emailProvider))
 {
+    // NOTIF #722: the SendGrid binding needs a verified From address at runtime. Fail fast on a
+    // misconfigured hosted deploy instead of invoking the provider without a sender identity.
+    var fromEmail = builder.Configuration["Notification:Email:FromEmail"];
+    if (string.IsNullOrWhiteSpace(fromEmail))
+    {
+        throw new InvalidOperationException(
+            "Notification:Email:Provider selects SendGrid but Notification:Email:FromEmail is not set. " +
+            "Set Notification__Email__FromEmail (e.g. notifications@fairspot.net) and Notification__Email__FromName (e.g. FairSpot).");
+    }
+
     builder.Services.AddSingleton<IEmailNotificationSender, DaprSendGridEmailNotificationSender>();
 }
 else
