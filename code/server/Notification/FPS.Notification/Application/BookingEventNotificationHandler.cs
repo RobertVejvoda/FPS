@@ -7,6 +7,7 @@ public sealed class BookingEventNotificationHandler(
     INotificationRepository repository,
     INotificationBroadcaster broadcaster,
     IEmailNotificationSender emailSender,
+    IEmailNotificationComposer emailComposer,
     INotificationPreferencesRepository preferencesRepository,
     INotificationAudienceResolver audienceResolver,
     ILogger<BookingEventNotificationHandler> logger)
@@ -96,8 +97,9 @@ public sealed class BookingEventNotificationHandler(
 
         var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey);
 
+        var composed = emailComposer.Compose(record);
         EmailSendResult result;
-        try { result = await emailSender.SendAsync(record, cancellationToken); }
+        try { result = await emailSender.SendAsync(record, composed, cancellationToken); }
         catch { result = EmailSendResult.Fail("Email delivery unavailable", EmailFailureCategory.ProviderUnavailable); }
 
         if (result.Success)

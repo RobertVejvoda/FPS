@@ -19,6 +19,7 @@ namespace FPS.Notification.Application;
 public sealed class TenantRequestSalesAlertHandler(
     INotificationRepository repository,
     IEmailNotificationSender emailSender,
+    IEmailNotificationComposer emailComposer,
     IConfiguration configuration,
     ILogger<TenantRequestSalesAlertHandler> logger)
 {
@@ -50,10 +51,11 @@ public sealed class TenantRequestSalesAlertHandler(
             CreatedAt = DateTime.UtcNow,
         };
 
+        var composed = emailComposer.Compose(record);
         EmailSendResult result;
         try
         {
-            result = await emailSender.SendAsync(record, ct);
+            result = await emailSender.SendAsync(record, composed, ct);
         }
         catch (Exception ex)
         {

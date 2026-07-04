@@ -21,15 +21,15 @@ public sealed class TenantRequestSalesAlertHandlerTests
     private static Mock<IEmailNotificationSender> OkSender(Action<NotificationRecord>? capture = null)
     {
         var sender = new Mock<IEmailNotificationSender>();
-        sender.Setup(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
-            .Callback<NotificationRecord, CancellationToken>((r, _) => capture?.Invoke(r))
+        sender.Setup(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+            .Callback<NotificationRecord, ComposedEmail, CancellationToken>((r, _, _) => capture?.Invoke(r))
             .ReturnsAsync(EmailSendResult.Ok());
         return sender;
     }
 
     private static TenantRequestSalesAlertHandler Handler(
         INotificationRepository repo, IEmailNotificationSender sender, IConfiguration config) =>
-        new(repo, sender, config, NullLogger<TenantRequestSalesAlertHandler>.Instance);
+        new(repo, sender, new EmailNotificationComposer(), config, NullLogger<TenantRequestSalesAlertHandler>.Instance);
 
     [Fact]
     public async Task Handle_EmailsConfiguredSalesAddress_WithAlertOnly()
@@ -66,7 +66,7 @@ public sealed class TenantRequestSalesAlertHandlerTests
         await handler.HandleAsync(Event("dup-1"), CancellationToken.None);
         await handler.HandleAsync(Event("dup-1"), CancellationToken.None); // at-least-once replay of the same event
 
-        sender.Verify(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()), Times.Once);
+        sender.Verify(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class TenantRequestSalesAlertHandlerTests
     {
         var repo = new InMemoryNotificationRepository();
         var sender = new Mock<IEmailNotificationSender>();
-        sender.Setup(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+        sender.Setup(s => s.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("smtp down"));
         var handler = Handler(repo, sender.Object, Config("ops@fairspot.net"));
 

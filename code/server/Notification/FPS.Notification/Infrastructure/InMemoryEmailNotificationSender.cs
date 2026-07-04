@@ -13,11 +13,12 @@ namespace FPS.Notification.Infrastructure;
 public sealed class InMemoryEmailNotificationSender(ILogger<InMemoryEmailNotificationSender> logger)
     : IEmailNotificationSender
 {
-    public Task<EmailSendResult> SendAsync(NotificationRecord record, CancellationToken cancellationToken = default)
+    public Task<EmailSendResult> SendAsync(
+        NotificationRecord record, ComposedEmail email, CancellationToken cancellationToken = default)
     {
         logger.LogInformation(
-            "[Email-stub] To={RecipientId} Type={Type} Message={Message}",
-            record.RecipientId, record.NotificationType, record.MessageText);
+            "[Email-stub] To={RecipientId} Type={Type} Subject={Subject}",
+            record.RecipientId, record.NotificationType, email.Subject);
 
         return Task.FromResult(EmailSendResult.Ok());
     }

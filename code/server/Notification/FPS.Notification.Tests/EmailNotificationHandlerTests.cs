@@ -18,6 +18,7 @@ public sealed class EmailNotificationHandlerTests
     public EmailNotificationHandlerTests()
     {
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
+            new EmailNotificationComposer(),
             new InMemoryNotificationPreferencesRepository(),
             new RosterBackedAudienceResolver(new InMemoryHrRosterStore()),
             logger.Object);
@@ -27,7 +28,7 @@ public sealed class EmailNotificationHandlerTests
             .Returns(Task.CompletedTask);
         broadcaster.Setup(b => b.BroadcastAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
     }
 
@@ -54,7 +55,7 @@ public sealed class EmailNotificationHandlerTests
 
         emailSender.Verify(e => e.SendAsync(
             It.Is<NotificationRecord>(n => n.Channel == NotificationChannel.Email && n.RecipientId == "user-1"),
-            It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
 
         repository.Verify(r => r.SaveAsync(
             It.Is<NotificationRecord>(n =>
@@ -66,7 +67,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_EmailSenderFailure_MarksEmailRecordFailed_InAppUnaffected()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Fail("SMTP timeout"));
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
@@ -93,7 +94,7 @@ public sealed class EmailNotificationHandlerTests
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
 
-        emailSender.Verify(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()), Times.Never);
+        emailSender.Verify(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -106,16 +107,16 @@ public sealed class EmailNotificationHandlerTests
 
         emailSender.Verify(e => e.SendAsync(
             It.Is<NotificationRecord>(n => n.RecipientId == "user-1" && n.Channel == NotificationChannel.Email),
-            It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
         emailSender.Verify(e => e.SendAsync(
             It.Is<NotificationRecord>(n => n.RecipientId == "user-2" && n.Channel == NotificationChannel.Email),
-            It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_EmailSenderThrows_DoesNotThrow_SavesFailedEmailRecord_InAppUnaffected()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("provider-internal-detail-must-not-leak"));
 
         var exception = await Record.ExceptionAsync(() =>
@@ -150,7 +151,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_EmailSenderFailure_LogsWarning_WithSafeFields()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Fail("SMTP timeout"));
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
@@ -173,7 +174,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_EmailSenderThrows_LogsWarning_WithProviderUnavailableCategory()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("provider-internal-detail-must-not-leak"));
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));

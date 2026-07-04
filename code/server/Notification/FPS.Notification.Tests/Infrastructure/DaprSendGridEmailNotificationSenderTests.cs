@@ -31,14 +31,19 @@ public sealed class DaprSendGridEmailNotificationSenderTests
             FromName = "FairSpot"
         });
 
-        var result = await sender.SendAsync(Record("ops@fairspot.net", message: "Hello <ops>\nReview request."));
+        // NOTIF #727 — the sender forwards already-composed subject/body verbatim; it does not build them.
+        var composed = new ComposedEmail(
+            "Your parking spot is confirmed",
+            "<p>Hello &lt;ops&gt;<br>Review request.</p>",
+            "Hello <ops>\nReview request.");
+        var result = await sender.SendAsync(Record("ops@fairspot.net"), composed);
 
         Assert.True(result.Success);
         Assert.NotNull(sentRequest);
         Assert.Equal("notification-email", sentRequest!.BindingName);
         Assert.Equal("create", sentRequest.Operation);
         Assert.Equal("ops@fairspot.net", sentRequest.Metadata["emailTo"]);
-        Assert.Equal("FairSpot: notification", sentRequest.Metadata["subject"]);
+        Assert.Equal("Your parking spot is confirmed", sentRequest.Metadata["subject"]);
         Assert.Equal("noreply@fairspot.net", sentRequest.Metadata["emailFrom"]);
         Assert.Equal("FairSpot", sentRequest.Metadata["emailFromName"]);
         var body = Encoding.UTF8.GetString(sentRequest.Data.ToArray());
@@ -51,7 +56,7 @@ public sealed class DaprSendGridEmailNotificationSenderTests
         var dapr = new Mock<DaprClient>();
         var sender = Sender(dapr.Object);
 
-        var result = await sender.SendAsync(Record("user-1"));
+        var result = await sender.SendAsync(Record("user-1"), Email());
 
         Assert.False(result.Success);
         Assert.Equal(EmailFailureCategory.DeliveryRejected, result.FailureCategory);
@@ -71,7 +76,7 @@ public sealed class DaprSendGridEmailNotificationSenderTests
             .ThrowsAsync(new InvalidOperationException("provider-secret-detail"));
         var sender = Sender(dapr.Object);
 
-        var result = await sender.SendAsync(Record("ops@fairspot.net"));
+        var result = await sender.SendAsync(Record("ops@fairspot.net"), Email());
 
         Assert.False(result.Success);
         Assert.Equal("Email delivery unavailable", result.FailureReason);
@@ -95,6 +100,11 @@ public sealed class DaprSendGridEmailNotificationSenderTests
             dapr,
             Options.Create(options ?? new DaprSendGridEmailOptions()),
             NullLogger<DaprSendGridEmailNotificationSender>.Instance);
+
+    private static ComposedEmail Email(
+        string subject = "Parking spot allocated",
+        string html = "<p>Body</p>",
+        string text = "Body") => new(subject, html, text);
 
     private static NotificationRecord Record(
         string recipientId,

@@ -4,7 +4,10 @@ namespace FPS.Notification.Application;
 
 public interface IEmailNotificationSender
 {
-    Task<EmailSendResult> SendAsync(NotificationRecord record, CancellationToken cancellationToken = default);
+    // NOTIF #727 — transport receives already-composed content; the record carries recipient and
+    // routing/logging context only. Senders must not build subject/body themselves.
+    Task<EmailSendResult> SendAsync(
+        NotificationRecord record, ComposedEmail email, CancellationToken cancellationToken = default);
 }
 
 public sealed record EmailSendResult(bool Success, string? FailureReason, string? FailureCategory = null)
