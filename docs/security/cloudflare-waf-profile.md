@@ -325,7 +325,7 @@ Grafana must not be exposed publicly. If external operator access is needed, pub
    |---|---|
    | Identity provider group | `REPLACE_WITH_SSO_GROUP_NAME` |
 
-5. Under **Authentication**, choose at minimum **One-time PIN** (email OTP). If the organisation has an identity provider (Google Workspace, Azure AD, Okta), connect it under **Zero Trust** → **Settings** → **Authentication** and select it here.
+5. Under **Authentication**, choose at minimum **One-time PIN** (email OTP). If the organisation has an identity provider (Google Workspace, Microsoft Entra ID, Okta), connect it under **Zero Trust** → **Settings** → **Authentication** and select it here.
 
 6. Save the application.
 

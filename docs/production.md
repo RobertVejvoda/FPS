@@ -4,7 +4,7 @@ Production describes how FairSpot is hosted, operated, recovered, and validated 
 
 The goal for v1 is not to operate production for clients directly. FairSpot must prove that the platform can be run locally, demonstrated in a realistic hosted environment, and deployed into a client-owned production environment with clear operational evidence. Dapr is the component portability boundary; OpenTelemetry is the telemetry portability boundary.
 
-FairSpot is therefore a **bring-your-own-cloud** platform. The core architecture defines contracts for identity, ingress, service integration, persistence, messaging, secrets, object storage, observability, backup, restore, and operations. Local, Azure, AWS, Kubernetes, or client-owned infrastructure can satisfy those contracts with different concrete services as long as tenant isolation, security controls, and operational evidence remain intact.
+FairSpot is therefore a **bring-your-own-cloud** platform. The core architecture defines contracts for identity, ingress, service integration, persistence, messaging, secrets, object storage, observability, backup, restore, and operations. Release 1 uses the NAS/Cloudflare hosted evaluation path, and the FairSpot-operated cloud-hosted follow-up target is DigitalOcean. Client-owned cloud, Kubernetes, or on-premises infrastructure can still satisfy the same contracts as long as tenant isolation, security controls, and operational evidence remain intact.
 
 FairSpot is also a Dapr-first production reference for later systems. New production-facing slices should use Dapr building blocks first when they match the requirement: Workflow for orchestration, pub/sub for domain events, transactional outbox for state-plus-event reliability where supported, secret stores for runtime secrets, mTLS/Sentry for service identity, resiliency policies for dependency behavior, and state encryption where the selected component supports it.
 
@@ -30,7 +30,7 @@ Read this section from high level to detail:
 4. **Availability and recovery**: define what can fail, how FairSpot keeps operating, and how much data loss/downtime is acceptable.
 5. **Data protection**: define backups, restore drills, tenant-scoped recovery, and secret recovery.
 6. **Operations**: define monitoring, alerts, incidents, maintenance, and runbooks.
-7. **Cloud setup**: compare candidate deployment profiles and keep cost visible.
+7. **Provider setup**: keep deployment-profile choices explicit and avoid provider assumptions in application architecture.
 8. **Testing and readiness**: prove the environment before calling it production.
 
 ## Environment Profiles
@@ -38,7 +38,7 @@ Read this section from high level to detail:
 | Profile | Owner | Purpose | Expected shape |
 | --- | --- | --- | --- |
 | Local | FairSpot delivery team | Develop and validate behavior cheaply. | Docker Compose or local containers with local Dapr components and local equivalents for identity, storage, broker, cache, secrets, and observability. |
-| Demo | FairSpot delivery team | Show a working system to evaluators and collect performance/usage evidence. | Low-cost hosted deployment using replaceable Dapr components; exact provider remains a planning decision. |
+| Demo | FairSpot delivery team | Show a working system to evaluators and collect performance/usage evidence. | NAS/Cloudflare for Release 1 evaluation; DigitalOcean for the cloud-hosted follow-up profile using replaceable Dapr components. |
 | Client production | Client IT / operations | Run FairSpot with the client's identity, hosting, monitoring, backup, and security controls. | Client-owned cloud or on-premise environment, Dapr-compatible components, OpenTelemetry export to the client's observability platform, documented backup/restore and support boundaries. |
 
 ## Target Runtime
@@ -65,13 +65,14 @@ Detailed hosted-operator runbooks for the FairSpot-operated pilot live in the pr
 - [Availability Model](./production/availability-model): service, data, broker, identity, and deployment failure assumptions.
 - [RTO/RPO Requirements](./production/rto-rpo-requirements): recovery time and recovery point targets by capability.
 - [Backup And Restore](./production/backup-restore): public backup/restore responsibility contract; private operator procedure lives in `fairspot-platform`.
-- [Monitoring](./production/monitoring): metrics, logs, traces, dashboards, alerts, and cloud-provider monitoring options.
+- [Monitoring](./production/monitoring): metrics, logs, traces, dashboards, alerts, and hosted-provider monitoring boundaries.
 - [Incident Handling](./production/incident-handling): public incident classification and communication contract; private operator procedure lives in `fairspot-platform`.
 - [Maintenance](./production/maintenance): public maintenance responsibility model; private operator procedure lives in `fairspot-platform`.
 
 ## Cloud And Environment Notes
 
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
+- [DigitalOcean Setup](./production/digitalocean-setup): FairSpot-operated cloud-hosted follow-up target after Release 1 NAS/Cloudflare evaluation.
 - [Dapr-First Production Standards](./production/dapr-first-production-standards): production-grade Dapr usage rules for workflows, outbox, pub/sub, state, secrets, mTLS, resiliency, and validation.
 - [Demo Environment Baseline](./production/demo-environment-baseline): OPS002 baseline for low-cost hosted demo scope, components, seed data, smoke tests, cost evidence, reset, and teardown.
 - [Client Production Handoff](./production/client-production-handoff): OPS003 responsibility split, Dapr component replacement boundaries, identity integration requirements, backup/restore handoff, release process, and client IT checklist.
@@ -81,7 +82,7 @@ Detailed hosted-operator runbooks for the FairSpot-operated pilot live in the pr
 - [Draw Scheduling And Workflow](./production/draw-scheduling-and-workflow): Dapr Workflow direction, on-demand Draw behavior, multi-instance scheduler safety, and UI progress requirements.
 - [Draw REST Client Scenarios](./production/draw-rest-client-scenarios.http): VS Code REST Client smoke scenarios for booking, Draw trigger, idempotency, status, and lifecycle checks.
 
-Provider-specific setup notes and local development environment details should stay out of the public production overview unless they are needed for client evaluation. `OPS000` selected the need for a pluggable Dapr-first strategy, not a final production provider owned by FairSpot.
+Provider-specific setup notes and local development environment details should stay out of the public production overview unless they are needed for client evaluation. `OPS000` selected the need for a pluggable Dapr-first strategy. The current FairSpot-operated hosted path is NAS/Cloudflare for Release 1, with DigitalOcean approved as the cloud-hosted follow-up target.
 
 ## Testing And Readiness
 

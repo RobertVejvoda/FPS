@@ -31,7 +31,7 @@ FairSpot uses OIDC Authorization Code + PKCE for web and mobile clients. Service
 **Local fallback**: A dev-token fallback path exists for local development and demo use. It is guarded by `devTokenFallbackEnabled` configuration, disabled by default in non-development environments, and excluded from production deployment profiles.
 
 **Customer responsibility (BYOC)**:
-- Operate and maintain the IdP (Keycloak, Azure AD, Okta, or equivalent).
+- Operate and maintain the IdP (Keycloak, Okta, Microsoft Entra ID, or equivalent).
 - Configure OIDC client, realm, and group-to-role mappings.
 - Manage user lifecycle: creation, deactivation, MFA policy.
 - Issue short-lived access tokens (recommended: 15–60 minutes).
@@ -238,7 +238,7 @@ Break-glass access is **not a role** in FairSpot. It is an operational procedure
 
 ## Secret Management and Rotation
 
-FairSpot uses **Dapr secretstore** as the abstraction boundary. The concrete secret store (Vault, Azure Key Vault, AWS Secrets Manager, etc.) is a client deployment choice.
+FairSpot uses **Dapr secretstore** as the abstraction boundary. The concrete secret store is a deployment-profile choice: Vault or approved secret injection for FairSpot-operated profiles, and a client-approved secret manager for client-owned production.
 
 ### Secret Inventory
 
@@ -270,7 +270,7 @@ FairSpot is an architecture and product; it does not certify GDPR compliance. A 
 | What is the purpose? | Fair allocation of limited parking capacity, operational notifications, audit evidence, fairness reporting, tenant policy configuration. |
 | What is the legal basis? | **Client determines legal basis.** FairSpot supports legitimate interest, consent, or contract performance depending on client policy. Privacy notice delivery is client responsibility. |
 | Who has access? | Employees (own data), HR/facilities (tenant-scoped operational data), auditors (tenant audit records), admins (tenant config). No cross-tenant access. See [Security Model](./security-model) § Role to Data Access. |
-| Where is data stored? | Client-controlled infrastructure. Data residency determined by client deployment region. FairSpot is provider-neutral; client chooses Azure, AWS, GCP, on-premises, etc. |
+| Where is data stored? | Client-controlled infrastructure for client production. Data residency is determined by the selected deployment region. FairSpot-operated evaluation uses NAS/Cloudflare first and DigitalOcean for the cloud-hosted follow-up target; client-owned deployments may use the client's approved cloud, Kubernetes, or on-premises platform. |
 | How long is data retained? | Configurable retention periods. Recommended defaults: bookings 1 year, notifications 90 days, audit 7 years. Client enforces retention; FairSpot provides deletion mechanisms. See Retention Schedules above. |
 | What are the risks? | Fairness perception if allocation internals leak; privacy risk if tenant isolation fails; security risk if secrets are exposed. Mitigations: pseudonymised audit, tenant-scoped queries, secret store, TLS, audit controls. See [Gap Register](./gap-register). |
 | What safeguards are in place? | SSO-first (no company passwords stored), pseudonymised audit, tenant isolation, data minimisation, encryption in transit, secret management, role-based access, audit trails, GDPR erasure support. |
@@ -287,11 +287,11 @@ FairSpot is designed for **client-owned infrastructure** (BYOC). In this model:
 
 | Service | Subprocessor Examples | Purpose |
 |---------|----------------------|---------|
-| Container hosting | Azure, AWS, GCP, or on-premises | Runtime environment |
-| Database | MongoDB Atlas, AWS DocumentDB, Azure Cosmos DB, or self-hosted | Persistence |
-| Identity provider | Azure AD, Okta, Keycloak (self-hosted) | Authentication |
-| Secret store | HashiCorp Vault, Azure Key Vault, AWS Secrets Manager | Secret management |
-| Object storage | Azure Blob, AWS S3, MinIO (self-hosted) | Exports, backups |
+| Container hosting | Client cloud/platform, DigitalOcean for FairSpot-hosted cloud evaluation, or on-premises | Runtime environment |
+| Database | Managed MongoDB/PostgreSQL, client-approved database, or self-hosted store | Persistence |
+| Identity provider | Client IdP, Okta, Microsoft Entra ID, Keycloak, or approved OIDC provider | Authentication |
+| Secret store | HashiCorp Vault, client-approved secret manager, or DigitalOcean-compatible secret injection | Secret management |
+| Object storage | DigitalOcean Spaces, MinIO, or client-approved object storage | Exports, backups |
 | Observability | Grafana Cloud, Datadog, Splunk, or self-hosted | Logs, metrics, traces |
 | Email delivery (if enabled) | Twilio SendGrid or approved SMTP relay | Notification delivery |
 

@@ -45,7 +45,7 @@ The **Public summary / replacement** column records the public destination for e
 | `production/client-production-handoff.md` | Operator/customer responsibility-split internals | Customer handoff checklist |
 | `production/release-pipeline.md`, `production/ghcr-image-publishing.md`, `production/release-evidence-template.md` | Operator release/promotion & image pipeline | Release versioning & support policy |
 | `production/rto-rpo-requirements.md`, `production/perf001-readiness-evidence.md` | Platform SLA targets / capacity evidence | Customer-facing availability & performance expectations |
-| `production/aws-setup.md`, `production/azure-setup.md` | Cloud-vendor operator/cost references | Cloud-choice guidance (no pricing) |
+| `production/aws-setup.md`, `production/azure-setup.md` | Legacy cloud-vendor references only | Active public guidance is NAS/Cloudflare plus DigitalOcean target-cloud setup; client cloud choices stay provider-neutral and no pricing is promised |
 | `production/demo-environment-baseline.md`, `production/demo-profile-decision.md`, `production/ops007-hosted-demo-evidence.md` | Hosted demo platform internals | Demo access/scope expectations |
 | `production/customer-first-deployment-gap-analysis.md`, `production/cust008-onboarding-e2e-evidence.md`, `production/tenant-onboarding-smoke.md`, `production/integration-evidence.md`, `production/ops008-persistence-profile.md` | Onboarding/provisioning operator evidence | Customer onboarding process & checklist |
 | `production/hosted-mobile-build-plan.md` | Hosted mobile build/release strategy | Mobile deployment contract |

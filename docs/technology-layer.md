@@ -19,12 +19,11 @@ Production operation is also a top-level architecture section. See [Production](
 - **Dapr state store / persistence adapters**: Persistence boundary for service-owned state and read models. The concrete operational/document store is selected by deployment profile.
 - **OIDC/OAuth 2.0 identity provider**: Identity boundary for JWT issuer, tenant/user claims, roles, and SSO. The concrete IdP is selected by local, demo, or client production profile.
 - **OpenTelemetry**: Telemetry boundary for metrics, logs, traces, dashboards, and alerting. Client production exports to the client's approved observability platform.
-- **Profile-specific deployment tooling**: Local, demo, Azure, AWS, Kubernetes, or client-owned environments may use different infrastructure-as-code and runtime tooling without changing application service contracts.
+- **Profile-specific deployment tooling**: Local, NAS/Cloudflare, DigitalOcean, Kubernetes, or client-owned environments may use different infrastructure-as-code and runtime tooling without changing application service contracts.
 
 
 ### Domain Map
 
 ![Domain Map](./images/fps-software-architecture-detailed.png)
-
 
 

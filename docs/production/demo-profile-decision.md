@@ -1,6 +1,6 @@
 # OPS007A Demo Profile Decision And Runtime Inventory
 
-**Status:** Decision required — see [Open Decisions](#open-decisions) below.
+**Status:** Provider choice superseded. Release 1 uses NAS/Cloudflare; the cloud-hosted follow-up target is DigitalOcean.
 **Prepared by:** Claude (FPS Implementer), 2026-05-22
 **Tracks:** Issue #234 → OPS007 (#226)
 
@@ -54,15 +54,15 @@ Demo component templates in `code/infrastructure/dapr/components/demo/` are **pa
 
 | Logical name | Building block | Local provider | Demo template exists? | Demo candidate |
 |---|---|---|---|---|
-| `fps-pubsub` | pub/sub | RabbitMQ | **Yes** (`fps-pubsub.yaml`) | Azure Service Bus or managed RabbitMQ |
-| `bookingstore` | state | MongoDB | **Yes** (`bookingstore.yaml`) | MongoDB Atlas or managed MongoDB |
-| `secretstore` | secret store | HashiCorp Vault | **Yes** (`vault-demo.yaml`) | Azure Key Vault or Vault managed |
-| `profilestore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas (same pattern as bookingstore) |
+| `fps-pubsub` | pub/sub | RabbitMQ | **Yes** (`fps-pubsub.yaml`) | RabbitMQ first; Dapr-compatible hosted broker later if needed |
+| `bookingstore` | state | MongoDB | **Yes** (`bookingstore.yaml`) | Self-hosted MongoDB first; managed database later if needed |
+| `secretstore` | secret store | HashiCorp Vault | **Yes** (`vault-demo.yaml`) | Vault or profile-approved secret injection |
+| `profilestore` | state | MongoDB | **No — OPS007B must add** | Same state-store pattern as bookingstore |
 | `notificationstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
 | `auditstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
 | `configstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
 | `reportingstore` | state | MongoDB | **No — OPS007B must add** | MongoDB Atlas |
-| `s3store` | output binding | MinIO | **No — OPS007B must add** | Cloud S3-compatible store |
+| `s3store` | output binding | MinIO | **No — OPS007B must add** | MinIO first; DigitalOcean Spaces when hosted object storage is needed |
 
 ### 1.4 Identity
 
@@ -118,7 +118,7 @@ Run the existing Docker Compose stack on a small cloud VM with a public IP, TLS 
 
 | Criterion | Assessment |
 |---|---|
-| **Cost** | $6–20/month (Hetzner CX22/CAX21, DigitalOcean Basic, Linode Nanode). TLS free via Let's Encrypt. |
+| **Cost** | Small VPS baseline; validate current provider prices before sharing externally. TLS can use Let's Encrypt or the selected edge provider. |
 | **Complexity** | Very low. Stack is identical to local; only add TLS ingress and firewall rules. |
 | **Dapr fit** | Identical to local — `dapr run -f dapr.yaml` or `start-with-dapr.sh` on the VM. No component changes. |
 | **Identity fit** | Same Keycloak; runs on Docker with a persistent volume. |
@@ -127,20 +127,20 @@ Run the existing Docker Compose stack on a small cloud VM with a public IP, TLS 
 | **Limitation** | Not a proof of cloud Dapr component swap. All services on one VM is a single point of failure. Not representative of client production topology. |
 | **Time to working URL** | 1–2 days. |
 
-### Profile B — Azure Container Apps (ACA) with Azure-managed components
+### Profile B — DigitalOcean cloud profile
 
-Deploy FairSpot services as ACA apps using ACA's native Dapr sidecar, Azure Service Bus for pub/sub, MongoDB Atlas for state, Azure Key Vault for secrets, and Microsoft Entra External ID or a small Keycloak ACA app for identity.
+Deploy the FairSpot stack to DigitalOcean after the NAS/Cloudflare Release 1 profile is proven. Start with a Droplet/Docker Compose profile and self-hosted Dapr sidecars. Evaluate DigitalOcean Managed Databases, Spaces, Container Registry, Load Balancers, and DOKS only when they provide needed durability or evidence.
 
 | Criterion | Assessment |
 |---|---|
-| **Cost** | Consumption plan free tier covers light demo traffic (180k vCPU-sec/month free). MongoDB Atlas M0 free tier covers demo data volume. Azure Service Bus Basic ≈ $0.05/million operations. Key Vault ≈ $0/month at demo volume. Main variable: identity — Entra External ID has a free tier (50k MAU); Keycloak on a dedicated ACA app adds ≈$5–15/month. Total estimated: $0–30/month at zero or light traffic. |
-| **Complexity** | Medium. ACA Dapr is injected per-app via CLI or Bicep. Requires ACA environment, managed identity, component YAML. Existing `demo/` component templates are a starting point. |
-| **Dapr fit** | Excellent. ACA is the reference demo candidate in `hosting-deployment-strategy.md`. Native sidecar, managed identity for component auth. |
-| **Identity fit** | Entra External ID: managed, no hosted VM, free tier sufficient. Alternative: Keycloak on a single always-on ACA dedicated plan app (avoids Entra dependency). |
-| **Persistence fit** | MongoDB Atlas free tier (M0) for state stores. Backup via Atlas snapshots. Dapr component swap from local MongoDB is one YAML change. |
-| **Teardown** | Delete resource group. Scale-to-zero during idle periods. |
-| **Limitation** | Requires Azure subscription and service principal. Bicep or CLI scripts needed. More setup than Profile A. Entra External ID tenant is a new dependency unless Keycloak is kept. |
-| **Time to working URL** | 3–5 days including ACA environment, component wiring, and identity. |
+| **Cost** | Validate current DigitalOcean prices before sharing externally. Keep the first cloud profile small and avoid static public commitments. |
+| **Complexity** | Low to medium for Droplet/Docker Compose; medium to high if DOKS or managed service swaps are included. |
+| **Dapr fit** | Good with self-hosted sidecars and existing component contracts. DOKS can add Kubernetes-native Dapr operation later. |
+| **Identity fit** | Keep Keycloak first unless a pilot requires a managed/client IdP. |
+| **Persistence fit** | Self-hosted stores first with documented backup/restore; evaluate managed databases when durability or operations evidence requires it. |
+| **Teardown** | Destroy Droplet and managed resources after backup/evidence retention decisions are complete. |
+| **Limitation** | The Droplet path proves cloud hosting and public operation, not managed component swaps. DOKS increases operational overhead. |
+| **Time to working URL** | Similar to Profile A for Droplet/Docker Compose after domain, secrets, and edge routing are prepared. |
 
 ### Profile C — Fly.io with self-hosted components
 
@@ -161,22 +161,22 @@ Deploy FairSpot services and supporting infrastructure as Fly.io apps. No manage
 
 ## 4. Recommendation
 
-**Start with Profile A (VPS + Docker Compose). Plan a Profile B (ACA) migration for Demo v0 release.**
+**Start with the Release 1 NAS/Cloudflare profile. Use Profile B (DigitalOcean Droplet + Docker Compose) as the cloud-hosted follow-up.**
 
 ### Rationale
 
-Profile A is the fastest path to a stable public demo URL with zero new technology risk:
+The NAS/Cloudflare profile is the fastest path to a stable public demo URL with zero new target-cloud risk:
 
 - The stack is identical to local — same Compose file, same Dapr version, same components
 - Dapr component contracts are unchanged; this is not a proof of swap but a proof of the product
-- A working demo at `https://fps-demo.example.com` can exist within 1–2 working days
-- Cost is $6–20/month with no subscription, service principal, or cloud account required to start
+- A working public-domain demo can use the existing containerized stack and Cloudflare edge profile
+- Cost stays under operator control without committing public provider prices
 - Keycloak, RabbitMQ, MongoDB, and Vault all have Docker volumes for persistence; VM snapshot covers backup at demo scale
 
-Profile B (ACA) is the right next step *after* a successful Demo v0 walkthrough because:
+Profile B (DigitalOcean) is the right next step *after* a successful Release 1 walkthrough because:
 
-- It validates the Dapr component swap (the core portability claim)
-- It demonstrates cloud-native deployment to evaluators who ask about production topology
+- It validates FairSpot-operated cloud hosting without reopening AWS/Azure planning
+- It demonstrates a cloud deployment path to evaluators who ask about production topology
 - Three demo Dapr component templates already exist (`fps-pubsub`, `bookingstore`, `vault-demo`); the remaining six are derived from the same MongoDB/Vault pattern and OPS007B adds them
 - It sets up the evidence base for client production conversations
 
@@ -187,7 +187,7 @@ Profile C (Fly.io) adds complexity without a compensating benefit and is not rec
 **Business decisions (Robert/Codex must answer — see [Open Decisions](#open-decisions)):**
 
 1. Domain or subdomain for the demo URL (e.g. `fps-demo.yourdomain.com`) — TLS and OIDC redirect URIs depend on it
-2. VPS provider choice (Hetzner, DigitalOcean, or other)
+2. Target host choice for the cloud follow-up (DigitalOcean Droplet first unless Robert approves a different option)
 3. SSH key for VM access
 
 **Implementation risks and known checks (OPS007B must address):**
@@ -198,7 +198,7 @@ Profile C (Fly.io) adds complexity without a compensating benefit and is not rec
 - **Persistent volumes** — MongoDB, Keycloak, Vault, and MinIO data must survive VM reboots via named Docker volumes; no container uses ephemeral storage for demo data
 - **Service restart strategy** — Docker restart policies (`unless-stopped`) for infrastructure and application containers; define expected boot order and startup health checks
 - **Docker network availability** — the Compose-managed network must already exist or be created on VM start; multi-app Dapr run must resolve service hostnames correctly on the VM
-- **Missing demo Dapr component templates** — `profilestore`, `notificationstore`, `auditstore`, `configstore`, `reportingstore`, and `s3store` templates do not exist yet; Profile A uses the local components unchanged, so this is not a blocker for Profile A but is a blocker for Profile B
+- **Missing demo Dapr component templates** — `profilestore`, `notificationstore`, `auditstore`, `configstore`, `reportingstore`, and `s3store` templates do not exist yet; the NAS/Droplet path can use local-style components first, but managed-service swaps require profile-specific templates
 - **Smoke vs durable components** — Profile A reuses local components (MongoDB on Docker, RabbitMQ on Docker); these are durable between restarts if volumes are configured correctly, but a VM failure loses data since there is no off-VM backup by default
 
 ---
@@ -209,10 +209,10 @@ These are concrete yes/no or option choices that require input from Robert or Co
 
 | # | Decision | Options | Blocking |
 |---|---|---|---|
-| D1 | **VPS provider** | Hetzner CX22 (~€4/month), DigitalOcean Basic Droplet (~$6/month), other | Yes — needed to provision the VM |
+| D1 | **Cloud follow-up host** | DigitalOcean Droplet first, DOKS later, or explicitly approved alternative | Yes — needed before cloud provisioning |
 | D2 | **Domain for demo URL** | Use existing domain, register `fairspot.demo` / `fps-demo.example.com`, or use IP-only for first demo | Yes — TLS cert and OIDC redirect URIs depend on it |
-| D3 | **Profile A → B migration timing** | Before Demo v0 launch (validate Dapr swap claim) vs after Demo v0 launch (keep velocity) | Yes — determines OPS007B scope |
-| D4 | **Identity for Profile B** | Keep Keycloak on ACA dedicated app vs Entra External ID free tier | No — can decide during OPS007B |
+| D3 | **NAS → DigitalOcean timing** | After Release 1 evaluation path is stable vs before first external walkthrough | Yes — determines OPS007B scope |
+| D4 | **Identity for DigitalOcean profile** | Keep Keycloak first vs client/managed IdP for a specific pilot | No — can decide during OPS007B |
 | D5 | **Observability on Profile A** | Keep Grafana/Prometheus/Loki on the same VM vs skip dashboards for first demo and add in OPS007B | No — can decide during OPS007B |
 | D6 | **Demo reset downtime** | Acceptable to stop and restart Docker Compose for reset (≈30s) vs require hot-reset without downtime | No — can decide during OPS007B |
 

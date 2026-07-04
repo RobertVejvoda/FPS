@@ -102,7 +102,7 @@
     **Acceptance Criteria:**
     - Local dashboards use Prometheus/Grafana or equivalent.
     - Demo dashboards show usage, latency, errors, event processing, notification delivery, and draw duration.
-    - Client production telemetry can be exported to platforms such as Dynatrace, Azure Monitor, Grafana, Splunk, or equivalent.
+    - Client production telemetry can be exported to platforms such as Dynatrace, Grafana, Splunk, Datadog, New Relic, DigitalOcean Monitoring, or equivalent.
     **Priority:** Medium
 
 5. **NFR1404 - Security**

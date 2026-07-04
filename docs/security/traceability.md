@@ -1,27 +1,31 @@
-## Traceability in Security for Azure Hosting
+## Security Traceability
 
-Traceability in security for Azure hosting refers to the ability to track and trace the actions and changes made within the Azure environment. This is crucial for ensuring accountability, auditing, and forensic analysis. Traceability involves several key components:
+Security traceability records who changed or accessed sensitive systems, what data or resource was affected, and which evidence supports investigation. It is provider-neutral and applies across NAS/Cloudflare, DigitalOcean, Kubernetes, and client-owned profiles.
 
-### Logging and Monitoring
-- **Azure Monitor**: Capturing detailed logs of all events, including user actions, system changes, and access attempts within Azure.
-- **Azure Activity Logs**: Maintaining a chronological record of all activities to provide a historical record for review.
-- **Azure Security Center**: Continuously observing system activities to detect and respond to security incidents promptly.
+## Evidence Streams
 
-### Identity and Access Management (IAM)
-- **Azure Active Directory (AAD)**: Ensuring that users are who they claim to be through mechanisms like passwords, biometrics, and multi-factor authentication.
-- **Role-Based Access Control (RBAC)**: Defining and enforcing what authenticated users are allowed to do within the Azure environment.
-- **Conditional Access**: Assigning permissions based on user roles and conditions to simplify management and enhance security.
+| Evidence | Purpose |
+| --- | --- |
+| Audit service records | Business activity, policy-sensitive changes, allocation outcomes, erasure requests, and privileged reads. |
+| Technical logs | Service startup, dependency failures, request failures, retries, and support diagnostics. |
+| Metrics and traces | Latency, error rate, dependency behavior, and cross-service request correlation. |
+| Identity provider logs | Login, MFA, token issuance, and account lifecycle events where exposed by the IdP. |
+| Ingress/WAF logs | Public request filtering, rate limiting, and suspicious access attempts. |
+| Change records | Pull requests, release evidence, deployment history, and operator actions. |
 
-### Change Management
-- **Azure DevOps**: Keeping track of changes to code, configurations, and documents to ensure that all modifications are documented and reversible.
-- **Azure Resource Manager (ARM)**: Managing and documenting the state of system configurations to prevent unauthorized changes and ensure consistency.
+## Required Correlation
 
-### Incident Response
-- **Azure Sentinel**: Investigating security incidents by analyzing logs, audit trails, and other traceable data to determine the cause and impact.
-- **Azure Security Center**: Identifying the underlying reasons for security breaches to prevent future occurrences.
+- Business events should include stable event IDs and tenant scope.
+- Technical telemetry should carry trace/correlation IDs where available.
+- Business-facing audit views must read from the Audit service, not raw logs.
+- Support correlation IDs are diagnostic links only; they do not replace authorization or tenant scoping.
 
-### Compliance and Reporting
-- **Azure Policy**: Ensuring that traceability practices meet legal and regulatory requirements, such as GDPR, HIPAA, and PCI-DSS.
-- **Azure Compliance Manager**: Generating reports that provide insights into system activities, security posture, and compliance status.
+## Incident Use
 
-Implementing robust traceability mechanisms in Azure hosting is essential for maintaining the integrity, confidentiality, and availability of systems and data. It enables organizations to detect and respond to security threats effectively, ensure compliance, and maintain trust with stakeholders.
+During an incident, operators should be able to reconstruct:
+
+1. who or what initiated the action;
+2. the tenant and resource affected;
+3. the request, event, or deployment identifier;
+4. technical symptoms and dependency behavior;
+5. the remediation and follow-up actions taken.
