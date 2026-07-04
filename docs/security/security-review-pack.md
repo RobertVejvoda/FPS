@@ -293,7 +293,7 @@ FairSpot is designed for **client-owned infrastructure** (BYOC). In this model:
 | Secret store | HashiCorp Vault, Azure Key Vault, AWS Secrets Manager | Secret management |
 | Object storage | Azure Blob, AWS S3, MinIO (self-hosted) | Exports, backups |
 | Observability | Grafana Cloud, Datadog, Splunk, or self-hosted | Logs, metrics, traces |
-| Email delivery (if enabled) | SendGrid, AWS SES, or SMTP relay | Notification delivery |
+| Email delivery (if enabled) | Twilio SendGrid or approved SMTP relay | Notification delivery |
 
 **Client responsibility**: Maintain the subprocessor list, sign DPAs with each subprocessor where required, and update privacy notices when subprocessors change.
 

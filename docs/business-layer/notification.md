@@ -10,8 +10,13 @@ v1 requires both:
 - email notifications.
 
 Push notifications may be added later, but they are not required for v1.
+SMS is not a v1 channel. If SMS is added later, use Twilio SMS behind a Dapr output binding; do not introduce Amazon SNS as a notification provider.
 
 Implementation is sliced. `N001` establishes the Booking-event consumer and durable in-app notification records first. Email delivery remains a v1 requirement, but it is implemented in a later Notification slice after the in-app record contract and idempotency behavior are stable.
+
+Production email delivery uses the logical Dapr output binding `notification-email`. The current hosted/demo provider is Twilio SendGrid (`bindings.twilio.sendgrid`); application code must invoke the binding contract rather than a provider SDK. Local and evaluation profiles may keep the in-memory sender unless a real staging binding is explicitly configured.
+
+Booking operational events currently carry recipient user IDs, not email addresses. Real employee email delivery therefore requires a Profile or Identity recipient lookup before the SendGrid sender can deliver to users. Sales/onboarding alerts may send immediately because the configured recipient is already an email address.
 
 ## Notification Classes
 
@@ -158,7 +163,7 @@ N001 must not:
 - query Booking or Profile to infer recipients not present in the event;
 - change Booking state or publish new Booking events.
 
-The full v1 requirement for email remains authoritative. Later Notification slices add email delivery, preferences, streaming/history APIs, and production persistence without changing the N001 in-app record idempotency contract.
+The full v1 requirement for email remains authoritative. Later Notification slices add employee email address resolution, retry policy, preferences, streaming/history APIs, and production persistence without changing the N001 in-app record idempotency contract.
 
 ## Notification History
 
