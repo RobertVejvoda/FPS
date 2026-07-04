@@ -315,19 +315,11 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
     var existing = await tenantRepository.GetAsync(tenantId, CancellationToken.None);
     if (existing is not null)
     {
-        // PLAT003A repair: upgrade an already-seeded Green Logistics tenant to the resettable
-        // sandbox marker so it satisfies the reset guard (local/harness state may predate the
-        // flag). Never touches a non-sandbox tenant.
-        if (existing.Kind == TenantKind.Sandbox && !existing.IsResettableSandbox)
-        {
-            var repaired = TenantWorkspace.Restore(
-                existing.TenantId, existing.Slug, existing.DisplayName, existing.Region, existing.TimeZone,
-                existing.SupportContacts, existing.Kind, isResettableSandbox: true, existing.LifecycleState,
-                existing.Transitions, existing.Provisioning, existing.Branding, existing.DiscoveryDomains,
-                existing.SeedEvents, existing.CreatedAt, existing.UpdatedAt,
-                existing.PrimaryModule, existing.EnabledModules);
-            await tenantRepository.SaveAsync(repaired, CancellationToken.None);
-        }
+        // Heal state that predates a later seed change (PLAT003A resettable flag, #719 Seats
+        // module). Persist only when something actually changed so repeat startups stay idempotent.
+        var (healed, changed) = GreenLogisticsSeedHealer.Heal(existing);
+        if (changed)
+            await tenantRepository.SaveAsync(healed, CancellationToken.None);
         return;
     }
 
