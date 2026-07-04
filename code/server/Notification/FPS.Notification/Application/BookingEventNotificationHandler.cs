@@ -133,6 +133,11 @@ public sealed class BookingEventNotificationHandler(
         RelatedTimeSlot = envelope.Payload.TimeSlot,
         LocationId = envelope.Payload.LocationId,
         NextAction = ResolveNextAction(delivery.EffectiveType),
+        // #727 — carry safe outcome differentiators so the composer can pick variant-specific
+        // templates (reallocation, allocated-reservation cancellation, penalty type).
+        AllocationSource = envelope.Payload.AllocationSource,
+        ReasonCode = envelope.Payload.ReasonCode,
+        PreviousStatus = envelope.Payload.PreviousStatus,
         SourceEventId = envelope.EventId,
         CreatedAt = DateTime.UtcNow
     };

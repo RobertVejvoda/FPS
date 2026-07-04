@@ -14,7 +14,10 @@ public sealed class EmailNotificationComposerTests
         string? date = "2026-05-14",
         string? timeSlot = "09:00-17:00",
         string? location = "GL-HQ",
-        string? nextAction = null) => new()
+        string? nextAction = null,
+        string? allocationSource = null,
+        string? reasonCode = null,
+        string? previousStatus = null) => new()
     {
         Id = Guid.NewGuid(),
         TenantId = "tenant-1",
@@ -26,9 +29,52 @@ public sealed class EmailNotificationComposerTests
         RelatedTimeSlot = timeSlot,
         LocationId = location,
         NextAction = nextAction,
+        AllocationSource = allocationSource,
+        ReasonCode = reasonCode,
+        PreviousStatus = previousStatus,
         SourceEventId = "event-1",
         CreatedAt = DateTime.UtcNow,
     };
+
+    [Fact]
+    public void Compose_Reallocation_UsesDistinctTemplate_FromNormalAllocation()
+    {
+        var normal = composer.Compose(Record("booking.slotAllocated"));
+        var realloc = composer.Compose(Record("booking.slotAllocated", allocationSource: "reallocation"));
+
+        Assert.Equal("Your parking spot is confirmed", normal.Subject);
+        Assert.Equal("A parking spot was reallocated to you", realloc.Subject);
+        Assert.Contains("Parking spot reallocated", realloc.HtmlBody);
+        Assert.Contains("Reallocated", realloc.HtmlBody);
+    }
+
+    [Fact]
+    public void Compose_AllocatedReservationCancelled_UsesDistinctTemplate()
+    {
+        var beforeAlloc = composer.Compose(Record("booking.requestCancelled"));
+        var afterAlloc = composer.Compose(Record("booking.requestCancelled", previousStatus: "Allocated"));
+
+        Assert.Equal("Your parking request was cancelled", beforeAlloc.Subject);
+        Assert.Equal("Your allocated parking reservation was cancelled", afterAlloc.Subject);
+    }
+
+    [Theory]
+    [InlineData("LateCancel", "A late-cancellation penalty was applied")]
+    [InlineData("NoShow", "A no-show penalty was applied")]
+    public void Compose_PenaltyVariants_UseReasonSpecificSubjects(string reasonCode, string expectedSubject)
+    {
+        var email = composer.Compose(Record("booking.penaltyApplied", reasonCode: reasonCode));
+
+        Assert.Equal(expectedSubject, email.Subject);
+    }
+
+    [Fact]
+    public void Compose_PenaltyWithUnknownReason_FallsBackToBasePenaltyTemplate()
+    {
+        var email = composer.Compose(Record("booking.penaltyApplied", reasonCode: "Something"));
+
+        Assert.Equal("A parking penalty was applied", email.Subject);
+    }
 
     [Theory]
     [InlineData("booking.requestSubmitted", "Your parking request was submitted")]

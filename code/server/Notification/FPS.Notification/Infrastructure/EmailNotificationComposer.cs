@@ -29,12 +29,19 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
             ["booking.requestSubmitted.hr"] = new("New parking request submitted", "New parking request", "Submitted"),
             ["booking.requestRejected"] = new("Your parking request could not be allocated", "Parking request not allocated", "Not allocated"),
             ["booking.slotAllocated"] = new("Your parking spot is confirmed", "Parking spot allocated", "Allocated"),
+            // Variant: a cancellation freed a spot that was reallocated to this requestor.
+            ["booking.slotAllocated.reallocation"] = new("A parking spot was reallocated to you", "Parking spot reallocated", "Reallocated"),
             ["booking.requestCancelled"] = new("Your parking request was cancelled", "Parking request cancelled", "Cancelled"),
             ["booking.requestCancelled.hr"] = new("A parking request was cancelled", "Parking request cancelled", "Cancelled"),
+            // Variant: an already-allocated reservation was cancelled (vs cancelled before allocation).
+            ["booking.requestCancelled.postAllocation"] = new("Your allocated parking reservation was cancelled", "Parking reservation cancelled", "Cancelled"),
             ["booking.drawCompleted"] = new("Your parking allocation results", "Parking allocation complete", "Draw complete"),
             ["booking.drawCompleted.hr"] = new("Parking draw completed", "Parking draw completed", "Draw complete"),
             ["booking.noShowRecorded"] = new("Parking no-show recorded", "No-show recorded", "No-show"),
             ["booking.penaltyApplied"] = new("A parking penalty was applied", "Parking penalty applied", "Penalty applied"),
+            // Variants: distinct penalty reasons get their own copy.
+            ["booking.penaltyApplied.LateCancel"] = new("A late-cancellation penalty was applied", "Late-cancellation penalty", "Penalty applied"),
+            ["booking.penaltyApplied.NoShow"] = new("A no-show penalty was applied", "No-show penalty", "Penalty applied"),
             ["booking.usageConfirmed"] = new("Parking usage confirmed", "Parking usage confirmed", "Confirmed"),
             ["booking.requestExpired"] = new("Your parking request expired", "Parking request expired", "Expired"),
             ["booking.manualCorrectionApplied"] = new("Your parking request was updated", "Parking request updated", "Updated"),
@@ -45,7 +52,13 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
 
     public ComposedEmail Compose(NotificationRecord record)
     {
-        var template = Templates.TryGetValue(record.NotificationType, out var t) ? t : Fallback;
+        // Prefer a variant-specific template (keyed on safe outcome differentiators), then the base
+        // NotificationType, then a safe generic fallback.
+        var refinedKey = ResolveVariantKey(record);
+        var template =
+            (refinedKey is not null && Templates.TryGetValue(refinedKey, out var v)) ? v
+            : Templates.TryGetValue(record.NotificationType, out var t) ? t
+            : Fallback;
         var details = BuildDetails(record);
         var nextAction = ResolveNextAction(record.NextAction);
         var footer = ResolveFooter(record.NotificationType);
@@ -55,6 +68,26 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
             RenderHtml(template, record.MessageText, details, nextAction, footer),
             RenderText(template, record.MessageText, details, nextAction, footer));
     }
+
+    // Maps shared NotificationTypes to a variant key using only business-safe differentiators. Returns
+    // null when the base template applies. Unrecognised values fall through to the base template.
+    private static string? ResolveVariantKey(NotificationRecord record) => record.NotificationType switch
+    {
+        "booking.slotAllocated" when IsReallocation(record.AllocationSource) => "booking.slotAllocated.reallocation",
+        "booking.requestCancelled" when IsAllocatedStatus(record.PreviousStatus) => "booking.requestCancelled.postAllocation",
+        "booking.penaltyApplied" when record.ReasonCode is "LateCancel" or "NoShow" => $"booking.penaltyApplied.{record.ReasonCode}",
+        _ => null,
+    };
+
+    private static bool IsReallocation(string? source) =>
+        string.Equals(source, "reallocation", StringComparison.OrdinalIgnoreCase);
+
+    // The cancelled reservation was already allocated (vs cancelled before allocation). Booking emits
+    // PreviousStatus null on cancellations today, so this variant stays dormant until that field is
+    // populated upstream — the template and wiring are ready for it.
+    private static bool IsAllocatedStatus(string? previousStatus) =>
+        string.Equals(previousStatus, "Allocated", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(previousStatus, "Reallocated", StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<(string Label, string Value)> BuildDetails(NotificationRecord record)
     {
