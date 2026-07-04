@@ -15,10 +15,15 @@ spec:
     #   isSecure: false
     #   protocol: grpc
   mtls:
+    # OPS017 — service-to-service mTLS stays DISABLED on the self-hosted Docker Compose
+    # stack (local AND NAS). Dapr mTLS needs the Sentry control plane to issue/rotate
+    # workload certificates; this stack runs only Placement + Scheduler, no Sentry, so
+    # mTLS cannot be enabled here safely. On a single NAS host all sidecars share one
+    # private Docker bridge, so plaintext intra-service traffic is low risk (sniffing it
+    # requires host access). mTLS is delivered by the planned Kubernetes/DOKS profile,
+    # where Sentry is standard — see fps-config.k8s-hosted.yaml (the mTLS-enabled target)
+    # and docs/production/dapr-first-production-standards.md.
     enabled: false
-    # Demo / client production: enable mTLS when Dapr sidecar injection is managed by
-    # the platform (ACA Dapr, AKS Dapr extension, or self-hosted Placement+Sentry).
-    # enabled: true
     # WorkflowHistorySigning remains off until the deployment profile has mTLS
     # enabled and a documented CA/root-key lifecycle. Do not enable it in local
     # smoke or any profile that cannot preserve signed workflow verification.

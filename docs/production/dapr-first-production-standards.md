@@ -93,6 +93,42 @@ Production profiles should use:
 - Dapr state encryption where supported, in addition to infrastructure encryption at rest;
 - private networking and WAF/ingress controls that never expose Dapr sidecar APIs publicly.
 
+## Service-to-Service Security Mode (OPS017)
+
+Dapr mTLS gives each sidecar a SPIFFE workload identity and encrypts and mutually
+authenticates all sidecar-to-sidecar traffic. Which profiles run it, and why, is fixed:
+
+| Profile | mTLS | Why |
+|---|---|---|
+| Local Docker Compose | **Disabled** | Keep local development simple. Traffic stays on one host's loopback/private bridge. |
+| NAS / self-hosted Docker Compose (Release 1) | **Disabled (documented exception)** | Dapr mTLS needs the **Sentry** control plane to issue and rotate workload certificates. The self-hosted Compose stack runs only Placement + Scheduler — no Sentry — so mTLS cannot be enabled here safely. On a single NAS host all sidecars share one private Docker bridge, so plaintext intra-service traffic is low risk: sniffing it requires host access, at which point the attacker already has more than the traffic. |
+| Kubernetes / DigitalOcean DOKS (target) | **Enabled** | Sentry is standard on the Kubernetes Dapr install and managed runtimes. mTLS is the default there, so the defense-in-depth that matters once services span hosts arrives naturally with the K8s move. |
+
+**Configuration split.** The Compose stack mounts `dapr/configuration/fps-config.yaml`
+(`mtls.enabled: false`). The mTLS-enabled target for the hosted K8s profile is a separate,
+not-wired-in artifact, `dapr/configuration/fps-config.k8s-hosted.yaml` (`mtls.enabled: true`),
+which also carries the `workloadCertTTL` / `allowedClockSkew` and workflow-history-signing
+posture for that profile.
+
+**Certificates, trust anchors, rotation.** No key material is committed. On Kubernetes,
+Sentry holds the trust-bundle root CA and issues short-lived leaf certificates bound to each
+app's SPIFFE ID (`spiffe://<trust-domain>/ns/<namespace>/<app-id>`); it auto-rotates leaves
+before `workloadCertTTL` expiry. Root rotation is an operator action — roll the Sentry
+trust-bundle secret and restart sidecars — with evidence recorded in the private operator
+runbook. `allowedClockSkew` absorbs node clock drift during verification.
+
+**Failure mode.** With mTLS enabled, a sidecar that cannot obtain or validate a certificate
+(Sentry unreachable, expired/again-untrusted root, clock skew beyond tolerance) fails its
+service-to-service calls closed rather than falling back to plaintext. Operators must treat
+Sentry availability and trust-bundle rotation as release-gating for that profile.
+
+**How this is reported.** No application code depends on certificate material — services
+reference only logical Dapr component and app names. The startup path
+(`tools/start-container-stack.sh`) reads the active Dapr Configuration and prints the
+service-to-service security mode under **"Dapr service-to-service security (OPS017)"**:
+`DISABLED` with the documented-exception note on the self-hosted profiles, `ENABLED` where a
+profile mounts the mTLS-enabled configuration.
+
 ## References
 
 - Dapr transactional outbox: <https://docs.dapr.io/developing-applications/building-blocks/state-management/howto-outbox/>

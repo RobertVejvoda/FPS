@@ -13,6 +13,7 @@ Any hosted or client-owned FairSpot deployment must satisfy these public require
 | Ingress | Public traffic enters through HTTPS only. Direct service/container ports must not be exposed to the Internet. |
 | Identity | Tenant and user identity come from the configured OIDC provider and signed tokens, never from caller-supplied request bodies. |
 | Runtime | FairSpot services run as containers with Dapr sidecars or equivalent Dapr-compatible runtime components. |
+| Service-to-service security | Dapr mTLS is the target for the FairSpot-operated Kubernetes/DOKS profile. On the Release 1 NAS/self-hosted Docker Compose profile it is a documented exception (mTLS disabled — no Sentry control plane; single-host private bridge). Startup reports the active Dapr security mode. See [Dapr-First Production Standards](./dapr-first-production-standards) (OPS017). |
 | Secrets | Tunnel tokens, certificates, passwords, keys, and connection strings are injected from a secret-management system and are never committed. |
 | Storage | State stores, read models, and backup targets are tenant-safe and encrypted according to the selected deployment profile. |
 | Operations | Deployment must have backup/restore evidence, incident handling, maintenance expectations, and public-boundary smoke evidence before real customer data is processed. |
