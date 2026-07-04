@@ -7,6 +7,13 @@ public interface IEmailVerificationRepository
 {
     Task<EmailVerification?> GetAsync(string tenantId, string userId, CancellationToken cancellationToken = default);
     Task SaveAsync(EmailVerification verification, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes all email-verification records for a tenant (Profile-owned tenant data — deleted on tenant
+    /// purge / sandbox reset so confidential address + secret-derived token-hash state is never orphaned).
+    /// Returns the number of records removed; idempotent.
+    /// </summary>
+    Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Generates the cryptographically-random, URL-safe one-time verification token (plaintext).</summary>

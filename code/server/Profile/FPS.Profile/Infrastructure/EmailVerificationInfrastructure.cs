@@ -13,10 +13,48 @@ public sealed class DaprEmailVerificationRepository(DaprClient daprClient) : IEm
     public Task<EmailVerification?> GetAsync(string tenantId, string userId, CancellationToken cancellationToken = default) =>
         daprClient.GetStateAsync<EmailVerification?>(StoreName, Key(tenantId, userId), cancellationToken: cancellationToken);
 
-    public Task SaveAsync(EmailVerification verification, CancellationToken cancellationToken = default) =>
-        daprClient.SaveStateAsync(StoreName, Key(verification.TenantId, verification.UserId), verification, cancellationToken: cancellationToken);
+    public async Task SaveAsync(EmailVerification verification, CancellationToken cancellationToken = default)
+    {
+        await daprClient.SaveStateAsync(
+            StoreName, Key(verification.TenantId, verification.UserId), verification, cancellationToken: cancellationToken);
+        await AddToTenantIndexAsync(verification.TenantId, verification.UserId, cancellationToken);
+    }
+
+    // Tenant purge / sandbox reset removes every verification record for the tenant so no confidential
+    // address / token-hash state is left orphaned when the owning profiles are purged.
+    public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        var indexKey = TenantIndexKey(tenantId);
+        var userIds = await daprClient.GetStateAsync<List<string>>(StoreName, indexKey, cancellationToken: cancellationToken) ?? [];
+
+        var removed = 0;
+        foreach (var userId in userIds)
+        {
+            var key = Key(tenantId, userId);
+            var record = await daprClient.GetStateAsync<EmailVerification?>(StoreName, key, cancellationToken: cancellationToken);
+            if (record is null)
+                continue; // stale index entry — nothing to remove
+            await daprClient.DeleteStateAsync(StoreName, key, cancellationToken: cancellationToken);
+            removed++;
+        }
+
+        await daprClient.DeleteStateAsync(StoreName, indexKey, cancellationToken: cancellationToken);
+        return removed;
+    }
+
+    private async Task AddToTenantIndexAsync(string tenantId, string userId, CancellationToken cancellationToken)
+    {
+        var indexKey = TenantIndexKey(tenantId);
+        var index = await daprClient.GetStateAsync<List<string>>(StoreName, indexKey, cancellationToken: cancellationToken) ?? [];
+        if (!index.Contains(userId))
+        {
+            index.Add(userId);
+            await daprClient.SaveStateAsync(StoreName, indexKey, index, cancellationToken: cancellationToken);
+        }
+    }
 
     private static string Key(string tenantId, string userId) => $"email-verification:{tenantId}:{userId}";
+    private static string TenantIndexKey(string tenantId) => $"email-verification-index:{tenantId}";
 }
 
 public sealed class InMemoryEmailVerificationRepository : IEmailVerificationRepository
@@ -30,6 +68,13 @@ public sealed class InMemoryEmailVerificationRepository : IEmailVerificationRepo
     {
         store[$"{verification.TenantId}:{verification.UserId}"] = verification;
         return Task.CompletedTask;
+    }
+
+    public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
+    {
+        var keys = store.Where(kv => kv.Value.TenantId == tenantId).Select(kv => kv.Key).ToList();
+        foreach (var key in keys) store.Remove(key);
+        return Task.FromResult(keys.Count);
     }
 }
 
