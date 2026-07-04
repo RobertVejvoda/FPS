@@ -292,7 +292,7 @@ TOKEN=$(./tools/dev-auth.sh gl-employee1)
 curl -s -o /dev/null -w "%{http_code}" http://localhost:10000/me
 curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/me
 
-# Booking with Dapr sidecar — expects 200 (empty list)
+# Booking with Dapr sidecar — expects 200 (seeded list after dev-seed; empty before seed)
 curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://localhost:10000/bookings
 
 # Notification — expects 200
@@ -368,7 +368,7 @@ curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://
 **Full mobile E2E sequence:**
 
 - OPS006C (this page) resolves the Booking sidecar gap. `GET /bookings` returns `200` when Booking is started through `dapr run -f dapr.yaml` instead of plain `dotnet run`.
-- OPS006D resolves the profile seed gap. `GET /profile/snapshot` returns `200` for `gl-employee1`, `gl-employee2`, and `gl-employee3` after `./tools/dev-seed.sh`.
+- OPS006D resolves the profile seed gap. `GET /profile/snapshot` returns `200` for the seeded Green Logistics showcase users after `./tools/dev-seed.sh`.
 
 Full mobile E2E testing — where all four endpoints return valid data — requires the OPS006B gateway, the OPS006C Dapr sidecar run path, and the OPS006D seed/reset step. The gateway closes the routing gap; sidecars close the Dapr state/pubsub gap; seed data closes the Profile and demo-domain gap. The remaining OPS006 parent work is coordinated startup and health/log visibility through the local harness.
 
@@ -414,38 +414,30 @@ After starting services (Identity + `dapr run -f dapr.yaml`), run the seed scrip
 ./tools/dev-seed.sh
 ```
 
-This seeds Profile snapshots for `gl-employee1`, `gl-employee2`, and `gl-employee3` (in the Green Logistics tenant) by:
+This seeds Profile snapshots for the default Green Logistics showcase (`gl-employee1`..`gl-employee10` plus role users) by:
 1. Getting a ROPC token per user from local Keycloak.
 2. Decoding the JWT `sub` claim to get the Dapr/service user ID.
 3. Calling `PUT /profile/admin/snapshot` (Development-only endpoint) with synthetic profile facts.
 
-**Configuration** — `dev-seed.sh` seeds the Green Logistics tenant policy and 20 parking slots at `GL-HQ` (the seeded business data). The Configuration service also creates a default tenant policy + 10 parking slots at `Prague` for the bare `demo` scaffold when it starts in `Development` mode.
+**Configuration** — `dev-seed.sh` seeds the Green Logistics tenant policy, six named parking slots at `GL-HQ`, and the Seats-module location `GL-TEAMS` (the seeded showcase data). The Configuration service also creates a default tenant policy + 10 parking slots at `Prague` for the bare `demo` scaffold when it starts in `Development` mode.
 
-**Bookings** — empty list (`GET /bookings` → `200 []`) is the documented local baseline. Submit a booking via the mobile app or Booking API to create entries.
+**Bookings** — `dev-seed.sh` creates the Green Logistics showcase bookings, triggers the parking Draw, verifies a visible waitlist, cancels one allocated general request to prove reallocation, and runs the Seats Draw. Use a clean reset when you need a fresh baseline.
 
-**Notifications** — unread count `0` is the documented baseline. Events are published in-memory (smoke components) so booking submissions create notification records.
+**Notifications** — booking submissions and allocation events create notification records when the Dapr sidecars are running.
 
 ### Seed demo data table
 
-| Username | Display name | ParkingEligible | CompanyCar | Vehicles | Accessibility |
-| --- | --- | --- | --- | --- | --- |
-| `gl-employee1` | Jan Novak | ✓ | — | 1AB 2345 (sedan), 2AB 3456 (EV) | — |
-| `gl-employee2` | Petra Svobodova | ✓ | ✓ | 3AC 4567 (fleet) | — |
-| `gl-employee3` | Tomas Dvorak | ✓ | — | 4AD 5678 | ✓ |
-| `gl-hr-admin` | Lucie Prochazkova | — | — | — | — |
-| `gl-tenant-admin` | Karel Urban | — | — | — | — |
-| `gl-report-viewer` | Eva Kralova | — | — | — | — |
-| `gl-auditor` | Martin Cerny | — | — | — | — |
+See [Demo Seed Data Reference](../demo-seed-data.md) for the full roster and expected outcomes. The default local showcase uses `gl-employee1`..`gl-employee10` plus `gl-hr-admin`, `gl-tenant-admin`, `gl-report-viewer`, and `gl-auditor`. Larger Green Logistics employee counts are opt-in local experiments; load/performance validation uses `tools/perf-seed-greenlogistics.sh`.
 
 ### Reset / re-seed
 
-Profile seeding is idempotent — re-run after a service restart:
+By default, re-running `dev-seed.sh` clears local persisted demo state and recreates the showcase. Set `FPS_DEV_SEED_RESET_STATE=false` only when intentionally appending to existing local data:
 
 ```sh
 ./tools/dev-seed.sh
 ```
 
-For a full reset (clears all in-memory state including bookings):
+For a full volume reset:
 
 ```sh
 ./tools/stop-local-harness.sh --reset

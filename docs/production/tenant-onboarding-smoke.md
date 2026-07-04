@@ -99,7 +99,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:10000/me | python3 -m
 
 **Status:** 🟡 Evaluation-grade
 
-`dev-seed.sh` configures the Green Logistics policy and 20 `GL-HQ` parking slots (and the Configuration service also seeds a default `Prague` location for the bare `demo` scaffold on startup). This represents step 4 for evaluation.
+`dev-seed.sh` configures the Green Logistics policy, six named `GL-HQ` parking slots, and the `GL-TEAMS` Seats location (and the Configuration service also seeds a default `Prague` location for the bare `demo` scaffold on startup). This represents step 4 for evaluation.
 
 **Verify:**
 ```bash
@@ -157,7 +157,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:5181/tenants/greenlog
 
 **Status:** 🟡 Evaluation-grade (seed) / ✅ Implemented (API)
 
-Profile service provides `POST /profile/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for `gl-employee1`, `gl-employee2`, `gl-employee3` (in the Green Logistics tenant).
+Profile service provides `POST /profile/bootstrap` for seeding employee profiles. The `dev-seed.sh` script calls this for the default Green Logistics showcase employees (`gl-employee1`..`gl-employee10`) and role users.
 
 **Run the employee seed:**
 ```bash

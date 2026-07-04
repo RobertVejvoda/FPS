@@ -30,7 +30,7 @@ toward a decision.** It doubles as the sales pipeline and a feature-signal board
 
 | # | Stage | What happens | Plane | Status |
 |---|---|---|---|---|
-| 1 | **Land** | Public page; CTAs *Start a FairSpot Pilot* (high intent) + *Explore the Green Logistics demo* (low commitment) | open | built (#656) |
+| 1 | **Land** | Public page; CTAs *Start a FairSpot Pilot* (high intent) + *Explore the Green Logistics tour* (low commitment, static/safe) | open | built (#656/#705) |
 | 2 | **Capture** | Submit company / domain / work email / *parking challenge*; Turnstile + rate-limited → sales email + operator queue | open (intake) / private (queue) | built (#637/#650, #651/#653) |
 | 3 | **Qualify (triage)** | Operator reviews fit (size, region, modules); approve/reject with reason, audited | private | to build (PLAT008C) |
 | 4 | **Provision tailored workspace** | Spin up a *dedicated* eval tenant, seeded to mirror their situation, their branding — not a shared playground | private | partial (#634/#645 + seed; automation PLAT008B/C) |
@@ -51,6 +51,25 @@ the **parking-challenge free-text** is both qualification context and a feature-
 manual seed/provision → manual walkthrough → manual `eval→active`. Automate in slice order:
 triage (PLAT008C) → provisioning automation (PLAT008B/C) → engagement signals (PLAT005) →
 auto-expiry/reset (PLAT003) → billing → feedback (PLAT006).
+
+### Evaluation data profiles
+
+Keep the data paths separate. This split supports the platform epic (#633) and resolves the
+showcase-vs-tailored planning point from #667. The default showcase should stay small enough to
+explain in one screen; richer datasets belong either to a tailored prospect workspace or to
+explicit validation tools.
+
+| Path | Use it for | Boundary |
+|---|---|---|
+| **Default Green Logistics showcase** | Local development, guided customer walkthroughs, Release 1 smoke evidence, and source content for the static public tour. `./tools/dev-seed.sh` creates the small story from #704: named people, six parking slots, visible scarcity, fairness history, one reallocation, and a Seats example. | Synthetic only. It is a story-led evaluation baseline, not load data and not a permanent anonymous live demo. |
+| **Tiny `demo` isolation fixture** | Tenant-isolation and SSO contrast checks. Enable it explicitly with `FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh`. | One `demo` tenant-admin and no business data by default. It must not reappear as the normal evaluator scaffold. |
+| **Tailored prospect workspace** | Qualified guided pilots after triage. The tenant should be seeded/provisioned around the prospect's actual parking challenge, branding, location model, and identity path. | Dedicated tenant; use real or customer-shaped data only when the pilot scope and approvals allow it. Stable new product requirements start in strategy/product docs, then become GitHub implementation slices. |
+| **Load/performance seed** | Capacity and performance validation. Use `tools/perf-seed-greenlogistics.sh` with explicit counts. | Synthetic bulk data. It must not pollute the default showcase or public tour narrative. |
+
+The public product tour (#705) may use static screenshots, copy, and examples derived from the
+Green Logistics showcase. It must not expose credentials, live tenant access, internal URLs, or
+operator runbooks. Live tenant access remains guided until a future self-serve sandbox is
+explicitly implemented.
 
 ## 3. Self-onboarding — two flavours, sequenced
 
@@ -93,9 +112,14 @@ the tour) or activation (provisioning / walkthrough friction).
 
 ## 6. Dependencies & near-term needs
 
-- **Improve the demo seed** — the funnel's quality hinges on a realistic, tailorable seed
-  (richer Green Logistics scenario; per-prospect shaping). Prioritise.
-- A short **product tour / walkthrough asset** for the "explore" CTA (cheap proof without hosting).
+- Keep the **default showcase seed** small, narrative-driven, and resettable (#704). Do not use it
+  as the bulk/load dataset or as a catch-all realistic company clone (#667).
+- Use **tailored per-prospect workspaces** for guided pilots, once triage says the prospect is worth
+  provisioning. This is where richer company-specific data belongs.
+- Maintain the **static product tour / walkthrough asset** for the "explore" CTA (#705): cheap proof
+  without public live-tenant exposure.
+- Keep **Release 1** evidence honest (#388): synthetic/evaluation-grade where it is synthetic, and
+  explicit about gaps before real customer data.
 - Slices: PLAT008B/C (directory/triage/provision), PLAT003 (demo reset/expiry), PLAT005 (usage),
   PLAT006 (feedback); provisioning + identity automation; billing.
 
