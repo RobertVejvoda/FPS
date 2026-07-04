@@ -1,3 +1,4 @@
+using Dapr.Client;
 using FPS.Notification.Application;
 using FPS.Notification.Identity;
 using FPS.Notification.Infrastructure;
@@ -11,13 +12,34 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddDapr();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDaprClient();
 builder.Services.AddSingleton<DaprNotificationRepository>();
 builder.Services.AddSingleton<INotificationRepository>(sp => sp.GetRequiredService<DaprNotificationRepository>());
 builder.Services.AddSingleton<INotificationPreferencesRepository, DaprNotificationPreferencesRepository>();
 builder.Services.AddSingleton<DaprHrRosterStore>();
 builder.Services.AddSingleton<IHrRosterStore>(sp => sp.GetRequiredService<DaprHrRosterStore>());
 builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroadcaster>();
-builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
+builder.Services.Configure<DaprSendGridEmailOptions>(
+    builder.Configuration.GetSection(DaprSendGridEmailOptions.SectionName));
+var emailProvider = builder.Configuration["Notification:Email:Provider"];
+if (DaprSendGridEmailNotificationSender.IsConfiguredProvider(emailProvider))
+{
+    // NOTIF #722: the SendGrid binding needs a verified From address at runtime. Fail fast on a
+    // misconfigured hosted deploy instead of invoking the provider without a sender identity.
+    var fromEmail = builder.Configuration["Notification:Email:FromEmail"];
+    if (string.IsNullOrWhiteSpace(fromEmail))
+    {
+        throw new InvalidOperationException(
+            "Notification:Email:Provider selects SendGrid but Notification:Email:FromEmail is not set. " +
+            "Set Notification__Email__FromEmail (e.g. notifications@fairspot.net) and Notification__Email__FromName (e.g. FairSpot).");
+    }
+
+    builder.Services.AddSingleton<IEmailNotificationSender, DaprSendGridEmailNotificationSender>();
+}
+else
+{
+    builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
+}
 builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
 builder.Services.AddSingleton<HrRosterConfigurationSeeder>();
 builder.Services.AddScoped<NotificationTenantStorePurger>();

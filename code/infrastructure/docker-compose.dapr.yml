@@ -64,6 +64,10 @@ services:
       RABBITMQ_PASS: "${RABBITMQ_PASS:-admin}"
       MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
       MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+      # NOTIF #722: real SendGrid API key for the notification-email binding. Empty by
+      # default so local/dev seeds without it. On NAS, set SENDGRID_API_KEY in the ignored
+      # operator env source (code/infrastructure/nas.env) — it already feeds compose/vault-init.
+      SENDGRID_API_KEY: "${SENDGRID_API_KEY:-}"
     entrypoint:
       - sh
       - -c
@@ -75,6 +79,15 @@ services:
           username="$$RABBITMQ_USER" password="$$RABBITMQ_PASS"
         vault kv put secret/dapr/minio-credentials \
           accessKey="$$MINIO_ACCESS_KEY" secretKey="$$MINIO_SECRET_KEY"
+        # NOTIF #722: only seed the SendGrid secret when a key is supplied, so the
+        # notification-email binding's secretKeyRef (sendgrid-credentials/apiKey) resolves.
+        # The real key lives only in the ignored operator env / Vault — never in tracked files.
+        if [ -n "$$SENDGRID_API_KEY" ]; then
+          vault kv put secret/dapr/sendgrid-credentials apiKey="$$SENDGRID_API_KEY"
+          echo "SendGrid credentials seeded."
+        else
+          echo "SENDGRID_API_KEY not set; skipping SendGrid secret (notification-email binding stays unconfigured)."
+        fi
         echo "Vault secrets seeded."
 
   # ── Dapr system services ────────────────────────────────────────────────────

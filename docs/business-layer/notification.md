@@ -10,8 +10,40 @@ v1 requires both:
 - email notifications.
 
 Push notifications may be added later, but they are not required for v1.
+SMS is not a v1 channel. If SMS is added later, use Twilio SMS behind a Dapr output binding; do not introduce Amazon SNS as a notification provider.
 
 Implementation is sliced. `N001` establishes the Booking-event consumer and durable in-app notification records first. Email delivery remains a v1 requirement, but it is implemented in a later Notification slice after the in-app record contract and idempotency behavior are stable.
+
+Production email delivery uses the logical Dapr output binding `notification-email`. The current hosted/demo provider is Twilio SendGrid (`bindings.twilio.sendgrid`); application code must invoke the binding contract rather than a provider SDK. Local and evaluation profiles may keep the in-memory sender unless a real staging binding is explicitly configured.
+
+Booking operational events currently carry recipient user IDs, not email addresses. Real employee email delivery therefore requires a Profile or Identity recipient lookup before the SendGrid sender can deliver to users. Sales/onboarding alerts may send immediately because the configured recipient is already an email address.
+
+### Email delivery configuration (SendGrid)
+
+The Notification service selects the email sender by configuration. Any of `SendGrid`, `DaprSendGrid`, or `DaprBinding` in `Notification:Email:Provider` activates the Dapr-binding sender; anything else (or unset) keeps the in-memory sender. When the SendGrid provider is selected, `Notification:Email:FromEmail` is **required** — the service fails fast at startup if it is missing, because SendGrid needs a verified From address at send time.
+
+| Setting | Env var | Example | Notes |
+|---|---|---|---|
+| Provider | `Notification__Email__Provider` | `SendGrid` | Unset/`InMemory` keeps the evaluation sender |
+| Binding name | `Notification__Email__BindingName` | `notification-email` | Logical Dapr binding; app never names a provider SDK |
+| From address | `Notification__Email__FromEmail` | `notifications@fairspot.net` | Required for SendGrid; public config, not a secret |
+| From name | `Notification__Email__FromName` | `FairSpot` | Public config |
+
+**Operator prerequisites** (complete before enabling SendGrid in any hosted/demo runtime):
+
+- SendGrid domain authentication configured and verified for `fairspot.net`.
+- The SendGrid-generated CNAME records added to Cloudflare DNS **DNS-only (gray cloud), not proxied**.
+- Verified sender identity: from `notifications@fairspot.net`, reply-to `support@fairspot.net`.
+- Cloudflare Email Routing (or another mailbox provider) routing `notifications@fairspot.net` and `support@fairspot.net` to a real monitored mailbox.
+- A SendGrid API key restricted to **Mail Send** only.
+
+**Secret handling.** The real SendGrid API key must never be committed or pasted into issues, PRs, docs, screenshots, or tracked env files. Tracked env examples/templates may contain **placeholders only** (e.g. `SENDGRID_API_KEY=<set-in-ignored-operator-env-or-secret-manager>`). The real key lives only in an ignored operator env file or is provisioned directly into the active Dapr secret store as secret name `sendgrid-credentials`, key `apiKey`. The Dapr component YAML references it solely through `secretKeyRef`; neither application code nor the component reads the raw key from app configuration.
+
+**NAS seeding path.** Set `SENDGRID_API_KEY` in the ignored operator env source `code/infrastructure/nas.env` (it already feeds compose and `vault-init`). When present, `vault-init` seeds Vault as `secret/dapr/sendgrid-credentials apiKey=…`; when absent it is skipped and the `notification-email` binding stays unconfigured. Do not place SendGrid config in `cloudflared.yml`. For the Vault-backed profile the equivalent manual shape is:
+
+```bash
+vault kv put secret/dapr/sendgrid-credentials apiKey=<real SendGrid API key>
+```
 
 ## Notification Classes
 
@@ -158,7 +190,7 @@ N001 must not:
 - query Booking or Profile to infer recipients not present in the event;
 - change Booking state or publish new Booking events.
 
-The full v1 requirement for email remains authoritative. Later Notification slices add email delivery, preferences, streaming/history APIs, and production persistence without changing the N001 in-app record idempotency contract.
+The full v1 requirement for email remains authoritative. Later Notification slices add employee email address resolution, retry policy, preferences, streaming/history APIs, and production persistence without changing the N001 in-app record idempotency contract.
 
 ## Notification History
 

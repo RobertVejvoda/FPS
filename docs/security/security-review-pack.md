@@ -293,7 +293,7 @@ FairSpot is designed for **client-owned infrastructure** (BYOC). In this model:
 | Secret store | HashiCorp Vault, client-approved secret manager, or DigitalOcean-compatible secret injection | Secret management |
 | Object storage | DigitalOcean Spaces, MinIO, or client-approved object storage | Exports, backups |
 | Observability | Grafana Cloud, Datadog, Splunk, or self-hosted | Logs, metrics, traces |
-| Email delivery (if enabled) | SendGrid or approved SMTP relay | Notification delivery |
+| Email delivery (if enabled) | Twilio SendGrid or approved SMTP relay | Notification delivery |
 
 **Client responsibility**: Maintain the subprocessor list, sign DPAs with each subprocessor where required, and update privacy notices when subprocessors change.
 

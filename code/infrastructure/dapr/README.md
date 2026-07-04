@@ -37,6 +37,7 @@ template/documentation — copy and adapt them for each deployment target.
 | `reportingstore`   | state          | MongoDB            | Same                        | Same                     |
 | `workflowstore`    | actor state    | MongoDB            | Same                        | Same                     |
 | `s3store`          | output binding | MinIO (S3-compat.) | Cloud object storage        | Client-approved S3-compatible store |
+| `notification-email` | output binding | Disabled by default; app uses in-memory sender | Twilio SendGrid | Twilio SendGrid or approved equivalent email binding |
 | `secretstore`      | secret store   | HashiCorp Vault    | Azure Key Vault / Vault managed | Client secret-management platform |
 
 **Rule:** Application code references only the logical name. Never hardcode a broker URL,
@@ -63,8 +64,9 @@ Local Vault secret paths (prefix: `dapr/`):
 - `dapr/rabbitmq-credentials` → `{ username, password }`
 - `dapr/mongodb-credentials` → `{ username, password }`
 - `dapr/minio-credentials` → `{ accessKey, secretKey }`
+- `dapr/sendgrid-credentials` → `{ apiKey }` when the `notification-email` binding is enabled
 
-Demo and client profiles: replace Vault with Azure Key Vault, AWS Secrets Manager, or equivalent.
+Demo and client profiles: replace Vault with a deployment-approved managed secret store.
 Use workload/managed identity where the platform supports it — no committed tokens.
 
 ---

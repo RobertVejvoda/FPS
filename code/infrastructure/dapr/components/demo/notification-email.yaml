@@ -1,0 +1,16 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: notification-email
+spec:
+  type: bindings.twilio.sendgrid
+  version: v1
+  metadata:
+  - name: apiKey
+    secretKeyRef:
+      name: sendgrid-credentials
+      key: apiKey
+scopes:
+- fps-notification
+auth:
+  secretStore: secretstore
