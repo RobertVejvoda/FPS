@@ -16,9 +16,11 @@ public sealed class InMemoryEmailNotificationSender(ILogger<InMemoryEmailNotific
     public Task<EmailSendResult> SendAsync(
         NotificationRecord record, ComposedEmail email, CancellationToken cancellationToken = default)
     {
+        // Logs the composed plain-text body (not the HTML) so the local/test path exercises and
+        // surfaces the text alternative the composer produces.
         logger.LogInformation(
-            "[Email-stub] To={RecipientId} Type={Type} Subject={Subject}",
-            record.RecipientId, record.NotificationType, email.Subject);
+            "[Email-stub] To={RecipientId} Type={Type} Subject={Subject} Text={Text}",
+            record.RecipientId, record.NotificationType, email.Subject, email.TextBody);
 
         return Task.FromResult(EmailSendResult.Ok());
     }

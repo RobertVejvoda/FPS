@@ -52,9 +52,9 @@ public sealed class DaprSendGridEmailNotificationSender(
         var configured = options.Value;
         // NOTIF #727 — transport only: subject/body come pre-composed. The upstream Dapr
         // `bindings.twilio.sendgrid` binding sends a single `text/html` content part, so this path
-        // delivers email.HtmlBody only. email.TextBody is still composed (used by the in-memory/logging
-        // sender and ready for a multipart-capable transport) but is NOT delivered here today; true
-        // multipart HTML+text delivery is tracked as a follow-up (see #727 review).
+        // delivers email.HtmlBody only. email.TextBody is still composed (the in-memory sender logs
+        // it, and it is ready for a multipart-capable transport) but is NOT delivered here today;
+        // true multipart HTML+text delivery is tracked in #731.
         var request = new BindingRequest(BindingName(configured), CreateOperation)
         {
             Data = Encoding.UTF8.GetBytes(email.HtmlBody)

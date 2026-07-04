@@ -298,8 +298,10 @@ public class BookingRequestTests
         request.Cancel("User cancelled", _publisher.Object);
 
         Assert.Equal(BookingRequestStatus.Cancelled, request.Status);
+        // #727 — the cancel event carries the pre-cancellation status so Notification can pick
+        // the right template (cancelled-before-allocation here).
         _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestCancelledEvent>(
-            e => e.RequestId == request.Id), default), Times.Once);
+            e => e.RequestId == request.Id && e.PreviousStatus == "Pending"), default), Times.Once);
     }
 
     [Fact]
@@ -310,6 +312,9 @@ public class BookingRequestTests
         request.Cancel("Changed plans", _publisher.Object);
 
         Assert.Equal(BookingRequestStatus.Cancelled, request.Status);
+        // #727 — pre-cancellation status "Allocated" drives the allocated-reservation-cancelled email.
+        _publisher.Verify(p => p.PublishAsync(It.Is<BookingRequestCancelledEvent>(
+            e => e.RequestId == request.Id && e.PreviousStatus == "Allocated"), default), Times.Once);
     }
 
     [Fact]

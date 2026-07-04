@@ -39,8 +39,9 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
             ["booking.drawCompleted.hr"] = new("Parking draw completed", "Parking draw completed", "Draw complete"),
             ["booking.noShowRecorded"] = new("Parking no-show recorded", "No-show recorded", "No-show"),
             ["booking.penaltyApplied"] = new("A parking penalty was applied", "Parking penalty applied", "Penalty applied"),
-            // Variants: distinct penalty reasons get their own copy.
-            ["booking.penaltyApplied.LateCancel"] = new("A late-cancellation penalty was applied", "Late-cancellation penalty", "Penalty applied"),
+            // Variants: distinct penalty reasons get their own copy. Keys match the real producer
+            // value (Booking's PenaltyType enum → "LateCancellation" / "NoShow").
+            ["booking.penaltyApplied.LateCancellation"] = new("A late-cancellation penalty was applied", "Late-cancellation penalty", "Penalty applied"),
             ["booking.penaltyApplied.NoShow"] = new("A no-show penalty was applied", "No-show penalty", "Penalty applied"),
             ["booking.usageConfirmed"] = new("Parking usage confirmed", "Parking usage confirmed", "Confirmed"),
             ["booking.requestExpired"] = new("Your parking request expired", "Parking request expired", "Expired"),
@@ -75,16 +76,16 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
     {
         "booking.slotAllocated" when IsReallocation(record.AllocationSource) => "booking.slotAllocated.reallocation",
         "booking.requestCancelled" when IsAllocatedStatus(record.PreviousStatus) => "booking.requestCancelled.postAllocation",
-        "booking.penaltyApplied" when record.ReasonCode is "LateCancel" or "NoShow" => $"booking.penaltyApplied.{record.ReasonCode}",
+        "booking.penaltyApplied" when record.ReasonCode is "LateCancellation" or "NoShow" => $"booking.penaltyApplied.{record.ReasonCode}",
         _ => null,
     };
 
     private static bool IsReallocation(string? source) =>
         string.Equals(source, "reallocation", StringComparison.OrdinalIgnoreCase);
 
-    // The cancelled reservation was already allocated (vs cancelled before allocation). Booking emits
-    // PreviousStatus null on cancellations today, so this variant stays dormant until that field is
-    // populated upstream — the template and wiring are ready for it.
+    // The cancelled reservation was already allocated (vs cancelled before allocation). Booking now
+    // carries the pre-cancellation status on the cancel event (#727), so this variant is delivered
+    // end-to-end; the check tolerates future allocated-like statuses too.
     private static bool IsAllocatedStatus(string? previousStatus) =>
         string.Equals(previousStatus, "Allocated", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(previousStatus, "Reallocated", StringComparison.OrdinalIgnoreCase);

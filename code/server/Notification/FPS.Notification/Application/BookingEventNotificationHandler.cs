@@ -301,11 +301,12 @@ public sealed class BookingEventNotificationHandler(
 
     private static string BuildPenaltyMessage(BookingEventPayload p)
     {
+        // ReasonCode is Booking's PenaltyType enum name (e.g. "LateCancellation", "NoShow").
         var penaltyLabel = p.ReasonCode switch
         {
-            "NoShow"    => "no-show",
-            "LateCancel" => "late cancellation",
-            _           => "a booking violation"
+            "NoShow"          => "no-show",
+            "LateCancellation" => "late cancellation",
+            _                 => "a booking violation"
         };
         return $"A penalty was applied to your account due to {penaltyLabel}. This may affect your future allocation priority.";
     }

@@ -166,9 +166,11 @@ public sealed class BookingRequest : IAggregateRoot
         if (Status != BookingRequestStatus.Pending && Status != BookingRequestStatus.Allocated)
             throw new BookingException("Only pending or allocated requests can be cancelled");
 
+        var previousStatus = Status; // captured before the transition so notifications can tell
+                                     // an allocated-reservation cancellation apart (NOTIF #727)
         Status = BookingRequestStatus.Cancelled;
         CancellationReason = reason;
-        eventPublisher.PublishAsync(new BookingRequestCancelledEvent(Id, reason));
+        eventPublisher.PublishAsync(new BookingRequestCancelledEvent(Id, reason, previousStatus.ToString()));
     }
 
     public bool IsTerminal() => TerminalStatuses.Contains(Status);

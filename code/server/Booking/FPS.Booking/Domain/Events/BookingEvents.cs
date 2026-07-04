@@ -57,7 +57,11 @@ public record BookingRequestRejectedEvent(
 
 public record BookingRequestCancelledEvent(
     BookingRequestId RequestId,
-    string Reason) : DomainEvent;
+    string Reason,
+    // NOTIF #727 — the request's status immediately before cancellation ("Pending" or "Allocated"),
+    // so downstream notifications can distinguish an allocated-reservation cancellation from a
+    // cancellation before allocation. Defaulted so existing construction sites stay valid.
+    string PreviousStatus = "") : DomainEvent;
 
 // SlotAllocation events
 public record SlotAllocationCreatedEvent(

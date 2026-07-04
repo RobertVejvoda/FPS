@@ -59,7 +59,7 @@ public sealed class EmailNotificationComposerTests
     }
 
     [Theory]
-    [InlineData("LateCancel", "A late-cancellation penalty was applied")]
+    [InlineData("LateCancellation", "A late-cancellation penalty was applied")]
     [InlineData("NoShow", "A no-show penalty was applied")]
     public void Compose_PenaltyVariants_UseReasonSpecificSubjects(string reasonCode, string expectedSubject)
     {
