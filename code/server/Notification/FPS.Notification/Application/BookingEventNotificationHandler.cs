@@ -7,6 +7,7 @@ public sealed class BookingEventNotificationHandler(
     INotificationRepository repository,
     INotificationBroadcaster broadcaster,
     IEmailNotificationSender emailSender,
+    IEmailNotificationComposer emailComposer,
     INotificationPreferencesRepository preferencesRepository,
     INotificationAudienceResolver audienceResolver,
     ILogger<BookingEventNotificationHandler> logger)
@@ -96,8 +97,9 @@ public sealed class BookingEventNotificationHandler(
 
         var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey);
 
+        var composed = emailComposer.Compose(record);
         EmailSendResult result;
-        try { result = await emailSender.SendAsync(record, cancellationToken); }
+        try { result = await emailSender.SendAsync(record, composed, cancellationToken); }
         catch { result = EmailSendResult.Fail("Email delivery unavailable", EmailFailureCategory.ProviderUnavailable); }
 
         if (result.Success)
@@ -131,6 +133,11 @@ public sealed class BookingEventNotificationHandler(
         RelatedTimeSlot = envelope.Payload.TimeSlot,
         LocationId = envelope.Payload.LocationId,
         NextAction = ResolveNextAction(delivery.EffectiveType),
+        // #727 — carry safe outcome differentiators so the composer can pick variant-specific
+        // templates (reallocation, allocated-reservation cancellation, penalty type).
+        AllocationSource = envelope.Payload.AllocationSource,
+        ReasonCode = envelope.Payload.ReasonCode,
+        PreviousStatus = envelope.Payload.PreviousStatus,
         SourceEventId = envelope.EventId,
         CreatedAt = DateTime.UtcNow
     };
@@ -294,11 +301,12 @@ public sealed class BookingEventNotificationHandler(
 
     private static string BuildPenaltyMessage(BookingEventPayload p)
     {
+        // ReasonCode is Booking's PenaltyType enum name (e.g. "LateCancellation", "NoShow").
         var penaltyLabel = p.ReasonCode switch
         {
-            "NoShow"    => "no-show",
-            "LateCancel" => "late cancellation",
-            _           => "a booking violation"
+            "NoShow"          => "no-show",
+            "LateCancellation" => "late cancellation",
+            _                 => "a booking violation"
         };
         return $"A penalty was applied to your account due to {penaltyLabel}. This may affect your future allocation priority.";
     }

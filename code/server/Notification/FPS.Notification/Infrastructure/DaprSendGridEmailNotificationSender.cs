@@ -36,7 +36,7 @@ public sealed class DaprSendGridEmailNotificationSender(
         !string.IsNullOrWhiteSpace(provider) && EnabledProviderNames.Contains(provider.Trim());
 
     public async Task<EmailSendResult> SendAsync(
-        NotificationRecord record, CancellationToken cancellationToken = default)
+        NotificationRecord record, ComposedEmail email, CancellationToken cancellationToken = default)
     {
         if (!TryNormalizeEmailAddress(record.RecipientId, out var recipientAddress))
         {
@@ -50,12 +50,17 @@ public sealed class DaprSendGridEmailNotificationSender(
         }
 
         var configured = options.Value;
+        // NOTIF #727 — transport only: subject/body come pre-composed. The upstream Dapr
+        // `bindings.twilio.sendgrid` binding sends a single `text/html` content part, so this path
+        // delivers email.HtmlBody only. email.TextBody is still composed (the in-memory sender logs
+        // it, and it is ready for a multipart-capable transport) but is NOT delivered here today;
+        // true multipart HTML+text delivery is tracked in #731.
         var request = new BindingRequest(BindingName(configured), CreateOperation)
         {
-            Data = Encoding.UTF8.GetBytes(BuildHtmlBody(record.MessageText))
+            Data = Encoding.UTF8.GetBytes(email.HtmlBody)
         };
         request.Metadata["emailTo"] = recipientAddress;
-        request.Metadata["subject"] = BuildSubject(record, configured.SubjectPrefix);
+        request.Metadata["subject"] = email.Subject;
 
         if (!string.IsNullOrWhiteSpace(configured.FromEmail))
         {
@@ -84,25 +89,6 @@ public sealed class DaprSendGridEmailNotificationSender(
         string.IsNullOrWhiteSpace(options.BindingName)
             ? "notification-email"
             : options.BindingName.Trim();
-
-    private static string BuildSubject(NotificationRecord record, string? configuredPrefix)
-    {
-        var prefix = string.IsNullOrWhiteSpace(configuredPrefix) ? "FairSpot" : configuredPrefix.Trim();
-        var subject = record.NotificationType == TenantRequestSalesAlertHandler.NotificationType
-            ? "tenant request received"
-            : "notification";
-
-        return $"{prefix}: {subject}";
-    }
-
-    private static string BuildHtmlBody(string message)
-    {
-        var encoded = WebUtility.HtmlEncode(message)
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Replace("\n", "<br>", StringComparison.Ordinal);
-
-        return $"<p>{encoded}</p>";
-    }
 
     private static bool TryNormalizeEmailAddress(string recipientId, out string address)
     {

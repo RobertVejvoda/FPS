@@ -75,7 +75,9 @@ public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingE
                     BookingRequestId: e.RequestId.Value.ToString(),
                     RequestorId: requestorId,
                     LocationId: null, Date: null, TimeSlot: null,
-                    PreviousStatus: null,
+                    // #727 — carry the pre-cancellation status so Notification can pick the
+                    // allocated-reservation-cancelled template vs cancelled-before-allocation.
+                    PreviousStatus: string.IsNullOrEmpty(e.PreviousStatus) ? null : e.PreviousStatus,
                     NewStatus: "Cancelled",
                     ReasonCode: null,
                     ReasonText: e.Reason,

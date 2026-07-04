@@ -16,6 +16,8 @@ Implementation is sliced. `N001` establishes the Booking-event consumer and dura
 
 Production email delivery uses the logical Dapr output binding `notification-email`. The current hosted/demo provider is Twilio SendGrid (`bindings.twilio.sendgrid`); application code must invoke the binding contract rather than a provider SDK. Local and evaluation profiles may keep the in-memory sender unless a real staging binding is explicitly configured.
 
+Email content is composed by `EmailNotificationComposer` (NOTIF #727): the sender receives an already-composed subject, HTML body, and plain-text body and never builds content itself. The `bindings.twilio.sendgrid` binding delivers a single `text/html` part, so the SendGrid transport delivers the HTML body today; the composed plain-text alternative is retained for the in-memory sender and a future multipart-capable transport (#731).
+
 Booking operational events currently carry recipient user IDs, not email addresses. Real employee email delivery therefore requires a Profile or Identity recipient lookup before the SendGrid sender can deliver to users. Sales/onboarding alerts may send immediately because the configured recipient is already an email address.
 
 ### Email delivery configuration (SendGrid)

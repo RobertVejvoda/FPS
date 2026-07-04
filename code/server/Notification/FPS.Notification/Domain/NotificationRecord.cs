@@ -14,6 +14,12 @@ public sealed class NotificationRecord
     public string? RelatedTimeSlot { get; init; }
     public string? LocationId { get; init; }
     public string? NextAction { get; init; }
+    // NOTIF #727 — business-safe outcome differentiators the email composer uses to pick a distinct
+    // template for variants that share a NotificationType (reallocation, allocated-reservation
+    // cancellation, late-cancel vs no-show penalty). Safe category values only — never internals.
+    public string? AllocationSource { get; init; }
+    public string? ReasonCode { get; init; }
+    public string? PreviousStatus { get; init; }
     public string SourceEventId { get; init; } = string.Empty;
     public string DeliveryStatus { get; private set; } = NotificationDeliveryStatus.Stored;
     public string? FailureReason { get; private set; }
