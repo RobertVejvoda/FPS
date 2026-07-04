@@ -6,7 +6,7 @@
 
 FairSpot is a multi-tenant, event-driven application platform for fair allocation of scarce company resources, with parking as the first product domain. The system is organised as independently deployable services around bounded business contexts. Dapr provides the provider-neutral boundary for sidecar-based service integration, pub/sub, state access, health checks, secrets, and future workflow orchestration.
 
-This page intentionally describes provider-neutral architecture. Local, demo, Azure, AWS, Kubernetes, and client-owned production variants are deployment profiles under [Production](../production), not core architecture decisions.
+This page intentionally describes provider-neutral architecture. Local, NAS/Cloudflare, DigitalOcean, Kubernetes, and client-owned production variants are deployment profiles under [Production](../production), not core architecture decisions.
 
 Each backend service follows the same high-level shape:
 

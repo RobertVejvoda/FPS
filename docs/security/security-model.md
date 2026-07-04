@@ -147,7 +147,7 @@ FairSpot separates technical telemetry from business activity evidence:
 
 | Evidence type | Owner | Normal users | Examples |
 | --- | --- | --- | --- |
-| Technical logs | Observability backend such as Loki, Splunk, Datadog, or Azure Monitor. | Operators and developers with operational responsibility. | Request failures, dependency timeout, retry category, service startup, Dapr sidecar issue. |
+| Technical logs | Observability backend such as Loki, Splunk, Datadog, Grafana, DigitalOcean Monitoring for host/resource signals, or equivalent. | Operators and developers with operational responsibility. | Request failures, dependency timeout, retry category, service startup, Dapr sidecar issue. |
 | Metrics | Observability backend such as Prometheus. | Operators and selected admins for non-sensitive service health. | Request rate, latency, 5xx rate, queue depth, notification failure count. |
 | Traces | Tracing backend such as Jaeger or the client APM. | Operators and developers with operational responsibility. | Cross-service request path for `/bookings`, pub/sub consumer flow, dependency spans. |
 | Business activity | Audit service. | Tenant-scoped auditors, admins, HR/facility roles, and security reviewers. | Booking submitted, request rejected, slot allocated, policy published, PII mapping erased. |

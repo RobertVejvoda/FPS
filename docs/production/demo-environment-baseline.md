@@ -14,7 +14,7 @@ OPS002 defines the first hosted demo baseline for FairSpot. The demo environment
 
 ## Selected Baseline Profile
 
-The first OPS002 baseline should target a low-cost managed container runtime with Dapr support or a small Dapr-capable container environment. Azure Container Apps remains the reference candidate because the existing hosting strategy already evaluates it and it supports managed Dapr, but the baseline must stay portable enough to move to another runtime.
+The first OPS002 baseline is the Release 1 NAS/Cloudflare hosted evaluation profile. The cloud-hosted follow-up target is DigitalOcean, starting with a Droplet/Docker Compose profile that mirrors the current container stack and self-hosted Dapr sidecars. DOKS is deferred until Kubernetes evidence is needed. The baseline must stay portable enough to move to a client-owned platform through Dapr, OpenTelemetry, OIDC, and documented deployment boundaries.
 
 The baseline is acceptable if it can provide:
 

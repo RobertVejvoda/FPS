@@ -1,59 +1,28 @@
-## Docker Images in AKS
+## Backup and Recovery Security
 
-When hosting Docker images in Azure Kubernetes Service (AKS), it's crucial to have a backup and recovery strategy to ensure the availability and integrity of your containerized applications. Here are the key steps:
-### Backup
+Backup and recovery controls protect FairSpot state, identity configuration, object storage, release artifacts, and operational evidence. The exact tooling depends on the deployment profile.
 
-#### Using Azure Container Registry (ACR)
-- **Export Images**: Use `az acr import` to export images from ACR to a storage account.
-- **Automated Backups**: Set up a scheduled task to regularly export images to a storage account.
+## Scope
 
-#### Using Third-Party Tools
-- **Velero**: Use Velero to back up and restore Kubernetes cluster resources and persistent volumes.
-- **Harbor**: Use Harbor to replicate images to another registry as a backup.
+| Asset | Backup Expectation |
+| --- | --- |
+| Container images | Immutable image tags in the selected registry; previous known-good tag available for rollback. |
+| Databases/state stores | Service-specific backups with tenant scope understood and restore tested. |
+| Identity provider | Realm/client/user/role configuration export or provider-approved recovery path. |
+| Object storage | Tenant object storage backups or replication according to retention requirements. |
+| Secrets | Secret recovery process documented without exposing secret values in docs or tickets. |
+| Observability/evidence | Retain enough logs, metrics, traces, and release evidence for incident and audit needs. |
 
-### Recovery
+## Release 1 and DigitalOcean Path
 
-#### From Azure Container Registry
-- **Import Images**: Use `az acr import` to import images back from the storage account to ACR.
-- **Redeploy**: Update your Kubernetes manifests to redeploy the images from ACR.
+- NAS/Cloudflare profile uses the NAS backup/restore responsibility model plus service-level backups.
+- DigitalOcean Droplet profile may use Droplet snapshots plus service-specific database/object-storage backups.
+- Managed databases or Spaces must use their own backup/retention features if selected.
 
-#### Using Third-Party Tools
-- **Velero**: Restore cluster resources and persistent volumes using Velero.
-- **Harbor**: Pull images from the backup registry and push them to your primary registry.
+## Recovery Requirements
 
-### Backup Procedures
-- Regularly test image backups and recovery process every quarter.
-- Monitor backup operations and set up alerts for failures.
-- Keep backup scripts and tools up to date.
-- Document the backup and recovery process and ensure team members are trained.
-
-### Storage Account
-- **Choosing a Storage Account**: Use Azure Blob Storage for storing exported Docker images and backups.
-- **Configuration**: Ensure the storage account is configured with appropriate access controls and redundancy options.
-- **Access**: Use Azure Storage Explorer or Azure CLI to manage and access the storage account.
-
-
-## Azure Cosmos DB
-
-[Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/) provides automatic and manual backup options to ensure data protection and recovery. Here are the key features:
-
-### Automatic Backups
-- **Frequency**: Azure Cosmos DB automatically takes backups of your data every 4 hours.
-- **Retention**: These backups are retained for 30 days.
-- **Restoration**: You can request a point-in-time restore by contacting Azure support.
-
-### Manual Backups
-- **On-Demand Backups**: On-demand backups using Azure Data Factory before each version upgrade.
-- **Export Data**:  Azure Cosmos DB Data Migration tool to export data to a storage account (Azure Blob Storage).
-
-### Recovery Process
-- **Contact Support**: For automatic backups, contact Azure support to initiate a restore.
-- **Use Exported Data**: For manual backups, use the exported data from storage account to restore database.
-
-### Backup procedures
-- Regularly test backups and recovery process every quarter.
-- Monitor backup operations and set up alerts for failures.
-- Keep backup scripts and tools up to date.
-
-
-
+- Test restore before customer data is processed.
+- Document the restore operator, approval, scope, source backup, and validation result.
+- Re-run smoke tests after restore.
+- Reapply GDPR erasure where restored backups reintroduce previously erased personal data.
+- Keep backup encryption keys and restore credentials in an approved secret-management process.
