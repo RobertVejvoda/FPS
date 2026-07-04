@@ -20,6 +20,8 @@ builder.Services.AddSingleton<DaprHrRosterStore>();
 builder.Services.AddSingleton<IHrRosterStore>(sp => sp.GetRequiredService<DaprHrRosterStore>());
 builder.Services.AddSingleton<INotificationBroadcaster, InMemoryNotificationBroadcaster>();
 builder.Services.AddSingleton<IEmailNotificationComposer, EmailNotificationComposer>();
+builder.Services.AddSingleton<IProfileRecipientLookup, DaprProfileRecipientLookup>();
+builder.Services.AddSingleton<IEmailRecipientResolver, DaprEmailRecipientResolver>();
 builder.Services.Configure<DaprSendGridEmailOptions>(
     builder.Configuration.GetSection(DaprSendGridEmailOptions.SectionName));
 var emailProvider = builder.Configuration["Notification:Email:Provider"];

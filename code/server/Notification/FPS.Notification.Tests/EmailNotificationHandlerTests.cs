@@ -12,13 +12,17 @@ public sealed class EmailNotificationHandlerTests
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly Mock<IEmailNotificationSender> emailSender = new();
+    private readonly Mock<IEmailRecipientResolver> recipientResolver = new();
     private readonly Mock<ILogger<BookingEventNotificationHandler>> logger = new();
     private readonly BookingEventNotificationHandler handler;
 
     public EmailNotificationHandlerTests()
     {
+        recipientResolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResolvedRecipient.Ok("recipient@example.com"));
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
             new EmailNotificationComposer(),
+            recipientResolver.Object,
             new InMemoryNotificationPreferencesRepository(),
             new RosterBackedAudienceResolver(new InMemoryHrRosterStore()),
             logger.Object);
@@ -28,7 +32,7 @@ public sealed class EmailNotificationHandlerTests
             .Returns(Task.CompletedTask);
         broadcaster.Setup(b => b.BroadcastAsync(It.IsAny<NotificationRecord>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
     }
 
@@ -55,7 +59,7 @@ public sealed class EmailNotificationHandlerTests
 
         emailSender.Verify(e => e.SendAsync(
             It.Is<NotificationRecord>(n => n.Channel == NotificationChannel.Email && n.RecipientId == "user-1"),
-            It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
 
         repository.Verify(r => r.SaveAsync(
             It.Is<NotificationRecord>(n =>
@@ -67,7 +71,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_EmailSenderFailure_MarksEmailRecordFailed_InAppUnaffected()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Fail("SMTP timeout"));
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
@@ -87,6 +91,49 @@ public sealed class EmailNotificationHandlerTests
     }
 
     [Fact]
+    public async Task Handle_UnresolvedRecipient_RejectsEmail_SkipsSend_InAppPersists()
+    {
+        // NOTIF #728 — recipient user ID has no verified email; email must be recorded as
+        // delivery-rejected, SendGrid must not be called, and the in-app record must still persist.
+        recipientResolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResolvedRecipient.Reject("email_unverified_source"));
+
+        await handler.HandleAsync(BuildEnvelope("booking.slotAllocated", "user-1"));
+
+        emailSender.Verify(e => e.SendAsync(
+            It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.Channel == NotificationChannel.Email &&
+                n.DeliveryStatus == NotificationDeliveryStatus.Failed),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.Channel == NotificationChannel.InApp &&
+                n.DeliveryStatus == NotificationDeliveryStatus.Stored),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmailShapedRequestorId_NotTrustedDirectly_NoSendWhenProfileRejects()
+    {
+        // NOTIF #728 — even if a Booking event's requestor ID is email-shaped, it must go through the
+        // resolver (Profile); when Profile does not resolve it, SendGrid must not be called.
+        recipientResolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), "attacker@evil.example", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResolvedRecipient.Reject("recipient_not_found"));
+
+        await handler.HandleAsync(BuildEnvelope("booking.slotAllocated", "attacker@evil.example"));
+
+        recipientResolver.Verify(r => r.ResolveAsync(It.IsAny<string>(), "attacker@evil.example", It.IsAny<CancellationToken>()), Times.Once);
+        emailSender.Verify(e => e.SendAsync(
+            It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_DuplicateEvent_DoesNotResendEmail()
     {
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -94,7 +141,7 @@ public sealed class EmailNotificationHandlerTests
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
 
-        emailSender.Verify(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
+        emailSender.Verify(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -107,16 +154,16 @@ public sealed class EmailNotificationHandlerTests
 
         emailSender.Verify(e => e.SendAsync(
             It.Is<NotificationRecord>(n => n.RecipientId == "user-1" && n.Channel == NotificationChannel.Email),
-            It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
         emailSender.Verify(e => e.SendAsync(
             It.Is<NotificationRecord>(n => n.RecipientId == "user-2" && n.Channel == NotificationChannel.Email),
-            It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_EmailSenderThrows_DoesNotThrow_SavesFailedEmailRecord_InAppUnaffected()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("provider-internal-detail-must-not-leak"));
 
         var exception = await Record.ExceptionAsync(() =>
@@ -151,7 +198,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_EmailSenderFailure_LogsWarning_WithSafeFields()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Fail("SMTP timeout"));
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));
@@ -174,7 +221,7 @@ public sealed class EmailNotificationHandlerTests
     [Fact]
     public async Task Handle_EmailSenderThrows_LogsWarning_WithProviderUnavailableCategory()
     {
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("provider-internal-detail-must-not-leak"));
 
         await handler.HandleAsync(BuildEnvelope("booking.requestSubmitted", "user-1"));

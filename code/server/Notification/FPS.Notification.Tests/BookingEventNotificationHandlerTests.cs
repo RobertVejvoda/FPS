@@ -11,17 +11,21 @@ public sealed class BookingEventNotificationHandlerTests
     private readonly Mock<INotificationRepository> repository = new();
     private readonly Mock<INotificationBroadcaster> broadcaster = new();
     private readonly Mock<IEmailNotificationSender> emailSender = new();
+    private readonly Mock<IEmailRecipientResolver> recipientResolver = new();
     private readonly InMemoryHrRosterStore roster = new();
     private readonly BookingEventNotificationHandler handler;
 
     public BookingEventNotificationHandlerTests()
     {
+        recipientResolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResolvedRecipient.Ok("recipient@example.com"));
         handler = new BookingEventNotificationHandler(repository.Object, broadcaster.Object, emailSender.Object,
             new EmailNotificationComposer(),
+            recipientResolver.Object,
             new InMemoryNotificationPreferencesRepository(),
             new RosterBackedAudienceResolver(roster),
             NullLogger<BookingEventNotificationHandler>.Instance);
-        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
+        emailSender.Setup(e => e.SendAsync(It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmailSendResult.Ok());
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);

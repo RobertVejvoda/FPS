@@ -36,9 +36,11 @@ public sealed class DaprSendGridEmailNotificationSender(
         !string.IsNullOrWhiteSpace(provider) && EnabledProviderNames.Contains(provider.Trim());
 
     public async Task<EmailSendResult> SendAsync(
-        NotificationRecord record, ComposedEmail email, CancellationToken cancellationToken = default)
+        NotificationRecord record, string recipientEmail, ComposedEmail email, CancellationToken cancellationToken = default)
     {
-        if (!TryNormalizeEmailAddress(record.RecipientId, out var recipientAddress))
+        // NOTIF #728 — the destination is the already-resolved verified address; still validated here
+        // as a defensive guard (the record's RecipientId is a user ID for employee events).
+        if (!TryNormalizeEmailAddress(recipientEmail, out var recipientAddress))
         {
             logger.LogWarning(
                 "Email delivery skipped because recipient address is unavailable. TenantId={TenantId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel}",

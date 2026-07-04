@@ -55,7 +55,9 @@ public sealed class TenantRequestSalesAlertHandler(
         EmailSendResult result;
         try
         {
-            result = await emailSender.SendAsync(record, composed, ct);
+            // NOTIF #728 — the sales/onboarding recipient is an already-configured email address, so it
+            // is passed straight to transport (no Profile recipient resolution needed).
+            result = await emailSender.SendAsync(record, salesAddress, composed, ct);
         }
         catch (Exception ex)
         {
