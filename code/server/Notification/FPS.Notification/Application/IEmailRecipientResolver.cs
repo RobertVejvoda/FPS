@@ -1,11 +1,12 @@
 namespace FPS.Notification.Application;
 
 /// <summary>
-/// NOTIF #728 — resolves a notification recipient (a user ID for employee events, or an already-configured
-/// email for sales/onboarding alerts) to a verified delivery email address. Employee events never carry
-/// email addresses; resolution goes through trusted Profile/Identity data. Fails closed: an unresolved,
-/// unverified, missing, malformed, or ambiguous recipient yields a rejection with a safe reason and the
-/// caller must not attempt a provider send.
+/// NOTIF #728 — resolves an <b>employee</b> notification recipient user ID to a verified delivery email
+/// address through trusted Profile/Identity data. Employee events never carry email addresses, and an
+/// event/caller-supplied address is never trusted. Fails closed: an unresolved, unverified, missing,
+/// malformed, or ambiguous recipient yields a rejection with a safe reason and the caller must not
+/// attempt a provider send. (Sales/onboarding alerts do not use this resolver — their configured
+/// address is passed straight to transport.)
 /// </summary>
 public interface IEmailRecipientResolver
 {

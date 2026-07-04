@@ -11,9 +11,10 @@ namespace FPS.Profile.Controllers;
 /// IDs, not email addresses; Notification calls this over Dapr to obtain a trusted delivery address.
 ///
 /// Verified = an Active profile with a well-formed <c>NotificationAddress</c> whose <c>FactSource</c>
-/// is a trusted provisioning source (SSO claims, admin entry/seed, or authorized import). FairSpot-local
-/// self-verification is out of scope (#729). Everything else fails closed with a safe reason and no PII
-/// is returned in the reason or logged here — the caller records a delivery-rejected outcome.
+/// is a trusted provisioning source (SSO claims, admin entry/seed, or authorized HR/file import).
+/// FairSpot-local self-verification is out of scope (#729). Everything else fails closed with a safe
+/// reason and no PII is returned in the reason or logged here — the caller records a delivery-rejected
+/// outcome.
 /// </summary>
 [ApiController]
 [DaprInternalOnly]
@@ -22,12 +23,17 @@ namespace FPS.Profile.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class NotificationRecipientController(IProfileRepository repository) : ControllerBase
 {
+    // Must match the FactSource values actually written by trusted Profile provisioning paths:
+    // sso-claims (ProfileSnapshotController), admin-seed (ProfileAdminController), admin-entry +
+    // file-import (EmployeeBootstrapController), hr-import (HrImportService). demo-seed is intentionally
+    // excluded (synthetic showcase data), as is FairSpot-local self-verification (#729).
     private static readonly HashSet<string> TrustedFactSources = new(StringComparer.OrdinalIgnoreCase)
     {
         "sso-claims",
         "admin-seed",
         "admin-entry",
-        "import",
+        "hr-import",
+        "file-import",
     };
 
     [HttpPost("/internal/profile/notification-recipient")]

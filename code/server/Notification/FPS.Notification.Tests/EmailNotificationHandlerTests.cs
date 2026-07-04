@@ -118,6 +118,22 @@ public sealed class EmailNotificationHandlerTests
     }
 
     [Fact]
+    public async Task Handle_EmailShapedRequestorId_NotTrustedDirectly_NoSendWhenProfileRejects()
+    {
+        // NOTIF #728 — even if a Booking event's requestor ID is email-shaped, it must go through the
+        // resolver (Profile); when Profile does not resolve it, SendGrid must not be called.
+        recipientResolver.Setup(r => r.ResolveAsync(It.IsAny<string>(), "attacker@evil.example", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResolvedRecipient.Reject("recipient_not_found"));
+
+        await handler.HandleAsync(BuildEnvelope("booking.slotAllocated", "attacker@evil.example"));
+
+        recipientResolver.Verify(r => r.ResolveAsync(It.IsAny<string>(), "attacker@evil.example", It.IsAny<CancellationToken>()), Times.Once);
+        emailSender.Verify(e => e.SendAsync(
+            It.IsAny<NotificationRecord>(), It.IsAny<string>(), It.IsAny<ComposedEmail>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_DuplicateEvent_DoesNotResendEmail()
     {
         repository.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

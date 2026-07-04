@@ -39,7 +39,8 @@ public sealed class NotificationRecipientControllerTests
     [InlineData("sso-claims")]
     [InlineData("admin-seed")]
     [InlineData("admin-entry")]
-    [InlineData("import")]
+    [InlineData("hr-import")]  // real HR CSV import value (HrImportService)
+    [InlineData("file-import")] // real bootstrap import value (EmployeeBootstrapController)
     public async Task Resolve_VerifiedTrustedSource_ReturnsEmail(string factSource)
     {
         repository.Setup(r => r.GetAsync("tenant-1", "user-1", It.IsAny<CancellationToken>()))
@@ -52,12 +53,13 @@ public sealed class NotificationRecipientControllerTests
         Assert.Null(result.Reason);
     }
 
-    [Fact]
-    public async Task Resolve_UntrustedSource_FailsClosed()
+    [Theory]
+    [InlineData("self-registered")] // FairSpot-local self-verification is #729, out of scope
+    [InlineData("demo-seed")]       // synthetic showcase data — intentionally not trusted
+    public async Task Resolve_UntrustedSource_FailsClosed(string factSource)
     {
-        // e.g. a FairSpot-local self-registered address (verification is #729, out of scope here).
         repository.Setup(r => r.GetAsync("tenant-1", "user-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Profile(factSource: "self-registered"));
+            .ReturnsAsync(Profile(factSource: factSource));
 
         var result = await ResolveAsync();
 

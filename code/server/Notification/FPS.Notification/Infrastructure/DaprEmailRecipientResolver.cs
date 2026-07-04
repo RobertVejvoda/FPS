@@ -1,15 +1,16 @@
-using System.Net.Mail;
 using FPS.Notification.Application;
 using Microsoft.Extensions.Logging;
 
 namespace FPS.Notification.Infrastructure;
 
 /// <summary>
-/// NOTIF #728 — resolves recipients to verified delivery addresses. Sales/onboarding alerts whose
-/// recipient is already a configured email address are trusted as-is; employee user IDs are resolved
-/// to a verified Profile <c>NotificationAddress</c> via <see cref="IProfileRecipientLookup"/>. Never
-/// logs the recipient ID or email address; any lookup failure fails closed so the caller records a
-/// delivery-rejected outcome and does not call SendGrid.
+/// NOTIF #728 — resolves an employee notification recipient (a user ID) to a verified Profile
+/// <c>NotificationAddress</c> via <see cref="IProfileRecipientLookup"/>. It never trusts an
+/// event/caller-supplied address: an email-shaped recipient ID is still resolved through Profile
+/// (and fails closed if no matching verified profile exists), so a corrupt Booking event cannot
+/// redirect employee mail. Sales/onboarding alerts do not use this resolver — their configured
+/// address is passed straight to transport by their handler. Never logs the recipient ID or address;
+/// any lookup failure fails closed so the caller records a delivery-rejected outcome and skips SendGrid.
 /// </summary>
 public sealed class DaprEmailRecipientResolver(
     IProfileRecipientLookup profileLookup,
@@ -21,13 +22,9 @@ public sealed class DaprEmailRecipientResolver(
         if (string.IsNullOrWhiteSpace(recipientId))
             return ResolvedRecipient.Reject("recipient_missing");
 
-        // Sales/onboarding alerts carry an already-configured email address — trust it directly rather
-        // than resolving through Profile.
-        if (IsWellFormedEmail(recipientId))
-            return ResolvedRecipient.Ok(recipientId.Trim());
-
         try
         {
+            // Always resolve through Profile — an email-shaped recipient ID is NOT trusted directly.
             var result = await profileLookup.LookupAsync(tenantId, recipientId, cancellationToken);
             if (result is { Resolved: true } && !string.IsNullOrWhiteSpace(result.Email))
                 return ResolvedRecipient.Ok(result.Email!);
@@ -40,22 +37,6 @@ public sealed class DaprEmailRecipientResolver(
             logger.LogWarning(
                 "Recipient email resolution unavailable for tenant {TenantId}; failing closed.", tenantId);
             return ResolvedRecipient.Reject("recipient_resolution_unavailable");
-        }
-    }
-
-    private static bool IsWellFormedEmail(string candidate)
-    {
-        var trimmed = candidate.Trim();
-        if (trimmed.Length == 0 || trimmed.Any(char.IsWhiteSpace) || !trimmed.Contains('@', StringComparison.Ordinal))
-            return false;
-        try
-        {
-            var parsed = new MailAddress(trimmed);
-            return string.Equals(parsed.Address, trimmed, StringComparison.OrdinalIgnoreCase);
-        }
-        catch (FormatException)
-        {
-            return false;
         }
     }
 }

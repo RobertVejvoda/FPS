@@ -15,13 +15,19 @@ public sealed class DaprEmailRecipientResolverTests
         resolver = new DaprEmailRecipientResolver(lookup.Object, NullLogger<DaprEmailRecipientResolver>.Instance);
 
     [Fact]
-    public async Task Resolve_RecipientAlreadyEmail_PassesThroughWithoutProfileLookup()
+    public async Task Resolve_EmailShapedRecipientId_StillGoesThroughProfile_NotTrustedDirectly()
     {
-        var result = await resolver.ResolveAsync("platform", "sales@fairspot.net");
+        // NOTIF #728 — a corrupt/future Booking event whose RequestorId is email-shaped must NOT be
+        // trusted as the delivery address; it is still resolved through Profile and fails closed when
+        // no matching verified profile exists.
+        lookup.Setup(l => l.LookupAsync("tenant-1", "attacker@evil.example", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProfileRecipientResult(false, null, "recipient_not_found"));
 
-        Assert.True(result.Resolved);
-        Assert.Equal("sales@fairspot.net", result.Email);
-        lookup.Verify(l => l.LookupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        var result = await resolver.ResolveAsync("tenant-1", "attacker@evil.example");
+
+        Assert.False(result.Resolved);
+        Assert.Null(result.Email);
+        lookup.Verify(l => l.LookupAsync("tenant-1", "attacker@evil.example", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
