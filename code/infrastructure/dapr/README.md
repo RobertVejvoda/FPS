@@ -14,8 +14,9 @@ dapr/
     demo/     ← template files for demo-hosted environment (OPS002)
     client/   ← template files for client-owned production (OPS003)
   configuration/
-    fps-config.yaml   ← Dapr tracing, actors, and mTLS configuration
+    fps-config.yaml   ← Compose (local + NAS): tracing, actors, mTLS disabled (OPS017)
     fps-smoke-config.yaml ← Host-local smoke config without tracing export
+    fps-config.k8s-hosted.yaml ← mTLS-enabled target for the K8s/DOKS profile (not wired into Compose)
 ```
 
 Dapr loads components from the directory mounted at `/components` in the sidecar.
@@ -129,8 +130,15 @@ export to the Docker-network Zipkin endpoint.
 - **Demo / client**: Uncomment the `otel:` block and point at an OpenTelemetry Collector.
   The collector then exports to Azure Monitor, Grafana, Dynatrace, Splunk, or equivalent.
 
-mTLS is disabled locally. Enable it for demo and client by setting `mtls.enabled: true`
-and deploying a Dapr Placement + Sentry service (or using a managed Dapr runtime).
+### Service-to-service security mode (OPS017)
+
+mTLS is **disabled** on the self-hosted Docker Compose stack (local and NAS): `fps-config.yaml`
+sets `mtls.enabled: false` because Dapr mTLS needs the Sentry control plane to issue/rotate
+workload certificates, and this stack runs only Placement + Scheduler (no Sentry). The
+mTLS-**enabled** target for the Kubernetes/DigitalOcean DOKS profile is a separate,
+not-wired-in artifact: `configuration/fps-config.k8s-hosted.yaml`. `tools/start-container-stack.sh`
+reads the active configuration and reports the mode ("Dapr service-to-service security").
+See [Dapr-First Production Standards](../../../docs/production/dapr-first-production-standards.md).
 
 ---
 

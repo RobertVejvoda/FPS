@@ -530,6 +530,36 @@ for svc in "${SIDECAR_SERVICES[@]}"; do
   fi
 done
 
+# ── Dapr service-to-service security mode (OPS017) ───────────────────────────────
+# Report whether hosted Dapr mTLS is active by reading the Dapr Configuration the
+# sidecars are launched with. The self-hosted Compose stack (local AND NAS) runs
+# mTLS-disabled by documented exception: it has no Sentry control plane to issue the
+# workload certificates mTLS requires. mTLS is the target on the Kubernetes/DOKS
+# profile (fps-config.k8s-hosted.yaml). See docs/production/dapr-first-production-standards.md.
+hdr "Dapr service-to-service security (OPS017)"
+
+DAPR_CONFIG_FILE="$INFRA_DIR/dapr/configuration/fps-config.yaml"
+if [[ -f "$DAPR_CONFIG_FILE" ]]; then
+  MTLS_MODE="$(awk '
+    /^[[:space:]]*#/        { next }
+    /^[[:space:]]*mtls:/    { flag=1; next }
+    flag && /^[[:space:]]*enabled:[[:space:]]*(true|false)/ { print $2; exit }
+  ' "$DAPR_CONFIG_FILE")"
+  case "$MTLS_MODE" in
+    true)
+      ok "Dapr mTLS: ENABLED — sidecar-to-sidecar traffic is mutually authenticated and encrypted."
+      ;;
+    false)
+      info "Dapr mTLS: DISABLED — documented self-hosted exception (OPS017). No Sentry control plane on Docker Compose; on a single NAS host all sidecars share one private Docker bridge. mTLS is enabled on the Kubernetes/DOKS profile (fps-config.k8s-hosted.yaml)."
+      ;;
+    *)
+      info "Dapr mTLS: mode could not be read from $DAPR_CONFIG_FILE (expected mtls.enabled: true|false)."
+      ;;
+  esac
+else
+  info "Dapr mTLS: active config not found at $DAPR_CONFIG_FILE."
+fi
+
 # ── Stop here if E2E/smoke is skipped ────────────────────────────────────────────
 
 if [[ "$SKIP_E2E" == "true" ]]; then
