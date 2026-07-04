@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Dapr.Client;
 using FPS.Profile.Application;
 using FPS.Profile.Domain;
+using FPS.SharedKernel.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace FPS.Profile.Infrastructure;
@@ -11,7 +12,7 @@ public sealed class DaprEmailVerificationRepository(DaprClient daprClient) : IEm
     private const string StoreName = "profilestore";
 
     public Task<EmailVerification?> GetAsync(string tenantId, string userId, CancellationToken cancellationToken = default) =>
-        daprClient.GetStateAsync<EmailVerification?>(StoreName, Key(tenantId, userId), cancellationToken: cancellationToken);
+        daprClient.GetStateAsync<EmailVerification>(StoreName, Key(tenantId, userId), cancellationToken: cancellationToken);
 
     public async Task SaveAsync(EmailVerification verification, CancellationToken cancellationToken = default)
     {
@@ -31,7 +32,7 @@ public sealed class DaprEmailVerificationRepository(DaprClient daprClient) : IEm
         foreach (var userId in userIds)
         {
             var key = Key(tenantId, userId);
-            var record = await daprClient.GetStateAsync<EmailVerification?>(StoreName, key, cancellationToken: cancellationToken);
+            var record = await daprClient.GetStateAsync<EmailVerification>(StoreName, key, cancellationToken: cancellationToken);
             if (record is null)
                 continue; // stale index entry — nothing to remove
             await daprClient.DeleteStateAsync(StoreName, key, cancellationToken: cancellationToken);
@@ -53,8 +54,13 @@ public sealed class DaprEmailVerificationRepository(DaprClient daprClient) : IEm
         }
     }
 
-    private static string Key(string tenantId, string userId) => $"email-verification:{tenantId}:{userId}";
-    private static string TenantIndexKey(string tenantId) => $"email-verification-index:{tenantId}";
+    // Use the shared tenant storage-key utility (sanitised tenant segment) — same contract as
+    // DaprProfileRepository — rather than ad-hoc interpolation (tenant-storage-contract.md).
+    private static string Key(string tenantId, string userId) =>
+        TenantStorageKey.For("email-verification", tenantId, userId);
+
+    private static string TenantIndexKey(string tenantId) =>
+        TenantStorageKey.For("email-verification-index", tenantId, "all");
 }
 
 public sealed class InMemoryEmailVerificationRepository : IEmailVerificationRepository
