@@ -4,6 +4,126 @@
  */
 
 export interface paths {
+    "/profile/email/verification/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile/email/verification/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConfirmEmailVerificationRequest"];
+                    "text/json": components["schemas"]["ConfirmEmailVerificationRequest"];
+                    "application/*+json": components["schemas"]["ConfirmEmailVerificationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmailVerificationStatusResponse"];
+                        "application/json": components["schemas"]["EmailVerificationStatusResponse"];
+                        "text/json": components["schemas"]["EmailVerificationStatusResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmailVerificationRejectedResponse"];
+                        "application/json": components["schemas"]["EmailVerificationRejectedResponse"];
+                        "text/json": components["schemas"]["EmailVerificationRejectedResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/profile/bootstrap": {
         parameters: {
             query?: never;
@@ -834,6 +954,9 @@ export interface components {
             requiresChargerForEveryRequest: boolean;
             requiresAccessibleSpot: boolean;
         };
+        ConfirmEmailVerificationRequest: {
+            token: string;
+        };
         DeactivateRequest: {
             externalSubject: null | string;
         };
@@ -857,6 +980,12 @@ export interface components {
             snapshotVersion: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        EmailVerificationRejectedResponse: {
+            reason: string;
+        };
+        EmailVerificationStatusResponse: {
+            verified: boolean;
         };
         /** Format: binary */
         IFormFile: string;
