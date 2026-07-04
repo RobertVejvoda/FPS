@@ -8,6 +8,7 @@ public sealed class BookingEventNotificationHandler(
     INotificationBroadcaster broadcaster,
     IEmailNotificationSender emailSender,
     IEmailNotificationComposer emailComposer,
+    IEmailRecipientResolver emailRecipientResolver,
     INotificationPreferencesRepository preferencesRepository,
     INotificationAudienceResolver audienceResolver,
     ILogger<BookingEventNotificationHandler> logger)
@@ -97,9 +98,24 @@ public sealed class BookingEventNotificationHandler(
 
         var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey);
 
+        // NOTIF #728 — resolve the recipient user ID to a verified email before any provider send.
+        // Fail closed on an unresolved/unverified/malformed recipient: record a delivery-rejected
+        // outcome and skip SendGrid. The in-app record is persisted independently in HandleInAppAsync,
+        // so this never blocks in-app delivery. No recipient ID or address is logged.
+        var recipient = await emailRecipientResolver.ResolveAsync(envelope.TenantId, delivery.RecipientId, cancellationToken);
+        if (!recipient.Resolved)
+        {
+            record.MarkFailed(recipient.RejectionReason ?? "recipient_email_unavailable");
+            logger.LogWarning(
+                "Email delivery rejected: recipient email not resolved. TenantId={TenantId} NotificationType={NotificationType} SourceEventId={SourceEventId} Channel={Channel} FailureCategory={FailureCategory}",
+                record.TenantId, record.NotificationType, record.SourceEventId, record.Channel, EmailFailureCategory.DeliveryRejected);
+            await repository.SaveAsync(record, cancellationToken);
+            return;
+        }
+
         var composed = emailComposer.Compose(record);
         EmailSendResult result;
-        try { result = await emailSender.SendAsync(record, composed, cancellationToken); }
+        try { result = await emailSender.SendAsync(record, recipient.Email!, composed, cancellationToken); }
         catch { result = EmailSendResult.Fail("Email delivery unavailable", EmailFailureCategory.ProviderUnavailable); }
 
         if (result.Success)

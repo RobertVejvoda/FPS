@@ -14,13 +14,13 @@ public sealed class InMemoryEmailNotificationSender(ILogger<InMemoryEmailNotific
     : IEmailNotificationSender
 {
     public Task<EmailSendResult> SendAsync(
-        NotificationRecord record, ComposedEmail email, CancellationToken cancellationToken = default)
+        NotificationRecord record, string recipientEmail, ComposedEmail email, CancellationToken cancellationToken = default)
     {
         // Logs the composed plain-text body (not the HTML) so the local/test path exercises and
-        // surfaces the text alternative the composer produces.
+        // surfaces the text alternative the composer produces. The resolved address is not logged.
         logger.LogInformation(
-            "[Email-stub] To={RecipientId} Type={Type} Subject={Subject} Text={Text}",
-            record.RecipientId, record.NotificationType, email.Subject, email.TextBody);
+            "[Email-stub] Type={Type} Subject={Subject} Text={Text}",
+            record.NotificationType, email.Subject, email.TextBody);
 
         return Task.FromResult(EmailSendResult.Ok());
     }

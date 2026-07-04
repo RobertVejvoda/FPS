@@ -36,7 +36,7 @@ public sealed class DaprSendGridEmailNotificationSenderTests
             "Your parking spot is confirmed",
             "<p>Hello &lt;ops&gt;<br>Review request.</p>",
             "Hello <ops>\nReview request.");
-        var result = await sender.SendAsync(Record("ops@fairspot.net"), composed);
+        var result = await sender.SendAsync(Record("ops@fairspot.net"), "ops@fairspot.net", composed);
 
         Assert.True(result.Success);
         Assert.NotNull(sentRequest);
@@ -56,7 +56,7 @@ public sealed class DaprSendGridEmailNotificationSenderTests
         var dapr = new Mock<DaprClient>();
         var sender = Sender(dapr.Object);
 
-        var result = await sender.SendAsync(Record("user-1"), Email());
+        var result = await sender.SendAsync(Record("user-1"), "user-1", Email());
 
         Assert.False(result.Success);
         Assert.Equal(EmailFailureCategory.DeliveryRejected, result.FailureCategory);
@@ -76,7 +76,7 @@ public sealed class DaprSendGridEmailNotificationSenderTests
             .ThrowsAsync(new InvalidOperationException("provider-secret-detail"));
         var sender = Sender(dapr.Object);
 
-        var result = await sender.SendAsync(Record("ops@fairspot.net"), Email());
+        var result = await sender.SendAsync(Record("ops@fairspot.net"), "ops@fairspot.net", Email());
 
         Assert.False(result.Success);
         Assert.Equal("Email delivery unavailable", result.FailureReason);
