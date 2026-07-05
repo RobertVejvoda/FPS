@@ -75,6 +75,7 @@
     * [NAS Cloudflare Deployment Contract](./production/nas-cloudflare-deployment-profile)
     * [OIDC/Auth Contract](./production/nas-cloudflare-auth-profile)
     * [Hosted Readiness Expectations](./production/hosted-smoke-runbook)
+    * [Operational Evidence Checklist](./production/operational-evidence-checklist)
     * [Backup And Restore Contract](./production/backup-restore)
     * [Encryption And Backup Evidence](./production/nas-encryption-backup-evidence)
     * [Maintenance Contract](./production/maintenance)
