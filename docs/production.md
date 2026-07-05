@@ -72,6 +72,7 @@ Detailed hosted-operator runbooks for the FairSpot-operated pilot live in the pr
 ## Cloud And Environment Notes
 
 - [Hosting and Deployment Strategy](./production/hosting-deployment-strategy): deployment profile strategy covering local, demo, and client-owned production with Dapr component portability and cost planning.
+- [Deployment Profile Template](./production/deployment-profile-template): reusable template separating provider-neutral contracts from profile-specific examples, with the Local, NAS/Cloudflare, DigitalOcean, and Client-owned/BYOC profiles filled in.
 - [DigitalOcean Setup](./production/digitalocean-setup): FairSpot-operated cloud-hosted follow-up target after Release 1 NAS/Cloudflare evaluation.
 - [Dapr-First Production Standards](./production/dapr-first-production-standards): production-grade Dapr usage rules for workflows, outbox, pub/sub, state, secrets, mTLS, resiliency, and validation.
 - [Demo Environment Baseline](./production/demo-environment-baseline): OPS002 baseline for low-cost hosted demo scope, components, seed data, smoke tests, cost evidence, reset, and teardown.
