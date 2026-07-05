@@ -27,6 +27,10 @@ CUSTOMER_URL="${CUSTOMER_URL:-http://localhost:5181}"
 ALLOW_SKIPPED="${ALLOW_SKIPPED:-0}"
 CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:8.11.1}"
 INFRA_DIR="$(cd "$(dirname "$0")/../code/infrastructure" && pwd)"
+# DataHub's connection string requires POSTGRES_PASSWORD (fail-closed on
+# production-like profiles). This gate runs against the LOCAL stack, so supply
+# the local dev default for compose interpolation of the merged config.
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-fps}"
 COMPOSE=(docker compose --project-directory "$INFRA_DIR"
   -f "$INFRA_DIR/docker-compose.yaml"
   -f "$INFRA_DIR/docker-compose.services.yml"

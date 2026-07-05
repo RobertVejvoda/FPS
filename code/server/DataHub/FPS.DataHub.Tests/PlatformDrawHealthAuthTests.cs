@@ -43,6 +43,10 @@ public sealed class PlatformDrawHealthAuthTests : IClassFixture<WebApplicationFa
                     ["Auth:PlatformAuthority"] = PlatformIssuer,
                     ["Auth:PlatformIssuer"] = PlatformIssuer,
                     ["Auth:TrustedRealmRoles"] = "admin,hr_manager,auditor,report_viewer",
+                    // Throwaway connection string so DataHub startup doesn't fail closed in the Test
+                    // environment (base appsettings.json no longer ships one — SEC012A #742). The DbContext
+                    // is swapped to in-memory below, so this is never used to connect.
+                    ["ConnectionStrings:DataHub"] = "Host=localhost;Database=datahub_test;Username=test;Password=test",
                 }));
             builder.ConfigureTestServices(services =>
             {

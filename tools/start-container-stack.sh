@@ -90,6 +90,11 @@ done
 if [[ "$MODE" == "local" ]]; then
   ENV_FILE="${ENV_FILE:-$INFRA_DIR/local-docker.env}"
   export VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
+  # DataHub's connection string now fails closed on production-like profiles
+  # (no committed Postgres password). The local dev default lives here, in the
+  # LOCAL-only path, mirroring VAULT_TOKEN above — NAS supplies POSTGRES_PASSWORD
+  # from nas.env instead.
+  export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-fps}"
 else
   ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
 fi
