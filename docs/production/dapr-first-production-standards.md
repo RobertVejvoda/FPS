@@ -129,6 +129,37 @@ service-to-service security mode under **"Dapr service-to-service security (OPS0
 `DISABLED` with the documented-exception note on the self-hosted profiles, `ENABLED` where a
 profile mounts the mTLS-enabled configuration.
 
+## Dynamic Database Secrets (SEC012A)
+
+DataHub is the one service backed by PostgreSQL (EF Core / Npgsql) rather than a Dapr state store, so its database credential is a connection string the app reads at startup, not a Dapr component secret. SEC012A (#742) is Phase 2 of the #628 secret-hardening path.
+
+**Fail-closed hardening (done).** The base `appsettings.json` no longer ships a Postgres connection string; `ConnectionStrings:DataHub` is supplied per profile:
+
+- **Local development** — `appsettings.Development.json` (dev-only `localhost` credentials, matching the local Postgres container).
+- **Production-like profiles** — injected as the `ConnectionStrings__DataHub` environment value; NAS sources the password from the operator `nas.env`, gated by the Postgres service's required `POSTGRES_PASSWORD`.
+- If no connection string is supplied, DataHub startup **fails closed** (`ConnectionStrings:DataHub is required`) instead of falling back to a committed default password.
+
+**Why Dapr Vault KV is not enough for database leases.** The Dapr `secretstores.hashicorp.vault` component reads **static** key/value secrets: it fetches a stored string and returns it unchanged — no lease, no TTL, no renewal or revocation. A database credential that never rotates and outlives any single process is exactly what dynamic secrets exist to avoid. Vault's **database secrets engine** instead *generates* a short-lived Postgres user on demand, bound to a lease with a TTL; the credential must be **renewed** before expiry and is **revoked** when the lease ends. Dapr KV has no lease lifecycle to drive that renewal/revocation, so it cannot safely carry a dynamic database credential — hence Vault Agent (or app-side lease renewal) is required.
+
+**NAS dynamic-secret target (follow-up implementation).** The intended flow keeps the credential short-lived and out of application config:
+
+| Step | Component | Behavior |
+|---|---|---|
+| Enable engine | Vault **database secrets engine** | Configured against Postgres using an admin/rotation connection. |
+| Least-privilege role | Vault role `datahub` | Issues a Postgres user granted only the privileges DataHub needs (read/write its projection tables — not superuser). |
+| Lease / TTL | Vault role default-TTL + max-TTL | Short default TTL (e.g. hours) with renewal; max-TTL bounds total lifetime before a fresh credential is issued. |
+| Render | **Vault Agent** template | The Agent authenticates with the least-privilege `fairspot-dapr` token, requests a `datahub` credential, and writes the rendered `ConnectionStrings__DataHub` to a file/env source DataHub reads. |
+| Renew / rotate | **Vault Agent** | Renews the lease before expiry and re-renders on rotation; DataHub picks up the refreshed connection string (Agent restart-on-change or app reload). |
+| Consume | DataHub | Reads `ConnectionStrings__DataHub` from the Agent-rendered source exactly as it reads any injected connection string — no application code change and no Dapr dependency on this path. |
+
+Because Npgsql pools connections, rotation must recycle the pool (or rely on new connections picking up the refreshed string); app-side lease renewal is an acceptable alternative where a Vault Agent sidecar is not available.
+
+**Remaining follow-ups (#628).** The other datastores still use static secrets and should move to Vault dynamic secrets under the same path, tracked separately — not widened into this slice:
+
+- **MongoDB** (Booking/Profile/Configuration/Audit/Reporting/Notification/Customer state stores) — Vault database secrets engine (MongoDB plugin).
+- **RabbitMQ** (`fps-pubsub`) — Vault RabbitMQ secrets engine or rotated static credentials.
+- **MinIO / object storage** (`s3store`) — rotated access/secret keys or a provider-managed identity.
+
 ## References
 
 - Dapr transactional outbox: <https://docs.dapr.io/developing-applications/building-blocks/state-management/howto-outbox/>
