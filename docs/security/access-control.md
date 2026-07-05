@@ -17,6 +17,16 @@ FairSpot access control combines OIDC authentication, tenant-scoped authorizatio
 - Keycloak admin, databases, brokers, Dapr sidecars, and observability backends must not be public.
 - Cloudflare Access, VPN/tunnel access, local admin access, or a client-approved equivalent should protect operator-only surfaces.
 
+## Authentication Assurance
+
+Authentication assurance (MFA/passkey strength) layers on top of role-based access; it does not replace claim-based scoping. Policy is defined in [Authentication → Multi-Factor Authentication and Passkeys](./authentication) and [Tenant Login Modes](../business-layer/tenant-login-modes).
+
+- Normal employee accounts use the baseline factor of the enforcing identity provider.
+- Administrator, HR/facilities, auditor, and platform/operator roles carry a stricter expectation: a phishing-resistant factor (passkey/WebAuthn) or mandatory MFA.
+- Break-glass accounts carry the strictest expectation and are few, named, periodically reviewed, and disabled when no longer needed.
+- For company-SSO tenants this stricter expectation is met by the customer IdP's policy; for FairSpot-local accounts it is enforced by FairSpot-controlled Keycloak.
+- A satisfied second factor strengthens login assurance only. Tenant, user, and role identity continue to come solely from validated claims.
+
 ## Reviews
 
 - Review role mappings before hosted demos and client pilots.

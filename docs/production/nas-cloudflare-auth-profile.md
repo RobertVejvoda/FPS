@@ -13,6 +13,7 @@ This public page records the identity contract only. Environment-specific Keyclo
 | Tenant isolation | Backend authorization derives tenant/user/role identity from validated claims. Tenant context is never trusted from request bodies or UI state. |
 | Public domains | Hosted profiles use separate application and authentication hostnames, protected by HTTPS. |
 | Platform plane | Cross-tenant platform roles are separate from tenant roles and are only honored from the trusted platform issuer. |
+| MFA / passkeys | For FairSpot-local accounts, FairSpot-controlled Keycloak enforces MFA (passkey/WebAuthn preferred, OTP/TOTP fallback, recovery codes). For company SSO, the customer IdP enforces MFA. Detailed WebAuthn/OTP realm configuration lives in the private platform runbook. See [Authentication → MFA and Passkeys](../security/authentication). |
 | Secrets | Client secrets, realm signing material, admin passwords, tunnel tokens, and recovery keys are secret data and stay out of Git. |
 
 ## Public References
@@ -21,3 +22,4 @@ This public page records the identity contract only. Environment-specific Keyclo
 - [Security Architecture](../architecture/security/)
 - [Authentication](../security/authentication)
 - [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary)
+- [Keycloak WebAuthn / passkeys](https://www.keycloak.org/docs/latest/server_admin/#webauthn)

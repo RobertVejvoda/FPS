@@ -161,6 +161,33 @@ External IdP broker setup is tracked in AUTH006 (issue #544).
 
 ---
 
+## Multi-Factor Authentication by Login Path
+
+MFA responsibility follows the same split as the login paths themselves (AUTH007, #601). FairSpot does not implement its own MFA — it is configured in the enforcing identity provider.
+
+| Login path | Where MFA is enforced | Factors |
+|---|---|---|
+| Company SSO | Customer's own IdP, under the customer's policy. FairSpot trusts the authenticated assertion and any step-up (`acr`/`amr`) the IdP supplies. | Customer-defined |
+| FairSpot account | FairSpot-controlled Keycloak. | Passkey/WebAuthn preferred; OTP/TOTP fallback; recovery codes |
+
+### Expectations by account type
+
+| Account type | MFA expectation |
+|---|---|
+| Demo employee (`demo` fixture) | Baseline; MFA optional for synthetic demo convenience. |
+| Green Logistics employee | Baseline employee assurance on the enforcing IdP. |
+| Administrator (tenant-admin) | Stronger factor expected: passkey or mandatory MFA. |
+| HR / facilities | Stronger factor expected for privileged operational actions. |
+| Auditor | Stronger factor expected for audit-evidence access. |
+| Platform / operator | Mandatory strong MFA (passkey preferred); honored only from the trusted platform issuer. |
+| Break-glass admin | Strictest: mandatory strong factor; few named accounts, periodically reviewed, disabled when not needed. |
+
+Stricter role expectations are recorded in [Access Control](../security/access-control). Detailed Keycloak WebAuthn/OTP realm configuration is hosted-operator setup and lives in the private platform runbook per the [#684 boundary](../production/nas-cloudflare-auth-profile).
+
+For FairSpot-local accounts, verified email ownership (AUTH008) is a prerequisite for email-based recovery/fallback; it does not by itself grant access.
+
+---
+
 ## What Tenant Discovery Is Not
 
 To avoid security misunderstandings, this table records explicit non-goals:
@@ -183,3 +210,4 @@ To avoid security misunderstandings, this table records explicit non-goals:
 | AUTH004: Add company SSO and FairSpot account entry paths | #542 | Login screen with two entry paths, discovery email input, and IdP routing |
 | AUTH005: Implement domain-based tenant discovery | #543 | Domain-to-tenant lookup, opaque response for unknown domains, routing to IdP |
 | AUTH006: Document external IdP broker test setup | #544 | Keycloak identity-provider broker configuration guidance for demo/test |
+| AUTH007: MFA and passkey policy | #601 | MFA/passkey policy across login paths, factor expectations by role, and smoke checklist (docs slice; no custom MFA code) |
