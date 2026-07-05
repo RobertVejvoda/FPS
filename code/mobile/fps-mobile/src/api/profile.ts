@@ -1,4 +1,4 @@
-import type { components } from '@fps/api-client/profile';
+import type { components } from '@robertvejvoda/fairspot-api-client/profile';
 import type { ApiClientConfig } from './client';
 
 export type ProfileSnapshot = components['schemas']['ProfileSnapshot'];

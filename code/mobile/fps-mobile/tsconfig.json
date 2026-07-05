@@ -6,6 +6,9 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "@robertvejvoda/fairspot-api-client/*": [
+        "../../clients/typescript/src/*"
       ]
     }
   },

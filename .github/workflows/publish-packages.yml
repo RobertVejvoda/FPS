@@ -2,13 +2,18 @@ name: Publish Packages
 
 # Packs (and optionally publishes) the FairSpot open-core shared surfaces the future private
 # fairspot-platform repo can consume: the FairSpot.SharedKernel NuGet package and the npm
-# packages @fps/api-client and @fps/ui. Manual-only (workflow_dispatch) — versioning and
-# publish cadence are deliberate, not on every push. Bump <Version> in the csproj first.
+# packages @robertvejvoda/fairspot-api-client and @robertvejvoda/fairspot-ui.
+# Versioning and publish cadence are deliberate, not on every push. Bump <Version> in the
+# csproj or the package.json version first.
 #
-# NuGet (SharedKernel) can publish to GitHub Packages with the built-in GITHUB_TOKEN. The npm
-# packages are pack/dry-run only here (they are private:true and consumed in-repo via file:
-# deps); no extra secrets are required.
+# GitHub Packages publishing uses the built-in GITHUB_TOKEN for this public repo. Private
+# consumers need their own read token configured in their CI npmrc.
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/publish-packages.yml"
+      - "code/clients/**"
+      - "code/server/Shared/FPS.SharedKernel/**"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -34,17 +39,15 @@ jobs:
         run: dotnet pack code/server/Shared/FPS.SharedKernel/FPS.SharedKernel.csproj -c Release -o ${{ runner.temp }}/nupkg
 
       - name: Push to GitHub Packages
-        if: ${{ !inputs.dry_run }}
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
         run: >-
           dotnet nuget push "${{ runner.temp }}/nupkg/*.nupkg"
           --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           --api-key "${{ secrets.GITHUB_TOKEN }}"
           --skip-duplicate
 
-  pack-npm-packages:
-    # Validates the shared npm package surfaces (@fps/api-client, @fps/ui) by packing them.
-    # Dry-run only: both are private:true and consumed in-repo via file: deps, so nothing is
-    # published here and no secrets beyond the default token are needed.
+  pack-and-publish-npm-packages:
+    # Validates the shared npm package surfaces on PR and optionally publishes on manual dispatch.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,11 +55,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@robertvejvoda'
 
-      - name: Pack @fps/api-client (dry run)
+      - name: Pack @robertvejvoda/fairspot-api-client (dry run)
         run: npm pack --dry-run
         working-directory: code/clients/typescript
 
-      - name: Pack @fps/ui (dry run)
+      - name: Publish @robertvejvoda/fairspot-api-client
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+        run: npm publish
+        working-directory: code/clients/typescript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install @robertvejvoda/fairspot-ui build dependencies
+        run: npm install --no-package-lock --ignore-scripts
+        working-directory: code/clients/ui
+
+      - name: Pack @robertvejvoda/fairspot-ui (dry run)
         run: npm pack --dry-run
         working-directory: code/clients/ui
+
+      - name: Publish @robertvejvoda/fairspot-ui
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+        run: npm publish
+        working-directory: code/clients/ui
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

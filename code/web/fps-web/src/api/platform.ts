@@ -1,7 +1,7 @@
 import type { ApiClientConfig, FetchResult } from './client';
 
 // Platform-plane tenant directory/detail (PLAT008B). These endpoints are platform-only and
-// deliberately excluded from the open @fps/api-client (ApiExplorerSettings.IgnoreApi), so the
+// deliberately excluded from the open @robertvejvoda/fairspot-api-client (ApiExplorerSettings.IgnoreApi), so the
 // platform surface types them locally and calls them directly.
 
 export type PlatformTenantRow = {

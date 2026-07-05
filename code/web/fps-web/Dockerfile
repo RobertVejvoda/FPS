@@ -3,7 +3,7 @@
 # Multi-stage build for the FairSpot web app (Vite + React SPA), served by nginx.
 #
 # The build context MUST be the repo `code/` directory, because the web app
-# depends on the @fps/api-client TypeScript source via `file:../../clients/typescript`
+# depends on the @robertvejvoda/fairspot-api-client TypeScript source via `file:../../clients/typescript`
 # and a Vite alias to `../../clients/typescript/src`.
 #
 # Example:

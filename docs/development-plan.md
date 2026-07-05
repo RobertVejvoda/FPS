@@ -758,7 +758,7 @@ Mobile app shell contract:
 | --- | --- |
 | Platform | React Native + Expo managed workflow. |
 | Language | TypeScript. |
-| API contract | Use `@fps/api-client` generated types from `code/clients/typescript`; do not hand-copy DTOs. |
+| API contract | Use `@robertvejvoda/fairspot-api-client` generated types from `code/clients/typescript`; do not hand-copy DTOs. |
 | Auth in MOB001 | Developer-provided bearer token only. Real login, token refresh, browser-based OIDC flow, MFA, and secure production session lifecycle are later slices. |
 | Navigation | Shell-level navigation only; screens may use typed mock data or read-only API probes. |
 | Configuration | API base URL must be environment/config driven, not hard-coded to one developer machine. |

@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fps/api-client": "file:../../clients/typescript",
+    "@robertvejvoda/fairspot-api-client": "file:../../clients/typescript",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.33",
     "expo-auth-session": "~7.0.11",

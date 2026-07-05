@@ -1,4 +1,4 @@
-import type { components } from '@fps/api-client/booking';
+import type { components } from '@robertvejvoda/fairspot-api-client/booking';
 import type { ApiClientConfig, FetchResult } from './client';
 
 export type BookingListItem = components['schemas']['BookingListItem'];

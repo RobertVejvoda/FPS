@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@fps/api-client': '../../clients/typescript/src',
-      '@fps/ui': '../../clients/ui/src/index.ts',
+      '@robertvejvoda/fairspot-api-client': '../../clients/typescript/src',
+      '@robertvejvoda/fairspot-ui': '../../clients/ui/src/index.ts',
     },
   },
   server: {

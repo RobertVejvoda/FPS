@@ -13,7 +13,7 @@ namespace FPS.Customer.Controllers;
 /// it. Approve/Reject advance the request; provisioning stays a separate, later step.
 ///
 /// Excluded from the open OpenAPI document (ApiExplorerSettings.IgnoreApi) so the generated
-/// open <c>@fps/api-client</c> does not expose this platform-plane queue (#673); the public
+/// open <c>@robertvejvoda/fairspot-api-client</c> does not expose this platform-plane queue (#673); the public
 /// intake <c>POST /tenant-requests</c> (TenantRequestIntakeController) stays in the open client.
 /// </summary>
 [ApiController]

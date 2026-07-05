@@ -46,6 +46,7 @@ memory/
 # Node
 node_modules/
 code/web/fps-web/dist/
+code/clients/**/dist/
 package-lock.json
 # Allow app lockfiles so CI installs are deterministic.
 !code/mobile/fps-mobile/package-lock.json
