@@ -42,6 +42,7 @@ import { HrEmployeeHistoryPage } from './pages/HrEmployeeHistoryPage';
 import { ParkingMapPage } from './pages/ParkingMapPage';
 import { LegalPage } from './pages/LegalPage';
 import { PilotPage } from './pages/PilotPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
 function Guard({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
   const { roles } = useAuth();
@@ -250,6 +251,9 @@ export function App() {
       <Routes>
         <Route path="/session" element={<SessionPage />} />
         <Route path="/auth/callback" element={<OidcCallbackPage />} />
+        {/* AUTH008B (#734) — verification landing must be top-level so the emailed link isn't bounced to
+            /session (which would discard the token) before the callback can consume and scrub it. */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/pilot" element={<PilotPage />} />
         <Route path="/platform/*" element={<PlatformShell />} />

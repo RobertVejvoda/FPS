@@ -16,8 +16,9 @@ builder.Services.AddSingleton<IProfileRepository, DaprProfileRepository>();
 // AUTH008 (#729) — email ownership verification (slice 1: state machine; email/audit stubs).
 builder.Services.AddSingleton<IEmailVerificationRepository, DaprEmailVerificationRepository>();
 builder.Services.AddSingleton<IVerificationTokenGenerator, RandomVerificationTokenGenerator>();
-builder.Services.AddSingleton<IEmailVerificationSender, LoggingEmailVerificationSender>();
-builder.Services.AddSingleton<IEmailVerificationAuditSink, LoggingEmailVerificationAuditSink>();
+builder.Services.AddSingleton<INotificationVerificationClient, DaprNotificationVerificationClient>();
+builder.Services.AddSingleton<IEmailVerificationSender, DaprNotificationEmailVerificationSender>();
+builder.Services.AddSingleton<IEmailVerificationAuditSink, DaprEmailVerificationAudit>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.Configure<EmailVerificationOptions>(
     builder.Configuration.GetSection(EmailVerificationOptions.SectionName));

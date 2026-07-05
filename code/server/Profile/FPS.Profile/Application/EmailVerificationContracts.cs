@@ -31,13 +31,16 @@ public interface IEmailVerificationSender
     Task SendAsync(string tenantId, string userId, string emailAddress, string token, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Records verification security evidence (requested/succeeded/expired/failed) — never the token.</summary>
+/// <summary>
+/// Records durable verification security evidence (requested/succeeded/expired/failed) — outcome, reason,
+/// and a pseudonymised actor only; never the token or the email address.
+/// </summary>
 public interface IEmailVerificationAuditSink
 {
-    void Requested(string tenantId, string userId);
-    void Succeeded(string tenantId, string userId);
-    void Expired(string tenantId, string userId);
-    void Failed(string tenantId, string userId, string reason);
+    Task RequestedAsync(string tenantId, string userId, CancellationToken cancellationToken = default);
+    Task SucceededAsync(string tenantId, string userId, CancellationToken cancellationToken = default);
+    Task ExpiredAsync(string tenantId, string userId, CancellationToken cancellationToken = default);
+    Task FailedAsync(string tenantId, string userId, string reason, CancellationToken cancellationToken = default);
 }
 
 public sealed class EmailVerificationOptions
@@ -45,6 +48,9 @@ public sealed class EmailVerificationOptions
     public const string SectionName = "Profile:EmailVerification";
     public TimeSpan Ttl { get; init; } = TimeSpan.FromHours(24);
     public int MaxAttempts { get; init; } = 5;
+    // AUTH008B #734 — base URL of the FairSpot email-verification callback page. The one-time token is
+    // appended as a `token` query parameter to form the link delivered in the email.
+    public string VerificationBaseUrl { get; init; } = "https://app.fairspot.net/verify-email";
 }
 
 public sealed record VerificationOutcome(bool Verified, string? RejectionReason)

@@ -45,7 +45,7 @@ public sealed class EmailVerificationService(
 
         // Out-of-band delivery of the plaintext token. Nothing logs it.
         await sender.SendAsync(tenantId, userId, normalised, token, cancellationToken);
-        audit.Requested(tenantId, userId);
+        await audit.RequestedAsync(tenantId, userId, cancellationToken);
         return null;
     }
 
@@ -55,7 +55,7 @@ public sealed class EmailVerificationService(
         var verification = await repository.GetAsync(tenantId, userId, cancellationToken);
         if (verification is null || verification.State != EmailVerificationState.Pending)
         {
-            audit.Failed(tenantId, userId, "no_pending_verification");
+            await audit.FailedAsync(tenantId, userId, "no_pending_verification", cancellationToken);
             return VerificationOutcome.Reject("no_pending_verification");
         }
 
@@ -64,13 +64,13 @@ public sealed class EmailVerificationService(
         {
             verification.MarkExpired();
             await repository.SaveAsync(verification, cancellationToken);
-            audit.Expired(tenantId, userId);
+            await audit.ExpiredAsync(tenantId, userId, cancellationToken);
             return VerificationOutcome.Reject("expired");
         }
 
         if (verification.AttemptCount >= options.Value.MaxAttempts)
         {
-            audit.Failed(tenantId, userId, "too_many_attempts");
+            await audit.FailedAsync(tenantId, userId, "too_many_attempts", cancellationToken);
             return VerificationOutcome.Reject("too_many_attempts");
         }
 
@@ -78,13 +78,13 @@ public sealed class EmailVerificationService(
         {
             verification.RegisterFailedAttempt();
             await repository.SaveAsync(verification, cancellationToken);
-            audit.Failed(tenantId, userId, "invalid_token");
+            await audit.FailedAsync(tenantId, userId, "invalid_token", cancellationToken);
             return VerificationOutcome.Reject("invalid_token");
         }
 
         verification.MarkVerified(now);
         await repository.SaveAsync(verification, cancellationToken);
-        audit.Succeeded(tenantId, userId);
+        await audit.SucceededAsync(tenantId, userId, cancellationToken);
         return VerificationOutcome.Ok();
     }
 

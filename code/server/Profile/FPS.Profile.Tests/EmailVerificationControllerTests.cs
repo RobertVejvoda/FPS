@@ -27,8 +27,7 @@ public sealed class EmailVerificationControllerTests
 
         var service = new EmailVerificationService(
             new InMemoryEmailVerificationRepository(), tokenGen.Object,
-            new LoggingEmailVerificationSender(NullLogger<LoggingEmailVerificationSender>.Instance),
-            new LoggingEmailVerificationAuditSink(NullLogger<LoggingEmailVerificationAuditSink>.Instance),
+            new NoopSender(), new NoopAudit(),
             TimeProvider.System, Options.Create(new EmailVerificationOptions()));
         controller = new EmailVerificationController(service, profiles.Object, currentUser.Object);
     }
@@ -109,5 +108,17 @@ public sealed class EmailVerificationControllerTests
         var result = await controller.Confirm(new ConfirmEmailVerificationRequest("tok-123"), CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
+    }
+    private sealed class NoopSender : IEmailVerificationSender
+    {
+        public Task SendAsync(string tenantId, string userId, string emailAddress, string token, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopAudit : IEmailVerificationAuditSink
+    {
+        public Task RequestedAsync(string t, string u, CancellationToken c = default) => Task.CompletedTask;
+        public Task SucceededAsync(string t, string u, CancellationToken c = default) => Task.CompletedTask;
+        public Task ExpiredAsync(string t, string u, CancellationToken c = default) => Task.CompletedTask;
+        public Task FailedAsync(string t, string u, string r, CancellationToken c = default) => Task.CompletedTask;
     }
 }
