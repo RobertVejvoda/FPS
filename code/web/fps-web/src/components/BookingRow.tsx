@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { BookingListItem } from '../api/bookings';
 import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
-import { StatusBadge } from '@fps/ui';
+import { StatusBadge } from '@robertvejvoda/fairspot-ui';
 
 const STATUS_MEANING: Record<string, string> = {
   Submitted: 'Waiting for allocation',

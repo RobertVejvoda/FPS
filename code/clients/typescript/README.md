@@ -1,4 +1,4 @@
-# @fps/api-client
+# @robertvejvoda/fairspot-api-client
 
 Generated TypeScript API client for FairSpot — typed request/response models scraped from each service's OpenAPI document. **Generated; do not edit by hand** (regenerate via `npm run generate`).
 
@@ -14,17 +14,28 @@ In-repo, `fps-web` consumes this as a local source package via a `file:` depende
 
 ```jsonc
 // package.json
-"dependencies": { "@fps/api-client": "file:../../clients/typescript" }
+"dependencies": { "@robertvejvoda/fairspot-api-client": "file:../../clients/typescript" }
 ```
 
 ```ts
-import type { paths } from '@fps/api-client/booking';
+import type { paths } from '@robertvejvoda/fairspot-api-client/booking';
 ```
 
-A future private repo would reference it the same way (vendored/path) or via GitHub Packages once publishing is enabled.
+Private repositories consume the published package from GitHub Packages:
+
+```jsonc
+// package.json
+"dependencies": { "@robertvejvoda/fairspot-api-client": "0.1.0" }
+```
+
+```ini
+@robertvejvoda:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+```
 
 ## Maintenance
 
 - `npm run generate` — regenerate from running services (`tools/generate-api-client.sh`).
 - `npm run check-stale` — verify the committed client matches the current OpenAPI.
+- `npm run build` — copy the generated type surface into `dist/` for publishing.
 - `npm pack --dry-run` — validate the package surface without publishing.

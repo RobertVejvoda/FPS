@@ -1,4 +1,4 @@
-import type { components } from '@fps/api-client/customer';
+import type { components } from '@robertvejvoda/fairspot-api-client/customer';
 import type { ApiClientConfig, FetchResult } from './client';
 
 export interface TenantDiscoveryResponse {

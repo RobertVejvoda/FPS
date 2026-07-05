@@ -11,8 +11,8 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "paths": {
-      "@fps/api-client/*": ["../../clients/typescript/src/*"],
-      "@fps/ui": ["../../clients/ui/src/index.ts"],
+      "@robertvejvoda/fairspot-api-client/*": ["../../clients/typescript/src/*"],
+      "@robertvejvoda/fairspot-ui": ["../../clients/ui/src/index.ts"],
       "react": ["./node_modules/@types/react"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
     }

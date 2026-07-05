@@ -11,7 +11,7 @@ namespace FPS.Customer.Controllers;
 /// (<see cref="RequirePlatformReaderAttribute"/>: platform_admin / operator / auditor); a
 /// tenant/customer token can never reach it, and authorization never uses tenant claims.
 ///
-/// Excluded from the open OpenAPI/@fps/api-client surface (ApiExplorerSettings.IgnoreApi) — this
+/// Excluded from the open OpenAPI/@robertvejvoda/fairspot-api-client surface (ApiExplorerSettings.IgnoreApi) - this
 /// is a platform-plane surface that will move to the private fairspot-platform repo (#675). The
 /// platform web calls it directly. No mutating tenant actions live here.
 /// </summary>

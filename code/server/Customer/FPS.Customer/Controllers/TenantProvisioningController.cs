@@ -12,7 +12,7 @@ namespace FPS.Customer.Controllers;
 // TenantController. It is isolated here so it can move to the private fairspot-platform
 // operator service (the open core bootstraps its single tenant via seed/config, not this API).
 // Excluded from the open OpenAPI document (ApiExplorerSettings.IgnoreApi) so the generated
-// open `@fps/api-client` does not expose a platform-plane endpoint (#673). The endpoint still
+// open `@robertvejvoda/fairspot-api-client` does not expose a platform-plane endpoint (#673). The endpoint still
 // serves at runtime; only its advertisement in the open client is withheld.
 [ApiController]
 [Authorize]

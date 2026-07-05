@@ -1,30 +1,47 @@
 {
-  "name": "@fps/api-client",
+  "name": "@robertvejvoda/fairspot-api-client",
   "version": "0.1.0",
-  "description": "Generated TypeScript API client for FairSpot (open-core customer/tenant services only) — do not edit by hand",
-  "private": true,
+  "description": "Generated TypeScript API client for FairSpot (open-core customer/tenant services only) - do not edit by hand",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/RobertVejvoda/fairspot"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "files": [
-    "src",
+    "dist",
     "README.md"
   ],
+  "types": "./dist/index.d.ts",
   "scripts": {
+    "build": "node ./scripts/build.mjs",
     "generate": "bash ../../../tools/generate-api-client.sh",
-    "check-stale": "bash ../../../tools/check-api-client-stale.sh"
+    "check-stale": "bash ../../../tools/check-api-client-stale.sh",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "openapi-typescript": "7.4.0"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./identity": "./src/identity.d.ts",
-    "./booking": "./src/booking.d.ts",
-    "./profile": "./src/profile.d.ts",
-    "./notification": "./src/notification.d.ts",
-    "./customer": "./src/customer.d.ts"
+    ".": {
+      "types": "./dist/index.d.ts"
+    },
+    "./identity": {
+      "types": "./dist/identity.d.ts"
+    },
+    "./booking": {
+      "types": "./dist/booking.d.ts"
+    },
+    "./profile": {
+      "types": "./dist/profile.d.ts"
+    },
+    "./notification": {
+      "types": "./dist/notification.d.ts"
+    },
+    "./customer": {
+      "types": "./dist/customer.d.ts"
+    }
   }
 }

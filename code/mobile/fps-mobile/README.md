@@ -21,7 +21,7 @@ cd code/mobile/fps-mobile
 npm install
 ```
 
-The package depends on `@fps/api-client` via a local `file:../../clients/typescript`
+The package depends on `@robertvejvoda/fairspot-api-client` via a local `file:../../clients/typescript`
 reference. The generated types are consumed type-only — no DTOs are copied by
 hand.
 

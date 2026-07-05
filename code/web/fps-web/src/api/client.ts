@@ -1,4 +1,4 @@
-import type { paths as IdentityPaths } from '@fps/api-client/identity';
+import type { paths as IdentityPaths } from '@robertvejvoda/fairspot-api-client/identity';
 
 export type MeResponse =
   IdentityPaths['/me']['get']['responses']['200']['content']['application/json'];

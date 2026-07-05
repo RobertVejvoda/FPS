@@ -11,8 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fps/api-client": "file:../../clients/typescript",
-    "@fps/ui": "file:../../clients/ui",
+    "@robertvejvoda/fairspot-api-client": "file:../../clients/typescript",
+    "@robertvejvoda/fairspot-ui": "file:../../clients/ui",
     "oidc-client-ts": "^3.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

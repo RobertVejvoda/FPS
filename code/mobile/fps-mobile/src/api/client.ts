@@ -1,6 +1,6 @@
 // Type-only imports from the generated API client. The mobile shell never copies
 // DTOs by hand and never sends spoofable tenant/requestor identifiers.
-import type { paths as IdentityPaths } from '@fps/api-client/identity';
+import type { paths as IdentityPaths } from '@robertvejvoda/fairspot-api-client/identity';
 
 export type MeResponse =
   IdentityPaths['/me']['get']['responses']['200']['content']['application/json'];
