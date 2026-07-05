@@ -14,7 +14,7 @@ SMS is not a v1 channel. If SMS is added later, use Twilio SMS behind a Dapr out
 
 Implementation is sliced. `N001` establishes the Booking-event consumer and durable in-app notification records first. Email delivery remains a v1 requirement, but it is implemented in a later Notification slice after the in-app record contract and idempotency behavior are stable.
 
-Production email delivery uses the logical Dapr output binding `notification-email`. The current hosted/demo provider is Twilio SendGrid (`bindings.twilio.sendgrid`); application code must invoke the binding contract rather than a provider SDK. Local and evaluation profiles may keep the in-memory sender unless a real staging binding is explicitly configured.
+Production email delivery uses a thin direct SendGrid v3 HTTP transport behind Notification infrastructure (`ISendGridEmailTransport`), because the Dapr `bindings.twilio.sendgrid` output binding can only send a single `text/html` content part and FairSpot delivers `multipart/alternative` (HTML + plain text) — NOTIF #731. The transport reads the SendGrid API key from the Dapr secret store at send time; application code never names a provider SDK. The `notification-email` Dapr binding component is **retained but superseded** (compatibility scaffolding referencing the same secret); it is not the active production send path. Local and evaluation profiles keep the in-memory sender unless the SendGrid provider is explicitly configured.
 
 Email content is composed by `EmailNotificationComposer` (NOTIF #727): the sender receives an already-composed subject, HTML body, and plain-text body and never builds content itself. NOTIF #731 — email is delivered as a genuine `multipart/alternative` message carrying **both** the HTML and the plain-text parts. Because the `bindings.twilio.sendgrid` binding can only send a single `text/html` part, the real send path is a thin direct call to the SendGrid v3 Mail Send API (`ISendGridEmailTransport`); the API key is read from the Dapr secret store at send time and never held in configuration or Git. The verification email (AUTH008B) uses the same transport, so it is multipart as well.
 
@@ -22,14 +22,17 @@ Booking operational events currently carry recipient user IDs, not email address
 
 ### Email delivery configuration (SendGrid)
 
-The Notification service selects the email sender by configuration. Any of `SendGrid`, `DaprSendGrid`, or `DaprBinding` in `Notification:Email:Provider` activates the Dapr-binding sender; anything else (or unset) keeps the in-memory sender. When the SendGrid provider is selected, `Notification:Email:FromEmail` is **required** — the service fails fast at startup if it is missing, because SendGrid needs a verified From address at send time.
+The Notification service selects the email sender by configuration. Any of `SendGrid`, `DaprSendGrid`, or `DaprBinding` in `Notification:Email:Provider` activates the SendGrid HTTP transport; anything else (or unset) keeps the in-memory sender. When the SendGrid provider is selected, `Notification:Email:FromEmail` is **required** — the service fails fast at startup if it is missing, because SendGrid needs a verified From address at send time.
 
 | Setting | Env var | Example | Notes |
 |---|---|---|---|
 | Provider | `Notification__Email__Provider` | `SendGrid` | Unset/`InMemory` keeps the evaluation sender |
-| Binding name | `Notification__Email__BindingName` | `notification-email` | Logical Dapr binding; app never names a provider SDK |
 | From address | `Notification__Email__FromEmail` | `notifications@fairspot.net` | Required for SendGrid; public config, not a secret |
 | From name | `Notification__Email__FromName` | `FairSpot` | Public config |
+| Secret store | `Notification__Email__SecretStoreName` | `secretstore` | Dapr secret store the API key is read from (default `secretstore`) |
+| API key secret | `Notification__Email__ApiKeySecretName` | `sendgrid-credentials` | Secret name holding the key (default `sendgrid-credentials`) |
+| API key field | `Notification__Email__ApiKeySecretKey` | `apiKey` | Field within the secret (default `apiKey`) |
+| Binding name | `Notification__Email__BindingName` | `notification-email` | **Legacy/unused** by the active HTTP transport; names the retained (superseded) Dapr binding component |
 
 **Operator prerequisites** (complete before enabling SendGrid in any hosted/demo runtime):
 
@@ -39,9 +42,9 @@ The Notification service selects the email sender by configuration. Any of `Send
 - Cloudflare Email Routing (or another mailbox provider) routing `notifications@fairspot.net` and `support@fairspot.net` to a real monitored mailbox.
 - A SendGrid API key restricted to **Mail Send** only.
 
-**Secret handling.** The real SendGrid API key must never be committed or pasted into issues, PRs, docs, screenshots, or tracked env files. Tracked env examples/templates may contain **placeholders only** (e.g. `SENDGRID_API_KEY=<set-in-ignored-operator-env-or-secret-manager>`). The real key lives only in an ignored operator env file or is provisioned directly into the active Dapr secret store as secret name `sendgrid-credentials`, key `apiKey`. The Dapr component YAML references it solely through `secretKeyRef`; neither application code nor the component reads the raw key from app configuration.
+**Secret handling.** The real SendGrid API key must never be committed or pasted into issues, PRs, docs, screenshots, or tracked env files. Tracked env examples/templates may contain **placeholders only** (e.g. `SENDGRID_API_KEY=<set-in-ignored-operator-env-or-secret-manager>`). The real key lives only in an ignored operator env file or is provisioned directly into the active Dapr secret store as secret name `sendgrid-credentials`, key `apiKey`. The Notification service reads this key from the Dapr secret store at send time (`GetSecretAsync`); the raw key is never read from app configuration. The retained (superseded) `notification-email` component references the same secret solely through `secretKeyRef`.
 
-**NAS seeding path.** Set `SENDGRID_API_KEY` in the ignored operator env source `code/infrastructure/nas.env` (it already feeds compose and `vault-init`). When present, `vault-init` seeds Vault as `secret/dapr/sendgrid-credentials apiKey=…`; when absent it is skipped and the `notification-email` binding stays unconfigured. Do not place SendGrid config in `cloudflared.yml`. For the Vault-backed profile the equivalent manual shape is:
+**NAS seeding path.** Set `SENDGRID_API_KEY` in the ignored operator env source `code/infrastructure/nas.env` (it already feeds compose and `vault-init`). When present, `vault-init` seeds Vault as `secret/dapr/sendgrid-credentials apiKey=…`, which the SendGrid HTTP transport reads at send time; when absent it is skipped and, with no key available, email stays on the in-memory sender. Do not place SendGrid config in `cloudflared.yml`. For the Vault-backed profile the equivalent manual shape is:
 
 ```bash
 vault kv put secret/dapr/sendgrid-credentials apiKey=<real SendGrid API key>
