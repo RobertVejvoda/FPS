@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Mail;
 using System.Text;
-using Dapr.Client;
 using FPS.Notification.Application;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace FPS.Notification.Infrastructure;
 
@@ -43,16 +41,15 @@ internal static class VerificationEmailContent
 }
 
 /// <summary>
-/// Real transport: sends the verification email via the Dapr SendGrid output binding. The composed body
-/// (with the link) goes only into the binding request; no record is persisted and the link is not logged.
+/// Real transport: sends the verification email through the shared SendGrid transport. NOTIF #731 — the
+/// verification email now goes out multipart/alternative (both the HTML and plain-text parts from
+/// <see cref="VerificationEmailContent"/>). The composed body carries the Secret link but is sent
+/// transiently: no record is persisted and the link is never logged.
 /// </summary>
 public sealed class DaprBindingVerificationEmailDelivery(
-    DaprClient daprClient,
-    IOptions<DaprSendGridEmailOptions> options,
+    ISendGridEmailTransport transport,
     ILogger<DaprBindingVerificationEmailDelivery> logger) : IVerificationEmailDelivery
 {
-    private const string CreateOperation = "create";
-
     public async Task<bool> SendAsync(VerificationEmailRequest request, CancellationToken cancellationToken = default)
     {
         if (!TryNormalizeEmail(request.EmailAddress, out var recipient))
@@ -61,31 +58,21 @@ public sealed class DaprBindingVerificationEmailDelivery(
             return false;
         }
 
-        var configured = options.Value;
-        var bindingRequest = new BindingRequest(
-            string.IsNullOrWhiteSpace(configured.BindingName) ? "notification-email" : configured.BindingName.Trim(),
-            CreateOperation)
-        {
-            Data = Encoding.UTF8.GetBytes(VerificationEmailContent.Html(request.VerificationLink)),
-        };
-        bindingRequest.Metadata["emailTo"] = recipient;
-        bindingRequest.Metadata["subject"] = VerificationEmailContent.Subject;
-        if (!string.IsNullOrWhiteSpace(configured.FromEmail))
-            bindingRequest.Metadata["emailFrom"] = configured.FromEmail.Trim();
-        if (!string.IsNullOrWhiteSpace(configured.FromName))
-            bindingRequest.Metadata["emailFromName"] = configured.FromName.Trim();
+        var sent = await transport.SendAsync(
+            new SendGridEmailMessage(
+                recipient,
+                null,
+                VerificationEmailContent.Subject,
+                VerificationEmailContent.Html(request.VerificationLink),
+                VerificationEmailContent.Text(request.VerificationLink)),
+            cancellationToken);
 
-        try
-        {
-            await daprClient.InvokeBindingAsync(bindingRequest, cancellationToken);
-            return true;
-        }
-        catch (Exception)
+        if (!sent)
         {
             // No link/address in the log. The Secret token in the link is never logged.
             logger.LogWarning("Verification email delivery failed (provider unavailable). TenantId={TenantId}", request.TenantId);
-            return false;
         }
+        return sent;
     }
 
     private static bool TryNormalizeEmail(string candidate, out string address)

@@ -1,10 +1,7 @@
-using System.Text;
-using Dapr.Client;
 using FPS.Notification.Application;
 using FPS.Notification.Domain;
 using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FPS.Notification.Tests.Infrastructure;
@@ -12,26 +9,16 @@ namespace FPS.Notification.Tests.Infrastructure;
 public sealed class DaprSendGridEmailNotificationSenderTests
 {
     [Fact]
-    public async Task SendAsync_InvokesNotificationEmailBinding_WithSafeMetadata()
+    public async Task SendAsync_ForwardsBothHtmlAndTextParts_ToTransport()
     {
-        BindingRequest? sentRequest = null;
-        var dapr = new Mock<DaprClient>();
-        dapr.Setup(d => d.InvokeBindingAsync(
-                It.IsAny<BindingRequest>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<BindingRequest, CancellationToken>((request, _) => sentRequest = request)
-            .ReturnsAsync((BindingRequest request, CancellationToken _) =>
-                new BindingResponse(request, ReadOnlyMemory<byte>.Empty, new Dictionary<string, string>()));
+        var transport = new Mock<ISendGridEmailTransport>();
+        SendGridEmailMessage? sent = null;
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SendGridEmailMessage, CancellationToken>((m, _) => sent = m)
+            .ReturnsAsync(true);
+        var sender = new DaprSendGridEmailNotificationSender(transport.Object, NullLogger<DaprSendGridEmailNotificationSender>.Instance);
 
-        var sender = Sender(dapr.Object, new DaprSendGridEmailOptions
-        {
-            BindingName = "notification-email",
-            SubjectPrefix = "FairSpot",
-            FromEmail = "noreply@fairspot.net",
-            FromName = "FairSpot"
-        });
-
-        // NOTIF #727 — the sender forwards already-composed subject/body verbatim; it does not build them.
+        // NOTIF #731 — both the HTML and plain-text bodies must reach the transport (multipart delivery).
         var composed = new ComposedEmail(
             "Your parking spot is confirmed",
             "<p>Hello &lt;ops&gt;<br>Review request.</p>",
@@ -39,49 +26,39 @@ public sealed class DaprSendGridEmailNotificationSenderTests
         var result = await sender.SendAsync(Record("ops@fairspot.net"), "ops@fairspot.net", composed);
 
         Assert.True(result.Success);
-        Assert.NotNull(sentRequest);
-        Assert.Equal("notification-email", sentRequest!.BindingName);
-        Assert.Equal("create", sentRequest.Operation);
-        Assert.Equal("ops@fairspot.net", sentRequest.Metadata["emailTo"]);
-        Assert.Equal("Your parking spot is confirmed", sentRequest.Metadata["subject"]);
-        Assert.Equal("noreply@fairspot.net", sentRequest.Metadata["emailFrom"]);
-        Assert.Equal("FairSpot", sentRequest.Metadata["emailFromName"]);
-        var body = Encoding.UTF8.GetString(sentRequest.Data.ToArray());
-        Assert.Contains("Hello &lt;ops&gt;<br>Review request.", body);
+        Assert.NotNull(sent);
+        Assert.Equal("ops@fairspot.net", sent!.ToEmail);
+        Assert.Equal("Your parking spot is confirmed", sent.Subject);
+        Assert.Equal("<p>Hello &lt;ops&gt;<br>Review request.</p>", sent.HtmlBody);
+        Assert.Equal("Hello <ops>\nReview request.", sent.TextBody);
     }
 
     [Fact]
-    public async Task SendAsync_RejectsNonEmailRecipientId_WithoutInvokingBinding()
+    public async Task SendAsync_RejectsNonEmailRecipientId_WithoutCallingTransport()
     {
-        var dapr = new Mock<DaprClient>();
-        var sender = Sender(dapr.Object);
+        var transport = new Mock<ISendGridEmailTransport>();
+        var sender = new DaprSendGridEmailNotificationSender(transport.Object, NullLogger<DaprSendGridEmailNotificationSender>.Instance);
 
         var result = await sender.SendAsync(Record("user-1"), "user-1", Email());
 
         Assert.False(result.Success);
         Assert.Equal(EmailFailureCategory.DeliveryRejected, result.FailureCategory);
-        dapr.Verify(d => d.InvokeBindingAsync(
-                It.IsAny<BindingRequest>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        transport.Verify(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task SendAsync_ProviderException_ReturnsProviderUnavailable_WithoutProviderDetails()
+    public async Task SendAsync_TransportFailure_ReturnsProviderUnavailable()
     {
-        var dapr = new Mock<DaprClient>();
-        dapr.Setup(d => d.InvokeBindingAsync(
-                It.IsAny<BindingRequest>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("provider-secret-detail"));
-        var sender = Sender(dapr.Object);
+        var transport = new Mock<ISendGridEmailTransport>();
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var sender = new DaprSendGridEmailNotificationSender(transport.Object, NullLogger<DaprSendGridEmailNotificationSender>.Instance);
 
         var result = await sender.SendAsync(Record("ops@fairspot.net"), "ops@fairspot.net", Email());
 
         Assert.False(result.Success);
         Assert.Equal("Email delivery unavailable", result.FailureReason);
         Assert.Equal(EmailFailureCategory.ProviderUnavailable, result.FailureCategory);
-        Assert.DoesNotContain("provider-secret-detail", result.FailureReason);
     }
 
     [Theory]
@@ -92,14 +69,6 @@ public sealed class DaprSendGridEmailNotificationSenderTests
     {
         Assert.True(DaprSendGridEmailNotificationSender.IsConfiguredProvider(provider));
     }
-
-    private static DaprSendGridEmailNotificationSender Sender(
-        DaprClient dapr,
-        DaprSendGridEmailOptions? options = null) =>
-        new(
-            dapr,
-            Options.Create(options ?? new DaprSendGridEmailOptions()),
-            NullLogger<DaprSendGridEmailNotificationSender>.Instance);
 
     private static ComposedEmail Email(
         string subject = "Parking spot allocated",

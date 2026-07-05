@@ -1,7 +1,4 @@
-using System.Net;
 using System.Net.Mail;
-using System.Text;
-using Dapr.Client;
 using FPS.Notification.Application;
 using FPS.Notification.Domain;
 using Microsoft.Extensions.Logging;
@@ -13,18 +10,28 @@ public sealed class DaprSendGridEmailOptions
 {
     public const string SectionName = "Notification:Email";
     public string Provider { get; init; } = "InMemory";
+    // Retained for the (now superseded) Dapr SendGrid binding component; the real send path is the
+    // multipart HTTP transport (NOTIF #731).
     public string BindingName { get; init; } = "notification-email";
     public string SubjectPrefix { get; init; } = "FairSpot";
     public string? FromEmail { get; init; }
     public string? FromName { get; init; } = "FairSpot";
+    // NOTIF #731 — the SendGrid API key is read from the Dapr secret store, not configuration/env.
+    public string SecretStoreName { get; init; } = "secretstore";
+    public string ApiKeySecretName { get; init; } = "sendgrid-credentials";
+    public string ApiKeySecretKey { get; init; } = "apiKey";
 }
 
+/// <summary>
+/// SendGrid email sender for normal notification emails. NOTIF #731 — sends both the composed HTML and
+/// plain-text bodies as a multipart/alternative message through <see cref="ISendGridEmailTransport"/>
+/// (the Dapr binding could only send HTML). Transport-only: subject/body arrive pre-composed (#727) and the
+/// destination is the already-resolved verified address (#728).
+/// </summary>
 public sealed class DaprSendGridEmailNotificationSender(
-    DaprClient daprClient,
-    IOptions<DaprSendGridEmailOptions> options,
+    ISendGridEmailTransport transport,
     ILogger<DaprSendGridEmailNotificationSender> logger) : IEmailNotificationSender
 {
-    private const string CreateOperation = "create";
     private static readonly HashSet<string> EnabledProviderNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "SendGrid",
@@ -51,46 +58,15 @@ public sealed class DaprSendGridEmailNotificationSender(
                 EmailFailureCategory.DeliveryRejected);
         }
 
-        var configured = options.Value;
-        // NOTIF #727 — transport only: subject/body come pre-composed. The upstream Dapr
-        // `bindings.twilio.sendgrid` binding sends a single `text/html` content part, so this path
-        // delivers email.HtmlBody only. email.TextBody is still composed (the in-memory sender logs
-        // it, and it is ready for a multipart-capable transport) but is NOT delivered here today;
-        // true multipart HTML+text delivery is tracked in #731.
-        var request = new BindingRequest(BindingName(configured), CreateOperation)
-        {
-            Data = Encoding.UTF8.GetBytes(email.HtmlBody)
-        };
-        request.Metadata["emailTo"] = recipientAddress;
-        request.Metadata["subject"] = email.Subject;
+        // NOTIF #731 — both HTML and plain-text parts are delivered (multipart/alternative).
+        var sent = await transport.SendAsync(
+            new SendGridEmailMessage(recipientAddress, null, email.Subject, email.HtmlBody, email.TextBody),
+            cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(configured.FromEmail))
-        {
-            request.Metadata["emailFrom"] = configured.FromEmail.Trim();
-        }
-
-        if (!string.IsNullOrWhiteSpace(configured.FromName))
-        {
-            request.Metadata["emailFromName"] = configured.FromName.Trim();
-        }
-
-        try
-        {
-            await daprClient.InvokeBindingAsync(request, cancellationToken);
-            return EmailSendResult.Ok();
-        }
-        catch (Exception)
-        {
-            return EmailSendResult.Fail(
-                "Email delivery unavailable",
-                EmailFailureCategory.ProviderUnavailable);
-        }
+        return sent
+            ? EmailSendResult.Ok()
+            : EmailSendResult.Fail("Email delivery unavailable", EmailFailureCategory.ProviderUnavailable);
     }
-
-    private static string BindingName(DaprSendGridEmailOptions options) =>
-        string.IsNullOrWhiteSpace(options.BindingName)
-            ? "notification-email"
-            : options.BindingName.Trim();
 
     private static bool TryNormalizeEmailAddress(string recipientId, out string address)
     {

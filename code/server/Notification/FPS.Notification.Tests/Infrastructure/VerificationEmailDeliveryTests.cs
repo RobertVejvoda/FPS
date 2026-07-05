@@ -1,15 +1,13 @@
-using System.Text;
-using Dapr.Client;
 using FPS.Notification.Application;
 using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FPS.Notification.Tests.Infrastructure;
 
-// AUTH008B (#734) — the transient verification-email transport. The verification link (Secret token
-// embedded) must reach the provider send but never a persisted record or a log line.
+// AUTH008B (#734) + NOTIF (#731) — the transient verification-email transport. The verification link (Secret
+// token embedded) must reach the provider send but never a persisted record or a log line, and the email now
+// goes out multipart (HTML + plain text).
 public sealed class VerificationEmailDeliveryTests
 {
     private const string Tenant = "tenant-1";
@@ -17,73 +15,62 @@ public sealed class VerificationEmailDeliveryTests
     private const string Link = "https://app.fairspot.net/verify-email?token=abc%26def";
 
     [Fact]
-    public async Task DaprBinding_SendsLinkToProviderBinding_WithSafeMetadata()
+    public async Task DaprBinding_SendsBothHtmlAndTextParts_WithSubjectAndRecipient()
     {
-        BindingRequest? sent = null;
-        var dapr = new Mock<DaprClient>();
-        dapr.Setup(d => d.InvokeBindingAsync(It.IsAny<BindingRequest>(), It.IsAny<CancellationToken>()))
-            .Callback<BindingRequest, CancellationToken>((r, _) => sent = r)
-            .ReturnsAsync((BindingRequest r, CancellationToken _) =>
-                new BindingResponse(r, ReadOnlyMemory<byte>.Empty, new Dictionary<string, string>()));
+        var transport = new Mock<ISendGridEmailTransport>();
+        SendGridEmailMessage? sent = null;
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SendGridEmailMessage, CancellationToken>((m, _) => sent = m)
+            .ReturnsAsync(true);
 
-        var sut = Delivery(dapr.Object, new DaprSendGridEmailOptions
-        {
-            BindingName = "notification-email", FromEmail = "noreply@fairspot.net", FromName = "FairSpot"
-        });
-
-        var ok = await sut.SendAsync(new VerificationEmailRequest(Tenant, Recipient, Link));
+        var ok = await Delivery(transport.Object).SendAsync(new VerificationEmailRequest(Tenant, Recipient, Link));
 
         Assert.True(ok);
         Assert.NotNull(sent);
-        Assert.Equal("notification-email", sent!.BindingName);
-        Assert.Equal("create", sent.Operation);
-        Assert.Equal(Recipient, sent.Metadata["emailTo"]);
-        Assert.Equal("Verify your FairSpot email address", sent.Metadata["subject"]);
-        Assert.Equal("noreply@fairspot.net", sent.Metadata["emailFrom"]);
-        Assert.Equal("FairSpot", sent.Metadata["emailFromName"]);
-        var body = Encoding.UTF8.GetString(sent.Data.ToArray());
-        Assert.Contains("https://app.fairspot.net/verify-email?token=abc%26def", body); // link present for the send
+        Assert.Equal(Recipient, sent!.ToEmail);
+        Assert.Equal("Verify your FairSpot email address", sent.Subject);
+        Assert.NotNull(sent.TextBody);                                   // plain-text part present (multipart)
+        Assert.Contains(Link, sent.HtmlBody);                            // link present in HTML
+        Assert.Contains(Link, sent.TextBody!);                           // link present in plain text
     }
 
     [Fact]
-    public async Task DaprBinding_HtmlEncodesTheLink_InTheBody()
+    public async Task DaprBinding_HtmlEncodesTheLink_ButPlainTextKeepsItRaw()
     {
-        BindingRequest? sent = null;
-        var dapr = new Mock<DaprClient>();
-        dapr.Setup(d => d.InvokeBindingAsync(It.IsAny<BindingRequest>(), It.IsAny<CancellationToken>()))
-            .Callback<BindingRequest, CancellationToken>((r, _) => sent = r)
-            .ReturnsAsync((BindingRequest r, CancellationToken _) =>
-                new BindingResponse(r, ReadOnlyMemory<byte>.Empty, new Dictionary<string, string>()));
+        var transport = new Mock<ISendGridEmailTransport>();
+        SendGridEmailMessage? sent = null;
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SendGridEmailMessage, CancellationToken>((m, _) => sent = m)
+            .ReturnsAsync(true);
 
-        // A raw ampersand in the link must be HTML-encoded inside the anchor href to keep the markup valid.
-        await Delivery(dapr.Object).SendAsync(
+        await Delivery(transport.Object).SendAsync(
             new VerificationEmailRequest(Tenant, Recipient, "https://app.fairspot.net/v?token=a&x=1"));
 
-        var body = Encoding.UTF8.GetString(sent!.Data.ToArray());
-        Assert.Contains("token=a&amp;x=1", body);
+        Assert.Contains("token=a&amp;x=1", sent!.HtmlBody);              // ampersand encoded in the HTML anchor
+        Assert.Contains("token=a&x=1", sent.TextBody!);                 // raw in the plain-text part
     }
 
     [Fact]
-    public async Task DaprBinding_RejectsInvalidRecipient_WithoutInvokingBinding()
+    public async Task DaprBinding_RejectsInvalidRecipient_WithoutCallingTransport()
     {
-        var dapr = new Mock<DaprClient>();
+        var transport = new Mock<ISendGridEmailTransport>();
 
-        var ok = await Delivery(dapr.Object).SendAsync(new VerificationEmailRequest(Tenant, "not-an-email", Link));
+        var ok = await Delivery(transport.Object).SendAsync(new VerificationEmailRequest(Tenant, "not-an-email", Link));
 
         Assert.False(ok);
-        dapr.Verify(d => d.InvokeBindingAsync(It.IsAny<BindingRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        transport.Verify(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task DaprBinding_ProviderException_ReturnsFalse_WithoutLeakingLink()
+    public async Task DaprBinding_TransportFailure_ReturnsFalse()
     {
-        var dapr = new Mock<DaprClient>();
-        dapr.Setup(d => d.InvokeBindingAsync(It.IsAny<BindingRequest>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("provider-detail"));
+        var transport = new Mock<ISendGridEmailTransport>();
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
-        var ok = await Delivery(dapr.Object).SendAsync(new VerificationEmailRequest(Tenant, Recipient, Link));
+        var ok = await Delivery(transport.Object).SendAsync(new VerificationEmailRequest(Tenant, Recipient, Link));
 
-        Assert.False(ok); // failure is swallowed to a bool; no link/token surfaces to the caller
+        Assert.False(ok);
     }
 
     [Fact]
@@ -96,7 +83,6 @@ public sealed class VerificationEmailDeliveryTests
         Assert.True(ok);
     }
 
-    private static DaprBindingVerificationEmailDelivery Delivery(DaprClient dapr, DaprSendGridEmailOptions? options = null) =>
-        new(dapr, Options.Create(options ?? new DaprSendGridEmailOptions()),
-            NullLogger<DaprBindingVerificationEmailDelivery>.Instance);
+    private static DaprBindingVerificationEmailDelivery Delivery(ISendGridEmailTransport transport) =>
+        new(transport, NullLogger<DaprBindingVerificationEmailDelivery>.Instance);
 }

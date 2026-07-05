@@ -33,7 +33,7 @@ This document records the production persistence sequencing plan for FairSpot. I
 | Customer | `InMemoryTenantIdentityConfigStore`, `InMemoryTenantRoleMappingStore` (runtime caches, Dapr-hydrated) | Review required — may be restart-safe already | PERSIST006B |
 | Reporting | `InMemoryReportingRepository` | Lower priority — DataHub is the durable read-model direction | Deferred to DataHub track |
 
-**`InMemorySimulationClock`** (Booking) and **`InMemoryEmailNotificationSender`** (Notification) are intentional evaluation-grade stubs, not persistence gaps. Hosted/demo email delivery now uses the `notification-email` Dapr output binding backed by SendGrid when that provider is configured; the in-memory sender remains for local and evaluation profiles.
+**`InMemorySimulationClock`** (Booking) and **`InMemoryEmailNotificationSender`** (Notification) are intentional evaluation-grade stubs, not persistence gaps. Hosted/demo email delivery now uses a thin direct SendGrid v3 HTTP transport behind Notification infrastructure when that provider is configured (the Dapr `notification-email` binding is retained but superseded — it can only send `text/html`, and FairSpot delivers multipart HTML + plain text, NOTIF #731); the in-memory sender remains for local and evaluation profiles.
 
 ---
 

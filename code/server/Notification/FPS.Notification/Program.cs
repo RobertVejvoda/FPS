@@ -37,6 +37,11 @@ if (DaprSendGridEmailNotificationSender.IsConfiguredProvider(emailProvider))
             "Set Notification__Email__FromEmail (e.g. notifications@fairspot.net) and Notification__Email__FromName (e.g. FairSpot).");
     }
 
+    // NOTIF #731 — real send goes through the SendGrid v3 HTTP transport so email is delivered
+    // multipart/alternative (HTML + plain text); the Dapr binding could only send HTML. The API key is
+    // read from the Dapr secret store at send time.
+    builder.Services.AddHttpClient(SendGridHttpEmailTransport.HttpClientName);
+    builder.Services.AddSingleton<ISendGridEmailTransport, SendGridHttpEmailTransport>();
     builder.Services.AddSingleton<IEmailNotificationSender, DaprSendGridEmailNotificationSender>();
     // AUTH008B #734 — verification email uses the same SendGrid transport, on a dedicated transient path
     // that never persists a notification record or logs the Secret verification link.
