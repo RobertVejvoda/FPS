@@ -51,6 +51,10 @@ pkill -KILL -f "code/mobile/fps-mobile.*expo" 2>/dev/null || true
 
 if [ "$MODE" = "--reset" ]; then
   printf '[local] Stopping containers and removing local Docker volumes...\n'
+  # DataHub's connection string requires POSTGRES_PASSWORD (fail-closed on
+  # production-like profiles); supply the LOCAL dev default so compose can
+  # interpolate the file for this local-only teardown.
+  export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-fps}"
   docker compose --project-directory "$REPO_ROOT/code/infrastructure" \
     -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" \
     -f "$REPO_ROOT/code/infrastructure/docker-compose.services.yml" \
