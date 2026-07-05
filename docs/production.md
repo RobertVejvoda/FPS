@@ -68,6 +68,7 @@ Detailed hosted-operator runbooks for the FairSpot-operated pilot live in the pr
 - [Monitoring](./production/monitoring): metrics, logs, traces, dashboards, alerts, and hosted-provider monitoring boundaries.
 - [Incident Handling](./production/incident-handling): public incident classification and communication contract; private operator procedure lives in `fairspot-platform`.
 - [Maintenance](./production/maintenance): public maintenance responsibility model; private operator procedure lives in `fairspot-platform`.
+- [Operational Evidence Checklist](./production/operational-evidence-checklist): provider-neutral observability, backup, restore, and incident readiness checklist, with a restore-drill evidence record and post-restore smoke checks.
 
 ## Cloud And Environment Notes
 
