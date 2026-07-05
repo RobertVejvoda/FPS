@@ -71,6 +71,7 @@
     * [External IdP Broker Test Setup](./production/idp-broker-test-setup)
   * Public operations contracts
     * [Hosting Strategy](./production/hosting-deployment-strategy)
+    * [Deployment Profile Template](./production/deployment-profile-template)
     * [NAS Cloudflare Deployment Contract](./production/nas-cloudflare-deployment-profile)
     * [OIDC/Auth Contract](./production/nas-cloudflare-auth-profile)
     * [Hosted Readiness Expectations](./production/hosted-smoke-runbook)
