@@ -21,7 +21,9 @@ namespace FPS.Profile.Controllers;
 // Internal service-to-service endpoint — kept out of the public OpenAPI/generated web client, matching
 // the other Dapr-only controllers (e.g. PurgeController). The web frontend never calls this.
 [ApiExplorerSettings(IgnoreApi = true)]
-public sealed class NotificationRecipientController(IProfileRepository repository) : ControllerBase
+public sealed class NotificationRecipientController(
+    IProfileRepository repository,
+    IEmailVerificationRepository emailVerifications) : ControllerBase
 {
     // Must match the FactSource values actually written by trusted Profile provisioning paths:
     // sso-claims (ProfileSnapshotController), admin-seed (ProfileAdminController), admin-entry +
@@ -56,13 +58,24 @@ public sealed class NotificationRecipientController(IProfileRepository repositor
         if (string.IsNullOrWhiteSpace(profile.NotificationAddress))
             return Ok(NotificationRecipientResult.Reject("no_verified_email"));
 
-        if (!TrustedFactSources.Contains(profile.FactSource))
-            return Ok(NotificationRecipientResult.Reject("email_unverified_source"));
-
         if (!IsWellFormedEmail(profile.NotificationAddress))
             return Ok(NotificationRecipientResult.Reject("email_malformed"));
 
-        return Ok(NotificationRecipientResult.Accept(profile.NotificationAddress));
+        // Trusted when the address comes from a trusted provisioning source OR the user has completed
+        // FairSpot-local email ownership verification for this exact address (AUTH008 #729). An address
+        // change drops trust automatically because the verification records the address it verified.
+        if (TrustedFactSources.Contains(profile.FactSource))
+            return Ok(NotificationRecipientResult.Accept(profile.NotificationAddress));
+
+        var normalised = Application.EmailVerificationService.Normalise(profile.NotificationAddress);
+        if (normalised is not null)
+        {
+            var verification = await emailVerifications.GetAsync(request.TenantId, request.UserId, cancellationToken);
+            if (verification is not null && verification.IsVerifiedFor(normalised))
+                return Ok(NotificationRecipientResult.Accept(profile.NotificationAddress));
+        }
+
+        return Ok(NotificationRecipientResult.Reject("email_unverified_source"));
     }
 
     private static bool IsWellFormedEmail(string candidate)

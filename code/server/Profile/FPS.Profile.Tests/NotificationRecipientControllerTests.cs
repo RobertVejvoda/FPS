@@ -1,20 +1,23 @@
 using FPS.Profile.Application;
 using FPS.Profile.Controllers;
 using FPS.Profile.Domain;
+using FPS.Profile.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
 namespace FPS.Profile.Tests;
 
 // NOTIF #728 — internal recipient resolution: only Active profiles with a well-formed
-// NotificationAddress from a trusted provisioning source resolve to a delivery address; everything
-// else fails closed. Tenant-scoped so a (tenant, userId) pair never crosses tenants.
+// NotificationAddress from a trusted provisioning source (or a completed AUTH008 #729 verification)
+// resolve to a delivery address; everything else fails closed. Tenant-scoped so a (tenant, userId)
+// pair never crosses tenants.
 public sealed class NotificationRecipientControllerTests
 {
     private readonly Mock<IProfileRepository> repository = new();
+    private readonly InMemoryEmailVerificationRepository verifications = new();
     private readonly NotificationRecipientController controller;
 
-    public NotificationRecipientControllerTests() => controller = new NotificationRecipientController(repository.Object);
+    public NotificationRecipientControllerTests() => controller = new NotificationRecipientController(repository.Object, verifications);
 
     private static UserProfile Profile(
         string? notificationAddress = "jan.novak@greenlogistics.example",
@@ -66,6 +69,49 @@ public sealed class NotificationRecipientControllerTests
         Assert.False(result.Resolved);
         Assert.Null(result.Email);
         Assert.Equal("email_unverified_source", result.Reason);
+    }
+
+    [Fact]
+    public async Task Resolve_UntrustedSourceButVerified_ReturnsEmail()
+    {
+        // AUTH008 (#729) — a self-verified address is trusted even from an untrusted provisioning source.
+        repository.Setup(r => r.GetAsync("tenant-1", "user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Profile(factSource: "self-registered"));
+        await SeedVerified("jan.novak@greenlogistics.example");
+
+        var result = await ResolveAsync();
+
+        Assert.True(result.Resolved);
+        Assert.Equal("jan.novak@greenlogistics.example", result.Email);
+    }
+
+    [Fact]
+    public async Task Resolve_VerifiedForDifferentAddress_FailsClosed()
+    {
+        // Verification is bound to the address it verified — a later address change is not trusted.
+        repository.Setup(r => r.GetAsync("tenant-1", "user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Profile(notificationAddress: "changed@greenlogistics.example", factSource: "self-registered"));
+        await SeedVerified("jan.novak@greenlogistics.example");
+
+        var result = await ResolveAsync();
+
+        Assert.False(result.Resolved);
+        Assert.Equal("email_unverified_source", result.Reason);
+    }
+
+    private async Task SeedVerified(string address)
+    {
+        var v = new EmailVerification
+        {
+            TenantId = "tenant-1",
+            UserId = "user-1",
+            EmailAddress = address.ToLowerInvariant(),
+            TokenHash = "hash",
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        v.MarkVerified(DateTimeOffset.UtcNow);
+        await verifications.SaveAsync(v);
     }
 
     [Fact]
