@@ -9,8 +9,10 @@ namespace FPS.Profile.Controllers;
 /// AUTH008 (#729) — email ownership verification for FairSpot-local accounts. The signed-in user requests
 /// verification of their account email (a one-time link is delivered out-of-band) and confirms it by
 /// presenting the token. Verification proves email ownership only — tenant/user/role access still comes
-/// from authenticated claims. The token is Secret: it is accepted in the request body (never a query
-/// string) and never returned or logged.
+/// from authenticated claims. The token is Secret and never returned or logged. AUTH008B (#734): the
+/// emailed link carries the token as a `?token=` query parameter that the web callback (/verify-email)
+/// reads once and scrubs from the URL; this confirm API still accepts the token ONLY in the request
+/// body — the query string is never a valid transport for the API itself.
 /// </summary>
 [ApiController]
 [Route("profile/email/verification")]
