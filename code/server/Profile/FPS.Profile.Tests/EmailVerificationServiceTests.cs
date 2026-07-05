@@ -41,7 +41,7 @@ public sealed class EmailVerificationServiceTests
         var record = await repo.GetAsync(Tenant, User);
         Assert.Equal(EmailVerificationState.Verified, record!.State);
         Assert.True(record.IsVerifiedFor(Email));
-        audit.Verify(a => a.Succeeded(Tenant, User), Times.Once);
+        audit.Verify(a => a.SucceededAsync(Tenant, User, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class EmailVerificationServiceTests
         Assert.False(outcome.Verified);
         Assert.Equal("expired", outcome.RejectionReason);
         Assert.Equal(EmailVerificationState.Expired, (await repo.GetAsync(Tenant, User))!.State);
-        audit.Verify(a => a.Expired(Tenant, User), Times.Once);
+        audit.Verify(a => a.ExpiredAsync(Tenant, User, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

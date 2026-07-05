@@ -1,9 +1,11 @@
 using System.Security.Cryptography;
+using System.Text;
 using Dapr.Client;
 using FPS.Profile.Application;
 using FPS.Profile.Domain;
 using FPS.SharedKernel.Infrastructure;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FPS.Profile.Infrastructure;
 
@@ -94,34 +96,87 @@ public sealed class RandomVerificationTokenGenerator : IVerificationTokenGenerat
 }
 
 /// <summary>
-/// AUTH008 slice 1 stub — records that a verification email was requested without ever logging the token
-/// or address. Slice 2 replaces this with the Profile→Notification/SendGrid send.
+/// AUTH008B (#734) — real delivery: builds the one-time verification link from the configured base URL and
+/// the token, then hands it to Notification over Dapr service invocation for transient send. The token
+/// (and the link that embeds it) exists only in memory here and in the outbound request — never persisted
+/// or logged. On any failure it does not throw (the pending verification remains valid until it expires).
 /// </summary>
-public sealed class LoggingEmailVerificationSender(ILogger<LoggingEmailVerificationSender> logger) : IEmailVerificationSender
+public sealed class DaprNotificationEmailVerificationSender(
+    INotificationVerificationClient client,
+    IOptions<EmailVerificationOptions> options,
+    ILogger<DaprNotificationEmailVerificationSender> logger) : IEmailVerificationSender
 {
-    public Task SendAsync(string tenantId, string userId, string emailAddress, string token, CancellationToken cancellationToken = default)
+    public async Task SendAsync(string tenantId, string userId, string emailAddress, string token, CancellationToken cancellationToken = default)
     {
-        // Never log the token or the address (both Secret/Confidential). Slice 2 delivers the real email.
-        logger.LogInformation(
-            "Email verification send requested (stub). TenantId={TenantId} — real delivery is AUTH008 slice 2 (#729).",
-            tenantId);
-        return Task.CompletedTask;
+        var link = BuildLink(options.Value.VerificationBaseUrl, token);
+        try
+        {
+            await client.DeliverAsync(tenantId, emailAddress, link, cancellationToken);
+        }
+        catch (Exception)
+        {
+            // No token/link/address in the log. The pending verification stays valid until it expires.
+            logger.LogWarning("Verification email delivery request to Notification failed. TenantId={TenantId}", tenantId);
+        }
+    }
+
+    public static string BuildLink(string baseUrl, string token)
+    {
+        var separator = baseUrl.Contains('?', StringComparison.Ordinal) ? '&' : '?';
+        return $"{baseUrl}{separator}token={Uri.EscapeDataString(token)}";
     }
 }
 
-/// <summary>
-/// AUTH008 slice 1 — emits verification security evidence via structured logs (no token, no address).
-/// Slice 2 wires this to the Audit service over pub/sub.
-/// </summary>
-public sealed class LoggingEmailVerificationAuditSink(ILogger<LoggingEmailVerificationAuditSink> logger) : IEmailVerificationAuditSink
+/// <summary>Seam over the Dapr service invocation to Notification, so the sender's link handling is unit-testable.</summary>
+public interface INotificationVerificationClient
 {
-    public void Requested(string tenantId, string userId) => Emit(tenantId, userId, "requested", null);
-    public void Succeeded(string tenantId, string userId) => Emit(tenantId, userId, "succeeded", null);
-    public void Expired(string tenantId, string userId) => Emit(tenantId, userId, "expired", null);
-    public void Failed(string tenantId, string userId, string reason) => Emit(tenantId, userId, "failed", reason);
-
-    private void Emit(string tenantId, string userId, string outcome, string? reason) =>
-        logger.LogInformation(
-            "email-verification audit: Outcome={Outcome} Reason={Reason} TenantId={TenantId} UserId={UserId}",
-            outcome, reason ?? "-", tenantId, userId);
+    Task DeliverAsync(string tenantId, string emailAddress, string verificationLink, CancellationToken cancellationToken = default);
 }
+
+public sealed class DaprNotificationVerificationClient(DaprClient daprClient) : INotificationVerificationClient
+{
+    private const string NotificationAppId = "fps-notification";
+    private const string DeliverMethod = "internal/notification/email-verification";
+
+    public Task DeliverAsync(string tenantId, string emailAddress, string verificationLink, CancellationToken cancellationToken = default) =>
+        daprClient.InvokeMethodAsync<VerificationEmailDeliveryRequest, VerificationEmailDeliveryResult>(
+            NotificationAppId, DeliverMethod,
+            new VerificationEmailDeliveryRequest(tenantId, emailAddress, verificationLink), cancellationToken);
+}
+
+// Dapr service-invocation contract mirroring Notification's internal endpoint (matched by JSON shape).
+public sealed record VerificationEmailDeliveryRequest(string TenantId, string EmailAddress, string VerificationLink);
+public sealed record VerificationEmailDeliveryResult(bool Sent);
+
+/// <summary>
+/// AUTH008B (#734) — durable verification security evidence: publishes outcome events to the Audit service
+/// over pub/sub. The actor is a SHA-256 hash of the user id (pseudonymised); the token and email address
+/// are never included.
+/// </summary>
+public sealed class DaprEmailVerificationAudit(DaprClient daprClient) : IEmailVerificationAuditSink
+{
+    private const string PubSub = "fps-pubsub";
+    private const string Topic = "security-events";
+    private const string Category = "email-verification";
+
+    public Task RequestedAsync(string tenantId, string userId, CancellationToken cancellationToken = default) =>
+        Publish(tenantId, userId, "requested", null, cancellationToken);
+    public Task SucceededAsync(string tenantId, string userId, CancellationToken cancellationToken = default) =>
+        Publish(tenantId, userId, "succeeded", null, cancellationToken);
+    public Task ExpiredAsync(string tenantId, string userId, CancellationToken cancellationToken = default) =>
+        Publish(tenantId, userId, "expired", null, cancellationToken);
+    public Task FailedAsync(string tenantId, string userId, string reason, CancellationToken cancellationToken = default) =>
+        Publish(tenantId, userId, "failed", reason, cancellationToken);
+
+    private Task Publish(string tenantId, string userId, string outcome, string? reason, CancellationToken cancellationToken) =>
+        daprClient.PublishEventAsync(PubSub, Topic,
+            new SecurityAuditEvent(Category, outcome, tenantId, HashActor(userId), DateTimeOffset.UtcNow, reason),
+            cancellationToken);
+
+    private static string HashActor(string userId) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(userId))).ToLowerInvariant();
+}
+
+/// <summary>Security audit evidence. Actor is a hash; carries outcome/reason only — never token or email.</summary>
+public sealed record SecurityAuditEvent(
+    string Category, string Outcome, string TenantId, string ActorHash, DateTimeOffset OccurredAt, string? Reason);

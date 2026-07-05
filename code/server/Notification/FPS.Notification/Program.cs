@@ -38,10 +38,15 @@ if (DaprSendGridEmailNotificationSender.IsConfiguredProvider(emailProvider))
     }
 
     builder.Services.AddSingleton<IEmailNotificationSender, DaprSendGridEmailNotificationSender>();
+    // AUTH008B #734 — verification email uses the same SendGrid transport, on a dedicated transient path
+    // that never persists a notification record or logs the Secret verification link.
+    builder.Services.AddSingleton<IVerificationEmailDelivery, DaprBindingVerificationEmailDelivery>();
 }
 else
 {
     builder.Services.AddSingleton<IEmailNotificationSender, InMemoryEmailNotificationSender>();
+    // Local/dev: never logs the verification link/token.
+    builder.Services.AddSingleton<IVerificationEmailDelivery, LogSafeVerificationEmailDelivery>();
 }
 builder.Services.AddSingleton<INotificationAudienceResolver, RosterBackedAudienceResolver>();
 builder.Services.AddSingleton<HrRosterConfigurationSeeder>();
