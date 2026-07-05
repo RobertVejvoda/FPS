@@ -93,6 +93,11 @@ The next automation target is a delivery state orchestrator that reads issue and
 
 There are two implementer agents available: **Claude** (Anthropic) and **GitHub Copilot agent** (assign-an-issue model, billed under the GitHub subscription). Codex's specs can be routed to either one. Default routing rule:
 
+- **Issue placement first** — before creating, routing, splitting, or moving an issue, classify it as one of:
+  - **Public open-core**: runtime, fairness, tenant self-administration, auth/security capability, self-hosted/BYOC capability, public product validation, or other work a self-hosted operator reasonably needs. Keep in `fairspot`.
+  - **Private platform/commercial**: hosted operator plane, billing, usage metering as billing/pilot input, operator dashboard, commercial beta/onboarding funnel, hosted-only runbooks/evidence, marketing site, platform gateway/vhost config, or private platform service/web work. Put in `fairspot-platform`.
+  - **Split**: issue bundles an open-core capability with hosted/operator/commercial work. Keep the capability slice public and create/move the platform slice private, with backlinks both ways.
+  If classification is unclear, stop at a PO clarification comment instead of silently routing the issue.
 - **Copilot candidate** — slice is mechanical and file-bounded: pattern-following implementation that mirrors an existing example, test-coverage additions, mechanical refactors (renames, extracts, lint cleanup), dependency bumps with a clear repro. Codex's spec is tight (clear acceptance criteria + explicit "files expected to change").
 - **Claude candidate** — slice touches architecture, cross-service flow, or design judgment; spec might be wrong and needs an implementer who can push back; cross-cutting refactors; anything where reading the diff isn't enough to validate.
 - **Copilot Pro+ controlled candidate** — a broader slice may be assigned to Copilot when the goal is to evaluate Pro+ behavior or to preserve Claude quota. Codex must make the scope unusually explicit, name non-goals, list expected files, require validation evidence, and call out safety constraints. Treat the first PR as an implementation proposal that needs strict Codex review, not as automatically equivalent to a Claude implementation.
