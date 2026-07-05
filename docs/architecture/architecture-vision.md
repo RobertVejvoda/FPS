@@ -3,20 +3,20 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Architecture State** | Target |
 | **Target Version** | Customer-Ready Target v0.1 |
 | **ADM Phase** | Phase A - Architecture Vision |
 | **Responsible** | Codex/Product Owner |
 | **Accountable** | Robert |
-| **Last Reviewed** | 2026-05-31 |
+| **Last Reviewed** | 2026-07-05 |
 | **Next Review** | Before customer architecture review |
 
-FairSpot is an open-source, parking-first fair allocation platform for companies where demand for shared workplace resources exceeds supply.
+FairSpot is an open-source fair allocation and booking platform for companies where demand for shared workplace resources exceeds supply. Parking is the first launch module and proof vertical, not the product boundary.
 
 ## Problem
 
-Companies with limited parking often coordinate requests through email, spreadsheets, or informal priority rules. That creates avoidable HR/facilities work, low transparency, weak auditability, and low employee trust.
+Companies with limited workplace resources often coordinate requests through email, spreadsheets, or informal priority rules. Parking is the first visible problem, but the same pattern appears with seats, sport courts, desks, lockers, chargers, and other shared resources. Manual coordination creates avoidable HR/facilities work, low transparency, weak auditability, and low employee trust.
 
 ## Target Outcome
 
@@ -30,8 +30,8 @@ FairSpot's strategy is expressed through the product overview, roadmap, commerci
 
 | Product Direction | Architecture Translation |
 | --- | --- |
-| Parking first | Business, application, data, technology, and security architecture are scoped to parking v1. Generic scarce-resource abstractions are future options, not current target scope. |
-| Small-company pilot first | The customer-ready target optimizes for a realistic tenant, initially below about 150 employees, with visible parking friction and manageable support complexity. |
+| Shared-resource platform, parking first | Business, application, data, technology, and security architecture prove the model through the parking launch module while preserving the target direction for seats, sport courts, desks, lockers, chargers, and similar resource types. |
+| Small-company pilot first | The customer-ready target optimizes for a realistic tenant, initially below about 150 employees, with visible shared-resource friction and manageable support complexity. Parking remains the first proof path. |
 | Trust before scale | Employee-visible explanations, HR/facility auditability, tenant isolation, privacy, and hosted smoke evidence are required before larger rollout. |
 | Open core remains useful | Fairness rules, normal tenant operation, basic reporting/read-model evidence, audit, and privacy controls must remain usable without paid unlocks. |
 | Paid services before product Billing | Setup, support, production readiness, and client-specific integration may be commercial paths; in-product Billing and payment remain deferred. |
@@ -41,9 +41,9 @@ FairSpot's strategy is expressed through the product overview, roadmap, commerci
 
 | Scope Item | Target Position | Status |
 | --- | --- | --- |
-| Product domain | Parking-first fair allocation for scarce workplace resources. Other resources are future extensions. | Draft |
+| Product domain | Fair allocation and booking for scarce workplace resources. Parking is the first launch module; other resource types reuse the same tenant, policy, booking, Draw, notification, audit, reporting, and usage-evidence model. | Draft |
 | Customer readiness | Demonstrable employee, HR/facilities, tenant admin, audit, and operator journeys with explicit gaps. | Draft |
-| Pilot fit | First external evaluation should target a small or medium company with visible parking scarcity before larger enterprise rollout. | Draft |
+| Pilot fit | First external evaluation should target a small or medium company with visible shared-resource scarcity, starting with parking where the current implementation is strongest. | Draft |
 | Deployment posture | Local development, hosted demo, and client-owned production profiles with Dapr/OpenTelemetry portability boundaries. | Draft |
 | Data architecture | Service-owned writes and event-fed DataHub read models for cross-service reads. | Draft |
 | Security posture | Tenant isolation, SSO-first identity, auditability, privacy, WAF/ingress hardening, and secrets separation. | Draft |

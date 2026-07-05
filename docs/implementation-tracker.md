@@ -160,7 +160,7 @@ Phase visibility is tracked in the [FPS Delivery Kanban](https://github.com/user
 | Order | Slice | Goal | Why This Order | Links |
 | --- | --- | --- | --- | --- |
 | 1 | Status and traceability cleanup | Make docs truthful after recent merges. | Stale tracker and traceability pages create wrong handoffs and wrong client expectations. | [Tracker](./implementation-tracker), [Traceability](./requirements-traceability) |
-| 2 | Business story cleanup | Explain value, roles, and parking-first scope. | Business readers need the product story before architecture detail. | [Business Layer](./business-layer), [Demo and Evaluation](./demo-and-evaluation) |
+| 2 | Business story cleanup | Explain value, roles, and shared-resource scope with parking as the first proof module. | Business readers need the product story before architecture detail. | [Business Layer](./business-layer), [Demo and Evaluation](./demo-and-evaluation) |
 | 3 | ArchiMate view hierarchy | Prepare business/application/technology/security/production view structure. | Architects need a stable hierarchy before richer diagrams are added. | [Legacy Architecture Evidence](./architecture-views) |
 | 4 | Demo and client evaluation plan | Define how each role can try FPS. | Demo readiness exposes missing product and operational slices. | [Demo and Evaluation](./demo-and-evaluation) |
 | 5 | Pluggable operations plan | Define local, demo, and client-owned production profiles. | Dapr only helps if each component boundary is explicit and replaceable. | [Production](./production), [Hosting Strategy](./production/hosting-deployment-strategy) |
@@ -182,4 +182,4 @@ These are tracker maintenance tasks, not ordered delivery slices.
 
 | Idea | Status | Note |
 | --- | --- | --- |
-| Seat/desk booking | Future | Once the parking product reaches a stable hosted v1, evaluate whether the same platform approach can support company seat or desk booking. Reuse tenant-scoped resources, policy-driven allocation, notifications, audit, reporting, and admin configuration where practical, but define separate seat-specific rules before implementation. |
+| Additional resource modules | Future | Sequence seats, sport courts, desks, lockers, chargers, and similar bookable resources through the shared-resource model after the parking proof path is stable enough. Reuse tenant-scoped resources, policy-driven allocation, notifications, audit, reporting, and admin configuration where practical, but define resource-specific rules before implementation. |

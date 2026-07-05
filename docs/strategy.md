@@ -12,9 +12,9 @@ Current strategy content is governed through:
 - [Evaluation and Onboarding](./strategy-layer/evaluation-and-onboarding) for the guided pilot funnel, self-onboarding tiers, and the open-runtime / paid-platform (open-core) split.
 - [Versions and Decisions](./versions-and-decisions) for durable decisions.
 
-FairSpot starts with parking because parking is a concrete, high-friction reservation problem: demand often exceeds supply, allocation decisions affect employees directly, and manual coordination creates poor evidence. The strategic goal is to turn that process into a fair, auditable, tenant-isolated allocation platform for limited workplace resources.
+FairSpot is a fair shared-resource booking and allocation platform. Parking is the first launch module because it is a concrete, high-friction reservation problem: demand often exceeds supply, allocation decisions affect employees directly, and manual coordination creates poor evidence. The strategic goal is to make scarce workplace resources fair, auditable, tenant-isolated, and explainable across parking, seats, sport courts, desks, lockers, chargers, and similar bookable resources.
 
-Parking remains the v1 product focus. Future resource domains such as desks, chairs, or company seats should reuse the same platform ideas only after parking reaches a stable demo and hosted baseline.
+Parking remains the first implementation proof, not the product boundary. New resource domains should reuse the same tenant, policy, booking, Draw, notification, audit, reporting, and usage-evidence model rather than becoming separate one-off products.
 
 Architecture scope, constraints, stakeholders, target state, and gaps are maintained in the [Architecture Repository](./architecture/).
 
@@ -33,9 +33,9 @@ Architecture scope, constraints, stakeholders, target state, and gaps are mainta
 ## Strategic Direction
 
 - Keep the product understandable to business readers: problem, actors, policy, outcomes, and evidence first.
-- Start with small, realistic parking pilots before larger enterprise rollout.
+- Start with small, realistic parking-led pilots before larger rollout, while presenting FairSpot as a shared-resource platform.
 - Keep the free/open core useful enough to prove fairness, tenant operation, and employee trust.
 - Recover cost through setup, support, production readiness, and client-specific integration before product Billing is approved.
-- Keep future workplace-resource booking as a product extension, not a distraction from parking v1.
+- Treat additional resource types as first-class product scope, sequenced after the shared booking/allocation model is stable enough to avoid fragmenting the platform.
 
 Architecture-level direction such as Dapr-first runtime boundaries, DataHub read models, client-owned deployment profiles, and security/privacy controls belongs in the architecture repository so customer reviewers can assess it consistently.

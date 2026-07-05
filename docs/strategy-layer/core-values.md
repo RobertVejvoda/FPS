@@ -4,7 +4,7 @@ FairSpot is guided by four product values. They are meant to be practical decisi
 
 ## Fair
 
-FairSpot exists to make access to scarce workplace resources more equitable and explainable. Parking allocation must not depend on who emailed first, who knows HR best, or who understands hidden process details.
+FairSpot exists to make access to scarce workplace resources more equitable and explainable. Access to parking, seats, sport courts, desks, lockers, chargers, or similar bookable resources must not depend on who emailed first, who knows HR/facilities best, or who understands hidden process details.
 
 Fair means:
 
@@ -44,8 +44,8 @@ FairSpot should be useful to evaluate, operate, and adapt before it becomes a la
 
 Practical means:
 
-- parking remains the v1 focus until the demo and hosted baseline are stable;
+- parking remains the first launch proof until the demo and hosted baseline are stable;
 - local setup, smoke testing, and observability should make the system easy to prove;
 - Dapr and OpenTelemetry are used as portability boundaries rather than vendor commitments;
 - client-owned deployment, support, and production handoff are part of the product story;
-- future resources such as desks, lockers, chargers, or seats reuse the model only after the parking product is credible.
+- additional resources such as seats, sport courts, desks, lockers, and chargers reuse the same model instead of creating one-off booking products.

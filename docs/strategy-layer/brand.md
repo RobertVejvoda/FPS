@@ -4,7 +4,7 @@ FairSpot uses a calm green identity to support the product story: fair access to
 
 ## Logo Direction
 
-The selected mark is an abstract `F` formed from layered allocation paths. All paths originate from the same lower starting point and then separate into distinct allocation routes. It should read as a product mark first, not as a literal parking sign or car icon. This keeps FairSpot usable beyond parking if later resource modules such as desks, lockers, chargers, or seats are added.
+The selected mark is an abstract `F` formed from layered allocation paths. All paths originate from the same lower starting point and then separate into distinct allocation routes. It should read as a product mark first, not as a literal parking sign or car icon. This keeps FairSpot usable for parking, seats, sport courts, desks, lockers, chargers, and other shared-resource modules.
 
 Use the light app icon as the default product mark:
 

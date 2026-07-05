@@ -6,9 +6,9 @@ This pack gives a new evaluator enough context to decide whether FairSpot is wor
 
 | Topic | Summary |
 | --- | --- |
-| Problem | Shared company parking often has more demand than capacity. Manual email/spreadsheet coordination is opaque, slow, hard to audit, and can feel unfair to employees. |
-| Product | FairSpot is an open-source, multi-tenant fair allocation platform for limited workplace resources. Parking is the first module, with documented fairness rules, booking workflows, notifications, audit records, reporting, and tenant policy configuration. |
-| Primary user value | Employees can request, view, cancel, and confirm parking from mobile without seeing hidden allocation internals or other employees' data. |
+| Problem | Shared workplace resources often have more demand than capacity. Parking is the first visible pain point, but the same coordination problem appears with seats, sport courts, desks, lockers, chargers, and other limited resources. Manual email/spreadsheet coordination is opaque, slow, hard to audit, and can feel unfair to employees. |
+| Product | FairSpot is an open-source, multi-tenant fair allocation and booking platform for limited workplace resources. Parking is the first launch module, with documented fairness rules, booking workflows, notifications, audit records, reporting, and tenant policy configuration. |
+| Primary user value | Employees can request, view, cancel, and confirm resource bookings from mobile without seeing hidden allocation internals or other employees' data. |
 | Business value | HR/facilities teams can configure policy and capacity, reduce manual coordination, and explain allocation outcomes using audit and reporting evidence. |
 | Trust value | Allocation rules, notifications, audit, GDPR erasure behavior, and tenant isolation are explicit rather than implicit operational habits. |
 | Deployment posture | FairSpot is designed for local development, NAS/Cloudflare Release 1 evaluation, a DigitalOcean cloud-hosted follow-up profile, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
@@ -123,7 +123,7 @@ Provider prices change frequently. Do not present numeric cost commitments witho
 
 | Question | Answer |
 | --- | --- |
-| Is FairSpot only for parking? | Parking is the first concrete v1 domain. The same tenant, policy, notification, audit, and reporting pattern may later support other scarce workplace resources after parking is stable. |
+| Is FairSpot only for parking? | No. Parking is the first launch module and proof vertical. The product scope is fair booking and allocation of scarce workplace resources, including seats, sport courts, desks, lockers, chargers, and similar bookable resources. |
 | Does FairSpot replace the customer's identity provider? | No. FairSpot is SSO-first and expects company users to authenticate through the customer IdP where possible. |
 | Does FairSpot store company passwords? | No. Company passwords must stay with the IdP. FairSpot-local credential verifiers are fallback Secret data only. |
 | Can employees see other employees or lottery internals? | Employee views must remain safe: own bookings, own notifications, and understandable reasons without exposing other employees or hidden allocation internals. |
