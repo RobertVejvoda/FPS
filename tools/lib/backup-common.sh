@@ -34,11 +34,19 @@ INFRA_DIR="$REPO_ROOT/code/infrastructure"
 # local, defaults to nas.env for nas. Sets the COMPOSE_CMD array and MODE.
 resolve_compose() {
   MODE="${MODE:-local}"
+  # Default the env file and export the same interpolation vars that
+  # start-container-stack.sh does, so any compose subcommand (ps/exec/down/up)
+  # can render the config. DataHub fails closed without POSTGRES_PASSWORD, and
+  # the Vault/Dapr wiring needs VAULT_TOKEN; NAS supplies real values via nas.env.
   if [[ "$MODE" == "nas" ]]; then
     ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
     SERVICES_FILE="docker-compose.services.images.yml"
+    export ALERTMANAGER_CONFIG_FILE="${ALERTMANAGER_CONFIG_FILE:-runtime/config.yaml}"
   else
+    ENV_FILE="${ENV_FILE:-$INFRA_DIR/local-docker.env}"
     SERVICES_FILE="docker-compose.services.yml"
+    export VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
+    export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-fps}"
   fi
 
   local files=(

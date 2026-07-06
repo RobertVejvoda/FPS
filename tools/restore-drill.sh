@@ -56,6 +56,8 @@ done
 command -v docker >/dev/null 2>&1 || die "docker is required"
 [[ -n "$FROM" ]]     || die "--from <backup-dir> is required"
 [[ -d "$FROM" ]]     || die "backup dir not found: $FROM"
+# Absolute path: docker -v bind mounts (MinIO restore) reject relative paths.
+FROM="$(cd "$FROM" && pwd)"
 [[ -f "$FROM/manifest.json" ]] || die "no manifest.json in $FROM — not a backup dir"
 
 if [[ "$MODE" == "nas" && "$FORCE_NAS" != "true" ]]; then
@@ -107,10 +109,13 @@ _wait_healthy minio
 
 # ── 4. Restore each store ────────────────────────────────────────────────────
 if _has "$MONGO_ARTIFACT"; then
-  log "MongoDB: mongorestore --drop --oplogReplay"
+  log "MongoDB: mongorestore --drop"
+  # Defence in depth: never restore admin/config (infra users/roles) even if an
+  # older archive contains them — restoring users mid-stream breaks auth/indexes.
   "${COMPOSE_CMD[@]}" exec -T mongodb sh -c \
     'mongorestore --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" \
-       --authenticationDatabase admin --archive --gzip --drop --oplogReplay' \
+       --authenticationDatabase admin --nsExclude "admin.*" --nsExclude "config.*" \
+       --archive --gzip --drop' \
     < "$FROM/$MONGO_ARTIFACT"
   ok "MongoDB restored"
 fi
@@ -148,9 +153,14 @@ if _has "$VAULT_SNAPSHOT_ARTIFACT" || _has "$VAULT_TAR_ARTIFACT"; then
   warn "(then unseal with the restored keys). See the private runbook (#684)."
 fi
 
-# ── 5. Bring the full stack up ───────────────────────────────────────────────
-log "Starting the full stack"
-"${COMPOSE_CMD[@]}" up -d
+# ── 5. Bring the full stack up (only needed for the smoke) ───────────────────
+# The data-return assertions below query the restored stores directly, which are
+# already up from step 3 — so a --skip-smoke drill proves recovery without the
+# full app stack (and without services like Grafana that the smoke would need).
+if [[ "$SKIP_SMOKE" != "true" ]]; then
+  log "Starting the full stack"
+  "${COMPOSE_CMD[@]}" up -d
+fi
 
 # ── 6. Prove data returned (not just services healthy) ───────────────────────
 log "Asserting restored data is present"

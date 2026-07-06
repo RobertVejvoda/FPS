@@ -82,7 +82,11 @@ backup_mongo() {
   _running mongodb || { warn "mongodb not running — skipping"; return; }
   log "MongoDB: mongodump --archive --gzip --oplog"
   # Credentials come from the container's own env; --oplog gives a consistent
-  # point-in-time across the replica set.
+  # point-in-time across the replica set. This is a full-instance dump (mongodump
+  # has no --excludeDatabase); restore-drill.sh uses --nsExclude to skip
+  # admin/config on the way back in, so the infra users/roles are never
+  # re-applied (restoring admin.system.users mid-stream would reset the session
+  # auth and break index creation).
   if "${COMPOSE_CMD[@]}" exec -T mongodb sh -c \
       'mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" \
          --authenticationDatabase admin --archive --gzip --oplog' \
