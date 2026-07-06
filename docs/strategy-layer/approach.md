@@ -28,7 +28,7 @@ The architecture repository translates this approach into target-state artifacts
 
 | Product Approach | Architecture Artifact |
 | --- | --- |
-| Parking-first scope | [Architecture Vision](../architecture/architecture-vision), [Target Architecture](../architecture/architecture-states/target-architecture) |
+| Scarce shared-capacity scope, parking first | [Architecture Vision](../architecture/architecture-vision), [Target Architecture](../architecture/architecture-states/target-architecture) |
 | Small-organization pilot first | [Stakeholders and Concerns](../architecture/stakeholders-and-concerns), [Transition Architectures](../architecture/architecture-states/transition-architectures) |
 | Repeatable deployment and evidence | [Deployment Profiles](../architecture/technology/deployment-profiles), [Observability](../architecture/technology/observability) |
 | Open, inspectable fairness story | [Principles](../architecture/principles), [Policies](../architecture/business/policies), [Business Processes](../architecture/business/business-processes) |
