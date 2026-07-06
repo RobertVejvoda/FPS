@@ -169,6 +169,8 @@ services:
       - KC_HTTP_ENABLED=true
       - KC_PROXY_HEADERS=xforwarded
       - KC_HEALTH_ENABLED=true
+      # Substituted into the fairspot realm's web-client redirect URIs at import time.
+      - FPS_APP_ORIGIN=${FPS_APP_ORIGIN:?Set FPS_APP_ORIGIN in nas.env, e.g. https://app.example.net}
     volumes:
       # Operator-supplied realm export(s); the directory contents are git-ignored.
       - ./keycloak/import:/opt/keycloak/data/import:ro
