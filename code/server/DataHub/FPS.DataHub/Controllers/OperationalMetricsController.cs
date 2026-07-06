@@ -140,6 +140,19 @@ public sealed class OperationalMetricsController(
             })
             .ToListAsync(ct);
 
+        // Per-(date,location,slot) rejection-reason breakdown so a facade can reconstruct
+        // per-row reason detail (#763). Fetched over the range and attached to the page's rows.
+        var reasonRows = await query
+            .Where(b => b.FinalStatus == "Rejected" && b.ReasonCode != null)
+            .GroupBy(b => new { b.Date, b.LocationId, b.TimeSlot, b.ReasonCode })
+            .Select(g => new { g.Key.Date, g.Key.LocationId, g.Key.TimeSlot, g.Key.ReasonCode, Count = g.Count() })
+            .ToListAsync(ct);
+        var reasonsBySlot = reasonRows
+            .GroupBy(r => (r.Date, r.LocationId, r.TimeSlot))
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyDictionary<string, int>)g.ToDictionary(x => x.ReasonCode!, x => x.Count));
+
         var items = rows.Select(r => new DailySummaryRow(
             Date:           r.Date,
             LocationId:     r.LocationId,
@@ -151,7 +164,9 @@ public sealed class OperationalMetricsController(
             NoShow:         r.NoShow,
             Waitlisted:     r.Waitlisted,
             Penalties:      r.Penalties,
-            AllocationRate: r.Demand == 0 ? 0 : Math.Round(r.Allocated * 100.0 / r.Demand, 1)));
+            AllocationRate: r.Demand == 0 ? 0 : Math.Round(r.Allocated * 100.0 / r.Demand, 1),
+            RejectionsByReason: reasonsBySlot.GetValueOrDefault((r.Date, r.LocationId, r.TimeSlot))
+                                ?? new Dictionary<string, int>()));
 
         return Ok(new { Items = items, Page = page, PageSize = pageSize, Total = total });
     }
@@ -396,7 +411,8 @@ public sealed record DailySummaryRow(
     int NoShow,
     int Waitlisted,
     int Penalties,
-    double AllocationRate);
+    double AllocationRate,
+    IReadOnlyDictionary<string, int> RejectionsByReason);
 
 public sealed record UtilizationRow(
     string LocationId,

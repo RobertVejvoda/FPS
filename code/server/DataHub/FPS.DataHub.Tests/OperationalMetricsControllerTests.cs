@@ -225,6 +225,25 @@ public sealed class OperationalMetricsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Daily_IncludesPerSlotRejectionReasons()
+    {
+        // #763: per-(date,location,slot) reason breakdown so the Reporting facade can rebuild
+        // per-row RejectionByReason. All four share the default date/location/slot → one row.
+        await SaveAsync(
+            Outcome("r1", Tenant, "u1", "Rejected", reasonCode: "capacity_full"),
+            Outcome("r2", Tenant, "u2", "Rejected", reasonCode: "capacity_full"),
+            Outcome("r3", Tenant, "u3", "Rejected", reasonCode: "ineligible"),
+            Outcome("r4", Tenant, "u4", "Allocated"));
+
+        var result = await _controller.Daily(null, Today, Today, page: 1, pageSize: 10, CancellationToken.None);
+        var json = System.Text.Json.JsonSerializer.Serialize(Assert.IsType<OkObjectResult>(result).Value);
+
+        Assert.Contains("\"RejectionsByReason\"", json);
+        Assert.Contains("\"capacity_full\":2", json);
+        Assert.Contains("\"ineligible\":1", json);
+    }
+
+    [Fact]
     public async Task Daily_TenantIsolation()
     {
         await SaveAsync(
