@@ -24,11 +24,16 @@ if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Te
 else
 {
     builder.Services.AddSingleton<IReportingRepository, NoOpReportingRepository>();
+    // Fail closed on the DataHub base URL rather than baking a service-name default into the app:
+    // the runtime service name is owned by compose (currently http://fps-datahub:5211), so it is
+    // injected via DataHubService__BaseUrl and validated here. This mirrors the SEC012A DataHub
+    // connection-string convention and avoids a silently-wrong default if the env var is missing.
+    var dataHubBaseUrl = builder.Configuration["DataHubService:BaseUrl"]
+        ?? throw new InvalidOperationException(
+            "DataHubService__BaseUrl is required outside Development/Test — Reporting reads durable "
+            + "report data from DataHub. Set it in the compose profile (e.g. http://fps-datahub:5211).");
     builder.Services.AddHttpClient<IReportingQueryRepository, DataHubReportingQueryRepository>(client =>
-        // DataHub listens on 5211 inside the compose network; compose also injects
-        // DataHubService__BaseUrl. The fallback carries the port so a missing env var
-        // does not silently degrade to port 80.
-        client.BaseAddress = new Uri(builder.Configuration["DataHubService:BaseUrl"] ?? "http://fps-datahub:5211"));
+        client.BaseAddress = new Uri(dataHubBaseUrl));
 }
 
 builder.Services.AddScoped<BookingEventReportingHandler>();
