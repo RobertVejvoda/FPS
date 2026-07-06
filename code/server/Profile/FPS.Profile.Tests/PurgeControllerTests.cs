@@ -16,12 +16,14 @@ public sealed class PurgeControllerTests
 {
     private readonly Mock<IProfileRepository> repository = new();
     private readonly Mock<IEmailVerificationRepository> emailVerifications = new();
+    private readonly Mock<IAccountActivationRepository> accountActivations = new();
     private readonly PurgeController controller;
 
     public PurgeControllerTests()
     {
         emailVerifications.Setup(v => v.PurgeTenantAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(0);
-        var purger = new ProfileTenantStorePurger(repository.Object, emailVerifications.Object);
+        accountActivations.Setup(v => v.PurgeTenantAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        var purger = new ProfileTenantStorePurger(repository.Object, emailVerifications.Object, accountActivations.Object);
         controller = new PurgeController(purger);
     }
 
@@ -32,6 +34,8 @@ public sealed class PurgeControllerTests
 
         Assert.IsType<BadRequestObjectResult>(result);
         repository.Verify(r => r.PurgeTenantAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        emailVerifications.Verify(r => r.PurgeTenantAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        accountActivations.Verify(r => r.PurgeTenantAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -62,17 +66,19 @@ public sealed class PurgeControllerTests
     }
 
     [Fact]
-    public async Task PurgeTenant_AlsoPurgesEmailVerification_AndSumsCounts()
+    public async Task PurgeTenant_AlsoPurgesEmailVerificationAndAccountActivation_AndSumsCounts()
     {
-        // AUTH008 (#729) — verification records must be purged with the profiles; the count is summed.
+        // AUTH008/AUTH009 — verification and activation records must be purged with the profiles; counts are summed.
         repository.Setup(r => r.PurgeTenantAsync("demo", It.IsAny<CancellationToken>())).ReturnsAsync(3);
         emailVerifications.Setup(v => v.PurgeTenantAsync("demo", It.IsAny<CancellationToken>())).ReturnsAsync(2);
+        accountActivations.Setup(v => v.PurgeTenantAsync("demo", It.IsAny<CancellationToken>())).ReturnsAsync(4);
 
         var result = await controller.PurgeTenant(new TenantPurgeRequest("demo", SandboxReset: false), CancellationToken.None);
 
         var response = Assert.IsType<TenantPurgeResponse>(Assert.IsType<OkObjectResult>(result).Value);
-        Assert.Equal(5, response.Count);
+        Assert.Equal(9, response.Count);
         emailVerifications.Verify(v => v.PurgeTenantAsync("demo", It.IsAny<CancellationToken>()), Times.Once);
+        accountActivations.Verify(v => v.PurgeTenantAsync("demo", It.IsAny<CancellationToken>()), Times.Once);
     }
 }
 

@@ -9,7 +9,8 @@ namespace FPS.Profile.Infrastructure;
 /// </summary>
 public sealed class ProfileTenantStorePurger(
     IProfileRepository repository,
-    IEmailVerificationRepository emailVerifications) : ITenantStorePurger
+    IEmailVerificationRepository emailVerifications,
+    IAccountActivationRepository accountActivations) : ITenantStorePurger
 {
     public string Service => "profile";
 
@@ -21,6 +22,9 @@ public sealed class ProfileTenantStorePurger(
         // AUTH008 (#729) — verification records are Profile-owned tenant data; purge them too so the
         // verified address + secret-derived token hash are never left orphaned after a profile purge.
         removed += await emailVerifications.PurgeTenantAsync(scope.TenantId, ct);
+        // AUTH009 (#738) — pending-account activation records are also Profile-owned tenant data and
+        // include confidential email + secret-derived token-hash state.
+        removed += await accountActivations.PurgeTenantAsync(scope.TenantId, ct);
         return removed;
     }
 }

@@ -157,6 +157,8 @@ Required minimum:
 
 FairSpot must not import customer passwords, broad HR/member/customer records, medical details, or unrelated user data. File/bootstrap import remains an exception path and must follow [Customer Identity Integration](./customer-data-import). If HR, membership, or bootstrap import files are stored for evidence or troubleshooting, they must be treated as controlled documents with retention, access control, and audit records.
 
+A user provisioned or invited as **inactive** can be given a one-time **activation challenge** (AUTH009 #738): they are emailed a link and stay inactive/blocked until they prove ownership of their identity email, at which point the account becomes active. The activation token is Secret (hashed at rest, never logged); the confirm step trusts only the opaque challenge id + token, not any caller-supplied identity. See [Authentication](../security/authentication). Changing the operational notification address later is a separate AUTH008B verification.
+
 ### 8. Readiness Check
 
 Before the tenant moves to `Ready`, FairSpot should produce a readiness result that can be shown to the customer or operator.
