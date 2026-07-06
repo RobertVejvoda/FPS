@@ -166,6 +166,7 @@ services:
       - KC_DB_PASSWORD=${KC_DB_PASSWORD:?Set KC_DB_PASSWORD in nas.env}
       # Behind Cloudflare: origin speaks HTTP, TLS/hostname come from the edge.
       - KC_HOSTNAME=${KC_HOSTNAME:?Set KC_HOSTNAME in nas.env, e.g. https://auth.example.net}
+      - KC_HOSTNAME_STRICT=true
       - KC_HTTP_ENABLED=true
       - KC_PROXY_HEADERS=xforwarded
       - KC_HEALTH_ENABLED=true

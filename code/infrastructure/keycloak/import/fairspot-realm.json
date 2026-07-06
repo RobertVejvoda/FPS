@@ -33,7 +33,7 @@
   "clients": [
     {
       "clientId": "fps-mobile",
-      "name": "FPS Mobile Dev",
+      "name": "FairSpot Mobile",
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": false,
@@ -93,7 +93,7 @@
     },
     {
       "clientId": "fps-web",
-      "name": "FPS Web Dev",
+      "name": "FairSpot Web",
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": false,
@@ -110,7 +110,7 @@
       "attributes": {
         "access.token.lifespan": "3600",
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5200/"
+        "post.logout.redirect.uris": "${FPS_APP_ORIGIN}/"
       },
       "protocolMappers": [
         {
