@@ -40,9 +40,10 @@ if [ "$MODE" = "--reset" ]; then
   printf '[nas] Stopping NAS containers and removing volumes...\n'
   docker compose --project-directory "$INFRA_DIR" --env-file "$ENV_FILE" \
     -f "$INFRA_DIR/docker-compose.yaml" \
-    -f "$INFRA_DIR/docker-compose.services.yml" \
+    -f "$INFRA_DIR/docker-compose.services.images.yml" \
     -f "$INFRA_DIR/docker-compose.dapr.yml" \
     -f "$INFRA_DIR/docker-compose.nas.yml" \
+    -f "$INFRA_DIR/docker-compose.services.nas.yml" \
     down -v
 else
   printf '[nas] Stopping NAS containers; volumes preserved...\n'

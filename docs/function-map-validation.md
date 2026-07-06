@@ -2,9 +2,9 @@
 
 This note validates the exported function-map asset against current docs and code.
 
-Design asset checked: [docs/images/fps-function-map.png](./images/fps-function-map.png)
+Design asset checked: [docs/images/fairspot-function-map.png](./images/fairspot-function-map.png)
 
-Raw source: [docs/fps.drawio](./fps.drawio), diagram `function-map`
+Raw source: [docs/fairspot.drawio](./fairspot.drawio), diagram `function-map`
 
 ## Summary
 
@@ -21,7 +21,7 @@ The map is broadly directionally correct, but several boxes are either not curre
 | Web App | Channel. | Web app is a primary user interface for employee, HR, admin, reporting, audit, profile, and notifications. | React app exists under `code/web/fps-web`; routes cover My Spots/bookings, HR Operations, Tenant Admin, Configuration, Reporting, Audit, Profile, Notifications. | Implemented for current baseline. |
 | Mobile App | Channel. | Mobile app is employee-facing for login, My Spots/bookings, notifications, profile, and booking actions. | Expo app exists under `code/mobile/fps-mobile`; tabs and detail pages cover bookings, request submission, notifications, profile, auth. | Implemented for current employee baseline. |
 | Notification | Exchange support. | Notification consumes Booking events and provides in-app, email, API, stream, unread count, mark-read, preferences. | `FPS.Notification` service exists; Dapr `booking-events` consumer, APIs, broadcaster, email boundary, preferences. | Implemented. |
-| Event Bus | Exchange support. | Dapr pub/sub is the event bus boundary for Booking events. | Dapr `fps-pubsub` components exist for local/demo/client/smoke; Booking publishes and Notification/Audit/Reporting subscribe. | Implemented for current event flow. |
+| Event Bus | Exchange support. | Dapr pub/sub is the event bus boundary for Booking events. | Dapr `fairspot-pubsub` components exist for local/demo/client/smoke; Booking publishes and Notification/Audit/Reporting subscribe. | Implemented for current event flow. |
 | Communication | Exchange support. | Current practical communication is Notification in-app/email plus gateway/client traffic. SMS/push are not current baseline. | Email sender boundary and SSE exist; no SMS or push service found. | Partial. Keep as target support capability, not current feature. |
 | Booking | Bookings Management. | Booking owns request lifecycle, allocation, cancellation, usage, draw, HR operations support, event publication. | `FPS.Booking` API/application/domain/infrastructure exist with tests. | Implemented for current parking baseline. |
 | Allocation | Reference under Bookings Management. | Allocation rules and Draw are core to Booking, not a separate server. | Allocation lives inside Booking domain/application services. | Implemented inside Booking. Diagram may imply a separate function, not a separate service. |

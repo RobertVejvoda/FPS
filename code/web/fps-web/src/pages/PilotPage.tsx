@@ -72,13 +72,13 @@ export function PilotPage() {
       renderWidget();
       return;
     }
-    let script = document.querySelector<HTMLScriptElement>('script[data-fps-verify]');
+    let script = document.querySelector<HTMLScriptElement>('script[data-fairspot-verify]');
     if (!script) {
       script = document.createElement('script');
       script.src = VERIFY_SCRIPT;
       script.async = true;
       script.defer = true;
-      script.dataset.fpsVerify = 'true';
+      script.dataset.fairspotVerify = 'true';
       document.head.appendChild(script);
     }
     script.addEventListener('load', renderWidget);

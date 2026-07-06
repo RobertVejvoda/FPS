@@ -14,7 +14,7 @@ spec:
       name: mongodb-connection
       key: host
   - name: databaseName
-    value: fps-booking
+    value: fairspot-booking
   - name: collectionName
     value: bookings
   - name: username
@@ -28,6 +28,6 @@ spec:
   - name: params
     value: "?ssl=true&replicaSet=atlas-xxx"
 scopes:
-- fps-booking
+- fairspot-booking
 auth:
   secretStore: secretstore

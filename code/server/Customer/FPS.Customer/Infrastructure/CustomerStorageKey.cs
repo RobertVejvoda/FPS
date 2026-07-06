@@ -5,7 +5,7 @@ namespace FPS.Customer.Infrastructure;
 internal static class CustomerStorageKey
 {
     private static readonly Regex ValidPattern = new(@"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$", RegexOptions.Compiled);
-    private static readonly string[] ReservedPrefixes = ["fps-", "dapr-", "admin-", "system-"];
+    private static readonly string[] ReservedPrefixes = ["fairspot-", "dapr-", "admin-", "system-"];
 
     internal static string Sanitise(string tenantId)
     {

@@ -283,5 +283,5 @@ volumes:
 
 networks:
   web:
-    name: fps_network
+    name: fairspot_network
     external: true

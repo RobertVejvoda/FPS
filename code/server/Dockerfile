@@ -12,7 +12,7 @@
 #     --build-arg SERVICE=Booking \
 #     --build-arg PROJECT=FPS.Booking \
 #     --build-arg PORT=5131 \
-#     -t fps-booking:local \
+#     -t fairspot-booking:local \
 #     code/server
 
 ARG SERVICE=Booking

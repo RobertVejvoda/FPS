@@ -24,7 +24,7 @@ Every deployment profile must satisfy these contracts. Concrete technology is a 
 | **Identity** | OIDC/OAuth issues a stable subject, `tenant_id`, and role claims. Tenant/user/role come only from validated claims — never from request bodies, query, headers, or UI state. Company SSO and FairSpot-local fallback both supported; MFA per [authentication policy](../security/authentication). | Profile/client IdP selectable |
 | **Dapr components** | Application code references only **logical component names**; the same names are reused across profiles. Components are scoped per service (least privilege) outside local. | Yes (component swap) |
 | **Persistence / read models** | Each service owns its operational store and read models with tenant-safe collections/partitions/keys derived from a sanitised tenant key ([tenant storage contract](./tenant-storage-contract)); storage names are never caller-supplied. Backup, restore, encryption, and repeatable tenant provisioning required. | Yes (state component swap) |
-| **Broker / pub-sub** | Booking events reach Notification/Audit/Reporting through the logical `fps-pubsub` component bound to an approved broker or provider-native event service. | Yes (pub/sub swap) |
+| **Broker / pub-sub** | Booking events reach Notification/Audit/Reporting through the logical `fairspot-pubsub` component bound to an approved broker or provider-native event service. | Yes (pub/sub swap) |
 | **Secrets** | Credentials, certificates, API keys, and tunnel/registry tokens come from a secret store through the Dapr secret-store boundary. No secrets in Git, container images, or component YAML (use `secretKeyRef`). | Yes (secret store swap) |
 | **Object storage** | Reports, exports, backup artifacts, and future attachments use tenant-scoped paths (prefer one bucket/container per tenant) with encryption; clients never load direct storage paths. | Yes (binding swap) |
 | **Observability** | Services emit OpenTelemetry-compatible metrics, logs, and traces (span `tenant_id`); the profile selects where they land. Application telemetry stays FairSpot-owned; provider monitoring is host/network only. | Yes (OTel exporter config) |
@@ -74,11 +74,11 @@ The developer/CI profile. Filled from the current [Local Test Harness](./local-t
 | Runtime | .NET 10 services run from source, each (except Identity) paired with a Dapr sidecar; started by `tools/start-local-harness.sh` (stop/reset via `tools/stop-local-harness.sh`). Docker Compose (`code/infrastructure/docker-compose.yaml`) runs the infrastructure. |
 | Ingress | Envoy gateway at `http://localhost:10000` fronts all services under one origin and passes `Authorization` through unchanged (it neither mints nor verifies tokens). |
 | Identity | Local Keycloak (`http://localhost:8180`), realm `fps-local`, clients `fps-web-dev` / `fps-mobile-dev`; seeded synthetic users via `tools/dev-setup-auth.sh`. |
-| Dapr components | Logical names backed locally: state stores (`bookingstore`, `profilestore`, `auditstore`, `configstore`, `reportingstore`, `customerstore`, `notificationstore`, `workflowstore`, …) → MongoDB; `fps-pubsub` → RabbitMQ; `secretstore` → HashiCorp Vault (dev); `s3store` → MinIO; cron bindings `draw-scheduler` / `sandbox-reset-scheduler`. A `components/smoke/` variant swaps state/pub-sub to in-memory. |
+| Dapr components | Logical names backed locally: state stores (`bookingstore`, `profilestore`, `auditstore`, `configstore`, `reportingstore`, `customerstore`, `notificationstore`, `workflowstore`, …) → MongoDB; `fairspot-pubsub` → RabbitMQ; `secretstore` → HashiCorp Vault (dev); `s3store` → MinIO; cron bindings `draw-scheduler` / `sandbox-reset-scheduler`. A `components/smoke/` variant swaps state/pub-sub to in-memory. |
 | Persistence / read models | MongoDB per service (collection-per-tenant), tenant-scoped keys via `TenantStorageKey`; in-memory smoke variant for fast runs. |
-| Broker / pub-sub | RabbitMQ (`3-management`) behind `fps-pubsub`. |
+| Broker / pub-sub | RabbitMQ (`3-management`) behind `fairspot-pubsub`. |
 | Secrets | HashiCorp Vault in dev mode behind `secretstore`; local dev credentials only. |
-| Object storage | MinIO (`fps-bucket`) behind `s3store`. |
+| Object storage | MinIO (`fairspot-bucket`) behind `s3store`. |
 | Observability | OpenTelemetry traces export to local Jaeger via OTLP (OBS001, [Local Observability](../local-observability)); Grafana/Prometheus/Loki/Alertmanager dashboards in Compose; logs carry `TraceId` and `tenant_id`. |
 | Backup / restore | Not applicable — named volumes only; `stop-local-harness.sh --reset` discards them. |
 | Data classification / encryption | Synthetic data only; plain HTTP permitted on the developer machine. |
@@ -98,7 +98,7 @@ Public contract only — detailed operator steps live in the private `fairspot-p
 | Identity | One Keycloak realm `fairspot` for demo + Green Logistics; tenant separation by application tenant claims, not separate realms. Company SSO + FairSpot-local (MFA per policy). |
 | Dapr components | Same logical names as Local; **Dapr mTLS is a documented exception (disabled)** on this single-host Compose profile (no Sentry control plane) — startup reports the active security mode. |
 | Persistence / read models | Tenant-safe, encrypted stores/backups per the hosted encryption boundary. |
-| Broker / pub-sub | RabbitMQ behind `fps-pubsub`. |
+| Broker / pub-sub | RabbitMQ behind `fairspot-pubsub`. |
 | Secrets | Injected from a secret store (Vault via the Dapr secret-store boundary); tunnel tokens, realm signing material, admin passwords, and recovery keys never in Git. |
 | Object storage | Tenant-scoped, encrypted; profile-selected backing. |
 | Observability | FairSpot-owned OpenTelemetry app telemetry; Cloudflare/provider monitoring covers host/network only; business activity stays in the Audit service. |
@@ -120,7 +120,7 @@ Target shape only — see [DigitalOcean Setup](./digitalocean-setup). Reuses the
 | Identity | Keycloak first; managed/client OIDC only when a pilot requires it. |
 | Dapr components | Same logical names; self-hosted sidecars/runtime initially. |
 | Persistence / read models | Self-hosted stores first; DO Managed Databases (PostgreSQL, MongoDB-compatible, Valkey/Redis, OpenSearch) evaluated only when durability/evidence improves. |
-| Broker / pub-sub | RabbitMQ first (or another Dapr-compatible broker later) behind `fps-pubsub`. |
+| Broker / pub-sub | RabbitMQ first (or another Dapr-compatible broker later) behind `fairspot-pubsub`. |
 | Secrets | Vault or profile-approved injection through the secret-store boundary; no secrets in manifests/docs. |
 | Object storage | MinIO initially; DO Spaces when hosted storage is needed. |
 | Observability | Grafana/Prometheus/Loki/Jaeger + OpenTelemetry export first; DO Monitoring adds host visibility only. |
@@ -142,7 +142,7 @@ Operated by the client or the client's hosting partner. FairSpot supplies deploy
 | Identity | Client IdP via OIDC/OAuth 2.0 with explicitly mapped tenant and role claims. |
 | Dapr components | Must support Dapr components or a documented equivalent adapter path, keeping the logical component names. |
 | Persistence / read models | Client-approved stores with tenant-scoped provisioning, backup, retention, and access controls. |
-| Broker / pub-sub | Client-approved broker/provider behind `fps-pubsub`. |
+| Broker / pub-sub | Client-approved broker/provider behind `fairspot-pubsub`. |
 | Secrets | Client secret-management platform / workload identity through the Dapr secret-store boundary. |
 | Object storage | Client-approved, tenant-scoped, encrypted storage. |
 | Observability | OpenTelemetry export to the client's observability platform (Collector as the default handoff). |

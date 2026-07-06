@@ -30,7 +30,7 @@ public sealed class TenantIdentityServiceTests
     private static TenantIdentityConfig MakeConfig(
         string tenantId,
         string issuer = "https://idp.example.com",
-        string audience = "fps-api",
+        string audience = "fairspot-api",
         bool localAccounts = false,
         Dictionary<string, string>? roleMapping = null) => new()
     {
@@ -40,7 +40,7 @@ public sealed class TenantIdentityServiceTests
         TenantClaimName = "tenant_id",
         SubjectClaimName = "sub",
         RoleClaimNames = ["groups"],
-        RoleMapping = roleMapping ?? new Dictionary<string, string> { ["fps-admins"] = "admin" },
+        RoleMapping = roleMapping ?? new Dictionary<string, string> { ["fairspot-admins"] = "admin" },
         LocalAccountPolicyEnabled = localAccounts,
         ConfiguredByHash = "actor-hash",
         ConfiguredAt = DateTimeOffset.UtcNow,
@@ -97,11 +97,11 @@ public sealed class TenantIdentityServiceTests
         var tenantId = await CreateTenant();
         await service.ConfigureAsync(MakeConfig(tenantId), CancellationToken.None);
 
-        var error = await service.ConfigureAsync(MakeConfig(tenantId, audience: "fps-api-v2"), CancellationToken.None);
+        var error = await service.ConfigureAsync(MakeConfig(tenantId, audience: "fairspot-api-v2"), CancellationToken.None);
 
         Assert.Null(error);
         var stored = await service.GetConfigAsync(tenantId, CancellationToken.None);
-        Assert.Equal("fps-api-v2", stored!.Audience);
+        Assert.Equal("fairspot-api-v2", stored!.Audience);
     }
 
     [Fact]
@@ -401,7 +401,7 @@ public sealed class TenantIdentityServiceTests
         }
 
         Assert.True(freshConfigStore.IsConfigured(tenantId));
-        Assert.Equal(["admin"], freshRoleStore.MapToRoles(tenantId, ["fps-admins"]));
+        Assert.Equal(["admin"], freshRoleStore.MapToRoles(tenantId, ["fairspot-admins"]));
     }
 
     // ── Blank subject guard ──────────────────────────────────────────────────

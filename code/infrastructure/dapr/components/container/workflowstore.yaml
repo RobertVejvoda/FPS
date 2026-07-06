@@ -9,7 +9,7 @@ spec:
   - name: host
     value: mongodb:27017
   - name: databaseName
-    value: fps-workflow
+    value: fairspot-workflow
   - name: collectionName
     value: workflows
   - name: username

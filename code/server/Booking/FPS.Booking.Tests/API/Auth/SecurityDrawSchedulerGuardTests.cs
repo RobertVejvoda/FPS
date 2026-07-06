@@ -17,7 +17,7 @@ public sealed class SecurityDrawSchedulerGuardTests : IClassFixture<WebApplicati
 {
     private const string TokenHeader = "dapr-api-token";
     private const string ConfigKey = "APP_API_TOKEN";
-    private const string TestToken = "fps-booking-test-app-token";
+    private const string TestToken = "fairspot-booking-test-app-token";
 
     private readonly WebApplicationFactory<Program> factory;
 

@@ -159,7 +159,7 @@ These checks cannot be verified locally and must be completed before the "Before
 | Check | How to verify | Status |
 |---|---|---|
 | `GET https://app.<domain>/metrics` returns 403 | From an external IP — not from NAS LAN | ⏳ Pending public domain |
-| `GET https://app.<domain>/dapr/v1.0/invoke/fps-booking/method/health` returns 403 | From external IP | ⏳ Pending public domain |
+| `GET https://app.<domain>/dapr/v1.0/invoke/fairspot-booking/method/health` returns 403 | From external IP | ⏳ Pending public domain |
 | `GET https://app.<domain>/swagger` returns 403 | From external IP | ⏳ Pending public domain |
 | `GET https://auth.<domain>/admin` returns 403 | From external IP | ⏳ Pending public domain |
 | NAS internal ports not reachable from Internet | `curl -v https://<NAS-IP>:27017` etc. (from external) | ⏳ Pending NAS deployment |
@@ -213,7 +213,7 @@ When the Cloudflare Tunnel and domain are configured:
 ```bash
 APP_URL=https://app.<domain> \
 AUTH_URL=https://auth.<domain> \
-OIDC_REALM=fps-pilot \
+OIDC_REALM=fairspot-pilot \
   ./tools/smoke-hosted.sh
 ```
 

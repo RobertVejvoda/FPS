@@ -7,7 +7,7 @@
 #   version: v1
 #   metadata:
 #   - name: vaultName
-#     value: "fps-demo-kv"
+#     value: "fairspot-demo-kv"
 #   - name: azureClientId
 #     value: "{env:AZURE_CLIENT_ID}"
 #

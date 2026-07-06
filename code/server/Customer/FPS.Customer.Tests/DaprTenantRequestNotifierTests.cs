@@ -25,7 +25,7 @@ public sealed class DaprTenantRequestNotifierTests
         var dapr = new Mock<DaprClient>();
         TenantRequestEvent? published = null;
         dapr.Setup(d => d.PublishEventAsync(
-                "fps-pubsub", "tenant-request-received", It.IsAny<TenantRequestEvent>(), It.IsAny<CancellationToken>()))
+                "fairspot-pubsub", "tenant-request-received", It.IsAny<TenantRequestEvent>(), It.IsAny<CancellationToken>()))
             .Callback<string, string, TenantRequestEvent, CancellationToken>((_, _, e, _) => published = e)
             .Returns(Task.CompletedTask);
 

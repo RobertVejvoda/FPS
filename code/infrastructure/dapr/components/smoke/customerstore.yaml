@@ -6,6 +6,6 @@ spec:
   type: state.in-memory
   version: v1
 scopes:
-- fps-customer
+- fairspot-customer
 # Smoke-test only. State is not persisted across restarts.
 # Smoke-test only. State is not persisted across restarts.

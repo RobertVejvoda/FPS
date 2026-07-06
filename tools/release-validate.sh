@@ -156,12 +156,12 @@ Prerequisites (host): Docker Engine + Docker Compose v2 only. No .NET / Dapr / N
      See docs/production/nas-cloudflare-deployment-profile.md.
 
 4. Bring up the hosted stack (NAS overlay: restart policies + required-credential check):
-     ./tools/start-container-stack.sh --nas --domain <domain> --realm fps-pilot
+     ./tools/start-container-stack.sh --nas --domain <domain> --realm fairspot-pilot
    This verifies container/sidecar health, internal OIDC discovery, and the public
    app./auth. boundary through Cloudflare (Docker-only probes).
 
 5. Hosted E2E + boundary smoke (writes a redacted evidence file):
-     APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> OIDC_REALM=fps-pilot \
+     APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> OIDC_REALM=fairspot-pilot \
        ./tools/smoke-hosted.sh
    Produces smoke-evidence-<timestamp>.txt (tokens redacted) — attach to #388.
    Mandatory boundary checks: HTTP→HTTPS redirect, and internal surfaces
@@ -181,7 +181,7 @@ run_host_checks() {
   else
     record "Server tests (validate.sh)" SKIP "skipped via --skip-unit"
   fi
-  # Web app typecheck + build (fps-web is not in CI; needs host Node/npm).
+  # Web app typecheck + build (fairspot-web package; needs host Node/npm).
   run_gate "Web app (typecheck+build)" "requires host Node/npm — cd code/web/fps-web && npm run typecheck && npm run build" \
     bash -c 'cd code/web/fps-web && npm run typecheck && npm run build'
 }
@@ -226,7 +226,7 @@ else
 fi
 
 # Mobile — readiness note (built + tested in CI; store publishing is out of scope).
-record "Mobile readiness" RESIDUAL "fps-mobile builds/tests in CI; store publishing out of scope (see docs/production/hosted-mobile-build-plan.md)"
+record "Mobile readiness" RESIDUAL "fairspot-mobile builds/tests in CI; store publishing out of scope (see docs/production/hosted-mobile-build-plan.md)"
 
 # Platform health — platform-plane endpoints (draw-health/usage-stats) need a platform-issuer
 # token that isn't mintable locally; covered by CI server tests (PlatformDrawHealthTests).

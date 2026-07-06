@@ -54,6 +54,6 @@ FairSpot helps customer organizations manage scarce shared capacity without turn
 
 ## Exchange Map
 
-![Exchange Map](./images/fps-exchange-map.png)
+![Exchange Map](./images/fairspot-exchange-map.png)
 
 Validation note: [Exchange Map Validation](./exchange-map-validation)

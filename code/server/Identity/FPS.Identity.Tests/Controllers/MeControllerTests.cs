@@ -19,9 +19,9 @@ public sealed class MeControllerTests : IClassFixture<WebApplicationFactory<Prog
     private readonly WebApplicationFactory<Program> factory;
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-test-signing-key-at-least-32-chars!"));
+        new(Encoding.UTF8.GetBytes("fairspot-test-signing-key-at-least-32-chars!"));
 
-    private const string PlatformIssuer = "https://platform.test/realms/fps-platform";
+    private const string PlatformIssuer = "https://platform.test/realms/fairspot-platform";
 
     public MeControllerTests(WebApplicationFactory<Program> factory)
     {

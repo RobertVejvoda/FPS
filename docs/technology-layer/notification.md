@@ -24,4 +24,4 @@ This Notification component provides functionalities to manage and display notif
 
 ## Packaging
 
-![Notification](../images/fps-software-pack-notification.png)
+![Notification](../images/fairspot-software-pack-notification.png)

@@ -86,7 +86,7 @@ else
 }
 
 builder.Services.AddFpsHealthChecks();
-builder.Services.AddFpsObservability("fps-booking", builder.Configuration);
+builder.Services.AddFpsObservability("fairspot-booking", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();

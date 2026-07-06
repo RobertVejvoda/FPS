@@ -12,7 +12,7 @@ namespace FPS.Audit.Controllers;
 [DaprInternalOnly]
 public sealed class SecurityEventsController(SecurityEventAuditHandler handler) : ControllerBase
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "security-events";
 
     [HttpPost("/audit/security-events")]

@@ -505,7 +505,7 @@ The operator must tick off each item before allowing external customer traffic. 
 
 - [ ] Custom rule `FPS — Block internal paths on app` is active and set to Block.
 - [ ] Verified by requesting `https://app.<domain>/metrics` from an external IP — response is HTTP 403.
-- [ ] Verified by requesting `https://app.<domain>/dapr/v1.0/invoke/fps-booking/method/health` — response is HTTP 403.
+- [ ] Verified by requesting `https://app.<domain>/dapr/v1.0/invoke/fairspot-booking/method/health` — response is HTTP 403.
 - [ ] Verified by requesting `https://app.<domain>/swagger` — response is HTTP 403.
 - [ ] Custom rule `FPS — Block Keycloak admin paths on auth` is active and set to Block.
 - [ ] Verified by requesting `https://auth.<domain>/admin` — response is HTTP 403.

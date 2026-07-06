@@ -65,7 +65,7 @@ public sealed class CustomerStorageKeyTests
     }
 
     [Theory]
-    [InlineData("fps-internal")]
+    [InlineData("fairspot-internal")]
     [InlineData("dapr-state")]
     [InlineData("admin-tenant")]
     [InlineData("system-core")]

@@ -81,7 +81,7 @@ print(f"TENANT_CONTACTS_JSON={sh(contacts_json)}")
 
 identity = d.get('identity', {})
 print(f"IDENTITY_ISSUER={sh(identity.get('trustedIssuer',''))}")
-print(f"IDENTITY_AUDIENCE={sh(identity.get('audience','fps-api'))}")
+print(f"IDENTITY_AUDIENCE={sh(identity.get('audience','fairspot-api'))}")
 print(f"IDENTITY_TENANT_CLAIM={sh(identity.get('tenantClaimName','tenant_id'))}")
 print(f"IDENTITY_SUBJECT_CLAIM={sh(identity.get('subjectClaimName','sub'))}")
 role_claims_json = json.dumps(identity.get('roleClaimNames', ['roles']))

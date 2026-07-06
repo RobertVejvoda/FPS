@@ -7,7 +7,7 @@ namespace FPS.Booking.Infrastructure.Services;
 
 public sealed class BookingDaprEventPublisher(DaprClient daprClient) : IBookingEventPublisher
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "booking-events";
 
     // Returns a contextual publisher that wraps domain events in the integration envelope.

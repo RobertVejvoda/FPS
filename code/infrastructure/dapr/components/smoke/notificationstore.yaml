@@ -6,5 +6,5 @@ spec:
   type: state.in-memory
   version: v1
 scopes:
-- fps-notification
+- fairspot-notification
 # Smoke-test only. State is not persisted across restarts.

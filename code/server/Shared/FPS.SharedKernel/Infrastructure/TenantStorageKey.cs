@@ -11,7 +11,7 @@ public static class TenantStorageKey
 {
     private static readonly Regex ValidPattern = new(@"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$", RegexOptions.Compiled);
 
-    private static readonly string[] ReservedPrefixes = ["fps-", "dapr-", "admin-", "system-"];
+    private static readonly string[] ReservedPrefixes = ["fairspot-", "dapr-", "admin-", "system-"];
 
     /// <summary>
     /// Returns a sanitised tenant ID string suitable for use as a key segment.

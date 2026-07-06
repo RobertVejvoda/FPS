@@ -48,7 +48,7 @@ The detailed hosted-operator procedure belongs in the private platform runbooks.
 
 ### Activating and verifying the reset (PLAT003C)
 
-**Where the flag lives.** Activation is env-gated and OFF by default (fail closed). The container/hosted compose files (`docker-compose.services.yml`, `docker-compose.services.images.yml`) read on `fps-customer`:
+**Where the flag lives.** Activation is env-gated and OFF by default (fail closed). The container/hosted compose files (`docker-compose.services.yml`, `docker-compose.services.images.yml`) read on `fairspot-customer`:
 
 - `SandboxReset__Enabled=${FPS_SANDBOX_RESET_ENABLED:-false}` — arms the destructive purge/reseed.
 - `SandboxReset__Scheduler__Enabled=${FPS_SANDBOX_RESET_SCHEDULER_ENABLED:-false}` — arms the nightly cron tick.

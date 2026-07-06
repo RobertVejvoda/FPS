@@ -21,7 +21,7 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
     private readonly WebApplicationFactory<Program> factory;
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-config-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-config-test-signing-key-at-least-32!!"));
 
     public ConfigurationAuthorizationTests(WebApplicationFactory<Program> factory)
     {

@@ -302,7 +302,7 @@ log "Seeding demo profile data..."
 
 printf '\n'
 printf '================================================\n'
-printf ' FPS Local Harness — Ready\n'
+printf ' FairSpot Local Harness — Ready\n'
 printf '================================================\n'
 printf ' Mobile gateway:  http://localhost:10000\n'
 printf ' Identity:        http://localhost:5192\n'

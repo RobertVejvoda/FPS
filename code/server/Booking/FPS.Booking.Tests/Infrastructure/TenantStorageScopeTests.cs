@@ -9,8 +9,8 @@ public sealed class TenantStorageScopeTests
     [Fact]
     public void Collection_IsDeterministicAndSanitised()
     {
-        Assert.Equal("fps-acme-corp-booking", TenantStorageScope.Collection("booking", "acme-corp"));
-        Assert.Equal("fps-acme-corp-booking", TenantStorageScope.Collection("Booking", "ACME-CORP")); // normalised
+        Assert.Equal("fairspot-acme-corp-booking", TenantStorageScope.Collection("booking", "acme-corp"));
+        Assert.Equal("fairspot-acme-corp-booking", TenantStorageScope.Collection("Booking", "ACME-CORP")); // normalised
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public sealed class TenantStorageScopeTests
 
     [Theory]
     [InlineData("ab")]            // too short
-    [InlineData("fps-internal")]  // reserved prefix
+    [InlineData("fairspot-internal")]  // reserved prefix
     [InlineData("Bad Tenant")]    // invalid characters
     public void Collection_InvalidTenant_Throws(string tenantId)
         => Assert.Throws<ArgumentException>(() => TenantStorageScope.Collection("booking", tenantId));

@@ -22,7 +22,7 @@ public sealed class SecurityIngestionGuardTests : IClassFixture<WebApplicationFa
 {
     private const string TokenHeader = "dapr-api-token";
     private const string ConfigKey = "APP_API_TOKEN";
-    private const string TestToken = "fps-test-app-token";
+    private const string TestToken = "fairspot-test-app-token";
 
     private readonly WebApplicationFactory<Program> factory;
 

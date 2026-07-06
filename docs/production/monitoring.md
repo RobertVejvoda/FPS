@@ -89,7 +89,7 @@ FairSpot services use ASP.NET Core's built-in request logging (`ILogger`) which 
 3. Set env vars before starting services:
    ```sh
    export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-   export OTEL_SERVICE_NAME=fps-booking   # one per service
+   export OTEL_SERVICE_NAME=fairspot-booking   # one per service
    ```
 
 Once the SDK is registered, pointing `OTEL_EXPORTER_OTLP_ENDPOINT` at a client's OpenTelemetry Collector (Dynatrace, Grafana, Splunk, Datadog, New Relic, or equivalent) requires only a config change — no application code change.

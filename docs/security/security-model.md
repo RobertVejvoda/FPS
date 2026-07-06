@@ -113,7 +113,7 @@ Dapr hardening complements application security. Services must still enforce ten
 
 Workflow-specific runtime controls are narrower than FairSpot authorization:
 
-- `WorkflowAccessPolicy` can default-deny cross-app workflow scheduling for the workflow-hosting app IDs (`fps-booking` and `fps-audit`) while still allowing same-app workflow execution.
+- `WorkflowAccessPolicy` can default-deny cross-app workflow scheduling for the workflow-hosting app IDs (`fairspot-booking` and `fairspot-audit`) while still allowing same-app workflow execution.
 - `WorkflowAccessPolicy` is open by default when no policy is loaded, and cross-app enforcement depends on mTLS; it is a Dapr perimeter control, not a replacement for application-layer authorization.
 - `schedule` is the only cross-app workflow operation enforced today; `get`, `terminate`, `purge`, `pause`, `resume`, and `rerun` still resolve to local self-calls and remain an application-level authorization concern.
 - `WorkflowHistorySigning` is intentionally not enabled in the local smoke profile because mTLS is off there, and it is not a default production switch until the deployment profile has a documented CA/root-key lifecycle.

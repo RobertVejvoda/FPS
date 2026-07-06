@@ -2,7 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: Loki
-    uid: fps-loki
+    uid: fairspot-loki
     type: loki
     access: proxy
     url: http://loki:3100
@@ -19,5 +19,5 @@ datasources:
           # (request ids, etc.) don't get a stray link.
           matcherRegex: 'TraceId=([0-9a-f]{16,32})'
           url: '$${__value.raw}'
-          datasourceUid: fps-jaeger
+          datasourceUid: fairspot-jaeger
           urlDisplayLabel: 'View trace'

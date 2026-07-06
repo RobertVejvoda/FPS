@@ -98,7 +98,7 @@ public sealed class FpsJwtBearerOptionsExtensionsTests
     // ── PLAT001 multi-issuer (platform realm) ───────────────────────────────────
 
     private const string CustomerAuthority = "https://auth.example/realms/fairspot";
-    private const string PlatformAuthority = "https://platform.example/realms/fps-platform";
+    private const string PlatformAuthority = "https://platform.example/realms/fairspot-platform";
 
     private static JwtBearerOptions Configure(Dictionary<string, string?> values, string environment = "Production")
     {

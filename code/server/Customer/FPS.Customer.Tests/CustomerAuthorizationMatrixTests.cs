@@ -27,11 +27,11 @@ namespace FPS.Customer.Tests;
 // by the claims transformation, exactly as in production.
 public sealed class CustomerAuthorizationMatrixTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    private const string PlatformIssuer = "https://platform.test/realms/fps-platform";
+    private const string PlatformIssuer = "https://platform.test/realms/fairspot-platform";
     private const string CustomerIssuer = "https://auth.test/realms/fairspot";
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-customer-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-customer-test-signing-key-at-least-32!!"));
 
     private readonly WebApplicationFactory<Program> factory;
 

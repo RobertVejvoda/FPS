@@ -2,7 +2,7 @@
 
 The Customer component is responsible for managing customers in a multi-tenant application. A multi-tenant application is one where a single instance of the software serves multiple customers (tenants), each with their own isolated data and configurations.
 
-![Software Architecture - Customer](../images/fps-software-arch-customer.png)
+![Software Architecture - Customer](../images/fairspot-software-arch-customer.png)
 
 ## REST API Endpoints
 
@@ -77,5 +77,5 @@ The Customer component is responsible for managing customers in a multi-tenant a
 
 ## Packaging
 
-![Customer](../images/fps-software-pack-customer.png)
+![Customer](../images/fairspot-software-pack-customer.png)
 

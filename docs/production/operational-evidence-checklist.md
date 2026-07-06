@@ -26,7 +26,7 @@ Observability requirements stay OpenTelemetry-compatible and provider-neutral; n
 - [ ] **Correlation identifiers** are present and searchable: `traceId`/`spanId`, `sourceEventId`/command/business-event ID, and `correlationId`/workflow ID. These support links only — they never replace tenant scoping.
 - [ ] **`tenant_id`** is an operator dimension on logs and as an OTel span attribute, sourced only from the validated JWT tenant claim / Dapr event envelope (never from body, query, or header); platform/no-tenant requests use the `__none__` sentinel.
 - [ ] Health endpoints respond: `GET /health` on every service returns `{ status: "Healthy", checks[] }`.
-- [ ] Dashboards exist for service health and per-tenant activity (e.g. Grafana "FPS Local Operations"; Prometheus `up{job=~"fps-..."}`).
+- [ ] Dashboards exist for service health and per-tenant activity (e.g. Grafana "FairSpot Local Operations"; Prometheus `up{job=~"fairspot-..."}`).
 - [ ] Baseline **alert rules** are wired: `FpsServiceDown`, `FpsHighErrorRate` (>5% 5xx), `FpsHighLatency` (p95 >2s), `RabbitMQDown`, `RabbitMQHighQueueDepth`. Alert routing is configured for the profile.
 - [ ] Business activity is read from the **Audit service**, not from raw technical logs; audit views never expose raw logs, secrets, tokens, or personal identifiers.
 

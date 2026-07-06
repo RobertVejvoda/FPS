@@ -6,5 +6,5 @@ spec:
   type: state.in-memory
   version: v1
 scopes:
-- fps-booking
+- fairspot-booking
 # Smoke-test only. State is not persisted across restarts.

@@ -30,7 +30,7 @@ public static class TenantStorageScope
 
     /// <summary>
     /// Deterministic collection / partition / schema-safe name for a service's tenant data:
-    /// <c>fps-{tenantId}-{service}</c>. Lowercase and hyphenated, so it is safe as a MongoDB
+    /// <c>fairspot-{tenantId}-{service}</c>. Lowercase and hyphenated, so it is safe as a MongoDB
     /// collection, a PostgreSQL schema, an object-storage prefix, or a DNS label. When the
     /// tenant id is long enough that the full name would exceed <see cref="MaxNameLength"/>, the
     /// tenant segment is deterministically truncated and a short hash suffix keeps it unique.
@@ -39,15 +39,15 @@ public static class TenantStorageScope
     {
         var tenant = TenantStorageKey.Sanitise(tenantId);
         var svc = NormaliseService(service);
-        var name = $"fps-{tenant}-{svc}";
+        var name = $"fairspot-{tenant}-{svc}";
         if (name.Length <= MaxNameLength)
             return name;
 
         var hash = ShortHash(tenant);
-        var fixedLength = "fps-".Length + 1 + hash.Length + 1 + svc.Length; // fps-{tPrefix}-{hash}-{svc}
+        var fixedLength = "fairspot-".Length + 1 + hash.Length + 1 + svc.Length; // fairspot-{tPrefix}-{hash}-{svc}
         var budget = MaxNameLength - fixedLength;
         var prefix = budget > 0 ? tenant[..Math.Min(tenant.Length, budget)].TrimEnd('-') : string.Empty;
-        return prefix.Length > 0 ? $"fps-{prefix}-{hash}-{svc}" : $"fps-{hash}-{svc}";
+        return prefix.Length > 0 ? $"fairspot-{prefix}-{hash}-{svc}" : $"fairspot-{hash}-{svc}";
     }
 
     private static string ShortHash(string value) =>

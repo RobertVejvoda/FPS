@@ -9,7 +9,7 @@ spec:
   - name: host
     value: localhost:27017
   - name: databaseName
-    value: fps-shared
+    value: fairspot-shared
   - name: collectionName
     value: deactivated-users
   - name: username

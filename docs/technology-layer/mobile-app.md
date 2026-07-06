@@ -34,7 +34,7 @@ After login, the app validates the session through `GET /me` and uses the return
 
 ## Packaging
 
-![Packaging](../images/fps-software-pack-mobile.png)
+![Packaging](../images/fairspot-software-pack-mobile.png)
 
 | Software Component | Type | Purpose |
 |------------------- | ---- | ------- |

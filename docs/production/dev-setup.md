@@ -1,6 +1,6 @@
 # Development Setup
 
-![Development Setup](../images/fps-logical-architecture.png)
+![Development Setup](../images/fairspot-logical-architecture.png)
 
 ### Open Source solutions
 

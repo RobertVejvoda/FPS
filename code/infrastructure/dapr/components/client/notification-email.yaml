@@ -11,6 +11,6 @@ spec:
       name: sendgrid-credentials
       key: apiKey
 scopes:
-- fps-notification
+- fairspot-notification
 auth:
   secretStore: secretstore

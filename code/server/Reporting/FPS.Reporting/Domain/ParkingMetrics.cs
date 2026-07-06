@@ -30,4 +30,33 @@ public sealed class ParkingMetrics
     public void IncrementNoShow() => NoShowCount++;
     public void IncrementPenalty() => PenaltyCount++;
     public void IncrementUsageConfirmed() => UsageConfirmedCount++;
+
+    /// <summary>
+    /// #763: build a row directly from already-aggregated counts (e.g. projected from DataHub's
+    /// durable read models) rather than by replaying events. UsageConfirmed is not part of any report
+    /// contract, so it is not projected here.
+    /// </summary>
+    internal static ParkingMetrics Project(
+        string tenantId, string date, string locationId, string timeSlot,
+        int demand, int allocation, int rejection, int cancellation, int noShow, int penalty,
+        IReadOnlyDictionary<string, int>? rejectionByReason = null)
+    {
+        var metrics = new ParkingMetrics
+        {
+            TenantId = tenantId,
+            Date = date,
+            LocationId = locationId,
+            TimeSlot = timeSlot,
+            DemandCount = demand,
+            AllocationCount = allocation,
+            RejectionCount = rejection,
+            CancellationCount = cancellation,
+            NoShowCount = noShow,
+            PenaltyCount = penalty,
+        };
+        if (rejectionByReason is not null)
+            foreach (var (reason, count) in rejectionByReason)
+                metrics.RejectionByReason[reason] = count;
+        return metrics;
+    }
 }

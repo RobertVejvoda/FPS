@@ -24,7 +24,7 @@ public sealed class BookingAuthSpoofingTests : IClassFixture<WebApplicationFacto
     private readonly WebApplicationFactory<Program> factory;
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-booking-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-booking-test-signing-key-at-least-32!!"));
 
     public BookingAuthSpoofingTests(WebApplicationFactory<Program> factory)
     {

@@ -34,7 +34,7 @@ public static class DependencyInjection
         // PLAT-seats (#710) — server-side module boundary: resolve a tenant's enabled modules from Customer.
         services.AddScoped<ITenantModulesService, DaprTenantModulesService>();
         services.AddHttpClient<IProfileSnapshotService, HttpProfileSnapshotService>(client =>
-            client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fps-profile"));
+            client.BaseAddress = new Uri(configuration["ProfileService:BaseUrl"] ?? "http://fairspot-profile"));
         services.AddSingleton<DrawService>();
         services.AddScoped<BookingDaprEventPublisher>();
         services.AddScoped<IBookingEventPublisher>(sp => sp.GetRequiredService<BookingDaprEventPublisher>());

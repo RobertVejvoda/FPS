@@ -20,7 +20,7 @@ public sealed class DaprRemoteTenantStorePurgerTests
     [Fact]
     public void NormalStore_ExposesServiceAndIsNotImmutable()
     {
-        var purger = new DaprRemoteTenantStorePurger(AnyDapr(), "fps-booking", "booking", isImmutableEvidence: false);
+        var purger = new DaprRemoteTenantStorePurger(AnyDapr(), "fairspot-booking", "booking", isImmutableEvidence: false);
 
         Assert.Equal("booking", purger.Service);
         Assert.False(purger.IsImmutableEvidence);
@@ -29,7 +29,7 @@ public sealed class DaprRemoteTenantStorePurgerTests
     [Fact]
     public void EvidenceStore_IsFlaggedImmutable_SoOrchestratorSkipsItOutsideSandboxReset()
     {
-        var purger = new DaprRemoteTenantStorePurger(AnyDapr(), "fps-audit", "audit", isImmutableEvidence: true);
+        var purger = new DaprRemoteTenantStorePurger(AnyDapr(), "fairspot-audit", "audit", isImmutableEvidence: true);
 
         Assert.Equal("audit", purger.Service);
         Assert.True(purger.IsImmutableEvidence);

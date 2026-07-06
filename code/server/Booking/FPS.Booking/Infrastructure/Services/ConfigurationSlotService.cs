@@ -15,7 +15,7 @@ namespace FPS.Booking.Infrastructure.Services;
 // the draw stay resilient during the transition.
 public sealed class ConfigurationSlotService : IAvailableSlotService
 {
-    private const string ConfigurationAppId = "fps-configuration";
+    private const string ConfigurationAppId = "fairspot-configuration";
     private const string SlotsMethod = "internal/configuration/locations/slots";
 
     private readonly DaprClient daprClient;

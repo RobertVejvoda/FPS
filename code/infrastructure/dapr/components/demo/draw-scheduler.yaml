@@ -12,4 +12,4 @@ spec:
   - name: schedule
     value: "0 18 * * *"
 scopes:
-- fps-booking
+- fairspot-booking

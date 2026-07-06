@@ -1,6 +1,6 @@
 # Application Layer
 
-![Application Architecture](./images/fps-application-arch-1.png)
+![Application Architecture](./images/fairspot-application-arch-1.png)
 
 Validation note: [Application Architecture 1 Validation](./application-arch-1-validation.md)
 
@@ -21,8 +21,4 @@ Validation note: [Application Architecture 1 Validation](./application-arch-1-va
 | [Notification](./application-layer/notification) | Manage and send notifications | Internal | Standard | High | Simple |
 | [Profile](./application-layer/profile) | Manage customer users and profiles | Confidential | High | High | Simple |
 | [Reporting](./application-layer/reporting) | Legacy transitional report surface; DataHub is target for new read models | Internal | Standard | Standard | Simple |
-
-
-![Application Architecture 2](./images/fps-application-arch-2.png)
-
-
+![Application Architecture 2](./images/fairspot-application-arch-2.png)

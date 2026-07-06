@@ -6,7 +6,7 @@
 #
 # Usage (public domain — single-origin: the API is proxied at app.<domain>/api):
 #   APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> \
-#   OIDC_REALM=fps-pilot ./tools/smoke-hosted.sh
+#   OIDC_REALM=fairspot-pilot ./tools/smoke-hosted.sh
 #
 # Usage (localhost — talks to the Envoy gateway directly, API served at root, so
 # no /api; TLS/WAF checks become PENDING):
@@ -511,7 +511,7 @@ else
   # served through the public API. v1.0/invoke is the Dapr service-invocation entrypoint;
   # metrics is the Prometheus scrape endpoint.
   for ipath in "openapi/v1.json" "swagger" "swagger/index.html" "metrics" \
-               "v1.0/healthz" "v1.0/metadata" "v1.0/invoke/fps-booking/method/health"; do
+               "v1.0/healthz" "v1.0/metadata" "v1.0/invoke/fairspot-booking/method/health"; do
     ISTATUS=$(http_status "$APP_URL/$ipath")
     if [[ "$ISTATUS" == "401" || "$ISTATUS" == "403" || "$ISTATUS" == "404" ]]; then
       pass "GET /api/$ipath → HTTP $ISTATUS (internal surface not publicly served)  [mandatory #10]"

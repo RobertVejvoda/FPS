@@ -2,9 +2,9 @@
 
 This note validates the exported exchange-map asset against current docs and code.
 
-Design asset checked: [docs/images/fps-exchange-map.png](./images/fps-exchange-map.png)
+Design asset checked: [docs/images/fairspot-exchange-map.png](./images/fairspot-exchange-map.png)
 
-Raw source: [docs/fps.drawio](./fps.drawio), diagram `exchange-map`
+Raw source: [docs/fairspot.drawio](./fairspot.drawio), diagram `exchange-map`
 
 ## Summary
 

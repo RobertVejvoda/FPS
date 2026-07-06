@@ -2,7 +2,7 @@
 
 The Reporting component stores tenant-scoped parking reporting projections and exposes predefined report APIs. It receives Booking events, updates read models, and serves manager-safe aggregate views and CSV exports.
 
-![Software Architecture - Reporting](../images/fps-software-arch-reporting.png)
+![Software Architecture - Reporting](../images/fairspot-software-arch-reporting.png)
 
 ## REST API Endpoints
 
@@ -43,4 +43,4 @@ Candidate future endpoints:
 
 ## Packaging
 
-![Reporting](../images/fps-software-pack-reporting.png)
+![Reporting](../images/fairspot-software-pack-reporting.png)

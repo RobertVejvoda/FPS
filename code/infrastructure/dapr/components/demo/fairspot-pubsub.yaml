@@ -1,21 +1,21 @@
 # Demo profile — replace RabbitMQ with a managed broker.
-# Azure Service Bus example (swap the spec block; component name stays fps-pubsub):
+# Azure Service Bus example (swap the spec block; component name stays fairspot-pubsub):
 #
 # spec:
 #   type: pubsub.azure.servicebus.topics
 #   version: v1
 #   metadata:
 #   - name: namespaceName
-#     value: "fps-demo.servicebus.windows.net"
+#     value: "fairspot-demo.servicebus.windows.net"
 #   - name: azureClientId          # user-assigned managed identity
 #     value: "{env:AZURE_CLIENT_ID}"
 #
 # Scope each component to the apps that need it.
-# Publisher: fps-booking  |  Subscribers: fps-notification, fps-audit, fps-reporting
+# Publisher: fairspot-booking  |  Subscribers: fairspot-notification, fairspot-audit, fairspot-reporting
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: fps-pubsub
+  name: fairspot-pubsub
 spec:
   type: pubsub.rabbitmq
   version: v1
@@ -35,10 +35,10 @@ spec:
   - name: enableTLS
     value: "true"
 scopes:
-- fps-booking
-- fps-notification
-- fps-audit
-- fps-customer
-- fps-reporting
+- fairspot-booking
+- fairspot-notification
+- fairspot-audit
+- fairspot-customer
+- fairspot-reporting
 auth:
   secretStore: secretstore

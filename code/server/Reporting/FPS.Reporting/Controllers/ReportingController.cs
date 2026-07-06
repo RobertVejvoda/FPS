@@ -47,7 +47,7 @@ public sealed class ReportingController(ReportingQueryService queryService, ICur
             return Unauthorized();
 
         var csv = await queryService.GetSummaryCsvAsync(request, currentUser.TenantId, cancellationToken);
-        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fps-parking-summary.csv");
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fairspot-parking-summary.csv");
     }
 
     [HttpGet("/reports/parking/utilization")]
@@ -77,7 +77,7 @@ public sealed class ReportingController(ReportingQueryService queryService, ICur
             return Unauthorized();
 
         var csv = await queryService.GetAllocationOutcomesCsvAsync(request, currentUser.TenantId, cancellationToken);
-        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fps-allocation-outcomes.csv");
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "fairspot-allocation-outcomes.csv");
     }
 
     [HttpGet("/reports/parking/employee-impact")]

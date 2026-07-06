@@ -12,13 +12,18 @@ public sealed class ErasureController(IReportingRepository repository) : Control
     [HttpPost("/erasure")]
     public async Task<IActionResult> Erase([FromBody] ServiceErasureInput input, CancellationToken ct)
     {
-        // Reporting now stores the raw requestor reference (the same id Profile
-        // and Booking use) instead of a SHA hash — see issue #474. Prefer the
-        // explicit TargetUserId field, which Audit's ErasureWorkflow already
-        // forwards. The legacy TargetActorHash is intentionally not retried
-        // against the new shape because no rows in it were ever hashed; sending
-        // only a hash would silently match nothing, which is the right
-        // post-rename behaviour.
+        // In Dev/Test this anonymises the in-memory fairness rows that Reporting
+        // still projects locally (raw requestor reference, same id Profile and
+        // Booking use, not a SHA hash — see issue #474). Prefer the explicit
+        // TargetUserId field, which Audit's ErasureWorkflow already forwards. The
+        // legacy TargetActorHash is intentionally not retried against the new
+        // shape because no rows in it were ever hashed; sending only a hash would
+        // silently match nothing, which is the right post-rename behaviour.
+        //
+        // #763: in Production/NAS the repository is NoOpReportingRepository, so
+        // this returns "notApplicable" (0) — it does NOT anonymise DataHub-backed
+        // reports. DataHub owns the durable report data; user-level reporting
+        // erasure in DataHub is tracked in #772.
         var targetRef = !string.IsNullOrEmpty(input.TargetUserId)
             ? input.TargetUserId
             : input.TargetActorHash;

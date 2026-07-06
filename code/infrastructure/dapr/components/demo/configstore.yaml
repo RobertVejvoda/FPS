@@ -13,7 +13,7 @@ spec:
       name: mongodb-connection
       key: host
   - name: databaseName
-    value: fps-configuration
+    value: fairspot-configuration
   - name: collectionName
     value: policies
   - name: username
@@ -27,6 +27,6 @@ spec:
   - name: params
     value: "?ssl=true&replicaSet=atlas-xxx"
 scopes:
-- fps-configuration
+- fairspot-configuration
 auth:
   secretStore: secretstore

@@ -72,7 +72,7 @@ public sealed class IdentityStoreHydratorTests
         {
             TenantId = "tenant-x",
             TrustedIssuer = "https://idp.example.com",
-            Audience = "fps-api",
+            Audience = "fairspot-api",
             TenantClaimName = "tenant_id",
             SubjectClaimName = "sub",
             RoleClaimNames = ["groups"],

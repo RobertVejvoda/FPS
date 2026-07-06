@@ -28,7 +28,7 @@ public sealed class TenantParkingBootstrapAuthorizationTests : IClassFixture<Web
     private readonly WebApplicationFactory<Program> factory;
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-customer-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-customer-test-signing-key-at-least-32!!"));
 
     public TenantParkingBootstrapAuthorizationTests(WebApplicationFactory<Program> factory)
     {

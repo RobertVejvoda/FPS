@@ -9,7 +9,7 @@
 #   version: v1
 #   metadata:
 #   - name: bucket
-#     value: "fps-demo-reports"
+#     value: "fairspot-demo-reports"
 #   - name: region
 #     value: "eu-west-1"
 #   - name: accessKey
@@ -37,10 +37,10 @@ spec:
       name: s3-credentials
       key: secretKey
   - name: bucket
-    value: fps-demo-reports
+    value: fairspot-demo-reports
   - name: endpoint
     value: "{env:S3_ENDPOINT}"
 scopes:
-- fps-reporting
+- fairspot-reporting
 auth:
   secretStore: secretstore

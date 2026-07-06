@@ -8,7 +8,7 @@ OBS002 adds Prometheus metrics to all FPS .NET services and provisions a Grafana
 
 Default credentials: `admin` / `admin` (local only — change immediately in any shared environment).
 
-The **FPS Local Operations** dashboard auto-provisions on first Grafana start.
+The **FairSpot Local Operations** dashboard auto-provisions on first Grafana start.
 
 ---
 
@@ -63,7 +63,7 @@ RabbitMQ (port 15692) is scraped from within the Docker network — the promethe
 
 ## Finding a failing service
 
-1. Open Grafana → **FPS Local Operations** → **Service Health** panel.
+1. Open Grafana → **FairSpot Local Operations** → **Service Health** panel.
 2. Red = Prometheus cannot scrape `GET /metrics` — service is down or not started.
 3. Drill into **HTTP Error Rate** — spikes identify which service is returning errors.
 4. Cross-correlate with Jaeger traces at **http://localhost:16686** using the `TraceId` from service logs.
@@ -93,7 +93,7 @@ risk a cardinality explosion, and the logging/monitoring contract forbids raw te
 labels. So the tenant dimension lives in **logs and traces**, not metrics:
 
 - **Per-tenant activity / errors:** filter the `FPS.Request` logs in Loki/Grafana by `tenant_id` (e.g.
-  `{job="fps-booking"} |= "tenant_id=greenlogistics"`), or search Jaeger traces by the `tenant_id` span tag.
+  `{job="fairspot-booking"} |= "tenant_id=greenlogistics"`), or search Jaeger traces by the `tenant_id` span tag.
 - **Fleet health (all tenants):** use the tenant-agnostic metrics above — they answer "is the service
   healthy / fast / erroring" without needing a tenant label.
 - If a genuinely per-tenant *metric* is ever needed, use a **low-cardinality** proxy label such as

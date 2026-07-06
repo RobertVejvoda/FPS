@@ -4,7 +4,7 @@
 #   Azure Cosmos DB      state.azure.cosmosdb
 #   AWS DynamoDB         state.aws.dynamodb
 #
-# Database naming: fps-{service} per service (fps-booking, fps-notification, etc.)
+# Database naming: fairspot-{service} per service (fairspot-booking, fairspot-notification, etc.)
 # Collection naming: {entityType} or {tenantId}_{entityType} for multi-tenant sharding.
 apiVersion: dapr.io/v1alpha1
 kind: Component
@@ -19,7 +19,7 @@ spec:
       name: mongodb-connection
       key: host
   - name: databaseName
-    value: fps-booking
+    value: fairspot-booking
   - name: collectionName
     value: bookings
   - name: username
@@ -31,6 +31,6 @@ spec:
       name: mongodb-connection
       key: password
 scopes:
-- fps-booking
+- fairspot-booking
 auth:
   secretStore: secretstore

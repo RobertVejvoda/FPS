@@ -28,7 +28,7 @@ public sealed class HrProfileAuthorizationTests : IClassFixture<WebApplicationFa
     private readonly WebApplicationFactory<Program> factory;
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-profile-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-profile-test-signing-key-at-least-32!!"));
 
     public HrProfileAuthorizationTests(WebApplicationFactory<Program> factory)
     {

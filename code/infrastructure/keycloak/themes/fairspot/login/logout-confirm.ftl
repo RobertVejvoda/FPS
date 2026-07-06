@@ -9,34 +9,34 @@
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
 </head>
 <body>
-<div class="fps-wrapper">
-  <main class="fps-card" role="main">
+<div class="fairspot-wrapper">
+  <main class="fairspot-card" role="main">
 
-    <header class="fps-brand">
-      <div class="fps-logo-mark" aria-hidden="true">F</div>
-      <div class="fps-brand-text">
-        <span class="fps-brand-name">FairSpot</span>
-        <span class="fps-brand-tagline">Fair parking for everyone</span>
+    <header class="fairspot-brand">
+      <div class="fairspot-logo-mark" aria-hidden="true">F</div>
+      <div class="fairspot-brand-text">
+        <span class="fairspot-brand-name">FairSpot</span>
+        <span class="fairspot-brand-tagline">Fair parking for everyone</span>
       </div>
     </header>
 
-    <h1 class="fps-title">${msg("logoutConfirmTitle")}</h1>
-    <p class="fps-page-copy">${msg("logoutConfirmHeader")}</p>
+    <h1 class="fairspot-title">${msg("logoutConfirmTitle")}</h1>
+    <p class="fairspot-page-copy">${msg("logoutConfirmHeader")}</p>
 
     <form action="${url.logoutConfirmAction}" method="post" onsubmit="confirmLogout.disabled = true; return true;">
       <input type="hidden" name="session_code" value="${logoutConfirm.code}">
-      <button class="fps-btn" name="confirmLogout" id="kc-logout" type="submit">
+      <button class="fairspot-btn" name="confirmLogout" id="kc-logout" type="submit">
         ${msg("doLogout")}
       </button>
     </form>
 
     <#if !logoutConfirm.skipLink && (client.baseUrl)?has_content>
-      <a class="fps-btn-secondary" href="${client.baseUrl}">${msg("backToApplication")}</a>
+      <a class="fairspot-btn-secondary" href="${client.baseUrl}">${msg("backToApplication")}</a>
     </#if>
 
   </main>
 
-  <footer class="fps-footer">
+  <footer class="fairspot-footer">
     <p>${msg("fps.supportHint")}</p>
   </footer>
 </div>

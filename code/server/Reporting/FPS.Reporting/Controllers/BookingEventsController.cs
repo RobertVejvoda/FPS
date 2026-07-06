@@ -12,7 +12,7 @@ namespace FPS.Reporting.Controllers;
 [DaprInternalOnly]
 public sealed class BookingEventsController(BookingEventReportingHandler handler) : ControllerBase
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "booking-events";
 
     [HttpPost("/reporting/booking-events")]

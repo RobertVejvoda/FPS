@@ -33,19 +33,19 @@ Manual bearer-token entry is a local smoke-testing fallback, not the default use
 
 ## Packaging
 
-![Packaging](../images/fps-software-pack-web.png)
+![Packaging](../images/fairspot-software-pack-web.png)
 
 | Software Component | Type | Purpose | Technology | Packaging Type | Package Name |
 |------------------- | ---- | ------- | ---------- | -------------- | ------------ |
-| audit-ui | GUI | User interface for managing audits | React | Docker container | fps-web-app |
-| billing-ui | GUI | User interface for managing billings | React | Docker container | fps-web-app |
-| booking-ui | GUI | User interface for managing bookings | React | Docker container | fps-web-app |
-| configuration-ui | GUI | User interface for system configuration | React | Docker container | fps-web-app |
-| customer-ui | GUI | User interface for customer management | React | Docker container | fps-web-app |
-| notification-ui | GUI | User interface for managing notifications | React | Docker container | fps-web-app |
-| notification-svc | Service | Service for managing notifications | React | Docker container | fps-web-app |
-| profile-ui | GUI | User interface for profile management | React | Docker container | fps-web-app |
-| reporting-ui | GUI | User interface for reports and analytics | React | Docker container | fps-web-app |
-| feedback-ui | GUI | User interface for handling feedback | React | Docker container | fps-web-app |
-| login-ui | GUI | User interface for authentication | React | Docker container | fps-web-app |
-| login-svc | Service | Service for authentication | React | Docker container | fps-web-app |
+| audit-ui | GUI | User interface for managing audits | React | Docker container | fairspot-web-app |
+| billing-ui | GUI | User interface for managing billings | React | Docker container | fairspot-web-app |
+| booking-ui | GUI | User interface for managing bookings | React | Docker container | fairspot-web-app |
+| configuration-ui | GUI | User interface for system configuration | React | Docker container | fairspot-web-app |
+| customer-ui | GUI | User interface for customer management | React | Docker container | fairspot-web-app |
+| notification-ui | GUI | User interface for managing notifications | React | Docker container | fairspot-web-app |
+| notification-svc | Service | Service for managing notifications | React | Docker container | fairspot-web-app |
+| profile-ui | GUI | User interface for profile management | React | Docker container | fairspot-web-app |
+| reporting-ui | GUI | User interface for reports and analytics | React | Docker container | fairspot-web-app |
+| feedback-ui | GUI | User interface for handling feedback | React | Docker container | fairspot-web-app |
+| login-ui | GUI | User interface for authentication | React | Docker container | fairspot-web-app |
+| login-svc | Service | Service for authentication | React | Docker container | fairspot-web-app |

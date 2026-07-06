@@ -161,7 +161,7 @@ Assume five employees request parking and three spaces are available. Employees 
 
 The result is not meant to guarantee everyone a space every week. It is meant to prevent persistent unfairness over time and to give HR a defensible process.
 
-![Example](../images/fps-booking-allocation-example.png)
+![Example](../images/fairspot-booking-allocation-example.png)
 
 ## Further Improvements
 

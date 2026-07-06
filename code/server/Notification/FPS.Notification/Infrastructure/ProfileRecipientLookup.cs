@@ -18,7 +18,7 @@ public sealed record ProfileRecipientResult(bool Resolved, string? Email, string
 /// <summary>Invokes Profile's internal <c>notification-recipient</c> endpoint over Dapr service invocation.</summary>
 public sealed class DaprProfileRecipientLookup(DaprClient daprClient) : IProfileRecipientLookup
 {
-    private const string ProfileAppId = "fps-profile";
+    private const string ProfileAppId = "fairspot-profile";
     private const string ResolveMethod = "internal/profile/notification-recipient";
 
     public async Task<ProfileRecipientResult> LookupAsync(

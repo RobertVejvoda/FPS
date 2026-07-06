@@ -10,7 +10,7 @@ This is an **open-core** package: keep it to design primitives only. Do not add 
 
 ## Consumption
 
-In-repo, `fps-web` consumes this as a local source package via a `file:` dependency plus a Vite alias and a TypeScript path (no build step — source `.tsx` is consumed directly), the same pattern as [`@robertvejvoda/fairspot-api-client`](../typescript/README.md):
+In-repo, `fairspot-web` consumes this as a local source package via a `file:` dependency plus a Vite alias and a TypeScript path (no build step — source `.tsx` is consumed directly), the same pattern as [`@robertvejvoda/fairspot-api-client`](../typescript/README.md):
 
 ```jsonc
 // package.json

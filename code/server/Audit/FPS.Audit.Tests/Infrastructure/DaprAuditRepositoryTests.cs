@@ -64,7 +64,7 @@ public sealed class DaprAuditRepositoryTests
         TenantId = tenantId,
         CorrelationId = Guid.NewGuid().ToString(),
         ActorType = "user",
-        Source = "fps-booking",
+        Source = "fairspot-booking",
         EntityType = "bookingRequest",
         Action = "submit",
     };
