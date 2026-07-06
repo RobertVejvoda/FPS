@@ -3,13 +3,13 @@
 ![CI](https://github.com/RobertVejvoda/fairspot/actions/workflows/ci.yml/badge.svg?branch=master)
 ![Docs](https://github.com/RobertVejvoda/fairspot/actions/workflows/docs.yml/badge.svg?branch=master)
 
-FairSpot is an open-source, multi-tenant fair allocation and booking platform for companies where demand for shared workplace resources exceeds supply. Parking is the first launch module and proof vertical; the product scope also covers seats, sport courts, desks, lockers, chargers, and other bookable limited resources.
+FairSpot is an open-source, multi-tenant fair allocation and booking platform for B2B organizations where demand for scarce shared capacity exceeds supply. Parking is the first launch module and proof vertical; the product scope also covers seats, sport courts, desks, lockers, chargers, and other bookable limited resources.
 
-FairSpot replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Employees request a resource, resource-specific obligations such as company-car parking are handled first, and remaining capacity is allocated by documented fairness rules so access improves over time instead of depending on who emailed HR or facilities first.
+FairSpot replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Participants request capacity, resource-specific obligations such as company-car parking are handled first in the current parking module, and remaining capacity is allocated by documented fairness rules so access improves over time instead of depending on who asked an operator first.
 
 ## Executive Summary
 
-FairSpot is being built as a documentation-led product. Parking is the first concrete launch domain because it has visible scarcity, policy complexity, and employee trust impact. Seats, sport courts, desks, lockers, chargers, and similar resources are part of the broader product direction, not a separate later product.
+FairSpot is being built as a documentation-led product. Parking is the first concrete launch domain because it has visible scarcity, policy complexity, and user trust impact. Seats, sport courts, desks, lockers, chargers, and similar resources are part of the broader scarce-capacity direction, not a separate later product.
 
 The implemented backend now covers Booking, Identity/Profile context, Notification, Audit, Reporting read models, and Configuration policy/slot management. The mobile employee flow covers login, booking submission, booking actions, My Bookings, notifications, profile details, allocation status, and demo/pilot polish. The next product direction is repeatable local testing, client-evaluation features, web/admin surfaces, client-owned deployment guidance, and production operations.
 
@@ -25,10 +25,10 @@ The **hosted operator product** — cross-tenant platform operations, the operat
 
 ## Product Outcomes
 
-- **Fair access to scarce shared resources**: allocate spaces, seats, courts, and other limited resources with explicit, auditable rules instead of first-come, first-served coordination.
+- **Fair access to scarce shared capacity**: allocate spaces, seats, courts, and other limited capacity with explicit, auditable rules instead of first-come, first-served coordination.
 - **Lower operational load**: reduce HR and facilities work by automating request intake, Draw execution, notification, and audit records.
-- **Tenant isolation by design**: keep company data and policies isolated for SaaS use through authenticated context and tenant-scoped persistence.
-- **Employee trust**: make booking status, outcomes, and visible reasons understandable to employees.
+- **Tenant isolation by design**: keep organization data and policies isolated for SaaS use through authenticated context and tenant-scoped persistence.
+- **User trust**: make booking status, outcomes, and visible reasons understandable to users.
 - **Operational evidence**: preserve event, notification, and audit trails so policy decisions can be reviewed later.
 
 ## Current Product Shape

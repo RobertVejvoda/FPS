@@ -1,6 +1,6 @@
 # Brand
 
-FairSpot uses a calm green identity to support the product story: fair access to limited workplace resources without making the interface feel playful or consumer-only.
+FairSpot uses a calm green identity to support the product story: fair access to scarce shared capacity without making the interface feel playful or consumer-only.
 
 ## Logo Direction
 

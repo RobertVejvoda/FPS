@@ -4,19 +4,19 @@ FairSpot is guided by four product values. They are meant to be practical decisi
 
 ## Fair
 
-FairSpot exists to make access to scarce workplace resources more equitable and explainable. Access to parking, seats, sport courts, desks, lockers, chargers, or similar bookable resources must not depend on who emailed first, who knows HR/facilities best, or who understands hidden process details.
+FairSpot exists to make access to scarce shared capacity more equitable and explainable. Access to parking, seats, sport courts, desks, lockers, chargers, or similar bookable resources must not depend on who asked first, who knows an operator best, or who understands hidden process details.
 
 Fair means:
 
 - allocation rules are documented and visible enough to be trusted;
 - company-car, accessibility, reservation, and policy constraints are handled explicitly;
 - weighted Draw behavior improves access over time instead of rewarding speed alone;
-- outcomes have employee-visible reasons where possible;
-- sensitive allocation evidence is auditable without exposing other employees private data.
+- outcomes have user-visible reasons where possible;
+- sensitive allocation evidence is auditable without exposing other users' private data.
 
 ## Simple
 
-FairSpot should reduce coordination work, not move spreadsheet complexity into software screens. Employees, HR, admins, and auditors should be guided by business-readable flows rather than internal IDs, hidden policy fields, or technical terminology.
+FairSpot should reduce coordination work, not move spreadsheet complexity into software screens. Users, operators, admins, and auditors should be guided by business-readable flows rather than internal IDs, hidden policy fields, or technical terminology.
 
 Simple means:
 

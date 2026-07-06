@@ -1,12 +1,12 @@
 # Business Capabilities
 
-This capability map is the shared-resource customer-ready target, proven first through parking. It does not model every historical feature idea from the legacy functional architecture.
+This capability map is the scarce shared-capacity customer-ready target, proven first through parking. It does not model every historical feature idea from the legacy functional architecture.
 
 ## Capability Map
 
 | Capability | Target Description | Priority | Status | Source Evidence |
 | --- | --- | --- | --- | --- |
-| Tenant onboarding and readiness | Prepare a company tenant, identity mapping, locations, policy, initial data, support contacts, timezone, and launch readiness checks. | P0 | Partial | [Tenant Onboarding](/business-layer/tenant-onboarding), [Business Process Flows](/business-layer/business-process-flows) |
+| Tenant onboarding and readiness | Prepare a customer organization tenant, identity mapping, locations, policy, initial data, support contacts, timezone, and launch readiness checks. | P0 | Partial | [Tenant Onboarding](/business-layer/tenant-onboarding), [Business Process Flows](/business-layer/business-process-flows) |
 | Customer / tenant administration | Maintain tenant lifecycle state, tenant identity, support contacts, and readiness evidence durably. | P0 | Placeholder | [Customer](/business-layer/customer), [Tenant Storage Contract](/production/tenant-storage-contract) |
 | Employee resource request | Let employees request a limited resource for future Draw allocation or same-day allocation using authenticated tenant/user context; parking is the current implemented resource type. | P0 | Partial | [Booking](/business-layer/booking), [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) |
 | Profile and eligibility facts | Resolve employee active status, vehicle, company-car, accessibility, reserved-space, and location facts needed by policy. | P0 | Partial | [Profile](/business-layer/profile), [Allocation Rules](/business-layer/allocation-rules) |

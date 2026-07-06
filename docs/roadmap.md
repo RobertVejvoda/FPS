@@ -6,9 +6,9 @@ This roadmap explains the high-level delivery direction for FairSpot. Phases des
 
 | Principle | Meaning |
 | --- | --- |
-| Prove the core first | Fair allocation of scarce shared resources is the product center. Parking is the first proof vertical; supporting services matter because they make allocation usable, auditable, and trusted. |
+| Prove the core first | Fair allocation of scarce shared capacity is the product center. Parking is the first proof vertical; supporting services matter because they make allocation usable, auditable, and trusted. |
 | Keep slices vertical | Each implementation slice should deliver a visible capability or operational proof, not only an isolated layer. |
-| Finish the employee path before broadening UI | Mobile employee self-service proves the API and user workflow before web/admin surfaces expand the product. |
+| Finish the primary user path before broadening UI | Mobile self-service proves the API and user workflow before web/admin surfaces expand the product. |
 | Make operations pluggable | Dapr and OpenTelemetry boundaries must be proven before client-owned production can be credible. |
 | Keep commercialisation after product proof | Billing and paid features are intentionally late until the free/open core and client value are clear. |
 
@@ -32,12 +32,12 @@ Milestones are delivery checkpoints across phases. Phases explain the product ar
 
 | Milestone | Board issues | Goal | Exit criteria | Why this milestone exists |
 | --- | --- | --- | --- | --- |
-| `Demo v0` | `MOB006`, `OPS001`, `OPS002`, `CUST002`, `DOCS001` | Show a credible first demo path: employee notifications, deployment component strategy, low-cost demo plan, SSO-first integration contract, and client-facing material outline. | A new evaluator can understand and see the employee flow, how FairSpot would run for demo, and how company identity/data integration will work. | This is the first point where FairSpot becomes explainable to someone outside the implementation team. |
+| `Demo v0` | `MOB006`, `OPS001`, `OPS002`, `CUST002`, `DOCS001` | Show a credible first demo path: user notifications, deployment component strategy, low-cost demo plan, SSO-first integration contract, and client-facing material outline. | A new evaluator can understand and see the user flow, how FairSpot would run for demo, and how customer identity/data integration will work. | This is the first point where FairSpot becomes explainable to someone outside the implementation team. |
 | `Employee Pilot` | `MOB007`, `MOB008`, `MOB009`, `N005` | Complete the employee-facing mobile experience enough for pilot use. | Mobile covers profile/vehicle facts, employee-safe allocation detail, notifications/preferences, session recovery, accessibility, and production polish. | User testing should happen only after the core employee journey is coherent, not while screens are still placeholders. |
 | `Client Evaluation` | `ID002`, `P002`, `CFG003`, `CUST001`, `CUST003`-`CUST007`, `REPORT003`, `WEB001`-`WEB004` | Give business, HR/facilities, architecture, and reporting stakeholders enough product surface to evaluate FairSpot. | Admin/reporting workflows, web surfaces, user/profile mapping, customer onboarding, fixed operational reports, configuration publication, and readiness checks are credible enough for review. | Client evaluators need more than the employee mobile app; they need operating, reporting, and onboarding evidence. |
 | `Production Handoff` | `A003`, `OPS003`, `OPS004`, `OPS005`, `OPS006` | Prepare FairSpot for client-owned production operation and repeatable local testing. | Observability, performance evidence, audit retention/integrity, integration secret handling, local harness, and production responsibility split are documented and implemented where needed. | Production will run in the client's environment, so portability and operational evidence must be explicit. |
 | `Commercialisation Later` | `BILL000`, `BILL001` | Decide how FairSpot can recover cost without weakening the free/open core. | `BILL000` documents the commercial posture; `BILL001` remains deferred until a real Billing workflow is approved. | Billing and paid features follow product proof, not lead it. |
-| `Resource Map and Preferences` | Future `MAP`/`PREF` slices | Prove FairSpot can allocate within uploaded maps and prefer employee/team zones before fallback. | Tenant admins can publish a resource map with zones; employees can express a preferred zone; allocation records assigned zone and fallback reason when preference cannot be met. | This makes the broader FairSpot story concrete for seats, sport courts, desks, lockers, chargers, and other limited workplace resources beyond the first parking module. |
+| `Resource Map and Preferences` | Future `MAP`/`PREF` slices | Prove FairSpot can allocate within uploaded maps and prefer user/team zones before fallback. | Tenant admins can publish a resource map with zones; users can express a preferred zone; allocation records assigned zone and fallback reason when preference cannot be met. | This makes the broader FairSpot story concrete for seats, sport courts, desks, lockers, chargers, and other scarce shared capacity beyond the first parking module. |
 
 ## Release Validation Model
 

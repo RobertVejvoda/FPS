@@ -8,7 +8,7 @@
 
 ## Overview
 
-FairSpot presents employees with two login entry paths:
+FairSpot presents users with two current login entry paths:
 
 | Path | Label on login screen | When used |
 |---|---|---|
@@ -16,6 +16,8 @@ FairSpot presents employees with two login entry paths:
 | FairSpot account | "Sign in with FairSpot account" | Demo users, small tenants without SSO, break-glass admin, and fallback local accounts |
 
 Both paths use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly.
+
+The current labels are workplace-oriented because parking is the first proof path. The durable model is broader: a tenant may later label the brokered path as an organization, club, venue, or public-participant login and may allow user-owned identity providers such as Google, Apple, or Microsoft when the tenant policy permits it.
 
 ---
 
@@ -75,7 +77,7 @@ After the IdP issues a token, FairSpot validates:
 | Tenant membership | User's `(tenantId, issuer, externalSubject)` tuple must be provisioned in FairSpot. Unknown subjects fail closed. |
 | Active status | User must be active. Deactivated users cannot create new parking requests. |
 
-FairSpot services derive tenant identity from authenticated context only. Employee-facing APIs must not accept caller-supplied tenant, user, or role values.
+FairSpot services derive tenant identity from authenticated context only. User-facing APIs must not accept caller-supplied tenant, user, or role values.
 
 ---
 
@@ -93,12 +95,24 @@ This is the primary login path for enterprise customers.
 
 **Key properties:**
 
-- FairSpot never sees or stores the user's company password.
+- FairSpot never sees or stores the user's external IdP password.
 - Tenant and role mapping are configured per tenant, not inferred from arbitrary claims.
 - A new SSO user not yet provisioned in FairSpot profile facts is rejected at tenant-membership check until provisioned by SSO mapping, admin entry, or SCIM.
 - Role/group claims from the IdP are mapped through tenant-scoped configuration. Unmapped groups are ignored unless the tenant configuration explicitly rejects them.
 
 See [Customer Integration](./customer-data-import.md) for the full SSO contract, claim requirements, and integration modes.
+
+## Public Or Member Participant IdP Path
+
+This is the generalized path for organizations such as sport clubs, venues, or communities where users are not necessarily employees of the managing organization.
+
+1. User selects a tenant-specific login path, such as a club or venue login.
+2. Keycloak or the selected identity broker redirects to a customer-approved provider, such as Google, Apple, Microsoft, or a club IdP.
+3. The external provider authenticates the user and returns a stable subject.
+4. FairSpot resolves `(tenantId, issuer, externalSubject)` to a tenant-scoped user record, membership, role, and eligibility state.
+5. Booking rights are evaluated from FairSpot/customer-controlled tenant facts, not from the identity provider alone.
+
+Example: a tennis court tenant can allow a player to sign in with Google and book one court for up to four players. The Google login proves the requestor's identity; FairSpot still controls whether that requestor can book in that organization, what party size is allowed, what time windows are open, and which court-manager actions are audited.
 
 ---
 
@@ -155,7 +169,7 @@ Keycloak is the single OIDC issuer for FairSpot in all current deployment profil
 | Demo without external IdP | FairSpot-local accounts in Keycloak (seeded demo users) |
 | Break-glass admin | FairSpot-local account in Keycloak, not published through SSO broker |
 
-This keeps a single token issuer, a single token-validation configuration across FairSpot services, and a single realm configuration per environment. Adding a new company SSO means adding a Keycloak identity-provider broker configuration for that tenant — no FairSpot service code changes are required.
+This keeps a single token issuer, a single token-validation configuration across FairSpot services, and a single realm configuration per environment. Adding a new customer IdP broker means adding a Keycloak identity-provider broker configuration for that tenant — no FairSpot service code changes are required.
 
 External IdP broker setup is tracked in AUTH006 (issue #544).
 
@@ -197,7 +211,7 @@ To avoid security misunderstandings, this table records explicit non-goals:
 | "Typing my company email gives me access to that tenant" | Discovery only routes to an IdP suggestion. Access requires authenticated token + tenant membership. |
 | "The tenant in the login URL grants access" | Tenant in routing context is a hint only. Post-auth enforcement determines access. |
 | "If discovery fails to find my company, I cannot log in" | Discovery failure falls back to manual path selection. FairSpot-local account path is always available for provisioned users. |
-| "Company SSO means FairSpot has my company password" | FairSpot never receives the company password. The company IdP authenticates the user independently. |
+| "Company SSO means FairSpot has my customer IdP password" | FairSpot never receives the external IdP password. The customer IdP authenticates the user independently. |
 
 ---
 

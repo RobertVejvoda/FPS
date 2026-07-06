@@ -1,10 +1,10 @@
-# SSO-First Customer Integration
+# Customer Identity Integration
 
-FairSpot should integrate with a company primarily through the company's identity provider. For normal enterprise use, employees authenticate with SSO and FairSpot stores only the minimum profile and eligibility facts needed for booking, notification, audit, reporting, and support. FairSpot must not become a copy of the customer's HR or identity database.
+FairSpot should integrate with a customer organization through trusted identity providers. For normal enterprise use, employees authenticate with company SSO. For member, club, venue, or public-participant use cases, users may authenticate with customer-approved providers such as Google, Apple, Microsoft, a club IdP, or another OIDC/OAuth-compatible identity source. FairSpot stores only the minimum profile, membership, and eligibility facts needed for booking, notification, audit, reporting, and support. FairSpot must not become a copy of the customer's HR, membership, or identity database.
 
-Use [Tenant Onboarding](./tenant-onboarding) for the end-to-end sequence that creates a new company tenant, configures identity, creates the first administrator, sets up parking policy/slots, loads pilot employee facts, and proves readiness.
+Use [Tenant Onboarding](./tenant-onboarding) for the end-to-end sequence that creates a new customer organization tenant, configures identity, creates the first administrator, sets up policy/resources, loads pilot user facts, and proves readiness.
 
-See [Tenant Discovery and Login Modes](./tenant-login-modes) for the two employee login entry paths and the pre-auth tenant discovery model.
+See [Tenant Discovery and Login Modes](./tenant-login-modes) for the current login entry paths and the pre-auth tenant discovery model.
 
 Local FairSpot-created accounts are an explicit fallback for demo, small tenants, break-glass administration, or customers without SSO. When FairSpot owns such an account, credential verifiers such as password hashes are Secret data and must be handled by the Identity service using hardened credential storage. Plaintext passwords are never stored.
 
@@ -14,9 +14,9 @@ Customer integration should answer three questions:
 
 | Question | Expected answer |
 | --- | --- |
-| Who is allowed to use FairSpot? | Active employee identity and tenant membership come from SSO/OIDC claims issued by the customer's IdP whenever possible. |
-| What profile facts affect parking eligibility? | Vehicle, company-car, accessibility, location, and policy-related eligibility facts come from minimal IdP claims, authorized admin entry, employee self-service, or a narrowly scoped import where needed. |
-| Which system owns the truth? | The customer IdP owns identity and login state. FairSpot stores only the mapped subject, tenant, role, and policy facts it needs to operate. |
+| Who is allowed to use FairSpot? | Active user identity and tenant membership come from trusted SSO/OIDC claims, tenant provisioning, invitation, or approved admin assignment. |
+| What profile facts affect eligibility? | Resource-specific facts come from minimal IdP claims, authorized admin entry, user self-service, or a narrowly scoped import where needed. Parking uses vehicle, company-car, accessibility, location, and policy-related eligibility facts. |
+| Which system owns the truth? | The trusted IdP owns authentication. FairSpot stores the mapped subject, tenant membership, role, eligibility, and policy facts it needs to operate. |
 
 ## Contract Boundaries
 
@@ -24,11 +24,11 @@ This contract defines what FairSpot expects from customer identity and profile i
 
 | Boundary | Contract |
 | --- | --- |
-| Authentication | Company employees authenticate through the customer IdP using OIDC/OAuth 2.0. FairSpot validates signed tokens and never handles the company password. |
+| Authentication | Customer organization users authenticate through trusted OIDC/OAuth 2.0 providers. Enterprise tenants normally use the customer IdP; member/public-participant tenants may broker user-owned IdPs such as Google, Apple, or Microsoft. FairSpot validates signed tokens and never handles external IdP passwords. |
 | Tenant resolution | `tenantId` comes from trusted issuer-to-tenant configuration, a trusted `tenant_id` claim emitted by the IdP, or verified provisioning metadata. FairSpot must not accept tenant identity from arbitrary request bodies. |
 | User resolution | SSO users are mapped by `(tenantId, issuer, externalSubject)`, where `externalSubject` is the stable OIDC `sub` or equivalent immutable subject. |
 | Authorization | FairSpot roles come from mapped IdP groups/roles or tenant-admin assignments. Role mapping is tenant-scoped, auditable, and does not create roles dynamically from untrusted claims. |
-| Profile facts | FairSpot stores only facts required for parking policy, notification, audit, reporting, and support. Broad HR records stay outside FairSpot. |
+| Profile facts | FairSpot stores only facts required for policy, notification, audit, reporting, and support. Broad HR, member, customer, or identity records stay outside FairSpot. |
 | Local accounts | FairSpot-local accounts are fallback accounts only. Their credential verifiers are Secret data owned by Identity and are not imported from customer systems. |
 | Provisioning | SCIM or file/bootstrap import may create, update, or deactivate users and profile facts, but SSO remains the normal login and identity proof. |
 | Audit | Integration decisions must be attributable to a human actor, FairSpot system actor, or named customer integration identity. |
@@ -47,13 +47,14 @@ Each tenant integration must define a trusted issuer contract before users can a
 | Role/group mapping | Raw IdP groups are mapped to FairSpot roles through tenant configuration. Unmapped groups are ignored unless the tenant configuration explicitly rejects them. |
 | Deactivation | A user who can no longer authenticate through the trusted IdP, or is marked inactive by trusted provisioning/admin state, must not be able to create new parking requests. Existing booking lifecycle handling remains governed by Booking rules. |
 
-FairSpot services consume only authenticated context after token validation. Employee-facing APIs must not accept caller-supplied tenant, user, or role values as replacements for authenticated context.
+FairSpot services consume only authenticated context after token validation. User-facing APIs must not accept caller-supplied tenant, user, or role values as replacements for authenticated context.
 
 ## Candidate Integration Modes
 
 | Mode | Use When | Data Shape | Notes |
 | --- | --- | --- | --- |
-| SSO/OIDC login | Normal company integration. | Stable IdP subject, tenant mapping, employee identifier where available, email if notifications need it, display name if the UI needs it, and group/role claims where available. | Primary model. FairSpot does not store the employee's company password and should not ask for it. |
+| SSO/OIDC login | Normal organization integration. | Stable IdP subject, tenant mapping, employee/member/customer identifier where available, email if notifications need it, display name if the UI needs it, and group/role claims where available. | Primary model. FairSpot does not store the user's external IdP password and should not ask for it. |
+| User-owned IdP broker | Clubs, venues, communities, or public-participant tenants where users bring Google, Apple, Microsoft, or similar accounts. | Stable external subject, issuer, tenant membership/provisioning state, optional display/email, and domain-specific eligibility facts. | Authentication is not eligibility. Tenant membership, booking rights, and role assignment remain FairSpot/customer-controlled and auditable. |
 | IdP claims and groups | Customer IdP can provide role, location, department, company-car, or policy-related claims. | Minimal mapped claims used by Profile, Identity, and Authorization. | Preferred source for lifecycle and authorization facts when the customer can maintain claims reliably. |
 | SCIM provisioning | Customer supports standard user lifecycle provisioning. | User create/update/deactivate and group assignment. | Optional enterprise lifecycle support. It should complement SSO, not replace it or import a full HR record. |
 | Manual admin entry | Demo, small tenant, local fallback account, or policy facts not available from IdP claims. | Tenant admin creates or corrects only required FairSpot profile facts. | Lowest integration cost, but privileged changes must be auditable. Local credentials are Secret if FairSpot owns login. |
@@ -66,8 +67,8 @@ FairSpot services consume only authenticated context after token validation. Emp
 | Field | Required | Classification | Source of truth | Notes |
 | --- | --- | --- | --- | --- |
 | `tenantId` | Yes | Confidential | Trusted FairSpot tenant configuration / IdP mapping | Must come from trusted context, issuer mapping, or verified provisioning metadata, never arbitrary user input. |
-| `externalSubject` | Yes for SSO users | Confidential | Customer IdP | Stable OIDC `sub` or equivalent external subject. This is the primary company-user mapping key. |
-| `employeeId` | Optional unless policy requires it | Confidential | Customer IdP/HR | Use only when customer policy, support, or reporting needs an employee number. Prefer stable subject if employee ID is not required. |
+| `externalSubject` | Yes for SSO / external IdP users | Confidential | Trusted IdP | Stable OIDC `sub` or equivalent external subject. This is the primary external-user mapping key. |
+| `employeeId` / `memberId` / customer reference | Optional unless policy requires it | Confidential | Customer IdP/HR/member system/admin | Use only when customer policy, support, or reporting needs a business reference. Prefer stable subject if a business identifier is not required. |
 | `userId` | Yes after onboarding | Confidential | FairSpot Identity | Internal FairSpot user key mapped to authenticated claims or a local FairSpot account. |
 | `displayName` | Optional for v1 UI | Confidential | Customer IdP/admin/user | Avoid in events/audit where ID is enough. |
 | `email` | Required only for email notification or login fallback | Confidential | Customer IdP/admin/user | Used by Notification; avoid in audit/event payloads unless required. |
@@ -87,7 +88,7 @@ When the same fact can come from multiple systems, FairSpot uses the following p
 
 | Fact | Preferred source | Fallback source | Rule |
 | --- | --- | --- | --- |
-| Login permission | Customer IdP | FairSpot-local account for fallback users | SSO users must prove identity through the IdP. Local users prove identity through FairSpot Identity only when explicitly created as fallback accounts. |
+| Login permission | Customer-approved IdP | FairSpot-local account for fallback users | External users must prove identity through the trusted IdP. Local users prove identity through FairSpot Identity only when explicitly created as fallback accounts. |
 | Tenant membership | Trusted issuer mapping or tenant claim | Verified provisioning/admin assignment | Conflicting tenant mappings fail closed. |
 | FairSpot roles | Mapped IdP groups/roles | Tenant admin assignment | Privileged role changes require audit and must be tenant-scoped. |
 | Active/inactive status | IdP/SCIM lifecycle | Tenant admin correction | Inactive users cannot create new requests. Corrections require actor and reason. |
@@ -98,7 +99,7 @@ When the same fact can come from multiple systems, FairSpot uses the following p
 
 ## Local Account Fallback
 
-Local FairSpot accounts are allowed for demo users, small tenants without SSO, break-glass administration, and explicitly approved fallback scenarios. They are not the default customer integration model.
+Local FairSpot accounts are allowed for demo users, small tenants without external IdP integration, break-glass administration, and explicitly approved fallback scenarios. They are not the default customer integration model.
 
 Local-account rules:
 
@@ -134,9 +135,9 @@ Rejected file-import content:
 
 ## Security and Privacy Rules
 
-- SSO users authenticate with the customer IdP. FairSpot must not collect, import, store, log, or proxy the user's company password.
+- External users authenticate with the customer-approved IdP. FairSpot must not collect, import, store, log, or proxy the user's external IdP password.
 - FairSpot-local accounts are fallback accounts. Their credential verifier is **Secret** data and must use hardened password hashing, rotation/reset controls, and audit for administrative changes.
-- Employee/profile data is **Confidential** unless it contains credentials, tokens, client secrets, API keys, or integration keys, which are **Secret**.
+- User/profile data is **Confidential** unless it contains credentials, tokens, client secrets, API keys, or integration keys, which are **Secret**.
 - Integration credentials are Secret and must be stored in the selected secret-management system, never in CSV files, GitHub issues, PRs, logs, screenshots, or documentation examples.
 - Import files are exceptional. They must not contain passwords, tokens, broad HR extracts, or fields that FairSpot does not need. They must be encrypted at rest and deleted or retained according to customer-approved retention policy.
 - Import previews and validation errors must mask Confidential fields where possible.
@@ -175,8 +176,8 @@ Future implementation slices that consume this contract must preserve these cons
 
 | Slice | Purpose | Notes |
 | --- | --- | --- |
-| `CUST002` SSO-First Customer Integration Contract | Define SSO mapping, minimal profile data, classification, local-account fallback, validation, and audit behavior. | This page is the source-of-truth contract for downstream implementation slices. |
-| `P002` Profile Mapping And Minimal Facts | Implement profile mapping for SSO-derived users and the minimum policy facts needed by Booking. | File import is fallback/bootstrap, not the primary company integration. |
+| `CUST002` Customer Identity Integration Contract | Define trusted IdP mapping, minimal profile data, classification, local-account fallback, validation, and audit behavior. | This page is the source-of-truth contract for downstream implementation slices. |
+| `P002` Profile Mapping And Minimal Facts | Implement profile mapping for trusted IdP users and the minimum policy facts needed by Booking. | File import is fallback/bootstrap, not the primary identity integration. |
 | `ID002` User Provisioning Integration | Map IdP subjects, claims, groups, roles, local-account fallback, and deactivation behavior into Identity. | SSO/OIDC first; SCIM optional for lifecycle where available. |
 | `OPS005` Integration Secrets And Observability | Define secret handling, import logs, retry/error evidence, and metrics for integration actors. | Needed before customer-owned production integration. |
 

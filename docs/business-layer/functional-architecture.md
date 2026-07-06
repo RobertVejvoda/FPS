@@ -1,6 +1,6 @@
 ## Overview
 
-FairSpot's functional architecture is designed to ensure equitable allocation of limited workplace resources, starting with parking slots. Employees can request parking, and the system distributes available slots using a daily Draw process. This process prioritizes employees with fewer recent allocations after mandatory policy obligations are handled, increasing their chances of securing a slot. This approach supports fairness and maximizes the utilization of available parking spaces.
+FairSpot's functional architecture is designed to ensure equitable allocation of scarce shared capacity, starting with parking slots. Users can request capacity, and the system distributes available slots using a daily Draw process where the resource domain requires one. The current parking proof path prioritizes employees with fewer recent allocations after mandatory policy obligations are handled, increasing their chances of securing a slot. This approach supports fairness and maximizes utilization.
 
 ## Function Map
 

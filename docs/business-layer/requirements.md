@@ -4,6 +4,8 @@ Many companies have fewer parking spaces than employees who want to use them. Wh
 
 FairSpot replaces manual parking coordination with a transparent, automated allocation process. Employees request parking for specific time slots, the system allocates available capacity using configurable fairness rules, and all affected users receive clear status updates. The customer value is reduced administration, higher employee trust, better parking utilization, and auditable policy enforcement.
 
+Parking is the first proof path, not the only user model. In other resource domains, the requestor may be an employee, member, guest, or external participant. A sports club, for example, may let one authenticated player book one tennis court for up to four people, while the court manager controls availability, eligibility, price or policy rules, and exceptions for that organization.
+
 ## Business Goals
 
 1. **Reduce HR workload**
@@ -100,6 +102,8 @@ FairSpot must keep an audit trail of important business actions, including reque
 ### BR011: Multi-Tenant Customer Model
 
 FairSpot must support multiple customer organizations. Each customer must have isolated data, configurable policies, independent users, and tenant-specific billing or subscription settings where applicable.
+
+Tenant users are not always employees of the customer organization. A tenant may include employees, members, guests, external participants, or public users who authenticate with customer-approved identity providers such as Google, Apple, Microsoft, a club IdP, or a FairSpot-local fallback account. Authentication proves the person; tenant membership, eligibility, role, and booking rights remain tenant-scoped FairSpot/customer-controlled facts.
 
 ### BR012: Scalability and Flexibility
 

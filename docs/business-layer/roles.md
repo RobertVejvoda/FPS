@@ -4,6 +4,10 @@
 
 ## Business Actors
 
+### Participant / Requestor
+
+A participant or requestor creates, views, cancels, or confirms bookings for scarce shared capacity. In the current workplace parking proof path this actor is normally an employee. In other domains it can be a club member, external player, guest, resident, student, or other eligible user scoped to the managing organization.
+
 ### Employee
 
 An employee requests, views, cancels, or confirms parking reservations. Employees are the primary users of FairSpot and represent the largest source of daily business value.

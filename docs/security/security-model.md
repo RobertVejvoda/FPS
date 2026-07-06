@@ -7,7 +7,7 @@ It is an architecture and product control document, not a legal certification. F
 ## Security Principles
 
 - Identity, tenant, user, and role context come from authenticated claims or trusted system context only.
-- Company users authenticate through the customer's identity provider by default; FairSpot does not store company passwords.
+- Customer organization users authenticate through a trusted customer-approved identity provider by default; FairSpot does not store customer or external IdP passwords.
 - Authorization is tenant-scoped and least-privilege by default.
 - Confidential and Secret data must not be exposed in logs, events, GitHub issues, pull requests, telemetry labels, or employee-visible error messages.
 - Services fail closed when required identity, tenant, or role claims are missing.
@@ -52,7 +52,7 @@ It is an architecture and product control document, not a legal certification. F
 | Confidential | Customer, employee, operational, or audit data that could affect privacy, fairness, security, or business operations. | Tenant ID, user ID, roles, employee profile, license plate, booking requests, allocation outcomes, penalties, notifications, support cases, audit records, PII mapping, policy configuration, reporting exports. | Authenticated and authorized access, tenant scoping, encryption in transit and at rest, masking in logs, audit for administrative and sensitive reads/writes. |
 | Secret | Credentials or cryptographic material that can grant access, decrypt data, impersonate users/services, or alter trust boundaries. | Access/refresh tokens, local-account password hashes or credential verifiers, signing keys, OAuth client secrets, API keys, database connection strings, secret-store values, GitHub tokens, private certificates, backup encryption keys, recovery credentials. | Secret manager storage or hardened Identity storage for credential verifiers, no plaintext logs or repository storage, rotation/reset controls, short-lived credentials where possible, dual-control or approval for break-glass, access audit. |
 
-SSO-first company integration is covered by [SSO-First Customer Integration](../business-layer/customer-data-import). External subjects, employee IDs, names, emails, vehicle facts, company-car eligibility, accessibility flags, and role/location mappings are Confidential. Integration credentials, tokens, API keys, and FairSpot-local credential verifiers are Secret.
+Customer identity integration is covered by [Customer Identity Integration](../business-layer/customer-data-import). External subjects, employee/member/customer references, names, emails, vehicle facts, company-car eligibility, accessibility flags, membership facts, and role/location mappings are Confidential. Integration credentials, tokens, API keys, and FairSpot-local credential verifiers are Secret.
 
 ## Data Layer
 
@@ -89,7 +89,7 @@ Data at rest:
 | Boundary | Protocol | Encryption/authentication requirement |
 | --- | --- | --- |
 | End user to FairSpot | HTTPS; OIDC Authorization Code + PKCE for mobile/web login. | TLS 1.2+; JWT validation by services; mobile app stores no client secret. |
-| Customer IdP to FairSpot | OIDC federation for normal company login. | Trusted issuer configuration, redirect URI validation, signed token validation, tenant mapping, and no storage of company passwords in FairSpot. |
+| Customer IdP to FairSpot | OIDC federation for normal customer organization login. | Trusted issuer configuration, redirect URI validation, signed token validation, tenant mapping, and no storage of customer or external IdP passwords in FairSpot. |
 | API gateway routing | HTTP(S) behind a selected ingress/API gateway. | TLS at the edge; internal service endpoints remain protected and tenant-aware. The concrete gateway is selected by the deployment profile. |
 | Service invocation | Dapr service invocation or HTTPS. | Dapr mTLS/Sentry for service identity; propagate user context only when the downstream service needs user-scoped authorization. |
 | Pub/sub | Dapr pub/sub over the selected broker/provider protocol. | TLS and authenticated broker access in production; event contracts exclude Secret data. |

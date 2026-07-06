@@ -11,7 +11,7 @@
 | **Last Reviewed** | 2026-05-31 |
 | **Next Review** | Before customer architecture review |
 
-FairSpot business architecture describes the shared-resource fair allocation operating model, with parking as the first proof module. The target business state is a transparent, auditable booking and Draw process that reduces HR/facilities coordination work while keeping employees informed.
+FairSpot business architecture describes the scarce shared-capacity fair allocation operating model, with parking as the first proof module. The target business state is a transparent, auditable booking and Draw process that reduces operator coordination work while keeping users informed.
 
 ## Migration Status
 

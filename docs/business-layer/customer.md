@@ -2,7 +2,7 @@
 
 [Customer module](../application-layer/customer) is designed to manage customer and tenant setup within FairSpot. It encompasses customer entities, tenant lifecycle, user roles and permissions, data privacy and security, and support-facing information. Billing is deferred until the commercial model is approved.
 
-Customer employee onboarding and internal company-system integration are planned separately in [Tenant Onboarding](./tenant-onboarding) and [SSO-First Customer Integration](./customer-data-import). Tenant Onboarding defines how a new company is created, configured, checked, and made ready for employees. SSO-First Customer Integration defines the identity/profile data contract for SSO, local fallback accounts, imports, data classification, validation rules, and downstream implementation slices.
+Customer user onboarding and identity integration are planned separately in [Tenant Onboarding](./tenant-onboarding) and [Customer Identity Integration](./customer-data-import). Tenant Onboarding defines how a new customer organization is created, configured, checked, and made ready for users. Customer Identity Integration defines the identity/profile data contract for customer-approved IdPs, local fallback accounts, imports, data classification, validation rules, and downstream implementation slices.
 
 | User Story | Title |
 |------------|-------|
@@ -18,7 +18,7 @@ Customer employee onboarding and internal company-system integration are planned
 | [US510](#us510-support-or-service-subscription) | Support Or Service Subscription |
 
 ### US501: Define Customer
-**Description**: As a system architect, I want to define a customer as a company using FairSpot services, ensuring data isolation for privacy and compliance.
+**Description**: As a system architect, I want to define a customer as the organization using FairSpot services, ensuring data isolation for privacy and compliance.
 **Acceptance Criteria**:
 - Customer data is isolated.
 - Tailored services and personalized experiences are provided.
