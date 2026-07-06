@@ -13,9 +13,9 @@ The target is not full client-owned enterprise production yet. The target is a c
 | Edge protection | Cloudflare DNS proxy, TLS, WAF custom rules, managed rules where plan permits, rate limiting where plan permits, DDoS protection, and Cloudflare Access for operator-only surfaces. |
 | Origin hardening | No direct public access to internal services, Dapr sidecars, metrics, Swagger/OpenAPI, database, broker, MinIO, or Keycloak admin. |
 | Identity | Real OIDC URLs and redirect URIs for the public domain; tenant/user/role claims remain the source of truth. |
-| Persistence | No customer data in evaluation-grade in-memory stores. Booking, Profile, Configuration, Notification, Audit, and Reporting must use tenant-scoped persistent storage or an explicitly approved pilot limitation. |
+| Persistence | No customer data in evaluation-grade in-memory stores. Booking, Profile, Configuration, Notification, Audit, Customer, and DataHub must use tenant-scoped persistent storage; legacy Reporting compatibility paths need hosted evidence or an explicitly approved pilot limitation. |
 | Evidence | A repeatable smoke test proves login, booking request, Draw, notifications, audit, reporting, HR/admin operations, backup/restore, and log review. |
-| Mobile | Use hosted API/OIDC config and internal distribution first. App Store / Google Play submission comes after the hosted web/API path is stable. |
+| Mobile | Customer launch defaults to store-ready mobile distribution with hosted API/OIDC config. Internal builds, TestFlight, or Play internal testing are validation paths or explicit waiver paths, not the normal customer-facing release target. |
 
 ## What Is Implemented
 
@@ -37,12 +37,12 @@ The target is not full client-owned enterprise production yet. The target is a c
 | P0 | NAS + Cloudflare deployment profile is missing. | There is no repeatable public-domain setup for the current NAS-hosted path. | `docs/production/hosting-deployment-strategy.md`, Cloudflare Tunnel docs. |
 | P0 | WAF/rate-limit/origin-hardening policy is missing. | Public domain exposure without edge controls leaves login, API, and internal paths too easy to probe. | `docs/security/gap-register.md`, Cloudflare WAF docs. |
 | P0 | Public-domain auth and gateway configuration are missing. | Keycloak/OIDC issuer, redirect URIs, CORS, secure cookies, and Envoy routes must use the real domain, not localhost assumptions. | `docs/production/client-production-handoff.md`. |
-| P0 | Persistent tenant-scoped stores are incomplete. | Tenant storage contract marks Booking key gaps and in-memory repositories as production-blocking. | `docs/production/tenant-storage-contract.md`. |
+| P0 | Persistent-store hosted evidence is incomplete. | Customer-facing pilots need proof that the tenant-scoped stores, backup/restore path, and DataHub projections work under the selected hosted profile. Reporting compatibility paths remain transitional unless explicitly waived. | `docs/production/tenant-storage-contract.md`, `docs/production/backup-restore.md`. |
 | P0 | Hosted smoke/readiness evidence is missing. | We need proof that the real public URL works end-to-end after deployment and after reset. | `docs/production/demo-environment-baseline.md`, `docs/production/tenant-onboarding-smoke.md`. |
 | P1 | HR and Administrator role views are not merged. | First customers need clear role-specific defaults, Draw operation visibility, and support cancellation workflow. | Issues #310 and #311. |
 | P1 | Tenant onboarding remains partly evaluation-grade. | IdP mapping, first-admin path, tenant object storage, branding, and admin setup are not complete. | `docs/production/tenant-onboarding-smoke.md`. |
 | P1 | Retention jobs and privacy durable-store evidence remain incomplete. | Customer pilot with personal data needs retention and GDPR evidence or explicit approval to limit data scope. | `docs/security/gap-register.md`, `docs/security/security-review-pack.md`. |
-| P2 | Store-ready mobile release process is not prepared. | App Store / Google Play require signing, account verification, metadata, privacy/data-safety disclosures, and review evidence. | Apple Developer and Google Play Console docs. |
+| P0 | Store-ready mobile release evidence is not complete. | Customer launch normally requires signed builds, account verification, metadata, privacy/data-safety disclosures, review evidence, and a documented waiver if internal distribution is used for a pilot. | Apple Developer and Google Play Console docs. |
 
 ## Cloudflare Setup Direction
 
@@ -76,19 +76,19 @@ Cloudflare official references used for this direction:
 
 ## Mobile Store Direction
 
-For first customer deployment, do not make App Store / Google Play publication the critical path. Use the hosted domain with:
+For first customer deployment, treat App Store / Google Play readiness as part of the launch gate unless Robert approves a named pilot waiver. Use the hosted domain with:
 
-- responsive web for customer validation where possible;
-- Expo/internal native builds for mobile validation;
-- TestFlight for iOS beta once the Apple Developer Program account exists;
-- Google Play internal or closed testing once the Play Console account exists.
+- responsive web for customer validation where it is sufficient for the workflow;
+- signed native builds pointed at hosted API/OIDC configuration;
+- TestFlight for iOS beta and review preparation once the Apple Developer Program account exists;
+- Google Play internal or closed testing and review preparation once the Play Console account exists.
 
-Store submission becomes a later P2 release gate after backend domain, auth, privacy, and support flows are stable.
+Internal distribution is acceptable for smoke, stakeholder validation, or a deliberately bounded pilot waiver. It is not the default customer-facing release path.
 
-Current official constraints:
+Store account constraints to verify before launch:
 
-- Apple Developer Program membership is listed by Apple as USD 99 per year and includes TestFlight and App Store distribution. TestFlight supports inviting up to 10,000 external testers.
-- Google Play Console setup includes a one-time USD 25 registration fee, developer identity verification, account type selection, and, for some personal-account paths, testing requirements before production availability.
+- Apple Developer Program membership is required for TestFlight and App Store distribution. Verify the current membership fee, account role, agreement, and tester/review limits in Apple's official docs before committing launch dates.
+- Google Play Console setup requires developer account registration, identity verification, account type selection, and may impose testing requirements before production availability. Verify the current fee and account-specific requirements in Google's official docs before committing launch dates.
 
 Official references:
 
@@ -112,7 +112,7 @@ These are ordered for customer-first deployability, not long-term enterprise com
 | P1 | #310 HR operations workspace | Claude | HR default view, Draw visibility/action, request cancellation with notification. |
 | P1 | #311 Administrator default workspace | Claude | Admin landing surface for tenant readiness, configuration, identity/onboarding evidence, and smoke status. |
 | P1 | `CUST011` Tenant onboarding hardening for first customer (#319) | Claude | IdP mapping, first admin, object storage readiness, branding, and admin setup gaps resolved or explicitly deferred. |
-| P2 | `MOB010` Mobile hosted build and store-readiness plan (#318) | Claude | EAS/internal distribution config, TestFlight/Play internal testing plan, store metadata/privacy checklist. |
+| P0 | `MOB010` Mobile hosted build and store-readiness plan (#318) | Claude | EAS/internal distribution config, TestFlight/Play internal testing plan, store metadata/privacy checklist, and explicit waiver wording for any pilot that does not use public store distribution. |
 
 ## Acceptance Gate
 

@@ -1,6 +1,6 @@
 # OPS000 Deployment Profile Strategy
 
-> **Private-later (#670):** hosted-platform-operator runbook — planned to move to the private `fairspot-platform` repository. This slice only classifies it; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks the public summary/replacement that will accompany the move. Nothing is moved or deleted here.
+> **Public contract (#670/#684):** provider-neutral deployment strategy stays public. Hosted-operator procedures, environment values, evidence captures, and account-specific runbooks belong in the private `fairspot-platform` repository; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks that split.
 
 **Status:** Baseline merged; Release 1 uses NAS/Cloudflare and the FairSpot-operated cloud-hosted follow-up target is DigitalOcean.
 

@@ -65,14 +65,14 @@ Release 1 should validate what is already merged, not wait for every planned cus
 
 ## Current Priority
 
-The current next product phase is **Customer-Ready Hosted Evaluation**. The product story is coherent enough to explain, but the hosted pilot is not ready for real customer data until persistence, DataHub, role-specific UI, and hosted operations evidence are closed.
+The current next product phase is **Customer-Ready Hosted Evaluation**. The product story is coherent enough to explain, and the main persistence/DataHub slices have landed. The hosted pilot is still not ready for real customer data until hosted operations evidence, role-specific UX validation, Reporting/DataHub read-path reconciliation, and accepted residual risks are closed.
 
 In TOGAF terms, the roadmap is the business-readable companion to [Transition Architectures](./architecture/architecture-states/transition-architectures). This page explains the sequence; the architecture state pages own gaps, work package groups, and validation gates.
 
 | Slice | Goal | TOGAF Placement | Notes |
 | --- | --- | --- | --- |
-| Customer durable tenant state | Make tenant onboarding/readiness state survive restart and hosted deployment changes. | Phase C/E/F | Closes `GAP-001`; implementation issue #317. |
-| DataHub first projections | Build event-fed read models for customer-facing reports, HR/admin views, and readiness summaries. | Phase C/E/F | Starts with #332, then #335/#334. |
+| Customer durable tenant state | Tenant onboarding/readiness state survives restart and hosted deployment changes. | Phase C/E/F | Implemented through the Customer durable storage and PERSIST slices; keep restore evidence in Release 1 validation. |
+| DataHub first projections | Event-fed read models for booking outcomes, draw health, usage, and readiness summaries. | Phase C/E/F | Initial DataHub projections and rebuild evidence are merged; remaining work is read-path reconciliation and role-safe output validation. |
 | Hosted public-domain evidence | Prove NAS/Cloudflare/WAF/auth/smoke/reset behavior before real customer data. | Phase D/G | Issues #316, #315, #314, and Dapr hardening #378. |
 | Role-centered UX validation | Validate Employee, HR/facility, tenant admin, system admin, auditor, and sponsor default views. | Phase B/C/G | Draw schedule #340 is merged; Draw progress #339, HR operations #310, and UX follow-ups remain. |
 | Contract evidence consolidation | Make API/event/generated client evidence discoverable from Information Systems Architecture. | Phase C/G | Issue #377. |

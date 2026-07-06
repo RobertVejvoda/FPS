@@ -15,7 +15,7 @@ FairSpot is licensed as open-source software under **AGPL-3.0-or-later**. The du
 
 ## Open Core And The Platform Plane
 
-FairSpot is **open core**: the public `fairspot` repository (this one) stays AGPL and contains the runtime, the fairness/Draw engine, tenant self-administration, and all customer-facing and architectural documentation. The **commercial line is the platform plane** — the hosted operator product (cross-tenant operations, platform console, hosted-deployment runbooks, onboarding-queue internals, usage metering) planned for a separate, private `fairspot-platform` repository (open/private split #660, platform epic #633, licensing decision #642).
+FairSpot is **open core**: the public `fairspot` repository (this one) stays AGPL and contains the runtime, the fairness/Draw engine, tenant self-administration, and all customer-facing and architectural documentation. The **commercial line is the platform plane** — the hosted operator product (cross-tenant operations, platform console, hosted-deployment runbooks, onboarding-queue internals, usage metering) in the separate private `fairspot-platform` repository (open/private split #660, platform epic #633, licensing decision #642).
 
 This means: the AGPL obligations above apply to the open core; the private platform plane and any dual-license offer are separate commercial decisions, **TBD with legal**, and must not be implied as already part of the public deliverable. Which documentation is public versus private is classified in the [Open-Core Documentation Boundary](./open-core-boundary), and the funnel/hosting model is in [Evaluation & Onboarding](./evaluation-and-onboarding).
 
