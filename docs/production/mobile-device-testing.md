@@ -2,6 +2,8 @@
 
 This plan defines when and how to test the FairSpot mobile app on a real device, simulator, or emulator. It separates the current developer smoke path from the pilot-grade test path needed after the remaining mobile polish slices.
 
+Device, simulator, and beta (TestFlight / Play internal) testing here are **validation steps** toward the customer-launch distribution model, which is the public App Store / Google Play app. Mobile ships with the customer launch path unless Robert explicitly approves a waiver — see the launch-parity gate in [hosted-mobile-build-plan.md](./hosted-mobile-build-plan.md).
+
 ## When To Test
 
 | Moment | Purpose | Expected depth |
