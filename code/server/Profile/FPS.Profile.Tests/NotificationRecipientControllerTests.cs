@@ -15,9 +15,11 @@ public sealed class NotificationRecipientControllerTests
 {
     private readonly Mock<IProfileRepository> repository = new();
     private readonly InMemoryEmailVerificationRepository verifications = new();
+    private readonly InMemoryAccountActivationRepository activations = new();
     private readonly NotificationRecipientController controller;
 
-    public NotificationRecipientControllerTests() => controller = new NotificationRecipientController(repository.Object, verifications);
+    public NotificationRecipientControllerTests() =>
+        controller = new NotificationRecipientController(repository.Object, verifications, activations);
 
     private static UserProfile Profile(
         string? notificationAddress = "jan.novak@greenlogistics.example",
@@ -112,6 +114,51 @@ public sealed class NotificationRecipientControllerTests
         };
         v.MarkVerified(DateTimeOffset.UtcNow);
         await verifications.SaveAsync(v);
+    }
+
+    [Fact]
+    public async Task Resolve_UntrustedSourceButActivated_ReturnsEmail()
+    {
+        // AUTH009 (#738) — an onboarding-verified identity email is trusted when it exactly matches the
+        // notification address, even from an untrusted provisioning source.
+        repository.Setup(r => r.GetAsync("tenant-1", "user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Profile(factSource: "self-registered"));
+        await SeedActivated("jan.novak@greenlogistics.example");
+
+        var result = await ResolveAsync();
+
+        Assert.True(result.Resolved);
+        Assert.Equal("jan.novak@greenlogistics.example", result.Email);
+    }
+
+    [Fact]
+    public async Task Resolve_ActivatedForDifferentAddress_FailsClosed()
+    {
+        // A later different notification address drops AUTH009 trust — AUTH008B verification applies again.
+        repository.Setup(r => r.GetAsync("tenant-1", "user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Profile(notificationAddress: "changed@greenlogistics.example", factSource: "self-registered"));
+        await SeedActivated("jan.novak@greenlogistics.example");
+
+        var result = await ResolveAsync();
+
+        Assert.False(result.Resolved);
+        Assert.Equal("email_unverified_source", result.Reason);
+    }
+
+    private async Task SeedActivated(string identityEmail)
+    {
+        var activation = new AccountActivation
+        {
+            TenantId = "tenant-1",
+            UserId = "user-1",
+            ChallengeId = "challenge-1",
+            IdentityEmail = identityEmail.ToLowerInvariant(),
+            TokenHash = "hash",
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        activation.MarkActivated(DateTimeOffset.UtcNow);
+        await activations.SaveAsync(activation);
     }
 
     [Fact]
