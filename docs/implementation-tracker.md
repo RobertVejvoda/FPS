@@ -182,4 +182,4 @@ These are tracker maintenance tasks, not ordered delivery slices.
 
 | Idea | Status | Note |
 | --- | --- | --- |
-| Additional resource modules | Future | Sequence seats, sport courts, desks, lockers, chargers, and similar bookable resources through the shared-resource model after the parking proof path is stable enough. Reuse tenant-scoped resources, policy-driven allocation, notifications, audit, reporting, and admin configuration where practical, but define resource-specific rules before implementation. |
+| Additional resource modules | Future | Sequence seats, sport courts, desks, lockers, chargers, and similar bookable resources through the shared-resource model. Parking remains the first proof path; additional modules reuse tenant-scoped resources, policy-driven allocation, notifications, audit, reporting, and admin configuration where practical, but define resource-specific rules before implementation. |

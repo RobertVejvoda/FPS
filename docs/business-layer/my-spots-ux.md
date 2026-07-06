@@ -23,7 +23,7 @@ Use business language on employee screens.
 
 Never show raw user IDs, tenant IDs, GUIDs, API URLs, object-storage paths, or technical claims on employee screens. Admin and operations documentation may still use tenant terminology where it is technically precise.
 
-The main employee area is **My Spots**. It is intentionally generic so the same product model can later support parking, seats, desks, lockers, chargers, or other limited workplace resources.
+The main employee area is **My Spots**. It is intentionally generic so the same product model can support parking, seats, sport courts, desks, lockers, chargers, or other bookable limited workplace resources.
 
 ## Information Architecture
 

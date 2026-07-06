@@ -55,7 +55,7 @@ Customers must be able to configure parking rules for their organization, includ
 
 ### BR003A: Resource Map and Zone Preferences
 
-Customers should be able to upload or maintain a map of allocatable resources, such as parking spaces, desks, chairs, seats, lockers, or chargers. The map should support zones so the allocation process can prefer an employee's requested zone or team default area before falling back to another suitable resource when preferred capacity is unavailable.
+Customers should be able to upload or maintain a map of allocatable resources, such as parking spaces, seats, sport courts, desks, lockers, chargers, or similar bookable limited resources. The map should support zones so the allocation process can prefer an employee's requested zone or team default area before falling back to another suitable resource when preferred capacity is unavailable.
 
 Rules:
 

@@ -4,7 +4,7 @@ This page defines how FairSpot should be demonstrated to business stakeholders, 
 
 ## Demo Goal
 
-The demo should prove that FairSpot is more than a booking form. It should show fair access to limited workplace resources, currently parking. Future resources such as workplace desks, chairs, seats, lockers, or chargers may reuse the same tenant, policy, notification, audit, and reporting foundations after parking v1 is stable.
+The demo should prove that FairSpot is more than a booking form. It should show fair access to limited workplace resources, with parking as the first concrete proof path. Seats, sport courts, desks, lockers, chargers, and similar bookable resources are part of the same product model and should reuse the same tenant, policy, notification, audit, and reporting foundations with resource-specific rules where needed.
 
 ## Demo Roles
 
@@ -90,7 +90,7 @@ The first version of these materials is collected in the [Client Evaluation Pack
 
 | Material | Audience | Purpose |
 | --- | --- | --- |
-| One-page product summary | Sponsor, business evaluator | Explain problem, value, and parking v1 scope. |
+| One-page product summary | Sponsor, business evaluator | Explain the customer need, product value, and parking-led proof scope. |
 | Role-based demo script | Demo facilitator | Keep employee, HR, auditor, and operator demos consistent. |
 | Architecture overview | Architect, client IT | Show ArchiMate-style layers, Dapr boundaries, services, and data/security controls. |
 | Deployment and operations summary | Client IT, operator | Explain local/demo/client-owned production options and pluggable components. |

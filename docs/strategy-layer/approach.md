@@ -1,6 +1,6 @@
 # Goals And Approach
 
-FairSpot should prove one narrow product story before expanding: a company with scarce parking can replace manual coordination with a transparent request and Draw process that employees, HR/facilities, administrators, and client IT can understand.
+FairSpot should prove the shared-resource product story through one concrete first module: a company with scarce parking can replace manual coordination with a transparent request and Draw process that employees, HR/facilities, administrators, and client IT can understand.
 
 This page is product-facing. Architecture constraints and target-state detail are maintained in [Architecture Vision](../architecture/architecture-vision), [Target Architecture](../architecture/architecture-states/target-architecture), and [Transition Architectures](../architecture/architecture-states/transition-architectures).
 
@@ -18,7 +18,7 @@ This page is product-facing. Architecture constraints and target-state detail ar
 
 - Parking stays the first product module until demo and hosted-pilot evidence are credible.
 - Employee trust, HR/facility usefulness, tenant administration, and client IT reviewability are all part of product readiness.
-- Future workplace resources reuse the same allocation model only after parking v1 is stable.
+- Seats, sport courts, desks, lockers, chargers, and similar resources belong to the same product model; parking remains the first proof path and resource-specific rules are added when each module is implemented.
 - Billing is not a prerequisite for customer evaluation.
 - Commercial services should reduce adoption effort without hiding fairness, audit, tenant operation, or privacy behind paid-only features.
 

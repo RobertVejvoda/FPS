@@ -175,7 +175,7 @@ Notification history/SSE/email and audit query/PII erasure are implemented. Pref
 
 **13. Card reader / physical confirmation integration** — no vendor or protocol specified. Leave as a stub interface.
 
-**14. Seat booking as a future product extension** — after FairSpot parking reaches a stable hosted v1, the same allocation and booking platform approach could be applied to company seat/desk booking. Treat this as future scope, not v1 parking scope. It would reuse the concepts of tenant-scoped resources, employee requests, policy-driven allocation, notification, audit, reporting, and admin configuration, but would need separate business rules for seats, zones, teams, recurring occupancy, collaboration needs, health/safety constraints, and workspace-specific fairness.
+**14. Additional resource modules** — FairSpot is a shared-resource allocation and booking platform, with parking as the first proof module rather than the whole product. Seats, sport courts, desks, lockers, chargers, and similar bookable resources should reuse tenant-scoped resources, employee requests, policy-driven allocation, notification, audit, reporting, and admin configuration, with separate rules for each resource domain before implementation.
 
 ---
 

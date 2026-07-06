@@ -103,7 +103,7 @@ FairSpot must not allocate a request to a slot that does not satisfy the request
 
 Customers should be able to upload or maintain a tenant-scoped resource map for each location.
 
-For parking, the map represents spaces, sections, and capacity pools. Future resource modules can reuse the same concept for desks, chairs, seats, lockers, chargers, or other limited resources.
+For parking, the map represents spaces, sections, and capacity pools. The same concept should also support seats, sport courts, desks, lockers, chargers, or other bookable limited resources through resource-specific rules.
 
 Rules:
 
