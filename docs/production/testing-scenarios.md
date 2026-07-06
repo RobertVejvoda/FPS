@@ -45,11 +45,11 @@ These scenarios prove that the hosted environment can run FairSpot safely. They 
 
 ## Email Notification Staging Validation
 
-Run these before enabling a production email provider. The in-memory stub always returns success, so these steps require a real or mocked SendGrid Dapr binding.
+Run these before enabling a production email provider. The in-memory sender always returns success, so these steps require a configured SendGrid HTTP transport or a controlled mock of that transport. The retained `notification-email` Dapr binding is compatibility scaffolding only; it is not the active send path.
 
 | Step | How to validate |
 | --- | --- |
-| Provider sends a real email | Configure the Dapr output binding with staging credentials. Trigger a `booking.slotAllocated` event and confirm delivery to a test inbox. |
+| Provider sends a real email | Configure `Notification__Email__Provider=SendGrid`, a verified From address, and the SendGrid API key in the active secret store. Trigger a `booking.slotAllocated` event and confirm delivery to a test inbox. |
 | Failure is logged with safe fields | Take the provider offline or force a timeout. Inspect structured logs and confirm fields present: `TenantId`, `NotificationType`, `SourceEventId`, `Channel`, `FailureCategory`. Recipient identifiers and email addresses must not be logged. |
 | No secrets in failure log | Verify logs contain no SMTP credentials, access tokens, raw exception stack traces, or email-provider payload internals. `FailureCategory` should be `provider_unavailable` or `delivery_rejected`, not a raw provider error. |
 | In-app notification unaffected | With provider offline, confirm `in-app` record is saved with `stored` status; email record is saved with `failed` status and non-empty `FailureReason`. Neither record leaks secrets. |

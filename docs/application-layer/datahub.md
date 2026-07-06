@@ -1,8 +1,8 @@
 # DataHub Application
 
-DataHub is the proposed FairSpot application component for cross-service read models and query data. It is not a command-side service and must not own operational business state.
+DataHub is the FairSpot application component for cross-service read models and query data. It is not a command-side service and must not own operational business state.
 
-The working name is **DataHub**. It may be renamed before implementation if a better product-neutral name is approved.
+The accepted working name is **DataHub**. A later rename would require an explicit product/architecture decision because implementation, docs, and issue history now use this name.
 
 ## Purpose
 
@@ -354,7 +354,7 @@ DataHub health must not expose raw event payloads, secrets, employee-private det
 
 ## Migration From Reporting
 
-The current Reporting service is a legacy transitional component. It may continue serving existing report endpoints while DataHub is designed and implemented.
+The current Reporting service is a legacy transitional component. It may continue serving existing report endpoints while DataHub projections are expanded and adopted by report surfaces.
 
 Target direction:
 
@@ -368,7 +368,7 @@ Do not build new durable PostgreSQL persistence inside Reporting. New read-model
 
 ## Event Storming Needed
 
-Before implementation, run a lightweight event-storming pass for DataHub.
+Before adding a new DataHub projection family, run a lightweight event-storming pass.
 
 Minimum output:
 

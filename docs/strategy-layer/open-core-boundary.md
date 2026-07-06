@@ -9,7 +9,7 @@
 FairSpot follows an open-core split (the Dapr / Diagrid pattern — see [Evaluation & Onboarding §1](./evaluation-and-onboarding)):
 
 - **Public `fairspot` (AGPL):** the runtime + fairness engine + tenant self-administration, together with all customer-facing and architectural documentation. Anyone can self-host a single organisation and inspect how allocation works.
-- **Private `fairspot-platform` (commercial, later):** the hosted operator product — cross-tenant operations, the platform console, hosted-deployment runbooks, sales/onboarding queue internals, cost/usage metering, and sensitive operating procedures.
+- **Private `fairspot-platform` (commercial/platform plane):** the hosted operator product — cross-tenant operations, the platform console, hosted-deployment runbooks, sales/onboarding queue internals, cost/usage metering, and sensitive operating procedures.
 
 **The commercial line is the platform plane, not the fairness engine.** The open core stays good enough to evaluate and run a normal tenant; see [Commercialisation → Free and open-core boundary](./commercialisation) and [Licensing](./licensing).
 
@@ -56,7 +56,7 @@ The **Public summary / replacement** column records the public destination for e
 
 ## Shared packages (private-platform consumption)
 
-The open core exposes a small, explicit set of packages the future private `fairspot-platform` repo can consume **without linking to FairSpot internals** (#673, PLAT009A):
+The open core exposes a small, explicit set of packages the private `fairspot-platform` repo can consume **without linking to FairSpot internals** (#673, PLAT009A):
 
 | Package | Location | Surface | Consumed how |
 |---|---|---|---|
@@ -64,7 +64,7 @@ The open core exposes a small, explicit set of packages the future private `fair
 | `@robertvejvoda/fairspot-api-client` (npm) | `code/clients/typescript` | Generated TS API types for the **customer/tenant** services only (identity, booking, profile, notification, customer) — **no** platform-plane endpoints | In-repo via `file:` dep + Vite alias / tsconfig path; private repos via GitHub Packages; pack validated with `npm pack --dry-run` |
 | `@robertvejvoda/fairspot-ui` (npm) | `code/clients/ui` | Neutral, presentational UI primitives (e.g. `StatusBadge`) — **no** operator-console UI | Same `file:`-dep pattern as `@robertvejvoda/fairspot-api-client`; private repos via GitHub Packages; `npm pack --dry-run` validated |
 
-Validation is wired into [`publish-packages.yml`](https://github.com/RobertVejvoda/fairspot/blob/master/.github/workflows/publish-packages.yml): PRs dry-run-pack the shared surfaces, and manual `workflow_dispatch` can publish to GitHub Packages when `dry_run` is false. **A future private repo references these by package, never by reaching into `code/` internals** — that boundary is the point of this slice.
+Validation is wired into [`publish-packages.yml`](https://github.com/RobertVejvoda/fairspot/blob/master/.github/workflows/publish-packages.yml): PRs dry-run-pack the shared surfaces, and manual `workflow_dispatch` can publish to GitHub Packages when `dry_run` is false. **The private platform repo references these by package, never by reaching into `code/` internals** — that boundary is the point of this slice.
 
 ## How to apply (for contributors)
 

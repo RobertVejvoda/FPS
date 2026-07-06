@@ -192,13 +192,13 @@ The following gaps must be resolved before the first external customer is allowe
 |---|---|---|---|
 | 1 | WAF custom rules active and verified from external IP | SEC010 #315 | ⏳ Not started |
 | 2 | Public-domain OIDC realm configuration (Frontend URL, redirect URIs, CORS) | OPS012 #316 | ⏳ Not started |
-| 3 | Persistent tenant-scoped storage for in-memory services | DATA010 #317 | ⏳ Not started |
-| 4 | Vault in server mode (not dev mode) with persistent volume | — | ⏳ Not started |
+| 3 | Persistent tenant-scoped storage and DataHub projection baseline | DATA010/PERSIST #317 | ✅ Implemented baseline; hosted restore/projection evidence pending |
+| 4 | Vault in server mode (not dev mode) with persistent volume | OPS018 #618 / #630 | ✅ Implemented for NAS profile; operator evidence pending |
 | 5 | Public-domain smoke evidence (TLS, WAF, OIDC at `https://app.<domain>`) | OPS013 #314 | ⏳ Pending tunnel/domain |
 | 6 | Hosted Dapr mTLS/service-identity evidence | — | ⏳ Not started |
 | 7 | NAS/store/backup encryption-at-rest evidence | — | ⏳ Not started |
 
-Items 1–4, 6, and 7 are prerequisites for item 5. The localhost smoke in this document satisfies the API-level evidence only.
+The unresolved infrastructure gates plus environment-specific evidence for implemented storage/secret-management gates are prerequisites for item 5. The localhost smoke in this document satisfies the API-level evidence only.
 
 ---
 

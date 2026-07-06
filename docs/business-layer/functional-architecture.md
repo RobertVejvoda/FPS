@@ -10,16 +10,14 @@ Validation note: [Function Map Validation](../function-map-validation)
 
 ### [Identity](./identity)
 
-  - **User Authentication**: Provides secure login mechanisms including username/password and multi-factor authentication.
-  - **Password Management**: Allows users to reset and change passwords securely.
+  - **User Authentication**: Provides secure login through the configured OIDC/OAuth provider, including company SSO and FairSpot-local account paths.
+  - **Password Management**: Delegates password reset and change flows to the enforcing identity provider.
   - **Session Management**: Manages user sessions to ensure security and prevent unauthorized access.
   - **Single Sign-On (SSO)**: Supports SSO for seamless access across multiple systems.
   - **Account Lockout**: Implements account lockout policies to protect against brute force attacks.
   - **Login Activity Monitoring**: Tracks and logs login activities for security auditing.
-  - **Captcha Integration**: Integrates captcha to prevent automated login attempts.
-  - **Social Media Login**: Supports login via social media accounts for user convenience.
-  - **Two-Factor Authentication (2FA)**: Provides an additional layer of security through 2FA.
-  - **Biometric Authentication**: Supports biometric authentication methods such as fingerprint and facial recognition.
+  - **Abuse Protection**: Uses IdP and edge controls such as rate limiting, account lockout, and optional challenge policies.
+  - **MFA and Passkeys**: Relies on the enforcing identity provider for MFA, passkeys/WebAuthn, recovery codes, and role-based factor policy. FairSpot does not implement custom MFA code.
 
 ### [Profile](./profile)
 
@@ -27,8 +25,8 @@ Validation note: [Function Map Validation](../function-map-validation)
 - **View Booking History**: Enables users to view their past booking history for tracking reservations.
 - **Provide Vehicle Information**: Allows users to add and update their vehicle information.
 - **Manage Active Sessions**: Enables users to manage their active sessions for account security.
-- **Enable Multi-factor Authentication**: Provides users with the option to enable multi-factor authentication for enhanced security.
-- **View Login History**: Allows users to view their login history to monitor account access.
+- **View Account Security State**: Shows account/security context that FairSpot can safely obtain from the active identity provider.
+- **View Login History**: Allows users or administrators to inspect available login/security evidence where the IdP exposes it.
 - **Access Customer Support**: Provides users with access to customer support for assistance with issues.
 - **Receive Notifications**: Ensures users receive notifications for important events.
 - **Provide Feedback**: Allows users to provide feedback to help improve the service.
@@ -78,35 +76,24 @@ Validation note: [Function Map Validation](../function-map-validation)
 
 ### [Reporting](./reporting)
 
-  - **Real-time Occupancy Reports**: Provides current status of parking space occupancy, displaying available and occupied spaces in real-time.
-  - **Historical Usage Reports**: Tracks historical data on parking space usage, generating reports for specific time periods to analyze trends.
-  - **Revenue Reports**: Summarizes revenue generated from parking fees, breaking down revenue by day, week, month, or custom date ranges.
-  - **Violation Reports**: Logs parking violations and fines issued, providing detailed reports on types and frequency of violations.
-  - **User Activity Reports**: Monitors user activity within the parking system, reporting on user registrations, logins, and parking sessions.
-  - **Maintenance Reports**: Generates reports on maintenance activities and schedules, including data on scheduled and completed tasks.
-  - **Customer Feedback Reports**: Collects and generates reports on customer feedback and satisfaction, including ratings and comments.
-  - **Requests History Reports**: Generates reports on the history of requests with various filters, including date, user, and license plate.
-  - **User Request vs. Assignment Reports**: Generates graphical reports comparing user requests and assignments, including a graph comparing the number of requests and assignments per user.
-  - **Most Active User Reports**: Generates reports on the most active users based on requests and assignments, including data on the number of requests and assignments per user.
-  - **Least Active User Reports**: Generates reports on the least active users based on requests and assignments, including data on the number of requests and assignments per user.
-  - **Parking Slot Utilization Reports**: Generates reports on parking slot utilization with various filters, including data on occupancy rates and usage patterns.
-  - **System Error Logs and Incident Reports**: Generates reports on system error logs and incidents, including details on error types and resolutions.
-  - **User Login History and Active Sessions Reports**: Generates reports on user login history and active sessions, including data on login times and session durations.
-  - **Two-Factor Authentication Usage Reports**: Generates reports on two-factor authentication usage statistics, including data on authentication attempts and success rates.
-  - **Third-Party Integration Usage Reports**: Generates reports on third-party integration usage and performance, including data on integration usage and performance metrics.
-  - **System Backup and Recovery Reports**: Generates reports on system backup and recovery operations, including details on backup and recovery activities.
-  - **User Account Deletion Requests Reports**: Generates reports on user account deletion requests and their status, including data on deletion request statuses and processing times.
+  - **Allocation Outcome Reports**: Shows request, allocation, rejection, cancellation, and reallocation outcomes without exposing hidden Draw internals or other employees' private data.
+  - **Fairness Evidence Reports**: Compares request and assignment patterns, reason codes, and allocation history needed to explain the Draw outcome safely.
+  - **Utilization Reports**: Summarizes shared-capacity usage by tenant, location, zone, slot/resource type, and time window.
+  - **Operational History Reports**: Supports administrator/HR review of request history and policy-relevant events with tenant-safe filters.
+  - **Projection Status Reports**: Shows read-model freshness, event processing status, and projection lag where supported.
+  - **Privacy and Erasure Evidence**: Reports the status of account deletion or erasure requests without exposing raw PII in general reporting surfaces.
+  - **Export Evidence**: Supports controlled exports for customer operations and audit review. Durable projection ownership belongs in DataHub; the legacy Reporting service remains a transitional compatibility surface.
 
 ### [Customer](./customer)
 
   - **Customer Requirements**:
-  Manages customer data, ensuring privacy and compliance, and offers tailored services.
-  - **User Management**: Comprehensive user management features, including role-based access control, ensuring only authorized personnel can access sensitive data.
-  - **Custom Reporting**: Ability to generate, save, and modify custom reports in various formats, with scheduling and automatic generation options.
+  Manages tenant onboarding, readiness, identity setup, parking bootstrap, and customer-facing lifecycle evidence.
+  - **User Management**: Coordinates tenant administrators, identity configuration, and role mapping while leaving credentials and MFA state in the IdP.
+  - **Reporting Readiness**: Confirms the tenant has the reports and exports needed for evaluation and operations.
   - **Commercial Account Management**: Future tenant-level commercial records only after the commercial model is approved.
   - **Data Privacy and Security**: Secure storage and transmission of customer data, regular security audits, and timely breach notifications.
-  - **Customer Support**: Dedicated support portal with multiple channels, tracking response and resolution times.
-  - **Integration with Third-Party Services**: APIs for integration with third-party services, with documentation and support for API usage.
+  - **Customer Support**: Deferred support workflow; current public docs cover issue intake, evaluation, and operational handoff expectations.
+  - **Integration with Third-Party Services**: Generic OIDC, Dapr, event, and API contracts stay open; customer-specific adapters are commercial/support candidates.
 
   For more details, refer to the [Customer](./customer) documentation.
 
@@ -134,9 +121,9 @@ Validation note: [Function Map Validation](../function-map-validation)
 
 - **Real-time Notifications**: Sends real-time notifications to users for important events and updates.
 - **Customizable Notification Settings**: Allows users to customize their notification preferences and delivery methods.
-- **Email Notifications**: Sends notifications via email for various events such as booking confirmations, payment receipts, and system alerts.
-- **SMS Notifications**: Provides SMS notifications for urgent alerts and reminders.
-- **Push Notifications**: Supports push notifications for mobile app users to keep them informed on the go.
+- **Email Notifications**: Sends email notifications for mandatory booking and allocation lifecycle events when a production provider is configured.
+- **SMS Notifications**: Deferred channel; not part of the current v1 baseline.
+- **Push Notifications**: Deferred channel; not part of the current v1 baseline.
 - **In-app Notifications**: Displays notifications within the application for seamless user experience.
 - **Notification History**: Maintains a history of all notifications sent to users for reference and auditing purposes.
 - **Event-based Triggers**: Configures notifications based on specific events or conditions within the system.
@@ -163,9 +150,8 @@ Validation note: [Function Map Validation](../function-map-validation)
 #### [Mobile App](./mobile-app)
 
   - **Native Performance**: Optimized for iOS and Android platforms.
-  - **Push Notifications**: Real-time alerts and updates.
-  - **Offline Mode**: Core functionality available without internet.
-  - **Biometric Authentication**: Supports fingerprint and face recognition.
-  - **Location Services**: GPS integration for parking guidance.
-  - **Camera Integration**: Scan QR codes and parking tickets.
-  - **Battery Optimization**: Minimizes battery consumption.
+  - **Hosted Login**: Uses the configured OIDC provider and secure token storage.
+  - **Booking and My Spots**: Supports the employee booking, cancellation, and allocation-status workflows.
+  - **Notification Access**: Shows in-app notification history and status; operating-system push notifications are deferred.
+  - **Offline Tolerance**: Handles connectivity loss gracefully without promising full offline booking.
+  - **Future Device Capabilities**: Location, camera, and native passkey/biometric ceremonies may be considered only when backed by approved product slices and IdP policy.

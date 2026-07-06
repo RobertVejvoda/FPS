@@ -4,7 +4,7 @@
 
 ## Shared Open-Core Packages
 
-FairSpot exposes the shared packages below so the future private `fairspot-platform` repository can consume open-core contracts without vendoring `fairspot/code/**`.
+FairSpot exposes the shared packages below so the private `fairspot-platform` repository can consume open-core contracts without vendoring `fairspot/code/**`.
 
 | Package | Source | Published to | Notes |
 | --- | --- | --- | --- |

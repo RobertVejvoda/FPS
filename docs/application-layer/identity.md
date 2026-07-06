@@ -5,13 +5,13 @@
 ## Application Functions
 
 - **User Authentication**  
-    Handles secure login processes including username/password and multi-factor authentication options.
+    Handles secure login through the configured OIDC/OAuth provider. Company SSO, local-account login, MFA, passkeys, and recovery ceremonies are enforced by the provider.
 
 - **Session Management**  
     Controls user sessions, ensuring secure timeouts and preventing unauthorized access.
 
 - **Password Management**  
-    Facilitates secure password resets and changes with proper validation.
+    Delegates password resets and changes to the configured identity provider. FairSpot application services do not store or reset passwords.
 
 - **Single Sign-On (SSO)**  
     Enables seamless authentication across integrated systems using SSO protocols.
@@ -23,7 +23,7 @@
     Tracks login activities and maintains security audit logs.
 
 - **Multi-Factor Authentication**  
-    Provides additional security through 2FA and biometric authentication options.
+    Relies on the enforcing identity provider for MFA/passkey policy and factor challenge. Backend authorization still comes only from validated token claims.
 
-- **Social Authentication**  
-    Supports third-party authentication providers for enhanced user convenience.
+- **Identity Brokering**
+    Supports configured company identity providers through OIDC/OAuth federation where a tenant enables company SSO.

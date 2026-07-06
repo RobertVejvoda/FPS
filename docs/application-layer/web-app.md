@@ -5,7 +5,7 @@ The web application frontend consists of multiple modules providing a comprehens
 ## Application Functions
 
 - **[Authentication Module](./identity)**
-    Handles user login, multi-factor authentication, and session management through login-ui component.
+    Starts OIDC login, handles redirect/session validation, and presents provider-owned MFA/passkey ceremonies when the identity provider requires them.
 
 - **[Booking Management](./booking)**
     Provides interface for viewing, creating, and managing parking slot bookings via booking-ui.
@@ -29,10 +29,10 @@ The web application frontend consists of multiple modules providing a comprehens
     Provides access to system audit logs and monitoring via audit-ui.
 
 - **[Billing Portal](./billing)**
-    Handles payment processing and invoice management through billing-ui.
+    Deferred commercial/account surface only if a future approved business model requires it; no payment processing is part of the current baseline.
 
 - **[Feedback System](./feedback)**
-    Enables users to submit and manage feedback via feedback-ui.
+    Deferred authenticated feedback surface for evaluation/support signals; broad support-desk workflow is not part of the current baseline.
 
 ## WEB009 Web Real Login
 

@@ -1,12 +1,12 @@
 # Identity Business
 
-[Identity module](../application-layer/identity) is designed to provide secure and user-friendly authentication mechanisms for accessing the system. It includes features such as user login, credential validation, password reset, and third-party authentication options. The module ensures that user data is protected through encryption and secure data transmission, while also offering a responsive and intuitive user experience. Additionally, it supports logging and monitoring of login attempts and integrates Single Sign-On (SSO) for seamless access across multiple systems.
+[Identity module](../application-layer/identity) is designed to provide secure and user-friendly authentication mechanisms for accessing the system through the configured OIDC/OAuth provider. It supports the current two-path model: company SSO for tenants that bring an external identity provider, and FairSpot-local accounts hosted in FairSpot-controlled Keycloak for demo, small-tenant, fallback, and break-glass use. Password reset, MFA, passkeys, recovery codes, and credential validation are handled by the enforcing identity provider rather than custom FairSpot application logic. Identity also supports login monitoring and token-claim mapping for tenant, user, and role context.
 
 ### Authentication Management
 - Manage user identities and access control
-- Process login requests and validate credentials
-- Handle password reset workflows
-- Implement secure password storage with encryption
+- Process login requests through OIDC/OAuth flows
+- Delegate password reset workflows to the enforcing identity provider
+- Avoid storing passwords, MFA factors, passkeys, or recovery codes in FairSpot application services
 - Enforce brute force attack prevention
 - Ensure secure data transmission
 
@@ -16,8 +16,8 @@
 - Manage user sessions and timeouts
 
 ### External Authentication Services
-- Integrate third-party authentication providers
-- Implement secure OAuth/OpenID workflows
+- Integrate configured company identity providers for tenant SSO
+- Implement secure OAuth/OIDC workflows
 - Validate external authentication tokens
 
 ### System Security Monitoring

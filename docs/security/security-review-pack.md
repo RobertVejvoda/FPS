@@ -151,7 +151,7 @@ The following **always** remain with the customer and are **never** stored in Fa
 | Data | Owner | Notes |
 |------|-------|-------|
 | Company passwords | Customer IdP | FairSpot validates tokens; it never sees or stores passwords. |
-| MFA state and recovery codes | Customer IdP | MFA policy and enforcement are IdP responsibilities. |
+| MFA state and recovery codes | Enforcing IdP | Company-SSO tenants keep MFA state in the customer IdP. FairSpot-local accounts keep MFA/passkey state in FairSpot-controlled Keycloak; application services do not store factors or recovery codes. |
 | Full employee directory | Customer HR/IdP | FairSpot imports only mapped profile facts needed for policy. |
 | Organizational structure | Customer HR | Department, manager, cost centre stay with the customer unless explicitly required for parking policy. |
 | Employment contracts | Customer HR | Start date, termination, contract type are not FairSpot data unless policy explicitly needs them. |
