@@ -120,6 +120,21 @@ public sealed class OperationalMetricsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Dashboard_ReflectsPenaltyCount()
+    {
+        // #763: penalties are additive counts, independent of FinalStatus.
+        var a = Outcome("r1", Tenant, "u1", "Allocated"); a.PenaltyCount = 2;
+        var b = Outcome("r2", Tenant, "u2", "Used");      b.PenaltyCount = 1;
+        var c = Outcome("r3", Tenant, "u3", "Allocated"); // no penalties
+        await SaveAsync(a, b, c);
+
+        var resp = Assert.IsType<DashboardResponse>(Assert.IsType<OkObjectResult>(
+            await _controller.Dashboard(null, Today, Today, CancellationToken.None)).Value);
+
+        Assert.Equal(3, resp.TotalPenalties);
+    }
+
+    [Fact]
     public async Task Dashboard_AllocationRate_ComputedCorrectly()
     {
         await SaveAsync(

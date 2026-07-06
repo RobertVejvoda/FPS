@@ -27,6 +27,7 @@ public sealed class BookingProjectionHandler(
         "booking.requestCancelled" => true,
         "booking.usageConfirmed" => true,
         "booking.noShowRecorded" => true,
+        "booking.penaltyApplied" => true,
         "booking.requestExpired" => true,
         _ => false
     };
@@ -66,6 +67,9 @@ public sealed class BookingProjectionHandler(
                 break;
             case "booking.noShowRecorded":
                 await HandleNoShowRecorded(envelope, ct);
+                break;
+            case "booking.penaltyApplied":
+                await HandlePenaltyApplied(envelope, ct);
                 break;
             case "booking.requestExpired":
                 await HandleRequestExpired(envelope, ct);
@@ -494,6 +498,29 @@ public sealed class BookingProjectionHandler(
             projection.LastUpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             logger.LogInformation("Updated BookingOutcome projection to NoShow for {RequestId}", payload.BookingRequestId);
+        }
+    }
+
+    // #763: a penalty is additive — it does not change FinalStatus — so increment a separate count.
+    // Idempotency is provided by the caller's EventInbox dedup, so each event increments at most once.
+    private async Task HandlePenaltyApplied(BookingEventEnvelope envelope, CancellationToken ct)
+    {
+        var payload = envelope.Payload;
+        if (string.IsNullOrEmpty(payload.BookingRequestId))
+        {
+            logger.LogWarning("PenaltyApplied event missing BookingRequestId: {EventId}", envelope.EventId);
+            return;
+        }
+
+        var projection = await db.BookingOutcomes.FirstOrDefaultAsync(
+            b => b.BookingRequestId == payload.BookingRequestId, ct);
+
+        if (projection is not null)
+        {
+            projection.PenaltyCount += 1;
+            projection.LastUpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Incremented BookingOutcome penalty count for {RequestId}", payload.BookingRequestId);
         }
     }
 

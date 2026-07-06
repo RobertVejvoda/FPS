@@ -47,6 +47,7 @@ public sealed class OperationalMetricsController(
                 Waitlisted = g.Count(b => b.FinalStatus == "Waitlisted"),
                 Expired    = g.Count(b => b.FinalStatus == "Expired"),
                 Submitted  = g.Count(b => b.FinalStatus == "Submitted"),
+                Penalties  = g.Sum(b => b.PenaltyCount),
             })
             .FirstOrDefaultAsync(ct);
 
@@ -83,6 +84,7 @@ public sealed class OperationalMetricsController(
             Waitlisted:           outcomes?.Waitlisted ?? 0,
             Expired:              outcomes?.Expired    ?? 0,
             Submitted:            outcomes?.Submitted  ?? 0,
+            TotalPenalties:       outcomes?.Penalties  ?? 0,
             AllocationRate:       demand == 0 ? 0 : Math.Round(allocated * 100.0 / demand, 1),
             TotalDraws:           draws?.Total  ?? 0,
             FailedDraws:          draws?.Failed ?? 0,
@@ -134,6 +136,7 @@ public sealed class OperationalMetricsController(
                 Cancelled  = g.Count(b => b.FinalStatus == "Cancelled"),
                 NoShow     = g.Count(b => b.FinalStatus == "NoShow"),
                 Waitlisted = g.Count(b => b.FinalStatus == "Waitlisted"),
+                Penalties  = g.Sum(b => b.PenaltyCount),
             })
             .ToListAsync(ct);
 
@@ -147,6 +150,7 @@ public sealed class OperationalMetricsController(
             Cancelled:      r.Cancelled,
             NoShow:         r.NoShow,
             Waitlisted:     r.Waitlisted,
+            Penalties:      r.Penalties,
             AllocationRate: r.Demand == 0 ? 0 : Math.Round(r.Allocated * 100.0 / r.Demand, 1)));
 
         return Ok(new { Items = items, Page = page, PageSize = pageSize, Total = total });
@@ -375,6 +379,7 @@ public sealed record DashboardResponse(
     int Waitlisted,
     int Expired,
     int Submitted,
+    int TotalPenalties,
     double AllocationRate,
     int TotalDraws,
     int FailedDraws,
@@ -390,6 +395,7 @@ public sealed record DailySummaryRow(
     int Cancelled,
     int NoShow,
     int Waitlisted,
+    int Penalties,
     double AllocationRate);
 
 public sealed record UtilizationRow(
