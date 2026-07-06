@@ -3,7 +3,7 @@
 - **Mobile App**: Allow employees to check slot availability, make requests, and receive notifications on the go.
 - **Notification System**: Real-time alerts for slot availability, request status, and important updates.
 - **Offline Mode**: Allow users to access certain features even without an internet connection.
-- **Biometric Authentication**: Enhance security with fingerprint or facial recognition for app access.
+- **Secure App Access**: Use the platform OIDC session and operating-system secure storage; passkey or biometric ceremonies are presented only when the configured identity provider requires them.
 
 ### Features for Web Application
 

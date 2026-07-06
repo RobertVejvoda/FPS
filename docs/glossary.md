@@ -3,13 +3,12 @@
 ### Business Terms
 | Term | Explanation |
 | --- | --- |
-| Allocation | The process of assigning available parking slots to employees based on their requests and the system's fair algorithm. |
-| Cancellation | The act of withdrawing a parking slot request. Cancellations made after the Draw process may incur penalties. |
-| Draw Process | An automated mechanism that allocates parking slots among employees based on a fair and transparent algorithm. |
-| Expected Profit | Financial metric estimating the profitability of the system. |
-| Subscription Model | A monetization strategy where employees pay a fee for access to premium parking slots or additional features. |
-| Auction System | A feature that allows employees to bid for premium parking slots, generating additional revenue. |
-| Corporate Sponsorships | Partnerships with local businesses to sponsor parking slots, providing additional benefits to employees. |
+| Allocation | The process of assigning scarce shared capacity to eligible users based on requests, policy obligations, and the fair allocation algorithm. Parking slots are the first implemented resource type. |
+| Cancellation | The act of withdrawing a resource request or allocated reservation. Late or post-allocation cancellations may affect future allocation priority when policy enables penalties. |
+| Draw Process | An automated mechanism that allocates scarce shared capacity among eligible requests based on transparent, auditable fairness rules. |
+| Shared Resource | A limited workplace resource such as parking, desks, rooms, chargers, lockers, or sport courts that can use the same fair-allocation model when demand exceeds supply. |
+| Open Core | The public AGPL FairSpot runtime, fairness engine, tenant self-administration, and customer-facing documentation. |
+| Platform Plane | The private/commercial hosted-operator layer for cross-tenant operations, onboarding internals, usage metering, billing, and sensitive runbooks. |
 
 ### System Features
 | Term | Explanation |
@@ -17,20 +16,20 @@
 | Apps | Refers to the Web App and Mobile App used for interacting with the system. |
 | Microservices | Architectural style that structures an application as a collection of loosely coupled services. |
 | Auditing | Process of tracking and recording system activities for security and compliance purposes. |
-| Notification | A message sent to employees informing them of the status of their parking slot requests. |
-| Priority Management | A system feature that allows prioritization of parking slot requests based on criteria such as seniority or job role. |
+| Notification | A message sent to users informing them of request, allocation, cancellation, reallocation, reminder, or operational status. |
+| Priority Management | A policy-controlled feature that applies eligibility, obligations, penalties, and fairness weights to resource requests without exposing hidden allocation internals to users. |
 
 ### Environmental and Scalability
 | Term | Explanation |
 | --- | --- |
-| Eco-friendly Vehicles | Vehicles that have a reduced environmental impact, often incentivized with priority parking slots. |
+| Eco-friendly Vehicles | Vehicles that have a reduced environmental impact and may qualify for tenant policy treatment where a customer chooses to model that eligibility. |
 | Scalability | The system's ability to handle increased load as the company grows without performance degradation. |
 | Sustainability | Efforts to promote environmental responsibility, such as encouraging carpooling and the use of eco-friendly vehicles. |
 
 ### Data and Analytics
 | Term | Explanation |
 | --- | --- |
-| Data Analytics Services | Services that offer insights into parking trends and employee behavior, potentially valuable for third parties. |
+| Data Analytics Services | Tenant-scoped reporting and projection services that provide utilization, fairness, and operational evidence without exposing hidden allocation internals or unrelated employee-private data. |
 
 ### Security
 | Term | Explanation |
@@ -41,7 +40,7 @@
 | Confidentiality | Ensuring that information is accessible only to those authorized to have access. |
 | Integrity | The assurance that information is accurate and reliable. |
 | Access Rights | Permissions granted to users to access specific resources or data. |
-| Multi-Factor Authentication (MFA) | An authentication method that requires two or more verification factors. |
+| Multi-Factor Authentication (MFA) | An authentication method that requires two or more verification factors. In FairSpot, MFA/passkey enforcement is owned by the configured OIDC provider, not custom application code. |
 | Role-Based Access Control (RBAC) | A method of regulating access to resources based on the roles of individual users. |
 | Data Anonymization | The process of removing personally identifiable information from data sets. |
 | Data Breach Notification | The process of informing users about unauthorized access to their data. |

@@ -35,15 +35,15 @@ Billing and Payment Gateway are valid target architecture elements, but they are
 
 ### Customer Durable Storage
 
-Customer is represented correctly as an application service, but durable persistence is still a readiness gap. The current code uses in-memory tenant repositories for tenant registry, tenant identity configuration, first administrators, and parking bootstrap data.
+Customer is represented correctly as an application service. The original readiness gap was durable tenant storage: tenant registry, tenant identity configuration, first administrators, and parking bootstrap data needed to survive restart.
 
-This is tracked as `DATA011: Customer durable tenant storage`.
+That gap was addressed by `DATA011: Customer durable tenant storage` and the later PERSIST work. Current Customer runtime wiring uses Dapr-backed repositories; in-memory repositories remain as test fixtures and should not be described as the production path.
 
 ### DataHub Read Model Storage
 
 Reporting is represented correctly as a business report surface, but durable relational read models should not be added to Reporting by default. Customer-ready operational reporting depends on DataHub: PostgreSQL-backed projections fed by service events and exposed through approved read APIs or report views.
 
-The older `REPORT004: Durable relational reporting store` direction is obsolete unless explicitly re-scoped as transitional cleanup. New persistence and projection work should be tracked under DataHub slices.
+DataHub now has a PostgreSQL-backed event inbox and booking/draw/usage projections. The older `REPORT004: Durable relational reporting store` direction remains obsolete unless explicitly re-scoped as transitional cleanup. Remaining work is reconciling any Reporting compatibility endpoints with DataHub-owned projections, not adding new Reporting-owned projection storage.
 
 ### Feedback
 
@@ -66,14 +66,14 @@ Cache is reasonable as a technical architecture dependency, but it is not centra
 Use the diagram as a target application architecture with the following status split:
 
 1. Customer-first baseline: Web App, Mobile App, API Gateway, Identity/IAM, Booking, Profile, Configuration, Notification, Audit, Reporting endpoints, Dapr pub/sub, Dapr state stores, secrets, and observability.
-2. Customer-readiness gaps: Customer durable storage and DataHub read-model persistence/projections.
+2. Customer-readiness gaps: hosted proof, Reporting/DataHub read-path reconciliation, and remaining role-safe output validation.
 3. Partial or staged capabilities: Feedback, Communication channels, File/Object Storage, Cache.
 4. Future/deprioritized capabilities: Billing and Payment Gateway.
 
 ## Recommended Next Actions
 
 - Keep Application Architecture 1 as the target view, but annotate status in docs rather than redrawing it as a delivery board.
-- Complete the Customer durable storage slice before relying on tenant onboarding or tenant identity setup across restarts.
-- Complete the DataHub read-model storage and first projection slice before promising durable customer reporting.
+- Treat Customer durable storage and first DataHub projections as implemented baseline capabilities, then verify them through hosted restore/smoke evidence.
+- Reconcile Reporting compatibility endpoints with DataHub-owned durable projections before promising broad restart-safe customer reporting.
 - Keep Billing and Payment Gateway out of the customer-first deployable scope for now.
 - Consider a small authenticated Feedback slice for pilots and demos after the P0 persistence gaps are moving.

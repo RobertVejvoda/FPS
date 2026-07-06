@@ -15,7 +15,7 @@ FairSpot should recover cost without weakening the open, inspectable fairness en
 | Billing implementation | Deferred until the commercial offer is approved. |
 | First paid path | Support, implementation, pilot setup, production readiness, client-specific integration, and enhanced reporting packs. |
 | License posture | AGPL open core remains the default. Future dual licensing needs explicit legal and business approval. |
-| Open-core line | The open core (runtime + fairness + tenant self-administration) stays public and AGPL. The commercial line is the **platform plane** — the hosted operator product in a future private `fairspot-platform` repo (#660, #633, #642). See the [Open-Core Documentation Boundary](./open-core-boundary). |
+| Open-core line | The open core (runtime + fairness + tenant self-administration) stays public and AGPL. The commercial line is the **platform plane** — the hosted operator product in the private `fairspot-platform` repo (#660, #633, #642). See the [Open-Core Documentation Boundary](./open-core-boundary). |
 
 ## Licensing Decision (2026-06-28)
 

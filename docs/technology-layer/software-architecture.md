@@ -24,8 +24,8 @@ Current implementation work is documentation-led and proceeds through vertical s
 | Identity | Authenticated user context, roles, and `GET /me`. | JWT claim mapping for tenant, user, and roles. |
 | Booking | Parking request lifecycle, draw/allocation decisions, cancellation, usage, and booking history. | Core source of Booking events. |
 | Profile | Employee parking eligibility, vehicle facts, company-car and accessibility entitlements. | Booking consumes immutable Profile snapshots. |
-| Notification | User-visible notification records and later channels. | Consumes Booking events and stores idempotent in-app records; email delivery is still a local/stub adapter. |
-| Audit | Append-only, pseudonymised trace of Booking events. | Consumes Booking events and stores audit records; persistence is still in-memory for the evaluation baseline. |
+| Notification | User-visible notification records and later channels. | Consumes Booking events and stores idempotent in-app/email records; local and evaluation profiles may use the in-memory sender, while configured hosted/demo profiles use the SendGrid HTTP transport behind the Notification infrastructure. |
+| Audit | Append-only, pseudonymised trace of Booking events. | Consumes Booking events and stores audit records through the service persistence boundary; Dapr-backed persistence is the current runtime path. |
 | Configuration | Tenant/location parking policy and slot/capacity inputs. | Booking consumes policy and capacity contracts. |
 | Customer | Tenant ownership and onboarding. | Defines tenant boundaries, lifecycle, identity setup, parking bootstrap, readiness checks, and future provisioning. |
 | Reporting | Materialised read models and analytics. | Consumes Booking events/read models without driving Booking state; persistence is still in-memory for the evaluation baseline. |
@@ -60,7 +60,7 @@ Boundary rules are defined in [Booking Context Contract](../business-layer/booki
 | Domain outcomes | Dapr pub/sub | Booking events feed Notification, Audit, and Reporting read models. Each deployment profile binds the same logical pub/sub component to an approved broker or provider-native event service. |
 | Workflow/orchestration | Dapr Workflows where durability is needed | Draw workflow can be introduced when operational replay/long-running orchestration is required. |
 | Write persistence | Dapr state store or service persistence adapter | Booking uses a persistence boundary that must preserve tenant scope. Each deployment profile binds that boundary to an approved operational/document store. |
-| Read persistence | Service-owned read models | Production read models use service-owned stores with tenant-safe collections, partitions, or keys. Several evaluation-baseline services still use in-memory repositories and need persistence adapters before production. |
+| Read persistence | Service-owned read models | Production read models use service-owned stores with tenant-safe collections, partitions, or keys. DataHub is the durable PostgreSQL/event-inbox projection direction; the legacy Reporting compatibility surface still uses an in-memory repository and should not receive new durable projection ownership by default. |
 
 Cross-domain failures follow [Booking Context Contract](../business-layer/booking-context-contract): required command inputs fail safely, while observer services such as Notification and Audit must not roll back persisted Booking state.
 
