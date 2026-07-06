@@ -38,27 +38,36 @@ public sealed class DaprAccountActivationRepository(DaprClient daprClient) : IAc
             StoreName, ChallengeKey(activation.ChallengeId),
             new ChallengeReference(activation.TenantId, activation.UserId), cancellationToken: cancellationToken);
         await AddToTenantIndexAsync(activation.TenantId, activation.UserId, cancellationToken);
+        await AddToTenantChallengeIndexAsync(activation.TenantId, activation.ChallengeId, cancellationToken);
     }
 
     public async Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
     {
         var indexKey = TenantIndexKey(tenantId);
+        var challengeIndexKey = TenantChallengeIndexKey(tenantId);
         var userIds = await daprClient.GetStateAsync<List<string>>(StoreName, indexKey, cancellationToken: cancellationToken) ?? [];
+        var challengeIds = await daprClient.GetStateAsync<List<string>>(StoreName, challengeIndexKey, cancellationToken: cancellationToken) ?? [];
 
         var removed = 0;
+        // Remove all challenge-id index entries ever issued for the tenant, including superseded links
+        // that no longer appear on the current per-user record.
+        foreach (var challengeId in challengeIds)
+            await daprClient.DeleteStateAsync(StoreName, ChallengeKey(challengeId), cancellationToken: cancellationToken);
+
         foreach (var userId in userIds)
         {
             var key = Key(tenantId, userId);
             var record = await daprClient.GetStateAsync<AccountActivation>(StoreName, key, cancellationToken: cancellationToken);
             if (record is null)
                 continue; // stale index entry — nothing to remove
-            // Remove the challenge index entry too so no challenge → (tenant, user) mapping is orphaned.
+            // Backward-compatible cleanup for records written before the tenant challenge index existed.
             await daprClient.DeleteStateAsync(StoreName, ChallengeKey(record.ChallengeId), cancellationToken: cancellationToken);
             await daprClient.DeleteStateAsync(StoreName, key, cancellationToken: cancellationToken);
             removed++;
         }
 
         await daprClient.DeleteStateAsync(StoreName, indexKey, cancellationToken: cancellationToken);
+        await daprClient.DeleteStateAsync(StoreName, challengeIndexKey, cancellationToken: cancellationToken);
         return removed;
     }
 
@@ -73,11 +82,25 @@ public sealed class DaprAccountActivationRepository(DaprClient daprClient) : IAc
         }
     }
 
+    private async Task AddToTenantChallengeIndexAsync(string tenantId, string challengeId, CancellationToken cancellationToken)
+    {
+        var indexKey = TenantChallengeIndexKey(tenantId);
+        var index = await daprClient.GetStateAsync<List<string>>(StoreName, indexKey, cancellationToken: cancellationToken) ?? [];
+        if (!index.Contains(challengeId))
+        {
+            index.Add(challengeId);
+            await daprClient.SaveStateAsync(StoreName, indexKey, index, cancellationToken: cancellationToken);
+        }
+    }
+
     private static string Key(string tenantId, string userId) =>
         TenantStorageKey.For("account-activation", tenantId, userId);
 
     private static string TenantIndexKey(string tenantId) =>
         TenantStorageKey.For("account-activation-index", tenantId, "all");
+
+    private static string TenantChallengeIndexKey(string tenantId) =>
+        TenantStorageKey.For("account-activation-challenge-index", tenantId, "all");
 
     // Global (not tenant-scoped) index — the anonymous confirm path has no trusted tenant yet, and the
     // challenge id is high-entropy so enumeration is infeasible.
@@ -107,11 +130,13 @@ public sealed class InMemoryAccountActivationRepository : IAccountActivationRepo
     public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default)
     {
         var keys = store.Where(kv => kv.Value.TenantId == tenantId).ToList();
+        var challengeKeys = challenges.Where(kv => kv.Value.TenantId == tenantId).Select(kv => kv.Key).ToList();
         foreach (var kv in keys)
         {
-            challenges.Remove(kv.Value.ChallengeId);
             store.Remove(kv.Key);
         }
+        foreach (var challengeId in challengeKeys)
+            challenges.Remove(challengeId);
         return Task.FromResult(keys.Count);
     }
 }

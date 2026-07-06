@@ -220,6 +220,28 @@ public sealed class AccountActivationServiceTests
         audit.Verify(a => a.RevokedAsync(Tenant, User, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task PurgeTenant_RemovesActivation_AndAllChallengeReferences()
+    {
+        await SeedProfile();
+        var first = await service.IssueAsync(Tenant, User, default);
+        tokenGen.Setup(g => g.Generate()).Returns("second-token");
+        var second = await service.IssueAsync(Tenant, User, default);
+
+        await SeedProfile(tenant: "other-tenant", user: "other-user");
+        tokenGen.Setup(g => g.Generate()).Returns("other-token");
+        var other = await service.IssueAsync("other-tenant", "other-user", default);
+
+        var removed = await repo.PurgeTenantAsync(Tenant);
+
+        Assert.Equal(1, removed);
+        Assert.Null(await repo.GetAsync(Tenant, User));
+        Assert.Null(await repo.ResolveChallengeAsync(first.ChallengeId!));
+        Assert.Null(await repo.ResolveChallengeAsync(second.ChallengeId!));
+        Assert.NotNull(await repo.GetAsync("other-tenant", "other-user"));
+        Assert.NotNull(await repo.ResolveChallengeAsync(other.ChallengeId!));
+    }
+
     private sealed class MutableClock(DateTimeOffset now) : TimeProvider
     {
         public DateTimeOffset Now { get; set; } = now;
