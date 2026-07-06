@@ -86,6 +86,9 @@ FairSpot provides procedures; the client owns execution and scheduling.
 | Apply release | Client IT | Pull updated container images and apply configuration changes per the migration guide. |
 | Post-release verification | Client IT | Run smoke checks documented in `docs/production/local-test-harness.md` against the updated environment. |
 | Rollback | Client IT | Revert to the previous container images. Dapr component YAML and database schema are designed for backward compatibility within a major version. |
+| Mobile launch parity | FairSpot delivery team + Client | The mobile app ships with the customer launch path, not after it. Store distribution (App Store / Google Play) is the default; internal/beta distribution is a controlled-pilot validation step and requires an explicit waiver from Robert to be the launch model. Native releases follow the mobile release train in [release-pipeline.md](./release-pipeline.md); rollback is a new build or an approved waiver, not an image revert. |
+
+Store credentials, Apple/Google account operations, signing material, and submission evidence stay in the private `fairspot-platform` repository, never in this public repo or client-facing docs.
 
 ## Client IT Checklist
 
@@ -106,4 +109,5 @@ Before going live with the first production tenant:
 - [ ] Demo or synthetic data removed; first real tenant seeded via authorized admin path.
 - [ ] GDPR data residency confirmed: all data services in the required region.
 - [ ] Incident and rollback runbooks reviewed and accessible to the operations team.
+- [ ] Mobile launch parity confirmed: the mobile app is ready on the customer launch path (store submission in progress or approved), or a mobile waiver is explicitly recorded and approved by Robert.
 - [ ] `./tools/validate.sh` equivalent passed against the current release before go-live.

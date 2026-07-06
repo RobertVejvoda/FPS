@@ -81,6 +81,21 @@ For the full hosted E2E (login → booking → notification → audit, TLS/WAF),
 
 ---
 
+## Mobile release train
+
+The pipeline above promotes **server/web** artifacts. Mobile is a launch-parity part of the customer launch path (see [hosted-mobile-build-plan.md](./hosted-mobile-build-plan.md)), and store distribution changes the release train in ways the image pipeline does not cover:
+
+| Concern | Consequence for the release train |
+|---|---|
+| Version / build-number policy | Each store submission needs a unique, monotonically increasing build number (iOS `CFBundleVersion`, Android `versionCode`) alongside the marketing version. The version must be traceable to the commit/release tag that produced it. |
+| EAS build profiles / channels | `production` builds map to the store track; `preview`/`development` map to internal validation. An update channel binds a build to the JS/OTA updates it may receive, so channel and profile are chosen per release, not ad hoc. |
+| Release gates | A customer launch is not complete on server smoke alone: the store-readiness checklist and a passing device/beta validation are gates for the mobile half, unless an explicit waiver applies. |
+| Store-review timing | App Store / Play review is asynchronous and can take days and can be rejected. Plan submission ahead of the target launch date; the server deploy and the store approval are coordinated, not simultaneous. |
+| Rollback / waiver | Native binaries cannot be "rolled back" like container tags — recovery is a new build (or an OTA update within policy), or a temporary waiver to internal/beta distribution approved by Robert. Record which path was used. |
+| Evidence | Record the submitted build number, the commit/tag it came from, store-review outcome, and any waiver in the release evidence, next to the server deploy evidence. |
+
+Store credentials, account operations, signing material, and private submission evidence stay in the private `fairspot-platform` repository and its secret store — not in this public repo.
+
 ## Release evidence
 
-After a release deploy, capture the evidence using [release-evidence-template.md](./release-evidence-template.md): deployed tag + commit, smoke pass/fail summary, the rollback tag, and any residual risks or accepted limitations. Attach it to the release notes or the Release 1 validation issue (#388).
+After a release deploy, capture the evidence using [release-evidence-template.md](./release-evidence-template.md): deployed tag + commit, smoke pass/fail summary, the rollback tag, and any residual risks or accepted limitations. For a customer launch, include the mobile side: submitted build number + source commit/tag, store-review outcome, and any approved mobile waiver. Attach it to the release notes or the Release 1 validation issue (#388).

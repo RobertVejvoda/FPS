@@ -1,15 +1,27 @@
 # MOB010 — Hosted Mobile Build and Store-Readiness Plan
 
 **Status:** Plan + config scaffold. No store submission; no live developer-account artifacts created.
-**Tracks:** MOB010 (issue #318).
-**Priority:** P2 — must **not** block the first customer web/API deployment.
-**Source of truth:** [customer-first-deployment-gap-analysis.md](./customer-first-deployment-gap-analysis.md), [mobile-device-testing.md](./mobile-device-testing.md).
+**Tracks:** MOB010 (issue #318, build/config mechanics), MOB012 (issue #749, launch-parity gate — supersedes the earlier "mobile is a later track" framing).
+**Priority:** Launch-parity. Mobile store distribution ships with the customer launch path, not after it.
+**Source of truth:** [customer-first-deployment-gap-analysis.md](./customer-first-deployment-gap-analysis.md), [mobile-device-testing.md](./mobile-device-testing.md), [release-pipeline.md](./release-pipeline.md).
 
 ---
 
-## Principle
+## Principle — launch parity
 
-App Store / Google Play publication is **not** on the critical path for the first customer pilot. The pilot runs on the hosted web/API path; mobile is validated through **internal distribution** first (Expo dev client, EAS internal builds, TestFlight, Play internal testing). Public store launch is a later, separate track.
+Web/API and mobile ship **together** for a customer launch. App Store / Google Play publication is part of the customer launch path, not an optional later track, unless Robert explicitly approves a temporary waiver for a specific launch.
+
+Internal and beta distribution (Expo dev client, EAS internal builds, TestFlight, Play internal/closed testing) remain **validation steps** on the way to store launch — useful pilot evidence, not the final distribution model.
+
+### Release gate levels
+
+| Level | What it is | When it is acceptable |
+|---|---|---|
+| Internal installable build | Expo dev client / EAS `preview` device installs | Development and internal pilot evidence only. |
+| TestFlight / Play internal or closed testing | Beta distribution to named testers | Controlled pilot only, and only with an explicit waiver from Robert. |
+| App Store / Google Play downloadable app | Public store listing | **Default target for customer launch.** Web/API and mobile ship together unless waived. |
+
+> Store credentials, Apple/Google account operations, signing material, and private submission evidence live in the private `fairspot-platform` repository and its operator secret store — never in this public repo.
 
 ---
 
@@ -40,7 +52,7 @@ A minimal `eas.json` scaffold defines three profiles. The hosted URLs are suppli
 |---|---|---|
 | `development` | internal, dev client | Local development against a dev/hosted backend |
 | `preview` | internal | Internal pilot builds (ad-hoc / internal testers) before any store |
-| `production` | store build | App Store / Play submission (later track) |
+| `production` | store build | App Store / Play submission (default customer-launch target) |
 
 Set the hosted config at build time, e.g.:
 
@@ -66,13 +78,13 @@ For repeatable cloud builds, store these as EAS environment variables / secrets 
 | iOS TestFlight | Beta distribution to internal/external testers | **Apple Developer Program account** + App Store Connect app record |
 | Android internal testing | Closed track install via Play | **Google Play Console account** + an app entry |
 
-Recommendation for the pilot: validate on **EAS `preview` internal builds** (device installs) and, once the Apple/Google accounts exist, promote to **TestFlight** and **Play internal testing**. None of these require a public store listing.
+These are the **validation steps** before store launch: validate on **EAS `preview` internal builds** (device installs) and, once the Apple/Google accounts exist, promote to **TestFlight** and **Play internal testing**. None of these require a public store listing — and none of them are the customer-launch distribution model, which is the public store app (see the release gate levels above).
 
 ---
 
-## 4. Store-readiness checklist (later track)
+## 4. Store-readiness checklist (customer-launch track)
 
-Required before App Store / Google Play **public** submission (not pilot):
+Required before App Store / Google Play **public** submission — i.e. before customer launch, unless that launch carries an explicit mobile waiver:
 
 - [ ] **App identifiers** — set `ios.bundleIdentifier` and `android.package` in `app.json` (currently unset). Use a stable reverse-DNS id, e.g. `net.vejvoda.fairspot` (final value is a product decision).
 - [ ] **Signing** — iOS: distribution certificate + provisioning profile (EAS-managed credentials). Android: an upload keystore (EAS-managed or self-managed).
@@ -114,7 +126,7 @@ Not testable without store accounts: TestFlight external testing, Play closed/op
 | `ios.bundleIdentifier` / `android.package` unset | Required for any EAS native/store build | Small app.json config slice (product decision on the id) |
 | Mobile OIDC client + redirect not registered for the public domain | TestFlight/internal hosted login needs the real issuer plus the redirect URI generated by `AuthSession.makeRedirectUri({ path: 'login-callback' })` in Keycloak | OPS012 public-domain auth (#316) |
 | Apple/Google developer accounts | Prerequisite for TestFlight / Play testing | Operator/business action (account creation + verification) |
-| App icons / store screenshots / privacy + support URLs | Store metadata | Store-launch track (post-pilot) |
+| App icons / store screenshots / privacy + support URLs | Store metadata | Customer-launch track (required for store submission) |
 
 ---
 
