@@ -200,6 +200,8 @@ Stricter role expectations are recorded in [Access Control](../security/access-c
 
 For FairSpot-local accounts, verified email ownership (AUTH008) is a prerequisite for email-based recovery/fallback; it does not by itself grant access.
 
+AUTH009 (#738): a FairSpot-local or invited user provisioned as inactive activates only after proving ownership of their identity email through a one-time activation challenge (an admin/provisioning path issues it; the user confirms it from the emailed link). Until activation succeeds the account stays inactive and blocked. This identity-email activation path is distinct from AUTH008B operational notification-address verification.
+
 ---
 
 ## What Tenant Discovery Is Not
