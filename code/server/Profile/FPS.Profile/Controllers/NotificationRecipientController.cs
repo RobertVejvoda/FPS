@@ -23,7 +23,8 @@ namespace FPS.Profile.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class NotificationRecipientController(
     IProfileRepository repository,
-    IEmailVerificationRepository emailVerifications) : ControllerBase
+    IEmailVerificationRepository emailVerifications,
+    IAccountActivationRepository accountActivations) : ControllerBase
 {
     // Must match the FactSource values actually written by trusted Profile provisioning paths:
     // sso-claims (ProfileSnapshotController), admin-seed (ProfileAdminController), admin-entry +
@@ -72,6 +73,13 @@ public sealed class NotificationRecipientController(
         {
             var verification = await emailVerifications.GetAsync(request.TenantId, request.UserId, cancellationToken);
             if (verification is not null && verification.IsVerifiedFor(normalised))
+                return Ok(NotificationRecipientResult.Accept(profile.NotificationAddress));
+
+            // AUTH009 (#738) — an IAM/onboarding-verified identity email is trusted only when it EXACTLY
+            // matches the operational notification address. A later different notification address drops
+            // this trust automatically, so AUTH008B verification applies again.
+            var activation = await accountActivations.GetAsync(request.TenantId, request.UserId, cancellationToken);
+            if (activation is not null && activation.IsActivatedFor(normalised))
                 return Ok(NotificationRecipientResult.Accept(profile.NotificationAddress));
         }
 

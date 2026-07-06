@@ -23,6 +23,13 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.Configure<EmailVerificationOptions>(
     builder.Configuration.GetSection(EmailVerificationOptions.SectionName));
 builder.Services.AddScoped<EmailVerificationService>();
+// AUTH009 (#738) — pending-account activation gate (Identity/Profile-owned activation lifecycle).
+builder.Services.AddSingleton<IAccountActivationRepository, DaprAccountActivationRepository>();
+builder.Services.AddSingleton<IAccountActivationSender, DaprNotificationAccountActivationSender>();
+builder.Services.AddSingleton<IAccountActivationAuditSink, DaprAccountActivationAudit>();
+builder.Services.Configure<AccountActivationOptions>(
+    builder.Configuration.GetSection(AccountActivationOptions.SectionName));
+builder.Services.AddScoped<AccountActivationService>();
 builder.Services.AddScoped<ProfileTenantStorePurger>();
 builder.Services.AddScoped<EmployeeBootstrapService>();
 builder.Services.AddScoped<HrImportService>();
@@ -68,6 +75,14 @@ builder.Services.AddFpsObservability("fps-profile", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();
+// AUTH009 (#738) — per-IP rate limit on the anonymous activation-confirm endpoint.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(
+        FPS.Profile.Controllers.AccountActivationRateLimit.PolicyName,
+        FPS.Profile.Controllers.AccountActivationRateLimit.Partition);
+});
 
 var app = builder.Build();
 
@@ -80,6 +95,7 @@ if (app.Environment.IsDevelopment())
 app.UseFpsMetrics();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.UseFpsRequestTraceLogging();
 app.MapFpsMetrics();
