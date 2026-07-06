@@ -15,7 +15,7 @@ The target is not full client-owned enterprise production yet. The target is a c
 | Identity | Real OIDC URLs and redirect URIs for the public domain; tenant/user/role claims remain the source of truth. |
 | Persistence | No customer data in evaluation-grade in-memory stores. Booking, Profile, Configuration, Notification, Audit, and Reporting must use tenant-scoped persistent storage or an explicitly approved pilot limitation. |
 | Evidence | A repeatable smoke test proves login, booking request, Draw, notifications, audit, reporting, HR/admin operations, backup/restore, and log review. |
-| Mobile | Use hosted API/OIDC config and internal distribution first. App Store / Google Play submission comes after the hosted web/API path is stable. |
+| Mobile | Use hosted API/OIDC config. App Store / Google Play distribution ships **with** the customer launch path (MOB012 launch parity); internal / TestFlight / Play testing is validation only. A launch without store distribution needs an explicit Robert-approved waiver. See [hosted-mobile-build-plan.md](./hosted-mobile-build-plan.md). |
 
 ## What Is Implemented
 
@@ -42,7 +42,7 @@ The target is not full client-owned enterprise production yet. The target is a c
 | P1 | HR and Administrator role views are not merged. | First customers need clear role-specific defaults, Draw operation visibility, and support cancellation workflow. | Issues #310 and #311. |
 | P1 | Tenant onboarding remains partly evaluation-grade. | IdP mapping, first-admin path, tenant object storage, branding, and admin setup are not complete. | `docs/production/tenant-onboarding-smoke.md`. |
 | P1 | Retention jobs and privacy durable-store evidence remain incomplete. | Customer pilot with personal data needs retention and GDPR evidence or explicit approval to limit data scope. | `docs/security/gap-register.md`, `docs/security/security-review-pack.md`. |
-| P2 | Store-ready mobile release process is not prepared. | App Store / Google Play require signing, account verification, metadata, privacy/data-safety disclosures, and review evidence. | Apple Developer and Google Play Console docs. |
+| P1 | Store-ready mobile release process is not prepared. | Mobile ships with the customer launch path (MOB012 launch parity), so store distribution is a launch gate, not a later task: App Store / Google Play require signing, account verification, metadata, privacy/data-safety disclosures, and review evidence. A launch without store distribution needs an explicit Robert-approved waiver. | Apple Developer and Google Play Console docs, [hosted-mobile-build-plan.md](./hosted-mobile-build-plan.md). |
 
 ## Cloudflare Setup Direction
 
@@ -76,14 +76,14 @@ Cloudflare official references used for this direction:
 
 ## Mobile Store Direction
 
-For first customer deployment, do not make App Store / Google Play publication the critical path. Use the hosted domain with:
+For customer launch, App Store / Google Play distribution is the **default** target: web/API and mobile ship together (MOB012 launch parity). The internal/beta paths below are **validation steps** on the way to store launch — and are acceptable as the launch distribution model only under an explicit Robert-approved waiver for a specific launch:
 
 - responsive web for customer validation where possible;
 - Expo/internal native builds for mobile validation;
 - TestFlight for iOS beta once the Apple Developer Program account exists;
 - Google Play internal or closed testing once the Play Console account exists.
 
-Store submission becomes a later P2 release gate after backend domain, auth, privacy, and support flows are stable.
+Store submission is planned to land with the customer launch, not after it. The release-train consequences (build-number policy, EAS profiles/channels, store-review timing, rollback/waiver, evidence) are in [release-pipeline.md](./release-pipeline.md); the gate levels and store-readiness checklist are in [hosted-mobile-build-plan.md](./hosted-mobile-build-plan.md). Store credentials and Apple/Google account operations stay in the private `fairspot-platform` repository.
 
 Current official constraints:
 
@@ -124,4 +124,4 @@ Before the first customer sees the new domain:
 4. Tenant/customer data stores are persistent and tenant-scoped, or customer pilot scope explicitly says which non-persistent stores are allowed.
 5. Backup/restore and reset runbooks have been tested once.
 6. WAF, rate limiting, and Access policies are documented with screenshots or exported rule definitions.
-7. Mobile can point at the hosted domain using internal distribution or web fallback.
+7. Mobile ships on the customer launch path: App Store / Google Play distribution is the default (pointing at the hosted domain), or an explicit Robert-approved waiver records interim internal/beta distribution. (MOB012 launch parity.)
