@@ -6,10 +6,10 @@ This pack gives a new evaluator enough context to decide whether FairSpot is wor
 
 | Topic | Summary |
 | --- | --- |
-| Problem | Shared company parking often has more demand than capacity. Manual email/spreadsheet coordination is opaque, slow, hard to audit, and can feel unfair to employees. |
-| Product | FairSpot is an open-source, multi-tenant fair allocation platform for limited workplace resources. Parking is the first module, with documented fairness rules, booking workflows, notifications, audit records, reporting, and tenant policy configuration. |
-| Primary user value | Employees can request, view, cancel, and confirm parking from mobile without seeing hidden allocation internals or other employees' data. |
-| Business value | HR/facilities teams can configure policy and capacity, reduce manual coordination, and explain allocation outcomes using audit and reporting evidence. |
+| Problem | Scarce shared capacity often has more demand than supply. Parking is the first visible pain point, but the same coordination challenge appears with seats, sport courts, desks, lockers, chargers, and other limited resources. Manual email/spreadsheet coordination is opaque, slow, hard to audit, and can feel unfair to users. |
+| Product | FairSpot is an open-source, multi-tenant fair allocation and booking platform for B2B organizations with limited shared capacity. Parking is the first launch module, with documented fairness rules, booking workflows, notifications, audit records, reporting, and tenant policy configuration. |
+| Primary user value | Users can request, view, cancel, and confirm resource bookings without seeing hidden allocation internals or other users' data. The current mobile flow proves this first for employees in the parking module. |
+| Business value | Operators can configure policy and capacity, reduce manual coordination, and explain allocation outcomes using audit and reporting evidence. |
 | Trust value | Allocation rules, notifications, audit, GDPR erasure behavior, and tenant isolation are explicit rather than implicit operational habits. |
 | Deployment posture | FairSpot is designed for local development, NAS/Cloudflare Release 1 evaluation, a DigitalOcean cloud-hosted follow-up profile, and later client-owned production. Dapr is the component portability boundary; OpenTelemetry is the observability boundary. |
 | Current status | Release 1 evaluation baseline: employee mobile journey, web employee + HR/admin/reporting/audit surfaces, booking/Draw lifecycle, notifications, audit, reporting, durable Dapr persistence (PERSIST001–006), and the containerized NAS/Cloudflare hosting path are implemented. The [Roadmap → Release 1 Scope](./roadmap#release-1-scope) is the authoritative status. |
@@ -95,8 +95,8 @@ The NAS/Cloudflare evaluation profile — the Release 1 hosting target — is do
 | Topic | FairSpot position |
 | --- | --- |
 | Tenant isolation | Tenant context comes from authenticated or trusted service context. Employee APIs must not accept arbitrary tenant/user values from request bodies. |
-| Data minimisation | FairSpot stores the minimum employee/profile facts needed for booking, notification, audit, reporting, and support. |
-| SSO-first integration | Company employees authenticate through the customer's IdP by default. FairSpot does not store company passwords. |
+| Data minimisation | FairSpot stores the minimum user/profile facts needed for booking, notification, audit, reporting, and support. |
+| SSO-first integration | Customer organization users authenticate through the customer's IdP by default. FairSpot does not store customer passwords. |
 | Local accounts | FairSpot-local accounts are fallback/break-glass/demo accounts. Credential verifiers are Secret data owned by Identity. |
 | Audit | Audit records use stable/pseudonymised identifiers where possible and preserve allocation and policy-sensitive evidence. |
 | GDPR erasure | PII mapping erasure can remove identity mapping while preserving anonymous audit history. |
@@ -123,10 +123,11 @@ Provider prices change frequently. Do not present numeric cost commitments witho
 
 | Question | Answer |
 | --- | --- |
-| Is FairSpot only for parking? | Parking is the first concrete v1 domain. The same tenant, policy, notification, audit, and reporting pattern may later support other scarce workplace resources after parking is stable. |
-| Does FairSpot replace the customer's identity provider? | No. FairSpot is SSO-first and expects company users to authenticate through the customer IdP where possible. |
-| Does FairSpot store company passwords? | No. Company passwords must stay with the IdP. FairSpot-local credential verifiers are fallback Secret data only. |
-| Can employees see other employees or lottery internals? | Employee views must remain safe: own bookings, own notifications, and understandable reasons without exposing other employees or hidden allocation internals. |
+| Is FairSpot only for parking? | No. Parking is the first launch module and proof vertical. The product scope is fair booking and allocation of scarce shared capacity for B2B organizations, including seats, sport courts, desks, lockers, chargers, and similar bookable resources. |
+| Are users always employees? | No. Employee is the current workplace parking proof path. Other tenants may have members, guests, external participants, or public users who authenticate with their own Google, Apple, Microsoft, or customer-approved identity provider and are still scoped to one managing organization. |
+| Does FairSpot replace the customer's identity provider? | No. FairSpot is SSO-first and expects customer organization users to authenticate through the customer IdP where possible. Public-participant domains may broker user-owned IdPs, but tenant membership and booking eligibility remain FairSpot/customer-controlled. |
+| Does FairSpot store customer passwords? | No. Customer and external IdP passwords must stay with the IdP. FairSpot-local credential verifiers are fallback Secret data only. |
+| Can users see other users or lottery internals? | User views must remain safe: own bookings, own notifications, and understandable reasons without exposing other users or hidden allocation internals. |
 | Who operates production? | The current direction is client-owned production. FairSpot provides architecture, deployment guidance, component boundaries, and evidence; managed operation is not promised. |
 | Can a client use its own cloud, Kubernetes, or on-premises platform? | Yes. The design keeps client provider choices behind Dapr, OIDC, service-owned persistence, secret-management, object-storage, and OpenTelemetry boundaries. FairSpot's own cloud-hosted follow-up target is DigitalOcean, not AWS or Azure. |
 | Is billing implemented? | No. Commercialisation and billing are later decisions. The current AGPL project can still support paid implementation, support, and client-specific integration services. |

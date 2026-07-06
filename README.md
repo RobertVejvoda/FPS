@@ -9,17 +9,17 @@
 [![CI](https://github.com/RobertVejvoda/fairspot/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/fairspot/actions/workflows/ci.yml)
 [![Docs](https://github.com/RobertVejvoda/fairspot/actions/workflows/docs.yml/badge.svg?branch=master)](https://github.com/RobertVejvoda/fairspot/actions/workflows/docs.yml)
 
-FairSpot is an open-source, multi-tenant fair allocation platform for companies where demand for shared workplace resources exceeds supply. Parking is the first product module.
+FairSpot is an open-source, multi-tenant fair allocation and booking platform for B2B organizations where demand for scarce shared capacity exceeds supply. Parking is the first launch module and proof vertical; the product scope also covers seats, sport courts, desks, lockers, chargers, and other bookable limited resources.
 
-The product replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Employees request parking, company-car obligations are handled first, and remaining spaces are allocated by documented fairness rules so access improves over time instead of depending on who emailed HR first.
+The product replaces manual email and spreadsheet coordination with a transparent booking and Draw process. Participants request capacity, resource-specific obligations such as company-car parking are handled first in the current parking module, and remaining capacity is allocated by documented fairness rules so access improves over time instead of depending on who asked an operator first.
 
 The repository, service names, and some tooling still use `FPS` as the internal shorthand.
 
 ## What Works Today
 
 - Backend services for Booking, Identity, Profile, Configuration, Notification, Audit, Reporting, and Customer/Tenant readiness.
-- Employee booking lifecycle: submit, view, cancel, confirm usage, allocation status, notifications, and profile/vehicle data.
-- Fair allocation rules for scarce parking, including company-car priority, weighted Draw behavior, penalties, and audit evidence.
+- Employee booking lifecycle: submit, view, cancel, confirm usage, allocation status, notifications, and profile/resource data.
+- Fair allocation rules for scarce resources, with parking-specific support today for company-car priority, vehicle facts, weighted Draw behavior, penalties, and audit evidence.
 - Audit, reporting, notification, and observability foundations for local demo and client evaluation.
 - React web app and React Native/Expo mobile app paths for employee and admin-oriented evaluation.
 - Local harness with seeded demo users, Keycloak, Dapr sidecars, gateway, metrics, logs, traces, and smoke commands.

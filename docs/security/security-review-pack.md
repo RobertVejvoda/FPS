@@ -36,7 +36,7 @@ FairSpot uses OIDC Authorization Code + PKCE for web and mobile clients. Service
 - Manage user lifecycle: creation, deactivation, MFA policy.
 - Issue short-lived access tokens (recommended: 15–60 minutes).
 
-FairSpot does not store company passwords, MFA state, or IdP credentials.
+FairSpot does not store customer or external IdP passwords, MFA state, or IdP credentials.
 
 ---
 
@@ -273,7 +273,7 @@ FairSpot is an architecture and product; it does not certify GDPR compliance. A 
 | Where is data stored? | Client-controlled infrastructure for client production. Data residency is determined by the selected deployment region. FairSpot-operated evaluation uses NAS/Cloudflare first and DigitalOcean for the cloud-hosted follow-up target; client-owned deployments may use the client's approved cloud, Kubernetes, or on-premises platform. |
 | How long is data retained? | Configurable retention periods. Recommended defaults: bookings 1 year, notifications 90 days, audit 7 years. Client enforces retention; FairSpot provides deletion mechanisms. See Retention Schedules above. |
 | What are the risks? | Fairness perception if allocation internals leak; privacy risk if tenant isolation fails; security risk if secrets are exposed. Mitigations: pseudonymised audit, tenant-scoped queries, secret store, TLS, audit controls. See [Gap Register](./gap-register). |
-| What safeguards are in place? | SSO-first (no company passwords stored), pseudonymised audit, tenant isolation, data minimisation, encryption in transit, secret management, role-based access, audit trails, GDPR erasure support. |
+| What safeguards are in place? | SSO/OIDC-first trusted identity (no customer or external IdP passwords stored), pseudonymised audit, tenant isolation, data minimisation, encryption in transit, secret management, role-based access, audit trails, GDPR erasure support. |
 
 ### DPA and Subprocessor Guidance
 

@@ -28,9 +28,9 @@ This checklist is the lightweight readiness tool for the FairSpot architecture r
 
 ## Phase B - Business Architecture
 
-- Capabilities, value streams, actors, processes, and policies describe the parking-first operating model.
+- Capabilities, value streams, actors, processes, and policies describe the shared-resource operating model, with parking as the first proof module.
 - Role-centered HR, employee, administrator, auditor, and sponsor concerns are visible.
-- Deferred Billing and future resource types are explicit.
+- Deferred Billing and additional resource-type sequencing are explicit.
 
 ## Phase C - Information Systems Architecture
 

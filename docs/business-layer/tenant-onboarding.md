@@ -1,23 +1,23 @@
 # Tenant Onboarding
 
-Tenant onboarding explains how a new company becomes usable in FairSpot. It is the business and implementation contract for creating the tenant, connecting identity, creating the first administrator, configuring parking resources, loading the minimum employee facts, and proving the setup before employees use the system.
+Tenant onboarding explains how a new customer organization becomes usable in FairSpot. It is the business and implementation contract for creating the tenant, connecting identity, creating the first administrator, configuring resources, loading the minimum user facts, and proving the setup before users rely on the system.
 
-This page complements [Customer Integration](./customer-data-import), which defines the SSO-first identity and profile-data contract, and [Tenant Discovery and Login Modes](./tenant-login-modes), which explains the two employee login entry paths and pre-auth tenant discovery. Tenant onboarding is the operational sequence that applies those contracts to one company.
+This page complements [Customer Identity Integration](./customer-data-import), which defines the trusted identity and profile-data contract, and [Tenant Discovery and Login Modes](./tenant-login-modes), which explains the current login entry paths and pre-auth tenant discovery. Tenant onboarding is the operational sequence that applies those contracts to one customer organization.
 
 ## Goals
 
-Onboarding must answer these questions for every company:
+Onboarding must answer these questions for every customer organization:
 
 | Question | Required answer |
 | --- | --- |
-| Which company owns this tenant? | A stable tenant record with display name, slug, lifecycle state, region, timezone, and support contacts. |
+| Which organization owns this tenant? | A stable tenant record with display name, slug, lifecycle state, region, timezone, and support contacts. |
 | Who may administer it first? | At least one tenant-scoped administrator or break-glass local account with audited creation. |
 | How are users authenticated? | A trusted issuer/audience/tenant mapping, or an explicit local-account fallback for demo/small-tenant use. |
 | Which roles are granted? | Tenant-scoped mapping from IdP groups or admin assignments to FairSpot roles. |
-| Where can employees park? | One or more locations with policy defaults, optional overrides, and slots/capacity pools. |
+| Which resources can users request? | One or more locations/resources with policy defaults, optional overrides, and slots/capacity pools. Parking is the current proof path. |
 | Where are tenant files stored? | Tenant-scoped object storage is provisioned for controlled documents, exports, reports, evidence, and branding assets. |
 | How does the tenant brand appear? | Organization branding config can reference approved tenant-owned assets, but the app loads them through FairSpot APIs, not direct storage paths. |
-| Which employees are eligible? | Minimal active profile facts needed for booking, notification, allocation, reporting, and support. |
+| Which users are eligible? | Minimal active profile, membership, and eligibility facts needed for booking, notification, allocation, reporting, and support. |
 | Is the tenant ready for live use? | A readiness check proves identity, policy, slots, demo users, notifications, audit, and reporting work for that tenant. |
 
 ## Lifecycle
@@ -143,7 +143,7 @@ Full white-label support is future scope. It would include custom domains, deepe
 
 ### 7. Load Minimal Employee And Profile Facts
 
-Employees become usable through SSO-derived mapping, SCIM/provisioning, admin entry, or a tightly scoped bootstrap file.
+Users become usable through trusted IdP mapping, SCIM/provisioning, invitation, admin entry, or a tightly scoped bootstrap file.
 
 Required minimum:
 
@@ -155,7 +155,7 @@ Required minimum:
 - home location when policy or reporting needs it;
 - vehicle, company-car, accessibility, reserved-space, and capability facts only where policy requires them.
 
-FairSpot must not import customer passwords, broad HR records, medical details, or unrelated employee data. File/bootstrap import remains an exception path and must follow [Customer Integration](./customer-data-import). If HR import files are stored for evidence or troubleshooting, they must be treated as controlled documents with retention, access control, and audit records.
+FairSpot must not import customer passwords, broad HR/member/customer records, medical details, or unrelated user data. File/bootstrap import remains an exception path and must follow [Customer Identity Integration](./customer-data-import). If HR, membership, or bootstrap import files are stored for evidence or troubleshooting, they must be treated as controlled documents with retention, access control, and audit records.
 
 ### 8. Readiness Check
 
@@ -224,8 +224,8 @@ Readiness checks may run in dry-run mode for client evaluation. Dry-run output m
 
 ## Acceptance Criteria
 
-- A new company can be represented as a tenant before any employee data is imported.
-- Live employees cannot authenticate until trusted issuer/tenant mapping is configured or an explicit local-account fallback is enabled.
+- A new customer organization can be represented as a tenant before any user data is imported.
+- Live users cannot authenticate until trusted issuer/tenant mapping is configured or an explicit local-account fallback is enabled.
 - At least one tenant administrator exists before parking configuration is marked complete.
 - The tenant cannot become `Ready` without valid policy, at least one usable location/slot capacity, and required pilot user/profile facts.
 - Tenant object storage is provisioned before document, export, report, evidence, or branding upload paths are enabled.

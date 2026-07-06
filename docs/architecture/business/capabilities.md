@@ -1,17 +1,17 @@
 # Business Capabilities
 
-This capability map is the parking-first customer-ready target. It does not model every historical feature idea from the legacy functional architecture.
+This capability map is the scarce shared-capacity customer-ready target, proven first through parking. It does not model every historical feature idea from the legacy functional architecture.
 
 ## Capability Map
 
 | Capability | Target Description | Priority | Status | Source Evidence |
 | --- | --- | --- | --- | --- |
-| Tenant onboarding and readiness | Prepare a company tenant, identity mapping, locations, policy, initial data, support contacts, timezone, and launch readiness checks. | P0 | Partial | [Tenant Onboarding](/business-layer/tenant-onboarding), [Business Process Flows](/business-layer/business-process-flows) |
+| Tenant onboarding and readiness | Prepare a customer organization tenant, identity mapping, locations, policy, initial data, support contacts, timezone, and launch readiness checks. | P0 | Partial | [Tenant Onboarding](/business-layer/tenant-onboarding), [Business Process Flows](/business-layer/business-process-flows) |
 | Customer / tenant administration | Maintain tenant lifecycle state, tenant identity, support contacts, and readiness evidence durably. | P0 | Placeholder | [Customer](/business-layer/customer), [Tenant Storage Contract](/production/tenant-storage-contract) |
-| Employee parking request | Let employees request parking for future Draw allocation or same-day allocation using authenticated tenant/user context. | P0 | Partial | [Booking](/business-layer/booking), [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) |
+| Employee resource request | Let employees request a limited resource for future Draw allocation or same-day allocation using authenticated tenant/user context; parking is the current implemented resource type. | P0 | Partial | [Booking](/business-layer/booking), [Booking Request Lifecycle](/business-layer/booking-request-lifecycle) |
 | Profile and eligibility facts | Resolve employee active status, vehicle, company-car, accessibility, reserved-space, and location facts needed by policy. | P0 | Partial | [Profile](/business-layer/profile), [Allocation Rules](/business-layer/allocation-rules) |
-| Configuration and parking policy | Maintain tenant policy, locations, time slots, capacity/resource maps, zones, capability rules, and Draw schedule. | P0 | Partial | [Configuration](/business-layer/configuration), [Parking Policy Configuration](/business-layer/parking-policy-configuration) |
-| Fair allocation Draw | Allocate scarce parking capacity using auditable company-car priority, weighted fairness, slot matching, and deterministic evidence. | P0 | Partial | [Allocation Rules](/business-layer/allocation-rules), [Business Process Flows](/business-layer/business-process-flows) |
+| Resource configuration and policy | Maintain tenant policy, locations, time slots, capacity/resource maps, zones, capability rules, and Draw schedule; parking policy is the current implementation contract. | P0 | Partial | [Configuration](/business-layer/configuration), [Parking Policy Configuration](/business-layer/parking-policy-configuration) |
+| Fair allocation Draw | Allocate scarce resource capacity using auditable priority rules, weighted fairness, resource matching, and deterministic evidence; parking includes company-car priority and slot matching today. | P0 | Partial | [Allocation Rules](/business-layer/allocation-rules), [Business Process Flows](/business-layer/business-process-flows) |
 | Booking lifecycle management | Support cancellation, reallocation, usage confirmation, no-show, expiry, penalties, and employee-safe reason codes. | P0 | Partial | [Booking Request Lifecycle](/business-layer/booking-request-lifecycle), [Booking Reason Codes](/business-layer/booking-reason-codes) |
 | HR / facility operations | Give HR and facility managers role-specific queues, support views, next Draw visibility, controlled manual Draw, and cancellation workflows. | P0 | Placeholder | [Roles](/business-layer/roles), [Role Intent Roadmap](/business-layer/role-intent-roadmap), [My Spots UX](/business-layer/my-spots-ux) |
 | Facilities resource-map operations | Let facilities maintain locations, zones, capacity pools, spaces, temporary closures, and resource capabilities with validation and audit. | P0 | Placeholder | [Personas](/business-layer/personas), [Role Intent Roadmap](/business-layer/role-intent-roadmap), [Business Requirements](/business-layer/requirements) |
@@ -27,11 +27,11 @@ This capability map is the parking-first customer-ready target. It does not mode
 
 | Capability | Depends On | Why It Matters |
 | --- | --- | --- |
-| Employee parking request | Tenant readiness, identity, profile, configuration | Requests cannot be customer-ready if tenant context, policy, or employee eligibility is unstable. |
+| Employee resource request | Tenant readiness, identity, profile, configuration | Requests cannot be customer-ready if tenant context, policy, or employee eligibility is unstable. |
 | Fair allocation Draw | Booking, configuration, profile, audit, notification | Allocation must be policy-correct, explainable, idempotent, and communicated. |
 | Cancellation and reallocation | Booking lifecycle, original Draw evidence, notification, audit | Released capacity should be reused fairly and defensibly. |
 | HR / facility operations | Booking lifecycle, audit, notification, operational insight | HR needs safe exception handling without exposing hidden lottery internals to employees. |
-| Facilities resource-map operations | Configuration and parking policy, audit, operational insight | False or stale capacity creates avoidable rejections, manual corrections, and low employee trust. |
+| Facilities resource-map operations | Resource configuration and policy, audit, operational insight | False or stale capacity creates avoidable rejections, manual corrections, and low employee trust. |
 | Operational insight and read models | Booking events, audit events, DataHub storage | Customer-facing reports must survive restart and be tenant-scoped. |
 
 ## Capability Disposition
@@ -56,7 +56,7 @@ This table separates customer-first capabilities from source-evidence ideas that
 | Space / capacity pool | Facilities resource-map operations | Individual resources or pooled capacity with capabilities, active windows, closures, and publication evidence. |
 | Employee profile facts | Profile and eligibility facts | Minimum facts only; avoid broad HR import. |
 | Vehicle / capability facts | Profile and eligibility facts | Includes default vehicle, company-car, EV, accessibility, and capability signals where policy needs them. |
-| Parking request | Employee parking request / booking lifecycle | Employee-owned request intent; status changes are audit-visible. |
+| Booking/resource request | Employee resource request / booking lifecycle | Employee-owned request intent; status changes are audit-visible. Parking request is the current concrete implementation. |
 | Draw attempt | Fair allocation Draw | Includes algorithm version, seed/order evidence, decisions, and safe reason codes. |
 | Allocation / reservation | Booking lifecycle management | Assigned spot/resource for a date and time slot. |
 | Penalty | Booking lifecycle management | Booking-owned v1 penalty ledger for booking-related penalties. |

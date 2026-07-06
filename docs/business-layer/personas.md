@@ -164,4 +164,4 @@ FairSpot converts a recurring workplace frustration into a governed, measurable 
 - Extend policy toward sustainability when the business is ready.
 - See a concise management summary rather than operational detail.
 - Understand HR effort saved, unmet demand, fairness trend, and capacity pressure.
-- Use evidence to decide whether FairSpot should expand beyond parking into other limited workplace resources.
+- Use first-module evidence to decide which additional scarce shared capacity should be configured next.

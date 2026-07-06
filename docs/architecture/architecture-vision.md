@@ -3,20 +3,20 @@
 |  |  |
 | --- | --- |
 | **Status** | Draft |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Architecture State** | Target |
 | **Target Version** | Customer-Ready Target v0.1 |
 | **ADM Phase** | Phase A - Architecture Vision |
 | **Responsible** | Codex/Product Owner |
 | **Accountable** | Robert |
-| **Last Reviewed** | 2026-05-31 |
+| **Last Reviewed** | 2026-07-05 |
 | **Next Review** | Before customer architecture review |
 
-FairSpot is an open-source, parking-first fair allocation platform for companies where demand for shared workplace resources exceeds supply.
+FairSpot is an open-source fair allocation and booking platform for B2B organizations where demand for scarce shared capacity exceeds supply. Parking is the first launch module and proof vertical, not the product boundary.
 
 ## Problem
 
-Companies with limited parking often coordinate requests through email, spreadsheets, or informal priority rules. That creates avoidable HR/facilities work, low transparency, weak auditability, and low employee trust.
+Organizations with limited shared capacity often coordinate requests through email, spreadsheets, or informal priority rules. Parking is the first visible proof path, but the same pattern appears with seats, sport courts, desks, lockers, chargers, and other bookable resources. Manual coordination creates avoidable operations work, low transparency, weak auditability, and low user trust.
 
 ## Target Outcome
 
@@ -30,9 +30,9 @@ FairSpot's strategy is expressed through the product overview, roadmap, commerci
 
 | Product Direction | Architecture Translation |
 | --- | --- |
-| Parking first | Business, application, data, technology, and security architecture are scoped to parking v1. Generic scarce-resource abstractions are future options, not current target scope. |
-| Small-company pilot first | The customer-ready target optimizes for a realistic tenant, initially below about 150 employees, with visible parking friction and manageable support complexity. |
-| Trust before scale | Employee-visible explanations, HR/facility auditability, tenant isolation, privacy, and hosted smoke evidence are required before larger rollout. |
+| Scarce shared-capacity platform, parking first | Business, application, data, technology, and security architecture prove the model through the parking launch module while preserving the target direction for seats, sport courts, desks, lockers, chargers, and similar resource types. |
+| Small-organization pilot first | The customer-ready target optimizes for a realistic B2B tenant, initially below about 150 active users, with visible shared-capacity friction and manageable support complexity. Parking remains the first proof path. |
+| Trust before scale | User-visible explanations, operator auditability, tenant isolation, privacy, and hosted smoke evidence are required before larger rollout. |
 | Open core remains useful | Fairness rules, normal tenant operation, basic reporting/read-model evidence, audit, and privacy controls must remain usable without paid unlocks. |
 | Paid services before product Billing | Setup, support, production readiness, and client-specific integration may be commercial paths; in-product Billing and payment remain deferred. |
 | Client-owned production is credible | Dapr, OpenTelemetry, documented deployment profiles, and runbooks must support client-owned operation without binding the product to one provider. |
@@ -41,9 +41,9 @@ FairSpot's strategy is expressed through the product overview, roadmap, commerci
 
 | Scope Item | Target Position | Status |
 | --- | --- | --- |
-| Product domain | Parking-first fair allocation for scarce workplace resources. Other resources are future extensions. | Draft |
-| Customer readiness | Demonstrable employee, HR/facilities, tenant admin, audit, and operator journeys with explicit gaps. | Draft |
-| Pilot fit | First external evaluation should target a small or medium company with visible parking scarcity before larger enterprise rollout. | Draft |
+| Product domain | Fair allocation and booking for scarce shared capacity in B2B organizations. Parking is the first launch module; other resource types reuse the same tenant, policy, booking, Draw, notification, audit, reporting, and usage-evidence model. | Draft |
+| Customer readiness | Demonstrable user, operator, tenant admin, audit, and platform-operator journeys with explicit gaps. | Draft |
+| Pilot fit | First external evaluation should target a small or medium B2B organization with visible shared-capacity scarcity, starting with parking where the current implementation is strongest. | Draft |
 | Deployment posture | Local development, hosted demo, and client-owned production profiles with Dapr/OpenTelemetry portability boundaries. | Draft |
 | Data architecture | Service-owned writes and event-fed DataHub read models for cross-service reads. | Draft |
 | Security posture | Tenant isolation, SSO-first identity, auditability, privacy, WAF/ingress hardening, and secrets separation. | Draft |
@@ -51,7 +51,7 @@ FairSpot's strategy is expressed through the product overview, roadmap, commerci
 
 ## Goals
 
-- Make the employee booking and allocation outcome understandable.
+- Make the user booking and allocation outcome understandable.
 - Make HR/facility operation repeatable and auditable.
 - Keep tenant identity and data boundaries explicit.
 - Use Dapr-first provider-neutral runtime contracts where they fit.
@@ -63,9 +63,9 @@ FairSpot's strategy is expressed through the product overview, roadmap, commerci
 
 | Measure | Customer-Ready Expectation |
 | --- | --- |
-| Employee trust | Employee can request, see status, understand outcome, cancel where allowed, and receive notifications without seeing hidden Draw internals. |
-| HR/facilities usability | HR can see what needs attention, understand next Draw timing, trigger an authorized Draw where allowed, cancel any tenant-scoped request with reason, and rely on audit/notification evidence. |
-| Tenant administration | Administrator can see readiness, identity/profile/policy/location/storage gaps, and avoid exposing technical tenant concepts to employee workflows. |
+| User trust | User can request, see status, understand outcome, cancel where allowed, and receive notifications without seeing hidden Draw internals. |
+| Operator usability | Operator can see what needs attention, understand next Draw timing, trigger an authorized Draw where allowed, cancel any tenant-scoped request with reason, and rely on audit/notification evidence. |
+| Tenant administration | Administrator can see readiness, identity/profile/policy/location/storage gaps, and avoid exposing technical tenant concepts to user workflows. |
 | Operational confidence | Operator can see deployment profile, Dapr component health, observability, backup/restore expectations, WAF boundary, and hosted smoke evidence. |
 | Architecture governance | Draft, approved, deferred, and missing architecture artifacts are visible in the repository and trace to delivery gaps. |
 | Commercial restraint | Customer evaluation does not depend on Billing, paid-only fairness, or hidden operational features. |

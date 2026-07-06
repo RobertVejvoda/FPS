@@ -8,8 +8,8 @@ It is intentionally a product-facing assessment. The detailed architecture contr
 
 | Area | Current Assessment | Customer-Ready Position |
 | --- | --- | --- |
-| Product fit | Strong for parking-first fair allocation. The core story is clear: employees request parking, Draw allocates scarce spaces by explicit rules, HR/facilities can explain outcomes, and audit/notification evidence exists. | Suitable for customer evaluation with synthetic data and a guided demo. |
-| Business process | Core request, Draw, allocation, cancellation, notification, audit, and policy concepts are documented. HR/admin and employee viewpoints are represented in the architecture repository. | Needs customer validation of role-specific workflows and terminology before pilot sign-off. |
+| Product fit | Strong for fair allocation of scarce shared capacity, with parking as the first proof vertical. The core story is clear: users request limited capacity, Draw allocates scarce capacity by explicit rules, operators can explain outcomes, and audit/notification evidence exists. | Suitable for customer evaluation with synthetic data and a guided demo. |
+| Business process | Core request, Draw, allocation, cancellation, notification, audit, and policy concepts are documented. User/operator/admin viewpoints are represented in the architecture repository. | Needs customer validation of role-specific workflows and terminology before pilot sign-off. |
 | Application architecture | Service boundaries are documented around Booking, Configuration, Customer, Notification, Audit, DataHub, and frontend clients. Dapr remains the integration/runtime boundary. | Fit for evaluation, but DataHub projections and generated contract evidence still need consolidation. |
 | Data architecture | Target direction is DataHub/read-model based. Reporting-as-PostgreSQL is obsolete/deferred, and Customer durable storage is a known gap. | Not yet pilot-ready for restart-safe tenant/customer state until Customer persistence and first DataHub projections are implemented. |
 | Technology architecture | Local and hosted NAS/Cloudflare deployment profiles are documented. Dapr-first runtime, observability, backup/restore, and smoke paths are defined as target evidence. | Needs hosted public-domain smoke evidence, Dapr hardening evidence, and restore/operations proof before customer data. |
@@ -19,7 +19,7 @@ It is intentionally a product-facing assessment. The detailed architecture contr
 
 ## Strengths
 
-- Parking-first product scope is understandable and testable.
+- Scarce shared-capacity product scope is understandable and testable, with parking as the concrete first module.
 - The architecture is explicit about tenant isolation, Dapr boundaries, provider neutrality, audit, privacy, and client-owned production.
 - Known non-priority areas, especially Billing and old Reporting/PostgreSQL direction, are no longer presented as active customer-first scope.
 - The documentation separates product pages, architecture repository, and operations runbooks.

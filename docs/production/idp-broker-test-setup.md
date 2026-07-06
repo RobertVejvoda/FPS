@@ -32,7 +32,7 @@ Keycloak receives code → validates → maps claims → issues FairSpot token
 FairSpot API validates FairSpot token (trusted issuer, audience, tenant mapping)
 ```
 
-The company IdP is never a trusted issuer for FairSpot APIs. Keycloak remains the single OIDC issuer. Adding a new company SSO means adding a Keycloak IdP broker entry — no FairSpot service code changes are required.
+The customer IdP is never a trusted issuer for FairSpot APIs. Keycloak remains the single OIDC issuer. Adding a new customer IdP broker means adding a Keycloak IdP broker entry — no FairSpot service code changes are required.
 
 ---
 

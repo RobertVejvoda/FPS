@@ -4,12 +4,12 @@ The business layer explains why FairSpot exists, who it serves, and which custom
 
 ## Business Value
 
-FairSpot helps companies manage scarce parking capacity without turning HR into a manual dispatch team. The product creates value by:
+FairSpot helps customer organizations manage scarce shared capacity without turning operators into a manual dispatch team. Parking is the current proof path. The product creates value by:
 
 - reducing email and spreadsheet-based administration;
-- making parking allocation transparent and auditable;
-- improving employee trust in a fair process;
-- increasing utilization of existing parking assets;
+- making allocation transparent and auditable;
+- improving user trust in a fair process;
+- increasing utilization of existing scarce capacity;
 - giving management usable data about demand, capacity, and policy impact.
 
 ## Core Documents
@@ -28,7 +28,7 @@ FairSpot helps companies manage scarce parking capacity without turning HR into 
 - [Allocation Process](./business-layer/process)
 - [Executable Allocation Rules](./business-layer/allocation-rules)
 - [Parking Policy Configuration](./business-layer/parking-policy-configuration)
-- [SSO-First Customer Integration](./business-layer/customer-data-import)
+- [Customer Identity Integration](./business-layer/customer-data-import)
 - [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes)
 - [Tenant Onboarding](./business-layer/tenant-onboarding)
 - [Platform Operator Dashboard UX](./business-layer/platform-dashboard-ux)

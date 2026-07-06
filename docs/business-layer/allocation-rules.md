@@ -21,7 +21,7 @@ These rules cover:
 | Draw key | Tenant, location, date, and time slot being allocated. |
 | Eligible request | A request that passes tenant policy, duplicate, time slot, vehicle, and capacity constraints. |
 | Matching slot | A slot that can satisfy the request's location, time, vehicle, accessibility, EV, motorcycle, reserved, or company-car requirements. |
-| Resource map | Customer-maintained map of allocatable resources, such as parking spaces, desks, chairs, seats, lockers, chargers, or capacity pools. |
+| Resource map | Customer-maintained map of allocatable resources, such as parking spaces, seats, sport courts, desks, lockers, chargers, or capacity pools. |
 | Zone | Customer-defined grouping inside a location, such as a parking section, floor, desk neighborhood, team area, accessibility area, or charger area. |
 | Preferred zone | Employee-selected zone for a request. The allocation process should try it first when policy allows, but it is not a hard requirement by default. |
 | Team default zone | Zone normally associated with a team, department, or internal group. It is preferred before general fallback, but not reserved unless policy marks it as reserved. |
@@ -124,7 +124,7 @@ This preserves flexible slots for later requests while still giving employees a 
 
 ## Resource Maps and Zones
 
-FairSpot should support uploaded or maintained maps of allocatable resources. Parking remains the first implementation target, but the same model should also support workplace desks, chairs, seats, lockers, chargers, or similar limited resources.
+FairSpot should support uploaded or maintained maps of allocatable resources. Parking remains the first implementation target, but the same model should also support seats, sport courts, desks, lockers, chargers, or similar bookable limited resources.
 
 A resource map may define:
 

@@ -25,19 +25,19 @@ have a one-command local demo via the open repo (`tools/start-container-stack.sh
 ## 2. The guided pilot funnel
 
 The principle: instead of an anonymous sandbox with generic data, **every evaluation is
-qualified, provisioned around the prospect's own parking problem, accompanied, and time-boxed
+qualified, provisioned around the prospect's own shared-resource challenge, accompanied, and time-boxed
 toward a decision.** It doubles as the sales pipeline and a feature-signal board.
 
 | # | Stage | What happens | Plane | Status |
 |---|---|---|---|---|
 | 1 | **Land** | Public page; CTAs *Start a FairSpot Pilot* (high intent) + *Explore the Green Logistics tour* (low commitment, static/safe) | open | built (#656/#705) |
-| 2 | **Capture** | Submit company / domain / work email / *parking challenge*; Turnstile + rate-limited → sales email + operator queue | open (intake) / private (queue) | built (#637/#650, #651/#653) |
+| 2 | **Capture** | Submit company / domain / work email / *shared-resource challenge*; Turnstile + rate-limited -> sales email + operator queue | open (intake) / private (queue) | built (#637/#650, #651/#653) |
 | 3 | **Qualify (triage)** | Operator reviews fit (size, region, modules); approve/reject with reason, audited | private | to build (PLAT008C) |
 | 4 | **Provision tailored workspace** | Spin up a *dedicated* eval tenant, seeded to mirror their situation, their branding — not a shared playground | private | partial (#634/#645 + seed; automation PLAT008B/C) |
 | 5 | **Onboard + walkthrough** | Contact them, give access, run a guided session; in-app readiness checks act as a setup checklist | private + CS | partial |
 | 6 | **Evaluate** | They invite a few HR/employees, run real or simulated Draws, see transparent outcomes + audit evidence | open engine, private host | engine built |
 | 7 | **Convert** | Subscribe (hosted by us or a reseller) → `eval → active`; or self-host the open core; or auto-expire | private | to build (billing) |
-| 8 | **Expand / retain** | More sites/users, modules (seats/desks), feedback loop | private | to build (PLAT006, modules) |
+| 8 | **Expand / retain** | More sites/users, modules such as seats, sport courts, desks, lockers, or chargers, feedback loop | private | to build (PLAT006, modules) |
 
 **What makes it "guided"** (vs an open sandbox): (1) human-qualified at triage; (2) provisioned
 around their problem; (3) accompanied; (4) time-boxed with an explicit conversion step. Each
@@ -63,7 +63,7 @@ explicit validation tools.
 |---|---|---|
 | **Default Green Logistics showcase** | Local development, guided customer walkthroughs, Release 1 smoke evidence, and source content for the static public tour. `./tools/dev-seed.sh` creates the small story from #704: named people, six parking slots, visible scarcity, fairness history, one reallocation, and a Seats example. | Synthetic only. It is a story-led evaluation baseline, not load data and not a permanent anonymous live demo. |
 | **Tiny `demo` isolation fixture** | Tenant-isolation and SSO contrast checks. Enable it explicitly with `FPS_INCLUDE_DEMO_TENANT=1 ./tools/dev-setup-auth.sh`. | One `demo` tenant-admin and no business data by default. It must not reappear as the normal evaluator scaffold. |
-| **Tailored prospect workspace** | Qualified guided pilots after triage. The tenant should be seeded/provisioned around the prospect's actual parking challenge, branding, location model, and identity path. | Dedicated tenant; use real or customer-shaped data only when the pilot scope and approvals allow it. Stable new product requirements start in strategy/product docs, then become GitHub implementation slices. |
+| **Tailored prospect workspace** | Qualified guided pilots after triage. The tenant should be seeded/provisioned around the prospect's actual shared-resource challenge, branding, location model, and identity path. | Dedicated tenant; use real or customer-shaped data only when the pilot scope and approvals allow it. Stable new product requirements start in strategy/product docs, then become GitHub implementation slices. |
 | **Load/performance seed** | Capacity and performance validation. Use `tools/perf-seed-greenlogistics.sh` with explicit counts. | Synthetic bulk data. It must not pollute the default showcase or public tour narrative. |
 
 The public product tour (#705) may use static screenshots, copy, and examples derived from the

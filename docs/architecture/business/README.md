@@ -11,7 +11,7 @@
 | **Last Reviewed** | 2026-05-31 |
 | **Next Review** | Before customer architecture review |
 
-FairSpot business architecture describes the parking-first fair allocation operating model. The target business state is a transparent, auditable booking and Draw process that reduces HR/facilities coordination work while keeping employees informed.
+FairSpot business architecture describes the scarce shared-capacity fair allocation operating model, with parking as the first proof module. The target business state is a transparent, auditable booking and Draw process that reduces operator coordination work while keeping users informed.
 
 ## Migration Status
 
@@ -19,10 +19,10 @@ Core business architecture has been restated from legacy business-layer evidence
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Capabilities | Partial | Customer-ready parking capabilities are stated. Billing remains deferred. |
+| Capabilities | Partial | Customer-ready shared-resource capabilities are stated through the current parking implementation. Billing remains deferred. |
 | Value streams | Partial | Core tenant, employee, HR, audit, and deployment value streams are stated. Detailed ArchiMate diagrams are still placeholders. |
 | Actors and roles | Partial | Primary operating roles are stated. RACI remains governed separately. |
-| Business processes | Partial | Customer-first parking flows are migrated. Some implementation gaps remain in Customer persistence, HR/admin operations, and durable DataHub projections. |
+| Business processes | Partial | Customer-first booking and allocation flows are migrated through the current parking implementation. Some implementation gaps remain in Customer persistence, HR/admin operations, and durable DataHub projections. |
 | Policies | Partial | Allocation, lifecycle, notification, privacy, and deferred-scope policies are stated. Tenant-specific policy configuration still needs implementation validation. |
 
 ## Legacy Business Evidence Categorization

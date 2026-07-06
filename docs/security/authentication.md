@@ -34,7 +34,7 @@ Tenant or user identity must never come from request bodies, query strings, or c
 - Do not place tokens in URLs.
 - Use HTTPS for all hosted public endpoints.
 - Store browser/mobile session material only in platform-appropriate secure storage.
-- Do not store company passwords in FairSpot. Company credentials remain with the client's IdP.
+- Do not store customer or external IdP passwords in FairSpot. External credentials remain with the selected IdP.
 
 ## Multi-Factor Authentication and Passkeys
 

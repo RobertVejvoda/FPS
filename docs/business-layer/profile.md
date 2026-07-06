@@ -2,7 +2,7 @@
 
 [Profile module](../application-layer/profile) is designed to manage user-specific information and settings. It allows users to update their personal details, view and manage their booking history, provide vehicle information, and handle active sessions. Additionally, it includes features for enhancing account security through multi-factor authentication, viewing login history, and ensuring data security. Users can also access customer support, provide feedback, and manage notifications. This module aims to offer a comprehensive and secure way for users to manage their profiles and related activities.
 
-Profile facts should be mapped from SSO/OIDC claims where possible, entered by employees for self-owned details, or maintained by authorized admins for policy-sensitive facts. Source-of-truth rules, data classification, validation, and local-account credential handling are defined in [SSO-First Customer Integration](./customer-data-import).
+Profile facts should be mapped from trusted IdP claims where possible, entered by users for self-owned details, or maintained by authorized admins for policy-sensitive facts. Source-of-truth rules, data classification, validation, and local-account credential handling are defined in [Customer Identity Integration](./customer-data-import).
 
 ### Business Services
 
