@@ -165,6 +165,8 @@ services:
 
   alertmanager:
     restart: unless-stopped
+    volumes:
+      - ./alertmanager/runtime/secrets:/etc/alertmanager/secrets:ro
 
   loki:
     restart: unless-stopped
