@@ -97,6 +97,7 @@ if [[ "$MODE" == "local" ]]; then
   export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-fps}"
 else
   ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
+  export ALERTMANAGER_CONFIG_FILE="${ALERTMANAGER_CONFIG_FILE:-runtime/config.yaml}"
 fi
 
 # The normal container profile is Production-like. The local --seed path is a
@@ -262,6 +263,14 @@ if [[ "$TEARDOWN" == "true" ]]; then
   echo "Done. Data volumes are intact. To remove data volumes too:"
   echo "  docker volume rm \$(docker volume ls -q | grep fps)"
   exit 0
+fi
+
+# NAS Alertmanager notifications are rendered from the ignored operator env file.
+# If no ALERTMANAGER_* notification values are set, the renderer keeps the
+# local-only receiver so the stack remains non-notifying by default.
+if [[ "$MODE" == "nas" ]]; then
+  hdr "Alertmanager notification config"
+  "$REPO_ROOT/tools/render-alertmanager-nas-config.sh" "$ENV_FILE"
 fi
 
 # ── External network ─────────────────────────────────────────────────────────────

@@ -83,9 +83,54 @@ Silenced alerts remain in Alertmanager but do not re-notify until the silence ex
 
 ## Alert routing
 
-In local mode, all alerts go to the `local-only` receiver (no external notification). To add notifications:
-- Edit `code/infrastructure/alertmanager/config.yaml`
-- Add a `webhook_configs`, `email_configs`, or `slack_configs` block to the `local-only` receiver or create a new receiver and route to it.
+In local mode, all alerts go to the `local-only` receiver (no external notification). Keep
+`code/infrastructure/alertmanager/config.yaml` local-only so development machines do not send real
+operator alerts.
+
+In NAS/hosted mode, `./tools/start-container-stack.sh --nas` renders a gitignored Alertmanager config
+from `code/infrastructure/nas.env`:
+
+- warnings route to email only;
+- critical alerts route to email and Discord;
+- resolved notifications are enabled for critical alerts;
+- the SendGrid SMTP password and Discord webhook URL are written to gitignored runtime secret files.
+
+Required `nas.env` values:
+
+```env
+ALERTMANAGER_EMAIL_TO=you@example.com
+ALERTMANAGER_EMAIL_FROM=alerts@fairspot.net
+ALERTMANAGER_SMTP_SMARTHOST=smtp.sendgrid.net:587
+ALERTMANAGER_SMTP_USERNAME=apikey
+ALERTMANAGER_SMTP_PASSWORD=<sendgrid-mail-send-api-key>
+ALERTMANAGER_DISCORD_WEBHOOK_URL=<discord-webhook-url>
+```
+
+`ALERTMANAGER_SMTP_USERNAME=apikey` is the literal SendGrid SMTP username. Use a SendGrid API key
+with Mail Send permission as the password. Prefer a separate key from the Notification service key so
+alerting can be rotated independently.
+
+The generated files live under `code/infrastructure/alertmanager/runtime/`, which is ignored by Git.
+Do not paste the SendGrid key or Discord webhook into tracked YAML, issues, PRs, docs, screenshots, or
+terminal output.
+
+To render and inspect only the config shape without starting the stack:
+
+```bash
+./tools/render-alertmanager-nas-config.sh code/infrastructure/nas.env
+```
+
+To validate delivery on NAS:
+
+1. Start the NAS stack: `./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --skip-e2e`
+2. Confirm Alertmanager is running: `docker compose --project-directory code/infrastructure --env-file code/infrastructure/nas.env -f docker-compose.yaml -f docker-compose.services.images.yml -f docker-compose.dapr.yml -f docker-compose.nas.yml ps alertmanager`
+3. Trigger `FpsServiceDown` by stopping one FPS service.
+4. Wait 30-45 seconds.
+5. Confirm email and Discord receive the firing alert.
+6. Restart the service and confirm a resolved notification arrives.
+
+Rotate either channel by replacing the value in `nas.env`, rerunning `./tools/start-container-stack.sh --nas`,
+and deleting the old SendGrid key or Discord webhook in the provider UI.
 
 ---
 
