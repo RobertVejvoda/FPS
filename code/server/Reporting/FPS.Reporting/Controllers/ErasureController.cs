@@ -23,7 +23,7 @@ public sealed class ErasureController(IReportingRepository repository) : Control
         // #763: in Production/NAS the repository is NoOpReportingRepository, so
         // this returns "notApplicable" (0) — it does NOT anonymise DataHub-backed
         // reports. DataHub owns the durable report data; user-level reporting
-        // erasure in DataHub is a tracked follow-up.
+        // erasure in DataHub is tracked in #772.
         var targetRef = !string.IsNullOrEmpty(input.TargetUserId)
             ? input.TargetUserId
             : input.TargetActorHash;

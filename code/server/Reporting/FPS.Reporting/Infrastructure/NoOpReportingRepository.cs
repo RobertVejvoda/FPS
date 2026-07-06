@@ -8,8 +8,8 @@ namespace FPS.Reporting.Infrastructure;
 /// restart and is no longer the source of truth). This no-op absorbs the legacy <c>booking-events</c>
 /// projection path without storing anything, so no core tenant-scoped state lives in process memory.
 /// Reads are served by <see cref="DataHubReportingQueryRepository"/>. Purge/erasure are honestly
-/// inert here — the durable report data lives in DataHub and is removed by DataHub tenant purge
-/// (user-level reporting erasure in DataHub is a follow-up).
+/// inert here — the durable report data lives in DataHub and is removed by DataHub tenant purge.
+/// User-level (single-subject) erasure of DataHub report projections is tracked in #772.
 /// </summary>
 public sealed class NoOpReportingRepository : IReportingRepository
 {
@@ -31,8 +31,8 @@ public sealed class NoOpReportingRepository : IReportingRepository
     public Task<int> PurgeTenantAsync(string tenantId, CancellationToken cancellationToken = default) =>
         Task.FromResult(0);
 
-    // No in-memory fairness rows to anonymise — DataHub owns the durable data (follow-up: user-level
-    // reporting erasure in DataHub). This does NOT anonymise DataHub-backed reports.
+    // No in-memory fairness rows to anonymise — DataHub owns the durable data (user-level reporting
+    // erasure in DataHub is tracked in #772). This does NOT anonymise DataHub-backed reports.
     public Task<int> AnonymiseFairnessByRequestorRefAsync(string tenantId, string requestorRef, CancellationToken cancellationToken = default) =>
         Task.FromResult(0);
 }

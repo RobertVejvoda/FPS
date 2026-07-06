@@ -208,6 +208,8 @@ services:
       <<: *fps-service-auth-env
       ASPNETCORE_URLS: "http://+:5171"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
+      # #763 — Reporting reads durable report data from DataHub over this base URL.
+      DataHubService__BaseUrl: "http://fps-datahub:5211"
     networks:
       - web
 

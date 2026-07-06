@@ -25,7 +25,10 @@ else
 {
     builder.Services.AddSingleton<IReportingRepository, NoOpReportingRepository>();
     builder.Services.AddHttpClient<IReportingQueryRepository, DataHubReportingQueryRepository>(client =>
-        client.BaseAddress = new Uri(builder.Configuration["DataHubService:BaseUrl"] ?? "http://fps-datahub"));
+        // DataHub listens on 5211 inside the compose network; compose also injects
+        // DataHubService__BaseUrl. The fallback carries the port so a missing env var
+        // does not silently degrade to port 80.
+        client.BaseAddress = new Uri(builder.Configuration["DataHubService:BaseUrl"] ?? "http://fps-datahub:5211"));
 }
 
 builder.Services.AddScoped<BookingEventReportingHandler>();
