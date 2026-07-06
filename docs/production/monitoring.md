@@ -123,3 +123,46 @@ Provider monitoring is therefore supporting evidence only. A hosted profile is a
 - Dapr sidecar/component health where exposed;
 - backup/restore and scheduled-job outcomes;
 - an OpenTelemetry path for application traces and metrics.
+
+## Alert Notifications
+
+Prometheus owns alert evaluation and Alertmanager owns notification routing. Grafana remains the
+operator dashboard; FairSpot does not use Grafana-managed alerts for the current NAS profile.
+
+The local profile is intentionally non-notifying: Alertmanager routes to `local-only` so developers can
+see alerts in the Alertmanager UI without sending real operator messages.
+
+The NAS profile uses the ignored operator env file, `code/infrastructure/nas.env`, as the source for
+Alertmanager notification settings. `./tools/start-container-stack.sh --nas` renders a gitignored
+runtime config and secret files before starting Alertmanager.
+
+Initial operator channels:
+
+| Severity | Email | Discord |
+| --- | --- | --- |
+| Critical | Yes | Yes |
+| Warning | Yes | No |
+
+SendGrid SMTP is the email provider for Alertmanager. Use `smtp.sendgrid.net:587`,
+`ALERTMANAGER_SMTP_USERNAME=apikey`, and a SendGrid API key with Mail Send permission as the password.
+Prefer a separate SendGrid API key for Alertmanager so alerting can be rotated independently from
+application Notification email.
+
+Required NAS variables:
+
+```env
+ALERTMANAGER_EMAIL_TO=you@example.com
+ALERTMANAGER_EMAIL_FROM=alerts@fairspot.net
+ALERTMANAGER_SMTP_SMARTHOST=smtp.sendgrid.net:587
+ALERTMANAGER_SMTP_USERNAME=apikey
+ALERTMANAGER_SMTP_PASSWORD=<sendgrid-mail-send-api-key>
+ALERTMANAGER_DISCORD_WEBHOOK_URL=<discord-webhook-url>
+```
+
+Secret handling:
+
+- Real values live only in ignored `nas.env` or generated runtime secret files.
+- The SendGrid API key and Discord webhook URL must never be committed, pasted into issues, or shown in
+  screenshots.
+- Rotate Alertmanager's SendGrid key independently from the Notification service key where possible.
+- Rotate the Discord webhook if it is exposed.
