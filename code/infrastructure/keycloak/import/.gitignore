@@ -1,0 +1,6 @@
+# Operator-supplied Keycloak realm exports are imported on startup (--import-realm).
+# Realm exports can contain client secrets and environment-specific redirect URIs,
+# so they are NEVER committed. Keep only this .gitignore and the README.
+*
+!.gitignore
+!README.md
