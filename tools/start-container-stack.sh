@@ -174,6 +174,7 @@ COMPOSE_FILES=(
 )
 if [[ "$MODE" == "nas" ]]; then
   COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.nas.yml")
+  COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.services.nas.yml")
 fi
 
 if [[ "$MODE" == "nas" ]]; then
@@ -194,6 +195,7 @@ fi
 COMPOSE_HUMAN+=" -f docker-compose.yaml -f $SERVICES_FILE -f docker-compose.dapr.yml"
 if [[ "$MODE" == "nas" ]]; then
   COMPOSE_HUMAN+=" -f docker-compose.nas.yml"
+  COMPOSE_HUMAN+=" -f docker-compose.services.nas.yml"
 fi
 
 # ── Docker-only inspection helpers ───────────────────────────────────────────────

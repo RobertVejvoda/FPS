@@ -14,6 +14,7 @@
 #     -f docker-compose.services.yml \
 #     -f docker-compose.dapr.yml \
 #     -f docker-compose.nas.yml \
+#     -f docker-compose.services.nas.yml \
 #     up -d
 #
 # Prerequisites:
@@ -26,78 +27,6 @@
 # auto-start on developer machine reboots.
 
 services:
-
-  fairspot-audit:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-booking:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-configuration:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-customer:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-datahub:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-identity:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-notification:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-profile:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
-
-  fairspot-reporting:
-    environment:
-      Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
-      Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
-      Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-}
-      Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
-      Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
   envoy-proxy:
     restart: unless-stopped
@@ -116,7 +45,9 @@ services:
   # server-mode Vault).
   vault:
     restart: unless-stopped
-    command: server -config=/vault/config/vault.hcl
+    # Just `server` — the vault image auto-loads /vault/config, so passing an explicit
+    # -config=/vault/config/vault.hcl would load the listener twice (8200 bind conflict).
+    command: server
     environment:
       # In-container CLI target for the operator's `vault operator unseal`/init.
       - VAULT_ADDR=http://127.0.0.1:8200

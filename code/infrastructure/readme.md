@@ -99,7 +99,7 @@ vault status
 
 ## Vault Persistence
 
-Local Vault runs in development mode. Secrets are local-only and may need to be re-seeded after the Vault container is recreated. The checked-in `vault/config/vault-config.json` is retained for future non-dev local experiments, but it is not mounted by the default Docker Compose profile because the official Vault entrypoint already loads `/vault/config` automatically.
+Local Vault runs in development mode. Secrets are local-only and may need to be re-seeded after the Vault container is recreated. The NAS/hosted profile uses `vault/config/vault.hcl`; the default local Docker Compose profile does not mount it because the official Vault entrypoint already loads `/vault/config` automatically.
 
 If you switch away from dev mode, do not pass both `server` and an explicit `-config=/vault/config/...` argument while also mounting config under `/vault/config`; that loads the listener twice and fails with `bind: address already in use`.
 

@@ -76,12 +76,14 @@ docker compose --env-file nas.env \
   -f docker-compose.services.images.yml \
   -f docker-compose.dapr.yml \
   -f docker-compose.nas.yml \
+  -f docker-compose.services.nas.yml \
   pull
 docker compose --env-file nas.env \
   -f docker-compose.yaml \
   -f docker-compose.services.images.yml \
   -f docker-compose.dapr.yml \
   -f docker-compose.nas.yml \
+  -f docker-compose.services.nas.yml \
   up -d
 ```
 

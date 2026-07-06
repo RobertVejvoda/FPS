@@ -9,7 +9,7 @@
 # loopback-bound (see docker-compose.yaml), never exposed on the LAN.
 
 storage "raft" {
-  path    = "/vault/data"
+  path    = "/vault/file"
   node_id = "fairspot-nas-vault"
 }
 

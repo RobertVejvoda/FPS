@@ -123,7 +123,7 @@ To render and inspect only the config shape without starting the stack:
 To validate delivery on NAS:
 
 1. Start the NAS stack: `./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --skip-e2e`
-2. Confirm Alertmanager is running: `docker compose --project-directory code/infrastructure --env-file code/infrastructure/nas.env -f docker-compose.yaml -f docker-compose.services.images.yml -f docker-compose.dapr.yml -f docker-compose.nas.yml ps alertmanager`
+2. Confirm Alertmanager is running: `docker compose --project-directory code/infrastructure --env-file code/infrastructure/nas.env -f docker-compose.yaml -f docker-compose.services.images.yml -f docker-compose.dapr.yml -f docker-compose.nas.yml -f docker-compose.services.nas.yml ps alertmanager`
 3. Trigger `FpsServiceDown` by stopping one FPS service.
 4. Wait 30-45 seconds.
 5. Confirm email and Discord receive the firing alert.

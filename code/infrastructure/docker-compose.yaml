@@ -22,7 +22,7 @@ services:
       - VAULT_API_ADDR=http://0.0.0.0:8200
       - VAULT_ADDRESS=http://0.0.0.0:8200
     volumes:
-      - vault_data:/vault/data
+      - vault_data:/vault/file
     # Local dev mode matches the checked-in Dapr local component token.
     # Do not mount /vault/config in dev mode, or the listener is loaded twice.
     command: server -dev -dev-root-token-id=${VAULT_TOKEN:-dev-only-token} -dev-listen-address=0.0.0.0:8200
