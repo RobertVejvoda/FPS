@@ -116,7 +116,9 @@ services:
   # server-mode Vault).
   vault:
     restart: unless-stopped
-    command: server -config=/vault/config/vault.hcl
+    # Just `server` — the vault image auto-loads /vault/config, so passing an explicit
+    # -config=/vault/config/vault.hcl would load the listener twice (8200 bind conflict).
+    command: server
     environment:
       # In-container CLI target for the operator's `vault operator unseal`/init.
       - VAULT_ADDR=http://127.0.0.1:8200
