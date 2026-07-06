@@ -23,6 +23,65 @@ public sealed class BookingProjectionHandlerTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void CanHandle_PenaltyApplied()
+        => Assert.True(_handler.CanHandle("booking.penaltyApplied"));
+
+    [Fact]
+    public async Task HandlePenaltyApplied_IncrementsPenaltyCount_WithoutChangingStatus()
+    {
+        // #763: a penalty is additive — it increments a separate count and does not change FinalStatus.
+        _db.BookingOutcomes.Add(new BookingOutcomeProjection
+        {
+            BookingRequestId = "bk-1",
+            TenantId = "tenant-a",
+            RequestorId = "u1",
+            LocationId = "loc-hq",
+            Date = new DateOnly(2026, 6, 10),
+            TimeSlot = "08:00-17:00",
+            FinalStatus = "Allocated",
+        });
+        await _db.SaveChangesAsync();
+
+        // Two distinct penalty events (production dedup is the caller's EventInbox).
+        await _handler.HandleAsync(Penalty("evt-p1", "bk-1"), CancellationToken.None);
+        await _handler.HandleAsync(Penalty("evt-p2", "bk-1"), CancellationToken.None);
+
+        var row = await _db.BookingOutcomes.FirstAsync(b => b.BookingRequestId == "bk-1");
+        Assert.Equal(2, row.PenaltyCount);
+        Assert.Equal("Allocated", row.FinalStatus);
+    }
+
+    [Fact]
+    public async Task HandlePenaltyApplied_MissingOutcome_IsNoOp()
+    {
+        await _handler.HandleAsync(Penalty("evt-p3", "unknown"), CancellationToken.None);
+        Assert.Empty(_db.BookingOutcomes);
+    }
+
+    private static BookingEventEnvelope Penalty(string eventId, string bookingRequestId) => new(
+        EventId: eventId,
+        EventType: "booking.penaltyApplied",
+        EventVersion: 1,
+        OccurredAt: DateTime.UtcNow,
+        TenantId: "tenant-a",
+        CorrelationId: "corr",
+        CausationId: null,
+        ActorType: "system",
+        ActorId: null,
+        Source: "booking",
+        Payload: new BookingEventPayload(
+            BookingRequestId: bookingRequestId,
+            RequestorId: "u1",
+            LocationId: null,
+            Date: null,
+            TimeSlot: null,
+            PreviousStatus: null,
+            NewStatus: null,
+            ReasonCode: "LateCancellation",
+            ReasonText: null,
+            AffectedRecipientIds: null));
+
+    [Fact]
     public async Task HandleDrawStarted_CreatesDrawHistoryProjection()
     {
         // Arrange

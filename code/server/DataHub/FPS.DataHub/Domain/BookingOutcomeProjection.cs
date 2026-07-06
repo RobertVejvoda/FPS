@@ -54,6 +54,13 @@ public sealed class BookingOutcomeProjection
     /// <summary>When final decision was made</summary>
     public DateTime? DecidedAt { get; set; }
 
+    /// <summary>
+    /// Number of penalties applied to this booking (#763). A penalty is additive — it does not change
+    /// <see cref="FinalStatus"/> — so it is counted separately. Populated from booking.penaltyApplied
+    /// events. 0 for rows projected before this field was added.
+    /// </summary>
+    public int PenaltyCount { get; set; }
+
     /// <summary>Last updated timestamp for projection freshness</summary>
     public DateTimeOffset LastUpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
