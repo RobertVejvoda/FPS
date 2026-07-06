@@ -1,4 +1,4 @@
-# fps-mobile
+# fairspot-mobile
 
 Expo managed React Native + TypeScript app shell for FairSpot.
 
