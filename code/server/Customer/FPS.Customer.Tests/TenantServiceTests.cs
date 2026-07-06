@@ -238,7 +238,7 @@ public sealed class TenantServiceTests
         foreach (var service in new[] { "customer", "booking", "notification", "profile", "audit", "configuration", "datahub", "reporting" })
         {
             Assert.True(scopes.ContainsKey(service), $"provisioning metadata is missing the '{service}' scope");
-            Assert.Equal($"fps-acme-corp-{service}", scopes[service]);
+            Assert.Equal($"fairspot-acme-corp-{service}", scopes[service]);
         }
     }
 

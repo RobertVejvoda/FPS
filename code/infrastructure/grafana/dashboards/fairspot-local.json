@@ -1,10 +1,10 @@
 {
-  "title": "FPS Local Operations",
-  "uid": "fps-local-ops",
+  "title": "FairSpot Local Operations",
+  "uid": "fairspot-local-ops",
   "schemaVersion": 38,
   "version": 1,
   "refresh": "15s",
-  "tags": ["fps", "local"],
+  "tags": ["fairspot", "local"],
   "time": { "from": "now-1h", "to": "now" },
   "panels": [
     {
@@ -150,10 +150,10 @@
       "title": "FPS Service Logs (Loki) — copy TraceId to search in Jaeger at :16686",
       "type": "logs",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 36 },
-      "datasource": { "type": "loki", "uid": "fps-loki" },
+      "datasource": { "type": "loki", "uid": "fairspot-loki" },
       "targets": [
         {
-          "datasource": { "type": "loki", "uid": "fps-loki" },
+          "datasource": { "type": "loki", "uid": "fairspot-loki" },
           "expr": "{source=\"local-harness\"}",
           "legendFormat": ""
         }

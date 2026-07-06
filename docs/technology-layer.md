@@ -24,6 +24,6 @@ Production operation is also a top-level architecture section. See [Production](
 
 ### Domain Map
 
-![Domain Map](./images/fps-software-architecture-detailed.png)
+![Domain Map](./images/fairspot-software-architecture-detailed.png)
 
 

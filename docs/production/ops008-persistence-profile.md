@@ -47,7 +47,7 @@ The order is driven by service dependency: Configuration is the upstream of all 
 
 **Target state:** Tenant-scoped persistent store via Dapr state store or document collection. Configuration service owns its own store; no other service reads it directly.
 
-**Dapr component:** Uses the shared `fps-statestore` component (or a dedicated `fps-configuration-statestore`). Component scoping to `fps-configuration` app ID is required before customer traffic.
+**Dapr component:** Uses the shared `fairspot-statestore` component (or a dedicated `fairspot-configuration-statestore`). Component scoping to `fairspot-configuration` app ID is required before customer traffic.
 
 **Tenant key pattern (implemented, PR #595):**
 
@@ -141,7 +141,7 @@ Restore scope: all profile data for a tenant is under `profile:{tenantId}:*`. Ve
 
 **Tenant key pattern and component/collection separation (implemented, PR #597):**
 
-Three physically separate Dapr components back the three stores, all pointing to the `fps-audit` MongoDB database but to independent collections. This allows MongoDB-level backup, restore, and TTL index policies per collection, and ensures a GDPR erasure purge of `pii-mappings` cannot touch `auditlog`.
+Three physically separate Dapr components back the three stores, all pointing to the `fairspot-audit` MongoDB database but to independent collections. This allows MongoDB-level backup, restore, and TTL index policies per collection, and ensures a GDPR erasure purge of `pii-mappings` cannot touch `auditlog`.
 
 | Entity | Dapr component | MongoDB collection | Key pattern | Value shape | Notes |
 |---|---|---|---|---|---|
@@ -158,8 +158,8 @@ All keys pass through `TenantStorageKey.For(...)` (in `FPS.SharedKernel.Infrastr
 
 | Profile | auditstore | pii-mappingstore | erasure-store |
 |---|---|---|---|
-| local | `local/auditstore.yaml` → MongoDB `fps-audit.auditlog` | `local/pii-mappingstore.yaml` → MongoDB `fps-audit.pii-mappings` | `local/erasure-store.yaml` → MongoDB `fps-audit.erasure-requests` |
-| demo | `demo/auditstore.yaml` → MongoDB `fps-audit.auditlog` | `demo/pii-mappingstore.yaml` → MongoDB `fps-audit.pii-mappings` | `demo/erasure-store.yaml` → MongoDB `fps-audit.erasure-requests` |
+| local | `local/auditstore.yaml` → MongoDB `fairspot-audit.auditlog` | `local/pii-mappingstore.yaml` → MongoDB `fairspot-audit.pii-mappings` | `local/erasure-store.yaml` → MongoDB `fairspot-audit.erasure-requests` |
+| demo | `demo/auditstore.yaml` → MongoDB `fairspot-audit.auditlog` | `demo/pii-mappingstore.yaml` → MongoDB `fairspot-audit.pii-mappings` | `demo/erasure-store.yaml` → MongoDB `fairspot-audit.erasure-requests` |
 | smoke | `smoke/auditstore.yaml` → `state.in-memory` | `smoke/pii-mappingstore.yaml` → `state.in-memory` | `smoke/erasure-store.yaml` → `state.in-memory` |
 
 All component files are under `code/infrastructure/dapr/components/`. Local profile uses `localhost:27017` with `mongodb-credentials` secret; demo profile uses `mongodb-connection` secret with Atlas TLS params.
@@ -192,7 +192,7 @@ All component files are under `code/infrastructure/dapr/components/`. Local prof
 
 **Dapr component and key/value schema (implemented, PR #598):**
 
-All entities share the single `notificationstore` Dapr component (MongoDB `fps-notification.notifications`). No GDPR-physical separation is required — notification records are pseudonymised at write time and are erasable via `DeleteByRecipientIdAsync`.
+All entities share the single `notificationstore` Dapr component (MongoDB `fairspot-notification.notifications`). No GDPR-physical separation is required — notification records are pseudonymised at write time and are erasable via `DeleteByRecipientIdAsync`.
 
 | Entity | Key pattern | Value shape | Notes |
 |---|---|---|---|
@@ -209,11 +209,11 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
 
 | Profile | File | Backing store |
 |---|---|---|
-| local | `code/infrastructure/dapr/components/local/notificationstore.yaml` | MongoDB `localhost:27017` / `fps-notification.notifications` |
-| demo | `code/infrastructure/dapr/components/demo/notificationstore.yaml` | MongoDB Atlas / `fps-notification.notifications` |
+| local | `code/infrastructure/dapr/components/local/notificationstore.yaml` | MongoDB `localhost:27017` / `fairspot-notification.notifications` |
+| demo | `code/infrastructure/dapr/components/demo/notificationstore.yaml` | MongoDB Atlas / `fairspot-notification.notifications` |
 | smoke | `code/infrastructure/dapr/components/smoke/notificationstore.yaml` | `state.in-memory` |
 
-**HR roster global registry key rationale:** The `notif-roster-registry:all` key is intentionally not tenant-scoped. It is a service-level index storing only tenant IDs (no tenant-owned content), and is readable only by the Notification service's own Dapr app ID (`fps-notification`). Dapr component scoping ensures no other service can reach this key.
+**HR roster global registry key rationale:** The `notif-roster-registry:all` key is intentionally not tenant-scoped. It is a service-level index storing only tenant IDs (no tenant-owned content), and is readable only by the Notification service's own Dapr app ID (`fairspot-notification`). Dapr component scoping ensures no other service can reach this key.
 
 **Retention:** 90 days after creation (see [Tenant Storage Contract](./tenant-storage-contract.md#notification)).
 
@@ -258,7 +258,7 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
    DELETE FROM datahub_draw_history WHERE tenant_id = '<tenant>';
    DELETE FROM datahub_booking_outcome WHERE tenant_id = '<tenant>';
    ```
-3. Reset the Dapr pub/sub broker offset for `fps-booking-events` subscription to replay from the desired point, OR call the source service paginated replay API.
+3. Reset the Dapr pub/sub broker offset for `fairspot-booking-events` subscription to replay from the desired point, OR call the source service paginated replay API.
 4. Restart DataHub — `EventInboxService` re-ingests events and `BookingProjectionHandler` reconstructs projections idempotently.
 5. Verify row counts match expected values with a tenant-scoped query.
 
@@ -302,7 +302,7 @@ All entities share the single `notificationstore` Dapr component (MongoDB `fps-n
 
 **Active penalty score:** Continues to read from `IPenaltyRepository` (durable Booking DB) — no change to that path.
 
-**Dapr component:** Uses the existing `bookingstore` component (MongoDB `fps-booking.*`) present in local/demo/smoke profiles. No new component files needed.
+**Dapr component:** Uses the existing `bookingstore` component (MongoDB `fairspot-booking.*`) present in local/demo/smoke profiles. No new component files needed.
 
 **Provisioning evidence:**
 
@@ -335,7 +335,7 @@ The fix is `IdentityStoreHydrator` (`FPS.Customer.Infrastructure`), which uses a
 - **Development**: repository exception is logged; service starts with empty stores (local dev without Dapr sidecar keeps working)
 - **All other profiles (Production/Staging)**: exception propagates before `app.Run()` — the process exits and the orchestrator restarts the pod once Dapr is available
 
-The NAS/Envoy profile routes `/tenants` directly to `fps-customer` without health-check-based outlier removal, so a readiness health check alone is not sufficient; the application boundary must enforce fail-closed.
+The NAS/Envoy profile routes `/tenants` directly to `fairspot-customer` without health-check-based outlier removal, so a readiness health check alone is not sufficient; the application boundary must enforce fail-closed.
 
 **3. No additional mutation paths needed.**
 All runtime write paths already write to Dapr first. No further implementation required.

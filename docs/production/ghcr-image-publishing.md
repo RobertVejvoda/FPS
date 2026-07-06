@@ -20,8 +20,8 @@ The [`Publish Images`](../../.github/workflows/publish-images.yml) workflow buil
 
 | Image | Source |
 |---|---|
-| `fps-audit`, `fps-booking`, `fps-configuration`, `fps-customer`, `fps-datahub`, `fps-identity`, `fps-notification`, `fps-profile`, `fps-reporting` | `code/server/Dockerfile` (shared multi-stage build, per-service build args) |
-| `fps-web` | `code/web/fps-web/Dockerfile` (Vite build → nginx) |
+| `fairspot-audit`, `fairspot-booking`, `fairspot-configuration`, `fairspot-customer`, `fairspot-datahub`, `fairspot-identity`, `fairspot-notification`, `fairspot-profile`, `fairspot-reporting` | `code/server/Dockerfile` (shared multi-stage build, per-service build args) |
+| `fairspot-web` | `code/web/fps-web/Dockerfile` (Vite build → nginx) |
 
 All images are published under `ghcr.io/<owner>/<image>` (default owner `robertvejvoda`).
 
@@ -138,7 +138,7 @@ Local development still builds from source — nothing here changes it:
 
 ## Hosted routing (single origin)
 
-The web container is the public entry point for the browser UI. nginx in `fps-web`:
+The web container is the public entry point for the browser UI. nginx in `fairspot-web`:
 
 - serves the SPA at `/` (client-side routing falls back to `index.html`), and
 - reverse-proxies `/api/` to the Envoy gateway (`envoy-proxy:10000`).
@@ -147,7 +147,7 @@ Because the SPA and API share one origin, there is **no CORS** and no separate A
 
 | Hostname | Routes to | Serves |
 |---|---|---|
-| `app.<domain>` | `http://fps-web:80` | Web SPA + `/api/` proxy to Envoy |
+| `app.<domain>` | `http://fairspot-web:80` | Web SPA + `/api/` proxy to Envoy |
 | `auth.<domain>` | `http://keycloak:8080` | Keycloak public login |
 
 Set the web app's API base URL to the same origin under `/api`:
@@ -159,8 +159,8 @@ FPS_WEB_OIDC_AUTHORITY=https://auth.<domain>/realms/fairspot
 
 SPA routes live at `/` and never collide with the `/api/` backend prefix.
 
-The NAS smoke run (`start-container-stack.sh --nas`) verifies `fps-web` is running and that `/` and `/config.json` are reachable.
+The NAS smoke run (`start-container-stack.sh --nas`) verifies `fairspot-web` is running and that `/` and `/config.json` are reachable.
 
 ## Out of scope (OPS021)
 
-Production Vault/mTLS/storage-encryption hardening is **not** part of this slice. The Cloudflare hostname/Tunnel configuration that points `app.<domain>` at `fps-web` is an operator step documented in the [NAS / Cloudflare Deployment Profile](./nas-cloudflare-deployment-profile.md).
+Production Vault/mTLS/storage-encryption hardening is **not** part of this slice. The Cloudflare hostname/Tunnel configuration that points `app.<domain>` at `fairspot-web` is an operator step documented in the [NAS / Cloudflare Deployment Profile](./nas-cloudflare-deployment-profile.md).

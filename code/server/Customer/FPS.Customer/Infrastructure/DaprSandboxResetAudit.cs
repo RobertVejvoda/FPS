@@ -4,13 +4,13 @@ using FPS.Customer.Application;
 namespace FPS.Customer.Infrastructure;
 
 /// <summary>
-/// PLAT003A — publishes sandbox-reset audit evidence to fps-pubsub. The actor is a hash, never a
+/// PLAT003A — publishes sandbox-reset audit evidence to fairspot-pubsub. The actor is a hash, never a
 /// raw user id; no secrets, credentials, or raw payloads are included. Audit-service ingestion of
 /// the "tenant-reset-events" topic is a follow-up slice (the emitter is in place here).
 /// </summary>
 public sealed class DaprSandboxResetAudit(DaprClient dapr) : ISandboxResetAudit
 {
-    private const string PubSub = "fps-pubsub";
+    private const string PubSub = "fairspot-pubsub";
     private const string Topic = "tenant-reset-events";
 
     public Task StartedAsync(string actorHash, string tenantId, CancellationToken ct) =>

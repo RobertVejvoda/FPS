@@ -27,7 +27,7 @@
 
 services:
 
-  fps-audit:
+  fairspot-audit:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -35,7 +35,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-booking:
+  fairspot-booking:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -43,7 +43,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-configuration:
+  fairspot-configuration:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -51,7 +51,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-customer:
+  fairspot-customer:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -59,7 +59,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-datahub:
+  fairspot-datahub:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -67,7 +67,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-identity:
+  fairspot-identity:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -75,7 +75,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-notification:
+  fairspot-notification:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -83,7 +83,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-profile:
+  fairspot-profile:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}
@@ -91,7 +91,7 @@ services:
       Auth__AllowHttpMetadata: ${FPS_AUTH_ALLOW_HTTP_METADATA:-false}
       Auth__AllowLocalIssuerHostOverride: ${FPS_AUTH_ALLOW_LOCAL_ISSUER_HOST_OVERRIDE:-false}
 
-  fps-reporting:
+  fairspot-reporting:
     environment:
       Auth__Authority: ${FPS_AUTH_AUTHORITY:?Set FPS_AUTH_AUTHORITY in nas.env}
       Auth__Audience: ${FPS_AUTH_AUDIENCE:?Set FPS_AUTH_AUDIENCE in nas.env}

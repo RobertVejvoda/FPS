@@ -3,7 +3,7 @@
 # This is the mTLS-ENABLED target configuration for the planned Kubernetes hosting
 # profile (DigitalOcean DOKS). It is a template/target artifact — it is NOT mounted by
 # the local or NAS Docker Compose stack, which run mTLS-disabled by documented exception
-# (see fps-config.yaml and docs/production/dapr-first-production-standards.md, OPS017).
+# (see fairspot-config.yaml and docs/production/dapr-first-production-standards.md, OPS017).
 #
 # Why this lives on Kubernetes and not Compose:
 #   Dapr mTLS needs the Dapr control plane's Sentry service to issue and rotate the

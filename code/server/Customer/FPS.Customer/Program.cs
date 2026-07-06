@@ -33,20 +33,20 @@ builder.Services.AddScoped<FPS.SharedKernel.Infrastructure.TenantPurgeOrchestrat
 // itself stays inert until SandboxReset:Enabled is set (activated in PLAT003C-C3).
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger, CustomerTenantStorePurger>();
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-booking", "booking", isImmutableEvidence: false));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-booking", "booking", isImmutableEvidence: false));
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-profile", "profile", isImmutableEvidence: false));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-profile", "profile", isImmutableEvidence: false));
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-configuration", "configuration", isImmutableEvidence: false));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-configuration", "configuration", isImmutableEvidence: false));
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-notification", "notification", isImmutableEvidence: false));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-notification", "notification", isImmutableEvidence: false));
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-datahub", "datahub", isImmutableEvidence: false));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-datahub", "datahub", isImmutableEvidence: false));
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-reporting", "reporting", isImmutableEvidence: false));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-reporting", "reporting", isImmutableEvidence: false));
 // Audit holds immutable evidence — the orchestrator skips it unless sandboxReset, the endpoint self-gates too.
 builder.Services.AddSingleton<FPS.SharedKernel.Infrastructure.ITenantStorePurger>(sp =>
-    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fps-audit", "audit", isImmutableEvidence: true));
+    new FPS.SharedKernel.Infrastructure.DaprRemoteTenantStorePurger(sp.GetRequiredService<DaprClient>(), "fairspot-audit", "audit", isImmutableEvidence: true));
 builder.Services.AddScoped<SandboxResetService>();
 builder.Services.AddSingleton<ISandboxResetAudit, DaprSandboxResetAudit>();
 builder.Services.AddSingleton<ISandboxResetEvidenceStore, DaprSandboxResetEvidenceStore>();
@@ -148,7 +148,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
-builder.Services.AddFpsObservability("fps-customer", builder.Configuration);
+builder.Services.AddFpsObservability("fairspot-customer", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();
@@ -268,7 +268,7 @@ static async Task SeedLocalDemoTenantAsync(IServiceProvider services)
     {
         TenantId = tenantId,
         TrustedIssuer = "http://localhost:8180/realms/fps-local",
-        Audience = "fps-api",
+        Audience = "fairspot-api",
         TenantClaimName = "tenant_id",
         SubjectClaimName = "sub",
         RoleClaimNames = ["roles"],
@@ -364,7 +364,7 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
     {
         TenantId = tenantId,
         TrustedIssuer = "http://localhost:8180/realms/fps-local",
-        Audience = "fps-api",
+        Audience = "fairspot-api",
         TenantClaimName = "tenant_id",
         SubjectClaimName = "sub",
         RoleClaimNames = ["roles"],

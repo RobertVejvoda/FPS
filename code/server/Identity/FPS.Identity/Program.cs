@@ -14,7 +14,7 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddLogging();
 builder.Services.AddHttpClient();
 builder.Services.AddFpsHealthChecks();
-builder.Services.AddFpsObservability("fps-identity", builder.Configuration);
+builder.Services.AddFpsObservability("fairspot-identity", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddOpenApi("v1", options =>
 {

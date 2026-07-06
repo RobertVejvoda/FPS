@@ -19,7 +19,7 @@ public sealed class ReportingAuthorizationTests : IClassFixture<WebApplicationFa
     private readonly WebApplicationFactory<Program> factory;
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-reporting-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-reporting-test-signing-key-at-least-32!!"));
 
     public ReportingAuthorizationTests(WebApplicationFactory<Program> factory)
     {

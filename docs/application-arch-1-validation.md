@@ -1,6 +1,6 @@
 # Application Architecture 1 Validation
 
-This note validates `docs/images/fps-application-arch-1.png` against the current documentation and implementation. The diagram is treated as a target application view, not a claim that every component is production-complete today.
+This note validates `docs/images/fairspot-application-arch-1.png` against the current documentation and implementation. The diagram is treated as a target application view, not a claim that every component is production-complete today.
 
 ## Alignment Summary
 

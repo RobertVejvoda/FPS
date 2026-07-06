@@ -12,7 +12,7 @@ namespace FPS.Audit.Controllers;
 [DaprInternalOnly]
 public sealed class TenantResetEventsController(SandboxResetAuditHandler handler) : ControllerBase
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "tenant-reset-events";
 
     [HttpPost("/audit/tenant-reset-events")]

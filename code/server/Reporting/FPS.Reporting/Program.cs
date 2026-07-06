@@ -25,13 +25,13 @@ else
 {
     builder.Services.AddSingleton<IReportingRepository, NoOpReportingRepository>();
     // Fail closed on the DataHub base URL rather than baking a service-name default into the app:
-    // the runtime service name is owned by compose (currently http://fps-datahub:5211), so it is
+    // the runtime service name is owned by compose (currently http://fairspot-datahub:5211), so it is
     // injected via DataHubService__BaseUrl and validated here. This mirrors the SEC012A DataHub
     // connection-string convention and avoids a silently-wrong default if the env var is missing.
     var dataHubBaseUrl = builder.Configuration["DataHubService:BaseUrl"]
         ?? throw new InvalidOperationException(
             "DataHubService__BaseUrl is required outside Development/Test — Reporting reads durable "
-            + "report data from DataHub. Set it in the compose profile (e.g. http://fps-datahub:5211).");
+            + "report data from DataHub. Set it in the compose profile (e.g. http://fairspot-datahub:5211).");
     builder.Services.AddHttpClient<IReportingQueryRepository, DataHubReportingQueryRepository>(client =>
         client.BaseAddress = new Uri(dataHubBaseUrl));
 }
@@ -48,7 +48,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
-builder.Services.AddFpsObservability("fps-reporting", builder.Configuration);
+builder.Services.AddFpsObservability("fairspot-reporting", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();

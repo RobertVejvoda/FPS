@@ -14,9 +14,9 @@ dapr/
     demo/     ← template files for demo-hosted environment (OPS002)
     client/   ← template files for client-owned production (OPS003)
   configuration/
-    fps-config.yaml   ← Compose (local + NAS): tracing, actors, mTLS disabled (OPS017)
-    fps-smoke-config.yaml ← Host-local smoke config without tracing export
-    fps-config.k8s-hosted.yaml ← mTLS-enabled target for the K8s/DOKS profile (not wired into Compose)
+    fairspot-config.yaml   ← Compose (local + NAS): tracing, actors, mTLS disabled (OPS017)
+    fairspot-smoke-config.yaml ← Host-local smoke config without tracing export
+    fairspot-config.k8s-hosted.yaml ← mTLS-enabled target for the K8s/DOKS profile (not wired into Compose)
 ```
 
 Dapr loads components from the directory mounted at `/components` in the sidecar.
@@ -29,7 +29,7 @@ template/documentation — copy and adapt them for each deployment target.
 
 | Logical name       | Building block | Local provider     | Demo candidate              | Client-owned             |
 |--------------------|----------------|--------------------|-----------------------------|--------------------------|
-| `fps-pubsub`       | pub/sub        | RabbitMQ           | Azure Service Bus / RabbitMQ managed | Client-approved broker  |
+| `fairspot-pubsub`       | pub/sub        | RabbitMQ           | Azure Service Bus / RabbitMQ managed | Client-approved broker  |
 | `bookingstore`     | state          | MongoDB            | MongoDB Atlas / managed     | Client-approved MongoDB-compatible store |
 | `notificationstore`| state          | MongoDB            | Same                        | Same                     |
 | `auditstore`       | state          | MongoDB            | Same                        | Same                     |
@@ -50,7 +50,7 @@ connection string, or provider SDK in domain or application-layer code.
 
 | Topic name       | Publisher      | Subscribers                              |
 |------------------|----------------|------------------------------------------|
-| `booking-events` | `fps-booking`  | `fps-notification`, `fps-audit`, `fps-reporting` |
+| `booking-events` | `fairspot-booking`  | `fairspot-notification`, `fairspot-audit`, `fairspot-reporting` |
 
 The topic name is fixed. The pub/sub component backing it is swapped per profile.
 
@@ -78,13 +78,13 @@ Each service owns its own MongoDB database. Collections are named per entity typ
 
 | Service            | Database          | Collection(s)           |
 |--------------------|-------------------|-------------------------|
-| fps-booking        | `fps-booking`     | `bookings`              |
-| fps-notification   | `fps-notification`| `notifications`         |
-| fps-audit          | `fps-audit`       | `auditlog`              |
-| fps-profile        | `fps-profile`     | `profiles`              |
-| fps-configuration  | `fps-configuration`| `policies`, `slots`    |
-| fps-reporting      | `fps-reporting`   | `projections`           |
-| Dapr workflow actor runtime | `fps-workflow` | `workflows` |
+| fairspot-booking        | `fairspot-booking`     | `bookings`              |
+| fairspot-notification   | `fairspot-notification`| `notifications`         |
+| fairspot-audit          | `fairspot-audit`       | `auditlog`              |
+| fairspot-profile        | `fairspot-profile`     | `profiles`              |
+| fairspot-configuration  | `fairspot-configuration`| `policies`, `slots`    |
+| fairspot-reporting      | `fairspot-reporting`   | `projections`           |
+| Dapr workflow actor runtime | `fairspot-workflow` | `workflows` |
 
 For multi-tenant sharding, prefix the collection name with `{tenantId}_` (e.g. `acme_bookings`).
 Dapr state store keys embed the tenant-scoped key; the collection name is the partition boundary.
@@ -101,7 +101,7 @@ Indexes to create per collection:
 State-store components are scoped to the owning service app ID in every profile. `workflowstore`
 is shared because it backs the Dapr actor runtime used by Dapr Workflow. Pub/sub, binding,
 and secret-store components may also be shared when multiple apps need them. App IDs follow
-the pattern `fps-{service}` (e.g. `fps-booking`, `fps-notification`).
+the pattern `fairspot-{service}` (e.g. `fairspot-booking`, `fairspot-notification`).
 
 ## Workflow Access Policies
 
@@ -111,8 +111,8 @@ components.
 
 - Smoke, local, demo, and client profiles can load `WorkflowAccessPolicy` resources
   from their profile-specific `components/<profile>/` directory.
-- FairSpot uses a deny-by-default policy for workflow-hosting app IDs (`fps-booking`
-  and `fps-audit`) so unrelated app IDs cannot schedule their workflows.
+- FairSpot uses a deny-by-default policy for workflow-hosting app IDs (`fairspot-booking`
+  and `fairspot-audit`) so unrelated app IDs cannot schedule their workflows.
 - Same-app workflow calls remain allowed; the policy is a Dapr runtime perimeter
   and does not replace application authorization.
 - Workflow history signing is intentionally not enabled in local smoke because the
@@ -123,8 +123,8 @@ components.
 
 ## Observability
 
-The `fps-config.yaml` Dapr configuration selects `workflowstore` as the actor state store
-and enables tracing at 100% sampling rate (local). `fps-smoke-config.yaml` selects the same
+The `fairspot-config.yaml` Dapr configuration selects `workflowstore` as the actor state store
+and enables tracing at 100% sampling rate (local). `fairspot-smoke-config.yaml` selects the same
 actor state store but omits tracing so host-local `dapr run -f dapr.yaml` does not try to
 export to the Docker-network Zipkin endpoint.
 - **Local**: Zipkin at `http://zipkin:9411/api/v2/spans`
@@ -134,11 +134,11 @@ export to the Docker-network Zipkin endpoint.
 
 ### Service-to-service security mode (OPS017)
 
-mTLS is **disabled** on the self-hosted Docker Compose stack (local and NAS): `fps-config.yaml`
+mTLS is **disabled** on the self-hosted Docker Compose stack (local and NAS): `fairspot-config.yaml`
 sets `mtls.enabled: false` because Dapr mTLS needs the Sentry control plane to issue/rotate
 workload certificates, and this stack runs only Placement + Scheduler (no Sentry). The
 mTLS-**enabled** target for the Kubernetes/DigitalOcean DOKS profile is a separate,
-not-wired-in artifact: `configuration/fps-config.k8s-hosted.yaml`. `tools/start-container-stack.sh`
+not-wired-in artifact: `configuration/fairspot-config.k8s-hosted.yaml`. `tools/start-container-stack.sh`
 reads the active configuration and reports the mode ("Dapr service-to-service security").
 See [Dapr-First Production Standards](../../../docs/production/dapr-first-production-standards.md).
 

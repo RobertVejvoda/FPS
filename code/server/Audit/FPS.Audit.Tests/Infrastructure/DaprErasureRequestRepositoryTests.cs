@@ -106,12 +106,12 @@ public sealed class DaprErasureRequestRepositoryTests
         var req = Build();
         await repo.SaveAsync(req);
 
-        var results = new[] { new ErasureServiceResult("fps-profile", ErasureTreatment.Deleted, 1) };
+        var results = new[] { new ErasureServiceResult("fairspot-profile", ErasureTreatment.Deleted, 1) };
         await repo.UpdateStatusAsync(req.ErasureRequestId, "demo", ErasureStatus.InProgress,
             serviceResults: results);
 
         var updated = await repo.GetAsync(req.ErasureRequestId, "demo");
         Assert.Single(updated!.ServiceResults);
-        Assert.Equal("fps-profile", updated.ServiceResults[0].Service);
+        Assert.Equal("fairspot-profile", updated.ServiceResults[0].Service);
     }
 }

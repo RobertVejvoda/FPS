@@ -1,6 +1,6 @@
 # Software Architecture
 
-![Logical Architecture](../images/fps-logical-architecture.png)
+![Logical Architecture](../images/fairspot-logical-architecture.png)
 
 ## Architecture Overview
 
@@ -117,7 +117,7 @@ Dapr is a design boundary, not a cloud decision. Local development can use self-
 | Capability | Dapr responsibility | Production note |
 | --- | --- | --- |
 | Sidecars | Service invocation, pub/sub, state, secret access, and bindings. | Required for services that use Dapr components. |
-| Component contracts | Logical names such as `fps-pubsub`, `bookingstore`, `notificationstore`, and `secretstore`. | Provider changes should not require application code changes. |
+| Component contracts | Logical names such as `fairspot-pubsub`, `bookingstore`, `notificationstore`, and `secretstore`. | Provider changes should not require application code changes. |
 | mTLS/Sentry | Service identity and encrypted service-to-service traffic where supported. | Required for production or equivalent platform service identity must be documented. |
 | Placement/workflows | Actor/workflow support when a slice needs durable orchestration. | Future workflow use remains optional until a concrete slice requires it. |
 | Dashboard/operations | Runtime diagnostics and component visibility. | Optional; client tooling may replace it. |

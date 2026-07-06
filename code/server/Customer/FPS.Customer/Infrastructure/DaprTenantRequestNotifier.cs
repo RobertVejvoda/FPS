@@ -14,7 +14,7 @@ namespace FPS.Customer.Infrastructure;
 public sealed class DaprTenantRequestNotifier(
     DaprClient daprClient, ILogger<DaprTenantRequestNotifier> logger) : ITenantRequestNotifier
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "tenant-request-received";
 
     public async Task NotifySalesAsync(TenantRequest request, CancellationToken ct)

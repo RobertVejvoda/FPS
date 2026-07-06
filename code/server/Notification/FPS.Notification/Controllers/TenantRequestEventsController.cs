@@ -11,7 +11,7 @@ namespace FPS.Notification.Controllers;
 [DaprInternalOnly]
 public sealed class TenantRequestEventsController(TenantRequestSalesAlertHandler handler) : ControllerBase
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "tenant-request-received";
 
     [HttpPost("/notifications/tenant-request-events")]

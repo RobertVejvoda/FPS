@@ -6,7 +6,7 @@ apiVersion: 1
 # query API was not previously wired into Grafana provisioning.
 datasources:
   - name: Jaeger
-    uid: fps-jaeger
+    uid: fairspot-jaeger
     type: jaeger
     access: proxy
     # Container DNS on the shared `web` Docker network.
@@ -17,7 +17,7 @@ datasources:
       # Link traces back to Loki logs by TraceId so the user can jump from
       # a span to the surrounding application logs in one click.
       tracesToLogsV2:
-        datasourceUid: fps-loki
+        datasourceUid: fairspot-loki
         spanStartTimeShift: -1m
         spanEndTimeShift: 1m
         tags:

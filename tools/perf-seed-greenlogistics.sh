@@ -169,7 +169,7 @@ if [ "$RESET_STATE" = "true" ]; then
 
     if docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongodb \
         mongosh --quiet --eval \
-        "['fps-booking','fps-notification','fps-reporting','fps-audit'].forEach(dbName => db.getSiblingDB(dbName).dropDatabase());" \
+        "['fairspot-booking','fairspot-notification','fairspot-reporting','fairspot-audit'].forEach(dbName => db.getSiblingDB(dbName).dropDatabase());" \
         > /dev/null 2>&1; then
       ok "MongoDB collections dropped"
     else

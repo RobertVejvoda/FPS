@@ -1,4 +1,4 @@
-# dapr.yaml — FPS multi-app run configuration for local smoke testing.
+# dapr.yaml — FairSpot multi-app run configuration for local smoke testing.
 # Usage: dapr run -f dapr.yaml
 #
 # Prerequisites (in order):
@@ -24,72 +24,72 @@
 version: 1
 common:
   resourcesPath: code/infrastructure/dapr/components/local
-  configFilePath: code/infrastructure/dapr/configuration/fps-smoke-config.yaml
+  configFilePath: code/infrastructure/dapr/configuration/fairspot-smoke-config.yaml
   # The host-local harness uses durable local components. The smoke config
-  # intentionally omits tracing because fps-config.yaml references Docker-network
+  # intentionally omits tracing because fairspot-config.yaml references Docker-network
   # endpoints that host-local Dapr sidecars cannot resolve.
   env:
     ASPNETCORE_ENVIRONMENT: Development
     DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE: "false"
 
 apps:
-  - appID: fps-identity
+  - appID: fairspot-identity
     appDirPath: code/server/Identity/FPS.Identity
     appPort: 5192
     daprHTTPPort: 3602
     daprGRPCPort: 50002
     command: ["dotnet", "run", "--no-build", "--no-launch-profile", "--", "--urls", "http://0.0.0.0:5192"]
 
-  - appID: fps-booking
+  - appID: fairspot-booking
     appDirPath: code/server/Booking/FPS.Booking
     appPort: 5131
     daprHTTPPort: 3601
     daprGRPCPort: 50001
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-notification
+  - appID: fairspot-notification
     appDirPath: code/server/Notification/FPS.Notification
     appPort: 5157
     daprHTTPPort: 3607
     daprGRPCPort: 50007
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-profile
+  - appID: fairspot-profile
     appDirPath: code/server/Profile/FPS.Profile
     appPort: 5197
     daprHTTPPort: 3617
     daprGRPCPort: 50017
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-audit
+  - appID: fairspot-audit
     appDirPath: code/server/Audit/FPS.Audit
     appPort: 5161
     daprHTTPPort: 3611
     daprGRPCPort: 50011
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-reporting
+  - appID: fairspot-reporting
     appDirPath: code/server/Reporting/FPS.Reporting
     appPort: 5171
     daprHTTPPort: 3621
     daprGRPCPort: 50021
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-configuration
+  - appID: fairspot-configuration
     appDirPath: code/server/Configuration/FPS.Configuration
     appPort: 5141
     daprHTTPPort: 3631
     daprGRPCPort: 50031
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-customer
+  - appID: fairspot-customer
     appDirPath: code/server/Customer/FPS.Customer
     appPort: 5181
     daprHTTPPort: 3641
     daprGRPCPort: 50041
     command: ["dotnet", "run", "--no-build"]
 
-  - appID: fps-datahub
+  - appID: fairspot-datahub
     appDirPath: code/server/DataHub/FPS.DataHub
     appPort: 5211
     daprHTTPPort: 3651

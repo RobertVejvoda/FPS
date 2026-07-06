@@ -6,12 +6,12 @@
 #   GCP Pub/Sub          pubsub.gcp.pubsub
 #   Apache Kafka         pubsub.kafka
 #
-# The component name (fps-pubsub) and topic name (booking-events) must not change.
+# The component name (fairspot-pubsub) and topic name (booking-events) must not change.
 # Application code uses only the logical name — no broker-specific SDK.
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: fps-pubsub
+  name: fairspot-pubsub
 spec:
   type: pubsub.rabbitmq         # Replace type and metadata for client broker
   version: v1
@@ -21,10 +21,10 @@ spec:
       name: broker-connection
       key: connectionString
 scopes:
-- fps-booking
-- fps-notification
-- fps-audit
-- fps-customer
-- fps-reporting
+- fairspot-booking
+- fairspot-notification
+- fairspot-audit
+- fairspot-customer
+- fairspot-reporting
 auth:
   secretStore: secretstore

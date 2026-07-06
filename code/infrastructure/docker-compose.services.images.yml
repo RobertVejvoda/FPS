@@ -23,7 +23,7 @@
 #   FPS_IMAGE_TAG   image tag. Default: latest. Pin a sha-<commit> for repeatable
 #                   deploys and easy rollback (see the NAS deployment runbook).
 
-x-fps-service-auth-env: &fps-service-auth-env
+x-fairspot-service-auth-env: &fairspot-service-auth-env
   Auth__Authority: ${FPS_AUTH_AUTHORITY:-http://keycloak:8080/realms/fps-local}
   Auth__Audience: ${FPS_AUTH_AUDIENCE:-fps-mobile-dev}
   Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-fps-web-dev,fps-cli-dev}
@@ -42,127 +42,127 @@ x-fps-service-auth-env: &fps-service-auth-env
 
 services:
 
-  fps-audit:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-audit:${FPS_IMAGE_TAG:-latest}
+  fairspot-audit:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-audit:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5161:5161"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5161"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-booking:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-booking:${FPS_IMAGE_TAG:-latest}
+  fairspot-booking:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-booking:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5131:5131"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5131"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
-      ProfileService__BaseUrl: "http://fps-profile:5197"
+      ProfileService__BaseUrl: "http://fairspot-profile:5197"
     networks:
       - web
 
-  fps-configuration:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-configuration:${FPS_IMAGE_TAG:-latest}
+  fairspot-configuration:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-configuration:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5141:5141"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5141"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-customer:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-customer:${FPS_IMAGE_TAG:-latest}
+  fairspot-customer:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-customer:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5181:5181"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5181"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
-      DemoSeed__ProfileBaseUrl: "http://fps-profile:5197"
-      DemoSeed__ConfigurationBaseUrl: "http://fps-configuration:5141"
+      DemoSeed__ProfileBaseUrl: "http://fairspot-profile:5197"
+      DemoSeed__ConfigurationBaseUrl: "http://fairspot-configuration:5141"
       # PLAT003C-C3: sandbox-reset activation for the hosted/NAS demo. OFF by default (fail closed);
       # set FPS_SANDBOX_RESET_ENABLED=true in the hosted env only for a Green Logistics demo profile.
       # The reset refuses any tenant that is not a stored resettable sandbox. The scheduler flag arms
       # the nightly sandbox-reset-scheduler cron tick (a safe no-op while Enabled is false).
       SandboxReset__Enabled: ${FPS_SANDBOX_RESET_ENABLED:-false}
       SandboxReset__Scheduler__Enabled: ${FPS_SANDBOX_RESET_SCHEDULER_ENABLED:-false}
-      Readiness__ProfileBaseUrl: "http://fps-profile:5197"
-      Readiness__BookingBaseUrl: "http://fps-booking:5131"
-      Readiness__NotificationBaseUrl: "http://fps-notification:5157"
-      Readiness__AuditBaseUrl: "http://fps-audit:5161"
-      Readiness__ReportingBaseUrl: "http://fps-reporting:5171"
+      Readiness__ProfileBaseUrl: "http://fairspot-profile:5197"
+      Readiness__BookingBaseUrl: "http://fairspot-booking:5131"
+      Readiness__NotificationBaseUrl: "http://fairspot-notification:5157"
+      Readiness__AuditBaseUrl: "http://fairspot-audit:5161"
+      Readiness__ReportingBaseUrl: "http://fairspot-reporting:5171"
     networks:
       - web
 
-  fps-datahub:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-datahub:${FPS_IMAGE_TAG:-latest}
+  fairspot-datahub:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-datahub:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5211:5211"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5211"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-fps_datahub};Username=${POSTGRES_USER:-fps};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for production-like DataHub, see nas.env or run via start-container-stack.sh}"
     networks:
       - web
 
-  fps-identity:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-identity:${FPS_IMAGE_TAG:-latest}
+  fairspot-identity:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-identity:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5192:5192"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5192"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-notification:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-notification:${FPS_IMAGE_TAG:-latest}
+  fairspot-notification:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-notification:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5157:5157"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5157"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-profile:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-profile:${FPS_IMAGE_TAG:-latest}
+  fairspot-profile:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-profile:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5197:5197"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5197"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-reporting:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-reporting:${FPS_IMAGE_TAG:-latest}
+  fairspot-reporting:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-reporting:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5171:5171"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5171"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
       # #763 — Reporting reads durable report data from DataHub over this base URL.
-      DataHubService__BaseUrl: "http://fps-datahub:5211"
+      DataHubService__BaseUrl: "http://fairspot-datahub:5211"
     networks:
       - web
 
   # Web SPA (nginx). Runtime /config.json is generated from FPS_WEB_* env vars
   # (see code/web/fps-web/docker-entrypoint.sh); without them the baked default
   # is served. Public exposure (Cloudflare hostname) is handled separately.
-  fps-web:
-    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fps-web:${FPS_IMAGE_TAG:-latest}
+  fairspot-web:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-web:${FPS_IMAGE_TAG:-latest}
     ports:
       - "5200:80"
     environment:
@@ -181,4 +181,4 @@ services:
 networks:
   web:
     external: true
-    name: fps_network
+    name: fairspot_network

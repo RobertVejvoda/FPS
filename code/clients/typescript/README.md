@@ -10,7 +10,7 @@ It deliberately does **not** expose platform-plane / operator-console endpoints.
 
 ## Consumption
 
-In-repo, `fps-web` consumes this as a local source package via a `file:` dependency plus a Vite alias and a TypeScript path (no build step — the generated `.d.ts` is consumed directly):
+In-repo, `fairspot-web` consumes this as a local source package via a `file:` dependency plus a Vite alias and a TypeScript path (no build step — the generated `.d.ts` is consumed directly):
 
 ```jsonc
 // package.json

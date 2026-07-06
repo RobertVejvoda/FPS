@@ -9,11 +9,11 @@
 #     -f code/infrastructure/docker-compose.services.yml \
 #     up -d
 #
-# Image names follow the pattern fps-<service>:local.
+# Image names follow the pattern fairspot-<service>:local.
 # Port assignments match the service launchSettings.json HTTP ports.
 # Dapr sidecars are wired separately (see OPS014).
 
-x-fps-service-auth-env: &fps-service-auth-env
+x-fairspot-service-auth-env: &fairspot-service-auth-env
   Auth__Authority: ${FPS_AUTH_AUTHORITY:-http://keycloak:8080/realms/fps-local}
   Auth__Audience: ${FPS_AUTH_AUDIENCE:-fps-mobile-dev}
   Auth__AdditionalAudiences: ${FPS_AUTH_ADDITIONAL_AUDIENCES:-fps-web-dev,fps-cli-dev}
@@ -32,8 +32,8 @@ x-fps-service-auth-env: &fps-service-auth-env
 
 services:
 
-  fps-audit:
-    image: fps-audit:local
+  fairspot-audit:
+    image: fairspot-audit:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -44,14 +44,14 @@ services:
     ports:
       - "5161:5161"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5161"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-booking:
-    image: fps-booking:local
+  fairspot-booking:
+    image: fairspot-booking:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -62,15 +62,15 @@ services:
     ports:
       - "5131:5131"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5131"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
-      ProfileService__BaseUrl: "http://fps-profile:5197"
+      ProfileService__BaseUrl: "http://fairspot-profile:5197"
     networks:
       - web
 
-  fps-configuration:
-    image: fps-configuration:local
+  fairspot-configuration:
+    image: fairspot-configuration:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -81,14 +81,14 @@ services:
     ports:
       - "5141:5141"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5141"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-customer:
-    image: fps-customer:local
+  fairspot-customer:
+    image: fairspot-customer:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -99,11 +99,11 @@ services:
     ports:
       - "5181:5181"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5181"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
-      DemoSeed__ProfileBaseUrl: "http://fps-profile:5197"
-      DemoSeed__ConfigurationBaseUrl: "http://fps-configuration:5141"
+      DemoSeed__ProfileBaseUrl: "http://fairspot-profile:5197"
+      DemoSeed__ConfigurationBaseUrl: "http://fairspot-configuration:5141"
       # PLAT003C-C3: sandbox-reset activation. OFF by default (fail closed) so Production/NAS and a
       # plain `up` stay inert; set FPS_SANDBOX_RESET_ENABLED=true only for a demo / Green Logistics
       # evaluation profile. Even when enabled the reset refuses any tenant that is not a stored
@@ -112,16 +112,16 @@ services:
       # Enabled is false).
       SandboxReset__Enabled: ${FPS_SANDBOX_RESET_ENABLED:-false}
       SandboxReset__Scheduler__Enabled: ${FPS_SANDBOX_RESET_SCHEDULER_ENABLED:-false}
-      Readiness__ProfileBaseUrl: "http://fps-profile:5197"
-      Readiness__BookingBaseUrl: "http://fps-booking:5131"
-      Readiness__NotificationBaseUrl: "http://fps-notification:5157"
-      Readiness__AuditBaseUrl: "http://fps-audit:5161"
-      Readiness__ReportingBaseUrl: "http://fps-reporting:5171"
+      Readiness__ProfileBaseUrl: "http://fairspot-profile:5197"
+      Readiness__BookingBaseUrl: "http://fairspot-booking:5131"
+      Readiness__NotificationBaseUrl: "http://fairspot-notification:5157"
+      Readiness__AuditBaseUrl: "http://fairspot-audit:5161"
+      Readiness__ReportingBaseUrl: "http://fairspot-reporting:5171"
     networks:
       - web
 
-  fps-datahub:
-    image: fps-datahub:local
+  fairspot-datahub:
+    image: fairspot-datahub:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -132,15 +132,15 @@ services:
     ports:
       - "5211:5211"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5211"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-fps_datahub};Username=${POSTGRES_USER:-fps};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for production-like DataHub, see nas.env or run via start-container-stack.sh}"
     networks:
       - web
 
-  fps-identity:
-    image: fps-identity:local
+  fairspot-identity:
+    image: fairspot-identity:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -151,14 +151,14 @@ services:
     ports:
       - "5192:5192"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5192"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-notification:
-    image: fps-notification:local
+  fairspot-notification:
+    image: fairspot-notification:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -169,14 +169,14 @@ services:
     ports:
       - "5157:5157"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5157"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-profile:
-    image: fps-profile:local
+  fairspot-profile:
+    image: fairspot-profile:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -187,14 +187,14 @@ services:
     ports:
       - "5197:5197"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5197"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
     networks:
       - web
 
-  fps-reporting:
-    image: fps-reporting:local
+  fairspot-reporting:
+    image: fairspot-reporting:local
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -205,15 +205,15 @@ services:
     ports:
       - "5171:5171"
     environment:
-      <<: *fps-service-auth-env
+      <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5171"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
       # #763 — Reporting reads durable report data from DataHub over this base URL.
-      DataHubService__BaseUrl: "http://fps-datahub:5211"
+      DataHubService__BaseUrl: "http://fairspot-datahub:5211"
     networks:
       - web
 
 networks:
   web:
     external: true
-    name: fps_network
+    name: fairspot_network

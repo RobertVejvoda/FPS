@@ -17,7 +17,7 @@ Open **http://localhost:16686** in your browser. This is the Jaeger UI.
 ## Finding a trace for a failed request
 
 1. Make a request through Envoy (e.g. `curl http://localhost:10000/me -H "Authorization: Bearer $TOKEN"`)
-2. In Jaeger UI → **Search** → select **Service** (e.g. `fps-identity`) → click **Find Traces**
+2. In Jaeger UI → **Search** → select **Service** (e.g. `fairspot-identity`) → click **Find Traces**
 3. Click a trace to see the span waterfall. Failed requests show as error spans (red).
 
 Each service emits:
@@ -88,14 +88,14 @@ Or in `appsettings.json` / `appsettings.Development.json`:
 
 | Service | Name in Jaeger |
 |---------|---------------|
-| Identity | `fps-identity` |
-| Booking | `fps-booking` |
-| Profile | `fps-profile` |
-| Configuration | `fps-configuration` |
-| Reporting | `fps-reporting` |
-| Audit | `fps-audit` |
-| Notification | `fps-notification` |
-| Customer | `fps-customer` |
+| Identity | `fairspot-identity` |
+| Booking | `fairspot-booking` |
+| Profile | `fairspot-profile` |
+| Configuration | `fairspot-configuration` |
+| Reporting | `fairspot-reporting` |
+| Audit | `fairspot-audit` |
+| Notification | `fairspot-notification` |
+| Customer | `fairspot-customer` |
 
 ## What is NOT logged
 

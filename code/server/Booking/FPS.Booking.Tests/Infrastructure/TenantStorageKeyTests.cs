@@ -33,7 +33,7 @@ public sealed class TenantStorageKeyTests
         => Assert.Throws<ArgumentException>(() => TenantStorageKey.Sanitise(new string('a', 64)));
 
     [Theory]
-    [InlineData("fps-internal")]   // reserved prefix
+    [InlineData("fairspot-internal")]   // reserved prefix
     [InlineData("dapr-tenant")]    // reserved prefix
     [InlineData("admin-corp")]     // reserved prefix
     [InlineData("system-1")]       // reserved prefix

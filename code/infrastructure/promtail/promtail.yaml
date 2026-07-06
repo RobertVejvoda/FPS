@@ -9,7 +9,7 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  - job_name: fps-identity
+  - job_name: fairspot-identity
     static_configs:
       - targets:
           - localhost
@@ -19,7 +19,7 @@ scrape_configs:
           service: identity
           __path__: /logs/local-harness/identity.log
 
-  - job_name: fps-dapr
+  - job_name: fairspot-dapr
     static_configs:
       - targets:
           - localhost

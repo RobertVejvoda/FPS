@@ -135,7 +135,7 @@ public interface INotificationVerificationClient
 
 public sealed class DaprNotificationVerificationClient(DaprClient daprClient) : INotificationVerificationClient
 {
-    private const string NotificationAppId = "fps-notification";
+    private const string NotificationAppId = "fairspot-notification";
     private const string DeliverMethod = "internal/notification/email-verification";
 
     public Task DeliverAsync(string tenantId, string emailAddress, string verificationLink, CancellationToken cancellationToken = default) =>
@@ -155,7 +155,7 @@ public sealed record VerificationEmailDeliveryResult(bool Sent);
 /// </summary>
 public sealed class DaprEmailVerificationAudit(DaprClient daprClient) : IEmailVerificationAuditSink
 {
-    private const string PubSub = "fps-pubsub";
+    private const string PubSub = "fairspot-pubsub";
     private const string Topic = "security-events";
     private const string Category = "email-verification";
 

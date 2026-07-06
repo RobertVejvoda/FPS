@@ -121,7 +121,7 @@ reset_local_demo_state() {
 
   if ! docker compose -f "$REPO_ROOT/code/infrastructure/docker-compose.yaml" exec -T mongodb \
     mongosh -u admin -p admin --authenticationDatabase admin --quiet \
-    --eval '["fps-booking","fps-workflow","fps-notification","fps-reporting","fps-audit"].forEach(dbName => db.getSiblingDB(dbName).dropDatabase());' \
+    --eval '["fairspot-booking","fairspot-workflow","fairspot-notification","fairspot-reporting","fairspot-audit"].forEach(dbName => db.getSiblingDB(dbName).dropDatabase());' \
     > /dev/null; then
     err "Could not clear Mongo-backed local demo state"
     echo "Run: ./tools/stop-local-harness.sh --reset"

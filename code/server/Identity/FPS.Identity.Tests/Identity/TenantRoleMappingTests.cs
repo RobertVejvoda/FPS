@@ -385,7 +385,7 @@ public sealed class TenantRoleMappingTests
 
     // ── PLAT001: platform-plane gating ─────────────────────────────────────────
 
-    private const string PlatformIssuer = "https://platform.example/realms/fps-platform";
+    private const string PlatformIssuer = "https://platform.example/realms/fairspot-platform";
     private const string CustomerIssuer = "https://customer.example/realms/fairspot";
 
     private static TenantClaimsTransformation TransformationWithPlatformIssuer(string platformIssuer) =>

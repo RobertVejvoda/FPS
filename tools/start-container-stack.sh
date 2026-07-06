@@ -57,7 +57,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INFRA_DIR="$REPO_ROOT/code/infrastructure"
 
-NET="fps_network"
+NET="fairspot_network"
 CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:8.11.1}"
 
 # ── Argument parsing ────────────────────────────────────────────────────────────
@@ -452,15 +452,15 @@ fi
 hdr "App service readiness"
 
 APP_SERVICES=(
-  "fps-booking:5131"
-  "fps-identity:5192"
-  "fps-profile:5197"
-  "fps-notification:5157"
-  "fps-audit:5161"
-  "fps-reporting:5171"
-  "fps-configuration:5141"
-  "fps-customer:5181"
-  "fps-datahub:5211"
+  "fairspot-booking:5131"
+  "fairspot-identity:5192"
+  "fairspot-profile:5197"
+  "fairspot-notification:5157"
+  "fairspot-audit:5161"
+  "fairspot-reporting:5171"
+  "fairspot-configuration:5141"
+  "fairspot-customer:5181"
+  "fairspot-datahub:5211"
 )
 
 APP_TIMEOUT=120
@@ -502,15 +502,15 @@ fi
 hdr "Dapr sidecar status"
 
 SIDECAR_SERVICES=(
-  fps-audit-dapr
-  fps-booking-dapr
-  fps-configuration-dapr
-  fps-customer-dapr
-  fps-datahub-dapr
-  fps-identity-dapr
-  fps-notification-dapr
-  fps-profile-dapr
-  fps-reporting-dapr
+  fairspot-audit-dapr
+  fairspot-booking-dapr
+  fairspot-configuration-dapr
+  fairspot-customer-dapr
+  fairspot-datahub-dapr
+  fairspot-identity-dapr
+  fairspot-notification-dapr
+  fairspot-profile-dapr
+  fairspot-reporting-dapr
 )
 
 DAPR_TIMEOUT=60
@@ -549,10 +549,10 @@ done
 # sidecars are launched with. The self-hosted Compose stack (local AND NAS) runs
 # mTLS-disabled by documented exception: it has no Sentry control plane to issue the
 # workload certificates mTLS requires. mTLS is the target on the Kubernetes/DOKS
-# profile (fps-config.k8s-hosted.yaml). See docs/production/dapr-first-production-standards.md.
+# profile (fairspot-config.k8s-hosted.yaml). See docs/production/dapr-first-production-standards.md.
 hdr "Dapr service-to-service security (OPS017)"
 
-DAPR_CONFIG_FILE="$INFRA_DIR/dapr/configuration/fps-config.yaml"
+DAPR_CONFIG_FILE="$INFRA_DIR/dapr/configuration/fairspot-config.yaml"
 if [[ -f "$DAPR_CONFIG_FILE" ]]; then
   MTLS_MODE="$(awk '
     /^[[:space:]]*#/        { next }
@@ -564,7 +564,7 @@ if [[ -f "$DAPR_CONFIG_FILE" ]]; then
       ok "Dapr mTLS: ENABLED — sidecar-to-sidecar traffic is mutually authenticated and encrypted."
       ;;
     false)
-      info "Dapr mTLS: DISABLED — documented self-hosted exception (OPS017). No Sentry control plane on Docker Compose; on a single NAS host all sidecars share one private Docker bridge. mTLS is enabled on the Kubernetes/DOKS profile (fps-config.k8s-hosted.yaml)."
+      info "Dapr mTLS: DISABLED — documented self-hosted exception (OPS017). No Sentry control plane on Docker Compose; on a single NAS host all sidecars share one private Docker bridge. mTLS is enabled on the Kubernetes/DOKS profile (fairspot-config.k8s-hosted.yaml)."
       ;;
     *)
       info "Dapr mTLS: mode could not be read from $DAPR_CONFIG_FILE (expected mtls.enabled: true|false)."
@@ -612,7 +612,7 @@ if [[ "$SEED" == "true" ]]; then
     ok "Demo + Green Logistics data seeded (dev-seed.sh)"
   else
     fail "dev-seed.sh failed — demo data not seeded"
-    echo "    App logs: $COMPOSE_HUMAN logs fps-booking fps-profile fps-identity"
+    echo "    App logs: $COMPOSE_HUMAN logs fairspot-booking fairspot-profile fairspot-identity"
     echo "    Rerun:    ./tools/dev-seed.sh"
     exit 1
   fi
@@ -664,25 +664,25 @@ done
 # ── Web SPA smoke (NAS image stack only; local mode runs web via Vite) ───────────
 if [[ "$MODE" == "nas" ]]; then
   echo
-  echo "Web app (fps-web)..."
-  web_cid="$(_cid fps-web)"
+  echo "Web app (fairspot-web)..."
+  web_cid="$(_cid fairspot-web)"
   if [[ -z "$web_cid" || "$(_state "$web_cid")" != "running" ]]; then
-    fail "fps-web is not running (state: $( [[ -n "$web_cid" ]] && _state "$web_cid" || echo missing ))"
-    echo "    Logs:  $COMPOSE_HUMAN logs fps-web"
-    echo "    Rerun: $COMPOSE_HUMAN up -d fps-web"
+    fail "fairspot-web is not running (state: $( [[ -n "$web_cid" ]] && _state "$web_cid" || echo missing ))"
+    echo "    Logs:  $COMPOSE_HUMAN logs fairspot-web"
+    echo "    Rerun: $COMPOSE_HUMAN up -d fairspot-web"
   else
-    if probe_net -sf -o /dev/null http://fps-web:80/; then
-      ok "fps-web serves / (SPA index)"
+    if probe_net -sf -o /dev/null http://fairspot-web:80/; then
+      ok "fairspot-web serves / (SPA index)"
     else
-      fail "fps-web / not reachable"
-      echo "    Logs: $COMPOSE_HUMAN logs fps-web"
+      fail "fairspot-web / not reachable"
+      echo "    Logs: $COMPOSE_HUMAN logs fairspot-web"
     fi
-    cfg="$(probe_net -sf http://fps-web:80/config.json || true)"
+    cfg="$(probe_net -sf http://fairspot-web:80/config.json || true)"
     if printf '%s' "$cfg" | grep -q '"apiBaseUrl"'; then
-      ok "fps-web serves /config.json (runtime config present)"
+      ok "fairspot-web serves /config.json (runtime config present)"
     else
-      fail "fps-web /config.json missing or invalid (no apiBaseUrl)"
-      echo "    Set FPS_WEB_* in nas.env, or check the entrypoint: $COMPOSE_HUMAN logs fps-web"
+      fail "fairspot-web /config.json missing or invalid (no apiBaseUrl)"
+      echo "    Set FPS_WEB_* in nas.env, or check the entrypoint: $COMPOSE_HUMAN logs fairspot-web"
     fi
   fi
 fi
@@ -700,7 +700,7 @@ if [[ "$SEED" == "true" && $FAILURES -eq 0 ]]; then
   else
     fail "Local E2E smoke failed — see smoke-evidence-*.txt and output above"
     echo "    Pub/sub or workflow may not be wired. Check Dapr sidecar logs:"
-    echo "    $COMPOSE_HUMAN logs fps-booking-dapr fps-notification-dapr"
+    echo "    $COMPOSE_HUMAN logs fairspot-booking-dapr fairspot-notification-dapr"
   fi
 fi
 
@@ -716,13 +716,13 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
   # Single-origin model: app.<domain> serves the SPA at / and proxies /api/ to
   # Envoy. The API therefore lives under /api, not at the app root.
 
-  # 1) Web app entry point (SPA index served by fps-web).
+  # 1) Web app entry point (SPA index served by fairspot-web).
   echo "Web app entry point..."
   APP_ROOT_STATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/" || true)"
   if [[ "$APP_ROOT_STATUS" == "200" ]]; then
     ok "app.$PUBLIC_DOMAIN / reachable (HTTP 200, SPA)"
   elif [[ -z "$APP_ROOT_STATUS" || "$APP_ROOT_STATUS" == "000" ]]; then
-    fail "app.$PUBLIC_DOMAIN unreachable — is the Cloudflare Tunnel running and routed to fps-web:80?"
+    fail "app.$PUBLIC_DOMAIN unreachable — is the Cloudflare Tunnel running and routed to fairspot-web:80?"
     echo "    Start tunnel: docker compose -f code/infrastructure/cloudflared/docker-compose.cloudflared.yml --env-file code/infrastructure/cloudflared/.env.nas up -d"
   else
     fail "app.$PUBLIC_DOMAIN / returned HTTP $APP_ROOT_STATUS (expected 200)"

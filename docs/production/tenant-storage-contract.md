@@ -32,11 +32,11 @@ Before a tenant identifier is used in a storage key, collection name, partition 
 | Minimum length | 3 characters. |
 | Leading/trailing hyphens | Forbidden. |
 | Case normalisation | Normalise to lowercase before use. JWT claim values may contain uppercase. |
-| Reserved prefixes | `fps-`, `dapr-`, `admin-`, `system-` are reserved for internal use. Tenant IDs matching these prefixes must be rejected at provisioning time. |
+| Reserved prefixes | `fairspot-`, `dapr-`, `admin-`, `system-` are reserved for internal use. Tenant IDs matching these prefixes must be rejected at provisioning time. |
 | Collision handling | Two tenant IDs that produce the same sanitised form must be rejected. Provisioning must check uniqueness before creating storage. |
 
 Example valid tenant IDs: `acme-corp`, `demo`, `t123`.
-Example rejected: `ACME Corp` (uppercase and space), `fps-internal` (reserved prefix), `ab` (too short).
+Example rejected: `ACME Corp` (uppercase and space), `fairspot-internal` (reserved prefix), `ab` (too short).
 
 ### Canonical sanitisation
 
@@ -83,7 +83,7 @@ If the deployment profile uses tenant-scoped Dapr state store components (separa
 
 The shared-kernel `TenantStorageScope` (`FPS.SharedKernel.Infrastructure`) is the single, provider-neutral source of tenant storage identifiers. It reuses `TenantStorageKey` sanitisation and produces, from a trusted tenant key only:
 
-- `Collection(service, tenantKey)` — deterministic `fps-{tenant}-{service}` collection / partition / schema-safe names.
+- `Collection(service, tenantKey)` — deterministic `fairspot-{tenant}-{service}` collection / partition / schema-safe names.
 - `KeyPrefix(entityType, tenantKey)` / `KeySegment(tenantKey)` — the Dapr state-key prefixes that scope a tenant's keys.
 
 Callers never supply storage names directly. The **canonical storage key is the tenant id** — the same value services key their Dapr state under (`request:{tenantId}:…`) and that a purge scopes by. `TenantProvisioningMetadata` records the per-service scopes (Customer, Booking, Notification, Profile, Audit, Configuration, DataHub, legacy Reporting) derived from that tenant id, so provisioning evidence, service storage, and purge targets all match exactly. The tenant id is validated against this contract at provisioning time (3–63 chars, no reserved prefix); a generated GUID always conforms. `Collection()` is bounded to `MaxNameLength` (63) — a long tenant id is deterministically truncated with a short hash suffix, so a schema-based profile cannot overflow the identifier limit or collide.

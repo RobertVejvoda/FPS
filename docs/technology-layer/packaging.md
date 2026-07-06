@@ -1,6 +1,6 @@
 # Software Packaging
 
-![Software Packaging](../images/fps-software-pack.png)
+![Software Packaging](../images/fairspot-software-pack.png)
 
 ## Shared Open-Core Packages
 

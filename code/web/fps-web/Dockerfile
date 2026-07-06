@@ -7,10 +7,10 @@
 # and a Vite alias to `../../clients/typescript/src`.
 #
 # Example:
-#   docker build -f code/web/fps-web/Dockerfile -t fps-web:local code
+#   docker build -f code/web/fps-web/Dockerfile -t fairspot-web:local code
 #
 # Runtime config: /config.json is generated from FPS_WEB_* env vars at container
-# start (see docker-entrypoint.d/40-fps-config.sh); if no env is provided the
+# start (see docker-entrypoint.d/40-fairspot-config.sh); if no env is provided the
 # default baked from public/config.json is served.
 
 # ── Build stage ──────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ COPY --from=build /app/web/fps-web/dist /usr/share/nginx/html
 
 # Runtime config generation runs before nginx starts (nginx:alpine entrypoint
 # executes /docker-entrypoint.d/*.sh in order).
-COPY web/fps-web/docker-entrypoint.sh /docker-entrypoint.d/40-fps-config.sh
-RUN chmod +x /docker-entrypoint.d/40-fps-config.sh
+COPY web/fps-web/docker-entrypoint.sh /docker-entrypoint.d/40-fairspot-config.sh
+RUN chmod +x /docker-entrypoint.d/40-fairspot-config.sh
 
 EXPOSE 80

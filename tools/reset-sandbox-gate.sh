@@ -40,7 +40,7 @@ echo "== PLAT003C sandbox-reset gate (tenant=$TENANT) =="
 
 # 1. Customer service reachable?
 if ! curl -fsS -o /dev/null "$CUSTOMER_URL/health"; then
-  echo "FAIL: fps-customer not reachable at $CUSTOMER_URL."
+  echo "FAIL: fairspot-customer not reachable at $CUSTOMER_URL."
   echo "      Start the stack first: FPS_SANDBOX_RESET_ENABLED=true FPS_SANDBOX_RESET_SCHEDULER_ENABLED=true ./tools/start-container-stack.sh --seed"
   exit 1
 fi
@@ -48,12 +48,12 @@ fi
 # 2. Clear the per-UTC-day lease so THIS run drives a real reset (not a Skipped dedupe). The lease
 #    lives in customerstore; reach the customer Dapr sidecar (:3500) via a curl container that shares
 #    the customer container's network namespace. Best-effort.
-CID="$("${COMPOSE[@]}" ps -q fps-customer 2>/dev/null | head -1 || true)"
+CID="$("${COMPOSE[@]}" ps -q fairspot-customer 2>/dev/null | head -1 || true)"
 if [[ -n "$CID" ]]; then
   docker run --rm --network "container:$CID" "$CURL_IMAGE" -s -o /dev/null \
     -X DELETE "http://localhost:3500/v1.0/state/customerstore/sandbox-reset:lease" 2>/dev/null || true
 else
-  echo "  (note: could not resolve the fps-customer container to clear the reset lease; a Skipped run is possible)"
+  echo "  (note: could not resolve the fairspot-customer container to clear the reset lease; a Skipped run is possible)"
 fi
 
 # 3. Trigger the reset (internal scheduler route; Development bypass, no auth).
@@ -65,7 +65,7 @@ curl -fsS -X POST -o /dev/null "$CUSTOMER_URL/sandbox-reset-scheduler"
 printf "Waiting for reset outcome"
 outcome=""; skipped=""
 for _ in $(seq 1 30); do
-  logs="$("${COMPOSE[@]}" logs --since "$SINCE" fps-customer 2>/dev/null || true)"
+  logs="$("${COMPOSE[@]}" logs --since "$SINCE" fairspot-customer 2>/dev/null || true)"
   outcome="$(printf '%s\n' "$logs" | grep -E "Scheduled sandbox reset: tenant=${TENANT} status=" | tail -1 || true)"
   skipped="$(printf '%s\n' "$logs" | grep -E "Scheduled sandbox reset window .* already claimed" | tail -1 || true)"
   { [[ -n "$outcome" ]] || [[ -n "$skipped" ]]; } && break
@@ -106,7 +106,7 @@ if [[ -n "$skipped" ]]; then
   fi
   echo "FAIL: reset was SKIPPED — the per-UTC-day lease is already claimed, so no reset ran this window."
   echo "      This gate normally clears the lease automatically; if you still see this, clear it and retry:"
-  echo "        CID=\$(${COMPOSE[*]} ps -q fps-customer)"
+  echo "        CID=\$(${COMPOSE[*]} ps -q fairspot-customer)"
   echo "        docker run --rm --network container:\$CID $CURL_IMAGE -X DELETE http://localhost:3500/v1.0/state/customerstore/sandbox-reset:lease"
   echo "      Or accept a skip explicitly with ALLOW_SKIPPED=1."
   exit 1

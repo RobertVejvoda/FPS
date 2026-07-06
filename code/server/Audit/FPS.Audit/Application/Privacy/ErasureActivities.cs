@@ -16,7 +16,7 @@ public sealed class CheckActiveBookingsActivity(DaprClient dapr, ILogger<CheckAc
         try
         {
             var response = await dapr.InvokeMethodAsync<ServiceErasureInput, ErasureServiceResult>(
-                "fps-booking", "erasure/check-active", input);
+                "fairspot-booking", "erasure/check-active", input);
 
             logger.LogInformation(
                 "Active booking check complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment}",
@@ -42,7 +42,7 @@ public sealed class EraseProfileActivity(DaprClient dapr, ILogger<EraseProfileAc
         try
         {
             var response = await dapr.InvokeMethodAsync<ServiceErasureInput, ErasureServiceResult>(
-                "fps-profile", "erasure", input);
+                "fairspot-profile", "erasure", input);
             logger.LogInformation("Profile erasure complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment} Count={Count}",
                 input.ErasureRequestId, response.Treatment, response.AffectedCount);
             return response;
@@ -63,7 +63,7 @@ public sealed class EraseBookingDataActivity(DaprClient dapr, ILogger<EraseBooki
         try
         {
             var response = await dapr.InvokeMethodAsync<ServiceErasureInput, ErasureServiceResult>(
-                "fps-booking", "erasure", input);
+                "fairspot-booking", "erasure", input);
             logger.LogInformation("Booking erasure complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment} Count={Count}",
                 input.ErasureRequestId, response.Treatment, response.AffectedCount);
             return response;
@@ -84,7 +84,7 @@ public sealed class EraseNotificationActivity(DaprClient dapr, ILogger<EraseNoti
         try
         {
             var response = await dapr.InvokeMethodAsync<ServiceErasureInput, ErasureServiceResult>(
-                "fps-notification", "erasure", input);
+                "fairspot-notification", "erasure", input);
             logger.LogInformation("Notification erasure complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment} Count={Count}",
                 input.ErasureRequestId, response.Treatment, response.AffectedCount);
             return response;
@@ -105,7 +105,7 @@ public sealed class AnonymiseReportingActivity(DaprClient dapr, ILogger<Anonymis
         try
         {
             var response = await dapr.InvokeMethodAsync<ServiceErasureInput, ErasureServiceResult>(
-                "fps-reporting", "erasure", input);
+                "fairspot-reporting", "erasure", input);
             logger.LogInformation("Reporting anonymisation complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment} Count={Count}",
                 input.ErasureRequestId, response.Treatment, response.AffectedCount);
             return response;

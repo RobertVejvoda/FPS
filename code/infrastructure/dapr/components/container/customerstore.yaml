@@ -9,7 +9,7 @@ spec:
   - name: host
     value: mongodb:27017
   - name: databaseName
-    value: fps-customer
+    value: fairspot-customer
   - name: collectionName
     value: tenants
   - name: username
@@ -25,6 +25,6 @@ spec:
   - name: params
     value: "?authSource=admin&ssl=false"
 scopes:
-- fps-customer
+- fairspot-customer
 auth:
   secretStore: secretstore

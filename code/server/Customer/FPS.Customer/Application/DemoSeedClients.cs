@@ -40,7 +40,7 @@ public sealed class DaprDemoSeedProfileClient : IDemoSeedProfileClient
     {
         try
         {
-            using var http = DaprClient.CreateInvokeHttpClient("fps-profile");
+            using var http = DaprClient.CreateInvokeHttpClient("fairspot-profile");
             using var response = await http.PostAsJsonAsync(
                 "profile/admin/demo-seed", new { tenantId, employees }, ct);
             return response.IsSuccessStatusCode
@@ -66,7 +66,7 @@ public sealed class DaprDemoSeedConfigurationClient : IDemoSeedConfigurationClie
     {
         try
         {
-            using var http = DaprClient.CreateInvokeHttpClient("fps-configuration");
+            using var http = DaprClient.CreateInvokeHttpClient("fairspot-configuration");
             using var response = await http.PostAsJsonAsync(
                 "configuration/admin/demo-seed", new { tenantId, locationId, slots, policy }, ct);
             return response.IsSuccessStatusCode

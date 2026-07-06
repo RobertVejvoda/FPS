@@ -317,7 +317,7 @@ The following gaps are documented in the [Gap Register](./gap-register) and must
 | Gap | Severity | Blocker? | Planned Resolution |
 |-----|----------|----------|-------------------|
 | Encryption at rest not configured | High | **Yes** | Client enables encryption on all stores. FairSpot delegates to infrastructure; no code change needed. |
-| TLS for internal service-to-service traffic (Dapr mTLS) | Medium | **Yes** | Enable Dapr mTLS in production `fps-config.yaml`. Client responsibility. |
+| TLS for internal service-to-service traffic (Dapr mTLS) | Medium | **Yes** | Enable Dapr mTLS in production `fairspot-config.yaml`. Client responsibility. |
 | Infrastructure-layer tenant isolation (shared stores) | Medium | **Yes** | Planned in OPS008. Current design uses application-layer tenant keys; production should use per-tenant collections or schemas. |
 | No rate limiting on authentication endpoints | Medium | **Yes** | Envoy rate-limit policy to be configured before go-live. |
 | No Web Application Firewall (WAF) | Medium | **Yes** | Client must add WAF or cloud-native DDoS protection in production. |

@@ -182,7 +182,7 @@ public sealed class DaprNotificationAccountActivationSender(
 /// </summary>
 public sealed class DaprAccountActivationAudit(DaprClient daprClient) : IAccountActivationAuditSink
 {
-    private const string PubSub = "fps-pubsub";
+    private const string PubSub = "fairspot-pubsub";
     private const string Topic = "security-events";
     private const string Category = "account-activation";
 

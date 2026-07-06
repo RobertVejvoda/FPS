@@ -76,7 +76,7 @@ builder.Services.AddFpsHealthChecks()
     .AddDbContextCheck<DataHubDbContext>("datahub-db")
     .AddCheck<EventInboxHealthCheck>("datahub-event-inbox");
 
-builder.Services.AddFpsObservability("fps-datahub", builder.Configuration);
+builder.Services.AddFpsObservability("fairspot-datahub", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();

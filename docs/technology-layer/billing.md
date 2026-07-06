@@ -4,7 +4,7 @@ This page is a documentation-only guardrail. It does not approve product Billing
 
 Billing technology is deferred. FairSpot currently has no active Billing service, financial collection API, invoice engine, or Billing data store. The commercialisation decision is documented in [Commercialisation Impact Review](../strategy-layer/commercialisation).
 
-![Software Architecture - Customer](../images/fps-software-arch-customer.png)
+![Software Architecture - Customer](../images/fairspot-software-arch-customer.png)
 
 ## Current Technology Boundary
 

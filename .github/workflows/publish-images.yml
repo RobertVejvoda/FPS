@@ -34,15 +34,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: fps-audit,         service: Audit,         project: FPS.Audit,         port: '5161' }
-          - { name: fps-booking,       service: Booking,       project: FPS.Booking,       port: '5131' }
-          - { name: fps-configuration, service: Configuration, project: FPS.Configuration, port: '5141' }
-          - { name: fps-customer,      service: Customer,      project: FPS.Customer,      port: '5181' }
-          - { name: fps-datahub,       service: DataHub,       project: FPS.DataHub,       port: '5211' }
-          - { name: fps-identity,      service: Identity,      project: FPS.Identity,      port: '5192' }
-          - { name: fps-notification,  service: Notification,  project: FPS.Notification,  port: '5157' }
-          - { name: fps-profile,       service: Profile,       project: FPS.Profile,       port: '5197' }
-          - { name: fps-reporting,     service: Reporting,     project: FPS.Reporting,     port: '5171' }
+          - { name: fairspot-audit,         service: Audit,         project: FPS.Audit,         port: '5161' }
+          - { name: fairspot-booking,       service: Booking,       project: FPS.Booking,       port: '5131' }
+          - { name: fairspot-configuration, service: Configuration, project: FPS.Configuration, port: '5141' }
+          - { name: fairspot-customer,      service: Customer,      project: FPS.Customer,      port: '5181' }
+          - { name: fairspot-datahub,       service: DataHub,       project: FPS.DataHub,       port: '5211' }
+          - { name: fairspot-identity,      service: Identity,      project: FPS.Identity,      port: '5192' }
+          - { name: fairspot-notification,  service: Notification,  project: FPS.Notification,  port: '5157' }
+          - { name: fairspot-profile,       service: Profile,       project: FPS.Profile,       port: '5197' }
+          - { name: fairspot-reporting,     service: Reporting,     project: FPS.Reporting,     port: '5171' }
     steps:
       - uses: actions/checkout@v4
 
@@ -102,14 +102,14 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REGISTRY_OWNER }}/fps-web
+          images: ghcr.io/${{ env.REGISTRY_OWNER }}/fairspot-web
           tags: |
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
             type=semver,pattern={{version}}
 
-      - name: Build and push fps-web
+      - name: Build and push fairspot-web
         uses: docker/build-push-action@v6
         with:
           context: code
@@ -120,5 +120,5 @@ jobs:
           # GHCR displays BuildKit provenance attestations as an extra
           # unknown/unknown OS/Arch entry, which confuses package consumers.
           provenance: false
-          cache-from: type=gha,scope=fps-web
-          cache-to: type=gha,mode=max,scope=fps-web
+          cache-from: type=gha,scope=fairspot-web
+          cache-to: type=gha,mode=max,scope=fairspot-web

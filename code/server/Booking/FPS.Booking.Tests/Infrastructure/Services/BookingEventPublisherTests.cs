@@ -10,7 +10,7 @@ namespace FPS.Booking.Infrastructure.Tests.Services;
 public sealed class BookingEventPublisherTests
 {
     private const string ExpectedTopic = "booking-events";
-    private const string ExpectedPubSub = "fps-pubsub";
+    private const string ExpectedPubSub = "fairspot-pubsub";
 
     private readonly Mock<DaprClient> dapr = new();
     private readonly BookingDaprEventPublisher publisher;

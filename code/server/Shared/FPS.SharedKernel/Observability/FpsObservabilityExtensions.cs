@@ -12,7 +12,7 @@ namespace FPS.SharedKernel.Observability;
 public static class FpsObservabilityExtensions
 {
     // Registers OpenTelemetry tracing with OTLP export. serviceName should be a
-    // short kebab-case identifier (e.g. "fps-identity"). The OTLP endpoint is
+    // short kebab-case identifier (e.g. "fairspot-identity"). The OTLP endpoint is
     // read from Otlp:Endpoint config or the standard OTEL_EXPORTER_OTLP_ENDPOINT
     // env var; defaults to Jaeger's OTLP HTTP traces endpoint for local development.
     public static IServiceCollection AddFpsObservability(

@@ -82,7 +82,7 @@ public sealed class TenantControllerTests
     [Theory]
     [InlineData("me")]
     [InlineData("x")]
-    [InlineData("fps-reserved")]
+    [InlineData("fairspot-reserved")]
     public async Task Get_InvalidTenantId_Returns404NotThrows(string tenantId)
     {
         // Regression (#554): short/reserved strings like "me" reach this route via

@@ -13,7 +13,7 @@ spec:
       name: mongodb-connection
       key: host
   - name: databaseName
-    value: fps-workflow
+    value: fairspot-workflow
   - name: collectionName
     value: workflows
   - name: username

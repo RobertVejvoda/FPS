@@ -10,7 +10,7 @@ set -eu
 CONFIG_PATH="/usr/share/nginx/html/config.json"
 
 if [ -z "${FPS_WEB_API_BASE_URL:-}" ]; then
-  echo "[fps-config] FPS_WEB_API_BASE_URL not set — serving baked default config.json"
+  echo "[fairspot-config] FPS_WEB_API_BASE_URL not set — serving baked default config.json"
   exit 0
 fi
 
@@ -41,4 +41,4 @@ cat > "$CONFIG_PATH" <<EOF
 }
 EOF
 
-echo "[fps-config] wrote $CONFIG_PATH for apiBaseUrl=${FPS_WEB_API_BASE_URL}"
+echo "[fairspot-config] wrote $CONFIG_PATH for apiBaseUrl=${FPS_WEB_API_BASE_URL}"

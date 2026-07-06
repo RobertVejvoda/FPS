@@ -23,12 +23,12 @@ namespace FPS.DataHub.Tests;
 // a platform_* role forged on a customer-issuer token is stripped, so tenant/customer tokens fail.
 public sealed class PlatformDrawHealthAuthTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    private const string PlatformIssuer = "https://platform.test/realms/fps-platform";
+    private const string PlatformIssuer = "https://platform.test/realms/fairspot-platform";
     private const string CustomerIssuer = "https://auth.test/realms/fairspot";
     private const string Path = "/datahub/platform/draw-health";
 
     private static readonly SymmetricSecurityKey TestKey =
-        new(Encoding.UTF8.GetBytes("fps-datahub-test-signing-key-at-least-32!!"));
+        new(Encoding.UTF8.GetBytes("fairspot-datahub-test-signing-key-at-least-32!!"));
 
     private readonly WebApplicationFactory<Program> factory;
 

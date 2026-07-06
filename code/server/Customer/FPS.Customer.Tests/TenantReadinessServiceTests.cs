@@ -93,7 +93,7 @@ public sealed class TenantReadinessServiceTests
 
     private async Task SeedIdentityAsync(string tenantId,
         string issuer = "https://idp.example.com",
-        string audience = "fps-api",
+        string audience = "fairspot-api",
         IReadOnlyDictionary<string, string>? roleMapping = null)
     {
         var config = new TenantIdentityConfig
@@ -479,7 +479,7 @@ public sealed class TenantReadinessServiceTests
         foreach (var check in report!.Checks)
         {
             Assert.DoesNotContain("https://idp.example.com", check.Reason ?? string.Empty);
-            Assert.DoesNotContain("fps-api", check.Reason ?? string.Empty);
+            Assert.DoesNotContain("fairspot-api", check.Reason ?? string.Empty);
         }
     }
 }

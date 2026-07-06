@@ -28,4 +28,4 @@ services:
 networks:
   web:
     external: true
-    name: fps_network
+    name: fairspot_network

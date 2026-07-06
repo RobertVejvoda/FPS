@@ -68,7 +68,7 @@ public sealed class EmailVerificationDeliveryAndAuditTests
     {
         var dapr = new Mock<DaprClient>();
         SecurityAuditEvent? published = null;
-        dapr.Setup(d => d.PublishEventAsync("fps-pubsub", "security-events", It.IsAny<SecurityAuditEvent>(), It.IsAny<CancellationToken>()))
+        dapr.Setup(d => d.PublishEventAsync("fairspot-pubsub", "security-events", It.IsAny<SecurityAuditEvent>(), It.IsAny<CancellationToken>()))
             .Callback<string, string, SecurityAuditEvent, CancellationToken>((_, _, e, _) => published = e)
             .Returns(Task.CompletedTask);
         var audit = new DaprEmailVerificationAudit(dapr.Object);
@@ -93,7 +93,7 @@ public sealed class EmailVerificationDeliveryAndAuditTests
     public async Task Audit_Outcomes_PublishToSecurityEventsTopic(string outcome)
     {
         var dapr = new Mock<DaprClient>();
-        dapr.Setup(d => d.PublishEventAsync("fps-pubsub", "security-events", It.IsAny<SecurityAuditEvent>(), It.IsAny<CancellationToken>()))
+        dapr.Setup(d => d.PublishEventAsync("fairspot-pubsub", "security-events", It.IsAny<SecurityAuditEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var audit = new DaprEmailVerificationAudit(dapr.Object);
 
@@ -105,7 +105,7 @@ public sealed class EmailVerificationDeliveryAndAuditTests
         };
         await call;
 
-        dapr.Verify(d => d.PublishEventAsync("fps-pubsub", "security-events",
+        dapr.Verify(d => d.PublishEventAsync("fairspot-pubsub", "security-events",
             It.Is<SecurityAuditEvent>(e => e.Outcome == outcome && e.ActorHash == ExpectedHash(User)),
             It.IsAny<CancellationToken>()), Times.Once);
     }

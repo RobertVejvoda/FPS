@@ -35,7 +35,7 @@ public sealed class HttpProfileSnapshotServiceTests
         var snapshot = new ProfileSnapshot("tenant-1", "user-1", "Active", true, false, false, false, [], "v1");
         var handler = new CapturingHandler(HttpStatusCode.OK, JsonSerializer.Serialize(snapshot), r => captured = r);
         var service = new HttpProfileSnapshotService(
-            new HttpClient(handler) { BaseAddress = new Uri("http://fps-profile") },
+            new HttpClient(handler) { BaseAddress = new Uri("http://fairspot-profile") },
             httpContextAccessor.Object);
 
         await service.GetSnapshotAsync("tenant-1", "user-1");
@@ -54,7 +54,7 @@ public sealed class HttpProfileSnapshotServiceTests
 
         var handler = new CapturingHandler(HttpStatusCode.Unauthorized, string.Empty);
         var service = new HttpProfileSnapshotService(
-            new HttpClient(handler) { BaseAddress = new Uri("http://fps-profile") },
+            new HttpClient(handler) { BaseAddress = new Uri("http://fairspot-profile") },
             httpContextAccessor.Object);
 
         var result = await service.GetSnapshotAsync("tenant-1", "user-1");
@@ -73,7 +73,7 @@ public sealed class HttpProfileSnapshotServiceTests
             [new VehicleSnapshot("v-1", "ABC-123", "Sedan", false, true)], "v42");
         var handler = new CapturingHandler(HttpStatusCode.OK, JsonSerializer.Serialize(expected));
         var service = new HttpProfileSnapshotService(
-            new HttpClient(handler) { BaseAddress = new Uri("http://fps-profile") },
+            new HttpClient(handler) { BaseAddress = new Uri("http://fairspot-profile") },
             httpContextAccessor.Object);
 
         var result = await service.GetSnapshotAsync("tenant-1", "user-1");

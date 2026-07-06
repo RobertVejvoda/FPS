@@ -202,12 +202,12 @@ GitHub Actions
     └─ deploy to selected runtime profile
 
 Container Runtime
-    ├─ [fps-identity]     Dapr enabled, min 1 replica, ingress external
-    ├─ [fps-booking]      Dapr enabled, scale-to-zero, ingress internal
-    ├─ [fps-profile]      Dapr enabled, scale-to-zero, ingress internal
-    ├─ [fps-notification] Dapr enabled, scale-to-zero, ingress internal
-    ├─ [fps-audit]        Dapr enabled, scale-to-zero, ingress internal
-    └─ [fps-configuration]Dapr enabled, scale-to-zero, ingress internal
+    ├─ [fairspot-identity]     Dapr enabled, min 1 replica, ingress external
+    ├─ [fairspot-booking]      Dapr enabled, scale-to-zero, ingress internal
+    ├─ [fairspot-profile]      Dapr enabled, scale-to-zero, ingress internal
+    ├─ [fairspot-notification] Dapr enabled, scale-to-zero, ingress internal
+    ├─ [fairspot-audit]        Dapr enabled, scale-to-zero, ingress internal
+    └─ [fairspot-configuration]Dapr enabled, scale-to-zero, ingress internal
 
 External ingress
     └─ HTTPS/TLS managed by platform or ingress gateway

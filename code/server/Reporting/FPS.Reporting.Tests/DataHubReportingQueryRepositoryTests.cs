@@ -37,7 +37,7 @@ public sealed class DataHubReportingQueryRepositoryTests
             ctx.Request.Headers["Authorization"] = authHeader;
             accessor.Setup(a => a.HttpContext).Returns(ctx);
         }
-        var client = new HttpClient(handler) { BaseAddress = new Uri("http://fps-datahub") };
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://fairspot-datahub") };
         return (new DataHubReportingQueryRepository(client, accessor.Object), handler);
     }
 

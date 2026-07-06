@@ -104,9 +104,9 @@ authenticates all sidecar-to-sidecar traffic. Which profiles run it, and why, is
 | NAS / self-hosted Docker Compose (Release 1) | **Disabled (documented exception)** | Dapr mTLS needs the **Sentry** control plane to issue and rotate workload certificates. The self-hosted Compose stack runs only Placement + Scheduler — no Sentry — so mTLS cannot be enabled here safely. On a single NAS host all sidecars share one private Docker bridge, so plaintext intra-service traffic is low risk: sniffing it requires host access, at which point the attacker already has more than the traffic. |
 | Kubernetes / DigitalOcean DOKS (target) | **Enabled** | Sentry is standard on the Kubernetes Dapr install and managed runtimes. mTLS is the default there, so the defense-in-depth that matters once services span hosts arrives naturally with the K8s move. |
 
-**Configuration split.** The Compose stack mounts `dapr/configuration/fps-config.yaml`
+**Configuration split.** The Compose stack mounts `dapr/configuration/fairspot-config.yaml`
 (`mtls.enabled: false`). The mTLS-enabled target for the hosted K8s profile is a separate,
-not-wired-in artifact, `dapr/configuration/fps-config.k8s-hosted.yaml` (`mtls.enabled: true`),
+not-wired-in artifact, `dapr/configuration/fairspot-config.k8s-hosted.yaml` (`mtls.enabled: true`),
 which also carries the `workloadCertTTL` / `allowedClockSkew` and workflow-history-signing
 posture for that profile.
 
@@ -157,7 +157,7 @@ Because Npgsql pools connections, rotation must recycle the pool (or rely on new
 **Remaining follow-ups (#628).** The other datastores still use static secrets and should move to Vault dynamic secrets under the same path, tracked separately — not widened into this slice:
 
 - **MongoDB** (Booking/Profile/Configuration/Audit/Reporting/Notification/Customer state stores) — Vault database secrets engine (MongoDB plugin).
-- **RabbitMQ** (`fps-pubsub`) — Vault RabbitMQ secrets engine or rotated static credentials.
+- **RabbitMQ** (`fairspot-pubsub`) — Vault RabbitMQ secrets engine or rotated static credentials.
 - **MinIO / object storage** (`s3store`) — rotated access/secret keys or a provider-managed identity.
 
 ## References

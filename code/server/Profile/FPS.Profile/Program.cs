@@ -71,7 +71,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddFpsHealthChecks();
-builder.Services.AddFpsObservability("fps-profile", builder.Configuration);
+builder.Services.AddFpsObservability("fairspot-profile", builder.Configuration);
 builder.Services.AddFpsMetrics();
 builder.Services.AddFpsAuthorization();
 builder.Services.AddFpsDurableDeactivatedUserStore();

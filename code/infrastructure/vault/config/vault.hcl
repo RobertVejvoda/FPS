@@ -10,7 +10,7 @@
 
 storage "raft" {
   path    = "/vault/data"
-  node_id = "fps-nas-vault"
+  node_id = "fairspot-nas-vault"
 }
 
 listener "tcp" {

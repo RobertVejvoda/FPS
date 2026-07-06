@@ -11,7 +11,7 @@
   ],
   "identity": {
     "trustedIssuer": "http://localhost:8180/realms/fps-local",
-    "audience": "fps-api",
+    "audience": "fairspot-api",
     "tenantClaimName": "tenant_id",
     "subjectClaimName": "sub",
     "roleClaimNames": ["roles"],

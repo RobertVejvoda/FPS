@@ -9,21 +9,21 @@
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
 </head>
 <body>
-<div class="fps-wrapper">
-  <main class="fps-card" role="main">
+<div class="fairspot-wrapper">
+  <main class="fairspot-card" role="main">
 
-    <header class="fps-brand">
-      <div class="fps-logo-mark" aria-hidden="true">F</div>
-      <div class="fps-brand-text">
-        <span class="fps-brand-name">FairSpot</span>
-        <span class="fps-brand-tagline">Fair parking for everyone</span>
+    <header class="fairspot-brand">
+      <div class="fairspot-logo-mark" aria-hidden="true">F</div>
+      <div class="fairspot-brand-text">
+        <span class="fairspot-brand-name">FairSpot</span>
+        <span class="fairspot-brand-tagline">Fair parking for everyone</span>
       </div>
     </header>
 
-    <h1 class="fps-title">${msg("emailForgotTitle")}</h1>
+    <h1 class="fairspot-title">${msg("emailForgotTitle")}</h1>
 
     <#if message?has_content>
-      <div class="fps-alert fps-alert-${message.type}" role="alert" aria-live="assertive">
+      <div class="fairspot-alert fairspot-alert-${message.type}" role="alert" aria-live="assertive">
         ${kcSanitize(message.summary)?no_esc}
       </div>
     </#if>
@@ -32,11 +32,11 @@
 
     <form id="kc-reset-password-form" action="${url.loginAction}" method="post">
 
-      <div class="fps-field">
-        <label class="fps-label" for="username">
+      <div class="fairspot-field">
+        <label class="fairspot-label" for="username">
           <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
         </label>
-        <input class="fps-input<#if messagesPerField.existsError('username')> fps-input-error</#if>"
+        <input class="fairspot-input<#if messagesPerField.existsError('username')> fairspot-input-error</#if>"
                type="text"
                id="username"
                name="username"
@@ -48,23 +48,23 @@
                spellcheck="false"
                autofocus />
         <#if messagesPerField.existsError('username')>
-          <span class="fps-field-error" aria-live="polite">
+          <span class="fairspot-field-error" aria-live="polite">
             ${kcSanitize(messagesPerField.get('username'))?no_esc}
           </span>
         </#if>
       </div>
 
-      <button class="fps-btn" type="submit" tabindex="2">${msg("doSubmit")}</button>
+      <button class="fairspot-btn" type="submit" tabindex="2">${msg("doSubmit")}</button>
 
     </form>
 
     <p style="text-align:center;">
-      <a class="fps-link fps-back-link" href="${url.loginUrl}" tabindex="3">${msg("backToLogin")}</a>
+      <a class="fairspot-link fairspot-back-link" href="${url.loginUrl}" tabindex="3">${msg("backToLogin")}</a>
     </p>
 
   </main>
 
-  <footer class="fps-footer">
+  <footer class="fairspot-footer">
     <p>${msg("fps.supportHint")}</p>
   </footer>
 </div>

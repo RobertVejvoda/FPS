@@ -1,7 +1,7 @@
 apiVersion: 1
 
 providers:
-  - name: FPS Local
+  - name: FairSpot Local
     type: file
     disableDeletion: true
     updateIntervalSeconds: 30

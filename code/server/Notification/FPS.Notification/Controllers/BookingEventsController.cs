@@ -12,7 +12,7 @@ namespace FPS.Notification.Controllers;
 [DaprInternalOnly]
 public sealed class BookingEventsController(BookingEventNotificationHandler handler) : ControllerBase
 {
-    private const string PubSubName = "fps-pubsub";
+    private const string PubSubName = "fairspot-pubsub";
     private const string Topic = "booking-events";
 
     [HttpPost("/notifications/booking-events")]

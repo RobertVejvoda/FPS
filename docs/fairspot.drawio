@@ -1350,7 +1350,7 @@
             <mxPoint x="-15" y="-30" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="4N-NdC-DFC2X1iBBCnxv-12" parent="4N-NdC-DFC2X1iBBCnxv-2" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" value="fps-mobile-app" vertex="1">
+        <mxCell id="4N-NdC-DFC2X1iBBCnxv-12" parent="4N-NdC-DFC2X1iBBCnxv-2" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" value="fairspot-mobile-app" vertex="1">
           <mxGeometry height="40" width="227" x="660" y="180" as="geometry" />
         </mxCell>
         <mxCell id="OcRB1RtchUJj72V0f-qm-37" edge="1" parent="4N-NdC-DFC2X1iBBCnxv-2" source="4N-NdC-DFC2X1iBBCnxv-19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" target="OcRB1RtchUJj72V0f-qm-33">
@@ -1448,7 +1448,7 @@
             <mxPoint x="-139" y="-103" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="OcRB1RtchUJj72V0f-qm-0" parent="4N-NdC-DFC2X1iBBCnxv-2" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" value="fps-web-app" vertex="1">
+        <mxCell id="OcRB1RtchUJj72V0f-qm-0" parent="4N-NdC-DFC2X1iBBCnxv-2" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" value="fairspot-web-app" vertex="1">
           <mxGeometry height="40" width="227" x="420" y="180" as="geometry" />
         </mxCell>
         <mxCell id="OcRB1RtchUJj72V0f-qm-4" edge="1" parent="4N-NdC-DFC2X1iBBCnxv-2" source="4N-NdC-DFC2X1iBBCnxv-4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.02;entryY=-0.055;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.14;exitY=1.021;exitDx=0;exitDy=0;exitPerimeter=0;fontSize=10;" target="4N-NdC-DFC2X1iBBCnxv-19">
@@ -1833,7 +1833,7 @@
             <mxPoint x="-27" y="-10" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="P9-XmWIJQLrq_xANi2Ej-14" value="fps-mobile-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="P9-XmWIJQLrq_xANi2Ej-2" vertex="1">
+        <mxCell id="P9-XmWIJQLrq_xANi2Ej-14" value="fairspot-mobile-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="P9-XmWIJQLrq_xANi2Ej-2" vertex="1">
           <mxGeometry x="660" y="180" width="227" height="40" as="geometry" />
         </mxCell>
         <mxCell id="P9-XmWIJQLrq_xANi2Ej-15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="P9-XmWIJQLrq_xANi2Ej-2" source="P9-XmWIJQLrq_xANi2Ej-24" target="P9-XmWIJQLrq_xANi2Ej-34" edge="1">
@@ -1958,7 +1958,7 @@
             <mxPoint x="1170.48" y="320" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="P9-XmWIJQLrq_xANi2Ej-40" value="fps-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="P9-XmWIJQLrq_xANi2Ej-2" vertex="1">
+        <mxCell id="P9-XmWIJQLrq_xANi2Ej-40" value="fairspot-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="P9-XmWIJQLrq_xANi2Ej-2" vertex="1">
           <mxGeometry x="420" y="180" width="227" height="40" as="geometry" />
         </mxCell>
         <mxCell id="P9-XmWIJQLrq_xANi2Ej-41" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.02;entryY=-0.055;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.14;exitY=1.021;exitDx=0;exitDy=0;exitPerimeter=0;fontSize=10;" parent="P9-XmWIJQLrq_xANi2Ej-2" source="P9-XmWIJQLrq_xANi2Ej-11" target="P9-XmWIJQLrq_xANi2Ej-24" edge="1">
@@ -2228,7 +2228,7 @@
         <mxCell id="D1nbTqc2qFOA3NOHaqZz-1" value="Booking" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;dashed=1;fontSize=10;fillColor=#eeeeee;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
           <mxGeometry x="404" y="460" width="340" height="240" as="geometry" />
         </mxCell>
-        <mxCell id="D1nbTqc2qFOA3NOHaqZz-3" value="fps-mobile-app" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
+        <mxCell id="D1nbTqc2qFOA3NOHaqZz-3" value="fairspot-mobile-app" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
           <mxGeometry x="660" y="180" width="227" height="40" as="geometry" />
         </mxCell>
         <mxCell id="VEHafgccXoJ8xeA4-djP-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="yapgCjTPNcmDM5F4bcOt-4" source="kBxp4p9OtccmqEFeKfF4-1" target="VEHafgccXoJ8xeA4-djP-1" edge="1">
@@ -2284,7 +2284,7 @@
             <mxPoint x="-5" y="24" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="VEHafgccXoJ8xeA4-djP-1" value="fps-booking-api" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
+        <mxCell id="VEHafgccXoJ8xeA4-djP-1" value="fairspot-booking-api" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
           <mxGeometry x="444" y="490" width="270" height="20" as="geometry" />
         </mxCell>
         <mxCell id="9QIw3IsrBSXFwpZ22I7W-1" value="Repository" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=10;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
@@ -2304,7 +2304,7 @@
             <mxPoint y="-1" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="9QIw3IsrBSXFwpZ22I7W-6" value="fps-booking-engine" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
+        <mxCell id="9QIw3IsrBSXFwpZ22I7W-6" value="fairspot-booking-engine" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
           <mxGeometry x="444" y="650" width="266" height="20" as="geometry" />
         </mxCell>
         <mxCell id="ytuhTk5LGB8qeCYdQCqx-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.629;exitY=0.099;exitDx=0;exitDy=0;exitPerimeter=0;" parent="yapgCjTPNcmDM5F4bcOt-4" source="COKlCNy7kic_BbTXtjOA-2" target="D1nbTqc2qFOA3NOHaqZz-3" edge="1">
@@ -2357,7 +2357,7 @@
         <mxCell id="COKlCNy7kic_BbTXtjOA-2" value="Notification" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=10;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
           <mxGeometry x="860" y="490.00000000000006" width="120" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="COKlCNy7kic_BbTXtjOA-10" value="fps-web-app" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
+        <mxCell id="COKlCNy7kic_BbTXtjOA-10" value="fairspot-web-app" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="yapgCjTPNcmDM5F4bcOt-4" vertex="1">
           <mxGeometry x="430" y="180" width="227" height="40" as="geometry" />
         </mxCell>
       </root>
@@ -2401,7 +2401,7 @@
         <mxCell id="93E_xNrOxPsDQwFe3fpF-27" value="API Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="93E_xNrOxPsDQwFe3fpF-16" vertex="1">
           <mxGeometry x="463" y="300" width="410" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="93E_xNrOxPsDQwFe3fpF-31" value="fps-configuration-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="93E_xNrOxPsDQwFe3fpF-16" vertex="1">
+        <mxCell id="93E_xNrOxPsDQwFe3fpF-31" value="fairspot-configuration-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="93E_xNrOxPsDQwFe3fpF-16" vertex="1">
           <mxGeometry x="474" y="480" width="270" height="18" as="geometry" />
         </mxCell>
         <mxCell id="93E_xNrOxPsDQwFe3fpF-34" value="Repository" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=10;" parent="93E_xNrOxPsDQwFe3fpF-16" vertex="1">
@@ -2432,7 +2432,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="38mEZyykL3sOL4O16uTk-4" value="fps-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="93E_xNrOxPsDQwFe3fpF-16" vertex="1">
+        <mxCell id="38mEZyykL3sOL4O16uTk-4" value="fairspot-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="93E_xNrOxPsDQwFe3fpF-16" vertex="1">
           <mxGeometry x="460" y="190" width="420" height="40" as="geometry" />
         </mxCell>
         <mxCell id="38mEZyykL3sOL4O16uTk-8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="93E_xNrOxPsDQwFe3fpF-16" source="38mEZyykL3sOL4O16uTk-4" edge="1">
@@ -2515,7 +2515,7 @@
         <mxCell id="idvxYo7HiC7nPSXHMuOH-9" value="API Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
           <mxGeometry x="463" y="300" width="410" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="idvxYo7HiC7nPSXHMuOH-10" value="fps-customer-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
+        <mxCell id="idvxYo7HiC7nPSXHMuOH-10" value="fairspot-customer-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
           <mxGeometry x="474" y="480" width="270" height="18" as="geometry" />
         </mxCell>
         <mxCell id="idvxYo7HiC7nPSXHMuOH-11" value="Repository" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=10;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
@@ -2541,7 +2541,7 @@
             <mxPoint x="522" y="160" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="idvxYo7HiC7nPSXHMuOH-18" value="fps-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
+        <mxCell id="idvxYo7HiC7nPSXHMuOH-18" value="fairspot-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
           <mxGeometry x="460" y="190" width="420" height="40" as="geometry" />
         </mxCell>
         <mxCell id="idvxYo7HiC7nPSXHMuOH-19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="idvxYo7HiC7nPSXHMuOH-2" source="idvxYo7HiC7nPSXHMuOH-18" edge="1">
@@ -2591,7 +2591,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="14sKfDwFz5VbpWtFRibk-5" value="fps-customer-engine" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
+        <mxCell id="14sKfDwFz5VbpWtFRibk-5" value="fairspot-customer-engine" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="idvxYo7HiC7nPSXHMuOH-2" vertex="1">
           <mxGeometry x="474" y="630" width="270" height="18" as="geometry" />
         </mxCell>
       </root>
@@ -2616,7 +2616,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="byNrgGkQVywx8ToRXQI3-4" value="fps-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="O096NatDcWbCXW3WqK-R-1" vertex="1">
+        <mxCell id="byNrgGkQVywx8ToRXQI3-4" value="fairspot-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="O096NatDcWbCXW3WqK-R-1" vertex="1">
           <mxGeometry x="690" y="190" width="207" height="40" as="geometry" />
         </mxCell>
         <mxCell id="jHQv6GHWcKXi0CLOZGy--2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;exitX=0.709;exitY=1.004;exitDx=0;exitDy=0;exitPerimeter=0;" parent="O096NatDcWbCXW3WqK-R-1" source="byNrgGkQVywx8ToRXQI3-0" target="O096NatDcWbCXW3WqK-R-20" edge="1">
@@ -2652,7 +2652,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="ciWwyndFtTuNVKOj-Awo-0" value="fps-mobile-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="O096NatDcWbCXW3WqK-R-1" vertex="1">
+        <mxCell id="ciWwyndFtTuNVKOj-Awo-0" value="fairspot-mobile-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="O096NatDcWbCXW3WqK-R-1" vertex="1">
           <mxGeometry x="490" y="190" width="183" height="40" as="geometry" />
         </mxCell>
         <mxCell id="O096NatDcWbCXW3WqK-R-3" value="Components" parent="O096NatDcWbCXW3WqK-R-0" />
@@ -2693,7 +2693,7 @@
         <mxCell id="O096NatDcWbCXW3WqK-R-20" value="API Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="O096NatDcWbCXW3WqK-R-3" vertex="1">
           <mxGeometry x="480" y="300" width="410" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="O096NatDcWbCXW3WqK-R-32" value="fps-profile-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="O096NatDcWbCXW3WqK-R-3" vertex="1">
+        <mxCell id="O096NatDcWbCXW3WqK-R-32" value="fairspot-profile-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="O096NatDcWbCXW3WqK-R-3" vertex="1">
           <mxGeometry x="444" y="490" width="270" height="18" as="geometry" />
         </mxCell>
         <mxCell id="O096NatDcWbCXW3WqK-R-35" value="Repository" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=10;" parent="O096NatDcWbCXW3WqK-R-3" vertex="1">
@@ -2803,7 +2803,7 @@
         <mxCell id="FN6OzzKVOYJMzTJMEf8j-20" value="API Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
           <mxGeometry x="480" y="300" width="410" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="FN6OzzKVOYJMzTJMEf8j-25" value="fps-audit-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
+        <mxCell id="FN6OzzKVOYJMzTJMEf8j-25" value="fairspot-audit-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
           <mxGeometry x="550" y="410" width="250" height="18" as="geometry" />
         </mxCell>
         <mxCell id="FN6OzzKVOYJMzTJMEf8j-26" value="Monitoring" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
@@ -2833,7 +2833,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="FN6OzzKVOYJMzTJMEf8j-38" value="fps-audit-engine" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
+        <mxCell id="FN6OzzKVOYJMzTJMEf8j-38" value="fairspot-audit-engine" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
           <mxGeometry x="547.5" y="590" width="272.5" height="18" as="geometry" />
         </mxCell>
         <mxCell id="exFDDOBLbqkjxpfKQZ6V-30" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="FN6OzzKVOYJMzTJMEf8j-12" source="exFDDOBLbqkjxpfKQZ6V-0" target="exFDDOBLbqkjxpfKQZ6V-28" edge="1">
@@ -2865,7 +2865,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="exFDDOBLbqkjxpfKQZ6V-24" value="fps-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
+        <mxCell id="exFDDOBLbqkjxpfKQZ6V-24" value="fairspot-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="FN6OzzKVOYJMzTJMEf8j-12" vertex="1">
           <mxGeometry x="477" y="190" width="420" height="40" as="geometry" />
         </mxCell>
         <mxCell id="exFDDOBLbqkjxpfKQZ6V-31" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=10;" parent="FN6OzzKVOYJMzTJMEf8j-12" source="exFDDOBLbqkjxpfKQZ6V-28" target="FN6OzzKVOYJMzTJMEf8j-26" edge="1">
@@ -2998,7 +2998,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Aod_IJE_ouHOV6oj7znu-6" value="fps-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="Aod_IJE_ouHOV6oj7znu-1" vertex="1">
+        <mxCell id="Aod_IJE_ouHOV6oj7znu-6" value="fairspot-web-app" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="Aod_IJE_ouHOV6oj7znu-1" vertex="1">
           <mxGeometry x="477" y="190" width="420" height="40" as="geometry" />
         </mxCell>
         <mxCell id="Aod_IJE_ouHOV6oj7znu-10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=10;" parent="Aod_IJE_ouHOV6oj7znu-1" source="Aod_IJE_ouHOV6oj7znu-6" target="Aod_IJE_ouHOV6oj7znu-20" edge="1">
@@ -3084,7 +3084,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Aod_IJE_ouHOV6oj7znu-24" value="fps-reporting-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="Aod_IJE_ouHOV6oj7znu-12" vertex="1">
+        <mxCell id="Aod_IJE_ouHOV6oj7znu-24" value="fairspot-reporting-api" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="Aod_IJE_ouHOV6oj7znu-12" vertex="1">
           <mxGeometry x="554" y="480" width="270" height="18" as="geometry" />
         </mxCell>
         <mxCell id="Aod_IJE_ouHOV6oj7znu-28" value="PostgreSQL" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;" parent="Aod_IJE_ouHOV6oj7znu-12" vertex="1">
@@ -3098,7 +3098,7 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="U8RiQik4KcS_x61a3Gjm-0" value="fps-reporting-builder" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="Aod_IJE_ouHOV6oj7znu-12" vertex="1">
+        <mxCell id="U8RiQik4KcS_x61a3Gjm-0" value="fairspot-reporting-builder" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fontSize=10;fillColor=#cdeb8b;strokeColor=#36393d;" parent="Aod_IJE_ouHOV6oj7znu-12" vertex="1">
           <mxGeometry x="552" y="650" width="270" height="18" as="geometry" />
         </mxCell>
         <mxCell id="fSNDQZ8U1csympr44XPE-3" value="Event Bus" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;horizontal=0;direction=south;" parent="Aod_IJE_ouHOV6oj7znu-12" vertex="1">
@@ -9166,7 +9166,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="644KDzwo9FGyKWKSuphB-38" value="fps-web-app (docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="X4YO5RI2ncQrNG8uIQDV-6" vertex="1">
+        <mxCell id="644KDzwo9FGyKWKSuphB-38" value="fairspot-web-app (docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="X4YO5RI2ncQrNG8uIQDV-6" vertex="1">
           <mxGeometry x="50" y="275" width="1190" height="60" as="geometry" />
         </mxCell>
         <mxCell id="sNlozss1FXkkbOA2OQV0-3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.878;entryY=0.031;entryDx=0;entryDy=0;entryPerimeter=0;" parent="X4YO5RI2ncQrNG8uIQDV-6" source="sNlozss1FXkkbOA2OQV0-1" target="644KDzwo9FGyKWKSuphB-38" edge="1">
@@ -9263,7 +9263,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="dT0lR6_zaH2xU8vPSzEu-31" value="fps-mobile-app (docker image)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="dT0lR6_zaH2xU8vPSzEu-3">
+        <mxCell id="dT0lR6_zaH2xU8vPSzEu-31" value="fairspot-mobile-app (docker image)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="dT0lR6_zaH2xU8vPSzEu-3">
           <mxGeometry x="180" y="275" width="760" height="60" as="geometry" />
         </mxCell>
         <mxCell id="lUsg0QnUTXUgfh9qiBr--0" value="«GUI»&lt;br&gt;&lt;b&gt;booking-ui&lt;/b&gt;" style="html=1;dropTarget=0;whiteSpace=wrap;rounded=1;" vertex="1" parent="dT0lR6_zaH2xU8vPSzEu-3">
@@ -9373,10 +9373,10 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="y5wPCR3xg18q91Ob_20D-31" value="fps-booking-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="y5wPCR3xg18q91Ob_20D-3" vertex="1">
+        <mxCell id="y5wPCR3xg18q91Ob_20D-31" value="fairspot-booking-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="y5wPCR3xg18q91Ob_20D-3" vertex="1">
           <mxGeometry x="250" y="270" width="170" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="_eellNEBIJ1WTKk4Vd1e-0" value="fps-booking-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="y5wPCR3xg18q91Ob_20D-3" vertex="1">
+        <mxCell id="_eellNEBIJ1WTKk4Vd1e-0" value="fairspot-booking-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="y5wPCR3xg18q91Ob_20D-3" vertex="1">
           <mxGeometry x="710" y="270" width="170" height="60" as="geometry" />
         </mxCell>
         <mxCell id="0MAl1Pq7Mlsf5OG6H4J6-2" value="PostgreSQL" style="rounded=1;whiteSpace=wrap;html=1;" parent="y5wPCR3xg18q91Ob_20D-3" vertex="1">
@@ -9444,10 +9444,10 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="_tz59bz3UCh7qbyePNqN-16" value="fps-customer-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="_tz59bz3UCh7qbyePNqN-4" vertex="1">
+        <mxCell id="_tz59bz3UCh7qbyePNqN-16" value="fairspot-customer-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="_tz59bz3UCh7qbyePNqN-4" vertex="1">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="_tz59bz3UCh7qbyePNqN-17" value="fps-customer-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="_tz59bz3UCh7qbyePNqN-4" vertex="1">
+        <mxCell id="_tz59bz3UCh7qbyePNqN-17" value="fairspot-customer-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="_tz59bz3UCh7qbyePNqN-4" vertex="1">
           <mxGeometry x="710" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9480,7 +9480,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="aIguA9Cxydr0j-2TOSZP-0" value="fps-audit-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="12gLQBGC5XHvcdjGF3Z3-1" vertex="1">
+        <mxCell id="aIguA9Cxydr0j-2TOSZP-0" value="fairspot-audit-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="12gLQBGC5XHvcdjGF3Z3-1" vertex="1">
           <mxGeometry x="710" y="270" width="170" height="60" as="geometry" />
         </mxCell>
         <mxCell id="12gLQBGC5XHvcdjGF3Z3-4" value="Components" parent="12gLQBGC5XHvcdjGF3Z3-0" />
@@ -9515,7 +9515,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="12gLQBGC5XHvcdjGF3Z3-16" value="fps-audit-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="12gLQBGC5XHvcdjGF3Z3-4" vertex="1">
+        <mxCell id="12gLQBGC5XHvcdjGF3Z3-16" value="fairspot-audit-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="12gLQBGC5XHvcdjGF3Z3-4" vertex="1">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9548,7 +9548,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="nI4eEY63EqgCtvCnep9b-12" value="fps-billing-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="nI4eEY63EqgCtvCnep9b-1" vertex="1">
+        <mxCell id="nI4eEY63EqgCtvCnep9b-12" value="fairspot-billing-engine&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="nI4eEY63EqgCtvCnep9b-1" vertex="1">
           <mxGeometry x="620" y="270" width="170" height="60" as="geometry" />
         </mxCell>
         <mxCell id="nI4eEY63EqgCtvCnep9b-13" value="Components" parent="nI4eEY63EqgCtvCnep9b-0" />
@@ -9583,7 +9583,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="nI4eEY63EqgCtvCnep9b-22" value="fps-billing-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="nI4eEY63EqgCtvCnep9b-13" vertex="1">
+        <mxCell id="nI4eEY63EqgCtvCnep9b-22" value="fairspot-billing-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="nI4eEY63EqgCtvCnep9b-13" vertex="1">
           <mxGeometry x="230" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9637,7 +9637,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="KivrbxRqbp13Q9r0v5MC-19" value="fps-profile-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="KivrbxRqbp13Q9r0v5MC-10" vertex="1">
+        <mxCell id="KivrbxRqbp13Q9r0v5MC-19" value="fairspot-profile-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="KivrbxRqbp13Q9r0v5MC-10" vertex="1">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9670,7 +9670,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Qn837iVEs685Fh93mV3u-9" value="fps-report-builder&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="Qn837iVEs685Fh93mV3u-1" vertex="1">
+        <mxCell id="Qn837iVEs685Fh93mV3u-9" value="fairspot-report-builder&lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="Qn837iVEs685Fh93mV3u-1" vertex="1">
           <mxGeometry x="710" y="270" width="170" height="60" as="geometry" />
         </mxCell>
         <mxCell id="Qn837iVEs685Fh93mV3u-10" value="Components" parent="Qn837iVEs685Fh93mV3u-0" />
@@ -9705,7 +9705,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Qn837iVEs685Fh93mV3u-19" value="fps-reporting-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="Qn837iVEs685Fh93mV3u-10" vertex="1">
+        <mxCell id="Qn837iVEs685Fh93mV3u-19" value="fairspot-reporting-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="Qn837iVEs685Fh93mV3u-10" vertex="1">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9743,7 +9743,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="Z_mbySqd5-h7wTenmI_b-19" value="fps-notification-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="Z_mbySqd5-h7wTenmI_b-10" vertex="1">
+        <mxCell id="Z_mbySqd5-h7wTenmI_b-19" value="fairspot-notification-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="Z_mbySqd5-h7wTenmI_b-10" vertex="1">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9797,7 +9797,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="V1Pj21yb2-BJyHGXIFe9-10" value="fps-identity-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="V1Pj21yb2-BJyHGXIFe9-3">
+        <mxCell id="V1Pj21yb2-BJyHGXIFe9-10" value="fairspot-identity-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="V1Pj21yb2-BJyHGXIFe9-3">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>
@@ -9851,7 +9851,7 @@
             <mxPoint x="-27" y="7" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="0zaPWn199ngAMgJM2jv2-10" value="fps-configuration-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="0zaPWn199ngAMgJM2jv2-3" vertex="1">
+        <mxCell id="0zaPWn199ngAMgJM2jv2-10" value="fairspot-configuration-api &lt;br&gt;(docker image)" style="rounded=1;whiteSpace=wrap;html=1;" parent="0zaPWn199ngAMgJM2jv2-3" vertex="1">
           <mxGeometry x="240" y="270" width="170" height="60" as="geometry" />
         </mxCell>
       </root>

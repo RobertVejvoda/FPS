@@ -11,7 +11,7 @@ namespace FPS.Booking.Infrastructure.Services;
 public sealed class DaprTenantModulesService(DaprClient daprClient, ILogger<DaprTenantModulesService> logger)
     : ITenantModulesService
 {
-    private const string CustomerAppId = "fps-customer";
+    private const string CustomerAppId = "fairspot-customer";
     private const string ModulesMethod = "internal/customer/tenant-modules";
     private static readonly IReadOnlyList<string> ParkingOnly = ["Parking"];
 

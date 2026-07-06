@@ -9,21 +9,21 @@
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
 </head>
 <body>
-<div class="fps-wrapper">
-  <main class="fps-card" role="main">
+<div class="fairspot-wrapper">
+  <main class="fairspot-card" role="main">
 
-    <header class="fps-brand">
-      <div class="fps-logo-mark" aria-hidden="true">F</div>
-      <div class="fps-brand-text">
-        <span class="fps-brand-name">FairSpot</span>
-        <span class="fps-brand-tagline">Fair parking for everyone</span>
+    <header class="fairspot-brand">
+      <div class="fairspot-logo-mark" aria-hidden="true">F</div>
+      <div class="fairspot-brand-text">
+        <span class="fairspot-brand-name">FairSpot</span>
+        <span class="fairspot-brand-tagline">Fair parking for everyone</span>
       </div>
     </header>
 
-    <h1 class="fps-title">${msg("updatePasswordTitle")}</h1>
+    <h1 class="fairspot-title">${msg("updatePasswordTitle")}</h1>
 
     <#if message?has_content>
-      <div class="fps-alert fps-alert-${message.type}" role="alert" aria-live="assertive">
+      <div class="fairspot-alert fairspot-alert-${message.type}" role="alert" aria-live="assertive">
         ${kcSanitize(message.summary)?no_esc}
       </div>
     </#if>
@@ -36,9 +36,9 @@
                autocomplete="username" readonly />
       </#if>
 
-      <div class="fps-field">
-        <label class="fps-label" for="password-new">${msg("passwordNew")}</label>
-        <input class="fps-input<#if messagesPerField.existsError('password-new','password-confirm')> fps-input-error</#if>"
+      <div class="fairspot-field">
+        <label class="fairspot-label" for="password-new">${msg("passwordNew")}</label>
+        <input class="fairspot-input<#if messagesPerField.existsError('password-new','password-confirm')> fairspot-input-error</#if>"
                type="password"
                id="password-new"
                name="password-new"
@@ -46,22 +46,22 @@
                autocomplete="new-password"
                autofocus />
         <#if messagesPerField.existsError('password-new')>
-          <span class="fps-field-error" aria-live="polite">
+          <span class="fairspot-field-error" aria-live="polite">
             ${kcSanitize(messagesPerField.get('password-new'))?no_esc}
           </span>
         </#if>
       </div>
 
-      <div class="fps-field">
-        <label class="fps-label" for="password-confirm">${msg("passwordConfirm")}</label>
-        <input class="fps-input<#if messagesPerField.existsError('password-confirm')> fps-input-error</#if>"
+      <div class="fairspot-field">
+        <label class="fairspot-label" for="password-confirm">${msg("passwordConfirm")}</label>
+        <input class="fairspot-input<#if messagesPerField.existsError('password-confirm')> fairspot-input-error</#if>"
                type="password"
                id="password-confirm"
                name="password-confirm"
                tabindex="2"
                autocomplete="new-password" />
         <#if messagesPerField.existsError('password-confirm')>
-          <span class="fps-field-error" aria-live="polite">
+          <span class="fairspot-field-error" aria-live="polite">
             ${kcSanitize(messagesPerField.get('password-confirm'))?no_esc}
           </span>
         </#if>
@@ -69,13 +69,13 @@
 
       <input type="hidden" name="stateChecker" value="${stateChecker}" />
 
-      <button class="fps-btn" type="submit" tabindex="3">${msg("doSubmit")}</button>
+      <button class="fairspot-btn" type="submit" tabindex="3">${msg("doSubmit")}</button>
 
     </form>
 
   </main>
 
-  <footer class="fps-footer">
+  <footer class="fairspot-footer">
     <p>${msg("fps.supportHint")}</p>
   </footer>
 </div>

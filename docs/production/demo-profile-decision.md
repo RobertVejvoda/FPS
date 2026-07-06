@@ -35,7 +35,7 @@ What the local harness already provides, from `local-test-harness.md` and the re
 | Component | Image | Role |
 |---|---|---|
 | Keycloak | `quay.io/keycloak/keycloak:latest` | OIDC identity provider, `fps-local` realm |
-| RabbitMQ | `rabbitmq:3-management` | Dapr pub/sub broker (`fps-pubsub`) |
+| RabbitMQ | `rabbitmq:3-management` | Dapr pub/sub broker (`fairspot-pubsub`) |
 | MongoDB | `mongo:latest` | Dapr state stores (booking, profile, audit, reporting, config, notification) |
 | HashiCorp Vault | `hashicorp/vault:1.18` | Dapr secret store |
 | MinIO | `minio/minio` | Dapr S3-compatible output binding (`s3store`) |
@@ -54,7 +54,7 @@ Demo component templates in `code/infrastructure/dapr/components/demo/` are **pa
 
 | Logical name | Building block | Local provider | Demo template exists? | Demo candidate |
 |---|---|---|---|---|
-| `fps-pubsub` | pub/sub | RabbitMQ | **Yes** (`fps-pubsub.yaml`) | RabbitMQ first; Dapr-compatible hosted broker later if needed |
+| `fairspot-pubsub` | pub/sub | RabbitMQ | **Yes** (`fairspot-pubsub.yaml`) | RabbitMQ first; Dapr-compatible hosted broker later if needed |
 | `bookingstore` | state | MongoDB | **Yes** (`bookingstore.yaml`) | Self-hosted MongoDB first; managed database later if needed |
 | `secretstore` | secret store | HashiCorp Vault | **Yes** (`vault-demo.yaml`) | Vault or profile-approved secret injection |
 | `profilestore` | state | MongoDB | **No — OPS007B must add** | Same state-store pattern as bookingstore |
@@ -177,7 +177,7 @@ Profile B (DigitalOcean) is the right next step *after* a successful Release 1 w
 
 - It validates FairSpot-operated cloud hosting without reopening AWS/Azure planning
 - It demonstrates a cloud deployment path to evaluators who ask about production topology
-- Three demo Dapr component templates already exist (`fps-pubsub`, `bookingstore`, `vault-demo`); the remaining six are derived from the same MongoDB/Vault pattern and OPS007B adds them
+- Three demo Dapr component templates already exist (`fairspot-pubsub`, `bookingstore`, `vault-demo`); the remaining six are derived from the same MongoDB/Vault pattern and OPS007B adds them
 - It sets up the evidence base for client production conversations
 
 Profile C (Fly.io) adds complexity without a compensating benefit and is not recommended.
@@ -186,7 +186,7 @@ Profile C (Fly.io) adds complexity without a compensating benefit and is not rec
 
 **Business decisions (Robert/Codex must answer — see [Open Decisions](#open-decisions)):**
 
-1. Domain or subdomain for the demo URL (e.g. `fps-demo.yourdomain.com`) — TLS and OIDC redirect URIs depend on it
+1. Domain or subdomain for the demo URL (e.g. `fairspot-demo.yourdomain.com`) — TLS and OIDC redirect URIs depend on it
 2. Target host choice for the cloud follow-up (DigitalOcean Droplet first unless Robert approves a different option)
 3. SSH key for VM access
 
@@ -210,7 +210,7 @@ These are concrete yes/no or option choices that require input from Robert or Co
 | # | Decision | Options | Blocking |
 |---|---|---|---|
 | D1 | **Cloud follow-up host** | DigitalOcean Droplet first, DOKS later, or explicitly approved alternative | Yes — needed before cloud provisioning |
-| D2 | **Domain for demo URL** | Use existing domain, register `fairspot.demo` / `fps-demo.example.com`, or use IP-only for first demo | Yes — TLS cert and OIDC redirect URIs depend on it |
+| D2 | **Domain for demo URL** | Use existing domain, register `fairspot.demo` / `fairspot-demo.example.com`, or use IP-only for first demo | Yes — TLS cert and OIDC redirect URIs depend on it |
 | D3 | **NAS → DigitalOcean timing** | After Release 1 evaluation path is stable vs before first external walkthrough | Yes — determines OPS007B scope |
 | D4 | **Identity for DigitalOcean profile** | Keep Keycloak first vs client/managed IdP for a specific pilot | No — can decide during OPS007B |
 | D5 | **Observability on Profile A** | Keep Grafana/Prometheus/Loki on the same VM vs skip dashboards for first demo and add in OPS007B | No — can decide during OPS007B |

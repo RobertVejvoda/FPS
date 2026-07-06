@@ -9,19 +9,19 @@
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
 </head>
 <body>
-<div class="fps-wrapper">
-  <main class="fps-card" role="main">
+<div class="fairspot-wrapper">
+  <main class="fairspot-card" role="main">
 
-    <header class="fps-brand">
-      <div class="fps-logo-mark" aria-hidden="true">F</div>
-      <div class="fps-brand-text">
-        <span class="fps-brand-name">FairSpot</span>
-        <span class="fps-brand-tagline">Fair parking for everyone</span>
+    <header class="fairspot-brand">
+      <div class="fairspot-logo-mark" aria-hidden="true">F</div>
+      <div class="fairspot-brand-text">
+        <span class="fairspot-brand-name">FairSpot</span>
+        <span class="fairspot-brand-tagline">Fair parking for everyone</span>
       </div>
     </header>
 
-    <h1 class="fps-title">${msg("frontchannel-logout.title")}</h1>
-    <p class="fps-page-copy">${msg("frontchannel-logout.message")}</p>
+    <h1 class="fairspot-title">${msg("frontchannel-logout.title")}</h1>
+    <p class="fairspot-page-copy">${msg("frontchannel-logout.message")}</p>
 
     <#list logout.clients as client>
       <iframe title="${client.name}" src="${client.frontChannelLogoutUrl}" hidden></iframe>
@@ -38,12 +38,12 @@
         document.addEventListener("readystatechange", readystatechange);
         </#outputformat>
       </script>
-      <a id="continue" class="fps-btn" href="${logout.logoutRedirectUri}">${msg("doContinue")}</a>
+      <a id="continue" class="fairspot-btn" href="${logout.logoutRedirectUri}">${msg("doContinue")}</a>
     </#if>
 
   </main>
 
-  <footer class="fps-footer">
+  <footer class="fairspot-footer">
     <p>${msg("fps.supportHint")}</p>
   </footer>
 </div>

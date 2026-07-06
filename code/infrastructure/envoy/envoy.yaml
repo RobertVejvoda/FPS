@@ -29,47 +29,47 @@ static_resources:
                         - match:
                             prefix: "/health/identity"
                           route:
-                            cluster: fps-identity
+                            cluster: fairspot-identity
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/booking"
                           route:
-                            cluster: fps-booking
+                            cluster: fairspot-booking
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/notification"
                           route:
-                            cluster: fps-notification
+                            cluster: fairspot-notification
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/profile"
                           route:
-                            cluster: fps-profile
+                            cluster: fairspot-profile
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/audit"
                           route:
-                            cluster: fps-audit
+                            cluster: fairspot-audit
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/reporting"
                           route:
-                            cluster: fps-reporting
+                            cluster: fairspot-reporting
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/configuration"
                           route:
-                            cluster: fps-configuration
+                            cluster: fairspot-configuration
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/customer"
                           route:
-                            cluster: fps-customer
+                            cluster: fairspot-customer
                             prefix_rewrite: "/health"
                         - match:
                             prefix: "/health/datahub"
                           route:
-                            cluster: fps-datahub
+                            cluster: fairspot-datahub
                             prefix_rewrite: "/health"
                         # Employee mobile API surface — routes to host-run services.
                         # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
@@ -78,47 +78,47 @@ static_resources:
                         - match:
                             prefix: "/profile"
                           route:
-                            cluster: fps-profile
+                            cluster: fairspot-profile
                         - match:
                             prefix: "/notifications"
                           route:
-                            cluster: fps-notification
+                            cluster: fairspot-notification
                         - match:
                             prefix: "/bookings"
                           route:
-                            cluster: fps-booking
+                            cluster: fairspot-booking
                         - match:
                             prefix: "/draws"
                           route:
-                            cluster: fps-booking
+                            cluster: fairspot-booking
                         - match:
                             prefix: "/simulation"
                           route:
-                            cluster: fps-booking
+                            cluster: fairspot-booking
                         - match:
                             prefix: "/reports"
                           route:
-                            cluster: fps-reporting
+                            cluster: fairspot-reporting
                         - match:
                             prefix: "/audit"
                           route:
-                            cluster: fps-audit
+                            cluster: fairspot-audit
                         - match:
                             prefix: "/configuration"
                           route:
-                            cluster: fps-configuration
+                            cluster: fairspot-configuration
                         - match:
                             prefix: "/tenants"
                           route:
-                            cluster: fps-customer
+                            cluster: fairspot-customer
                         - match:
                             prefix: "/datahub"
                           route:
-                            cluster: fps-datahub
+                            cluster: fairspot-datahub
                         - match:
                             path: "/me"
                           route:
-                            cluster: fps-identity
+                            cluster: fairspot-identity
                 http_filters:
                   - name: envoy.filters.http.cors
                     typed_config:
@@ -128,117 +128,117 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
   clusters:
-    - name: fps-identity
+    - name: fairspot-identity
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-identity
+        cluster_name: fairspot-identity
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5192 }
 
-    - name: fps-booking
+    - name: fairspot-booking
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-booking
+        cluster_name: fairspot-booking
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5131 }
 
-    - name: fps-notification
+    - name: fairspot-notification
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-notification
+        cluster_name: fairspot-notification
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5157 }
 
-    - name: fps-profile
+    - name: fairspot-profile
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-profile
+        cluster_name: fairspot-profile
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5197 }
 
-    - name: fps-reporting
+    - name: fairspot-reporting
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-reporting
+        cluster_name: fairspot-reporting
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5171 }
 
-    - name: fps-audit
+    - name: fairspot-audit
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-audit
+        cluster_name: fairspot-audit
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5161 }
 
-    - name: fps-configuration
+    - name: fairspot-configuration
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-configuration
+        cluster_name: fairspot-configuration
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5141 }
 
-    - name: fps-customer
+    - name: fairspot-customer
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-customer
+        cluster_name: fairspot-customer
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address: { address: host.docker.internal, port_value: 5181 }
 
-    - name: fps-datahub
+    - name: fairspot-datahub
       connect_timeout: 1s
       type: LOGICAL_DNS
       dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
-        cluster_name: fps-datahub
+        cluster_name: fairspot-datahub
         endpoints:
           - lb_endpoints:
               - endpoint:

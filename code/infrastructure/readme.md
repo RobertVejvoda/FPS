@@ -31,7 +31,7 @@ The containerized local and NAS profiles do not require host-installed .NET or D
 The scenario scripts create the external Docker network automatically. To create it manually for low-level troubleshooting:
 
 ```bash
-docker network create fps_network
+docker network create fairspot_network
 ```
 
 ---
@@ -116,7 +116,7 @@ Dapr components are configured in profile-specific directories:
 The local logical component names are:
 
 - `bookingstore`: MongoDB state store for Booking.
-- `fps-pubsub`: RabbitMQ pub/sub for `booking-events`.
+- `fairspot-pubsub`: RabbitMQ pub/sub for `booking-events`.
 - `s3store`: MinIO/S3-compatible output binding.
 - `secretstore`: Vault-backed secret store.
 

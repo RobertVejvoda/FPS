@@ -21,7 +21,7 @@ spec:
     # mTLS cannot be enabled here safely. On a single NAS host all sidecars share one
     # private Docker bridge, so plaintext intra-service traffic is low risk (sniffing it
     # requires host access). mTLS is delivered by the planned Kubernetes/DOKS profile,
-    # where Sentry is standard — see fps-config.k8s-hosted.yaml (the mTLS-enabled target)
+    # where Sentry is standard — see fairspot-config.k8s-hosted.yaml (the mTLS-enabled target)
     # and docs/production/dapr-first-production-standards.md.
     enabled: false
     # WorkflowHistorySigning remains off until the deployment profile has mTLS

@@ -1,14 +1,14 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: fps-pubsub
+  name: fairspot-pubsub
 scopes:
-- fps-booking
-- fps-notification
-- fps-audit
-- fps-customer
-- fps-reporting
-- fps-datahub
+- fairspot-booking
+- fairspot-notification
+- fairspot-audit
+- fairspot-customer
+- fairspot-reporting
+- fairspot-datahub
 spec:
   type: pubsub.rabbitmq
   version: v1
@@ -16,7 +16,7 @@ spec:
   - name: protocol
     value: amqp
   - name: hostname
-    value: localhost
+    value: rabbitmq
   - name: durable
     value: "true"
   - name: deletedWhenUnused

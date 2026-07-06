@@ -125,12 +125,12 @@ services:
 
   # ── Per-app Dapr sidecars ───────────────────────────────────────────────────
 
-  fps-audit-dapr:
+  fairspot-audit-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-audit"
+      - "fairspot-audit"
       - "--app-port"
       - "5161"
       - "--dapr-http-port"
@@ -146,14 +146,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-audit"
+    network_mode: "service:fairspot-audit"
     depends_on:
-      fps-audit:
+      fairspot-audit:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -162,12 +162,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-booking-dapr:
+  fairspot-booking-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-booking"
+      - "fairspot-booking"
       - "--app-port"
       - "5131"
       - "--dapr-http-port"
@@ -183,14 +183,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-booking"
+    network_mode: "service:fairspot-booking"
     depends_on:
-      fps-booking:
+      fairspot-booking:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -199,12 +199,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-configuration-dapr:
+  fairspot-configuration-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-configuration"
+      - "fairspot-configuration"
       - "--app-port"
       - "5141"
       - "--dapr-http-port"
@@ -220,14 +220,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-configuration"
+    network_mode: "service:fairspot-configuration"
     depends_on:
-      fps-configuration:
+      fairspot-configuration:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -236,12 +236,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-customer-dapr:
+  fairspot-customer-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-customer"
+      - "fairspot-customer"
       - "--app-port"
       - "5181"
       - "--dapr-http-port"
@@ -257,14 +257,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-customer"
+    network_mode: "service:fairspot-customer"
     depends_on:
-      fps-customer:
+      fairspot-customer:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -273,12 +273,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-datahub-dapr:
+  fairspot-datahub-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-datahub"
+      - "fairspot-datahub"
       - "--app-port"
       - "5211"
       - "--dapr-http-port"
@@ -294,14 +294,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-datahub"
+    network_mode: "service:fairspot-datahub"
     depends_on:
-      fps-datahub:
+      fairspot-datahub:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -310,12 +310,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-identity-dapr:
+  fairspot-identity-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-identity"
+      - "fairspot-identity"
       - "--app-port"
       - "5192"
       - "--dapr-http-port"
@@ -331,14 +331,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-identity"
+    network_mode: "service:fairspot-identity"
     depends_on:
-      fps-identity:
+      fairspot-identity:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -347,12 +347,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-notification-dapr:
+  fairspot-notification-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-notification"
+      - "fairspot-notification"
       - "--app-port"
       - "5157"
       - "--dapr-http-port"
@@ -368,14 +368,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-notification"
+    network_mode: "service:fairspot-notification"
     depends_on:
-      fps-notification:
+      fairspot-notification:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -384,12 +384,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-profile-dapr:
+  fairspot-profile-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-profile"
+      - "fairspot-profile"
       - "--app-port"
       - "5197"
       - "--dapr-http-port"
@@ -405,14 +405,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-profile"
+    network_mode: "service:fairspot-profile"
     depends_on:
-      fps-profile:
+      fairspot-profile:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -421,12 +421,12 @@ services:
       vault-init:
         condition: service_completed_successfully
 
-  fps-reporting-dapr:
+  fairspot-reporting-dapr:
     <<: *dapr-sidecar-base
     command:
       - "./daprd"
       - "--app-id"
-      - "fps-reporting"
+      - "fairspot-reporting"
       - "--app-port"
       - "5171"
       - "--dapr-http-port"
@@ -442,14 +442,14 @@ services:
       - "--components-path"
       - "/dapr/components"
       - "--config"
-      - "/dapr/config/fps-config.yaml"
+      - "/dapr/config/fairspot-config.yaml"
       - "--log-level"
       - "info"
     environment:
       VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
-    network_mode: "service:fps-reporting"
+    network_mode: "service:fairspot-reporting"
     depends_on:
-      fps-reporting:
+      fairspot-reporting:
         condition: service_started
       dapr-placement:
         condition: service_started
@@ -462,47 +462,47 @@ services:
   # Inject Dapr port variables so each service's startup health poll fires
   # and Customer's IdentityStoreHydrator waits for the sidecar before hydrating.
 
-  fps-audit:
+  fairspot-audit:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-booking:
+  fairspot-booking:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-configuration:
+  fairspot-configuration:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-customer:
+  fairspot-customer:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-datahub:
+  fairspot-datahub:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-identity:
+  fairspot-identity:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-notification:
+  fairspot-notification:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-profile:
+  fairspot-profile:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
 
-  fps-reporting:
+  fairspot-reporting:
     environment:
       DAPR_HTTP_PORT: "3500"
       DAPR_GRPC_PORT: "50001"
@@ -532,4 +532,4 @@ secrets:
 networks:
   web:
     external: true
-    name: fps_network
+    name: fairspot_network

@@ -24,12 +24,12 @@ FairSpot uses Dapr building blocks as the portability boundary. No application s
 
 | Building block | Required contract | Local baseline | Client production examples |
 | --- | --- | --- | --- |
-| Pub/sub | Topic names match `code/infrastructure/dapr/README.md`. Component name must be `fps-pubsub`. | Local broker or in-memory smoke component | Managed broker, provider-native event service, or enterprise event platform behind Dapr |
+| Pub/sub | Topic names match `code/infrastructure/dapr/README.md`. Component name must be `fairspot-pubsub`. | Local broker or in-memory smoke component | Managed broker, provider-native event service, or enterprise event platform behind Dapr |
 | State store | Tenant-safe collections, partitions, or keys. No cross-tenant state keys. | Local document/operational store or in-memory smoke component | Managed document/operational store selected by client and bound through Dapr/component configuration |
 | Secret store | Secret names match service configuration. Dapr secretstore reference pattern only; no inline secrets. | Local secret store | Client-approved secret-management platform |
 | Bindings (cron) | Schedule expression in Dapr cron binding format. | Dapr local cron | Dapr cron binding, platform scheduler |
 | Service invocation | App ID naming matches `dapr.yaml` app IDs. | Dapr self-hosted | Managed, platform-provided, or self-hosted Dapr runtime |
-| mTLS | Enabled in production Dapr configuration (`fps-config.yaml`). | Disabled for local smoke | Platform-managed Dapr mTLS or Sentry |
+| mTLS | Enabled in production Dapr configuration (`fairspot-config.yaml`). | Disabled for local smoke | Platform-managed Dapr mTLS or Sentry |
 
 Component YAML templates are in `code/infrastructure/dapr/components/`. Local files use in-memory components for smoke testing. Production files must:
 - scope components to the required app IDs;

@@ -2,9 +2,9 @@
 apiVersion: dapr.io/v1alpha1
 kind: WorkflowAccessPolicy
 metadata:
-  name: fps-workflow-default-deny
+  name: fairspot-workflow-default-deny
 scopes:
-  - fps-booking
-  - fps-audit
+  - fairspot-booking
+  - fairspot-audit
 spec:
   rules: []

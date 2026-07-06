@@ -3,7 +3,7 @@ kind: Component
 metadata:
   name: s3store
 scopes:
-- fps-reporting
+- fairspot-reporting
 spec:
   type: bindings.aws.s3
   version: v1
@@ -17,7 +17,7 @@ spec:
       name: minio-credentials
       key: secretKey
   - name: bucket
-    value: fps-bucket
+    value: fairspot-bucket
   - name: endpoint
     value: http://minio:9000
 auth:
