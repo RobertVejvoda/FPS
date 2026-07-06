@@ -275,6 +275,7 @@ volumes:
   minio_data:
   mongodb_data:
   postgres_data:
+  keycloak_postgres_data:
   prometheus_data:
   grafana_data:
   vault_data:

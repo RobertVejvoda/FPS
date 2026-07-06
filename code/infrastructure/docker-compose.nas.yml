@@ -129,11 +129,52 @@ services:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in nas.env}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in nas.env}
 
+  # Dedicated PostgreSQL for Keycloak (separate from the DataHub Postgres) so identity
+  # state has its own durable volume and clean backup/restore boundary. Loopback-only.
+  keycloak-postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${KC_DB_USER:?Set KC_DB_USER in nas.env}
+      - POSTGRES_PASSWORD=${KC_DB_PASSWORD:?Set KC_DB_PASSWORD in nas.env}
+      - POSTGRES_DB=${KC_DB_NAME:-keycloak}
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d ${KC_DB_NAME:-keycloak}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Production Keycloak: real `start` (not dev/H2), Postgres-backed durable identity,
+  # TLS terminated at Cloudflare (KC_HTTP_ENABLED + forwarded proxy headers), and an
+  # operator-supplied realm import (drop a `kc.sh export` under keycloak/import/).
   keycloak:
     restart: unless-stopped
+    command: ["start", "--import-realm"]
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
     environment:
       - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN_USER:?Set KC_ADMIN_USER in nas.env}
       - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_ADMIN_PASS:?Set KC_ADMIN_PASS in nas.env}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-postgres:5432/${KC_DB_NAME:-keycloak}
+      - KC_DB_USERNAME=${KC_DB_USER:?Set KC_DB_USER in nas.env}
+      - KC_DB_PASSWORD=${KC_DB_PASSWORD:?Set KC_DB_PASSWORD in nas.env}
+      # Behind Cloudflare: origin speaks HTTP, TLS/hostname come from the edge.
+      - KC_HOSTNAME=${KC_HOSTNAME:?Set KC_HOSTNAME in nas.env, e.g. https://auth.example.net}
+      - KC_HOSTNAME_STRICT=true
+      - KC_HTTP_ENABLED=true
+      - KC_PROXY_HEADERS=xforwarded
+      - KC_HEALTH_ENABLED=true
+      # Substituted into the fairspot realm's web-client redirect URIs at import time.
+      - FPS_APP_ORIGIN=${FPS_APP_ORIGIN:?Set FPS_APP_ORIGIN in nas.env, e.g. https://app.example.net}
+    volumes:
+      # Operator-supplied realm export(s); the directory contents are git-ignored.
+      - ./keycloak/import:/opt/keycloak/data/import:ro
 
   rabbitmq:
     restart: unless-stopped

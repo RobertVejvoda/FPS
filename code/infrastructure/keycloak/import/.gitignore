@@ -1,0 +1,8 @@
+# Keycloak realm imports (--import-realm). The sanitized, versioned `fairspot-realm.json`
+# bootstrap IS committed (no users, no secrets, public/PKCE clients). Any operator-added
+# realm export can contain client secrets / env-specific config, so it stays git-ignored
+# and lives in the operator secret store (fairspot-platform), never here.
+*
+!.gitignore
+!README.md
+!fairspot-realm.json
