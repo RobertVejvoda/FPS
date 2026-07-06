@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "fps-mobile",
-    "slug": "fps-mobile",
-    "scheme": "fpsmobile",
+    "name": "FairSpot",
+    "slug": "fairspot-mobile",
+    "scheme": "fairspot",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,9 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "net.vejvoda.fairspot.mobile"
     },
     "android": {
+      "package": "net.vejvoda.fairspot.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
