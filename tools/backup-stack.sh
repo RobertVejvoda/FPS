@@ -5,12 +5,20 @@
 # Backs up, using each store's native tooling and referencing only the
 # containers' own injected credentials (no secrets on the host):
 #
-#   MongoDB (rs0)        mongodump --archive --gzip --oplog   -> mongodb.archive.gz
+#   MongoDB (rs0)        mongodump --archive --gzip           -> mongodb.archive.gz
 #   Postgres (DataHub)   pg_dump                              -> postgres-datahub.sql.gz
 #   Keycloak Postgres    pg_dump (NAS only)                   -> keycloak-postgres.sql.gz
 #   MinIO object storage volume tar                           -> minio-data.tar.gz
 #   Vault (raft)         operator raft snapshot save          -> vault.snap
-#                        (falls back to a volume tar when sealed / not raft)
+#
+# The Mongo dump is a full-instance logical dump (per-collection consistent). It
+# is NOT a global point-in-time: --oplog conflicts with the admin/config exclude
+# the restore requires, so for a busy instance use --quiesce (stops the app
+# writers around the dumps) or back up in a low-write window.
+#
+# Vault: only the native raft snapshot is a valid recovery backup. In --nas mode
+# the script FAILS CLOSED if it cannot take one (no live-directory tar, which
+# would be inconsistent). A local -dev Vault has no durable secrets.
 #
 # Each run writes a timestamped directory under --out with a SHA256SUMS integrity
 # file and a manifest.json. Old runs beyond --retention are pruned. The output
@@ -19,17 +27,20 @@
 # fairspot-platform runbook, #684) — this script only produces the artifacts.
 #
 # Usage:
-#   ./tools/backup-stack.sh [--nas|--local] [--env-file PATH] [--out DIR] [--retention N]
+#   ./tools/backup-stack.sh [--nas|--local] [--env-file PATH] [--out DIR]
+#                           [--retention N] [--quiesce]
 #
 #   --nas / --local    Which stack to back up (default: local).
 #   --env-file PATH    Compose env file (NAS default: code/infrastructure/nas.env).
 #   --out DIR          Backup root (default: ./backups).
 #   --retention N      Keep the newest N runs, prune older (default: 7).
+#   --quiesce          Stop the fairspot-* app writers around the dumps for a
+#                      consistent snapshot, then resume them (trap-guarded).
 #
-# VAULT_TOKEN (env or --env-file) is used for the raft snapshot; without it, and
-# when Vault is sealed, the raft volume is tarred instead.
+# VAULT_TOKEN (shell env or --env-file) authenticates the raft snapshot.
 #
-# Exit codes: 0 all requested stores backed up; 1 prerequisite/store failure.
+# Exit codes: 0 all requested stores backed up; 1 prerequisite/store failure
+#             (in --nas mode a Vault it cannot snapshot is a failure).
 
 set -euo pipefail
 
@@ -42,6 +53,7 @@ MODE="local"
 ENV_FILE=""
 OUT="$REPO_ROOT/backups"
 RETENTION=7
+QUIESCE=""   # non-empty when --quiesce: stop app writers around the dumps
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,7 +62,8 @@ while [[ $# -gt 0 ]]; do
     --env-file)   ENV_FILE="${2:-}"; shift ;;
     --out)        OUT="${2:-}"; shift ;;
     --retention)  RETENTION="${2:-}"; shift ;;
-    -h|--help)    sed -n '2,40p' "$0"; exit 0 ;;
+    --quiesce)    QUIESCE="true" ;;
+    -h|--help)    sed -n '2,42p' "$0"; exit 0 ;;
     *)            die "Unknown argument: $1 (see --help)" ;;
   esac
   shift
@@ -77,22 +90,50 @@ FAILED=()
 # Record a produced artifact for the manifest.
 _record() { BACKED_UP+=("$1|$2|$3"); }
 
+# ── Optional quiesce: stop the app writers so logical dumps are consistent ────
+# App services write to the stores via Dapr; stopping them (stores stay up) makes
+# the mongo/postgres dumps a consistent snapshot without needing --oplog. The
+# trap guarantees they are resumed even if a dump fails.
+APP_SERVICES=()
+_quiesce_start() {
+  [[ -n "$QUIESCE" ]] || return 0
+  local svc
+  while IFS= read -r svc; do
+    [[ "$svc" == fairspot-* ]] && APP_SERVICES+=("$svc")
+  done < <("${COMPOSE_CMD[@]}" config --services 2>/dev/null || true)
+  if (( ${#APP_SERVICES[@]} > 0 )); then
+    log "Quiescing app writers: ${APP_SERVICES[*]}"
+    trap _quiesce_stop EXIT
+    "${COMPOSE_CMD[@]}" stop "${APP_SERVICES[@]}" >/dev/null 2>&1 || warn "quiesce: some services did not stop"
+  else
+    warn "quiesce: no fairspot-* app services found to stop"
+  fi
+}
+_quiesce_stop() {
+  (( ${#APP_SERVICES[@]} > 0 )) || return 0
+  log "Resuming app writers"
+  "${COMPOSE_CMD[@]}" start "${APP_SERVICES[@]}" >/dev/null 2>&1 || warn "quiesce: some services did not restart — check the stack"
+}
+
 # ── MongoDB (all Dapr state stores live here; rs0 replica set) ────────────────
 backup_mongo() {
   _running mongodb || { warn "mongodb not running — skipping"; return; }
-  log "MongoDB: mongodump --archive --gzip --oplog"
-  # Credentials come from the container's own env; --oplog gives a consistent
-  # point-in-time across the replica set. This is a full-instance dump (mongodump
-  # has no --excludeDatabase); restore-drill.sh uses --nsExclude to skip
-  # admin/config on the way back in, so the infra users/roles are never
-  # re-applied (restoring admin.system.users mid-stream would reset the session
-  # auth and break index creation).
+  log "MongoDB: mongodump --archive --gzip"
+  # Credentials come from the container's own env. This is a full-instance
+  # logical dump (mongodump has no --excludeDatabase, so admin/config are dumped
+  # and skipped at restore via --nsExclude — restoring admin.system.users
+  # mid-stream would reset the session auth and break index creation).
+  #
+  # NOT --oplog: --oplog is incompatible with the --nsExclude the restore needs,
+  # so this is a per-collection snapshot, not a global point-in-time. For a busy
+  # instance run with --quiesce (stops the app writers around the dump) so the
+  # snapshot is consistent; otherwise back up in a low-write window.
   if "${COMPOSE_CMD[@]}" exec -T mongodb sh -c \
       'mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" \
-         --authenticationDatabase admin --archive --gzip --oplog' \
+         --authenticationDatabase admin --archive --gzip' \
       > "$DEST/$MONGO_ARTIFACT" 2>/dev/null; then
-    ok "MongoDB -> $MONGO_ARTIFACT ($(_size "$DEST/$MONGO_ARTIFACT"))"
-    _record mongodb "$MONGO_ARTIFACT" "mongodump --archive --gzip --oplog"
+    ok "MongoDB -> $MONGO_ARTIFACT ($(_size "$DEST/$MONGO_ARTIFACT"))${QUIESCE:+ (quiesced)}"
+    _record mongodb "$MONGO_ARTIFACT" "mongodump --archive --gzip${QUIESCE:+ (quiesced)}"
   else
     rm -f "$DEST/$MONGO_ARTIFACT"; FAILED+=(mongodb); warn "MongoDB backup failed"
   fi
@@ -144,11 +185,16 @@ backup_minio() {
   fi
 }
 
-# ── Vault (native raft snapshot; volume-tar fallback when sealed/not raft) ────
+# ── Vault (native raft snapshot; NAS fails closed if it can't take one) ───────
 backup_vault() {
   local cid; cid="$(_cid vault)"
   [[ -n "$cid" ]] || { warn "vault container absent — skipping"; return; }
+  # Token from the shell env OR the resolved --env-file (compose gets the file,
+  # this process does not — so read the one key we need, without leaking others).
   local token="${VAULT_TOKEN:-}"
+  [[ -z "$token" ]] && token="$(env_file_value VAULT_TOKEN)"
+
+  # The native raft snapshot is the ONLY valid recovery backup for server mode.
   if [[ -n "$token" ]] && "${COMPOSE_CMD[@]}" exec -T -e VAULT_TOKEN="$token" vault sh -c \
         'vault operator raft snapshot save /tmp/v.snap 1>&2 && cat /tmp/v.snap && rm -f /tmp/v.snap' \
         > "$DEST/$VAULT_SNAPSHOT_ARTIFACT" 2>/dev/null && [[ -s "$DEST/$VAULT_SNAPSHOT_ARTIFACT" ]]; then
@@ -158,24 +204,41 @@ backup_vault() {
     return
   fi
   rm -f "$DEST/$VAULT_SNAPSHOT_ARTIFACT"
-  # Fallback: sealed, no token, or -dev (not raft). Tar the raft dir if present.
-  log "Vault: raft snapshot unavailable — volume-tar fallback of /vault/file"
+
+  # NAS/server mode MUST NOT silently fall back to a live-directory tar: tarring
+  # /vault/file while Vault is writing produces an inconsistent, unrestorable
+  # artifact that only looks like a backup. Fail closed so the gap is visible.
+  if [[ "$MODE" == "nas" ]]; then
+    FAILED+=(vault)
+    if [[ -z "$token" ]]; then
+      warn "Vault: no VAULT_TOKEN (shell env or --env-file) — cannot take a raft snapshot. FAILING CLOSED."
+    else
+      warn "Vault: raft snapshot failed (sealed, or token lacks the snapshot policy). FAILING CLOSED."
+    fi
+    return
+  fi
+
+  # Local/dev only: -dev Vault has no durable raft storage. Tar /vault/file only
+  # if it actually holds data (an empty dev dir means there is nothing to back up).
+  log "Vault (local/dev): no raft snapshot — checking for durable volume data"
   if docker run --rm --volumes-from "$cid" -v "$DEST":/backup "$BACKUP_HELPER_IMAGE" \
-        sh -c 'test -d /vault/file && tar czf "/backup/'"$VAULT_TAR_ARTIFACT"'" -C /vault/file . ' 2>/dev/null \
+        sh -c 'test -n "$(ls -A /vault/file 2>/dev/null)" && tar czf "/backup/'"$VAULT_TAR_ARTIFACT"'" -C /vault/file . ' 2>/dev/null \
         && [[ -s "$DEST/$VAULT_TAR_ARTIFACT" ]]; then
-    ok "Vault -> $VAULT_TAR_ARTIFACT ($(_size "$DEST/$VAULT_TAR_ARTIFACT")) [SENSITIVE, volume tar]"
-    _record vault "$VAULT_TAR_ARTIFACT" "volume tar (/vault/file)"
+    ok "Vault -> $VAULT_TAR_ARTIFACT ($(_size "$DEST/$VAULT_TAR_ARTIFACT")) [SENSITIVE, local/dev volume tar]"
+    _record vault "$VAULT_TAR_ARTIFACT" "volume tar (/vault/file, local/dev)"
   else
     rm -f "$DEST/$VAULT_TAR_ARTIFACT"
-    warn "Vault has no durable raft storage (dev mode?) — nothing to back up"
+    warn "Vault (local/dev): no durable secret material — nothing to back up"
   fi
 }
 
+_quiesce_start
 backup_mongo
 backup_postgres
 backup_keycloak_pg
 backup_minio
 backup_vault
+_quiesce_stop; trap - EXIT; APP_SERVICES=()
 
 # ── Integrity: checksums over every artifact ─────────────────────────────────
 log "Writing integrity checksums"

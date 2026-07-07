@@ -7,13 +7,15 @@
 # services up -> run the hosted smoke -> assert data actually returned. This is
 # how we evidence that backups are restorable, not just producible.
 #
-#   MongoDB            mongorestore --archive --gzip --drop --oplogReplay
+#   MongoDB            mongorestore --archive --gzip --drop --nsExclude admin/config
 #   Postgres/DataHub   psql < dump   (dump is --clean --if-exists)
 #   Keycloak Postgres  psql < dump   (NAS only)
 #   MinIO              restore volume tar into a stopped minio, then start
-#   Vault              raft snapshot restore is a NAS/server-mode operation and
-#                      is intentionally NOT auto-applied to a -dev local Vault
-#                      (dev Vault holds no durable secrets). Printed as guidance.
+#   Vault              operator raft snapshot restore, in --nas --force-nas mode
+#                      with VAULT_TOKEN + VAULT_UNSEAL_KEYS supplied. If a raft
+#                      snapshot is present but not restored, the drill reports
+#                      INCOMPLETE (exit 2) — it never claims full recovery with a
+#                      blank Vault. A local -dev Vault holds no durable secrets.
 #
 # DESTRUCTIVE. Requires --yes. Targets the LOCAL stack by default; refuses --nas
 # unless --force-nas is also given (a NAS restore overwrites live customer data).
@@ -22,7 +24,12 @@
 #   ./tools/restore-drill.sh --from <backup-dir> [--yes] [--local|--nas --force-nas]
 #                            [--env-file PATH] [--skip-smoke]
 #
-# Exit codes: 0 restore + smoke + data-return all passed; 1 otherwise.
+# NAS Vault restore also needs, in the environment or --env-file:
+#   VAULT_TOKEN         a root/recovery token for the freshly-initialised node
+#   VAULT_UNSEAL_KEYS   comma-separated unseal keys from the snapshot's cluster
+#
+# Exit codes: 0 restore + smoke + data-return passed; 2 stores restored but Vault
+#             secret-store recovery INCOMPLETE; 1 a hard failure.
 
 set -euo pipefail
 
@@ -146,11 +153,45 @@ if _has "$MINIO_ARTIFACT"; then
   ok "MinIO restored"
 fi
 
-if _has "$VAULT_SNAPSHOT_ARTIFACT" || _has "$VAULT_TAR_ARTIFACT"; then
-  warn "Vault backup present. Vault restore is a NAS/server-mode operation and is NOT"
-  warn "auto-applied to the local dev Vault. On NAS, after init+unseal, run:"
-  warn "    vault operator raft snapshot restore $VAULT_SNAPSHOT_ARTIFACT"
-  warn "(then unseal with the restored keys). See the private runbook (#684)."
+# ── Vault: raft snapshot restore (NAS/server-mode; guarded) ──────────────────
+# Returns 0 only if the snapshot restores and Vault ends unsealed. The target
+# node must be initialised + unsealed first (operator/runbook #684). Any failure
+# leaves VAULT_STATUS=INCOMPLETE so the drill never reports a blank Vault as OK.
+vault_restore_snapshot() {
+  local token="$1" keys_csv="$2" vcid key
+  vcid="$(_cid vault)"; [[ -n "$vcid" ]] || return 1
+  docker cp "$FROM/$VAULT_SNAPSHOT_ARTIFACT" "$vcid:/tmp/restore.snap" >/dev/null 2>&1 || return 1
+  "${COMPOSE_CMD[@]}" exec -T -e VAULT_TOKEN="$token" vault \
+    vault operator raft snapshot restore -force /tmp/restore.snap >/dev/null 2>&1 || return 1
+  # A snapshot restore replaces the keyring, re-sealing the node — re-unseal with
+  # the snapshot cluster's original keys.
+  local IFS=','
+  # shellcheck disable=SC2086  # intentional comma word-splitting of the key list
+  for key in $keys_csv; do
+    [[ -n "$key" ]] && "${COMPOSE_CMD[@]}" exec -T vault vault operator unseal "$key" >/dev/null 2>&1 || true
+  done
+  unset IFS
+  "${COMPOSE_CMD[@]}" exec -T vault sh -c 'vault status -format=json 2>/dev/null' \
+    | grep -q '"sealed"[[:space:]]*:[[:space:]]*false' || return 1
+  "${COMPOSE_CMD[@]}" exec -T vault rm -f /tmp/restore.snap >/dev/null 2>&1 || true
+  return 0
+}
+
+VAULT_STATUS="n/a"
+if _has "$VAULT_SNAPSHOT_ARTIFACT"; then
+  vtoken="${VAULT_TOKEN:-$(env_file_value VAULT_TOKEN)}"
+  vkeys="${VAULT_UNSEAL_KEYS:-$(env_file_value VAULT_UNSEAL_KEYS)}"
+  if [[ "$MODE" == "nas" && "$FORCE_NAS" == "true" && -n "$vtoken" && -n "$vkeys" ]] \
+       && vault_restore_snapshot "$vtoken" "$vkeys"; then
+    VAULT_STATUS="restored"; ok "Vault raft snapshot restored and unsealed"
+  else
+    VAULT_STATUS="INCOMPLETE"
+    warn "Vault raft snapshot present but NOT restored."
+    warn "Needs --nas --force-nas, an initialised+unsealed Vault, VAULT_TOKEN and VAULT_UNSEAL_KEYS."
+    warn "Secret-store recovery is therefore NOT proven by this drill (runbook #684)."
+  fi
+elif _has "$VAULT_TAR_ARTIFACT"; then
+  warn "Vault volume-tar present (local/dev, no durable secrets) — nothing to restore."
 fi
 
 # ── 5. Bring the full stack up (only needed for the smoke) ───────────────────
@@ -199,5 +240,17 @@ fi
 
 echo
 [[ "$DATA_OK" == "true" ]] || die "Restore drill: data-return assertions FAILED"
-ok "Restore drill PASSED — stack rebuilt from $FROM, smoke green, data returned"
+
+if [[ "$VAULT_STATUS" == "INCOMPLETE" ]]; then
+  warn "Restore drill INCOMPLETE — stores restored and data returned, but Vault"
+  warn "secret-store recovery was NOT performed. Recovery is not fully proven."
+  echo "  Complete the NAS Vault raft-snapshot restore + unseal, then re-run, or"
+  echo "  record the manual Vault restore evidence in the private runbook (#684)."
+  exit 2
+fi
+
+msg="Restore drill PASSED — stack rebuilt from $FROM; data returned"
+[[ "$SKIP_SMOKE" != "true" ]] && msg="$msg; smoke green"
+[[ "$VAULT_STATUS" == "restored" ]] && msg="$msg; vault restored"
+ok "$msg"
 echo "  Record the drill (date, scope, result, operator) in the private runbook (#684)."

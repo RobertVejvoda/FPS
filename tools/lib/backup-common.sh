@@ -66,6 +66,16 @@ resolve_compose() {
   fi
 }
 
+# Read a single KEY's value from the resolved env file WITHOUT sourcing it (so
+# other secrets are never executed or exported). Returns empty if unset/absent.
+# Strips optional surrounding single/double quotes; last assignment wins.
+env_file_value() {
+  local key="$1" file="${ENV_FILE:-}"
+  [[ -n "$file" && -f "$file" ]] || return 0
+  sed -n "s/^[[:space:]]*${key}=//p" "$file" | tail -1 \
+    | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'\$//"
+}
+
 # Container id for a compose service (empty if not present/created).
 _cid() { "${COMPOSE_CMD[@]}" ps -aq "$1" 2>/dev/null | head -1 || true; }
 
