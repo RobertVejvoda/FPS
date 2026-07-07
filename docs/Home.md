@@ -50,6 +50,7 @@ The **hosted operator product** — cross-tenant platform operations, the operat
 
 | Reader | Start here | Purpose |
 | --- | --- | --- |
+| First-time evaluator (any role) | [Guided Tours](./tours/) | Pick a role-based path — resource user, sponsor/evaluator, tenant admin, HR/operator, auditor/security, or technical — and follow the product story end to end. |
 | Business evaluator | [Product Overview](./Home), [Business Architecture](./architecture/business/), [Demo and Evaluation](./demo-and-evaluation) | Understand the problem, product value, roles, and demo story. |
 | Product owner | [Roadmap](./roadmap), [Versions and Decisions](./versions-and-decisions), [Architecture Requirements](./architecture/requirements) | Understand priorities, durable decisions, and outcome coverage. |
 | Architect | [Architecture Repository](./architecture/), [Information Systems](./architecture/information-systems/), [Technology Architecture](./architecture/technology/) | Understand the capability model, bounded contexts, integration direction, and platform choices. |
