@@ -36,6 +36,10 @@ builder.Services.AddScoped<IProjectionHandler, UsageStatsProjectionHandler>();
 // PLAT003C — destructive single-tenant purge of DataHub read models (invoked over Dapr).
 builder.Services.AddScoped<DataHubTenantStorePurger>();
 
+// #772 — user-level GDPR erasure of a single subject's report contribution (invoked over Dapr
+// by the PRIV001 ErasureWorkflow as the reporting-anonymisation step).
+builder.Services.AddScoped<DataHubSubjectEraser>();
+
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
