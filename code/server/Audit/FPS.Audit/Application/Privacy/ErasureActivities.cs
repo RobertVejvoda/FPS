@@ -104,16 +104,19 @@ public sealed class AnonymiseReportingActivity(DaprClient dapr, ILogger<Anonymis
     {
         try
         {
+            // #772 — the durable report data lives in DataHub since #763 (Reporting is a read facade
+            // whose in-memory erasure is a no-op in production). Anonymise the subject's report
+            // contribution where it actually persists: DataHub's projections.
             var response = await dapr.InvokeMethodAsync<ServiceErasureInput, ErasureServiceResult>(
-                "fairspot-reporting", "erasure", input);
-            logger.LogInformation("Reporting anonymisation complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment} Count={Count}",
+                "fairspot-datahub", "erasure", input);
+            logger.LogInformation("Reporting anonymisation (DataHub) complete. ErasureRequestId={ErasureRequestId} Treatment={Treatment} Count={Count}",
                 input.ErasureRequestId, response.Treatment, response.AffectedCount);
             return response;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Reporting anonymisation failed. ErasureRequestId={ErasureRequestId}", input.ErasureRequestId);
-            return new ErasureServiceResult("reporting", ErasureTreatment.Failed, 0, "Service unavailable");
+            logger.LogWarning(ex, "Reporting anonymisation (DataHub) failed. ErasureRequestId={ErasureRequestId}", input.ErasureRequestId);
+            return new ErasureServiceResult("datahub-reporting", ErasureTreatment.Failed, 0, "Service unavailable");
         }
     }
 }
