@@ -34,10 +34,15 @@
 #   --env-file PATH    Compose env file (NAS default: code/infrastructure/nas.env).
 #   --out DIR          Backup root (default: ./backups).
 #   --retention N      Keep the newest N runs, prune older (default: 7).
-#   --quiesce          Stop the fairspot-* app writers around the dumps for a
-#                      consistent snapshot, then resume them (trap-guarded).
+#   --quiesce          Stop the writers (fairspot-* app services + keycloak)
+#                      around the dumps for a consistent snapshot, then resume
+#                      them (trap-guarded).
 #
-# VAULT_TOKEN (shell env or --env-file) authenticates the raft snapshot.
+# VAULT_TOKEN (shell env or --env-file) authenticates the raft snapshot. It must
+# carry the sys/storage/raft/snapshot policy; if the stack's Dapr token is
+# least-privilege (KV read only), export a snapshot-capable VAULT_TOKEN for the
+# backup. Vault RESTORE is a manual DR runbook step (#684), not part of this
+# script — its unseal keys are split-knowledge secrets.
 #
 # Exit codes: 0 all requested stores backed up; 1 prerequisite/store failure
 #             (in --nas mode a Vault it cannot snapshot is a failure).
@@ -90,23 +95,25 @@ FAILED=()
 # Record a produced artifact for the manifest.
 _record() { BACKED_UP+=("$1|$2|$3"); }
 
-# ── Optional quiesce: stop the app writers so logical dumps are consistent ────
-# App services write to the stores via Dapr; stopping them (stores stay up) makes
-# the mongo/postgres dumps a consistent snapshot without needing --oplog. The
-# trap guarantees they are resumed even if a dump fails.
+# ── Optional quiesce: stop the writers so logical dumps are consistent ────────
+# Everything that writes to a backed-up store must pause: the fairspot-* app
+# services (Mongo/Postgres via Dapr) AND keycloak (its Postgres store). The
+# stores themselves stay up; the trap guarantees writers resume even on failure.
 APP_SERVICES=()
 _quiesce_start() {
   [[ -n "$QUIESCE" ]] || return 0
   local svc
   while IFS= read -r svc; do
-    [[ "$svc" == fairspot-* ]] && APP_SERVICES+=("$svc")
+    case "$svc" in
+      fairspot-*|keycloak) APP_SERVICES+=("$svc") ;;
+    esac
   done < <("${COMPOSE_CMD[@]}" config --services 2>/dev/null || true)
   if (( ${#APP_SERVICES[@]} > 0 )); then
-    log "Quiescing app writers: ${APP_SERVICES[*]}"
+    log "Quiescing writers: ${APP_SERVICES[*]}"
     trap _quiesce_stop EXIT
     "${COMPOSE_CMD[@]}" stop "${APP_SERVICES[@]}" >/dev/null 2>&1 || warn "quiesce: some services did not stop"
   else
-    warn "quiesce: no fairspot-* app services found to stop"
+    warn "quiesce: no writer services found to stop"
   fi
 }
 _quiesce_stop() {

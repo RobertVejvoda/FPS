@@ -23,25 +23,35 @@ locations, credentials, and the recorded drill **evidence** stay in the private
 
 | Script | Purpose |
 | --- | --- |
-| `tools/backup-stack.sh` | Backs up every durable store in one command — MongoDB (`mongodump`), Postgres/DataHub and Keycloak Postgres (`pg_dump`), MinIO (volume tar), and Vault (native `raft snapshot`). Writes a timestamped directory with a `SHA256SUMS` integrity file and `manifest.json`, and prunes runs beyond `--retention`. Credentials are read from each container's own environment (or, for the Vault token, a single key parsed from `--env-file`) — none touch the host or the repo. `--quiesce` stops the app writers around the dumps for a consistent snapshot. |
-| `tools/restore-drill.sh` | Verifies a backup's checksums, tears the stack down **with its volumes**, restores the data stores (Mongo, Postgres, MinIO), performs the guarded NAS Vault restore, brings the stack back up, runs the hosted smoke, and asserts data actually returned. Destructive: requires `--yes`, targets the local stack by default, and refuses `--nas` without `--force-nas`. |
+| `tools/backup-stack.sh` | Backs up every durable store in one command — MongoDB (`mongodump`), Postgres/DataHub and Keycloak Postgres (`pg_dump`), MinIO (volume tar), and Vault (native `raft snapshot`). Writes a timestamped directory with a `SHA256SUMS` integrity file and `manifest.json`, and prunes runs beyond `--retention`. Credentials are read from each container's own environment (or, for the Vault token, a single key parsed from `--env-file`) — none touch the host or the repo. `--quiesce` stops the writers (app services + Keycloak) around the dumps for a consistent snapshot. |
+| `tools/restore-drill.sh` | Verifies a backup's checksums, tears the stack down **with its volumes**, restores the **data / object / identity** stores (Mongo, Postgres, Keycloak Postgres, MinIO), brings the stack back up, runs the hosted smoke, and asserts data actually returned. Vault secret-store restore is a **declared manual step** (below), not automated. Destructive: requires `--yes`, targets the local stack by default, and refuses `--nas` without `--force-nas`. |
 
 Output goes to a git-ignored `./backups/` directory. Vault artifacts are
 **sensitive** (they contain encrypted secret material) and must be handled as
 Confidential/Secret per the table above.
+
+**Scope of the automated drill:** it reconstructs the durable **data, object,
+and identity** stores from backups and proves data returned. Vault secret-store
+recovery is a separate **manual DR runbook step** (see below) — so the drill is
+not a fully-automated all-store restore, by design.
 
 **Mongo consistency:** the dump is a per-collection logical snapshot (not a
 global point-in-time — `--oplog` is incompatible with the admin/config exclude
 the restore needs). Run `backup-stack.sh --quiesce` on a busy instance, or back
 up in a low-write window, for a consistent snapshot.
 
-**Vault:** only the native raft snapshot is a valid recovery backup. In `--nas`
-mode `backup-stack.sh` **fails closed** if it cannot take one (it never tars a
-live raft directory, which would be inconsistent). The restore drill performs
-the raft-snapshot restore + re-unseal in `--nas --force-nas` mode when
-`VAULT_TOKEN` and `VAULT_UNSEAL_KEYS` are supplied; if a Vault snapshot is
-present but not restored, the drill reports **INCOMPLETE** (exit 2) rather than
-claiming full recovery. A local dev Vault holds no durable secrets.
+**Vault (backup automated, restore manual):** only the native raft snapshot is a
+valid recovery backup. In `--nas` mode `backup-stack.sh` **fails closed** if it
+cannot take one (it never tars a live raft directory, which would be
+inconsistent). The snapshot needs a `VAULT_TOKEN` carrying the
+`sys/storage/raft/snapshot` policy; if the stack's Dapr token is least-privilege,
+export a snapshot-capable token for the backup. Restoring a snapshot requires
+initialising and unsealing a fresh
+server-mode node and then re-unsealing with the snapshot cluster's keys —
+unseal keys are split-knowledge secrets that must not be handled by an
+unattended script, so the restore is a **human-supervised runbook step**
+(private `fairspot-platform`, #684). The drill prints the exact sequence when a
+Vault snapshot is present. A local dev Vault holds no durable secrets.
 
 Typical drill:
 
