@@ -78,7 +78,7 @@ printf 'Mode: local Docker only; Cloudflare is not used.\n\n'
 
 "$REPO_ROOT/tools/start-container-stack.sh" --seed
 
-sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\")"'
+sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\"); const fs = require(\"fs\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-api-client/package.json\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-ui/package.json\")"'
 start_background "web" "$LOG_DIR/web.log" \
   "$WEB_DIR/node_modules/.bin/vite" --host "$WEB_HOST"
 
