@@ -35,7 +35,7 @@ Green Logistics demo users share the password `Dev1234!`. The full user list, ro
 ## Presenter decks and journey diagrams
 
 - **Decks.** Slide outlines for live sessions — [Tour Decks](./decks/) — for the sponsor/evaluator, tenant-admin, and resource-user tours. Each slide traces back to a doc so decks stay current.
-- **Journey diagrams.** Editable draw.io sources for the core journeys: the [booking → Draw → notification loop](./diagrams/booking-draw-loop.drawio) and the [tenant onboarding flow](./diagrams/tenant-onboarding.drawio), registered in the [diagram catalog](../architecture/views/diagrams). Rendered PNGs are a pending manual export.
+- **Journey diagrams.** The core journeys as rendered images with editable draw.io sources: the booking → Draw → notification loop (in the [Resource User Tour](./resource-user)) and the tenant onboarding flow (in the [Tenant Admin Tour](./tenant-admin)), registered in the [diagram catalog](../architecture/views/diagrams).
 
 ## About these tours
 

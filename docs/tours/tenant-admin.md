@@ -15,7 +15,11 @@
 
 > 📷 **Screenshot gap:** web _Tenant setup / policy / slots_ admin surfaces — real screens not yet captured. Source flow: web admin → configuration.
 
-> 📊 **Journey diagram:** [tenant-onboarding.drawio](./diagrams/tenant-onboarding.drawio) — the setup → readiness → go-live flow (draw.io source; rendered PNG pending export).
+**Journey diagram** — the setup → readiness → go-live flow:
+
+![Tenant onboarding setup flow](../images/tour-tenant-onboarding.png)
+
+*Editable source: [tenant-onboarding.drawio](./diagrams/tenant-onboarding.drawio).*
 
 ## How to think about it
 

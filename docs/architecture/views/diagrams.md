@@ -66,12 +66,12 @@ Until a target view is explicitly marked authoritative, the text architecture pa
 
 ## Onboarding Tour Journey Diagrams (#756)
 
-Customer-onboarding role-journey diagrams for the [Guided Tours](/tours/). Each has an editable draw.io source in `docs/tours/diagrams/`; the rendered PNG is a **pending manual export** (there is no drawio→PNG render script — export from draw.io into `docs/images/` and drop the `Render` cell into the tour page).
+Customer-onboarding role-journey diagrams for the [Guided Tours](/tours/). Each has an editable draw.io source in `docs/tours/diagrams/` and a rendered PNG in `docs/images/`, exported with the `drawio` CLI (`drawio --export --format png --scale 2 --border 10 --output docs/images/<name>.png docs/tours/diagrams/<name>.drawio`); re-run that after editing a source.
 
 | Journey diagram | Tour | draw.io source | Rendered image | Status |
 | --- | --- | --- | --- | --- |
-| Booking → Draw → notification loop | [Resource User Tour](/tours/resource-user) | `docs/tours/diagrams/booking-draw-loop.drawio` | `/images/tour-booking-draw-loop.png` | Source added; PNG export pending |
-| Tenant onboarding setup flow | [Tenant Admin Tour](/tours/tenant-admin) | `docs/tours/diagrams/tenant-onboarding.drawio` | `/images/tour-tenant-onboarding.png` | Source added; PNG export pending |
+| Booking → Draw → notification loop | [Resource User Tour](/tours/resource-user) | `docs/tours/diagrams/booking-draw-loop.drawio` | [rendered PNG](/images/tour-booking-draw-loop.png) | Source + rendered output |
+| Tenant onboarding setup flow | [Tenant Admin Tour](/tours/tenant-admin) | `docs/tours/diagrams/tenant-onboarding.drawio` | [rendered PNG](/images/tour-tenant-onboarding.png) | Source + rendered output |
 
 ## Diagram Refresh Order
 

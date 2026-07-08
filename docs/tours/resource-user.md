@@ -17,7 +17,11 @@
 
 > 📷 **Screenshot gap:** in-app _Notifications_ with allocated/waitlisted states — not yet captured.
 
-> 📊 **Journey diagram:** [booking-draw-loop.drawio](./diagrams/booking-draw-loop.drawio) — the full request → obligations → Draw → notify → cancel/reallocate loop (draw.io source; rendered PNG pending export).
+**Journey diagram** — the full request → obligations → Draw → notify → cancel/reallocate loop:
+
+![Booking to Draw to notification loop](../images/tour-booking-draw-loop.png)
+
+*Editable source: [booking-draw-loop.drawio](./diagrams/booking-draw-loop.drawio).*
 
 ## What you will never see
 
