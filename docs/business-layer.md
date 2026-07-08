@@ -24,6 +24,8 @@ FairSpot helps customer organizations manage scarce shared capacity without turn
 - [Booking API Contract](./business-layer/booking-api-contract)
 - [Booking Context Contract](./business-layer/booking-context-contract)
 - [Booking Request Lifecycle](./business-layer/booking-request-lifecycle)
+- [Module Reservations UX](./business-layer/module-reservations-ux)
+- [My Spots Employee UX](./business-layer/my-spots-ux)
 - [Business Process Flows](./business-layer/business-process-flows)
 - [Allocation Process](./business-layer/process)
 - [Executable Allocation Rules](./business-layer/allocation-rules)
