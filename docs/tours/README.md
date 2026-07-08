@@ -32,8 +32,13 @@ Every tour points at the **Green Logistics** showcase — a small, synthetic ten
 
 Green Logistics demo users share the password `Dev1234!`. The full user list, roles, locations, slots, and the seeded Draw story are in [Demo Seed Data](../demo-seed-data), and a step-by-step run is in the [Green Logistics Walkthrough](./green-logistics-walkthrough). Use synthetic demo data only unless a customer-approved pilot explicitly changes that rule.
 
+## Presenter decks and journey diagrams
+
+- **Decks.** Slide outlines for live sessions — [Tour Decks](./decks/) — for the sponsor/evaluator, tenant-admin, and resource-user tours. Each slide traces back to a doc so decks stay current.
+- **Journey diagrams.** The core journeys as rendered images with editable draw.io sources: the booking → Draw → notification loop (in the [Resource User Tour](./resource-user)) and the tenant onboarding flow (in the [Tenant Admin Tour](./tenant-admin)), registered in the [diagram catalog](../architecture/views/diagrams).
+
 ## About these tours
 
 - **Source of truth.** Tours are reader paths, not new facts. They summarise and link into the canonical pages ([Product Overview](../Home), [Client Evaluation Pack](../client-evaluation-pack), [Demo and Evaluation](../demo-and-evaluation), the [Architecture Repository](../architecture/), and [Security Architecture](../architecture/security/)). Where a tour and a source page disagree, the source page wins.
-- **Screenshots and diagrams.** Product screens shown here come from real demo flows. Where a screen has not been captured yet, the tour marks a **📷 screenshot gap** rather than inventing one. Journey diagrams (draw.io) are being added as a follow-up.
+- **Screenshots.** Product screens shown here come from real demo flows. Where a screen has not been captured yet, the tour marks a **📷 screenshot gap** rather than inventing one.
 - **Open core.** These tours cover the public open-core product only. Hosted-operator runbooks, the operator console, onboarding-queue internals, and usage metering live in the private `fairspot-platform` companion and are referenced by contract/summary only. See the [Open-Core Boundary](../strategy-layer/open-core-boundary).

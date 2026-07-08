@@ -33,6 +33,7 @@ The current direction is **client-owned production**: FairSpot provides the arch
 
 ## What to check next
 
+- [Sponsor &amp; Evaluator Deck](./decks/sponsor-evaluator-deck) — the slide version of this tour for a go/no-go session.
 - [Client Evaluation Pack](../client-evaluation-pack) — the one-page summary, deployment/cost assumptions, FAQ, and security/GDPR position.
 - [Roadmap](../roadmap) and [Release 1 Scope](../roadmap#release-1-scope) — the authoritative, current status: what is ready, demo-only, and deferred.
 - [Demo and Evaluation](../demo-and-evaluation) — the guided demo story and roles.

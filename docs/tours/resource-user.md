@@ -17,6 +17,12 @@
 
 > 📷 **Screenshot gap:** in-app _Notifications_ with allocated/waitlisted states — not yet captured.
 
+**Journey diagram** — the full request → obligations → Draw → notify → cancel/reallocate loop:
+
+![Booking to Draw to notification loop](../images/tour-booking-draw-loop.png)
+
+*Editable source: [booking-draw-loop.drawio](./diagrams/booking-draw-loop.drawio).*
+
 ## What you will never see
 
 FairSpot keeps user views safe by design: your own bookings, your own notifications, and understandable reasons — **not** other users, and not the hidden allocation internals. This is a product guarantee, not a UI accident (see the [Security &amp; GDPR summary](../client-evaluation-pack#security-and-gdpr-summary)).
@@ -27,6 +33,7 @@ In the **Green Logistics** showcase, sign in as a general employee (for example 
 
 ## Go deeper
 
+- [Resource User Deck](./decks/resource-user-deck) — the slide version of this tour.
 - [Demo and Evaluation](../demo-and-evaluation) — demo roles and the booking story.
 - [Tenant Discovery and Login Modes](../business-layer/tenant-login-modes) — how sign-in resolves your tenant.
 - [Product Overview](../Home) — the fairness model in business terms.
