@@ -559,6 +559,22 @@ else
   else
     pending "Token endpoint burst → no 429 in 10 requests (enable the §3.1 rate-limit rule; requires Cloudflare Pro+)"
   fi
+
+  # App-side rate limit on the public /api path (§3.3, /api/draws, 2/min). APP_URL
+  # already includes /api, so this exercises the /api-prefixed path — if a rule only
+  # matched the root form (/draws) it would never fire here, catching that mismatch.
+  DRAW_EP="$APP_URL/draws"
+  RL_APP=""
+  for i in 1 2 3 4 5; do
+    RSTATUS=$(curl -o /dev/null -sw "%{http_code}" -X POST "$DRAW_EP" \
+      -H "Content-Type: application/json" --data "{}" 2>/dev/null || echo "000")
+    [[ "$RSTATUS" == "429" ]] && { RL_APP="$i"; break; }
+  done
+  if [[ -n "$RL_APP" ]]; then
+    pass "App $DRAW_EP burst → HTTP 429 after $RL_APP requests (app-side /api rate limit active)  [SEC010 §3.3]"
+  else
+    pending "App $DRAW_EP burst → no 429 in 5 requests (enable the §3.3 rule for the /api path; requires Cloudflare Pro+)"
+  fi
 fi
 
 # ── Internal infrastructure not publicly exposed  [mandatory #10] ─────────────

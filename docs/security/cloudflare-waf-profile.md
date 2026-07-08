@@ -209,6 +209,8 @@ All thresholds below are conservative defaults tuned for a pilot deployment. The
 
 Configure rate limiting rules under **Security** → **WAF** → **Rate limiting rules**.
 
+**Single-origin note (Release 1):** as in §1.1, `app.<domain>` reverse-proxies the API under `/api/`, and Cloudflare evaluates the **browser-facing** path *before* nginx strips `/api`. So every app-side rate-limit expression matches **both** the root form and the `/api/`-prefixed form (e.g. `/bookings` **and** `/api/bookings`) — otherwise the real public API calls (which are `/api/...`) would not be counted. The `auth.<domain>` token endpoint is not proxied and needs no `/api` form.
+
 ### 3.1 Login and token endpoints
 
 **Rule name:** `FPS — Rate limit login and token`
@@ -216,7 +218,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 | Field | Value |
 |---|---|
 | Match on | `http.host eq "auth.REPLACE_WITH_DOMAIN" and http.request.uri.path contains "/protocol/openid-connect/token"` |
-| Also match | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/token")` |
+| Also match | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/token") or starts_with(http.request.uri.path, "/api/token"))` |
 | Counting dimension | IP address |
 | Threshold | 5 requests |
 | Period | 10 seconds |
@@ -231,7 +233,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/bookings")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/bookings") or starts_with(http.request.uri.path, "/api/bookings"))` |
 | Counting dimension (Pro) | IP address |
 | Counting dimension (Business+) | Custom header `CF-Connecting-IP` correlated with `Authorization` JWT subject (requires advanced rate limiting) |
 | Threshold | 10 requests per IP per minute (Pro) — or 3 per authenticated user per minute (Business+) |
@@ -246,7 +248,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/draws")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/draws") or starts_with(http.request.uri.path, "/api/draws"))` |
 | Counting dimension | IP address |
 | Threshold | 2 requests per minute |
 | Action | Block (HTTP 429) |
@@ -260,7 +262,7 @@ Draw triggers are admin-only operations. A threshold of 2 per minute per IP acco
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/bookings/") and http.request.uri.path contains "/cancel"` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/bookings/") or starts_with(http.request.uri.path, "/api/bookings/")) and http.request.uri.path contains "/cancel"` |
 | Counting dimension | IP address |
 | Threshold | 5 requests per minute |
 | Action | Block (HTTP 429) |
@@ -272,7 +274,7 @@ Draw triggers are admin-only operations. A threshold of 2 per minute per IP acco
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/import") or http.request.uri.path contains "/import")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/import") or starts_with(http.request.uri.path, "/api/import") or http.request.uri.path contains "/import")` |
 | Counting dimension | IP address |
 | Threshold | 2 requests per minute |
 | Action | Block (HTTP 429) |

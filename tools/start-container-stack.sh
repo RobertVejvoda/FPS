@@ -794,6 +794,22 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
     info "Token endpoint not rate-limited in 10 requests — enable the §3.1 rule (Cloudflare Pro+); see code/infrastructure/cloudflare/"
   fi
 
+  # 8) App-side rate limit on the public /api path (SEC010 §3.3, /api/draws). Exercises
+  #    the /api-prefixed path so a root-only rule (that would miss the real public API)
+  #    is caught. Plan-dependent, so a miss is INFO not a hard failure.
+  DRAW_EP="$APP_URL/api/draws"
+  RL_APP=""
+  for _ in 1 2 3 4 5; do
+    RSTATUS="$(probe_pub -o /dev/null -w '%{http_code}' -X POST "$DRAW_EP" \
+      -H 'Content-Type: application/json' --data '{}' || true)"
+    [[ "$RSTATUS" == "429" ]] && { RL_APP="yes"; break; }
+  done
+  if [[ -n "$RL_APP" ]]; then
+    ok "App /api/draws rate-limited (HTTP 429, SEC010 §3.3 — /api path covered)"
+  else
+    info "App /api/draws not rate-limited in 5 requests — enable the §3.3 rule for the /api path (Cloudflare Pro+)"
+  fi
+
   echo
   info "For the full hosted E2E (login, booking, notifications, WAF, TLS, rate limits), run:"
   info "  APP_URL=$APP_URL/api AUTH_URL=$AUTH_URL OIDC_REALM=$REALM ./tools/smoke-hosted.sh"

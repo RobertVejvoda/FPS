@@ -8,7 +8,7 @@
       "description": "FPS — Rate limit login and token",
       "action": "block",
       "enabled": true,
-      "expression": "(http.host eq \"auth.REPLACE_WITH_DOMAIN\" and http.request.uri.path contains \"/protocol/openid-connect/token\") or (http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and starts_with(http.request.uri.path, \"/token\"))",
+      "expression": "(http.host eq \"auth.REPLACE_WITH_DOMAIN\" and http.request.uri.path contains \"/protocol/openid-connect/token\") or (http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and (starts_with(http.request.uri.path, \"/token\") or starts_with(http.request.uri.path, \"/api/token\")))",
       "ratelimit": {
         "characteristics": ["ip.src", "cf.colo.id"],
         "period": 10,
@@ -20,7 +20,7 @@
       "description": "FPS — Rate limit booking submission",
       "action": "block",
       "enabled": true,
-      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and starts_with(http.request.uri.path, \"/bookings\"))",
+      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and (starts_with(http.request.uri.path, \"/bookings\") or starts_with(http.request.uri.path, \"/api/bookings\")))",
       "ratelimit": {
         "characteristics": ["ip.src", "cf.colo.id"],
         "period": 60,
@@ -32,7 +32,7 @@
       "description": "FPS — Rate limit draw trigger",
       "action": "block",
       "enabled": true,
-      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and starts_with(http.request.uri.path, \"/draws\"))",
+      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and (starts_with(http.request.uri.path, \"/draws\") or starts_with(http.request.uri.path, \"/api/draws\")))",
       "ratelimit": {
         "characteristics": ["ip.src", "cf.colo.id"],
         "period": 60,
@@ -44,7 +44,7 @@
       "description": "FPS — Rate limit HR cancellation",
       "action": "block",
       "enabled": true,
-      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and starts_with(http.request.uri.path, \"/bookings/\") and http.request.uri.path contains \"/cancel\")",
+      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and (starts_with(http.request.uri.path, \"/bookings/\") or starts_with(http.request.uri.path, \"/api/bookings/\")) and http.request.uri.path contains \"/cancel\")",
       "ratelimit": {
         "characteristics": ["ip.src", "cf.colo.id"],
         "period": 60,
@@ -56,7 +56,7 @@
       "description": "FPS — Rate limit import",
       "action": "block",
       "enabled": true,
-      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and (starts_with(http.request.uri.path, \"/import\") or http.request.uri.path contains \"/import\"))",
+      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and http.request.method eq \"POST\" and (starts_with(http.request.uri.path, \"/import\") or starts_with(http.request.uri.path, \"/api/import\") or http.request.uri.path contains \"/import\"))",
       "ratelimit": {
         "characteristics": ["ip.src", "cf.colo.id"],
         "period": 60,
