@@ -1,0 +1,54 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="booking-draw-loop" name="Booking to Draw to Notification">
+    <mxGraphModel dx="960" dy="640" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Resource user journey: request → obligations → fair Draw → notify → act (#756)" style="text;html=1;align=left;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="820" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="signin" value="Sign in&#10;(SSO or FairSpot account;&#10;tenant/roles resolved)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="request" value="Request capacity&#10;(date + location)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="obliged" value="Obligation?&#10;(HR-assigned&#10;company-car / fixed slot)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="520" y="70" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="tier1" value="Tier-1 fixed-slot&#10;precedence&#10;(allocated before the Draw)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="770" y="40" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="draw" value="Tier-2 fair Draw&#10;(weighted fairness:&#10;recent history + penalties)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="770" y="150" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="outcome" value="Allocated or Waitlisted&#10;(by documented rules)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="770" y="270" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="notify" value="Notify&#10;(in-app record;&#10;safe status + reason)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="520" y="270" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="mybook" value="My Bookings&#10;(view own bookings;&#10;no other users, no internals)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="280" y="270" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cancel" value="Cancel a booking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="270" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="realloc" value="Reallocate&#10;(promote next fair&#10;waitlisted person)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="signin" target="request"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="request" target="obliged"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="yes" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="obliged" target="tier1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="no" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="obliged" target="draw"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="tier1" target="outcome"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="draw" target="outcome"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="outcome" target="notify"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="notify" target="mybook"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="mybook" target="cancel"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="cancel" target="realloc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" value="freed space re-enters the rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;" edge="1" parent="1" source="realloc" target="draw"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

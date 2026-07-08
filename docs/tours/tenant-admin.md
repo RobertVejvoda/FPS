@@ -15,6 +15,8 @@
 
 > 📷 **Screenshot gap:** web _Tenant setup / policy / slots_ admin surfaces — real screens not yet captured. Source flow: web admin → configuration.
 
+> 📊 **Journey diagram:** [tenant-onboarding.drawio](./diagrams/tenant-onboarding.drawio) — the setup → readiness → go-live flow (draw.io source; rendered PNG pending export).
+
 ## How to think about it
 
 - **No code changes to run parking.** HR and admins manage rules, overrides, and capacity through configuration.
@@ -27,6 +29,7 @@ In **Green Logistics**, sign in as `gl-tenant-admin` (Karel Urban, password `Dev
 
 ## Go deeper
 
+- [Tenant Admin Deck](./decks/tenant-admin-deck) — the slide version of this tour.
 - [Tenant Onboarding](../business-layer/tenant-onboarding) and [Tenant Discovery and Login Modes](../business-layer/tenant-login-modes).
 - [HR Import Contract](../hr-import) — bringing in profile/eligibility facts.
 - [Business Policies](../architecture/business/policies) — the policy model behind configuration.

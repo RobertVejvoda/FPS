@@ -1,0 +1,40 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="tenant-onboarding" name="Tenant Onboarding Setup">
+    <mxGraphModel dx="960" dy="640" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="360" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Tenant admin onboarding: setup → readiness → go-live (#756)" style="text;html=1;align=left;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="820" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="Tenant &amp; identity&#10;(isolated tenant;&#10;SSO-first sign-in)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" value="First admin&#10;(assign roles:&#10;employee, HR, admin…)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="230" y="80" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="Policy&#10;(documented fairness rules;&#10;obligation precedence)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="420" y="80" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" value="Locations &amp; slots&#10;(general, EV, accessible,&#10;motorcycle, company-car)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="610" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" value="Profile facts&#10;(HR-managed eligibility:&#10;company car, accessibility)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="810" y="80" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="Readiness&#10;(identity + policy + slots&#10;+ facts in place)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="210" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s7" value="Go-live&#10;(Draw behaves as&#10;configured)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="620" y="210" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s1" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s4" target="s5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s5" target="s6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="s6" target="s7"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

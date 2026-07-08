@@ -64,6 +64,15 @@ Until a target view is explicitly marked authoritative, the text architecture pa
 | Privacy and audit view | Privacy and audit | [Privacy Architecture](/architecture/security/privacy-architecture), [Controls](/architecture/security/controls) | Placeholder | [Data Privacy](/security/data-privacy), [Audit Capability](/business-layer/audit), [Audit Application](/application-layer/audit) | Robert TODO: show personal data, audit trail, notification duties, retention/erasure, role-safe DataHub reads, and support access limits. |
 | Transition roadmap view | Transition roadmap | [Transition Architectures](/architecture/architecture-states/transition-architectures), [Gap Analysis](/architecture/architecture-states/gap-analysis) | Placeholder | [Roadmap](/roadmap), [Implementation Tracker](/implementation-tracker) | Robert TODO: show customer-ready work packages, named transition states, delivery gates, deferred Billing, and obsolete Reporting/PostgreSQL direction. |
 
+## Onboarding Tour Journey Diagrams (#756)
+
+Customer-onboarding role-journey diagrams for the [Guided Tours](/tours/). Each has an editable draw.io source in `docs/tours/diagrams/`; the rendered PNG is a **pending manual export** (there is no drawio→PNG render script — export from draw.io into `docs/images/` and drop the `Render` cell into the tour page).
+
+| Journey diagram | Tour | draw.io source | Rendered image | Status |
+| --- | --- | --- | --- | --- |
+| Booking → Draw → notification loop | [Resource User Tour](/tours/resource-user) | `docs/tours/diagrams/booking-draw-loop.drawio` | `/images/tour-booking-draw-loop.png` | Source added; PNG export pending |
+| Tenant onboarding setup flow | [Tenant Admin Tour](/tours/tenant-admin) | `docs/tours/diagrams/tenant-onboarding.drawio` | `/images/tour-tenant-onboarding.png` | Source added; PNG export pending |
+
 ## Diagram Refresh Order
 
 | Priority | Diagram | Why It Comes Next | Blocks / Supports |
