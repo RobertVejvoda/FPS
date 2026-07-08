@@ -17,7 +17,7 @@ Bring the container stack up with seed data:
 | Mobile (Expo) | `./tools/start-smoke-mobile.sh` |
 | Keycloak sign-in | `http://localhost:8180` (realm `fps-local`) |
 
-All Green Logistics demo users share the password `Dev1234!` and live in tenant `greenlogistics` (work-email domain `greenlogistics.example`, which also demonstrates company-SSO tenant discovery). The full roster, locations, and slots are in [Demo Seed Data](./demo-seed-data).
+All Green Logistics demo users share the password `Dev1234!` and live in tenant `greenlogistics` (work-email domain `greenlogistics.example`, which also demonstrates company-SSO tenant discovery). The full roster, locations, and slots are in [Demo Seed Data](../demo-seed-data).
 
 **Cast for this walkthrough:**
 
@@ -35,8 +35,8 @@ All Green Logistics demo users share the password `Dev1234!` and live in tenant 
 | --- | --- | --- | --- | --- |
 | 1 | `gl-employee5` | Sign in (mobile or web); open the shell. | Tenant/user/roles resolved from sign-in — you never type a tenant or user id (`GET /me` resolves context). | Call `GET /me` through the gateway and show the resolved tenant/user. |
 | 2 | `gl-employee5` | Submit a `GL-HQ` parking request for the seeded date. | The request appears with a safe status and, where relevant, an employee-visible reason. | Show the booking request via the booking API response. |
-| 3 | `gl-employee1` | Submit an on-time request as the company-car holder. | The fixed company-car slot `VIP-01` is allocated **before** the fair Draw; the employee cannot self-assign company-car status. | Point to the seeded `VIP-01` obligation in [Demo Seed Data](./demo-seed-data). |
-| 4 | `gl-hr-admin` | Show tenant policy, the `GL-HQ` location, its six slots, and capacity. | Allocation behaviour maps to configured policy and capacity (general, EV, accessible, motorcycle, company-car). | 📷 Screenshot gap — describe the seeded slots from [Demo Seed Data](./demo-seed-data). |
+| 3 | `gl-employee1` | Submit an on-time request as the company-car holder. | The fixed company-car slot `VIP-01` is allocated **before** the fair Draw; the employee cannot self-assign company-car status. | Point to the seeded `VIP-01` obligation in [Demo Seed Data](../demo-seed-data). |
+| 4 | `gl-hr-admin` | Show tenant policy, the `GL-HQ` location, its six slots, and capacity. | Allocation behaviour maps to configured policy and capacity (general, EV, accessible, motorcycle, company-car). | 📷 Screenshot gap — describe the seeded slots from [Demo Seed Data](../demo-seed-data). |
 | 5 | `gl-tenant-admin` | Run the admin-only Demo Draw for the seeded requests (or show the completed result). | Ten requests, demand &gt; capacity → a mix of allocated and waitlisted by documented rules; the same Draw key is idempotent; lottery internals stay out of employee views. | The seed already runs the Draw; show its verified result. |
 | 6 | `gl-employee5` | View the booking result and notifications. | Notification history/unread state reflects the booking event (allocated or waitlisted with a safe reason). | 📷 Screenshot gap — show the notification API records. |
 | 7 | `gl-employee5` | Cancel an allocated booking. | The next fairly-ranked waitlisted employee is promoted — a freed space still flows by the rules. | The seed demonstrates this reallocation; point to `verify_demo_draw`. |
@@ -52,6 +52,6 @@ All Green Logistics demo users share the password `Dev1234!` and live in tenant 
 
 ## Related tours
 
-- [Resource User Tour](./tours/resource-user) — the participant's view of steps 1–7.
-- [HR &amp; Operator Tour](./tours/operator-hr) — the operator's view of policy, the Draw, and evidence.
-- [Auditor &amp; Security Tour](./tours/auditor-security) — the audit and privacy view of step 8.
+- [Resource User Tour](./resource-user) — the participant's view of steps 1–7.
+- [HR &amp; Operator Tour](./operator-hr) — the operator's view of policy, the Draw, and evidence.
+- [Auditor &amp; Security Tour](./auditor-security) — the audit and privacy view of step 8.

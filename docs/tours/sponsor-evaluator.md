@@ -16,7 +16,7 @@ Parking is the first launch module and proof vertical because it has visible sca
 
 ## The proof path
 
-The clearest proof is the parking loop, end to end: a person requests a space → obligations (company-car) are honoured first → the Draw fairly allocates the rest → the person is notified and can act → operators and auditors can see the evidence behind every outcome. Walk it yourself in the [Green Logistics Walkthrough](./tours/green-logistics-walkthrough), or hand it to a colleague using the [Resource User Tour](./tours/resource-user).
+The clearest proof is the parking loop, end to end: a person requests a space → obligations (company-car) are honoured first → the Draw fairly allocates the rest → the person is notified and can act → operators and auditors can see the evidence behind every outcome. Walk it yourself in the [Green Logistics Walkthrough](./green-logistics-walkthrough), or hand it to a colleague using the [Resource User Tour](./resource-user).
 
 ## Rollout posture
 
@@ -33,9 +33,9 @@ The current direction is **client-owned production**: FairSpot provides the arch
 
 ## What to check next
 
-- [Client Evaluation Pack](./client-evaluation-pack) — the one-page summary, deployment/cost assumptions, FAQ, and security/GDPR position.
-- [Roadmap](./roadmap) and [Release 1 Scope](./roadmap#release-1-scope) — the authoritative, current status: what is ready, demo-only, and deferred.
-- [Demo and Evaluation](./demo-and-evaluation) — the guided demo story and roles.
+- [Client Evaluation Pack](../client-evaluation-pack) — the one-page summary, deployment/cost assumptions, FAQ, and security/GDPR position.
+- [Roadmap](../roadmap) and [Release 1 Scope](../roadmap#release-1-scope) — the authoritative, current status: what is ready, demo-only, and deferred.
+- [Demo and Evaluation](../demo-and-evaluation) — the guided demo story and roles.
 
 ## Boundaries to know
 
