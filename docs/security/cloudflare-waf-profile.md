@@ -65,6 +65,8 @@ Custom WAF rules block or challenge requests before they reach the NAS. Configur
 
 Use `starts_with()` and `contains` in the expressions below. The regex `matches` operator requires Cloudflare Business or WAF Advanced and should not be used in the baseline Release 1 profile.
 
+> **Codified definitions (#764).** The custom rules (§1.1–1.2) and rate limits (§3) below are also checked in as machine-consumable JSON rulesets under [`code/infrastructure/cloudflare/`](https://github.com/RobertVejvoda/fairspot/tree/master/code/infrastructure/cloudflare) — `waf-custom-rules.json` and `rate-limit-rules.json`, shaped for the Cloudflare Rulesets API. That directory's `README.md` documents how an operator applies them to a zone (domain placeholder substituted; zone ID and API token supplied privately). The hosted smoke (`tools/smoke-hosted.sh` and `start-container-stack.sh --nas --domain`) verifies the rules are live. This doc remains the authoritative source for rationale, ordering, plan dependencies, and the TLS/Access/bot settings.
+
 ### 1.1 Block internal paths on `app.<domain>`
 
 The following paths must never be reachable from the Internet. They expose Dapr sidecar APIs, internal health checks, diagnostic endpoints, and documentation surfaces.

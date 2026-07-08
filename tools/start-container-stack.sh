@@ -766,8 +766,36 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
     fail "auth.$PUBLIC_DOMAIN/admin returned HTTP $KC_ADMIN_STATUS — admin console must not be public (configure the Cloudflare WAF / hostname rules, SEC010)"
   fi
 
+  # 6) Internal/diagnostic surfaces on app.<domain> must be blocked by the Cloudflare
+  #    WAF (SEC010 §1.1). In the single-origin SPA an unknown root path returns 200 via
+  #    history fallback, so a 200 here means the WAF internal-path rule is NOT active.
+  for rpath in metrics dapr/v1.0/metadata v1.0/healthz healthz admin _internal; do
+    RSTATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/$rpath" || true)"
+    if [[ "$RSTATUS" == "401" || "$RSTATUS" == "403" || "$RSTATUS" == "404" ]]; then
+      ok "app.$PUBLIC_DOMAIN/$rpath not publicly served (HTTP $RSTATUS)"
+    else
+      fail "app.$PUBLIC_DOMAIN/$rpath returned HTTP $RSTATUS — internal/diagnostic path must be blocked (Cloudflare WAF, SEC010 §1.1)"
+    fi
+  done
+
+  # 7) Rate limiting (SEC010 §3.1): a burst to the OIDC token endpoint should be
+  #    rate-limited (HTTP 429) at the edge. Requires Cloudflare Pro+, so a miss is an
+  #    INFO (plan-dependent), not a hard failure.
+  TOKEN_EP="$AUTH_URL/realms/$REALM/protocol/openid-connect/token"
+  RL_HIT=""
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    RSTATUS="$(probe_pub -o /dev/null -w '%{http_code}' -X POST "$TOKEN_EP" \
+      -H 'Content-Type: application/x-www-form-urlencoded' --data 'grant_type=password&client_id=probe' || true)"
+    [[ "$RSTATUS" == "429" ]] && { RL_HIT="yes"; break; }
+  done
+  if [[ -n "$RL_HIT" ]]; then
+    ok "Token endpoint rate-limited (HTTP 429, SEC010 §3.1)"
+  else
+    info "Token endpoint not rate-limited in 10 requests — enable the §3.1 rule (Cloudflare Pro+); see code/infrastructure/cloudflare/"
+  fi
+
   echo
-  info "For the full hosted E2E (login, booking, notifications, WAF, TLS), run:"
+  info "For the full hosted E2E (login, booking, notifications, WAF, TLS, rate limits), run:"
   info "  APP_URL=$APP_URL/api AUTH_URL=$AUTH_URL OIDC_REALM=$REALM ./tools/smoke-hosted.sh"
 fi
 

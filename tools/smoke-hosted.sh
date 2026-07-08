@@ -502,6 +502,20 @@ else
     fail "GET $AUTH_URL/admin → HTTP $KC_ADMIN_STATUS (expected 403/404 — WAF or Cloudflare Access rule needed)" "true"
   fi
 
+  # App-root diagnostic / framework routes (SEC010 §1.1 root form). In the
+  # single-origin SPA an unknown root path returns 200 via history fallback, so a
+  # 200 here means the WAF internal-path rule is NOT active at the app root.
+  for rpath in "dapr/v1.0/metadata" "v1.0/healthz" "healthz" "admin" "_internal"; do
+    RSTATUS=$(http_status "$APP_ORIGIN/$rpath")
+    if [[ "$RSTATUS" == "401" || "$RSTATUS" == "403" || "$RSTATUS" == "404" ]]; then
+      pass "GET $APP_ORIGIN/$rpath → HTTP $RSTATUS (app-root diagnostic path blocked)  [mandatory #10]"
+    elif [[ "$RSTATUS" == "200" ]]; then
+      fail "GET $APP_ORIGIN/$rpath → HTTP 200 (WAF internal-path rule not active at the app root)" "true"
+    else
+      pending "GET $APP_ORIGIN/$rpath → HTTP $RSTATUS (confirm against the live domain/WAF)"
+    fi
+  done
+
   # Additional internal/diagnostic surfaces that must not be publicly served via
   # the API. NOTE: in the single-origin model the SPA history-fallback returns
   # 200 for any unknown path at the app *root* by design (static SPA, no
@@ -521,6 +535,30 @@ else
       pending "GET /api/$ipath → HTTP $ISTATUS (confirm against the live domain/WAF)"
     fi
   done
+fi
+
+# ── Rate limiting  [SEC010 §3] ───────────────────────────────────────────────
+
+header "Rate limiting  [SEC010 §3]"
+if [[ "$IS_LOCALHOST" == "true" ]]; then
+  pending "Rate limiting — localhost mode (no Cloudflare edge; run against the public domain to verify)"
+else
+  # Burst the OIDC token endpoint: the edge rate-limit (§3.1, 5 req / 10s per IP)
+  # should return 429 before the origin. Unauthenticated POSTs are fine — the rule
+  # matches the path, and Keycloak rejects the body anyway. Requires Cloudflare Pro+.
+  TOKEN_EP="$AUTH_URL/realms/$OIDC_REALM/protocol/openid-connect/token"
+  RL_HIT=""
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    RSTATUS=$(curl -o /dev/null -sw "%{http_code}" -X POST "$TOKEN_EP" \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      --data "grant_type=password&client_id=probe" 2>/dev/null || echo "000")
+    [[ "$RSTATUS" == "429" ]] && { RL_HIT="$i"; break; }
+  done
+  if [[ -n "$RL_HIT" ]]; then
+    pass "Token endpoint burst → HTTP 429 after $RL_HIT requests (rate limit active)  [SEC010 §3.1]"
+  else
+    pending "Token endpoint burst → no 429 in 10 requests (enable the §3.1 rate-limit rule; requires Cloudflare Pro+)"
+  fi
 fi
 
 # ── Internal infrastructure not publicly exposed  [mandatory #10] ─────────────

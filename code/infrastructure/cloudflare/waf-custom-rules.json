@@ -1,0 +1,20 @@
+{
+  "_comment": "FairSpot Cloudflare WAF custom rules (SEC010 / #764). Codified, versioned form of docs/security/cloudflare-waf-profile.md sections 1.1-1.2. Apply to the http_request_firewall_custom phase entrypoint ruleset for the zone. Contains NO secrets: replace REPLACE_WITH_DOMAIN with the operator domain; zone id + API token are supplied privately (see README.md). Expressions use starts_with()/contains only (no regex 'matches', which needs Business+).",
+  "name": "FairSpot WAF custom rules",
+  "kind": "zone",
+  "phase": "http_request_firewall_custom",
+  "rules": [
+    {
+      "description": "FPS — Block internal paths on app",
+      "action": "block",
+      "enabled": true,
+      "expression": "(http.host eq \"app.REPLACE_WITH_DOMAIN\" and (starts_with(http.request.uri.path, \"/metrics\") or starts_with(http.request.uri.path, \"/api/metrics\") or starts_with(http.request.uri.path, \"/dapr/\") or starts_with(http.request.uri.path, \"/api/dapr/\") or starts_with(http.request.uri.path, \"/v1.0/\") or starts_with(http.request.uri.path, \"/api/v1.0/\") or starts_with(http.request.uri.path, \"/healthz\") or starts_with(http.request.uri.path, \"/api/healthz\") or starts_with(http.request.uri.path, \"/swagger\") or starts_with(http.request.uri.path, \"/api/swagger\") or starts_with(http.request.uri.path, \"/openapi\") or starts_with(http.request.uri.path, \"/api/openapi\") or starts_with(http.request.uri.path, \"/admin\") or starts_with(http.request.uri.path, \"/api/admin\") or starts_with(http.request.uri.path, \"/_\") or starts_with(http.request.uri.path, \"/api/_\")))"
+    },
+    {
+      "description": "FPS — Block Keycloak admin paths on auth",
+      "action": "block",
+      "enabled": true,
+      "expression": "(http.host eq \"auth.REPLACE_WITH_DOMAIN\" and (starts_with(http.request.uri.path, \"/auth/admin\") or starts_with(http.request.uri.path, \"/admin\") or starts_with(http.request.uri.path, \"/metrics\") or (starts_with(http.request.uri.path, \"/realms/\") and http.request.uri.path contains \"/account/applications\")))"
+    }
+  ]
+}
