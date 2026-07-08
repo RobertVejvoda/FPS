@@ -65,6 +65,8 @@ Custom WAF rules block or challenge requests before they reach the NAS. Configur
 
 Use `starts_with()` and `contains` in the expressions below. The regex `matches` operator requires Cloudflare Business or WAF Advanced and should not be used in the baseline Release 1 profile.
 
+> **Codified definitions (#764).** The custom rules (§1.1–1.2) and rate limits (§3) below are also checked in as machine-consumable JSON rulesets under [`code/infrastructure/cloudflare/`](https://github.com/RobertVejvoda/fairspot/tree/master/code/infrastructure/cloudflare) — `waf-custom-rules.json` and `rate-limit-rules.json`, shaped for the Cloudflare Rulesets API. That directory's `README.md` documents how an operator applies them to a zone (domain placeholder substituted; zone ID and API token supplied privately). The hosted smoke (`tools/smoke-hosted.sh` and `start-container-stack.sh --nas --domain`) verifies the rules are live. This doc remains the authoritative source for rationale, ordering, plan dependencies, and the TLS/Access/bot settings.
+
 ### 1.1 Block internal paths on `app.<domain>`
 
 The following paths must never be reachable from the Internet. They expose Dapr sidecar APIs, internal health checks, diagnostic endpoints, and documentation surfaces.
@@ -207,6 +209,8 @@ All thresholds below are conservative defaults tuned for a pilot deployment. The
 
 Configure rate limiting rules under **Security** → **WAF** → **Rate limiting rules**.
 
+**Single-origin note (Release 1):** as in §1.1, `app.<domain>` reverse-proxies the API under `/api/`, and Cloudflare evaluates the **browser-facing** path *before* nginx strips `/api`. So every app-side rate-limit expression matches **both** the root form and the `/api/`-prefixed form (e.g. `/bookings` **and** `/api/bookings`) — otherwise the real public API calls (which are `/api/...`) would not be counted. The `auth.<domain>` token endpoint is not proxied and needs no `/api` form.
+
 ### 3.1 Login and token endpoints
 
 **Rule name:** `FPS — Rate limit login and token`
@@ -214,7 +218,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 | Field | Value |
 |---|---|
 | Match on | `http.host eq "auth.REPLACE_WITH_DOMAIN" and http.request.uri.path contains "/protocol/openid-connect/token"` |
-| Also match | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/token")` |
+| Also match | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/token") or starts_with(http.request.uri.path, "/api/token"))` |
 | Counting dimension | IP address |
 | Threshold | 5 requests |
 | Period | 10 seconds |
@@ -229,7 +233,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/bookings")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/bookings") or starts_with(http.request.uri.path, "/api/bookings"))` |
 | Counting dimension (Pro) | IP address |
 | Counting dimension (Business+) | Custom header `CF-Connecting-IP` correlated with `Authorization` JWT subject (requires advanced rate limiting) |
 | Threshold | 10 requests per IP per minute (Pro) — or 3 per authenticated user per minute (Business+) |
@@ -244,7 +248,7 @@ Configure rate limiting rules under **Security** → **WAF** → **Rate limiting
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/draws")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/draws") or starts_with(http.request.uri.path, "/api/draws"))` |
 | Counting dimension | IP address |
 | Threshold | 2 requests per minute |
 | Action | Block (HTTP 429) |
@@ -258,7 +262,7 @@ Draw triggers are admin-only operations. A threshold of 2 per minute per IP acco
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and starts_with(http.request.uri.path, "/bookings/") and http.request.uri.path contains "/cancel"` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/bookings/") or starts_with(http.request.uri.path, "/api/bookings/")) and http.request.uri.path contains "/cancel"` |
 | Counting dimension | IP address |
 | Threshold | 5 requests per minute |
 | Action | Block (HTTP 429) |
@@ -270,7 +274,7 @@ Draw triggers are admin-only operations. A threshold of 2 per minute per IP acco
 
 | Field | Value |
 |---|---|
-| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/import") or http.request.uri.path contains "/import")` |
+| Match on | `http.host eq "app.REPLACE_WITH_DOMAIN" and http.request.method eq "POST" and (starts_with(http.request.uri.path, "/import") or starts_with(http.request.uri.path, "/api/import") or http.request.uri.path contains "/import")` |
 | Counting dimension | IP address |
 | Threshold | 2 requests per minute |
 | Action | Block (HTTP 429) |
