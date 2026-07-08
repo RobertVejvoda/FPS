@@ -23,7 +23,7 @@ Until a target view is explicitly marked authoritative, the text architecture pa
 | Legacy provider examples | Show older Azure/AWS variants. | [Azure Application Architecture](/images/fairspot-application-arch-azure.png), [Azure Logical Architecture](/images/fairspot-logical-architecture-azure.png), [AWS Logical Architecture](/images/fairspot-logical-architecture-aws.png) | Keep as legacy source evidence only; refresh runtime views around NAS/Cloudflare and DigitalOcean. |
 | Software architecture and packages | Shows software packages and service boundaries. | [Software Architecture](/technology-layer/software-architecture), package and service images under `docs/images/` | Source evidence; service catalog and target diagrams are authoritative after refresh. |
 | BPMN process evidence | Shows older process flows. | [Draw BPMN](/process/draw.bpmn), [Subscribe Tenant BPMN](/process/subscribe-tenant.bpmn), [Generate Invoice BPMN](/process/generate-invoice.bpmn) | Draw can inform target process/workflow views; Billing invoice process is deferred. |
-| Model files | Contain editable model sources. | `docs/archi/fairspot.archimate`, `docs/fairspot.drawio`, `docs/fairspot-composition.drawio`, `docs/wireframes.drawio` | Source model files; update only when Robert refreshes or approves the target model. |
+| Model files | Contain editable model sources. | `docs/fairspot.drawio`, `docs/fairspot-composition.drawio`, `docs/wireframes.drawio` | Source model files; update only when Robert refreshes or approves the target model. |
 
 ## Target View Catalog
 
@@ -90,7 +90,7 @@ Customer-onboarding role-journey diagrams for the [Guided Tours](/tours/). Each 
 - Robert TODO: provide or approve the authoritative application cooperation diagram for the customer-ready target.
 - Robert TODO: update source diagrams where Billing/Payment are future scope, Customer durable storage is a gap, Reporting/PostgreSQL is obsolete, and DataHub owns read models.
 - Robert TODO: decide whether the current Exchange Map and Function Map should remain target diagrams or receive status annotations.
-- Robert TODO: provide/update ArchiMate diagrams after this repository migration stabilizes.
+- Robert TODO: provide/update target architecture diagrams in the dedicated architecture repository after the migration stabilizes.
 
 ## Rules
 
