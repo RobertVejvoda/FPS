@@ -16,6 +16,7 @@
 # Usage (local-container — optional local-docker.env overrides):
 #   ./tools/start-container-stack.sh
 #   ./tools/start-container-stack.sh --seed     # also seed demo data + local E2E
+#   FPS_GRAFANA_HOST_PORT=3002 ./tools/start-container-stack.sh --seed
 #
 # Usage (NAS/hosted — real credentials enforced via nas.env, Docker/Compose only):
 #   ./tools/start-container-stack.sh --nas
@@ -204,6 +205,32 @@ fi
 # no curl.
 
 _cid() { "${COMPOSE_CMD[@]}" ps -aq "$1" 2>/dev/null | head -1 || true; }
+
+read_env_value() {
+  local key="$1"
+  local file="$2"
+  [[ -f "$file" ]] || return 0
+  awk -F= -v key="$key" '
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    {
+      k = $1
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+      if (k == key) {
+        value = substr($0, index($0, "=") + 1)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        gsub(/^"|"$/, "", value)
+        print value
+        exit
+      }
+    }
+  ' "$file"
+}
+
+GRAFANA_HOST_PORT="${FPS_GRAFANA_HOST_PORT:-}"
+if [[ -z "$GRAFANA_HOST_PORT" ]]; then
+  GRAFANA_HOST_PORT="$(read_env_value FPS_GRAFANA_HOST_PORT "$ENV_FILE")"
+fi
+GRAFANA_HOST_PORT="${GRAFANA_HOST_PORT:-3001}"
 
 # Health if a healthcheck is defined, otherwise the raw container state.
 _health() {
@@ -831,7 +858,7 @@ if [[ -z "$PUBLIC_DOMAIN" ]]; then
   echo "Stack is running in $MODE-container mode."
   echo "  Gateway:   http://localhost:10000"
   echo "  Keycloak:  http://localhost:8180"
-  echo "  Grafana:   http://localhost:3000"
+  echo "  Grafana:   http://localhost:$GRAFANA_HOST_PORT"
   if [[ "$SEED" != "true" && "$MODE" != "nas" ]]; then
     echo
     echo "To seed demo data and run the local E2E smoke, re-run with --seed."

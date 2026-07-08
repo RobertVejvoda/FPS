@@ -175,4 +175,6 @@ fi
 
 echo
 echo "Deployment command completed."
-echo "Internal Grafana: http://<NAS-LAN-IP>:3000, or via operator-only Cloudflare Access if configured."
+GRAFANA_HOST_PORT="${FPS_GRAFANA_HOST_PORT:-$(read_env_value FPS_GRAFANA_HOST_PORT)}"
+GRAFANA_HOST_PORT="${GRAFANA_HOST_PORT:-3001}"
+echo "Internal Grafana: http://<NAS-LAN-IP>:$GRAFANA_HOST_PORT, or via operator-only Cloudflare Access if configured."

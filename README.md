@@ -87,7 +87,7 @@ Useful local URLs after the harness starts:
 | API gateway | Call the local employee/admin API through the same gateway shape used by web and mobile. | http://localhost:10000 |
 | Web app smoke path | Try the browser UI against the local gateway and seeded OIDC users. | `./tools/start-smoke-web.sh` then http://localhost:5200 |
 | Mobile Expo smoke path | Try the React Native/Expo employee flow with the local backend. | `./tools/start-smoke-mobile.sh` |
-| Grafana | See local service health, request rates, latency, alerts, and logs in one operations view. | http://localhost:3000 |
+| Grafana | See local service health, request rates, latency, alerts, and logs in one operations view. Host port defaults to `3001` so Docsify can use `3000`. | http://localhost:3001 |
 | Jaeger | Follow a request across services with distributed traces and `TraceId` correlation. | http://localhost:16686 |
 | Prometheus | Inspect raw metrics, scrape targets, and alert rule state. | http://localhost:9090 |
 

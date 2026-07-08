@@ -207,7 +207,7 @@ For operational traces and infrastructure stats:
 
 | Tool | URL | What it shows locally |
 | --- | --- | --- |
-| Grafana | `http://localhost:3000` | Local dashboard shell. Login with the local Docker Compose defaults from `code/infrastructure/readme.md`. Dashboard provisioning is still a follow-up gap. |
+| Grafana | `http://localhost:3001` | Local dashboard shell. Host port defaults to `3001` so Docsify can use `3000`; login with the local Docker Compose defaults from `code/infrastructure/readme.md`. Dashboard provisioning is still a follow-up gap. |
 | Prometheus | `http://localhost:9090` | Local scrape targets from `code/infrastructure/prometheus/prometheus.yaml`. Current coverage is infrastructure-oriented, not full application metrics. |
 | Zipkin | `http://localhost:19411` | Traces only when Dapr tracing config is enabled. The default smoke `dapr.yaml` intentionally omits tracing config to avoid the Docker-network-only Zipkin endpoint. |
 | Jaeger | `http://localhost:16686` | Local tracing UI container. FairSpot services do not yet export OpenTelemetry traces to it by default. |
