@@ -154,6 +154,41 @@ Rules:
 
 This mechanism supports practical workplace patterns: teams can normally sit or park near their default area, while scarce capacity remains usable across the company when the preferred area is full.
 
+## Seats Allocation Extension
+
+Seats uses the same FairSpot scarce-capacity model as Parking: requests enter a scheduled fair Draw, allocation is auditable, and demand greater than capacity creates a waitlist. Seats must not be implemented as first-come-first-served.
+
+Seats adds a team-owned-area rule:
+
+1. Resolve active seat map, areas, seats, team ownership, date/time availability, and blocks.
+2. Exclude invalid, duplicate, late, ineligible, or blocked-capacity requests.
+3. For each team-owned area, allocate eligible requests from users who belong to the owning team first.
+4. If capacity remains in that area, allocate eligible requests from other teams.
+5. Apply ordered specific-seat preferences and alternate-seat preferences inside the team-priority model.
+6. Fall back to any allowed compatible seat when policy and the request permit fallback.
+
+Rules:
+
+- team membership comes from Profile/HR roster facts;
+- area ownership uses the same team vocabulary as Profile/HR roster facts;
+- no reserved percentage is needed: owning team first, leftovers open to others;
+- outside-team preferences for a team-owned area are allowed, but considered only after the owning team's eligible demand has had first priority;
+- specific-seat preference is a placement preference, not a guarantee;
+- HR/Admin blocked seats are excluded from allocation for the blocked date or range;
+- cancellation reallocation uses the same Seats team-priority and preference rules;
+- waitlist ordering must follow the same fair/team-priority model rather than simple timestamp order;
+- seat usage confirmation and no-show penalties are tenant-configurable and default off.
+
+Audit records for Seats allocation must capture:
+
+- requested seat preference and alternate preferences;
+- requested area/team context;
+- requestor team at allocation time;
+- assigned seat and area;
+- whether team-priority, alternate preference, or fallback was used;
+- blocked-seat exclusions that affected capacity;
+- reallocation source when a cancellation created the opportunity.
+
 ## Randomness and Reproducibility
 
 Every Draw must use a recorded random seed.

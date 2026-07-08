@@ -2,6 +2,8 @@
 
 This page defines the employee-facing My Spots experience for web and mobile. It is the source-of-truth UX spec for `UX007`.
 
+The durable multi-module UX direction is defined in [Module Reservations UX](./module-reservations-ux). `UX007` remains the parking-led cleanup baseline, but future work should converge toward one combined **My Reservations** page and one unified **Request** page instead of adding separate Parking and Seats navigation trees.
+
 The design goal is simple:
 
 > Do I have a spot when I need one, and if not, what can I do?
@@ -23,17 +25,20 @@ Use business language on employee screens.
 
 Never show raw user IDs, tenant IDs, GUIDs, API URLs, object-storage paths, or technical claims on employee screens. Admin and operations documentation may still use tenant terminology where it is technically precise.
 
-The main employee area is **My Spots**. It is intentionally generic so the same product model can support parking, seats, sport courts, desks, lockers, chargers, or other scarce shared capacity.
+The current employee area is **My Spots**. The target employee area is **My Reservations**: a date-grouped view across tenant-enabled modules such as Parking and Seats. Module names should appear as badges, filters, and module-specific detail sections, not as duplicated full page structures.
 
 ## Information Architecture
 
 ```text
 Employee
-+-- My Spots
-|   +-- Today / tomorrow focus
-|   +-- Quick request
-|   +-- My requests table
-|   +-- Request detail
++-- My Reservations
+|   +-- Date-grouped reservations and requests
+|   +-- Module badges and filters
+|   +-- Detail page or drawer
++-- Request
+|   +-- Quick date/time selection
+|   +-- Enabled module choices
+|   +-- One submit action
 +-- My Profile
 |   +-- Preferences
 |   +-- My Vehicles
@@ -49,15 +54,19 @@ HR / Admin additions
 +-- Audit
 ```
 
-`My Spots` should be the default employee landing page after login. Role-specific admin, HR, reporting, and audit pages should only appear for users who can use them.
+`My Reservations` should be the default employee landing page after login once the module-aware UX is implemented. Role-specific admin, HR, reporting, and audit pages should only appear for users who can use them.
 
-## Default My Spots Screen
+Employee module visibility is tenant-configuration-driven. User eligibility affects the action state and explanation, not whether a tenant-enabled module appears.
 
-The default page is one practical view with three parts:
+## Default My Spots / My Reservations Screen
+
+The default page is one practical view. In the parking-led baseline it contains three parts:
 
 1. Four day focus cards: today, tomorrow, and the next two working/requestable days.
 2. A compact request table for upcoming and past records with results.
 3. Secondary date selection only for uncommon dates outside the four focus cards.
+
+In the target module-aware UX, the same page becomes date-grouped **My Reservations** and shows all enabled modules together: pending requests, allocated reservations, waitlisted requests, cancelled items, and relevant historical states.
 
 ```text
 [My Spots]
