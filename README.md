@@ -44,6 +44,9 @@ FairSpot is still a product under active development. The current focus is demo 
 
 There are two ways to run FairSpot locally. Pick the one that matches your goal.
 
+Run one local mode at a time. The container stack and the host developer harness
+both publish the same FairSpot service ports such as Identity on `5192`.
+
 ### Release 1 / evaluation path — containers
 
 The Release 1 hosting profile is fully containerized: a technical evaluator or operator needs only **Docker and the Docker Compose v2 plugin** — **no host .NET SDK or Dapr CLI**. From the repository root:
@@ -71,6 +74,7 @@ For day-to-day development, the host harness runs services directly and allows a
 ```
 
 > `start-local-harness.sh` is the **developer/local-only** path. For the Release 1 evaluation experience, use the containerized path above.
+> If the container stack is already running, stop it with `./tools/start-container-stack.sh --down` before starting this harness.
 
 In a second shell:
 
