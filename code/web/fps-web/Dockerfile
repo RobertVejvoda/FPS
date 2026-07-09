@@ -3,8 +3,7 @@
 # Multi-stage build for the FairSpot web app (Vite + React SPA), served by nginx.
 #
 # The build context MUST be the repo `code/` directory, because the web app
-# depends on the @robertvejvoda/fairspot-api-client TypeScript source via `file:../../clients/typescript`
-# and a Vite alias to `../../clients/typescript/src`.
+# depends on local client packages via `file:../../clients/*` and Vite aliases.
 #
 # Example:
 #   docker build -f code/web/fps-web/Dockerfile -t fairspot-web:local code
@@ -17,9 +16,10 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# api-client source is referenced by the web app's file: dependency and Vite alias.
-# Copy it first so `npm ci` can resolve the local dependency.
+# Local client packages are referenced by the web app's file: dependencies and
+# Vite aliases. Copy them first so `npm ci` can resolve the local dependencies.
 COPY clients/typescript ./clients/typescript
+COPY clients/ui ./clients/ui
 
 # Install web dependencies against the lockfile (cache-friendly: manifests first).
 COPY web/fps-web/package.json web/fps-web/package-lock.json ./web/fps-web/
