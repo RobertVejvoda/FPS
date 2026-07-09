@@ -28,6 +28,15 @@ The local run path is split into four lifecycles:
 - web client: Vite on `http://localhost:5200`;
 - mobile client: Expo in LAN, tunnel, or localhost mode.
 
+Run one backend mode at a time. The containerized `start-container-stack.sh`
+path and the host `start-local-harness.sh` path publish the same FairSpot service
+ports, including Identity on `5192`. Stop the container stack before starting the
+host harness:
+
+```sh
+./tools/start-container-stack.sh --down
+```
+
 If Docker infrastructure is already running and you want a one-shot smoke run for an app surface, use:
 
 ```sh
@@ -207,7 +216,7 @@ For operational traces and infrastructure stats:
 
 | Tool | URL | What it shows locally |
 | --- | --- | --- |
-| Grafana | `http://localhost:3000` | Local dashboard shell. Login with the local Docker Compose defaults from `code/infrastructure/readme.md`. Dashboard provisioning is still a follow-up gap. |
+| Grafana | `http://localhost:3001` | Local dashboard shell. Host port defaults to `3001` so Docsify can use `3000`; login with the local Docker Compose defaults from `code/infrastructure/readme.md`. Dashboard provisioning is still a follow-up gap. |
 | Prometheus | `http://localhost:9090` | Local scrape targets from `code/infrastructure/prometheus/prometheus.yaml`. Current coverage is infrastructure-oriented, not full application metrics. |
 | Zipkin | `http://localhost:19411` | Traces only when Dapr tracing config is enabled. The default smoke `dapr.yaml` intentionally omits tracing config to avoid the Docker-network-only Zipkin endpoint. |
 | Jaeger | `http://localhost:16686` | Local tracing UI container. FairSpot services do not yet export OpenTelemetry traces to it by default. |
@@ -570,7 +579,8 @@ Employee tokens must receive `403` for this endpoint. Employees see the next Dra
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | Script exits with "Wrong .NET SDK" | System dotnet resolves before `$HOME/.dotnet` | Prepend `$HOME/.dotnet` to `PATH` and retry |
-| Script exits with "port ... is already in use" | Stale FairSpot service or Dapr sidecar process is still bound from a previous run, or a partial backend harness is running | Run `./tools/stop-local-harness.sh --services-only`, then retry |
+| Script exits with "Docker container using this port" | The container stack is already running on the same FairSpot service ports | Run one local mode at a time. To use the host harness, run `./tools/start-container-stack.sh --down`, then retry |
+| Script exits with "port ... is already in use" without a Docker container owner | Stale FairSpot service or Dapr sidecar process is still bound from a previous run, or a partial backend harness is running | Run `./tools/stop-local-harness.sh --services-only`, then retry |
 | Script exits non-zero with service port error | Dapr sidecar or service startup slow or crashed | Check `logs/local-harness/dapr-run.log`; run `./tools/stop-local-harness.sh` then retry |
 | Seed step fails with Booking `401` | Booking rejected the token; most often a stale service process was running with the wrong auth environment | Run `./tools/stop-local-harness.sh --services-only`, then start the harness again |
 | Seed step fails (script exits non-zero) | Profile service not yet ready, Keycloak realm missing, or service validation rejected the seed payload | Services are still running — fix the cause and re-run `./tools/dev-seed.sh`, or run `./tools/stop-local-harness.sh` and restart |

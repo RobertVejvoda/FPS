@@ -44,6 +44,9 @@ FairSpot is still a product under active development. The current focus is demo 
 
 There are two ways to run FairSpot locally. Pick the one that matches your goal.
 
+Run one local mode at a time. The container stack and the host developer harness
+both publish the same FairSpot service ports such as Identity on `5192`.
+
 ### Release 1 / evaluation path — containers
 
 The Release 1 hosting profile is fully containerized: a technical evaluator or operator needs only **Docker and the Docker Compose v2 plugin** — **no host .NET SDK or Dapr CLI**. From the repository root:
@@ -71,6 +74,7 @@ For day-to-day development, the host harness runs services directly and allows a
 ```
 
 > `start-local-harness.sh` is the **developer/local-only** path. For the Release 1 evaluation experience, use the containerized path above.
+> If the container stack is already running, stop it with `./tools/start-container-stack.sh --down` before starting this harness.
 
 In a second shell:
 
@@ -87,7 +91,7 @@ Useful local URLs after the harness starts:
 | API gateway | Call the local employee/admin API through the same gateway shape used by web and mobile. | http://localhost:10000 |
 | Web app smoke path | Try the browser UI against the local gateway and seeded OIDC users. | `./tools/start-smoke-web.sh` then http://localhost:5200 |
 | Mobile Expo smoke path | Try the React Native/Expo employee flow with the local backend. | `./tools/start-smoke-mobile.sh` |
-| Grafana | See local service health, request rates, latency, alerts, and logs in one operations view. | http://localhost:3000 |
+| Grafana | See local service health, request rates, latency, alerts, and logs in one operations view. Host port defaults to `3001` so Docsify can use `3000`. | http://localhost:3001 |
 | Jaeger | Follow a request across services with distributed traces and `TraceId` correlation. | http://localhost:16686 |
 | Prometheus | Inspect raw metrics, scrape targets, and alert rule state. | http://localhost:9090 |
 

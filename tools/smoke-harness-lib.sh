@@ -44,8 +44,39 @@ smoke_harness_ready() {
   return 0
 }
 
+docker_publishes_service_port() {
+  service_pattern="$1"
+  port="$2"
+
+  command -v docker >/dev/null 2>&1 || return 1
+
+  docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null \
+    | awk -v service_pattern="$service_pattern" -v port="$port" '
+        $1 ~ service_pattern && $0 ~ ":" port "->" port "/tcp" { found = 1 }
+        END { exit found ? 0 : 1 }
+      '
+}
+
+container_backend_present() {
+  docker_publishes_service_port "envoy-proxy" "10000" \
+    || docker_publishes_service_port "fairspot-identity" "5192"
+}
+
 ensure_smoke_harness() {
   stopped_stale_harness=false
+
+  if container_backend_present; then
+    if smoke_harness_ready; then
+      smoke_log "Reusing running container backend."
+      STARTED_SMOKE_HARNESS=false
+      return 0
+    fi
+
+    smoke_log "Container backend is running but not all smoke ports are ready."
+    smoke_log "Finish starting it with: ./tools/start-container-stack.sh --seed"
+    smoke_log "Or stop it before using the host harness: ./tools/start-container-stack.sh --down"
+    return 1
+  fi
 
   if smoke_harness_ready; then
     if smoke_harness_revision_matches; then

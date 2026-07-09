@@ -4,11 +4,23 @@ OBS002 adds Prometheus metrics to all FPS .NET services and provisions a Grafana
 
 ## Dashboard URL
 
-**http://localhost:3000**
+**http://localhost:3001**
 
 Default credentials: `admin` / `admin` (local only — change immediately in any shared environment).
 
 The **FairSpot Local Operations** dashboard auto-provisions on first Grafana start.
+
+The local host port defaults to `3001` so Docsify can use `3000`. Grafana still
+listens on `3000` inside the Docker network. If host port `3001` is already in
+use, run the local stack with a different host-side Grafana port:
+
+```bash
+FPS_GRAFANA_HOST_PORT=3002 ./tools/start-container-stack.sh --seed
+```
+
+For repeatable local use, put `FPS_GRAFANA_HOST_PORT=3002` in the ignored
+`code/infrastructure/local-docker.env` file and open
+`http://localhost:3002`.
 
 ---
 

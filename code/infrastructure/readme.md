@@ -146,7 +146,15 @@ See `dapr/README.md` for the full component contract, app scoping rules, and pro
    Open your browser and navigate to `http://localhost:9001`. Use the credentials `minioadmin/minioadmin` to log in.
 
 5. **Access Grafana**:
-   Open your browser and navigate to `http://localhost:3000`. Use the credentials `admin/admin` to log in.
+   Open your browser and navigate to `http://localhost:3001`. Use the credentials `admin/admin` to log in.
+   The local host port defaults to `3001` so Docsify can use `3000`; Grafana still listens on `3000` inside the Docker network.
+   If port `3001` is already in use, set a local override before starting the stack:
+
+   ```bash
+   FPS_GRAFANA_HOST_PORT=3002 ./tools/start-container-stack.sh --seed
+   ```
+
+   For a repeatable local override, add `FPS_GRAFANA_HOST_PORT=3002` to the ignored `code/infrastructure/local-docker.env` file.
 
 6. **Access Zipkin**:
    Open your browser and navigate to `http://localhost:19411`. The container still listens on `9411` inside the Docker network, but the host port is moved to `19411` so it does not collide with Dapr's default local Zipkin on `9411`.

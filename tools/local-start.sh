@@ -15,6 +15,7 @@ LOG_DIR="$REPO_ROOT/logs/local-runtime"
 PID_FILE="$LOG_DIR/pids"
 WEB_DIR="$REPO_ROOT/code/web/fps-web"
 MOBILE_DIR="$REPO_ROOT/code/mobile/fps-mobile"
+LOCAL_ENV_FILE="$REPO_ROOT/code/infrastructure/local-docker.env"
 WEB_HOST="${FPS_WEB_HOST:-127.0.0.1}"
 EXPO_MODE="${EXPO_MODE:-lan}"
 
@@ -44,6 +45,32 @@ detect_lan_ip() {
   return 1
 }
 
+read_env_value() {
+  key="$1"
+  file="$2"
+  [ -f "$file" ] || return 0
+  awk -F= -v key="$key" '
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    {
+      k = $1
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+      if (k == key) {
+        value = substr($0, index($0, "=") + 1)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        gsub(/^"|"$/, "", value)
+        print value
+        exit
+      }
+    }
+  ' "$file"
+}
+
+GRAFANA_HOST_PORT="${FPS_GRAFANA_HOST_PORT:-}"
+if [ -z "$GRAFANA_HOST_PORT" ]; then
+  GRAFANA_HOST_PORT="$(read_env_value FPS_GRAFANA_HOST_PORT "$LOCAL_ENV_FILE")"
+fi
+GRAFANA_HOST_PORT="${GRAFANA_HOST_PORT:-3001}"
+
 cd "$REPO_ROOT"
 
 printf '== FairSpot local scenario ==\n'
@@ -51,7 +78,7 @@ printf 'Mode: local Docker only; Cloudflare is not used.\n\n'
 
 "$REPO_ROOT/tools/start-container-stack.sh" --seed
 
-sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\")"'
+sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\"); const fs = require(\"fs\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-api-client/package.json\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-ui/package.json\")"'
 start_background "web" "$LOG_DIR/web.log" \
   "$WEB_DIR/node_modules/.bin/vite" --host "$WEB_HOST"
 
@@ -77,7 +104,7 @@ printf '\n== FairSpot local scenario ready ==\n'
 printf 'Web:      http://localhost:5200\n'
 printf 'Gateway:  http://localhost:10000\n'
 printf 'Keycloak: http://localhost:8180\n'
-printf 'Grafana:  http://localhost:3000\n'
+printf 'Grafana:  http://localhost:%s\n' "$GRAFANA_HOST_PORT"
 printf 'Mobile:   Expo started in %s mode. See logs/local-runtime/mobile.log for QR/output.\n' "$EXPO_MODE"
 printf '\nDemo users (Green Logistics): gl-employee1, gl-hr-admin, gl-tenant-admin, gl-auditor, gl-report-viewer\n'
 printf 'Password:   %s\n' "${FPS_DEV_PASSWORD:-Dev1234!}"

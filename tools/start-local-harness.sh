@@ -78,10 +78,29 @@ wait_port() {
   return 1
 }
 
+docker_port_owner() {
+  port="$1"
+  command -v docker >/dev/null 2>&1 || return 0
+  docker ps --format '{{.Names}}	{{.Ports}}' 2>/dev/null | awk -v port="$port" '
+    index($0, ":" port "->") > 0 { print; exit }
+  '
+}
+
 ensure_port_free() {
   port="$1"
   label="$2"
   host="${3:-localhost}"
+  owner="$(docker_port_owner "$port" || true)"
+  if [ -n "$owner" ]; then
+    printf '[harness] ERROR: %s port %s is already owned by a Docker container\n' "$label" "$port" >&2
+    printf '[harness]   Docker container using this port: %s\n' "$owner" >&2
+    printf '[harness]   The host harness and container stack use the same service ports; run one local mode at a time.\n' >&2
+    printf '[harness]   To use the host harness, stop the container stack first:\n' >&2
+    printf '[harness]     ./tools/start-container-stack.sh --down\n' >&2
+    printf '[harness]   Or keep using the container stack and do not start ./tools/start-local-harness.sh.\n' >&2
+    exit 1
+  fi
+
   if nc -z "$host" "$port" 2>/dev/null; then
     printf '[harness] ERROR: %s port %s is already in use on %s\n' "$label" "$port" "$host" >&2
     printf '[harness]   Run: ./tools/stop-local-harness.sh --services-only\n' >&2
