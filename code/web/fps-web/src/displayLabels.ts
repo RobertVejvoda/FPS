@@ -2,6 +2,9 @@ const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
 
 const LOCATION_LABELS: Record<string, string> = {
   Prague: 'Prague',
+  // UX009 review (#790) — employee screens must not show raw location ids.
+  'GL-HQ': 'Headquarters',
+  'GL-TEAMS': 'Team areas',
 };
 
 const FACILITY_LABELS: Record<string, string> = {

@@ -558,7 +558,7 @@ export default function NewBookingRoute() {
             {hasSeats ? (
               <ToggleRow
                 label="Team seat"
-                hint="A shared team seat for the same date and time, allocated by the same fair draw."
+                hint="Requests any allowed team-area seat for the same date and time — no specific seat is chosen here yet. Allocation follows your company's seat-area and team-priority rules; preferences are inputs, not guarantees."
                 value={wantSeat}
                 onValueChange={(v) => { setWantSeat(v); setModuleError(null); }}
               />

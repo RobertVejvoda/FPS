@@ -563,7 +563,10 @@ export function NewBookingPage() {
                   </label>
                   {wantSeat && (
                     <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
-                      A shared team seat for the selected date and time. Seats are allocated by the same fair draw as parking; when a day is popular a small waitlist forms.
+                      Requests any allowed team-area seat for the selected date and time — no specific
+                      seat is chosen here yet. Allocation uses the same fair draw as parking and follows
+                      your company’s seat-area and team-priority rules; seat preferences are inputs to
+                      allocation, not guarantees.
                     </p>
                   )}
                 </div>
