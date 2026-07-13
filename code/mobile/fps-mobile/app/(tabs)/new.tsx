@@ -17,7 +17,7 @@ import { useTenantModules } from '@/api/tenantModules';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
 import { formatBookingRef, formatCutOffAt, humanizeRejectionReason } from '@/displayLabels';
-import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END, DEFAULT_SEATS_LOCATION } from '@/demoDefaults';
+import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_SEATS_LOCATION } from '@/demoDefaults';
 import { colors, radius, spacing } from '@/theme';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
@@ -133,14 +133,21 @@ function initialForm(): FormState {
   };
 }
 
-function validate(form: FormState): FieldErrors {
+// UX009 (#782) — date/time are shared inputs before module selection, so the time
+// check runs for every selected module; only vehicle facts are parking-specific.
+function validateTime(form: FormState): FieldErrors {
   const errors: FieldErrors = {};
-  if (!form.licensePlate.trim()) errors.licensePlate = 'Select a vehicle or enter license plate';
   const arrivalMins = form.arrivalHour * 60 + form.arrivalMinute;
   const departureMins = form.departureHour * 60 + form.departureMinute;
   if (departureMins <= arrivalMins) {
     errors.plannedDeparture = 'Departure must be after arrival';
   }
+  return errors;
+}
+
+function validateParking(form: FormState): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!form.licensePlate.trim()) errors.licensePlate = 'Select a vehicle or enter license plate';
   return errors;
 }
 
@@ -172,15 +179,22 @@ export default function NewBookingRoute() {
     setForm(prev => ({ ...prev, dateOffset: parsed }));
   }, [offsetParam]);
 
+  // UX009 review (#790) — the request-window checks must follow the time range the
+  // user actually selected (preset or custom), not the fixed whole-day default,
+  // so Morning/Afternoon/custom windows gate correctly.
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const selectedSlotStart = `${pad2(form.arrivalHour)}:${pad2(form.arrivalMinute)}:00`;
+  const selectedSlotEnd = `${pad2(form.departureHour)}:${pad2(form.departureMinute)}:00`;
+
   useEffect(() => {
     let cancelled = false;
     setDrawStatus(null);
     const date = dateStrFromOffset(form.dateOffset);
-    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date, locationId: DEMO_LOCATION_ID, timeSlotStart: DEFAULT_TIME_SLOT_START, timeSlotEnd: DEFAULT_TIME_SLOT_END }).then((res) => {
+    fetchDrawStatus({ apiBaseUrl, bearerToken }, { date, locationId: DEMO_LOCATION_ID, timeSlotStart: selectedSlotStart, timeSlotEnd: selectedSlotEnd }).then((res) => {
       if (!cancelled) setDrawStatus(res);
     });
     return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken, form.dateOffset]);
+  }, [apiBaseUrl, bearerToken, form.dateOffset, selectedSlotStart, selectedSlotEnd]);
 
   useEffect(() => {
     let cancelled = false;
@@ -188,14 +202,14 @@ export default function NewBookingRoute() {
       const date = dateStrFromOffset(offset);
       const status = await fetchDrawStatus(
         { apiBaseUrl, bearerToken },
-        { date, locationId: DEMO_LOCATION_ID, timeSlotStart: DEFAULT_TIME_SLOT_START, timeSlotEnd: DEFAULT_TIME_SLOT_END },
+        { date, locationId: DEMO_LOCATION_ID, timeSlotStart: selectedSlotStart, timeSlotEnd: selectedSlotEnd },
       );
       return [offset, status] as const;
     })).then((entries) => {
       if (!cancelled) setDateStatuses(Object.fromEntries(entries));
     });
     return () => { cancelled = true; };
-  }, [apiBaseUrl, bearerToken]);
+  }, [apiBaseUrl, bearerToken, selectedSlotStart, selectedSlotEnd]);
 
   useEffect(() => {
     if (!hasSeats) return;
@@ -280,12 +294,12 @@ export default function NewBookingRoute() {
       setModuleError('Select at least one request to submit.');
       return;
     }
+    const errors: FieldErrors = { ...validateTime(form), ...(wantParking ? validateParking(form) : {}) };
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
     if (wantParking) {
-      const errors = validate(form);
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
-      }
       if (drawStatus?.kind === 'ok' && !drawStatus.data.canRequest) {
         setSubmitStatus({
           kind: 'done',
@@ -419,7 +433,8 @@ export default function NewBookingRoute() {
                 {dates.map(({ offset, label }) => (
                   (() => {
                     const status = dateStatuses[offset];
-                    const disabled = status?.kind === 'ok' && !status.data.canRequest;
+                    // Parking window state must not block seat-only selection.
+                    const disabled = wantParking && status?.kind === 'ok' && !status.data.canRequest;
                     return (
                       <Pressable
                         key={offset}
@@ -447,8 +462,8 @@ export default function NewBookingRoute() {
               </ScrollView>
             </FieldRow>
 
-            {/* Schedule banner (DRAW005) */}
-            {drawStatus?.kind === 'ok' && (
+            {/* Schedule banner (DRAW005) — parking draw state, shown only while Parking is selected */}
+            {wantParking && drawStatus?.kind === 'ok' && (
               <View style={[styles.scheduleBanner,
                 drawStatus.data.requestWindowStatus === 'open' ? styles.scheduleBannerOpen : styles.scheduleBannerClosed]}>
                 <Text style={styles.scheduleText}>{drawStatus.data.safeMessage}</Text>

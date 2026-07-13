@@ -367,7 +367,8 @@ export function NewBookingPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {quickDates.map((option) => {
                 const status = dateStatuses[option.date];
-                const closed = status?.kind === 'ok' && !status.canRequest;
+                // Parking window state must not block seat-only selection.
+                const closed = wantParking && status?.kind === 'ok' && !status.canRequest;
                 const selected = selectedDate === option.date;
                 return (
                   <button
