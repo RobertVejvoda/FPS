@@ -2,45 +2,62 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
-import { displaySlot, formatCutOffAt } from '../displayLabels';
+import { displayResourceNoun, displaySlot, displayNextDrawRun, formatCutOffAt, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '@robertvejvoda/fairspot-ui';
 import { NotificationBanner } from '../components/NotificationBanner';
-import { nextWorkdayOptions } from '../dateOptions';
+import { ModuleBadge } from '../components/ModuleBadge';
+import { addCalendarDays, fromLocalDateString, labelRelativeWorkday, labelWeekdayDate, nextWorkdayOptions, toLocalDateString } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
-import { ModuleSwitch } from '../tenant/ModuleSwitch';
+import { useTenantModules } from '../tenant/TenantModulesContext';
 
 const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
 const WORKDAY_END = '18:00:00';
+// How many past records the landing list mixes in under "Earlier" before
+// pointing at the full history page.
+const RECENT_WINDOW = 5;
 
 type LoadState =
   | { kind: 'loading' }
-  | { kind: 'ok'; items: BookingListItem[] }
+  | { kind: 'ok'; items: BookingListItem[]; totalCount: number }
   | { kind: 'error'; message: string };
+
+type ModuleFilter = 'all' | 'Parking' | 'Seats';
 
 export function BookingsPage() {
   const { apiBaseUrl, bearerToken, clear } = useAuth();
   const navigate = useNavigate();
-  const [loadState, setLoadState] = useState<LoadState>({ kind: 'loading' });
+  const { hasSeats, multiModule } = useTenantModules();
+  const [upcoming, setUpcoming] = useState<LoadState>({ kind: 'loading' });
+  const [recent, setRecent] = useState<LoadState>({ kind: 'loading' });
+  const [moduleFilter, setModuleFilter] = useState<ModuleFilter>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
   const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([]);
   const [drawStatusesLoading, setDrawStatusesLoading] = useState(true);
   const { dateBase, simulationActive } = useTenantDateContext();
   const days = useMemo(() => nextWorkdayOptions(dateBase, 4, { relativeLabels: !simulationActive }), [dateBase, simulationActive]);
+  const todayStr = useMemo(() => toLocalDateString(dateBase), [dateBase]);
+  const yesterdayStr = useMemo(() => toLocalDateString(addCalendarDays(fromLocalDateString(todayStr), -1)), [todayStr]);
 
-  const drawLocationId = loadState.kind === 'ok'
-    ? loadState.items.find(i => i.locationId)?.locationId ?? FALLBACK_LOCATION_ID
-    : FALLBACK_LOCATION_ID;
+  const upcomingItems = upcoming.kind === 'ok' ? upcoming.items : [];
+
+  const drawLocationId = upcomingItems.find(i => i.locationId && !isSeatsItem(i))?.locationId ?? FALLBACK_LOCATION_ID;
 
   const load = useCallback(() => {
-    setLoadState({ kind: 'loading' });
-    fetchBookings({ apiBaseUrl, bearerToken }).then((result) => {
+    setUpcoming({ kind: 'loading' });
+    setRecent({ kind: 'loading' });
+    fetchBookings({ apiBaseUrl, bearerToken }, { from: todayStr }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-      if (result.kind === 'ok') setLoadState({ kind: 'ok', items: result.items });
-      else setLoadState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load your spots.' });
+      if (result.kind === 'ok') setUpcoming({ kind: 'ok', items: result.items, totalCount: result.totalCount });
+      else setUpcoming({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load your reservations.' });
     });
-  }, [apiBaseUrl, bearerToken, clear, navigate]);
+    fetchBookings({ apiBaseUrl, bearerToken }, { to: yesterdayStr }).then((result) => {
+      if (result.kind === 'unauthenticated') return; // the upcoming fetch already handles the redirect
+      if (result.kind === 'ok') setRecent({ kind: 'ok', items: result.items, totalCount: result.totalCount });
+      else setRecent({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load recent requests.' });
+    });
+  }, [apiBaseUrl, bearerToken, clear, navigate, todayStr, yesterdayStr]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -69,7 +86,7 @@ export function BookingsPage() {
   }
 
   async function handleCancel(requestId: string) {
-    if (!confirm('Cancel this spot request?')) return;
+    if (!confirm('Cancel this request?')) return;
     setBusyId(requestId);
     const result = await cancelBooking({ apiBaseUrl, bearerToken }, requestId);
     setBusyId(null);
@@ -89,13 +106,50 @@ export function BookingsPage() {
     } else showToast(false, 'message' in result ? result.message : 'Could not confirm usage.');
   }
 
-  const items = loadState.kind === 'ok' ? loadState.items : [];
+  const recentItems = recent.kind === 'ok' ? recent.items.slice(0, RECENT_WINDOW) : [];
+
+  // Module filter chips appear once the tenant runs more than one module or the
+  // employee's own records already span modules — never for a parking-only tenant.
+  const dataSpansModules = useMemo(() => {
+    const all = [...upcomingItems, ...recentItems];
+    return all.some(isSeatsItem) && all.some(i => !isSeatsItem(i));
+  }, [upcomingItems, recentItems]);
+  const showModuleFilter = multiModule || dataSpansModules;
+
+  const matchesFilter = useCallback((item: BookingListItem) => {
+    if (moduleFilter === 'all') return true;
+    return moduleFilter === 'Seats' ? isSeatsItem(item) : !isSeatsItem(item);
+  }, [moduleFilter]);
+
+  // Date-first grouping: upcoming dates ascending (today first), then one
+  // collapsed "Earlier" group with the most recent past records.
+  const dateGroups = useMemo(() => {
+    const byDate = new Map<string, BookingListItem[]>();
+    for (const item of upcomingItems.filter(matchesFilter)) {
+      const bucket = byDate.get(item.requestedDate) ?? [];
+      bucket.push(item);
+      byDate.set(item.requestedDate, bucket);
+    }
+    return [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, items]) => ({
+        date,
+        label: simulationActive
+          ? labelWeekdayDate(fromLocalDateString(date))
+          : labelRelativeWorkday(fromLocalDateString(todayStr), fromLocalDateString(date)),
+        items: items.sort((a, b) => a.timeSlotStart.localeCompare(b.timeSlotStart)),
+      }));
+  }, [upcomingItems, matchesFilter, simulationActive, todayStr]);
+
+  const earlierItems = recentItems.filter(matchesFilter);
+
+  const totalCount = (upcoming.kind === 'ok' ? upcoming.totalCount : 0) + (recent.kind === 'ok' ? recent.totalCount : 0);
+  const shownCount = dateGroups.reduce((n, g) => n + g.items.length, 0) + earlierItems.length;
 
   return (
     <div className="page-stack">
-      <ModuleSwitch active="parking" />
       <section className="page-hero">
-        <h2>My Spots</h2>
+        <h2>My Reservations</h2>
       </section>
 
       <NotificationBanner />
@@ -106,53 +160,170 @@ export function BookingsPage() {
         </div>
       )}
 
-      {loadState.kind === 'error' && (
+      {upcoming.kind === 'error' && (
         <div className="panel">
-          <p style={{ color: '#b91c1c', margin: '0 0 8px' }}>{loadState.message}</p>
+          <p style={{ color: '#b91c1c', margin: '0 0 8px' }}>{upcoming.message}</p>
           <button onClick={load} className="btn-primary">Retry</button>
         </div>
       )}
 
-      {/* Three-day tiles */}
+      {/* Day focus cards — parking is the fully wired request module; a seat
+          reservation for the day renders as a compact badged row inside the card. */}
       <div className="day-tiles-grid">
         {days.map((day, i) => {
           const date = day.date;
-          const booking = items.find(b => b.requestedDate === date) ?? null;
+          const booking = upcomingItems.find(b => b.requestedDate === date && !isSeatsItem(b)) ?? null;
+          const seatBooking = upcomingItems.find(b => b.requestedDate === date && isSeatsItem(b)) ?? null;
           return (
             <DayTile
               key={day.date}
               label={day.label}
               date={date}
               booking={booking}
+              seatBooking={seatBooking}
               drawStatus={drawStatuses[i] ?? null}
-              drawLoading={loadState.kind === 'loading' || drawStatusesLoading}
+              drawLoading={upcoming.kind === 'loading' || drawStatusesLoading}
               busy={busyId === booking?.requestId}
               onCancel={booking?.nextAction === 'cancel' ? () => handleCancel(booking.requestId) : undefined}
               onConfirm={booking?.nextAction === 'confirmUsage' ? () => handleConfirm(booking.requestId) : undefined}
               onRequest={() => navigate(`/bookings/new?date=${date}`)}
               onDetails={booking ? () => navigate(`/bookings/${booking.requestId}`, { state: booking }) : undefined}
+              onSeatDetails={seatBooking ? () => navigate(`/bookings/${seatBooking.requestId}`, { state: seatBooking }) : undefined}
             />
           );
         })}
       </div>
 
       {/* Secondary navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-        <button onClick={() => navigate('/bookings/new')} style={linkBtn}>
-          Request for another date →
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 13 }}>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <button onClick={() => navigate('/bookings/new')} style={linkBtn}>
+            Request for another date →
+          </button>
+          {hasSeats && (
+            <button onClick={() => navigate('/seats')} style={linkBtn}>
+              Request a seat →
+            </button>
+          )}
+        </div>
         <button onClick={() => navigate('/bookings/history')} style={linkBtn}>
           History &amp; all requests →
         </button>
       </div>
+
+      {/* Date-grouped reservation and request list across enabled modules. */}
+      <section className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>My requests</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {showModuleFilter && (
+              <div className="module-filter" role="group" aria-label="Filter by module">
+                {(['all', 'Parking', 'Seats'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setModuleFilter(f)}
+                    className={`module-filter-chip${moduleFilter === f ? ' module-filter-chip-active' : ''}`}
+                    aria-pressed={moduleFilter === f}
+                  >
+                    {f === 'all' ? 'All' : f === 'Seats' ? 'Seats' : 'Parking'}
+                  </button>
+                ))}
+              </div>
+            )}
+            {totalCount > 0 && (
+              <span style={{ fontSize: 12, color: '#6b7280' }}>Showing {shownCount} of {totalCount} records</span>
+            )}
+          </div>
+        </div>
+
+        {upcoming.kind === 'loading' && <p style={{ color: '#6b7280', margin: 0, fontSize: 13 }}>Loading…</p>}
+        {upcoming.kind === 'ok' && dateGroups.length === 0 && earlierItems.length === 0 && (
+          <p style={{ color: '#6b7280', margin: 0, fontSize: 13 }}>
+            No requests yet. Use the day cards above to request a spot{hasSeats ? ' or a seat' : ''}.
+          </p>
+        )}
+
+        {dateGroups.map(group => (
+          <div key={group.date} className="resv-group">
+            <div className="resv-group-label">{group.label}</div>
+            {group.items.map(item => (
+              <ReservationRow
+                key={item.requestId}
+                item={item}
+                showModule={showModuleFilter}
+                onOpen={() => navigate(`/bookings/${item.requestId}`, { state: item })}
+              />
+            ))}
+          </div>
+        ))}
+
+        {earlierItems.length > 0 && (
+          <div className="resv-group">
+            <div className="resv-group-label">Earlier</div>
+            {earlierItems.map(item => (
+              <ReservationRow
+                key={item.requestId}
+                item={item}
+                showModule={showModuleFilter}
+                onOpen={() => navigate(`/bookings/${item.requestId}`, { state: item })}
+              />
+            ))}
+            <button onClick={() => navigate('/bookings/history')} style={{ ...linkBtn, alignSelf: 'flex-start', marginTop: 4 }}>
+              Full history →
+            </button>
+          </div>
+        )}
+        {recent.kind === 'error' && (
+          <p style={{ color: '#b91c1c', margin: 0, fontSize: 13 }}>{recent.message}</p>
+        )}
+      </section>
     </div>
   );
 }
 
-function DayTile({ label, date, booking, drawStatus, drawLoading, busy, onCancel, onConfirm, onRequest, onDetails }: {
+// One employee-safe outcome line per row: allocated resource label, next draw
+// timing while waiting, or the business reason — never raw ids or internals.
+function rowOutcome(item: BookingListItem): string | null {
+  const slotLabel = displaySlot(item.allocatedSlotId);
+  if (slotLabel) return `${displayResourceNoun(item.resourceType)}: ${slotLabel}`;
+  if (shouldShowNextDraw(item.status)) {
+    const next = displayNextDrawRun(item.requestedDate);
+    return next ? `Next draw: ${next}` : null;
+  }
+  if (item.status === 'Waitlisted') return 'Waiting for a released ' + displayResourceNoun(item.resourceType).toLowerCase();
+  if (item.status === 'Rejected') return humanizeRejectionReason(item.reasonCode ?? null, item.reason ?? null);
+  if (item.status === 'Cancelled') return 'Cancelled';
+  return item.reason ?? null;
+}
+
+function formatRowTime(t: string): string {
+  const [h, m] = t.split(':');
+  const hour = parseInt(h, 10);
+  return `${hour % 12 || 12}:${m.padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+}
+
+function ReservationRow({ item, showModule, onOpen }: {
+  item: BookingListItem;
+  showModule: boolean;
+  onOpen: () => void;
+}) {
+  const outcome = rowOutcome(item);
+  return (
+    <button className="resv-row" onClick={onOpen}>
+      {showModule && <ModuleBadge resourceType={item.resourceType} />}
+      <StatusBadge status={item.status} />
+      <span className="resv-row-outcome">{outcome ?? '—'}</span>
+      <span className="resv-row-time">{formatRowTime(item.timeSlotStart)} – {formatRowTime(item.timeSlotEnd)}</span>
+      <span className="resv-row-chevron" aria-hidden="true">›</span>
+    </button>
+  );
+}
+
+function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, busy, onCancel, onConfirm, onRequest, onDetails, onSeatDetails }: {
   label: string;
   date: string;
   booking: BookingListItem | null;
+  seatBooking: BookingListItem | null;
   drawStatus: DrawStatusResult | null;
   drawLoading?: boolean;
   busy?: boolean;
@@ -160,6 +331,7 @@ function DayTile({ label, date, booking, drawStatus, drawLoading, busy, onCancel
   onConfirm?: () => void;
   onRequest?: () => void;
   onDetails?: () => void;
+  onSeatDetails?: () => void;
 }) {
   const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
   const d = new Date(date + 'T00:00:00');
@@ -181,6 +353,17 @@ function DayTile({ label, date, booking, drawStatus, drawLoading, busy, onCancel
         <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginTop: 6 }}>
           Spot: {displaySlot(booking.allocatedSlotId)}
         </div>
+      )}
+
+      {/* Seat reservation for the day — compact badged row, only when one exists. */}
+      {seatBooking && (
+        <button onClick={onSeatDetails} className="tile-seat-row">
+          <ModuleBadge resourceType={seatBooking.resourceType} />
+          <StatusBadge status={seatBooking.status} />
+          {displaySlot(seatBooking.allocatedSlotId) && (
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{displaySlot(seatBooking.allocatedSlotId)}</span>
+          )}
+        </button>
       )}
 
       {/* Draw/schedule timing */}

@@ -36,7 +36,7 @@ export function SessionPage() {
           <div>
             <p className="session-eyebrow">Workplace parking operations</p>
             <h1>Fair allocation with evidence your business can trust.</h1>
-            <p>Request parking, run policy-based Draws, and give HR a clear operational record without exposing private employee data.</p>
+            <p>Request shared spots and seats, run policy-based Draws, and give HR a clear operational record without exposing private employee data.</p>
           </div>
           <SessionSnapshot />
         </div>
@@ -96,7 +96,8 @@ export function SessionPage() {
         <BrandLockup branding={branding} />
         <div>
           <p className="session-eyebrow">FairSpot for modern workplaces</p>
-          <h1>Parking allocation that employees can understand.</h1>
+          {/* UX008 (#781): module-neutral positioning — FairSpot allocates parking, seats, and future modules. */}
+          <h1>Fair allocation employees can understand.</h1>
           <p>Give employees a clear answer, give HR operational control, and keep every Draw ready for review.</p>
         </div>
         <SessionSnapshot />

@@ -66,7 +66,11 @@ public sealed class BookingOutcomesController(
                 // so this only ever surfaces the caller's own assignments.
                 SlotId = b.SlotId,
                 SubmittedAt = b.SubmittedAt,
-                DecidedAt = b.DecidedAt
+                DecidedAt = b.DecidedAt,
+                // UX008 (#781): module label for the combined My Reservations
+                // history. Pre-Seats rows have no stored resource type; they are
+                // all parking, so default the DTO accordingly.
+                ResourceType = b.ResourceType ?? "Parking"
             })
             .ToListAsync(ct);
 
@@ -182,7 +186,8 @@ public sealed class BookingOutcomesController(
                 SafeReasonText = b.SafeReasonText,
                 AllocationSource = b.AllocationSource,
                 SlotId = b.SlotId,
-                DecidedAt = b.DecidedAt
+                DecidedAt = b.DecidedAt,
+                ResourceType = b.ResourceType ?? "Parking"
             })
             .ToListAsync(ct);
 
@@ -227,6 +232,8 @@ public class BookingOutcomeDto
     public string? SlotId { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public DateTime? DecidedAt { get; set; }
+    /// <summary>UX008 (#781): employee-safe module label (Parking, Seats). Pre-Seats rows default to Parking.</summary>
+    public string ResourceType { get; set; } = "Parking";
 }
 
 public sealed class BookingOutcomeWithRequestorDto : BookingOutcomeDto

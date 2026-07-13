@@ -2,20 +2,27 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
-import { displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw } from '../displayLabels';
+import { displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '@robertvejvoda/fairspot-ui';
+import { ModuleBadge } from '../components/ModuleBadge';
 
-const STATUS_MEANING: Record<string, string> = {
-  Submitted: 'Waiting for allocation',
-  Pending: 'Waiting for the scheduled Draw',
-  Allocated: 'Spot allocated',
-  Rejected: 'Request not fulfilled',
-  Cancelled: 'Cancelled',
-  Expired: 'Time slot has passed',
-  Waitlisted: 'Waiting for a released slot',
-  UsageConfirmed: 'Usage confirmed',
-  NoShow: 'No-show recorded',
-};
+// UX008 (#781) — module-aware status meaning: allocated/waitlisted copy names the
+// module's resource (spot vs seat) instead of assuming parking.
+function statusMeaning(booking: BookingListItem): string | undefined {
+  const noun = displayResourceNoun(booking.resourceType);
+  const map: Record<string, string> = {
+    Submitted: 'Waiting for allocation',
+    Pending: 'Waiting for the scheduled Draw',
+    Allocated: `${noun} allocated`,
+    Rejected: 'Request not fulfilled',
+    Cancelled: 'Cancelled',
+    Expired: 'Time slot has passed',
+    Waitlisted: `Waiting for a released ${noun.toLowerCase()}`,
+    UsageConfirmed: 'Usage confirmed',
+    NoShow: 'No-show recorded',
+  };
+  return map[booking.status];
+}
 
 const DEMAND_LABEL: Record<string, string> = {
   Low: 'Low',
@@ -60,6 +67,8 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
   const isPreDraw = shouldShowNextDraw(booking.status);
   const isCompleted = draw?.kind === 'ok' && draw.status === 'Completed';
   const isDrawCapacityRejection = booking.reasonCode === 'DrawNotSelected' || (!booking.reasonCode && isCompleted);
+  const nounPlural = `${displayResourceNoun(booking.resourceType).toLowerCase()}s`;
+  const availableLabel = `Available ${nounPlural}`;
 
   if (!isPreDraw && booking.status !== 'Allocated' && booking.status !== 'Rejected') return null;
 
@@ -75,7 +84,7 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
               <Row label="Demand so far" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
               <Row label="Requests so far" value={String(draw.requestCount)} />
               {draw.availableSpotCount > 0 && (
-                <Row label="Available spots" value={String(draw.availableSpotCount)} />
+                <Row label={availableLabel} value={String(draw.availableSpotCount)} />
               )}
             </>
           )}
@@ -95,7 +104,7 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
               <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
               <Row label="Requests" value={String(draw.requestCount)} />
               {draw.availableSpotCount > 0 && (
-                <Row label="Available spots" value={String(draw.availableSpotCount)} />
+                <Row label={availableLabel} value={String(draw.availableSpotCount)} />
               )}
             </>
           )}
@@ -103,7 +112,9 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
             Result: Allocated
           </div>
           <div style={{ fontSize: 13, color: '#374151' }}>
-            Your request matched an available parking spot.
+            {isSeatsItem(booking)
+              ? 'Your request matched an available team seat.'
+              : 'Your request matched an available parking spot.'}
           </div>
         </>
       )}
@@ -118,7 +129,7 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
               <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
               <Row label="Requests" value={String(draw.requestCount)} />
               {draw.availableSpotCount > 0 && (
-                <Row label="Available spots" value={String(draw.availableSpotCount)} />
+                <Row label={availableLabel} value={String(draw.availableSpotCount)} />
               )}
             </>
           )}
@@ -127,7 +138,7 @@ function AllocationExplanation({ booking, draw, nextDrawLabel }: {
           </div>
           <div style={{ fontSize: 13, color: '#374151' }}>
             {isDrawCapacityRejection
-              ? 'More eligible requests than available spots. The draw followed company policy.'
+              ? `More eligible requests than available ${nounPlural}. The draw followed company policy.`
               : humanizeRejectionReason(booking.reasonCode ?? null, booking.reason ?? null)}
           </div>
         </>
@@ -212,7 +223,7 @@ export function BookingDetailPage() {
       <div className="page-stack">
         <section className="panel">
           <p style={{ color: '#6b7280' }}>Request not found.</p>
-          <button onClick={() => navigate('/bookings')} className="btn-primary">Back to My Spots</button>
+          <button onClick={() => navigate('/bookings')} className="btn-primary">Back to My Reservations</button>
         </section>
       </div>
     );
@@ -220,7 +231,7 @@ export function BookingDetailPage() {
 
   const slotLabel = displaySlot(booking.allocatedSlotId);
   const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
-  const meaning = STATUS_MEANING[booking.status];
+  const meaning = statusMeaning(booking);
 
   function showToast(ok: boolean, text: string) {
     setToast({ ok, text });
@@ -229,7 +240,7 @@ export function BookingDetailPage() {
 
   async function handleCancel() {
     if (!booking) return;
-    if (!confirm('Cancel this spot request?')) return;
+    if (!confirm('Cancel this request?')) return;
     setBusy(true);
     const result = await cancelBooking({ apiBaseUrl, bearerToken }, booking.requestId);
     setBusy(false);
@@ -259,11 +270,12 @@ export function BookingDetailPage() {
   return (
     <div className="page-stack">
       <section className="page-hero">
+        {/* The page hero is brand-green; the back link must stay readable on it. */}
         <button
           onClick={() => navigate('/bookings')}
-          style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 8 }}
+          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.92)', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 8 }}
         >
-          ← My Spots
+          ← My Reservations
         </button>
         <h2 style={{ margin: 0 }}>{formatDate(booking.requestedDate)}</h2>
       </section>
@@ -271,13 +283,16 @@ export function BookingDetailPage() {
       <section className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>Request status</span>
-          <StatusBadge status={booking.status} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {isSeatsItem(booking) && <ModuleBadge resourceType={booking.resourceType} />}
+            <StatusBadge status={booking.status} />
+          </span>
         </div>
         {meaning && (
           <p style={{ margin: '0 0 8px', fontSize: 13, color: '#374151' }}>{meaning}</p>
         )}
         <Row label="Time" value={`${formatTime(booking.timeSlotStart)} – ${formatTime(booking.timeSlotEnd)}`} />
-        {slotLabel && <Row label="Spot" value={slotLabel} />}
+        {slotLabel && <Row label={displayResourceNoun(booking.resourceType)} value={slotLabel} />}
         {booking.reason && <Row label="Note" value={booking.reason} />}
         <Row label="Submitted" value={formatDateTime(booking.createdAt)} />
         <Row label="Last updated" value={formatDateTime(booking.lastStatusChangedAt)} />

@@ -48,6 +48,25 @@ export function shortRequestorRef(value?: string | null): string {
   return value.length > 18 ? `${value.slice(0, 18)}...` : value;
 }
 
+// UX008 (#781) — employee-safe module labels for the module-aware My Reservations
+// surface. Booking items default to Parking; anything else falls back to the raw
+// resource type so a future module still renders a readable badge.
+export function isSeatsItem(item: { resourceType?: string | null }): boolean {
+  return item.resourceType === 'Seats';
+}
+
+export function displayModule(resourceType?: string | null): string {
+  if (!resourceType || resourceType === 'Parking') return 'Parking';
+  if (resourceType === 'Seats') return 'Seat';
+  return resourceType;
+}
+
+// The employee-facing name of the allocated resource: parking uses "Spot",
+// seats use "Seat". Keeps row/detail copy business-readable per module.
+export function displayResourceNoun(resourceType?: string | null): string {
+  return resourceType === 'Seats' ? 'Seat' : 'Spot';
+}
+
 export function displayDate(value?: string | null): string {
   if (!value) return '-';
   try {

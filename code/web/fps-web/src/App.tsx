@@ -170,8 +170,9 @@ function Shell() {
   if (isPlatformPlane(roles)) return <Navigate to="/platform/overview" replace />;
 
   const navItems = [
-    canAccessBookings(roles) && { to: '/bookings', label: 'My Spots' },
-    canAccessBookings(roles) && hasSeats && { to: '/seats', label: 'Team Seats' },
+    // UX008 (#781) — one module-aware employee entry for reservation history/status.
+    // Seat requesting stays reachable from My Reservations; no separate seats nav tree.
+    canAccessBookings(roles) && { to: '/bookings', label: 'My Reservations' },
     canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
     canAccessParkingMap(roles) && { to: '/parking-map', label: 'Parking Map' },

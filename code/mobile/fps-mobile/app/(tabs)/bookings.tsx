@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StateView } from '@/components/StateView';
@@ -7,7 +7,45 @@ import { BookingCard } from '@/components/BookingCard';
 import { useBookings } from '@/api/useBookings';
 import { cancelBooking, confirmBookingUsage } from '@/api/bookings';
 import { useAuth } from '@/auth/AuthContext';
+import { isSeatsItem } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
+import type { BookingListItem } from '@/api/bookings';
+
+// UX008 (#781) — date-first grouping for the module-aware reservations list.
+// Section order follows the API's cursor order; items keep their fetch order
+// inside each date section.
+function localTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function localTomorrowStr(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function dateSectionLabel(date: string): string {
+  if (date === localTodayStr()) return 'Today';
+  if (date === localTomorrowStr()) return 'Tomorrow';
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: 'long', month: 'short', day: 'numeric',
+  });
+}
+
+function toDateSections(items: BookingListItem[]): Array<{ title: string; data: BookingListItem[] }> {
+  const sections: Array<{ date: string; title: string; data: BookingListItem[] }> = [];
+  for (const item of items) {
+    const last = sections[sections.length - 1];
+    if (last && last.date === item.requestedDate) {
+      last.data.push(item);
+    } else {
+      sections.push({ date: item.requestedDate, title: dateSectionLabel(item.requestedDate), data: [item] });
+    }
+  }
+  return sections;
+}
 
 const FILTERS = [
   { key: 'upcoming' as const, label: 'Upcoming' },
@@ -25,7 +63,7 @@ export default function BookingsRoute() {
   const handleCancel = useCallback((requestId: string) => {
     Alert.alert(
       'Cancel request',
-      'Are you sure you want to cancel this spot request?',
+      'Are you sure you want to cancel this request?',
       [
         { text: 'Keep', style: 'cancel' },
         {
@@ -100,7 +138,7 @@ export default function BookingsRoute() {
 
   function renderContent() {
     if (state.kind === 'idle' || state.kind === 'loading') {
-      return <StateView kind="loading" title="Loading your spots…" />;
+      return <StateView kind="loading" title="Loading your reservations…" />;
     }
     if (state.kind === 'unauthenticated') {
       return (
@@ -115,7 +153,7 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Cannot load your spots"
+          title="Cannot load your reservations"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -126,7 +164,7 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="error"
-          title="Cannot load your spots"
+          title="Cannot load your reservations"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -137,20 +175,26 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="empty"
-          title="No spots yet"
-          message="Your spot requests will appear here."
+          title="No reservations yet"
+          message="Your requests and reservations will appear here."
           actionLabel="Refresh"
           onAction={refresh}
         />
       );
     }
+    const showModule = state.items.some(isSeatsItem) && state.items.some((i) => !isSeatsItem(i));
     return (
-      <FlatList
-        data={state.items}
+      <SectionList
+        sections={toDateSections(state.items)}
         keyExtractor={(item) => item.requestId}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        )}
+        stickySectionHeadersEnabled={false}
         renderItem={({ item }) => (
           <BookingCard
             booking={item}
+            showModule={showModule}
             onPress={() => router.push({
               pathname: '/booking/[requestId]',
               params: {
@@ -165,6 +209,7 @@ export default function BookingsRoute() {
                 allocatedSlotId: item.allocatedSlotId ?? '',
                 createdAt: item.createdAt,
                 lastStatusChangedAt: item.lastStatusChangedAt,
+                resourceType: item.resourceType ?? 'Parking',
               },
             })}
             onCancel={item.nextAction === 'cancel' ? () => handleCancel(item.requestId) : undefined}
@@ -258,6 +303,14 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
   },
   list: { padding: spacing.lg, gap: spacing.md },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.xs,
+  },
   actionMessage: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,

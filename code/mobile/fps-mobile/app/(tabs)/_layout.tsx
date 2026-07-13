@@ -26,7 +26,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="bookings"
         options={{
-          title: 'My Spots',
+          // UX008 (#781) — module-aware reservations list; short tab label.
+          title: 'Reservations',
           href: isEmployee ? undefined : null,
         }}
       />
