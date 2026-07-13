@@ -303,7 +303,10 @@ export function NewBookingPage() {
     if (!arrival) errs.plannedArrival = 'Use YYYY-MM-DDTHH:MM';
     if (!departure) errs.plannedDeparture = 'Use YYYY-MM-DDTHH:MM';
     if (arrival && departure && departure <= arrival) errs.plannedDeparture = 'Must be after arrival';
-    if (wantParking && drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = drawStatus.cannotRequestReason || 'Requests are closed for this time.';
+    // A closed Parking window fully blocks only a parking-only selection; with a
+    // seat also selected, Parking is reported as closed per-module and the seat
+    // still submits (partial success is the default — UX009 #782 / review #790).
+    if (wantParking && !wantSeat && drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = drawStatus.cannotRequestReason || 'Requests are closed for this time.';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setSubmitting(true);
@@ -311,7 +314,14 @@ export function NewBookingPage() {
 
     // Each selected module submits independently — partial success is the default.
     const results: ModuleOutcome[] = [];
-    if (wantParking) {
+    const parkingClosed = drawStatus?.kind === 'ok' && !drawStatus.canRequest;
+    if (wantParking && parkingClosed) {
+      results.push({
+        module: 'Parking',
+        ok: false,
+        text: (drawStatus.kind === 'ok' && drawStatus.cannotRequestReason) || 'Requests are closed for this time.',
+      });
+    } else if (wantParking) {
       const res = await submitBooking({ apiBaseUrl, bearerToken }, {
         facilityId: form.facilityId.trim(),
         locationId: form.locationId.trim() || null,
@@ -580,8 +590,8 @@ export function NewBookingPage() {
 
           <button
             type="submit"
-            disabled={submitting || (wantParking && (drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest)))}
-            style={{ ...primaryBtn, opacity: submitting || (wantParking && (drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest))) ? 0.6 : 1 }}
+            disabled={submitting || (wantParking && !wantSeat && (drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest)))}
+            style={{ ...primaryBtn, opacity: submitting || (wantParking && !wantSeat && (drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest))) ? 0.6 : 1 }}
           >
             {submitting ? 'Submitting…' : wantParking && wantSeat ? 'Submit selected requests' : 'Submit request'}
           </button>

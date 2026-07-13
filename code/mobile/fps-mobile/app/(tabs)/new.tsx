@@ -299,18 +299,19 @@ export default function NewBookingRoute() {
       setFieldErrors(errors);
       return;
     }
-    if (wantParking) {
-      if (drawStatus?.kind === 'ok' && !drawStatus.data.canRequest) {
-        setSubmitStatus({
-          kind: 'done',
-          outcomes: [{
-            module: 'Parking',
-            ok: false,
-            text: drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? 'Requests are closed for this time.',
-          }],
-        });
-        return;
-      }
+    // A closed Parking window fully blocks only a parking-only selection; with a
+    // seat also selected, Parking is reported as closed per-module and the seat
+    // still submits (partial success is the default — UX009 #782 / review #790).
+    const parkingClosed = drawStatus?.kind === 'ok' && !drawStatus.data.canRequest;
+    const parkingClosedText = drawStatus?.kind === 'ok'
+      ? drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? 'Requests are closed for this time.'
+      : 'Requests are closed for this time.';
+    if (wantParking && !wantSeat && parkingClosed) {
+      setSubmitStatus({
+        kind: 'done',
+        outcomes: [{ module: 'Parking', ok: false, text: parkingClosedText }],
+      });
+      return;
     }
     setSubmitStatus({ kind: 'submitting' });
     const requestedDate = dateStrFromOffset(form.dateOffset);
@@ -319,7 +320,9 @@ export default function NewBookingRoute() {
 
     // Each selected module submits independently — partial success is the default.
     const outcomes: ModuleOutcome[] = [];
-    if (wantParking) {
+    if (wantParking && parkingClosed) {
+      outcomes.push({ module: 'Parking', ok: false, text: parkingClosedText });
+    } else if (wantParking) {
       const result = await submitBooking(
         { apiBaseUrl, bearerToken },
         {
@@ -659,8 +662,8 @@ export default function NewBookingRoute() {
         {moduleError ? <Text style={styles.errorText}>{moduleError}</Text> : null}
 
         <Pressable
-          style={({ pressed }) => [styles.primary, (isSubmitting || (wantParking && requestWindowClosed) || pressed) && styles.primaryDimmed]}
-          disabled={isSubmitting || (wantParking && requestWindowClosed)}
+          style={({ pressed }) => [styles.primary, (isSubmitting || (wantParking && !wantSeat && requestWindowClosed) || pressed) && styles.primaryDimmed]}
+          disabled={isSubmitting || (wantParking && !wantSeat && requestWindowClosed)}
           onPress={handleSubmit}
           accessibilityRole="button"
           testID="button-submit"
