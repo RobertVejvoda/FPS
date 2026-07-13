@@ -1007,21 +1007,11 @@ select {
 .plat-queue-actions .plat-input { flex: 1 1 180px; }
 
 /* PLAT-seats (#710) — module switch + seat surfaces */
-.module-switch { display: inline-flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px; margin-bottom: 4px; }
-.module-tab { padding: 5px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; }
-.module-tab-active { background: var(--brand-primary); color: #fff; }
 
 .seat-request-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .seat-request-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
 .seat-request-row input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; }
 
-.seat-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.seat-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; background: var(--surface); }
-.seat-card.seat-ok { border-left-color: var(--success); }
-.seat-card.seat-wait { border-left-color: #fbbf24; }
-.seat-card.seat-off { border-left-color: var(--border); }
-.seat-date { font-weight: 700; }
-.seat-status { color: var(--muted); font-size: 14px; }
 
 .seat-metric { font-size: 30px; font-weight: 800; margin: 6px 0 0; }
 .seat-chip-row { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1039,3 +1029,23 @@ select {
 .site-stat { display: flex; flex-direction: column; }
 .site-stat strong { font-size: 34px; line-height: 1; color: var(--brand-primary); }
 .site-stat span { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* UX008 (#781) — module-aware My Reservations */
+.module-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: #eef2f7; border: 1px solid var(--border); color: #374151; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.module-badge-seats { background: #ecfdf5; border-color: #bbf7d0; color: #166534; }
+.module-filter { display: inline-flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 2px; }
+.module-filter-chip { padding: 3px 12px; border: none; border-radius: 999px; background: none; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.module-filter-chip-active { background: var(--brand-primary); color: #fff; }
+.resv-group { display: flex; flex-direction: column; gap: 6px; }
+.resv-group-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 6px; }
+.resv-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; text-align: left; font: inherit; width: 100%; }
+.resv-row:hover { border-color: var(--brand-primary); }
+.resv-row-outcome { flex: 1; font-size: 13px; color: #374151; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resv-row-time { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.resv-row-chevron { color: var(--muted); font-size: 16px; line-height: 1; }
+.tile-seat-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 6px; border: 1px dashed var(--border); border-radius: 6px; background: none; cursor: pointer; text-align: left; }
+.tile-seat-row:hover { border-color: var(--brand-primary); }
+@media (max-width: 640px) {
+  .resv-row { flex-wrap: wrap; }
+  .resv-row-outcome { flex-basis: 100%; order: 3; white-space: normal; }
+}

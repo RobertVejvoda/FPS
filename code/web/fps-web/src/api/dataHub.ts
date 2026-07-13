@@ -12,6 +12,8 @@ export interface BookingOutcomeItem {
   slotId: string | null;
   submittedAt: string | null;
   decidedAt: string | null;
+  // UX008 (#781): employee-safe module label (Parking, Seats). Pre-Seats rows default to Parking.
+  resourceType: string;
 }
 
 export interface MyOutcomesResponse {

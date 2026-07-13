@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
-import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displayLocation, displayModule, displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
@@ -10,6 +10,8 @@ type BookingCardProps = {
   onCancel?: () => void;
   onConfirmUsage?: () => void;
   actionPending?: boolean;
+  // UX008 (#781) — render a module badge when the surrounding list spans modules.
+  showModule?: boolean;
 };
 
 const STATUS_BADGE_COLOR: Record<string, string> = {
@@ -46,7 +48,7 @@ function formatTime(timeStr: string): string {
   return `${displayHour}:${m.padStart(2, '0')} ${ampm}`;
 }
 
-export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage, actionPending }: BookingCardProps) {
+export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage, actionPending, showModule }: BookingCardProps) {
   const badgeColor = STATUS_BADGE_COLOR[booking.status] ?? colors.textMuted;
   const nextAction =
     booking.nextAction && booking.nextAction.toLowerCase() !== 'none'
@@ -70,7 +72,14 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
     >
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.date}>{formatDate(booking.requestedDate)}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.date}>{formatDate(booking.requestedDate)}</Text>
+          {showModule ? (
+            <Text style={[styles.moduleBadge, isSeatsItem(booking) && styles.moduleBadgeSeats]}>
+              {displayModule(booking.resourceType)}
+            </Text>
+          ) : null}
+        </View>
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
           <Text style={styles.badgeText}>{badgeLabel}</Text>
         </View>
@@ -85,7 +94,7 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
       ) : null}
 
       {slotLabel ? (
-        <Text style={styles.detail}>Slot: {slotLabel}</Text>
+        <Text style={styles.detail}>{displayResourceNoun(booking.resourceType)}: {slotLabel}</Text>
       ) : null}
 
       {nextDrawLabel ? (
@@ -143,6 +152,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
+  },
+  moduleBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#374151',
+    backgroundColor: '#eef2f7',
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  moduleBadgeSeats: {
+    color: '#166534',
+    backgroundColor: '#ecfdf5',
   },
   date: {
     fontSize: 15,

@@ -4,20 +4,26 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchDrawStatus, type DrawStatusResponse } from '@/api/draws';
 import { useAuth } from '@/auth/AuthContext';
-import { displayLocation, displayNextDrawRun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displayLocation, displayModule, displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
 import { colors, radius, spacing } from '@/theme';
 
-const STATUS_LABEL: Record<string, string> = {
-  Submitted: 'Waiting for allocation',
-  Allocated: 'Parking spot allocated',
-  Rejected: 'Request not fulfilled',
-  Cancelled: 'Cancelled',
-  Expired: 'Time slot has passed',
-  Waitlisted: 'Waiting for a released spot',
-  UsageConfirmed: 'Usage confirmed',
-  NoShow: 'No-show recorded',
-  Pending: 'Pending — draw in progress',
-};
+// UX008 (#781) — module-aware status meaning: allocated/waitlisted copy names the
+// module's resource (spot vs seat) instead of assuming parking.
+function statusLabelFor(status: string, resourceType?: string | null): string {
+  const noun = displayResourceNoun(resourceType).toLowerCase();
+  const map: Record<string, string> = {
+    Submitted: 'Waiting for allocation',
+    Allocated: resourceType === 'Seats' ? 'Team seat allocated' : 'Parking spot allocated',
+    Rejected: 'Request not fulfilled',
+    Cancelled: 'Cancelled',
+    Expired: 'Time slot has passed',
+    Waitlisted: `Waiting for a released ${noun}`,
+    UsageConfirmed: 'Usage confirmed',
+    NoShow: 'No-show recorded',
+    Pending: 'Pending — draw in progress',
+  };
+  return map[status] ?? status;
+}
 
 const STATUS_COLOR: Record<string, string> = {
   Submitted: colors.primary,
@@ -75,16 +81,20 @@ function AllocationExplanation({
   reason,
   draw,
   nextDrawLabel,
+  resourceType,
 }: {
   status: string;
   reasonCode: string | undefined;
   reason: string | undefined;
   draw: DrawStatusResponse | null;
   nextDrawLabel: string | null;
+  resourceType: string | undefined;
 }) {
   const isPreDraw = shouldShowNextDraw(status);
   const isCompleted = draw?.status === 'Completed';
   const isDrawCapacityRejection = reasonCode === 'DrawNotSelected' || (!reasonCode && isCompleted);
+  const nounPlural = `${displayResourceNoun(resourceType).toLowerCase()}s`;
+  const availableLabel = `Available ${nounPlural}`;
 
   if (!isPreDraw && status !== 'Allocated' && status !== 'Rejected') return null;
 
@@ -100,7 +110,7 @@ function AllocationExplanation({
                 <Row label="Demand so far" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
                 <Row label="Requests so far" value={String(draw.requestCount)} />
                 {Number(draw.availableSpotCount) > 0 ? (
-                  <Row label="Available spots" value={String(draw.availableSpotCount)} />
+                  <Row label={availableLabel} value={String(draw.availableSpotCount)} />
                 ) : null}
               </>
             ) : null}
@@ -120,13 +130,15 @@ function AllocationExplanation({
                 <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
                 <Row label="Requests" value={String(draw.requestCount)} />
                 {Number(draw.availableSpotCount) > 0 ? (
-                  <Row label="Available spots" value={String(draw.availableSpotCount)} />
+                  <Row label={availableLabel} value={String(draw.availableSpotCount)} />
                 ) : null}
               </>
             ) : null}
             <Text style={[styles.resultLabel, { color: '#15803d' }]}>Result: Allocated</Text>
             <Text style={styles.explanationText}>
-              Your request matched an available parking spot.
+              {resourceType === 'Seats'
+                ? 'Your request matched an available team seat.'
+                : 'Your request matched an available parking spot.'}
             </Text>
           </>
         )}
@@ -141,14 +153,14 @@ function AllocationExplanation({
                 <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
                 <Row label="Requests" value={String(draw.requestCount)} />
                 {Number(draw.availableSpotCount) > 0 ? (
-                  <Row label="Available spots" value={String(draw.availableSpotCount)} />
+                  <Row label={availableLabel} value={String(draw.availableSpotCount)} />
                 ) : null}
               </>
             ) : null}
             <Text style={[styles.resultLabel, { color: colors.danger }]}>Result: Not allocated</Text>
             <Text style={styles.explanationText}>
               {isDrawCapacityRejection
-                ? 'More eligible requests than available spots. The draw followed company policy.'
+                ? `More eligible requests than available ${nounPlural}. The draw followed company policy.`
                 : humanizeRejectionReason(reasonCode ?? null, reason ?? null)}
             </Text>
           </>
@@ -171,6 +183,7 @@ export default function BookingDetailRoute() {
     allocatedSlotId?: string;
     createdAt: string;
     lastStatusChangedAt: string;
+    resourceType?: string;
   }>();
 
   const { apiBaseUrl, bearerToken } = useAuth();
@@ -192,7 +205,7 @@ export default function BookingDetailRoute() {
     });
   }, [needsDraw, params.requestedDate, params.locationId, params.timeSlotStart, params.timeSlotEnd, apiBaseUrl, bearerToken]);
 
-  const statusLabel = STATUS_LABEL[params.status] ?? params.status;
+  const statusLabel = statusLabelFor(params.status, params.resourceType);
   const statusColor = STATUS_COLOR[params.status] ?? colors.textMuted;
   const locationLabel = displayLocation(params.locationId);
   const slotLabel = displaySlot(params.allocatedSlotId);
@@ -227,6 +240,7 @@ export default function BookingDetailRoute() {
           reason={params.reason}
           draw={drawStatus}
           nextDrawLabel={nextDrawLabel}
+          resourceType={params.resourceType}
         />
 
         {/* Booking info */}
@@ -235,8 +249,9 @@ export default function BookingDetailRoute() {
           <View style={styles.card}>
             <Row label="Date" value={formatDate(params.requestedDate)} />
             <Row label="Time" value={`${formatTime(params.timeSlotStart)} – ${formatTime(params.timeSlotEnd)}`} />
+            {params.resourceType === 'Seats' ? <Row label="Module" value={displayModule(params.resourceType)} /> : null}
             {locationLabel ? <Row label="Location" value={locationLabel} /> : null}
-            {slotLabel ? <Row label="Allocated spot" value={slotLabel} /> : null}
+            {slotLabel ? <Row label={`Allocated ${displayResourceNoun(params.resourceType).toLowerCase()}`} value={slotLabel} /> : null}
           </View>
         </View>
 

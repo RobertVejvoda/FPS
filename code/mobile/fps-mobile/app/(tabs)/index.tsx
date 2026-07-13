@@ -7,7 +7,7 @@ import { useBookings } from '@/api/useBookings';
 import { cancelBooking, confirmBookingUsage, type BookingListItem } from '@/api/bookings';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { StateView } from '@/components/StateView';
-import { displaySlot, STATUS_BADGE_LABEL, formatCutOffAt } from '@/displayLabels';
+import { displayModule, displaySlot, isSeatsItem, STATUS_BADGE_LABEL, formatCutOffAt } from '@/displayLabels';
 import { DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
 import { colors, radius, spacing } from '@/theme';
 
@@ -21,7 +21,7 @@ function isWorkday(d: Date): boolean {
 }
 
 // Four day focus cards: today, tomorrow, then the next two working days
-// (weekends skipped), matching the web My Spots model. Labels use Today/Tomorrow
+// (weekends skipped), matching the web My Reservations model. Labels use Today/Tomorrow
 // then the weekday name — never D+2/D+3. Each card carries its real date + the
 // calendar offset used by the request form.
 function workdayCards(count = 4): Array<{ label: string; date: string; offset: number }> {
@@ -59,6 +59,7 @@ function bookingParams(item: BookingListItem) {
       allocatedSlotId: item.allocatedSlotId ?? '',
       createdAt: item.createdAt,
       lastStatusChangedAt: item.lastStatusChangedAt,
+      resourceType: item.resourceType ?? 'Parking',
     },
   };
 }
@@ -97,7 +98,7 @@ export default function HomeRoute() {
   }
 
   const handleCancel = useCallback(async (requestId: string) => {
-    Alert.alert('Cancel request', 'Are you sure you want to cancel this spot request?', [
+    Alert.alert('Cancel request', 'Are you sure you want to cancel this request?', [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Cancel request', style: 'destructive',
@@ -136,7 +137,7 @@ export default function HomeRoute() {
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <SafeAreaView style={styles.safe}>
-        <StateView kind="loading" title="Loading your spots…" />
+        <StateView kind="loading" title="Loading your reservations…" />
       </SafeAreaView>
     );
   }
@@ -160,7 +161,7 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind={state.kind}
-          title="Cannot load your spots"
+          title="Cannot load your reservations"
           message="Please check your connection and try again."
           actionLabel="Retry"
           onAction={refresh}
@@ -172,7 +173,7 @@ export default function HomeRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>My Spots</Text>
+        <Text style={styles.heading}>My Reservations</Text>
 
         {toastMsg && (
           <View style={styles.toast}>
@@ -183,7 +184,10 @@ export default function HomeRoute() {
         {/* Three day tiles */}
         {DAYS.map((day, i) => {
           const date = day.date;
-          const booking = state.items.find(b => b.requestedDate === date) ?? null;
+          // Parking is the fully wired request module for the day cards; a seat
+          // reservation for the same day renders as a compact badged row (UX008 #781).
+          const booking = state.items.find(b => b.requestedDate === date && !isSeatsItem(b)) ?? null;
+          const seatBooking = state.items.find(b => b.requestedDate === date && isSeatsItem(b)) ?? null;
           const drawStatus = drawStatuses[i] ?? null;
           return (
             <DayTile
@@ -191,6 +195,7 @@ export default function HomeRoute() {
               label={day.label}
               date={date}
               booking={booking}
+              seatBooking={seatBooking}
               drawStatus={drawStatus}
               drawLoading={drawLoading}
               busy={busyId === booking?.requestId}
@@ -198,6 +203,7 @@ export default function HomeRoute() {
               onConfirm={booking?.nextAction === 'confirmUsage' ? () => handleConfirm(booking.requestId) : undefined}
               onRequest={() => router.push({ pathname: '/(tabs)/new', params: { offset: String(day.offset) } })}
               onDetails={booking ? () => router.push(bookingParams(booking)) : undefined}
+              onSeatDetails={seatBooking ? () => router.push(bookingParams(seatBooking)) : undefined}
             />
           );
         })}
@@ -215,10 +221,11 @@ export default function HomeRoute() {
   );
 }
 
-function DayTile({ label, date, booking, drawStatus, drawLoading, busy, onCancel, onConfirm, onRequest, onDetails }: {
+function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, busy, onCancel, onConfirm, onRequest, onDetails, onSeatDetails }: {
   label: string;
   date: string;
   booking: BookingListItem | null;
+  seatBooking: BookingListItem | null;
   drawStatus: DrawStatusResult | null;
   drawLoading: boolean;
   busy: boolean;
@@ -226,6 +233,7 @@ function DayTile({ label, date, booking, drawStatus, drawLoading, busy, onCancel
   onConfirm?: () => void;
   onRequest?: () => void;
   onDetails?: () => void;
+  onSeatDetails?: () => void;
 }) {
   const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus.data : null;
   const badgeLabel = booking ? (STATUS_BADGE_LABEL[booking.status] ?? booking.status) : null;
@@ -246,6 +254,17 @@ function DayTile({ label, date, booking, drawStatus, drawLoading, busy, onCancel
 
       {/* Allocated slot */}
       {slot && <Text style={styles.tileSlot}>Spot: {slot}</Text>}
+
+      {/* Seat reservation for the day — compact badged row, only when one exists. */}
+      {seatBooking && (
+        <Pressable onPress={onSeatDetails} accessibilityRole="button" style={({ pressed }) => [styles.tileSeatRow, pressed && { opacity: 0.7 }]}>
+          <Text style={styles.tileSeatBadge}>{displayModule(seatBooking.resourceType)}</Text>
+          <Text style={styles.tileSeatStatus}>{STATUS_BADGE_LABEL[seatBooking.status] ?? seatBooking.status}</Text>
+          {displaySlot(seatBooking.allocatedSlotId) ? (
+            <Text style={styles.tileSeatLabel}>{displaySlot(seatBooking.allocatedSlotId)}</Text>
+          ) : null}
+        </Pressable>
+      )}
 
       {/* Schedule timing */}
       {drawLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.xs }} />}
@@ -328,6 +347,33 @@ const styles = StyleSheet.create({
   tileDate: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
   tileBadge: { fontSize: 13, fontWeight: '600', color: colors.text },
   tileSlot: { fontSize: 13, color: colors.text, fontWeight: '500' },
+  tileSeatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
+  tileSeatBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#166534',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  tileSeatStatus: { fontSize: 12, fontWeight: '600', color: colors.text },
+  tileSeatLabel: { fontSize: 12, color: colors.textMuted },
   tileSchedule: { fontSize: 12, color: colors.textMuted },
   tileUnavailable: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
   tileActions: { gap: spacing.xs, marginTop: spacing.xs },

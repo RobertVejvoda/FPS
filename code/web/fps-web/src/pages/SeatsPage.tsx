@@ -1,65 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { ModuleSwitch } from '../tenant/ModuleSwitch';
-import { fetchBookings, submitBooking, type BookingListItem } from '../api/bookings';
+import { fetchBookings, submitBooking } from '../api/bookings';
 
-// PLAT-seats (#710) — the employee's team-seat allocation surface. Deliberately NOT parking with
+// PLAT-seats (#710) — the employee's team-seat request surface. Deliberately NOT parking with
 // renamed labels: it speaks in workplace/seat language (team area, seat, waitlist). The tenant app
 // already uses demo facility/location constants for the showcase (see NewBookingPage), so seats
 // follow the same pattern.
+// UX008 (#781) — this page is request-only. Seat reservations, waitlist state, and history now
+// live on the combined date-grouped My Reservations page instead of a duplicated seats list.
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
 const DEFAULT_SEATS_LOCATION = 'GL-TEAMS';
 
-type State =
-  | { kind: 'loading' }
-  | { kind: 'error'; message: string }
-  | { kind: 'ok'; seats: BookingListItem[] };
-
-// Business-readable outcome copy — no raw ids beyond the human seat label (e.g. HQ-TEAM-A-03).
-function seatOutcome(item: BookingListItem): { label: string; tone: 'ok' | 'wait' | 'off' } {
-  switch (item.status) {
-    case 'Allocated': return { label: `Seat reserved — ${item.allocatedSlotId ?? 'assigned'}`, tone: 'ok' };
-    case 'Waitlisted':
-    case 'Pending': return { label: 'On the seat waitlist', tone: 'wait' };
-    case 'Cancelled': return { label: 'Cancelled', tone: 'off' };
-    default: return { label: 'No seat available for this day', tone: 'off' };
-  }
-}
-
 export function SeatsPage() {
   const { apiBaseUrl, bearerToken } = useAuth();
+  const navigate = useNavigate();
   const cfg = useMemo(() => ({ apiBaseUrl, bearerToken }), [apiBaseUrl, bearerToken]);
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  const [seatsLocation, setSeatsLocation] = useState(DEFAULT_SEATS_LOCATION);
   const [date, setDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    setState({ kind: 'loading' });
+  // Reuse the seats location the tenant already allocates at, if the employee has seat history;
+  // otherwise fall back to the showcase seats location.
+  const resolveLocation = useCallback(() => {
     void fetchBookings(cfg).then((r) => {
-      if (r.kind === 'ok') {
-        setState({ kind: 'ok', seats: r.items.filter((i) => i.resourceType === 'Seats') });
-      } else if (r.kind === 'unauthenticated') {
-        setState({ kind: 'error', message: 'Your session is not authorized.' });
-      } else if (r.kind === 'unreachable') {
-        setState({ kind: 'error', message: 'Could not reach the booking service.' });
-      } else {
-        setState({ kind: 'error', message: r.message });
-      }
+      if (r.kind !== 'ok') return;
+      const known = r.items.find((i) => i.resourceType === 'Seats' && i.locationId)?.locationId;
+      if (known) setSeatsLocation(known);
     });
   }, [cfg]);
 
-  useEffect(load, [load]);
-
-  // Reuse the seats location the tenant already allocates at, if the employee has seat history;
-  // otherwise fall back to the showcase seats location.
-  const seatsLocation = useMemo(() => {
-    if (state.kind === 'ok') {
-      const known = state.seats.find((s) => s.locationId)?.locationId;
-      if (known) return known;
-    }
-    return DEFAULT_SEATS_LOCATION;
-  }, [state]);
+  useEffect(resolveLocation, [resolveLocation]);
 
   async function requestSeat() {
     if (!date) { setFlash('Pick a workday first.'); return; }
@@ -79,7 +51,7 @@ export function SeatsPage() {
       plannedDepartureTime: `${date}T18:00:00`,
     });
     setSubmitting(false);
-    if (r.kind === 'accepted') { setFlash(r.status === 'Allocated' ? 'Seat reserved.' : 'Seat request submitted — you’ll find out in the draw.'); setDate(''); load(); }
+    if (r.kind === 'accepted') { setFlash(r.status === 'Allocated' ? 'Seat reserved. You can follow it under My Reservations.' : 'Seat request submitted — you’ll find out in the draw. Follow it under My Reservations.'); setDate(''); }
     else if (r.kind === 'rejected') setFlash(r.reason ?? 'Seat request could not be accepted.');
     else if (r.kind === 'unauthenticated') setFlash('Your session is not authorized.');
     else setFlash('message' in r ? r.message : 'Seat request failed.');
@@ -87,11 +59,16 @@ export function SeatsPage() {
 
   return (
     <section className="page-stack">
-      <ModuleSwitch active="seats" />
       <header className="page-hero">
         <div>
-          <h2>Team seats</h2>
-          <p>Request a shared team seat for a workday. Seats are allocated by the same fair draw as parking, so when a day is popular a small waitlist forms.</p>
+          <button
+            onClick={() => navigate('/bookings')}
+            style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 8 }}
+          >
+            ← My Reservations
+          </button>
+          <h2>Request a seat</h2>
+          <p>Request a shared team seat for a workday. Seats are allocated by the same fair draw as parking, so when a day is popular a small waitlist forms. Your seat requests and reservations appear on My Reservations.</p>
         </div>
       </header>
 
@@ -106,26 +83,6 @@ export function SeatsPage() {
           </button>
         </div>
         {flash && <p className="plat-muted" role="status">{flash}</p>}
-      </section>
-
-      <section className="plat-card">
-        <h3>Your seat requests</h3>
-        {state.kind === 'loading' && <p className="plat-muted">Loading…</p>}
-        {state.kind === 'error' && <p className="plat-error" role="alert">{state.message}</p>}
-        {state.kind === 'ok' && state.seats.length === 0 && <p className="plat-muted">No seat requests yet. Request a seat above.</p>}
-        {state.kind === 'ok' && state.seats.length > 0 && (
-          <ul className="seat-list">
-            {state.seats.map((s) => {
-              const o = seatOutcome(s);
-              return (
-                <li key={s.requestId} className={`seat-card seat-${o.tone}`}>
-                  <span className="seat-date">{s.requestedDate}</span>
-                  <span className="seat-status">{o.label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </section>
     </section>
   );

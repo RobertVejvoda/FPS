@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchMyOutcomes, type BookingOutcomeItem } from '../api/dataHub';
-import { displayLocation, displaySlot } from '../displayLabels';
+import { displayLocation, displayModule, displaySlot } from '../displayLabels';
+import { ModuleBadge } from '../components/ModuleBadge';
 
 type ListState =
   | { kind: 'loading' }
@@ -49,16 +50,20 @@ export function BookingHistoryPage() {
   }
 
   const hasMore = state.kind === 'ok' && state.items.length < state.total;
+  // UX008 (#781) — show the module column only when the employee's records span
+  // more than one module, so a parking-only history stays parking-simple.
+  const showModule = state.kind === 'ok'
+    && new Set(state.items.map(i => displayModule(i.resourceType))).size > 1;
 
   return (
     <div className="page-stack">
       <section className="page-hero">
-        <h2>My Spots — History</h2>
+        <h2>My Reservations — History</h2>
       </section>
 
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <button onClick={() => navigate('/bookings')} style={backBtn}>← Back to My Spots</button>
+          <button onClick={() => navigate('/bookings')} style={backBtn}>← Back to My Reservations</button>
         </div>
 
         {state.kind === 'loading' && (
@@ -81,6 +86,7 @@ export function BookingHistoryPage() {
               <thead>
                 <tr>
                   <th style={thStyle}>Date</th>
+                  {showModule && <th style={thStyle}>Module</th>}
                   <th style={thStyle}>Time slot</th>
                   <th style={thStyle}>Location</th>
                   <th style={thStyle}>Spot</th>
@@ -93,6 +99,7 @@ export function BookingHistoryPage() {
                 {state.items.map(b => (
                   <tr key={b.bookingRequestId} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={tdStyle}>{new Date(b.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                    {showModule && <td style={tdStyle}><ModuleBadge resourceType={b.resourceType} /></td>}
                     <td style={tdStyle}>{b.timeSlot}</td>
                     <td style={tdStyle}>{displayLocation(b.locationId) ?? '–'}</td>
                     <td style={tdStyle}>{displaySlot(b.slotId) ?? '–'}</td>

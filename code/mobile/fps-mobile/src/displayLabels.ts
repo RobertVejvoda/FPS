@@ -22,6 +22,25 @@ export function displaySlot(value?: string | null): string | null {
   return isGuid(value) ? 'Assigned space' : value.replace(/^Prague-/, 'Space ');
 }
 
+// UX008 (#781) — employee-safe module labels for the module-aware reservations
+// surface, mirroring the web displayLabels helpers. Booking items default to
+// Parking; unknown future modules fall back to the raw resource type.
+export function isSeatsItem(item: { resourceType?: string | null }): boolean {
+  return item.resourceType === 'Seats';
+}
+
+export function displayModule(resourceType?: string | null): string {
+  if (!resourceType || resourceType === 'Parking') return 'Parking';
+  if (resourceType === 'Seats') return 'Seat';
+  return resourceType;
+}
+
+// The employee-facing name of the allocated resource: parking uses "Spot",
+// seats use "Seat". Keeps card/detail copy business-readable per module.
+export function displayResourceNoun(resourceType?: string | null): string {
+  return resourceType === 'Seats' ? 'Seat' : 'Spot';
+}
+
 function formatDisplayTime(hour: number, minute: number): string {
   return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
