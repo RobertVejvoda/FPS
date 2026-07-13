@@ -12,11 +12,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
-import { submitBooking } from '@/api/bookings';
+import { fetchBookings, submitBooking, type SubmitBookingResult } from '@/api/bookings';
+import { useTenantModules } from '@/api/tenantModules';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
 import { formatBookingRef, formatCutOffAt, humanizeRejectionReason } from '@/displayLabels';
-import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
+import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END, DEFAULT_SEATS_LOCATION } from '@/demoDefaults';
 import { colors, radius, spacing } from '@/theme';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
@@ -41,13 +42,20 @@ type FormState = {
 
 type FieldErrors = Partial<Record<'licensePlate' | 'vehicleType' | 'plannedDeparture', string>>;
 
+// One entry per module submit — partial success is the default model (UX009 #782):
+// a valid Seat request may be created even if Parking fails, and the reverse.
+type ModuleOutcome = {
+  module: 'Parking' | 'Seats';
+  ok: boolean;
+  text: string;
+  requestId?: string;
+  requestedDate?: string;
+};
+
 type SubmitStatus =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'accepted'; requestId: string; requestedDate: string; status: string }
-  | { kind: 'rejected'; rejectionCode: string | null; reason: string | null }
-  | { kind: 'unreachable'; message: string }
-  | { kind: 'error'; status: number; message: string };
+  | { kind: 'done'; outcomes: ModuleOutcome[] };
 
 const ARRIVAL_TIMES = [
   { hour: 6, minute: 0 }, { hour: 6, minute: 30 },
@@ -66,6 +74,14 @@ const DEPARTURE_TIMES = [
   { hour: 18, minute: 30 }, { hour: 19, minute: 0 },
   { hour: 20, minute: 0 },
 ];
+
+// UX009 (#782) — the three preset time ranges, always shown as actual hours.
+// Same whole-day Parking default as the web app, the seed, and the draw schedule.
+const TIME_PRESETS = [
+  { key: 'day', name: 'Whole day', startHour: 8, endHour: 18 },
+  { key: 'morning', name: 'Morning', startHour: 8, endHour: 12 },
+  { key: 'afternoon', name: 'Afternoon', startHour: 12, endHour: 18 },
+] as const;
 
 function availableDates(): Array<{ offset: number; label: string }> {
   return Array.from({ length: 7 }, (_, i) => {
@@ -110,9 +126,9 @@ function initialForm(): FormState {
     requiresAccessibleSpot: false,
     isCompanyCar: false,
     dateOffset: 1,
-    arrivalHour: 6,
+    arrivalHour: 8,
     arrivalMinute: 0,
-    departureHour: 20,
+    departureHour: 18,
     departureMinute: 0,
   };
 }
@@ -132,6 +148,7 @@ export default function NewBookingRoute() {
   const router = useRouter();
   const { offset: offsetParam } = useLocalSearchParams<{ offset?: string }>();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
+  const { hasSeats } = useTenantModules();
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [form, setForm] = useState<FormState>(() => {
@@ -139,6 +156,11 @@ export default function NewBookingRoute() {
     return { ...initialForm(), dateOffset: offset };
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  // Module selection — parking is preselected; Seats appears only when tenant-enabled.
+  const [wantParking, setWantParking] = useState(true);
+  const [wantSeat, setWantSeat] = useState(false);
+  const [seatsLocation, setSeatsLocation] = useState(DEFAULT_SEATS_LOCATION);
+  const [moduleError, setModuleError] = useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ kind: 'idle' });
   const [drawStatus, setDrawStatus] = useState<DrawStatusResult | null>(null);
   const [dateStatuses, setDateStatuses] = useState<Record<number, DrawStatusResult>>({});
@@ -174,6 +196,17 @@ export default function NewBookingRoute() {
     });
     return () => { cancelled = true; };
   }, [apiBaseUrl, bearerToken]);
+
+  useEffect(() => {
+    if (!hasSeats) return;
+    let cancelled = false;
+    void fetchBookings({ apiBaseUrl, bearerToken }).then((r) => {
+      if (cancelled || r.kind !== 'ok') return;
+      const known = r.items.find((i) => i.resourceType === 'Seats' && i.locationId)?.locationId;
+      if (known) setSeatsLocation(known);
+    });
+    return () => { cancelled = true; };
+  }, [apiBaseUrl, bearerToken, hasSeats]);
 
   useEffect(() => {
     fetchProfileSnapshot({ apiBaseUrl, bearerToken }).then((res) => {
@@ -222,71 +255,129 @@ export default function NewBookingRoute() {
     }
   };
 
+  const describeResult = (module: 'Parking' | 'Seats', result: SubmitBookingResult, requestedDate: string): ModuleOutcome => {
+    const noun = module === 'Seats' ? 'seat' : 'spot';
+    if (result.kind === 'accepted') {
+      return {
+        module,
+        ok: true,
+        text: result.status === 'Allocated'
+          ? `Your ${noun} is allocated — no draw needed.`
+          : `Request submitted — you’ll find out in the draw.`,
+        requestId: result.requestId,
+        requestedDate,
+      };
+    }
+    if (result.kind === 'rejected') {
+      return { module, ok: false, text: humanizeRejectionReason(result.rejectionCode, result.reason) };
+    }
+    return { module, ok: false, text: result.kind === 'unreachable' ? result.message : 'Something went wrong. Please try again.' };
+  };
+
   const handleSubmit = async () => {
-    const errors = validate(form);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+    setModuleError(null);
+    if (!wantParking && !wantSeat) {
+      setModuleError('Select at least one request to submit.');
       return;
     }
-    if (drawStatus?.kind === 'ok' && !drawStatus.data.canRequest) {
-      setSubmitStatus({
-        kind: 'rejected',
-        rejectionCode: null,
-        reason: drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? 'Requests are closed for this time.',
-      });
-      return;
+    if (wantParking) {
+      const errors = validate(form);
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        return;
+      }
+      if (drawStatus?.kind === 'ok' && !drawStatus.data.canRequest) {
+        setSubmitStatus({
+          kind: 'done',
+          outcomes: [{
+            module: 'Parking',
+            ok: false,
+            text: drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? 'Requests are closed for this time.',
+          }],
+        });
+        return;
+      }
     }
     setSubmitStatus({ kind: 'submitting' });
     const requestedDate = dateStrFromOffset(form.dateOffset);
-    const result = await submitBooking(
-      { apiBaseUrl, bearerToken },
-      {
-        facilityId: form.facilityId,
-        locationId: form.locationId || null,
-        licensePlate: form.licensePlate.trim(),
-        vehicleType: form.vehicleType,
-        isElectric: form.isElectric,
-        requiresAccessibleSpot: form.requiresAccessibleSpot,
-        isCompanyCar: form.isCompanyCar,
-        plannedArrivalTime: toISO(form.dateOffset, form.arrivalHour, form.arrivalMinute),
-        plannedDepartureTime: toISO(form.dateOffset, form.departureHour, form.departureMinute),
-      },
-    );
-    if (result.kind === 'unauthenticated') {
-      await clearSession();
-      router.replace('/login');
-      return;
+    const plannedArrivalTime = toISO(form.dateOffset, form.arrivalHour, form.arrivalMinute);
+    const plannedDepartureTime = toISO(form.dateOffset, form.departureHour, form.departureMinute);
+
+    // Each selected module submits independently — partial success is the default.
+    const outcomes: ModuleOutcome[] = [];
+    if (wantParking) {
+      const result = await submitBooking(
+        { apiBaseUrl, bearerToken },
+        {
+          facilityId: form.facilityId,
+          locationId: form.locationId || null,
+          licensePlate: form.licensePlate.trim(),
+          vehicleType: form.vehicleType,
+          isElectric: form.isElectric,
+          requiresAccessibleSpot: form.requiresAccessibleSpot,
+          isCompanyCar: form.isCompanyCar,
+          plannedArrivalTime,
+          plannedDepartureTime,
+        },
+      );
+      if (result.kind === 'unauthenticated') {
+        await clearSession();
+        router.replace('/login');
+        return;
+      }
+      outcomes.push(describeResult('Parking', result, requestedDate));
     }
-    if (result.kind === 'accepted') {
-      setSubmitStatus({ kind: 'accepted', requestId: result.requestId, requestedDate, status: result.status });
-    } else {
-      setSubmitStatus(result);
+    if (wantSeat && hasSeats) {
+      const result = await submitBooking(
+        { apiBaseUrl, bearerToken },
+        {
+          facilityId: DEMO_FACILITY_ID,
+          locationId: seatsLocation,
+          resourceType: 'Seats',
+          // Vehicle fields are ignored for seats.
+          licensePlate: 'N/A',
+          vehicleType: 'Sedan',
+          isElectric: false,
+          requiresAccessibleSpot: false,
+          isCompanyCar: false,
+          plannedArrivalTime,
+          plannedDepartureTime,
+        },
+      );
+      if (result.kind === 'unauthenticated') {
+        await clearSession();
+        router.replace('/login');
+        return;
+      }
+      outcomes.push(describeResult('Seats', result, requestedDate));
     }
+    setSubmitStatus({ kind: 'done', outcomes });
   };
 
-  if (submitStatus.kind === 'accepted') {
-    const ref = formatBookingRef(submitStatus.requestId, submitStatus.requestedDate);
-    // 'Allocated' = immediate same-day / company-car Tier-1 fixed-slot allocation;
-    // otherwise the request is Pending and queued for the next Draw.
-    const allocated = submitStatus.status === 'Allocated';
+  // Any successful module → the result screen; every module outcome is reported
+  // clearly, including partial success (UX009 #782).
+  if (submitStatus.kind === 'done' && submitStatus.outcomes.some(o => o.ok)) {
+    const allOk = submitStatus.outcomes.every(o => o.ok);
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successContainer}>
-          <Text style={styles.successTitle}>{allocated ? 'Spot allocated' : 'Request submitted'}</Text>
-          <Text style={styles.successBody}>
-            {allocated
-              ? 'Your spot is allocated — no draw needed.'
-              : 'Your spot request is waiting for the next allocation draw.'}
-          </Text>
-          <View style={styles.refCard}>
-            <Text style={styles.refLabel}>Reference</Text>
-            <Text style={styles.refValue}>{ref}</Text>
-          </View>
+          <Text style={styles.successTitle}>{allOk ? 'Request submitted' : 'Partially submitted'}</Text>
+          {submitStatus.outcomes.map((o) => (
+            <View key={o.module} style={[styles.outcomeCard, o.ok ? styles.outcomeCardOk : styles.outcomeCardFail]}>
+              <Text style={styles.outcomeModule}>{o.module === 'Seats' ? 'Seat' : 'Parking'}</Text>
+              <Text style={[styles.outcomeText, o.ok ? styles.outcomeTextOk : styles.outcomeTextFail]}>{o.text}</Text>
+              {o.ok && o.requestId ? (
+                <Text style={styles.refValueSmall}>{formatBookingRef(o.requestId, o.requestedDate)}</Text>
+              ) : null}
+            </View>
+          ))}
           <Pressable
             style={({ pressed }) => [styles.primary, pressed && styles.primaryDimmed]}
             onPress={() => {
               setForm(initialForm());
               setFieldErrors({});
+              setWantParking(true);
+              setWantSeat(false);
               setSubmitStatus({ kind: 'idle' });
             }}
             accessibilityRole="button"
@@ -298,7 +389,7 @@ export default function NewBookingRoute() {
             onPress={() => router.push('/(tabs)/bookings')}
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryLabel}>My spots</Text>
+            <Text style={styles.secondaryLabel}>My Reservations</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -311,7 +402,7 @@ export default function NewBookingRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Request a spot</Text>
+        <Text style={styles.heading}>Request</Text>
 
         {profileLoading ? (
           <Text style={styles.mutedText}>Loading vehicles…</Text>
@@ -374,7 +465,31 @@ export default function NewBookingRoute() {
               </View>
             )}
 
-            <FieldRow label="Arrival time">
+            <FieldRow label="Time">
+              <View style={styles.pills}>
+                {TIME_PRESETS.map((preset) => {
+                  const active = form.arrivalHour === preset.startHour && form.arrivalMinute === 0
+                    && form.departureHour === preset.endHour && form.departureMinute === 0;
+                  return (
+                    <Pressable
+                      key={preset.key}
+                      style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.chipPressed]}
+                      onPress={() => {
+                        set('arrivalHour', preset.startHour); set('arrivalMinute', 0);
+                        set('departureHour', preset.endHour); set('departureMinute', 0);
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {preset.name} · {formatTimeLabel(preset.startHour, 0)} – {formatTimeLabel(preset.endHour, 0)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </FieldRow>
+
+            <FieldRow label="Custom arrival time">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {ARRIVAL_TIMES.map(({ hour, minute }) => {
                   const active = form.arrivalHour === hour && form.arrivalMinute === minute;
@@ -394,7 +509,7 @@ export default function NewBookingRoute() {
               </ScrollView>
             </FieldRow>
 
-            <FieldRow label="Departure time" error={fieldErrors.plannedDeparture}>
+            <FieldRow label="Custom departure time" error={fieldErrors.plannedDeparture}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {DEPARTURE_TIMES.map(({ hour, minute }) => {
                   const active = form.departureHour === hour && form.departureMinute === minute;
@@ -414,7 +529,24 @@ export default function NewBookingRoute() {
               </ScrollView>
             </FieldRow>
 
-            {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
+            {/* UX009 (#782) — module options for the selected date/time. Parking is the
+                fully wired module; Seats appears only when the tenant enables it. */}
+            <ToggleRow
+              label="Parking spot"
+              hint="A parking spot allocated by the fair draw."
+              value={wantParking}
+              onValueChange={(v) => { setWantParking(v); setModuleError(null); }}
+            />
+            {hasSeats ? (
+              <ToggleRow
+                label="Team seat"
+                hint="A shared team seat for the same date and time, allocated by the same fair draw."
+                value={wantSeat}
+                onValueChange={(v) => { setWantSeat(v); setModuleError(null); }}
+              />
+            ) : null}
+
+            {wantParking && profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
               <FieldRow label="Vehicle" error={fieldErrors.licensePlate}>
                 <View style={styles.vehicleList}>
                   {profile.vehicles.filter(v => v.isActive).map((v) => (
@@ -436,7 +568,7 @@ export default function NewBookingRoute() {
                   ))}
                 </View>
               </FieldRow>
-            ) : (
+            ) : wantParking ? (
               <>
                 <FieldRow label="License plate" error={fieldErrors.licensePlate}>
                   <TextInput
@@ -473,51 +605,47 @@ export default function NewBookingRoute() {
                   </View>
                 </FieldRow>
               </>
-            )}
+            ) : null}
 
-            {form.selectedVehicleId ? null : (
-              <ToggleRow
-                label="Electric vehicle"
-                hint="Enables EV charging spot allocation when available."
-                value={form.isElectric}
-                onValueChange={v => set('isElectric', v)}
-              />
-            )}
-            <ToggleRow
-              label="Accessible spot required"
-              hint="Requests a space close to an entrance or lift."
-              value={form.requiresAccessibleSpot}
-              onValueChange={v => set('requiresAccessibleSpot', v)}
-            />
-            <ToggleRow
-              label="Company car"
-              hint="Indicates this vehicle is owned or leased by your employer."
-              value={form.isCompanyCar}
-              onValueChange={v => set('isCompanyCar', v)}
-            />
+            {wantParking ? (
+              <>
+                {form.selectedVehicleId ? null : (
+                  <ToggleRow
+                    label="Electric vehicle"
+                    hint="Enables EV charging spot allocation when available."
+                    value={form.isElectric}
+                    onValueChange={v => set('isElectric', v)}
+                  />
+                )}
+                <ToggleRow
+                  label="Accessible spot required"
+                  hint="Requests a space close to an entrance or lift."
+                  value={form.requiresAccessibleSpot}
+                  onValueChange={v => set('requiresAccessibleSpot', v)}
+                />
+                <ToggleRow
+                  label="Company car"
+                  hint="Indicates this vehicle is owned or leased by your employer."
+                  value={form.isCompanyCar}
+                  onValueChange={v => set('isCompanyCar', v)}
+                />
+              </>
+            ) : null}
           </>
         )}
 
-        {submitStatus.kind === 'rejected' && (
-          <View style={styles.rejectionBox}>
-            <Text style={styles.rejectionTitle}>Request not fulfilled</Text>
-            <Text style={styles.rejectionText}>
-              {humanizeRejectionReason(submitStatus.rejectionCode, submitStatus.reason)}
-            </Text>
+        {submitStatus.kind === 'done' && !submitStatus.outcomes.some(o => o.ok) && submitStatus.outcomes.map((o) => (
+          <View key={o.module} style={styles.rejectionBox}>
+            <Text style={styles.rejectionTitle}>{o.module === 'Seats' ? 'Seat' : 'Parking'}: request not fulfilled</Text>
+            <Text style={styles.rejectionText}>{o.text}</Text>
           </View>
-        )}
+        ))}
 
-        {(submitStatus.kind === 'unreachable' || submitStatus.kind === 'error') ? (
-          <Text style={styles.errorText}>
-            {submitStatus.kind === 'unreachable'
-              ? submitStatus.message
-              : `Something went wrong. Please try again.`}
-          </Text>
-        ) : null}
+        {moduleError ? <Text style={styles.errorText}>{moduleError}</Text> : null}
 
         <Pressable
-          style={({ pressed }) => [styles.primary, (isSubmitting || requestWindowClosed || pressed) && styles.primaryDimmed]}
-          disabled={isSubmitting || requestWindowClosed}
+          style={({ pressed }) => [styles.primary, (isSubmitting || (wantParking && requestWindowClosed) || pressed) && styles.primaryDimmed]}
+          disabled={isSubmitting || (wantParking && requestWindowClosed)}
           onPress={handleSubmit}
           accessibilityRole="button"
           testID="button-submit"
@@ -525,7 +653,7 @@ export default function NewBookingRoute() {
           {isSubmitting ? (
             <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={styles.primaryLabel}>Submit request</Text>
+            <Text style={styles.primaryLabel}>{wantParking && wantSeat ? 'Submit selected requests' : 'Submit request'}</Text>
           )}
         </Pressable>
       </ScrollView>
@@ -689,6 +817,19 @@ const styles = StyleSheet.create({
   },
   refLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   refValue: { fontSize: 18, fontWeight: '700', color: colors.text, letterSpacing: 1 },
+  outcomeCard: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  outcomeCardOk: { backgroundColor: '#ecfdf5', borderColor: '#bbf7d0' },
+  outcomeCardFail: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+  outcomeModule: { fontSize: 12, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  outcomeText: { fontSize: 14, lineHeight: 20 },
+  outcomeTextOk: { color: '#166534' },
+  outcomeTextFail: { color: colors.danger },
+  refValueSmall: { fontSize: 14, fontWeight: '700', color: colors.text, letterSpacing: 0.5 },
   rejectionBox: {
     backgroundColor: '#fef2f2',
     borderRadius: radius.md,

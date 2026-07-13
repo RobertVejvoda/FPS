@@ -201,7 +201,7 @@ export function BookingsPage() {
             Request for another date →
           </button>
           {hasSeats && (
-            <button onClick={() => navigate('/seats')} style={linkBtn}>
+            <button onClick={() => navigate('/bookings/new?module=seats')} style={linkBtn}>
               Request a seat →
             </button>
           )}

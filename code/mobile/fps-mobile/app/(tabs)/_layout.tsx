@@ -34,7 +34,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="new"
         options={{
-          title: 'New',
+          // UX009 (#782) — one date-first Request entry for all enabled modules.
+          title: 'Request',
           href: isEmployee ? undefined : null,
         }}
       />

@@ -12,6 +12,9 @@ export type AuthState = {
   apiBaseUrl: string;
   bearerToken: string;
   roles: string[];
+  /** Server-confirmed tenant from GET /me — used only for tenant-scoped read URLs
+   *  such as the module list (UX009 #782); never sent as a scoping claim. */
+  tenantId: string;
   isConfigured: boolean;
   setSession: (accessToken: string) => Promise<void>;
   clearSession: () => Promise<void>;
@@ -24,10 +27,12 @@ export type AuthState = {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-async function loadRoles(apiBaseUrl: string, bearerToken: string): Promise<string[]> {
-  if (!apiBaseUrl || !bearerToken) return [];
+async function loadIdentity(apiBaseUrl: string, bearerToken: string): Promise<{ roles: string[]; tenantId: string }> {
+  if (!apiBaseUrl || !bearerToken) return { roles: [], tenantId: '' };
   const result = await fetchMe({ apiBaseUrl, bearerToken });
-  return result.kind === 'ok' ? (result.me.roles as string[]) : [];
+  return result.kind === 'ok'
+    ? { roles: result.me.roles as string[], tenantId: (result.me.tenantId as string) ?? '' }
+    : { roles: [], tenantId: '' };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [apiBaseUrl, setApiBaseUrl] = useState('');
   const [bearerToken, setBearerToken] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
+  const [tenantId, setTenantId] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -43,11 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const oidcToken = await loadAccessToken();
         if (oidcToken) {
           const { apiBaseUrl: configUrl } = getOidcConfig();
-          const fetchedRoles = await loadRoles(configUrl, oidcToken);
+          const identity = await loadIdentity(configUrl, oidcToken);
           if (!cancelled) {
             setApiBaseUrl(configUrl);
             setBearerToken(oidcToken);
-            setRoles(fetchedRoles);
+            setRoles(identity.roles);
+            setTenantId(identity.tenantId);
           }
           return;
         }
@@ -56,11 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem(DEV_TOKEN_KEY),
         ]);
         if (storedBaseUrl && storedToken) {
-          const fetchedRoles = await loadRoles(storedBaseUrl, storedToken);
+          const identity = await loadIdentity(storedBaseUrl, storedToken);
           if (!cancelled) {
             setApiBaseUrl(storedBaseUrl);
             setBearerToken(storedToken);
-            setRoles(fetchedRoles);
+            setRoles(identity.roles);
+            setTenantId(identity.tenantId);
           }
         } else if (!cancelled) {
           if (storedBaseUrl) setApiBaseUrl(storedBaseUrl);
@@ -82,10 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       AsyncStorage.removeItem(DEV_TOKEN_KEY),
     ]);
     const { apiBaseUrl: configUrl } = getOidcConfig();
-    const fetchedRoles = await loadRoles(configUrl, accessToken);
+    const identity = await loadIdentity(configUrl, accessToken);
     setApiBaseUrl(configUrl);
     setBearerToken(accessToken);
-    setRoles(fetchedRoles);
+    setRoles(identity.roles);
+    setTenantId(identity.tenantId);
   }, []);
 
   const clearSession = useCallback(async () => {
@@ -97,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setApiBaseUrl('');
     setBearerToken('');
     setRoles([]);
+    setTenantId('');
   }, []);
 
   const signOut = useCallback(async () => {
@@ -112,10 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       AsyncStorage.setItem(DEV_BASE_URL_KEY, trimmedBaseUrl),
       AsyncStorage.setItem(DEV_TOKEN_KEY, trimmedToken),
     ]);
-    const fetchedRoles = await loadRoles(trimmedBaseUrl, trimmedToken);
+    const identity = await loadIdentity(trimmedBaseUrl, trimmedToken);
     setApiBaseUrl(trimmedBaseUrl);
     setBearerToken(trimmedToken);
-    setRoles(fetchedRoles);
+    setRoles(identity.roles);
+    setTenantId(identity.tenantId);
   }, []);
 
   const clearCredentials = useCallback(async () => {
@@ -126,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setApiBaseUrl('');
     setBearerToken('');
     setRoles([]);
+    setTenantId('');
   }, []);
 
   const value = useMemo<AuthState>(
@@ -134,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiBaseUrl,
       bearerToken,
       roles,
+      tenantId,
       isConfigured: ready && apiBaseUrl.length > 0 && bearerToken.length > 0,
       setSession,
       clearSession,
@@ -141,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveCredentials,
       clearCredentials,
     }),
-    [ready, apiBaseUrl, bearerToken, roles, setSession, clearSession, signOut, saveCredentials, clearCredentials],
+    [ready, apiBaseUrl, bearerToken, roles, tenantId, setSession, clearSession, signOut, saveCredentials, clearCredentials],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
