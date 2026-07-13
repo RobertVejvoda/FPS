@@ -178,7 +178,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             : Models.RequestWindowStatus.Open;
 
         var safeMessage = drawStatus is "Completed"
-            ? "Spot allocation is complete. Check your result in My Spots."
+            // UX008 (#781): the employee surface is the module-aware My Reservations page.
+            ? "Allocation is complete. Check your result in My Reservations."
             : windowClosed
                 ? "The request window is closed for this date."
                 : $"Requests are open until {policy.DrawCutOffTime:HH:mm} ({policy.TimeZoneId}).";

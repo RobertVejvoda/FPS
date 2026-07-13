@@ -61,9 +61,10 @@ export function SeatsPage() {
     <section className="page-stack">
       <header className="page-hero">
         <div>
+          {/* The page hero is brand-green; the back link must stay readable on it. */}
           <button
             onClick={() => navigate('/bookings')}
-            style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 8 }}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.92)', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 8 }}
           >
             ← My Reservations
           </button>
