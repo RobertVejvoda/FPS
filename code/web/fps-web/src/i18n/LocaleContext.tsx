@@ -32,6 +32,10 @@ import { fetchTenantModules } from '../api/customer';
 type LocaleContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  // Feeds a pre-auth tenant default (e.g. from sign-in email discovery) into
+  // the tenant-default precedence slot. Transient: never persisted, never
+  // overrides an explicit user preference or the ?lang test override.
+  applyTenantDefault: (tag: string | null | undefined) => void;
 };
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
@@ -107,7 +111,19 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     setCurrentLocale(next);
   }, []);
 
-  const value = useMemo<LocaleContextValue>(() => ({ locale, setLocale }), [locale, setLocale]);
+  // LOC001 review (#802): the sign-in discovery flow calls this right before
+  // redirecting to Keycloak, so the store must update synchronously — the
+  // render effect would apply one tick too late for login()'s ui_locales.
+  const applyTenantDefault = useCallback((tag: string | null | undefined) => {
+    const supported = toSupportedLocale(tag);
+    setTenantDefault(supported);
+    if (supported && !queryOverride && !userPreference) setCurrentLocale(supported);
+  }, [queryOverride, userPreference]);
+
+  const value = useMemo<LocaleContextValue>(
+    () => ({ locale, setLocale, applyTenantDefault }),
+    [locale, setLocale, applyTenantDefault],
+  );
 
   return (
     <LocaleContext.Provider value={value}>

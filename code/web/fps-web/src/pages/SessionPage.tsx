@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { defaultRoute } from '../auth/roles';
 import { discoverTenant } from '../api/customer';
 import { useEffect } from 'react';
-import { t, type MessageKey } from '../i18n';
+import { t, useLocale, type MessageKey } from '../i18n';
 import { LocaleSwitcher } from '../components/LocaleSwitcher';
 
 const phaseMessageKeys: Record<string, MessageKey> = {
@@ -201,6 +201,7 @@ function EmailFirstSignIn({
 }) {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<SignInStep>('idle');
+  const { applyTenantDefault } = useLocale();
 
   const trimmed = email.trim();
   const atIndex = trimmed.indexOf('@');
@@ -223,6 +224,11 @@ function EmailFirstSignIn({
       // reachable for them.
       const sso = result.data.loginMode === 'CompanySso';
       setStep(sso ? 'routing-sso' : 'routing-local');
+      // LOC001 review (#802): apply the discovered tenant default locale before
+      // redirecting so Keycloak's ui_locales matches the tenant language even
+      // for a first-time visitor with an English browser. Transient tenant
+      // default only — a stored user language choice still wins.
+      applyTenantDefault(result.data.defaultLocale);
       await onLogin(trimmed, sso && result.data.idpAlias ? { idpHint: result.data.idpAlias } : undefined);
     } else if (result.kind === 'notfound') {
       setStep('notfound');
