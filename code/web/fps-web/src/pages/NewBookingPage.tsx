@@ -366,7 +366,7 @@ export function NewBookingPage() {
   return (
     <div style={{ maxWidth: 560 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button onClick={() => navigate('/bookings')} style={backBtn}>{t('bookings.back')}</button>
+        <button onClick={() => navigate('/bookings')} className="btn-link" style={{ marginLeft: -12 }}>{t('bookings.back')}</button>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('bookings.newRequest.heading')}</h2>
       </div>
 
@@ -391,8 +391,8 @@ export function NewBookingPage() {
                     style={{
                       padding: '6px 12px',
                       borderRadius: 6,
-                      border: `2px solid ${selected ? '#1d4ed8' : '#e5e7eb'}`,
-                      background: selected ? '#1d4ed8' : '#fff',
+                      border: `2px solid ${selected ? 'var(--brand-primary)' : '#e5e7eb'}`,
+                      background: selected ? 'var(--brand-primary)' : '#fff',
                       color: closed ? '#9ca3af' : selected ? '#fff' : '#374151',
                       fontWeight: 600,
                       cursor: closed || dateStatusesLoading ? 'not-allowed' : 'pointer',
@@ -429,8 +429,8 @@ export function NewBookingPage() {
                     style={{
                       padding: '6px 12px',
                       borderRadius: 6,
-                      border: `2px solid ${selected ? '#1d4ed8' : '#e5e7eb'}`,
-                      background: selected ? '#1d4ed8' : '#fff',
+                      border: `2px solid ${selected ? 'var(--brand-primary)' : '#e5e7eb'}`,
+                      background: selected ? 'var(--brand-primary)' : '#fff',
                       color: selected ? '#fff' : '#374151',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -496,7 +496,7 @@ export function NewBookingPage() {
                               style={{
                                 padding: '10px 14px',
                                 borderRadius: 6,
-                                border: `2px solid ${form.selectedVehicleId === v.vehicleId ? '#1d4ed8' : '#e5e7eb'}`,
+                                border: `2px solid ${form.selectedVehicleId === v.vehicleId ? 'var(--brand-primary)' : '#e5e7eb'}`,
                                 background: form.selectedVehicleId === v.vehicleId ? '#eff6ff' : '#fff',
                                 color: '#111827',
                                 cursor: 'pointer',
@@ -523,7 +523,7 @@ export function NewBookingPage() {
                             {VEHICLE_TYPES.map((vt) => (
                               <button
                                 key={vt} type="button" onClick={() => set('vehicleType', vt)}
-                                style={{ padding: '6px 14px', borderRadius: 6, border: `2px solid ${form.vehicleType === vt ? '#1d4ed8' : '#e5e7eb'}`, background: form.vehicleType === vt ? '#1d4ed8' : '#fff', color: form.vehicleType === vt ? '#fff' : '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 13 }}
+                                style={{ padding: '6px 14px', borderRadius: 6, border: `2px solid ${form.vehicleType === vt ? 'var(--brand-primary)' : '#e5e7eb'}`, background: form.vehicleType === vt ? 'var(--brand-primary)' : '#fff', color: form.vehicleType === vt ? '#fff' : '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 13 }}
                               >
                                 {tDynamic('bookings.vehicleType', vt, vt)}
                               </button>
@@ -589,7 +589,7 @@ export function NewBookingPage() {
                 </div>
               ))}
               {outcomes.some(o => o.ok) && (
-                <button type="button" onClick={() => navigate('/bookings')} style={{ ...backBtn, alignSelf: 'flex-start' }}>
+                <button type="button" onClick={() => navigate('/bookings')} className="btn-link" style={{ alignSelf: 'flex-start', marginLeft: -12 }}>
                   {t('bookings.viewMyReservations')}
                 </button>
               )}
@@ -621,7 +621,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function moduleCardStyle(selected: boolean): React.CSSProperties {
   return {
-    border: `2px solid ${selected ? '#1d4ed8' : '#e5e7eb'}`,
+    border: `2px solid ${selected ? 'var(--brand-primary)' : '#e5e7eb'}`,
     borderRadius: 8,
     padding: '12px 14px',
     background: '#fff',
@@ -631,5 +631,4 @@ function moduleCardStyle(selected: boolean): React.CSSProperties {
 const moduleHeadStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 };
 const checkboxRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' };
 const inputStyle: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14, color: '#111827', background: '#fff', width: '100%', boxSizing: 'border-box' };
-const primaryBtn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
-const backBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#1d4ed8', fontSize: 14, cursor: 'pointer', padding: 0 };
+const primaryBtn: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer' };

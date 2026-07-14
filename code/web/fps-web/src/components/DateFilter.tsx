@@ -257,7 +257,7 @@ function ChipButton({ active, onClick, label, subdued }: { active: boolean; onCl
       style={{
         padding: '0.375rem 0.875rem', borderRadius: 20, border: 'none', cursor: 'pointer',
         fontSize: '0.875rem',
-        background: active ? '#2563eb' : (subdued ? '#fff' : '#f3f4f6'),
+        background: active ? 'var(--brand-primary)' : (subdued ? '#fff' : '#f3f4f6'),
         color: active ? '#fff' : (subdued ? '#64748b' : '#374151'),
         fontWeight: active ? 600 : 400,
         boxShadow: subdued && !active ? 'inset 0 0 0 1px #e5e7eb' : undefined,

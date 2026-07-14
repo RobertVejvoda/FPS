@@ -24,13 +24,13 @@ function statusLabelFor(status: string, resourceType?: string | null): string {
 
 const STATUS_COLOR: Record<string, string> = {
   Submitted: colors.primary,
-  Allocated: '#15803d',
+  Allocated: colors.success,
   Rejected: colors.danger,
   Cancelled: colors.textMuted,
   Expired: colors.textMuted,
-  Waitlisted: '#92400e',
-  UsageConfirmed: '#15803d',
-  NoShow: '#b45309',
+  Waitlisted: colors.warning,
+  UsageConfirmed: colors.success,
+  NoShow: colors.warningStrong,
   Pending: colors.primary,
 };
 
@@ -124,7 +124,7 @@ function AllocationExplanation({
                 ) : null}
               </>
             ) : null}
-            <Text style={[styles.resultLabel, { color: '#15803d' }]}>{t('booking.detail.resultAllocated')}</Text>
+            <Text style={[styles.resultLabel, { color: colors.success }]}>{t('booking.detail.resultAllocated')}</Text>
             <Text style={styles.explanationText}>
               {resourceType === 'Seats'
                 ? t('booking.detail.matchedSeat')

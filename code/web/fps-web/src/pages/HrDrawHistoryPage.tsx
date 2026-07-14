@@ -71,7 +71,7 @@ function runLabelText(runLabel: string): string {
 function statusColor(status: string): string {
   if (status === 'Completed') return 'var(--success)';
   if (status === 'Failed') return 'var(--danger)';
-  if (status === 'InProgress') return '#2563eb';
+  if (status === 'InProgress') return 'var(--brand-primary)';
   return 'var(--muted)';
 }
 
@@ -271,7 +271,7 @@ export function HrDrawHistoryPage() {
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
-                background: selectedChip === i ? '#2563eb' : '#f3f4f6',
+                background: selectedChip === i ? 'var(--brand-primary)' : '#f3f4f6',
                 color: selectedChip === i ? '#fff' : '#374151',
                 fontWeight: selectedChip === i ? 600 : 400,
               }}
@@ -491,7 +491,7 @@ function UpcomingDrawCard({
               borderRadius: 4,
               border: 'none',
               cursor: drawRunning || !drawReason.trim() ? 'not-allowed' : 'pointer',
-              background: runLabel === 'Retry Draw' ? '#dc2626' : '#2563eb',
+              background: runLabel === 'Retry Draw' ? '#dc2626' : 'var(--brand-primary)',
               color: '#fff',
               fontSize: '0.875rem',
               opacity: drawRunning || !drawReason.trim() ? 0.5 : 1,

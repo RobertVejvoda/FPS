@@ -320,8 +320,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   actionSuccess: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#bbf7d0',
+    backgroundColor: colors.successSoft,
+    borderColor: colors.successBorder,
   },
   actionError: {
     backgroundColor: '#fef2f2',
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionSuccessText: {
-    color: '#166534',
+    color: colors.successText,
   },
   actionErrorText: {
     color: colors.danger,

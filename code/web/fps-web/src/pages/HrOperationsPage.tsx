@@ -19,6 +19,7 @@ import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { RequestorDetailDrawer } from './RequestorDetailDrawer';
+import { statusSoftTone } from '@robertvejvoda/fairspot-ui';
 import { t, tDynamic, tPlural } from '../i18n';
 
 const LOCATION_ID = 'Prague';
@@ -35,14 +36,11 @@ type ListState =
   | { kind: 'ok'; items: HrBookingListItem[]; totalCount: number; nextCursor: string | null }
   | { kind: 'error'; message: string };
 
+// UXPOL001 (#798): shared status palette from fairspot-ui — Pending is blue
+// (in flight) everywhere; amber stays reserved for Waitlisted.
 function statusBadgeStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case 'Allocated': return { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' };
-    case 'Pending':   return { background: '#fffbeb', color: '#92400e', border: '1px solid #fcd34d' };
-    case 'Cancelled': return { background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' };
-    case 'Rejected':  return { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' };
-    default:          return { background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' };
-  }
+  const tone = statusSoftTone(status);
+  return { background: tone.background, color: tone.color, border: `1px solid ${tone.border}` };
 }
 
 interface RequestRowProps {
@@ -74,8 +72,8 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
               type="button"
               onClick={() => onOpenDetail(item)}
               title={t('hr.ops.openRequestorDetail')}
-              style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1d4ed8', background: 'transparent',
-                border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+              style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-primary)', background: 'transparent',
+                border: 'none', padding: '8px 8px', margin: '-8px -8px', minHeight: 38, cursor: 'pointer', textAlign: 'left',
                 textDecoration: 'underline', textDecorationStyle: 'dotted', textDecorationColor: '#cbd5e1',
                 textUnderlineOffset: 3 }}
             >
@@ -113,8 +111,8 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
           <button
             disabled={busyId === item.requestId}
             onClick={() => onCancel(item.requestId)}
-            style={{ flexShrink: 0, padding: '0.3rem 0.875rem', borderRadius: 4, border: '1px solid #fca5a5',
-              background: '#fff', color: '#dc2626', fontSize: '0.8rem', cursor: 'pointer', alignSelf: 'flex-start' }}
+            style={{ flexShrink: 0, minHeight: 38, padding: '0.45rem 0.875rem', borderRadius: 6, border: '1px solid #fca5a5',
+              background: '#fff', color: 'var(--danger)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-start' }}
           >
             {t('hr.ops.cancel')}
           </button>
@@ -212,7 +210,7 @@ export function HrOperationsPage() {
               key={chip.date}
               onClick={() => setSelectedChip(i)}
               style={{ padding: '0.375rem 0.875rem', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.875rem',
-                background: selectedChip === i ? '#2563eb' : '#f3f4f6',
+                background: selectedChip === i ? 'var(--brand-primary)' : '#f3f4f6',
                 color: selectedChip === i ? '#fff' : '#374151', fontWeight: selectedChip === i ? 600 : 400 }}
             >
               {chip.label}
@@ -226,8 +224,8 @@ export function HrOperationsPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              style={{ padding: '0.25rem 0.75rem', borderRadius: 12, border: `1px solid ${statusFilter === s ? '#2563eb' : '#d1d5db'}`,
-                background: statusFilter === s ? '#eff6ff' : '#fff', color: statusFilter === s ? '#2563eb' : '#374151',
+              style={{ padding: '0.25rem 0.75rem', borderRadius: 12, border: `1px solid ${statusFilter === s ? 'var(--brand-primary)' : '#d1d5db'}`,
+                background: statusFilter === s ? '#eff6ff' : '#fff', color: statusFilter === s ? 'var(--brand-primary)' : '#374151',
                 fontSize: '0.8rem', cursor: 'pointer' }}
             >
               {statusLabel(s)}

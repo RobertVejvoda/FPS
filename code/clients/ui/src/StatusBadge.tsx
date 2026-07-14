@@ -1,19 +1,9 @@
-const COLOR: Record<string, string> = {
-  Submitted: '#1d4ed8',
-  Pending: '#1d4ed8',
-  Allocated: '#15803d',
-  Rejected: '#b91c1c',
-  Cancelled: '#6b7280',
-  Expired: '#6b7280',
-  Waitlisted: '#92400e',
-  UsageConfirmed: '#15803d',
-  NoShow: '#b45309',
-};
+import { statusSolidColor } from './statusColors.js';
 
 // LOC001 (#744): `label` lets the host app pass localized display text while
 // `status` keeps driving the color mapping from the stable machine value.
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const color = COLOR[status] ?? '#6b7280';
+  const color = statusSolidColor(status);
   return (
     <span style={{
       display: 'inline-block',

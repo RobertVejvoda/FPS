@@ -135,6 +135,6 @@ const page: React.CSSProperties = { display: 'flex', flexDirection: 'column', ga
 const card: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '16px 20px' };
 const cardTitle: React.CSSProperties = { margin: '0 0 8px', fontSize: 15, fontWeight: 700 };
 const muted: React.CSSProperties = { color: '#6b7280', fontSize: 13 };
-const btn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
+const btn: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
 const dangerBtn: React.CSSProperties = { background: '#b91c1c', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
 const td: React.CSSProperties = { padding: '7px 10px' };

@@ -431,8 +431,8 @@ export function ConfigurationPage() {
                   onClick={() => setLocationId(loc.locationId)}
                   style={{
                     padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer',
-                    border: `1px solid ${active ? '#1d4ed8' : '#d1d5db'}`,
-                    background: active ? '#1d4ed8' : '#fff',
+                    border: `1px solid ${active ? 'var(--brand-primary)' : '#d1d5db'}`,
+                    background: active ? 'var(--brand-primary)' : '#fff',
                     color: active ? '#fff' : '#374151',
                     fontWeight: active ? 600 : 400,
                   }}
@@ -812,7 +812,7 @@ const cardTitle: React.CSSProperties = { margin: '0 0 12px', fontSize: 15, fontW
 const fieldGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 };
 const muted: React.CSSProperties = { color: '#6b7280', fontSize: 13 };
 const input: React.CSSProperties = { border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none', background: '#fff', color: '#111827' };
-const btn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
+const btn: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
 const btnSm: React.CSSProperties = { ...btn, padding: '6px 12px', fontSize: 13 };
 const tbl: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13 };
 const th: React.CSSProperties = { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 500 };

@@ -35,7 +35,7 @@ type Phase =
 
 const STATUS_COLOR: Record<string, string> = {
   Created: 'green',
-  Updated: '#1d4ed8',
+  Updated: 'var(--brand-primary)',
   Unchanged: '#6b7280',
   Rejected: '#b91c1c',
 };
@@ -112,7 +112,7 @@ export function HrImportPage() {
       <h2 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>{t('hr.import.title')}</h2>
       <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
         {t('hr.import.intro')}{' '}
-        <a href={HR_IMPORT_DOC_URL} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8' }}>{t('hr.import.openContract')}</a>.
+        <a href={HR_IMPORT_DOC_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--brand-primary)' }}>{t('hr.import.openContract')}</a>.
       </p>
 
       <section style={helpPanel}>
@@ -169,7 +169,7 @@ export function HrImportPage() {
           <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>{t('hr.import.employeesSectionTitle')}</h3>
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
             <span style={{ color: 'green' }}>{t('hr.import.summary.created', { count: phase.data.created })}</span>
-            <span style={{ color: '#1d4ed8' }}>{t('hr.import.summary.updated', { count: phase.data.updated })}</span>
+            <span style={{ color: 'var(--brand-primary)' }}>{t('hr.import.summary.updated', { count: phase.data.updated })}</span>
             <span style={{ color: '#6b7280' }}>{t('hr.import.summary.unchanged', { count: phase.data.unchanged })}</span>
             <span style={{ color: '#b91c1c' }}>{t('hr.import.summary.rejected', { count: phase.data.rejected })}</span>
           </div>
@@ -234,7 +234,7 @@ export function HrImportPage() {
             <button
               onClick={() => void handleCommit()}
               disabled={isLoading}
-              style={{ padding: '7px 18px', fontSize: '0.875rem', cursor: 'pointer', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600 }}
+              style={{ padding: '7px 18px', fontSize: '0.875rem', cursor: 'pointer', background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600 }}
             >
               {isCommitLoading
                 ? t('hr.import.committing')

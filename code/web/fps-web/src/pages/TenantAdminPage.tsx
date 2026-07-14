@@ -301,7 +301,7 @@ export function TenantAdminPage() {
           <h3 style={{ ...cardTitle, color: '#92400e' }}>{t('admin.readiness.actionRequired', { label: nextAction.label })}</h3>
           <p style={{ margin: '0 0 8px', fontSize: 13, color: '#78350f' }}>{nextAction.detail}</p>
           {nextAction.link && (
-            <Link to={nextAction.link} style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 500 }}>
+            <Link to={nextAction.link} className="btn-link" style={{ alignSelf: 'flex-start', marginLeft: -12 }}>
               {t('admin.readiness.goTo', { label: nextAction.linkLabel ?? nextAction.link })}
             </Link>
           )}
@@ -349,7 +349,7 @@ function Row({ label, value }: { label: string; value: string }) {
 function LifecycleBadge({ state }: { state: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
     Draft:      { bg: '#f3f4f6', text: '#374151' },
-    Configured: { bg: '#eff6ff', text: '#1d4ed8' },
+    Configured: { bg: '#eff6ff', text: 'var(--brand-primary)' },
     Seeded:     { bg: '#f0f9ff', text: '#0369a1' },
     Ready:      { bg: '#f0fdf4', text: '#166534' },
     Suspended:  { bg: '#fef9c3', text: '#854d0e' },
@@ -411,7 +411,7 @@ function CheckRow({ check }: { check: ReadinessCheckDto }) {
           <p style={{ margin: '4px 0 0', fontSize: 12, color: nextActionColor }}>
             {meta.nextAction}
             {meta.link && (
-              <> — <Link to={meta.link} style={{ color: '#1d4ed8', fontWeight: 500 }}>{t('admin.readiness.goTo', { label: meta.linkLabel ?? meta.link })}</Link></>
+              <> — <Link to={meta.link} className="btn-link" style={{ fontSize: 12, minHeight: 38 }}>{t('admin.readiness.goTo', { label: meta.linkLabel ?? meta.link })}</Link></>
             )}
           </p>
         )}
@@ -427,5 +427,5 @@ const card: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7
 const cardTitle: React.CSSProperties = { margin: '0 0 12px', fontSize: 15, fontWeight: 700 };
 const rowLabel: React.CSSProperties = { fontSize: 12, color: '#6b7280', width: 80, flexShrink: 0 };
 const muted: React.CSSProperties = { color: '#6b7280', fontSize: 13 };
-const btn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
+const btn: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
 const btnSm: React.CSSProperties = { ...btn, padding: '6px 12px', fontSize: 13 };

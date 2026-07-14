@@ -198,16 +198,16 @@ export function BookingsPage() {
       {/* Secondary navigation */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 13 }}>
         <div style={{ display: 'flex', gap: 16 }}>
-          <button onClick={() => navigate('/bookings/new')} style={linkBtn}>
+          <button onClick={() => navigate('/bookings/new')} className="btn-link">
             {t('bookings.requestAnotherDate')}
           </button>
           {hasSeats && (
-            <button onClick={() => navigate('/bookings/new?module=seats')} style={linkBtn}>
+            <button onClick={() => navigate('/bookings/new?module=seats')} className="btn-link">
               {t('bookings.requestSeat')}
             </button>
           )}
         </div>
-        <button onClick={() => navigate('/bookings/history')} style={linkBtn}>
+        <button onClick={() => navigate('/bookings/history')} className="btn-link">
           {t('bookings.historyLink')}
         </button>
       </div>
@@ -269,7 +269,7 @@ export function BookingsPage() {
                 onOpen={() => navigate(`/bookings/${item.requestId}`, { state: item })}
               />
             ))}
-            <button onClick={() => navigate('/bookings/history')} style={{ ...linkBtn, alignSelf: 'flex-start', marginTop: 4 }}>
+            <button onClick={() => navigate('/bookings/history')} className="btn-link" style={{ alignSelf: 'flex-start', marginLeft: -12 }}>
               {t('bookings.fullHistory')}
             </button>
           </div>
@@ -397,7 +397,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
               </button>
             )}
             {!onCancel && !onConfirm && onDetails && (
-              <button onClick={onDetails} style={detailsBtnStyle}>{t('bookings.action.viewDetails')}</button>
+              <button onClick={onDetails} className="btn-link" style={{ width: '100%' }}>{t('bookings.action.viewDetails')}</button>
             )}
           </div>
         ) : !drawLoading && scheduleOk?.canRequest ? (
@@ -417,8 +417,7 @@ const tileStyle: React.CSSProperties = {
   padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 130,
 };
 const tileDayStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 };
-const requestBtnStyle: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' };
-const confirmBtnStyle: React.CSSProperties = { background: '#15803d', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' };
-const cancelBtnStyle: React.CSSProperties = { background: '#fff', border: '1px solid #b91c1c', color: '#b91c1c', borderRadius: 6, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' };
-const detailsBtnStyle: React.CSSProperties = { background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 500, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' };
-const linkBtn: React.CSSProperties = { background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 500, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' };
+// UXPOL001 (#798): tile actions share the 38px minimum target of the .btn-* classes.
+const requestBtnStyle: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, minHeight: 38, padding: '8px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };
+const confirmBtnStyle: React.CSSProperties = { background: 'var(--success)', color: '#fff', border: 'none', borderRadius: 6, minHeight: 38, padding: '8px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };
+const cancelBtnStyle: React.CSSProperties = { background: '#fff', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: 6, minHeight: 38, padding: '8px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' };

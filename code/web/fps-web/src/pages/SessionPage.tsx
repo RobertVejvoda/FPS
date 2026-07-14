@@ -136,8 +136,8 @@ export function SessionPage() {
               <button
                 type="button"
                 onClick={() => { setShowDevForm(v => !v); }}
-                className="btn-ghost"
-                style={{ minHeight: 0, padding: 0, textDecoration: 'underline' }}
+                className="btn-link"
+                style={{ color: 'var(--muted)', marginLeft: -12 }}
               >
                 {showDevForm ? t('session.dev.hide') : t('session.dev.show')}
               </button>

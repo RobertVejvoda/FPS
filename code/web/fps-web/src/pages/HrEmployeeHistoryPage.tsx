@@ -15,6 +15,7 @@ import {
   displaySlot,
   humanizeHrRejection,
 } from '../displayLabels';
+import { statusSoftTone } from '@robertvejvoda/fairspot-ui';
 import { t, tDynamic, tPlural } from '../i18n';
 
 const STATUS_FILTERS = ['All', 'Allocated', 'Pending', 'Rejected', 'Cancelled'];
@@ -43,16 +44,10 @@ function nDaysAgoIso(n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// UXPOL001 (#798): shared status palette from fairspot-ui.
 function statusBadgeStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case 'Allocated': return { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' };
-    case 'Pending':   return { background: '#fffbeb', color: '#92400e', border: '1px solid #fcd34d' };
-    case 'Cancelled':
-    case 'NoShow':
-    case 'Expired':   return { background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' };
-    case 'Rejected':  return { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' };
-    default:          return { background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' };
-  }
+  const tone = statusSoftTone(status);
+  return { background: tone.background, color: tone.color, border: `1px solid ${tone.border}` };
 }
 
 export function HrEmployeeHistoryPage() {
@@ -146,9 +141,9 @@ export function HrEmployeeHistoryPage() {
                 key={s}
                 onClick={() => updateParam('status', s === 'All' ? null : s)}
                 style={{ padding: '0.25rem 0.75rem', borderRadius: 12,
-                  border: `1px solid ${statusFilter === s ? '#2563eb' : '#d1d5db'}`,
+                  border: `1px solid ${statusFilter === s ? 'var(--brand-primary)' : '#d1d5db'}`,
                   background: statusFilter === s ? '#eff6ff' : '#fff',
-                  color: statusFilter === s ? '#2563eb' : '#374151',
+                  color: statusFilter === s ? 'var(--brand-primary)' : '#374151',
                   fontSize: '0.8rem', cursor: 'pointer' }}
               >
                 {statusLabel(s)}
@@ -257,7 +252,7 @@ function SummaryChip({ label, value, tone }: { label: string; value: number; ton
       case 'warn':  return { background: '#fffbeb', borderColor: '#fcd34d', color: '#92400e' };
       case 'bad':   return { background: '#fef2f2', borderColor: '#fecaca', color: '#991b1b' };
       case 'muted': return { background: '#f9fafb', borderColor: '#e5e7eb', color: '#6b7280' };
-      default:      return { background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' };
+      default:      return { background: '#eff6ff', borderColor: '#bfdbfe', color: 'var(--brand-primary)' };
     }
   })();
   return (
