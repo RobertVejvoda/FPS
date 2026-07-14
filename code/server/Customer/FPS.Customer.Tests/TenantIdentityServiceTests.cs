@@ -119,6 +119,36 @@ public sealed class TenantIdentityServiceTests
     }
 
     [Fact]
+    public void IdentityConfigDto_RoundTrip_PreservesIdpBrokerAlias()
+    {
+        // Regression for PR #794 review: the Dapr repository persists through
+        // TenantIdentityConfigDto — a field missing from the DTO mapping is
+        // silently dropped by the real store even when the domain object has it.
+        var config = MakeConfig("dto-tenant", idpBrokerAlias: "dto-tenant-okta");
+
+        var restored = TenantIdentityConfigDto.FromDomain(config).ToDomain();
+
+        Assert.Equal("dto-tenant-okta", restored.IdpBrokerAlias);
+        Assert.Equal(config.TrustedIssuer, restored.TrustedIssuer);
+        Assert.Equal(config.LocalAccountPolicyEnabled, restored.LocalAccountPolicyEnabled);
+    }
+
+    [Fact]
+    public void IdentityConfigDto_LegacyRecordWithoutAlias_RestoresAsNull()
+    {
+        var legacy = new TenantIdentityConfigDto
+        {
+            TenantId = "legacy-tenant",
+            TrustedIssuer = "https://idp.example.com",
+            Audience = "fairspot-api",
+        };
+
+        var restored = legacy.ToDomain();
+
+        Assert.Null(restored.IdpBrokerAlias);
+    }
+
+    [Fact]
     public async Task Configure_MissingIssuer_ReturnsError()
     {
         var tenantId = await CreateTenant();
