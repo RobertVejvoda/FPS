@@ -12,9 +12,11 @@ import {
   type DrawStatusResult,
 } from '../api/bookings';
 import {
+  displayCannotRequestReason,
   displayDate,
   displayDateTime,
   displayLocation,
+  displayScheduleMessage,
   formatDrawStatus,
   formatDrawRequestSummary,
   formatDrawTimestamp,
@@ -450,7 +452,7 @@ function UpcomingDrawCard({
   const schedule = status.nextDrawAt
     ? formatDrawTimestamp(status.nextDrawAt, status.timeZone)
     : formatScheduleSummary(status.scheduleStatus, status.scheduleSource);
-  const reason = status.safeMessage || status.cannotRequestReason;
+  const reason = displayScheduleMessage(status) || displayCannotRequestReason(status);
   const inProgressAttemptId = effectiveStatus === 'InProgress' ? historyMatch?.drawAttemptId : undefined;
   const inProgressExpanded = inProgressAttemptId ? expandedProgressId === inProgressAttemptId : false;
 

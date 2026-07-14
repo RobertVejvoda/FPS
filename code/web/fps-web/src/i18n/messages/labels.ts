@@ -145,6 +145,16 @@ const en = {
   // Relative date labels
   'labels.date.today': 'Today',
   'labels.date.tomorrow': 'Tomorrow',
+
+  // Draw schedule window messages — derived client-side from the structured
+  // draw-status fields; English mirrors the server's safe-message wording.
+  'labels.schedule.allocationComplete': 'Allocation is complete. Check your result in My Reservations.',
+  'labels.schedule.allocationCompleteShort': 'Spot allocation is complete for this date',
+  'labels.schedule.windowClosed': 'The request window is closed for this date.',
+  'labels.schedule.drawInProgress': 'Draw in progress',
+  'labels.schedule.datePassed': 'Date has passed',
+  'labels.schedule.notConfigured': 'Allocation schedule is not yet configured for this location.',
+  'labels.schedule.openUntil': 'Requests are open until {time}.',
 } as const;
 
 const cs: Catalog<keyof typeof en> = {
@@ -279,6 +289,14 @@ const cs: Catalog<keyof typeof en> = {
 
   'labels.date.today': 'Dnes',
   'labels.date.tomorrow': 'Zítra',
+
+  'labels.schedule.allocationComplete': 'Přidělování je dokončeno. Výsledek najdete v Mých rezervacích.',
+  'labels.schedule.allocationCompleteShort': 'Přidělování míst pro tento den je dokončeno',
+  'labels.schedule.windowClosed': 'Příjem žádostí pro tento den je uzavřen.',
+  'labels.schedule.drawInProgress': 'Losování právě probíhá',
+  'labels.schedule.datePassed': 'Tento den již proběhl',
+  'labels.schedule.notConfigured': 'Plán přidělování pro tuto lokalitu zatím není nastaven.',
+  'labels.schedule.openUntil': 'Žádosti lze podávat do {time}.',
 };
 
 export const labelsMessages = { en, cs };

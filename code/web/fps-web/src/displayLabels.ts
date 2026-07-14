@@ -120,6 +120,47 @@ export function formatCutOffAt(cutOffAt: string | null, timeZone: string): strin
   }
 }
 
+// Booking status pills — stable machine value in, localized display text out.
+export function displayBookingStatus(status: string): string {
+  return tDynamic('bookings.status', status, status);
+}
+
+// The draw-status API ships structured state (draw status, request-window
+// status, schedule status, cut-off) alongside an English safe-message. Derive
+// localized copy from the structured fields and keep the server text as the
+// fallback for combinations the client doesn't recognize. Stable message
+// codes on the API are a LOC001 follow-up.
+type ScheduleLike = {
+  status?: string;
+  requestWindowStatus?: string;
+  scheduleStatus?: string;
+  cutOffAt?: string | null;
+  timeZone?: string;
+  safeMessage?: string;
+  cannotRequestReason?: string | null;
+};
+
+export function displayScheduleMessage(s: ScheduleLike): string | null {
+  // Wire values: draw status is PascalCase ("Completed"), while the schedule
+  // metadata enums serialize camelCase ("closed", "known", "notConfigured").
+  if (s.status === 'Completed') return t('labels.schedule.allocationComplete');
+  if (s.scheduleStatus === 'notConfigured') return t('labels.schedule.notConfigured');
+  if (s.requestWindowStatus === 'closed') return t('labels.schedule.windowClosed');
+  if (s.requestWindowStatus === 'open' && s.cutOffAt && s.timeZone) {
+    return t('labels.schedule.openUntil', { time: formatCutOffAt(s.cutOffAt, s.timeZone) });
+  }
+  return s.safeMessage || null;
+}
+
+export function displayCannotRequestReason(s: ScheduleLike): string | null {
+  if (!s.cannotRequestReason) return null;
+  if (s.status === 'Completed') return t('labels.schedule.allocationCompleteShort');
+  if (s.status === 'InProgress') return t('labels.schedule.drawInProgress');
+  if (s.cannotRequestReason === 'Date has passed') return t('labels.schedule.datePassed');
+  if (s.requestWindowStatus === 'closed') return displayScheduleMessage(s);
+  return s.cannotRequestReason;
+}
+
 export function humanizeRejectionReason(reasonCode: string | null, reason: string | null): string {
   // A stable code localizes; the backend's free-text reason is the fallback
   // for codes the catalog doesn't know yet.

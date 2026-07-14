@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchBookings, cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
-import { displayResourceNoun, displaySlot, displayNextDrawRun, formatCutOffAt, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw } from '../displayLabels';
+import { displayBookingStatus, displayCannotRequestReason, displayResourceNoun, displayScheduleMessage, displaySlot, displayNextDrawRun, formatCutOffAt, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '@robertvejvoda/fairspot-ui';
 import { NotificationBanner } from '../components/NotificationBanner';
 import { ModuleBadge } from '../components/ModuleBadge';
@@ -311,7 +311,7 @@ function ReservationRow({ item, showModule, onOpen }: {
   return (
     <button className="resv-row" onClick={onOpen}>
       {showModule && <ModuleBadge resourceType={item.resourceType} />}
-      <StatusBadge status={item.status} />
+      <StatusBadge status={item.status} label={displayBookingStatus(item.status)} />
       <span className="resv-row-outcome">{outcome ?? '—'}</span>
       <span className="resv-row-time">{formatRowTime(item.timeSlotStart)} – {formatRowTime(item.timeSlotEnd)}</span>
       <span className="resv-row-chevron" aria-hidden="true">›</span>
@@ -345,7 +345,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
           <div style={tileDayStyle}>{label}</div>
           <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{dateLabel}</div>
         </div>
-        {booking && <StatusBadge status={booking.status} />}
+        {booking && <StatusBadge status={booking.status} label={displayBookingStatus(booking.status)} />}
       </div>
 
       {/* Allocated spot */}
@@ -359,7 +359,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
       {seatBooking && (
         <button onClick={onSeatDetails} className="tile-seat-row">
           <ModuleBadge resourceType={seatBooking.resourceType} />
-          <StatusBadge status={seatBooking.status} />
+          <StatusBadge status={seatBooking.status} label={displayBookingStatus(seatBooking.status)} />
           {displaySlot(seatBooking.allocatedSlotId) && (
             <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{displaySlot(seatBooking.allocatedSlotId)}</span>
           )}
@@ -378,8 +378,8 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
           {t('bookings.tile.cutoff', { time: formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone) })}
         </div>
       )}
-      {!drawLoading && scheduleOk?.safeMessage && !booking && (
-        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{scheduleOk.safeMessage}</div>
+      {!drawLoading && scheduleOk && displayScheduleMessage(scheduleOk) && !booking && (
+        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{displayScheduleMessage(scheduleOk)}</div>
       )}
 
       {/* Single primary action */}
@@ -404,7 +404,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
           <button onClick={onRequest} style={requestBtnStyle}>{t('bookings.action.requestSpot')}</button>
         ) : !drawLoading && !scheduleOk ? null : !drawLoading && !scheduleOk?.canRequest ? (
           <div style={{ fontSize: 11, color: '#9ca3af' }}>
-            {scheduleOk?.cannotRequestReason || t('bookings.tile.requestsNotOpen')}
+            {(scheduleOk && displayCannotRequestReason(scheduleOk)) || t('bookings.tile.requestsNotOpen')}
           </div>
         ) : null}
       </div>

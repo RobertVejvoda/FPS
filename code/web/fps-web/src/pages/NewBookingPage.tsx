@@ -7,7 +7,7 @@ import { isWorkday, nextWorkdayOptions, toLocalDateString } from '../dateOptions
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { useTenantModules } from '../tenant/TenantModulesContext';
 import { ModuleBadge } from '../components/ModuleBadge';
-import { displayResourceNoun } from '../displayLabels';
+import { displayCannotRequestReason, displayResourceNoun, displayScheduleMessage } from '../displayLabels';
 import { t, tDynamic, formatWallClock } from '../i18n';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
@@ -308,7 +308,7 @@ export function NewBookingPage() {
     // A closed Parking window fully blocks only a parking-only selection; with a
     // seat also selected, Parking is reported as closed per-module and the seat
     // still submits (partial success is the default — UX009 #782 / review #790).
-    if (wantParking && !wantSeat && drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = drawStatus.cannotRequestReason || t('bookings.error.requestsClosed');
+    if (wantParking && !wantSeat && drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = displayCannotRequestReason(drawStatus) || t('bookings.error.requestsClosed');
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setSubmitting(true);
@@ -321,7 +321,7 @@ export function NewBookingPage() {
       results.push({
         module: 'Parking',
         ok: false,
-        text: (drawStatus.kind === 'ok' && drawStatus.cannotRequestReason) || t('bookings.error.requestsClosed'),
+        text: (drawStatus.kind === 'ok' && displayCannotRequestReason(drawStatus)) || t('bookings.error.requestsClosed'),
       });
     } else if (wantParking) {
       const res = await submitBooking({ apiBaseUrl, bearerToken }, {
@@ -554,7 +554,7 @@ export function NewBookingPage() {
                       <div style={{ fontSize: 13, color: '#6b7280' }}>{t('bookings.status.checkingWindow')}</div>
                     ) : drawStatus?.kind === 'ok' && !drawStatus.canRequest ? (
                       <div style={{ padding: '10px 14px', borderRadius: 8, background: '#f9fafb', border: '1px solid #e5e7eb', color: '#6b7280', fontSize: 13 }}>
-                        {drawStatus.cannotRequestReason || drawStatus.safeMessage || t('bookings.error.requestsClosed')}
+                        {displayCannotRequestReason(drawStatus) || displayScheduleMessage(drawStatus) || t('bookings.error.requestsClosed')}
                       </div>
                     ) : null}
                   </div>

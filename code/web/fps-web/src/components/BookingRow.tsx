@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BookingListItem } from '../api/bookings';
-import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
+import { displayBookingStatus, displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '@robertvejvoda/fairspot-ui';
 import { t, formatDate as formatDateI18n, formatWallClock, type MessageKey } from '../i18n';
 
@@ -61,7 +61,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
             {locationLabel ? ` · ${locationLabel}` : ''}
           </span>
         </div>
-        <StatusBadge status={booking.status} />
+        <StatusBadge status={booking.status} label={displayBookingStatus(booking.status)} />
       </div>
 
       {booking.reason ? (

@@ -2,6 +2,8 @@
 import type { Catalog } from '../catalog';
 
 const en = {
+  'notifications.banner.viewAll': 'View all',
+  'notifications.banner.dismiss': 'Dismiss',
   'notifications.title': 'Notifications',
   'notifications.titleUnread': 'Notifications ({count} unread)',
   'notifications.subtitle': 'Your booking activity and updates',
@@ -33,6 +35,8 @@ const en = {
 } as const;
 
 const cs: Catalog<keyof typeof en> = {
+  'notifications.banner.viewAll': 'Zobrazit vše',
+  'notifications.banner.dismiss': 'Skrýt',
   'notifications.title': 'Oznámení',
   'notifications.titleUnread': 'Oznámení ({count} nepřečtených)',
   'notifications.subtitle': 'Vaše aktivita a novinky v rezervacích',

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { cancelBooking, confirmUsage, fetchDrawStatus, type BookingListItem, type DrawStatusResult } from '../api/bookings';
-import { displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw } from '../displayLabels';
+import { displayBookingStatus, displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '@robertvejvoda/fairspot-ui';
 import { ModuleBadge } from '../components/ModuleBadge';
 import { t, tDynamic, formatDate as formatDateI18n, formatDateTime as formatDateTimeI18n, formatWallClock, type MessageKey } from '../i18n';
@@ -290,7 +290,7 @@ export function BookingDetailPage() {
           <span style={{ fontWeight: 700, fontSize: 15 }}>{t('bookings.detail.requestStatus')}</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {isSeatsItem(booking) && <ModuleBadge resourceType={booking.resourceType} />}
-            <StatusBadge status={booking.status} />
+            <StatusBadge status={booking.status} label={displayBookingStatus(booking.status)} />
           </span>
         </div>
         {meaning && (
