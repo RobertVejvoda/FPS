@@ -470,6 +470,78 @@ public sealed class TenantServiceTests
         Assert.Equal("#123456", response.PrimaryColor);
     }
 
+    // ── Discovery: IdP broker alias routing hint (AUTH011) ────────────────────
+
+    [Fact]
+    public async Task DiscoverAsync_CompanySsoWithConfiguredAlias_ReturnsIdpAlias()
+    {
+        var identityRepo = new InMemoryTenantIdentityRepository();
+        var svc = new TenantService(repository, identityRepository: identityRepo);
+        var (created, _) = await svc.CreateAsync("sso-alias", "Sso Alias Co", "eu", "UTC", [], CancellationToken.None);
+        await svc.SetBrandingAsync(created!.TenantId, new TenantBrandingConfig { LoginMode = TenantLoginMode.CompanySso }, CancellationToken.None);
+        await identityRepo.SaveConfigAsync(new TenantIdentityConfig { TenantId = created.TenantId, IdpBrokerAlias = "sso-alias-okta" }, CancellationToken.None);
+        await svc.RegisterDiscoveryDomainAsync(created.TenantId, "sso-alias.example", "h", CancellationToken.None);
+
+        var response = await svc.DiscoverAsync("sso-alias.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal("CompanySso", response!.LoginMode);
+        Assert.Equal("sso-alias-okta", response.IdpAlias);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_CompanySsoWithoutAlias_ReturnsNullAlias()
+    {
+        var identityRepo = new InMemoryTenantIdentityRepository();
+        var svc = new TenantService(repository, identityRepository: identityRepo);
+        var (created, _) = await svc.CreateAsync("sso-noalias", "Sso NoAlias Co", "eu", "UTC", [], CancellationToken.None);
+        await svc.SetBrandingAsync(created!.TenantId, new TenantBrandingConfig { LoginMode = TenantLoginMode.CompanySso }, CancellationToken.None);
+        await svc.RegisterDiscoveryDomainAsync(created.TenantId, "sso-noalias.example", "h", CancellationToken.None);
+
+        var response = await svc.DiscoverAsync("sso-noalias.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Null(response!.IdpAlias);
+    }
+
+    [Theory]
+    [InlineData(TenantLoginMode.LocalAccount)]
+    [InlineData(TenantLoginMode.Both)]
+    public async Task DiscoverAsync_NonSsoRoute_DoesNotReturnAlias_EvenWhenConfigured(TenantLoginMode mode)
+    {
+        // Both must keep the Keycloak chooser (Green Logistics local fallback);
+        // LocalAccount has no broker. Neither may leak the alias.
+        var identityRepo = new InMemoryTenantIdentityRepository();
+        var svc = new TenantService(repository, identityRepository: identityRepo);
+        var slug = $"nonsso-{mode}".ToLowerInvariant();
+        var (created, _) = await svc.CreateAsync(slug, "NonSso Co", "eu", "UTC", [], CancellationToken.None);
+        if (mode != TenantLoginMode.LocalAccount)
+            await svc.SetBrandingAsync(created!.TenantId, new TenantBrandingConfig { LoginMode = mode }, CancellationToken.None);
+        await identityRepo.SaveConfigAsync(new TenantIdentityConfig { TenantId = created!.TenantId, IdpBrokerAlias = "should-not-leak" }, CancellationToken.None);
+        await svc.RegisterDiscoveryDomainAsync(created.TenantId, $"{slug}.example", "h", CancellationToken.None);
+
+        var response = await svc.DiscoverAsync($"{slug}.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal(mode.ToString(), response!.LoginMode);
+        Assert.Null(response.IdpAlias);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_NoIdentityRepository_ReturnsNullAlias()
+    {
+        // TenantService constructed without an identity repository (legacy/test path)
+        // must stay safe and simply omit the alias.
+        var (created, _) = await service.CreateAsync("noidrepo", "NoIdRepo Co", "eu", "UTC", [], CancellationToken.None);
+        await service.SetBrandingAsync(created!.TenantId, new TenantBrandingConfig { LoginMode = TenantLoginMode.CompanySso }, CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created.TenantId, "noidrepo.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("noidrepo.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Null(response!.IdpAlias);
+    }
+
     [Fact]
     public async Task DiscoverAsync_UnregisteredDomain_ReturnsNull()
     {

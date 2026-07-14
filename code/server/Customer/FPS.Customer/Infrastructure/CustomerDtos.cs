@@ -64,6 +64,8 @@ internal sealed class TenantIdentityConfigDto
     public List<string> RoleClaimNames { get; set; } = [];
     public Dictionary<string, string> RoleMapping { get; set; } = [];
     public bool LocalAccountPolicyEnabled { get; set; }
+    // AUTH011 (#793): non-secret Keycloak broker alias; null when not configured.
+    public string? IdpBrokerAlias { get; set; }
     public string ConfiguredByHash { get; set; } = string.Empty;
     public DateTimeOffset ConfiguredAt { get; set; }
 
@@ -77,6 +79,7 @@ internal sealed class TenantIdentityConfigDto
         RoleClaimNames = RoleClaimNames,
         RoleMapping = new Dictionary<string, string>(RoleMapping, StringComparer.OrdinalIgnoreCase),
         LocalAccountPolicyEnabled = LocalAccountPolicyEnabled,
+        IdpBrokerAlias = IdpBrokerAlias,
         ConfiguredByHash = ConfiguredByHash,
         ConfiguredAt = ConfiguredAt,
     };
@@ -91,6 +94,7 @@ internal sealed class TenantIdentityConfigDto
         RoleClaimNames = c.RoleClaimNames.ToList(),
         RoleMapping = c.RoleMapping.ToDictionary(kv => kv.Key, kv => kv.Value),
         LocalAccountPolicyEnabled = c.LocalAccountPolicyEnabled,
+        IdpBrokerAlias = c.IdpBrokerAlias,
         ConfiguredByHash = c.ConfiguredByHash,
         ConfiguredAt = c.ConfiguredAt,
     };

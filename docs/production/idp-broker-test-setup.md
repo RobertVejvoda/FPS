@@ -213,8 +213,8 @@ After completing provider setup:
 | Keycloak broker configuration | Manual — not automated | Client ID/secret entered by operator, not seeded by script. Must remain manual to avoid committing secrets. |
 | FairSpot user provisioning for brokered users | Pending | A brokered user not in FairSpot profile facts is rejected at `GET /me` until provisioned. AUTH007+ or SCIM will address this. |
 | Group/role claim mapping from external IdP | Not configured | Free Google account does not expose group claims. Entra free developer tenant supports it via app manifest, but mapping to FairSpot roles needs tenant-scoped configuration. |
-| Domain-to-IdP routing in Keycloak (`kc_idp_hint`) | Pending AUTH007 | Current `login_hint` passes the email; `kc_idp_hint` would select the specific identity provider automatically. |
-| Tenant-scoped IdP configuration in FairSpot | Pending | Currently, FairSpot's `TenantIdentityConfig` stores `trustedIssuer` and `audience` but not a per-tenant IdP hint for routing. |
+| Domain-to-IdP routing in Keycloak (`kc_idp_hint`) | Implemented (AUTH011, #793) | `login_hint` always carries the entered email. For `CompanySso` tenants whose identity configuration stores a broker alias, tenant discovery returns the alias and the web sends it as `kc_idp_hint`, so the browser goes straight to the configured provider instead of the Keycloak chooser. `Both`/`LocalAccount` tenants never receive an alias. |
+| Tenant-scoped IdP configuration in FairSpot | Implemented (AUTH011, #793) | `TenantIdentityConfig.IdpBrokerAlias` (set via `PUT /tenants/{tenantId}/identity-config`, non-secret, validated alias format) stores the per-tenant broker routing hint alongside `trustedIssuer` and `audience`. |
 
 ---
 

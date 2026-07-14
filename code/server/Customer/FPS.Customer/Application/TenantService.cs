@@ -7,6 +7,7 @@ public sealed record TenantDiscoveryResponse(
     string Slug,
     string DisplayName,
     string LoginMode,
+    string? IdpAlias,
     string? PrimaryColor,
     string? AccentColor,
     string? LogoAssetId,
@@ -15,7 +16,8 @@ public sealed record TenantDiscoveryResponse(
 
 public sealed class TenantService(
     ITenantRepository repository,
-    TenantReadinessService? readinessService = null)
+    TenantReadinessService? readinessService = null,
+    ITenantIdentityRepository? identityRepository = null)
 {
     public async Task<(TenantWorkspace? tenant, string? error)> CreateAsync(
         string? slug, string displayName, string region, string timeZone,
@@ -178,10 +180,23 @@ public sealed class TenantService(
         if (tenant is null) return null;
 
         var b = tenant.Branding;
+
+        // AUTH011 (#793): expose the broker alias only for an unambiguous CompanySso
+        // route. Both keeps the Keycloak chooser (local fallback stays reachable) and
+        // LocalAccount has no broker, so neither returns an alias. The alias is
+        // non-secret routing metadata for kc_idp_hint, never access authority.
+        string? idpAlias = null;
+        if (b.LoginMode == TenantLoginMode.CompanySso && identityRepository is not null)
+        {
+            var identityConfig = await identityRepository.GetConfigAsync(tenant.TenantId, ct);
+            idpAlias = identityConfig?.IdpBrokerAlias;
+        }
+
         return new TenantDiscoveryResponse(
             tenant.Slug,
             tenant.DisplayName,
             b.LoginMode.ToString(),
+            idpAlias,
             b.PrimaryColor,
             b.AccentColor,
             b.LogoAssetId,
