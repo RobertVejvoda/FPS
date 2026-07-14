@@ -282,8 +282,8 @@ function EmailFirstSignIn({
       <button
         type="button"
         onClick={() => { void onLogin(trimmed || undefined); }}
-        className="btn-ghost"
-        style={{ width: '100%', marginTop: 10, minHeight: 0, textDecoration: 'underline', fontSize: 13 }}
+        className="btn-link"
+        style={{ width: '100%', marginTop: 10, color: 'var(--muted)' }}
       >
         {t('session.email.signInFairspot')}
       </button>
