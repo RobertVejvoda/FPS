@@ -6,7 +6,7 @@
 
 ## The journey
 
-1. **Sign in.** You authenticate through your organisation's identity (SSO) or a FairSpot account — you never type in a tenant or user id. FairSpot resolves your tenant, identity, and roles from your sign-in. The two sign-in paths are explained in [Tenant Discovery and Login Modes](../business-layer/tenant-login-modes).
+1. **Sign in.** You enter your email and FairSpot routes you to the right sign-in automatically — your organisation's identity (SSO) or a FairSpot account — you never type in a tenant or user id. FairSpot resolves your tenant, identity, and roles from your sign-in. The login routes are explained in [Tenant Discovery and Login Modes](../business-layer/tenant-login-modes).
 2. **Request capacity.** Ask for a space for a date and location. Your request appears immediately with a safe status and, where relevant, an employee-visible reason — for example if the date is outside the booking window.
 3. **The Draw runs.** When demand is higher than supply, FairSpot allocates the scarce spaces by documented fairness rules. Obligations such as an HR-assigned company-car slot are honoured first; everyone else is selected by weighted fairness that considers recent allocation history — so if you missed out last time, your chances improve. You see your result, not the lottery internals.
 4. **Get notified.** A notification records the outcome (allocated, waitlisted, or a safe reason). Your notification history and unread state reflect the booking event.
