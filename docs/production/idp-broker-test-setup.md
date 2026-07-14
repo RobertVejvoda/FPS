@@ -10,14 +10,14 @@
 
 This document explains the smallest safe path for testing Keycloak's identity-provider (IdP) broker with an external identity provider. It covers option selection, mandatory claims, Keycloak configuration steps, local validation, and rollback — without committing any secrets.
 
-After following this guide, `ivana@greenlogistics.example` (or any user from a configured external IdP) can authenticate by entering their work email on the FairSpot email-first login screen — discovery routes them to the company SSO broker automatically (AUTH010). Keycloak acts as the broker and issues a FairSpot token; FPS services see only Keycloak tokens and require no code changes per tenant.
+After following this guide, `ivana@greenlogistics.example` (or any user from a configured external IdP) can authenticate through "Continue with company SSO" on the FairSpot login screen. Keycloak acts as the broker and issues a FairSpot token; FPS services see only Keycloak tokens and require no code changes per tenant.
 
 ---
 
 ## How This Fits the Company SSO Path
 
 ```
-User enters work email → domain discovery → automatic continue to company SSO
+User enters work email → domain discovery → "Continue with company SSO"
         │
         ▼
 Keycloak login page
@@ -180,7 +180,7 @@ After completing provider setup:
 2. **Test the SSO login flow manually:**
    - Open `http://localhost:5173` (or whichever port the web app runs on).
    - Enter an email address from the configured provider (e.g. `alice@greenlogistics.example` if the domain is mapped, or any Google/Entra account for a plain broker test).
-   - Click **Continue** — discovery routes to the company SSO path automatically.
+   - Click **Continue with company SSO**.
    - You should be redirected to Google or Microsoft for authentication.
    - After authentication, you should land back on the FairSpot app.
 
@@ -213,8 +213,8 @@ After completing provider setup:
 | Keycloak broker configuration | Manual — not automated | Client ID/secret entered by operator, not seeded by script. Must remain manual to avoid committing secrets. |
 | FairSpot user provisioning for brokered users | Pending | A brokered user not in FairSpot profile facts is rejected at `GET /me` until provisioned. AUTH007+ or SCIM will address this. |
 | Group/role claim mapping from external IdP | Not configured | Free Google account does not expose group claims. Entra free developer tenant supports it via app manifest, but mapping to FairSpot roles needs tenant-scoped configuration. |
-| Domain-to-IdP routing in Keycloak (`kc_idp_hint`) | Implemented (AUTH010, #788) | The web passes `kc_idp_hint` for `CompanySso` tenants whose discovery response carries a broker alias, so Keycloak skips the account chooser. `Both` tenants keep the chooser so local fallback stays reachable. |
-| Tenant-scoped IdP configuration in FairSpot | Implemented (AUTH010, #788) | Tenant branding config stores a non-secret `IdpAlias` (set via `PUT /tenants/{tenantId}/branding`, requires `LoginMode` `CompanySso` or `Both`) and exposes it through anonymous tenant discovery as a routing hint. |
+| Domain-to-IdP routing in Keycloak (`kc_idp_hint`) | Pending AUTH007 | Current `login_hint` passes the email; `kc_idp_hint` would select the specific identity provider automatically. |
+| Tenant-scoped IdP configuration in FairSpot | Pending | Currently, FairSpot's `TenantIdentityConfig` stores `trustedIssuer` and `audience` but not a per-tenant IdP hint for routing. |
 
 ---
 

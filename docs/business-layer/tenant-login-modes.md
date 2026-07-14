@@ -23,7 +23,7 @@ The current labels are workplace-oriented because parking is the first proof pat
 
 ## Pre-Auth Tenant Discovery
 
-Discovery is the first step of every web sign-in: the user enters their email, FairSpot extracts the domain, looks up the tenant route, and continues automatically (AUTH010).
+Before showing the SSO path, FairSpot can help the user find the right tenant and IdP by asking for their work email or company domain.
 
 **Discovery is routing only.** It selects a candidate tenant and suggests an IdP. It does not grant access, does not establish session state, and does not prove the user belongs to the tenant.
 
@@ -42,15 +42,14 @@ User types: alice@greenlogistics.example
          Found                 Not found
               │                     │
               ▼                     ▼
-  Continue automatically to   Opaque message: check the
-  the tenant's route:         address / retry / secondary
-  CompanySso → broker IdP     "FairSpot account" link /
-  (kc_idp_hint when alias     contact administrator
-  configured); Both →
-  Keycloak chooser (local
-  stays reachable);
-  LocalAccount → credentials
-  form (email prefilled)
+  Suggest "Continue with     Fall back to manual
+   company SSO" for that     tenant / path selection
+       tenant's IdP                 │
+              │                     ▼
+              └─────────┬──────────┘
+                        │
+                        ▼
+          User selects path and proceeds to login
 ```
 
 **What discovery must NOT do:**
@@ -87,8 +86,8 @@ FairSpot services derive tenant identity from authenticated context only. User-f
 This is the primary login path for enterprise customers.
 
 1. User visits the FairSpot login page.
-2. User enters their work email; tenant discovery runs on the domain (see above).
-3. FairSpot continues automatically to the company SSO route. For a `CompanySso` tenant with a configured broker alias, the web passes `kc_idp_hint` so Keycloak skips the account chooser; for a `Both` tenant the chooser stays visible so local fallback accounts remain reachable.
+2. Optional: user enters work email for tenant discovery (see above).
+3. User selects "Continue with company SSO".
 4. Keycloak acts as a broker and redirects the user to the company's external IdP (e.g. Entra ID, Okta, Google Workspace).
 5. The company IdP authenticates the user and issues a token back to Keycloak.
 6. Keycloak issues a FairSpot token with mapped claims.
@@ -213,7 +212,7 @@ To avoid security misunderstandings, this table records explicit non-goals:
 |---|---|
 | "Typing my company email gives me access to that tenant" | Discovery only routes to an IdP suggestion. Access requires authenticated token + tenant membership. |
 | "The tenant in the login URL grants access" | Tenant in routing context is a hint only. Post-auth enforcement determines access. |
-| "If discovery fails to find my company, I cannot log in" | Discovery failure shows an opaque retry/fallback state; the secondary "Sign in with a FairSpot account instead" link is always available for provisioned users. |
+| "If discovery fails to find my company, I cannot log in" | Discovery failure falls back to manual path selection. FairSpot-local account path is always available for provisioned users. |
 | "Company SSO means FairSpot has my customer IdP password" | FairSpot never receives the external IdP password. The customer IdP authenticates the user independently. |
 
 ---

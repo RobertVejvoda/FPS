@@ -136,7 +136,6 @@ public sealed class TenantController(TenantService service, ICurrentUser current
             FaviconAssetId = request.FaviconAssetId,
             LegalFooterText = request.LegalFooterText,
             LoginMode = loginMode,
-            IdpAlias = string.IsNullOrWhiteSpace(request.IdpAlias) ? null : request.IdpAlias.Trim(),
         };
 
         var error = await service.SetBrandingAsync(tenantId, config, ct);
@@ -226,7 +225,6 @@ public sealed record SetBrandingRequest(
     string? LogoAssetId,
     string? FaviconAssetId,
     string? LegalFooterText,
-    string? IdpAlias,
     string LoginMode = "LocalAccount");
 
 public sealed record RegisterDiscoveryDomainRequest(string Domain);

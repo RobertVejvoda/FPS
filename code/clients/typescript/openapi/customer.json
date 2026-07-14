@@ -979,8 +979,7 @@
           "accentColor",
           "logoAssetId",
           "faviconAssetId",
-          "legalFooterText",
-          "idpAlias"
+          "legalFooterText"
         ],
         "type": "object",
         "properties": {
@@ -1009,12 +1008,6 @@
             ]
           },
           "legalFooterText": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "idpAlias": {
             "type": [
               "null",
               "string"

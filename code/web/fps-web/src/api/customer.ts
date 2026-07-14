@@ -7,9 +7,9 @@ export interface TenantDiscoveryResponse {
   // 'LocalAccount' | 'CompanySso' | 'Both' — routing hint only, never authorization.
   loginMode: string;
   // Keycloak identity-provider broker alias for this tenant's company SSO, when one is
-  // configured (tenant branding IdpAlias, AUTH010). Passed as kc_idp_hint for
-  // CompanySso tenants only — never for Both, so local fallback stays reachable.
-  idpAlias?: string | null;
+  // configured (AUTH006). Optional: absent until the server contract adds it; the web
+  // passes it through as kc_idp_hint so a known SSO tenant skips the account chooser.
+  idpAlias?: string;
   primaryColor?: string;
   accentColor?: string;
   logoAssetId?: string;

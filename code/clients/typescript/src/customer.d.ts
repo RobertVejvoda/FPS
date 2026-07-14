@@ -766,7 +766,6 @@ export interface components {
             logoAssetId: null | string;
             faviconAssetId: null | string;
             legalFooterText: null | string;
-            idpAlias: null | string;
             /** @default LocalAccount */
             loginMode: string;
         };
