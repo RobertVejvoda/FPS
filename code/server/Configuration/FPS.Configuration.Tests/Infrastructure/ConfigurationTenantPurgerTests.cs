@@ -26,6 +26,9 @@ public sealed class ConfigurationTenantPurgerTests
         SetupSaveGet<List<ParkingPolicy>>(mock);
         SetupSaveGet<List<ParkingSlot>>(mock);
         SetupSaveGet<List<SlotChangeRecord>>(mock);
+        SetupSaveGet<SeatMap>(mock);
+        SetupSaveGet<List<SeatBlock>>(mock);
+        SetupSaveGet<List<SeatMapChangeRecord>>(mock);
         SetupSaveGet<List<string>>(mock);
 
         mock.Setup(c => c.DeleteStateAsync(
@@ -81,6 +84,9 @@ public sealed class ConfigurationTenantPurgerTests
         var policyRepo = new DaprParkingPolicyRepository(client);
         var slotRepo = new DaprParkingSlotRepository(client);
         var slotChangeRepo = new DaprSlotChangeRepository(client);
+        var seatMapRepo = new DaprSeatMapRepository(client);
+        var seatBlockRepo = new DaprSeatBlockRepository(client);
+        var seatChangeRepo = new DaprSeatMapChangeRepository(client);
 
         await policyRepo.SaveAsync(MakePolicy(tenantId));
 
@@ -96,6 +102,35 @@ public sealed class ConfigurationTenantPurgerTests
                 ChangedAt = DateTimeOffset.UtcNow,
                 ChangeReason = "seed",
                 SlotCount = 3,
+            });
+
+            // SEAT001 (#783): seat keys share the same location index and purge lifecycle.
+            await seatMapRepo.ReplaceLocationSeatMapAsync(tenantId, locationId, new SeatMap
+            {
+                Areas = [new SeatArea { AreaId = "A", TenantId = tenantId, LocationId = locationId, Label = "Area A", IsActive = true }],
+                Seats = [new Seat { SeatId = "A-01", TenantId = tenantId, LocationId = locationId, AreaId = "A", Label = "A-01", IsActive = true }],
+            });
+            await seatBlockRepo.AddAsync(new SeatBlock
+            {
+                BlockId = Guid.NewGuid().ToString("N"),
+                TenantId = tenantId,
+                LocationId = locationId,
+                SeatId = "A-01",
+                FromDate = new DateOnly(2026, 8, 1),
+                ToDate = new DateOnly(2026, 8, 2),
+                Reason = SeatBlockReason.Maintenance,
+                CreatedByUserId = "test",
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+            await seatChangeRepo.RecordAsync(new SeatMapChangeRecord
+            {
+                TenantId = tenantId,
+                LocationId = locationId,
+                ChangeType = SeatMapChangeRecord.TypeMapReplaced,
+                ChangedByUserId = "test",
+                ChangedAt = DateTimeOffset.UtcNow,
+                AreaCount = 1,
+                SeatCount = 1,
             });
         }
     }
@@ -125,8 +160,9 @@ public sealed class ConfigurationTenantPurgerTests
 
         var removed = await purger.PurgeTenantAsync("demo");
 
-        // tenant-default (1) + 2 locations × (override + slots + slot-change) = 7 keys.
-        Assert.Equal(7, removed);
+        // tenant-default (1) + 2 locations × (override + slots + slot-change
+        // + seat-map + seat-blocks + seat-change) = 13 keys.
+        Assert.Equal(13, removed);
         Assert.DoesNotContain(store.Keys, k => k.Contains(":demo:", StringComparison.Ordinal));
         Assert.Empty(store);
     }
