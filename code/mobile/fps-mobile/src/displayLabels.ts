@@ -78,6 +78,53 @@ export function formatCutOffAt(cutOffAt: string | null, timeZone: string): strin
   }
 }
 
+// LOC002 (#799): schedule/cannot-request copy localized from the stable
+// draw-status machine codes; safeMessage / cannotRequestReason free text is
+// only the fallback for missing or unknown codes (older servers).
+type ScheduleLike = {
+  status?: string | null;
+  requestWindowStatus?: string | null;
+  scheduleStatus?: string | null;
+  cutOffAt?: string | null;
+  timeZone?: string | null;
+  safeMessage?: string | null;
+  cannotRequestReason?: string | null;
+  scheduleMessageCode?: string | null;
+  cannotRequestCode?: string | null;
+};
+
+export function displayScheduleMessage(s: ScheduleLike): string | null {
+  switch (s.scheduleMessageCode) {
+    case 'schedule.allocationComplete': return t('labels.schedule.allocationComplete');
+    case 'schedule.notConfigured': return t('labels.schedule.notConfigured');
+    case 'schedule.windowClosed': return t('labels.schedule.windowClosed');
+    case 'schedule.openUntil':
+      if (s.cutOffAt && s.timeZone) return t('labels.schedule.openUntil', { time: formatCutOffAt(s.cutOffAt, s.timeZone) });
+      break;
+  }
+  if (s.status === 'Completed') return t('labels.schedule.allocationComplete');
+  if (s.scheduleStatus === 'notConfigured') return t('labels.schedule.notConfigured');
+  if (s.requestWindowStatus === 'closed') return t('labels.schedule.windowClosed');
+  if (s.requestWindowStatus === 'open' && s.cutOffAt && s.timeZone) {
+    return t('labels.schedule.openUntil', { time: formatCutOffAt(s.cutOffAt, s.timeZone) });
+  }
+  return s.safeMessage || null;
+}
+
+export function displayCannotRequestReason(s: ScheduleLike): string | null {
+  switch (s.cannotRequestCode) {
+    case 'request.datePassed': return t('labels.schedule.datePassed');
+    case 'request.allocationComplete': return t('labels.schedule.allocationCompleteShort');
+    case 'request.drawInProgress': return t('labels.schedule.drawInProgress');
+    case 'request.windowClosed': return displayScheduleMessage(s);
+  }
+  if (!s.cannotRequestReason && !s.cannotRequestCode) return null;
+  if (s.status === 'Completed') return t('labels.schedule.allocationCompleteShort');
+  if (s.status === 'InProgress') return t('labels.schedule.drawInProgress');
+  if (s.requestWindowStatus === 'closed') return displayScheduleMessage(s);
+  return s.cannotRequestReason ?? null;
+}
+
 export function humanizeRejectionReason(rejectionCode: string | null, reason: string | null): string {
   if (reason) return reason;
   if (rejectionCode) {
