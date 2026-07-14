@@ -118,22 +118,10 @@ export function SessionPage() {
             <p style={{ marginTop: 14, color: 'var(--danger)', fontSize: 13 }}>{statusMessage}</p>
           ) : null}
 
-          <CompanySsoPath apiBaseUrl={apiBaseUrl} onLogin={login} />
-
-          <div style={dividerStyle}>
-            <span style={dividerLabelStyle}>or</span>
-          </div>
-
-          <button
-            onClick={() => { void login(); }}
-            className="btn-secondary"
-            style={{ width: '100%', minHeight: 46 }}
-          >
-            Sign in with FairSpot account
-          </button>
+          <EmailFirstSignIn apiBaseUrl={apiBaseUrl} onLogin={login} />
 
           <div className="session-security-note">
-            <span>Fair parking</span>
+            <span>Fair allocation</span>
             <span>Team policies</span>
             <span>Clear outcomes</span>
           </div>
@@ -191,20 +179,29 @@ export function SessionPage() {
   );
 }
 
-type SsoStep = 'idle' | 'discovering' | 'notfound' | 'error';
+type SignInStep = 'idle' | 'discovering' | 'routing-sso' | 'routing-local' | 'notfound' | 'error';
 
-function CompanySsoPath({
+// AUTH010 (#788) — one email-first entry point. The user types their email; FairSpot
+// discovers the tenant's login route from the domain and continues automatically:
+// company SSO for CompanySso tenants, the FairSpot sign-in for LocalAccount/Both
+// tenants. Discovery is routing only — access still comes from validated token
+// claims and /me after authentication. Unknown domains get an opaque state with a
+// FairSpot-account fallback so responses never confirm which tenants exist.
+function EmailFirstSignIn({
   apiBaseUrl,
   onLogin,
 }: {
   apiBaseUrl: string;
-  onLogin: (loginHint?: string) => Promise<void>;
+  onLogin: (loginHint?: string, opts?: { idpHint?: string }) => Promise<void>;
 }) {
   const [email, setEmail] = useState('');
-  const [step, setStep] = useState<SsoStep>('idle');
+  const [step, setStep] = useState<SignInStep>('idle');
 
-  const domain = email.includes('@') ? email.slice(email.indexOf('@') + 1).trim() : '';
-  const canSubmit = domain.length > 1 && step !== 'discovering';
+  const trimmed = email.trim();
+  const atIndex = trimmed.indexOf('@');
+  const domain = atIndex > 0 ? trimmed.slice(atIndex + 1).trim() : '';
+  const routing = step === 'routing-sso' || step === 'routing-local';
+  const canSubmit = domain.length > 1 && step !== 'discovering' && !routing;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -212,7 +209,13 @@ function CompanySsoPath({
     setStep('discovering');
     const result = await discoverTenant(apiBaseUrl, domain);
     if (result.kind === 'ok') {
-      await onLogin(email);
+      // Route automatically by the tenant's configured login mode. The email is
+      // passed only as an OIDC login_hint; it is never stored. When discovery later
+      // supplies a broker alias (AUTH006), CompanySso tenants also get kc_idp_hint
+      // so Keycloak skips its account chooser.
+      const sso = result.data.loginMode === 'CompanySso';
+      setStep(sso ? 'routing-sso' : 'routing-local');
+      await onLogin(trimmed);
     } else if (result.kind === 'notfound') {
       setStep('notfound');
     } else {
@@ -228,7 +231,7 @@ function CompanySsoPath({
   return (
     <form onSubmit={(e) => { void handleSubmit(e); }} style={{ marginTop: 22 }}>
       <label style={labelStyle}>
-        Work email
+        Email
         <input
           type="email"
           value={email}
@@ -241,11 +244,14 @@ function CompanySsoPath({
       </label>
       {step === 'notfound' ? (
         <p style={discoveryMessageStyle}>
-          We couldn't find your company. Check your work email address or use a FairSpot account to sign in.
+          We couldn't find a sign-in route for that email. Check the address and try
+          again, or sign in with a FairSpot account. If you keep getting stuck, contact
+          your company's FairSpot administrator.
         </p>
       ) : step === 'error' ? (
         <p style={discoveryMessageStyle}>
-          Something went wrong. Try again or use a FairSpot account to sign in.
+          Something went wrong while finding your sign-in. Try again, or sign in with a
+          FairSpot account.
         </p>
       ) : null}
       <button
@@ -254,7 +260,21 @@ function CompanySsoPath({
         className="btn-primary"
         style={{ width: '100%', marginTop: 10, minHeight: 46 }}
       >
-        {step === 'discovering' ? 'Looking up your company…' : 'Continue with company SSO'}
+        {step === 'discovering' ? 'Finding your sign-in…'
+          : step === 'routing-sso' ? 'Taking you to your company sign-in…'
+          : step === 'routing-local' ? 'Taking you to FairSpot sign-in…'
+          : 'Continue'}
+      </button>
+      {/* The FairSpot-local path stays reachable without discovery — demo users,
+          small tenants, fallback, and break-glass accounts. A quiet secondary link,
+          not an equal first choice. */}
+      <button
+        type="button"
+        onClick={() => { void onLogin(trimmed || undefined); }}
+        className="btn-ghost"
+        style={{ width: '100%', marginTop: 10, minHeight: 0, textDecoration: 'underline', fontSize: 13 }}
+      >
+        Sign in with a FairSpot account instead
       </button>
     </form>
   );
@@ -314,21 +334,6 @@ const inputStyle: React.CSSProperties = {
   background: '#fff',
   width: '100%',
   boxSizing: 'border-box',
-};
-
-const dividerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
-  margin: '18px 0',
-  color: 'var(--muted)',
-  fontSize: 12,
-};
-
-const dividerLabelStyle: React.CSSProperties = {
-  flexShrink: 0,
-  padding: '0 6px',
-  background: '#fff',
 };
 
 const discoveryMessageStyle: React.CSSProperties = {

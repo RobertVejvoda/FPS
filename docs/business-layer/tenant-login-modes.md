@@ -1,21 +1,21 @@
 # Tenant Discovery and Login Modes
 
-**Status:** Implemented on web for Release 1 — the sign-in screen offers company-SSO work-email discovery and FairSpot-account sign-in. Mobile currently uses a single OIDC sign-in. Original decision and remaining follow-ups tracked under AUTH001–AUTH005.
-**Tracks:** Issue #539 (AUTH001)
+**Status:** Implemented on web for Release 1 — the sign-in screen is email-first (AUTH010, #788): the user enters an email, FairSpot discovers the tenant's login route from the domain, and routing continues automatically. Mobile currently uses a single OIDC sign-in. Original decision and remaining follow-ups tracked under AUTH001–AUTH005.
+**Tracks:** Issue #539 (AUTH001), Issue #788 (AUTH010)
 **Related decisions:** `versions-and-decisions.md` → *Two-path login model and tenant discovery*
 
 ---
 
 ## Overview
 
-FairSpot presents users with two current login entry paths:
+FairSpot still supports two login **routes**, but the user no longer chooses between them up front. The web sign-in screen is **email-first** (AUTH010): the user enters their email, FairSpot extracts the domain and runs tenant discovery, and the correct route continues automatically.
 
-| Path | Label on login screen | When used |
+| Route | How the user reaches it | When used |
 |---|---|---|
-| Company SSO | "Continue with company SSO" | Normal login for employees of an SSO-integrated company |
-| FairSpot account | "Sign in with FairSpot account" | Demo users, small tenants without SSO, break-glass admin, and fallback local accounts |
+| Company SSO | Automatically, when the email domain maps to a tenant whose login mode is `CompanySso` | Normal login for employees of an SSO-integrated company |
+| FairSpot account | Automatically for `LocalAccount`/`Both` tenants, and always reachable via a quiet "Sign in with a FairSpot account instead" link | Demo users, small tenants without SSO, break-glass admin, and fallback local accounts |
 
-Both paths use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly.
+Both routes use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly. The entered email is passed only as an OIDC `login_hint` (and, once an external broker is configured per AUTH006, a `kc_idp_hint` for `CompanySso` tenants so Keycloak can skip its account chooser); it is not stored and never grants access.
 
 The current labels are workplace-oriented because parking is the first proof path. The durable model is broader: a tenant may later label the brokered path as an organization, club, venue, or public-participant login and may allow user-owned identity providers such as Google, Apple, or Microsoft when the tenant policy permits it.
 
@@ -23,11 +23,11 @@ The current labels are workplace-oriented because parking is the first proof pat
 
 ## Pre-Auth Tenant Discovery
 
-Before showing the SSO path, FairSpot can help the user find the right tenant and IdP by asking for their work email or company domain.
+The sign-in screen asks for one thing first: the user's email. FairSpot uses the email domain to find the right tenant and login route before any credentials are requested.
 
-**Discovery is routing only.** It selects a candidate tenant and suggests an IdP. It does not grant access, does not establish session state, and does not prove the user belongs to the tenant.
+**Discovery is routing only.** It selects a candidate tenant and login route. It does not grant access, does not establish session state, and does not prove the user belongs to the tenant.
 
-### Discovery flow
+### Discovery flow (email-first, AUTH010)
 
 ```
 User types: alice@greenlogistics.example
@@ -42,15 +42,19 @@ User types: alice@greenlogistics.example
          Found                 Not found
               │                     │
               ▼                     ▼
-  Suggest "Continue with     Fall back to manual
-   company SSO" for that     tenant / path selection
-       tenant's IdP                 │
-              │                     ▼
+  Route by tenant login mode:   Opaque "no sign-in route
+   CompanySso → company SSO     found" state with retry,
+   LocalAccount/Both →          support guidance, and the
+   FairSpot sign-in             FairSpot-account fallback
+              │                     │
               └─────────┬──────────┘
                         │
                         ▼
-          User selects path and proceeds to login
+     Continue automatically to Keycloak with login_hint
+     (and kc_idp_hint for brokered SSO tenants — AUTH006)
 ```
+
+A quiet "Sign in with a FairSpot account instead" link stays available before and after discovery, so provisioned local users (demo, small tenants, break-glass) are never blocked by discovery.
 
 **What discovery must NOT do:**
 
@@ -86,8 +90,8 @@ FairSpot services derive tenant identity from authenticated context only. User-f
 This is the primary login path for enterprise customers.
 
 1. User visits the FairSpot login page.
-2. Optional: user enters work email for tenant discovery (see above).
-3. User selects "Continue with company SSO".
+2. User enters their work email; tenant discovery maps the domain to the tenant and its `CompanySso` login mode (see above).
+3. FairSpot continues automatically — no path choice is asked.
 4. Keycloak acts as a broker and redirects the user to the company's external IdP (e.g. Entra ID, Okta, Google Workspace).
 5. The company IdP authenticates the user and issues a token back to Keycloak.
 6. Keycloak issues a FairSpot token with mapped claims.
@@ -212,7 +216,7 @@ To avoid security misunderstandings, this table records explicit non-goals:
 |---|---|
 | "Typing my company email gives me access to that tenant" | Discovery only routes to an IdP suggestion. Access requires authenticated token + tenant membership. |
 | "The tenant in the login URL grants access" | Tenant in routing context is a hint only. Post-auth enforcement determines access. |
-| "If discovery fails to find my company, I cannot log in" | Discovery failure falls back to manual path selection. FairSpot-local account path is always available for provisioned users. |
+| "If discovery fails to find my company, I cannot log in" | Discovery failure shows an opaque retry/support state with a FairSpot-account fallback link. The FairSpot-local account path is always available for provisioned users. |
 | "Company SSO means FairSpot has my customer IdP password" | FairSpot never receives the external IdP password. The customer IdP authenticates the user independently. |
 
 ---
