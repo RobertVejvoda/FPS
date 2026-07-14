@@ -40,7 +40,9 @@ type AuthState = {
   appVersion: string;
   turnstileSiteKey: string;
   demoUrl: string;
-  login: (loginHint?: string) => Promise<void>;
+  // idpHint (Keycloak kc_idp_hint) routes straight to a brokered IdP, skipping the
+  // generic account chooser — only sent when tenant discovery supplies an alias.
+  login: (loginHint?: string, idpHint?: string) => Promise<void>;
   logout: () => Promise<void>;
   save: (apiBaseUrl: string, token: string) => Promise<void>;
   clear: () => void;
@@ -211,12 +213,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = useCallback(async (loginHint?: string) => {
+  const login = useCallback(async (loginHint?: string, idpHint?: string) => {
     const um = userManagerRef.current;
     if (!um) return;
     try {
       await um.removeUser();
-      await um.signinRedirect({ prompt: 'login', login_hint: loginHint });
+      await um.signinRedirect({
+        prompt: 'login',
+        login_hint: loginHint,
+        extraQueryParams: idpHint ? { kc_idp_hint: idpHint } : undefined,
+      });
     } catch {
       setPhase('login-failed');
     }

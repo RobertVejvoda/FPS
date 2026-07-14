@@ -1,21 +1,21 @@
 # Tenant Discovery and Login Modes
 
-**Status:** Implemented on web for Release 1 — the sign-in screen offers company-SSO work-email discovery and FairSpot-account sign-in. Mobile currently uses a single OIDC sign-in. Original decision and remaining follow-ups tracked under AUTH001–AUTH005.
-**Tracks:** Issue #539 (AUTH001)
+**Status:** Implemented on web for Release 1 — the sign-in screen is email-first (AUTH010, #788): the user enters one email, FairSpot discovers the tenant route, and continues automatically to the company-SSO broker or the FairSpot-account credentials form. A secondary "Sign in with a FairSpot account instead" link stays available for provisioned local users whose domain is not registered for discovery. Mobile currently uses a single OIDC sign-in. Original decision and remaining follow-ups tracked under AUTH001–AUTH005.
+**Tracks:** Issue #539 (AUTH001), #788 (AUTH010)
 **Related decisions:** `versions-and-decisions.md` → *Two-path login model and tenant discovery*
 
 ---
 
 ## Overview
 
-FairSpot presents users with two current login entry paths:
+FairSpot routes users between two login paths, discovered from a single email-first entry point (AUTH010, #788):
 
-| Path | Label on login screen | When used |
+| Path | How the user reaches it | When used |
 |---|---|---|
-| Company SSO | "Continue with company SSO" | Normal login for employees of an SSO-integrated company |
-| FairSpot account | "Sign in with FairSpot account" | Demo users, small tenants without SSO, break-glass admin, and fallback local accounts |
+| Company SSO | Enters work email → discovery finds an SSO tenant → automatic continue to the brokered IdP (with `kc_idp_hint` where an alias is configured) | Normal login for employees of an SSO-integrated company |
+| FairSpot account | Enters email → discovery finds a local-account tenant → automatic continue to the credentials form; or the secondary "Sign in with a FairSpot account instead" link | Demo users, small tenants without SSO, break-glass admin, and fallback local accounts |
 
-Both paths use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly.
+The user is never asked to choose between "company SSO" and "FairSpot account" before discovery — the first decision is entering an email. Unknown domains get an opaque retry/fallback message that does not reveal which tenants exist. Both paths use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly. The entered email is passed as OIDC `login_hint` only; it is not stored and never determines tenant access.
 
 The current labels are workplace-oriented because parking is the first proof path. The durable model is broader: a tenant may later label the brokered path as an organization, club, venue, or public-participant login and may allow user-owned identity providers such as Google, Apple, or Microsoft when the tenant policy permits it.
 
