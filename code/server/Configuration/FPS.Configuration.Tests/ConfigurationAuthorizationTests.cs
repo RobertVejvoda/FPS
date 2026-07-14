@@ -43,6 +43,9 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
                 services.AddSingleton<IParkingPolicyRepository, InMemoryParkingPolicyRepository>();
                 services.AddSingleton<IParkingSlotRepository, InMemoryParkingSlotRepository>();
                 services.AddSingleton<ISlotChangeRepository, InMemorySlotChangeRepository>();
+                services.AddSingleton<ISeatMapRepository, InMemorySeatMapRepository>();
+                services.AddSingleton<ISeatBlockRepository, InMemorySeatBlockRepository>();
+                services.AddSingleton<ISeatMapChangeRepository, InMemorySeatMapChangeRepository>();
                 services.AddSingleton<IDeactivatedUserStore, InMemoryDeactivatedUserStore>();
 
                 services.PostConfigureAll<JwtBearerOptions>(options =>
@@ -213,6 +216,78 @@ public sealed class ConfigurationAuthorizationTests : IClassFixture<WebApplicati
         var client = ClientWithToken("user-1", "tenant-1", "admin");
         var response = await client.PutAsync("/configuration/locations/loc-1/slots", JsonContent("""{"slots":[]}"""));
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    // SEAT001 (#783) — seat-map endpoints
+
+    [Fact]
+    public async Task GetSeatMap_Unauthenticated_Returns401()
+    {
+        var response = await factory.CreateClient().GetAsync("/configuration/locations/loc-1/seat-map");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSeatMap_EmployeeRole_Returns403()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.GetAsync("/configuration/locations/loc-1/seat-map");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSeatMap_HrManagerRole_Returns200()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "hr_manager");
+        var response = await client.GetAsync("/configuration/locations/loc-1/seat-map");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutSeatMap_EmployeeRole_Returns403()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.PutAsync(
+            "/configuration/locations/loc-1/seat-map",
+            JsonContent("""{"areas":[],"seats":[]}"""));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutSeatMap_AdminRole_Returns204()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "admin");
+        var response = await client.PutAsync(
+            "/configuration/locations/loc-1/seat-map",
+            JsonContent("""{"areas":[],"seats":[]}"""));
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddSeatBlock_EmployeeRole_Returns403()
+    {
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.PostAsync(
+            "/configuration/locations/loc-1/seat-blocks",
+            JsonContent("""{"seatId":"S1","fromDate":"2026-08-01","toDate":"2026-08-02","reason":"Maintenance"}"""));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetEmployeeSeatMap_EmployeeRole_Returns200()
+    {
+        // The whole point of the employee-safe seat map: employees must reach it
+        // for seat preference selection without any HR/admin role.
+        var client = ClientWithToken("user-1", "tenant-1", "employee");
+        var response = await client.GetAsync("/configuration/locations/loc-1/seat-map/map");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetEmployeeSeatMap_Unauthenticated_Returns401()
+    {
+        var response = await factory.CreateClient().GetAsync("/configuration/locations/loc-1/seat-map/map");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     // GET /configuration/locations/{locationId}/slots/map — public-safe Parking Map (MAP001)

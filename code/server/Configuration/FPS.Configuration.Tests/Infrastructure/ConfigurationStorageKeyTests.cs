@@ -46,6 +46,37 @@ public sealed class ConfigurationStorageKeyTests
         Assert.Equal("config-slotchange:demo:prague", key);
     }
 
+    // ── config-seat* key formats (SEAT001 #783) ───────────────────────────────
+
+    [Fact]
+    public void SeatMapKey_HasExpectedFormat()
+    {
+        var key = TenantStorageKey.For("config-seatmap", "demo", "prague");
+        Assert.Equal("config-seatmap:demo:prague", key);
+    }
+
+    [Fact]
+    public void SeatBlockKey_HasExpectedFormat()
+    {
+        var key = TenantStorageKey.For("config-seatblocks", "acme-corp", "main-office");
+        Assert.Equal("config-seatblocks:acme-corp:main-office", key);
+    }
+
+    [Fact]
+    public void SeatChangeKey_HasExpectedFormat()
+    {
+        var key = TenantStorageKey.For("config-seatchange", "demo", "prague");
+        Assert.Equal("config-seatchange:demo:prague", key);
+    }
+
+    [Fact]
+    public void SeatMapKey_DifferentTenants_ProduceDifferentKeys()
+    {
+        Assert.NotEqual(
+            TenantStorageKey.For("config-seatmap", "demo", "prague"),
+            TenantStorageKey.For("config-seatmap", "other-co", "prague"));
+    }
+
     // ── Tenant isolation ──────────────────────────────────────────────────────
 
     [Fact]

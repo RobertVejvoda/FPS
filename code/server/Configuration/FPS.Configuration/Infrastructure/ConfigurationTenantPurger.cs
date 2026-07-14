@@ -32,6 +32,12 @@ public sealed class ConfigurationTenantPurger(DaprClient daprClient) : IConfigur
                 DaprParkingSlotRepository.SlotListKey(tenantId, locationId), cancellationToken);
             removed += await DeleteIfPresentAsync<List<SlotChangeRecord>>(
                 DaprSlotChangeRepository.SlotChangeKey(tenantId, locationId), cancellationToken);
+            removed += await DeleteIfPresentAsync<SeatMap>(
+                DaprSeatMapRepository.SeatMapKey(tenantId, locationId), cancellationToken);
+            removed += await DeleteIfPresentAsync<List<SeatBlock>>(
+                DaprSeatBlockRepository.SeatBlockKey(tenantId, locationId), cancellationToken);
+            removed += await DeleteIfPresentAsync<List<SeatMapChangeRecord>>(
+                DaprSeatMapChangeRepository.SeatChangeKey(tenantId, locationId), cancellationToken);
         }
 
         // Drop the index last so a re-purge is a clean no-op.

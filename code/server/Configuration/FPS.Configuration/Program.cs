@@ -16,12 +16,16 @@ builder.Services.AddDaprClient();
 builder.Services.AddSingleton<IParkingPolicyRepository, DaprParkingPolicyRepository>();
 builder.Services.AddSingleton<IParkingSlotRepository, DaprParkingSlotRepository>();
 builder.Services.AddSingleton<ISlotChangeRepository, DaprSlotChangeRepository>();
+builder.Services.AddSingleton<ISeatMapRepository, DaprSeatMapRepository>();
+builder.Services.AddSingleton<ISeatBlockRepository, DaprSeatBlockRepository>();
+builder.Services.AddSingleton<ISeatMapChangeRepository, DaprSeatMapChangeRepository>();
 
 builder.Services.AddScoped<IConfigurationTenantPurger, ConfigurationTenantPurger>();
 builder.Services.AddScoped<ConfigurationTenantStorePurger>();
 
 builder.Services.AddScoped<ParkingPolicyService>();
 builder.Services.AddScoped<ParkingSlotService>();
+builder.Services.AddScoped<SeatMapService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 builder.Services.AddAuthentication("Bearer")
