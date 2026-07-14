@@ -204,14 +204,17 @@ function EmailFirstSignIn({
     setStep('discovering');
     const result = await discoverTenant(apiBaseUrl, domain);
     if (result.kind === 'ok') {
-      // Known domain: continue automatically to the discovered route. Company SSO
-      // tenants get the broker hint (when configured) so Keycloak can skip the
-      // account chooser; local-account tenants land on the credentials form with
-      // the email prefilled. Both routes end at the same trusted issuer.
+      // Known domain: continue automatically to the discovered route. All routes end
+      // at the same trusted issuer; the broker hint only applies to strict SSO:
+      // - CompanySso: pass the tenant's broker alias (kc_idp_hint) so Keycloak skips
+      //   the account chooser and goes straight to the company IdP.
+      // - Both (e.g. Green Logistics): never pass the alias — the Keycloak chooser
+      //   must stay visible so local demo/fallback accounts remain reachable.
+      // - LocalAccount: credentials form with the email prefilled via login_hint.
       setRouteName(result.data.displayName);
       setStep('redirecting');
-      const isSso = result.data.loginMode === 'CompanySso' || result.data.loginMode === 'Both';
-      await onLogin(email, isSso ? result.data.idpAlias : undefined);
+      const idpHint = result.data.loginMode === 'CompanySso' ? (result.data.idpAlias ?? undefined) : undefined;
+      await onLogin(email, idpHint);
     } else if (result.kind === 'notfound') {
       setStep('notfound');
     } else {

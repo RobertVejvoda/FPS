@@ -359,6 +359,47 @@ public sealed class TenantServiceTests
     }
 
     [Fact]
+    public async Task SetBranding_IdpAliasWithSsoMode_Persists()
+    {
+        var (created, _) = await service.CreateAsync("brand-alias", "Alias Co", "eu", "UTC", [], CancellationToken.None);
+        var config = new TenantBrandingConfig { LoginMode = TenantLoginMode.CompanySso, IdpAlias = "alias-co-entra" };
+
+        var error = await service.SetBrandingAsync(created!.TenantId, config, CancellationToken.None);
+
+        Assert.Null(error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Equal("alias-co-entra", tenant!.Branding.IdpAlias);
+    }
+
+    [Fact]
+    public async Task SetBranding_IdpAliasWithLocalAccountMode_ReturnsError()
+    {
+        var (created, _) = await service.CreateAsync("brand-alias-local", "Alias Local Co", "eu", "UTC", [], CancellationToken.None);
+        var config = new TenantBrandingConfig { LoginMode = TenantLoginMode.LocalAccount, IdpAlias = "alias-co-entra" };
+
+        var error = await service.SetBrandingAsync(created!.TenantId, config, CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("IdpAlias", error);
+    }
+
+    [Theory]
+    [InlineData("-leading-hyphen")]
+    [InlineData(".leading-dot")]
+    [InlineData("has space")]
+    [InlineData("bad/slash")]
+    public async Task SetBranding_InvalidIdpAliasFormat_ReturnsError(string alias)
+    {
+        var (created, _) = await service.CreateAsync($"brand-alias-bad-{Guid.NewGuid():N}"[..20], "Alias Bad Co", "eu", "UTC", [], CancellationToken.None);
+        var config = new TenantBrandingConfig { LoginMode = TenantLoginMode.CompanySso, IdpAlias = alias };
+
+        var error = await service.SetBrandingAsync(created!.TenantId, config, CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("IdpAlias", error);
+    }
+
+    [Fact]
     public async Task SetBranding_UnknownTenant_ReturnsError()
     {
         var error = await service.SetBrandingAsync("no-such", new TenantBrandingConfig(), CancellationToken.None);
@@ -468,6 +509,32 @@ public sealed class TenantServiceTests
         Assert.Equal("Discover Co", response.DisplayName);
         Assert.Equal("CompanySso", response.LoginMode);
         Assert.Equal("#123456", response.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_SsoTenantWithAlias_ReturnsIdpAlias()
+    {
+        var (created, _) = await service.CreateAsync("disc-alias", "Disc Alias Co", "eu", "UTC", [], CancellationToken.None);
+        await service.SetBrandingAsync(created!.TenantId,
+            new TenantBrandingConfig { LoginMode = TenantLoginMode.CompanySso, IdpAlias = "disc-alias-okta" }, CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created.TenantId, "disc-alias.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("disc-alias.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal("disc-alias-okta", response!.IdpAlias);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_NoAliasConfigured_ReturnsNullIdpAlias()
+    {
+        var (created, _) = await service.CreateAsync("disc-noalias", "Disc NoAlias Co", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "disc-noalias.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("disc-noalias.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Null(response!.IdpAlias);
     }
 
     [Fact]

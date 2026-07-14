@@ -367,7 +367,7 @@ public sealed class TenantControllerTests
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.SetBranding(tenantId,
-            new SetBrandingRequest("#aabbcc", null, null, null, null, "CompanySso"),
+            new SetBrandingRequest("#aabbcc", null, null, null, null, null, "CompanySso"),
             CancellationToken.None);
 
         Assert.IsType<NoContentResult>(result);
@@ -382,7 +382,7 @@ public sealed class TenantControllerTests
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.SetBranding(tenantId,
-            new SetBrandingRequest("not-a-hex", null, null, null, null),
+            new SetBrandingRequest("not-a-hex", null, null, null, null, null),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
@@ -392,7 +392,7 @@ public sealed class TenantControllerTests
     public async Task SetBranding_UnknownTenant_Returns404()
     {
         var result = await controller.SetBranding("no-such",
-            new SetBrandingRequest(null, null, null, null, null),
+            new SetBrandingRequest(null, null, null, null, null, null),
             CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(result);
@@ -405,10 +405,71 @@ public sealed class TenantControllerTests
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
 
         var result = await controller.SetBranding(tenantId,
-            new SetBrandingRequest(null, null, null, null, null, "InvalidMode"),
+            new SetBrandingRequest(null, null, null, null, null, null, "InvalidMode"),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    // ── IdP broker alias (AUTH010) ───────────────────────────────────────────
+
+    [Fact]
+    public async Task SetBranding_IdpAliasWithCompanySso_PersistsAlias()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("brand-idp", "Brand Idp", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest(null, null, null, null, null, "acme-entra", "CompanySso"),
+            CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        var tenant = await repository.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal("acme-entra", tenant!.Branding.IdpAlias);
+    }
+
+    [Fact]
+    public async Task SetBranding_IdpAliasWithLocalAccount_Returns400()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("brand-idp-local", "Brand Idp Local", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest(null, null, null, null, null, "acme-entra", "LocalAccount"),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Theory]
+    [InlineData("-starts-with-hyphen")]
+    [InlineData("has space")]
+    [InlineData("has/slash")]
+    public async Task SetBranding_InvalidIdpAliasFormat_Returns400(string alias)
+    {
+        var created = await provisioning.Create(new CreateTenantRequest($"brand-idp-bad-{Guid.NewGuid():N}", "Brand Idp Bad", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest(null, null, null, null, null, alias, "CompanySso"),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SetBranding_WhitespaceIdpAlias_TreatedAsAbsent()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("brand-idp-ws", "Brand Idp Ws", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.SetBranding(tenantId,
+            new SetBrandingRequest(null, null, null, null, null, "   ", "LocalAccount"),
+            CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        var tenant = await repository.GetAsync(tenantId, CancellationToken.None);
+        Assert.Null(tenant!.Branding.IdpAlias);
     }
 
     // ── Discovery domain endpoints (AUTH002) ─────────────────────────────────
@@ -484,7 +545,7 @@ public sealed class TenantDiscoveryControllerTests
     {
         var created = await provisioning.Create(new CreateTenantRequest("green-co", "Green Co", "eu", "UTC", []), CancellationToken.None);
         var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
-        await tenantController.SetBranding(tenantId, new SetBrandingRequest("#00ff00", null, null, null, null, "CompanySso"), CancellationToken.None);
+        await tenantController.SetBranding(tenantId, new SetBrandingRequest("#00ff00", null, null, null, null, null, "CompanySso"), CancellationToken.None);
         await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("green.example"), CancellationToken.None);
 
         var result = await discoveryController.Discover("green.example", CancellationToken.None);
@@ -495,6 +556,36 @@ public sealed class TenantDiscoveryControllerTests
         Assert.Equal("Green Co", response.DisplayName);
         Assert.Equal("CompanySso", response.LoginMode);
         Assert.Equal("#00ff00", response.PrimaryColor);
+    }
+
+    [Fact]
+    public async Task Discover_SsoTenantWithIdpAlias_ReturnsAlias()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("sso-co", "Sso Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.SetBranding(tenantId, new SetBrandingRequest(null, null, null, null, null, "sso-co-okta", "CompanySso"), CancellationToken.None);
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("sso-co.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("sso-co.example", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<TenantDiscoveryResponse>(ok.Value);
+        Assert.Equal("CompanySso", response.LoginMode);
+        Assert.Equal("sso-co-okta", response.IdpAlias);
+    }
+
+    [Fact]
+    public async Task Discover_TenantWithoutIdpAlias_ReturnsNullAlias()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("no-idp-co", "No Idp Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("no-idp.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("no-idp.example", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<TenantDiscoveryResponse>(ok.Value);
+        Assert.Null(response.IdpAlias);
     }
 
     [Fact]
