@@ -458,6 +458,120 @@ public sealed class TenantControllerTests
 
         Assert.IsType<NotFoundResult>(result);
     }
+
+    // ── Default locale (LOC001 / #744) ────────────────────────────────────────
+
+    [Fact]
+    public async Task Create_WithDefaultLocale_PersistedAndReturnedInResponse()
+    {
+        var result = await provisioning.Create(
+            new CreateTenantRequest("loc-ctrl", "Loc Ctrl", "eu", "UTC", [], DefaultLocale: "cs-CZ"),
+            CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
+        Assert.Equal("cs-CZ", response.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task Create_NoDefaultLocaleSpecified_ReturnsNull()
+    {
+        var result = await provisioning.Create(new CreateTenantRequest("loc-ctrl-none", "Co", "eu", "UTC", []), CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<CreatedAtActionResult>(result).Value);
+        Assert.Null(response.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task Create_InvalidDefaultLocale_Returns400()
+    {
+        var result = await provisioning.Create(
+            new CreateTenantRequest("loc-ctrl-bad", "Co", "eu", "UTC", [], DefaultLocale: "???"),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Update_WithDefaultLocale_OverwritesStoredLocale()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("loc-upd-ctrl", "Co", "eu", "UTC", [], DefaultLocale: "en-US"), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.Update(tenantId,
+            new UpdateTenantRequest("Co Updated", "UTC", [], DefaultLocale: "cs-CZ"),
+            CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        var tenant = await repository.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal("cs-CZ", tenant!.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task Update_WithoutDefaultLocale_LeavesStoredLocaleUnchanged()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("loc-noop-ctrl", "Co", "eu", "UTC", [], DefaultLocale: "cs-CZ"), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.Update(tenantId, new UpdateTenantRequest("Co Renamed", "UTC", []), CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        var tenant = await repository.GetAsync(tenantId, CancellationToken.None);
+        Assert.Equal("cs-CZ", tenant!.DefaultLocale);
+        Assert.Equal("Co Renamed", tenant.DisplayName);
+    }
+
+    [Fact]
+    public async Task Update_InvalidDefaultLocale_Returns400()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("loc-upd-bad-ctrl", "Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.Update(tenantId,
+            new UpdateTenantRequest("Co", "UTC", [], DefaultLocale: "not-a-locale-tag-way-too-long"),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Get_ReturnsDefaultLocale()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("loc-get", "Co", "eu", "UTC", [], DefaultLocale: "cs-CZ"), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        var result = await controller.Get(tenantId, CancellationToken.None);
+
+        var response = Assert.IsType<TenantResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("cs-CZ", response.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task GetModules_ReturnsDefaultLocale()
+    {
+        var created = await provisioning.Create(
+            new CreateTenantRequest("loc-mod-read", "Co", "eu", "UTC", [], DefaultLocale: "cs-CZ"),
+            CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        currentUser.Setup(u => u.TenantId).Returns(tenantId);
+        var result = await controller.GetModules(tenantId, CancellationToken.None);
+
+        var response = Assert.IsType<TenantModulesResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("cs-CZ", response.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task GetModules_NoDefaultLocale_ReturnsNull()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("loc-mod-none", "Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+
+        currentUser.Setup(u => u.TenantId).Returns(tenantId);
+        var result = await controller.GetModules(tenantId, CancellationToken.None);
+
+        var response = Assert.IsType<TenantModulesResponse>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Null(response.DefaultLocale);
+    }
 }
 
 public sealed class TenantDiscoveryControllerTests
@@ -551,5 +665,37 @@ public sealed class TenantDiscoveryControllerTests
         var result = await discoveryController.Discover("CI.EXAMPLE", CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
+    }
+
+    // ── Default locale (LOC001 / #744) ────────────────────────────────────────
+
+    [Fact]
+    public async Task Discover_ExposesDefaultLocale()
+    {
+        var created = await provisioning.Create(
+            new CreateTenantRequest("loc-disc-ctrl", "Loc Disc", "eu", "UTC", [], DefaultLocale: "cs-CZ"),
+            CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("loc-disc-ctrl.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("loc-disc-ctrl.example", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<TenantDiscoveryResponse>(ok.Value);
+        Assert.Equal("cs-CZ", response.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task Discover_NoDefaultLocale_ReturnsNull()
+    {
+        var created = await provisioning.Create(new CreateTenantRequest("loc-disc-none-ctrl", "Co", "eu", "UTC", []), CancellationToken.None);
+        var tenantId = ((TenantResponse)((CreatedAtActionResult)created).Value!).TenantId;
+        await tenantController.RegisterDiscoveryDomain(tenantId, new RegisterDiscoveryDomainRequest("loc-disc-none-ctrl.example"), CancellationToken.None);
+
+        var result = await discoveryController.Discover("loc-disc-none-ctrl.example", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<TenantDiscoveryResponse>(ok.Value);
+        Assert.Null(response.DefaultLocale);
     }
 }

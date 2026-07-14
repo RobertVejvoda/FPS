@@ -24,6 +24,10 @@ builder.Services.AddSingleton<IProfileRecipientLookup, DaprProfileRecipientLooku
 builder.Services.AddSingleton<IEmailRecipientResolver, DaprEmailRecipientResolver>();
 builder.Services.Configure<DaprSendGridEmailOptions>(
     builder.Configuration.GetSection(DaprSendGridEmailOptions.SectionName));
+// LOC001 (#744) — service-wide default locale for compose-time text. Per-tenant/per-recipient locale
+// resolution is a documented follow-up; see NotificationLocaleOptions.
+builder.Services.Configure<NotificationLocaleOptions>(
+    builder.Configuration.GetSection(NotificationLocaleOptions.SectionName));
 var emailProvider = builder.Configuration["Notification:Email:Provider"];
 if (DaprSendGridEmailNotificationSender.IsConfiguredProvider(emailProvider))
 {

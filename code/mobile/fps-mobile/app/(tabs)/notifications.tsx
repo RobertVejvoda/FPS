@@ -4,16 +4,16 @@ import { useState } from 'react';
 import { StateView } from '@/components/StateView';
 import { NotificationCard } from '@/components/NotificationCard';
 import { useNotifications } from '@/api/useNotifications';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
-
-const FILTERS = [
-  { key: false as const, label: 'All' },
-  { key: true as const, label: 'Unread' },
-];
 
 export default function NotificationsRoute() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const { state, refresh, markRead } = useNotifications(unreadOnly);
+  const FILTERS = [
+    { key: false as const, label: t('notifications.filter.all') },
+    { key: true as const, label: t('notifications.filter.unread') },
+  ];
 
   const filterBar = (
     <View style={styles.filterBar}>
@@ -34,14 +34,14 @@ export default function NotificationsRoute() {
 
   function renderContent() {
     if (state.kind === 'idle' || state.kind === 'loading') {
-      return <StateView kind="loading" title="Loading notifications…" />;
+      return <StateView kind="loading" title={t('notifications.loading')} />;
     }
     if (state.kind === 'unauthenticated') {
       return (
         <StateView
           kind="unauthenticated"
-          title="Not signed in"
-          message="Sign in to see your parking notifications."
+          title={t('session.notSignedIn')}
+          message={t('notifications.signInPrompt')}
         />
       );
     }
@@ -49,9 +49,9 @@ export default function NotificationsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Cannot load alerts"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
+          title={t('notifications.cannotLoad')}
+          message={t('common.checkConnection')}
+          actionLabel={t('common.retry')}
           onAction={refresh}
         />
       );
@@ -60,9 +60,9 @@ export default function NotificationsRoute() {
       return (
         <StateView
           kind="error"
-          title="Cannot load alerts"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
+          title={t('notifications.cannotLoad')}
+          message={t('common.checkConnection')}
+          actionLabel={t('common.retry')}
           onAction={refresh}
         />
       );
@@ -71,13 +71,13 @@ export default function NotificationsRoute() {
       return (
         <StateView
           kind="empty"
-          title={unreadOnly ? 'No unread notifications' : 'No notifications yet'}
+          title={unreadOnly ? t('notifications.empty.unreadTitle') : t('notifications.empty.title')}
           message={
             unreadOnly
-              ? 'All caught up. Switch to All to see your history.'
-              : 'Booking and allocation updates will appear here.'
+              ? t('notifications.empty.unreadMessage')
+              : t('notifications.empty.message')
           }
-          actionLabel="Refresh"
+          actionLabel={t('common.refresh')}
           onAction={refresh}
         />
       );

@@ -3,6 +3,7 @@ import { colors } from '@/theme';
 import { useUnreadCount } from '@/api/useUnreadCount';
 import { useAuth } from '@/auth/AuthContext';
 import { isMobileEmployeeRole } from '@/auth/roles';
+import { t } from '@/i18n';
 
 export default function TabsLayout() {
   const { roles } = useAuth();
@@ -19,7 +20,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('nav.home'),
           href: isEmployee ? undefined : null,
         }}
       />
@@ -27,7 +28,7 @@ export default function TabsLayout() {
         name="bookings"
         options={{
           // UX008 (#781) — module-aware reservations list; short tab label.
-          title: 'Reservations',
+          title: t('nav.reservations'),
           href: isEmployee ? undefined : null,
         }}
       />
@@ -35,14 +36,14 @@ export default function TabsLayout() {
         name="new"
         options={{
           // UX009 (#782) — one date-first Request entry for all enabled modules.
-          title: 'Request',
+          title: t('nav.request'),
           href: isEmployee ? undefined : null,
         }}
       />
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Alerts',
+          title: t('nav.alerts'),
           tabBarBadge: isEmployee && unreadCount > 0 ? unreadCount : undefined,
           href: isEmployee ? undefined : null,
         }}
@@ -50,7 +51,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: 'More',
+          title: t('nav.more'),
           href: isEmployee ? undefined : null,
         }}
       />
@@ -63,7 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="unsupported-role"
         options={{
-          title: 'Access',
+          title: t('nav.access'),
           href: isEmployee ? null : undefined,
         }}
       />

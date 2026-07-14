@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { getOidcConfig, isOidcConfigured } from '@/auth/oidcConfig';
 import { loadForcePromptLogin, clearForcePromptLogin } from '@/auth/authStorage';
 import { fetchMe } from '@/api/client';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -39,7 +40,7 @@ function useOptionalDiscovery(configured: boolean, issuerUrl: string): Discovery
       .catch(() => {
         if (isMounted) setState({
           discovery: null,
-          error: 'Identity provider is not reachable from this device.',
+          error: t('session.identityProviderUnreachable'),
         });
       });
 
@@ -91,13 +92,13 @@ export default function LoginRoute() {
       return;
     }
     if (response.type === 'error') {
-      setStatus({ kind: 'error', message: response.error?.message ?? 'Authorization failed.' });
+      setStatus({ kind: 'error', message: response.error?.message ?? t('session.authorizationFailed') });
       return;
     }
     if (response.type !== 'success') return;
 
     if (!request?.codeVerifier || !discovery?.tokenEndpoint) {
-      setStatus({ kind: 'error', message: 'Incomplete OIDC response.' });
+      setStatus({ kind: 'error', message: t('session.incompleteResponse') });
       return;
     }
 
@@ -132,15 +133,15 @@ export default function LoginRoute() {
       setStatus({
         kind: 'error',
         message: meResult.kind === 'unauthenticated'
-          ? 'Session was rejected. Please sign in again.'
-          : `Server error (${meResult.status}). Please try again.`,
+          ? t('session.rejected')
+          : t('session.serverError', { status: meResult.status }),
       });
     }).catch(async (err: unknown) => {
       // Token exchange failed; keep the force-prompt flag set for the next attempt.
       await clearSession();
       setStatus({
         kind: 'error',
-        message: err instanceof Error ? err.message : 'Token exchange failed.',
+        message: err instanceof Error ? err.message : t('session.tokenExchangeFailed'),
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,18 +160,16 @@ export default function LoginRoute() {
           accessibilityIgnoresInvertColors
         />
         <Text style={styles.title}>FairSpot</Text>
-        <Text style={styles.subtitle}>Fair access to workplace parking</Text>
+        <Text style={styles.subtitle}>{t('session.tagline')}</Text>
 
         {!configured ? (
           <View style={styles.notice}>
-            <Text style={styles.noticeText}>
-              Login is not configured for this build.{'\n'}Use the developer session option below.
-            </Text>
+            <Text style={styles.noticeText}>{t('session.notConfiguredNotice')}</Text>
           </View>
         ) : null}
 
         {status.kind === 'cancelled' ? (
-          <Text style={styles.hint}>Sign in was cancelled.</Text>
+          <Text style={styles.hint}>{t('session.cancelled')}</Text>
         ) : status.kind === 'error' ? (
           <Text style={styles.error}>{status.message}</Text>
         ) : discoveryError ? (
@@ -180,8 +179,8 @@ export default function LoginRoute() {
         {configured ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Sign in"
-            accessibilityHint="Opens the identity provider login page"
+            accessibilityLabel={t('session.signIn')}
+            accessibilityHint={t('session.signInHint')}
             disabled={!canSignIn}
             onPress={() => {
               setStatus({ kind: 'loading' });
@@ -196,20 +195,20 @@ export default function LoginRoute() {
             {isLoading ? (
               <ActivityIndicator color={colors.primaryText} />
             ) : (
-              <Text style={styles.primaryLabel}>Sign in</Text>
+              <Text style={styles.primaryLabel}>{t('session.signIn')}</Text>
             )}
           </Pressable>
         ) : null}
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Developer session"
-          accessibilityHint="Enter an API base URL and bearer token manually"
+          accessibilityLabel={t('session.devSessionLabel')}
+          accessibilityHint={t('session.devSessionHint')}
           onPress={() => router.push('/debug-session')}
           style={({ pressed }) => [styles.devLink, pressed && styles.devLinkPressed]}
           testID="button-dev-session"
         >
-          <Text style={styles.devLinkLabel}>Developer session</Text>
+          <Text style={styles.devLinkLabel}>{t('session.devSessionLabel')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

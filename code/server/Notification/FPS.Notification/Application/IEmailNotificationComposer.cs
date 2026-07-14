@@ -10,7 +10,10 @@ namespace FPS.Notification.Application;
 /// </summary>
 public interface IEmailNotificationComposer
 {
-    ComposedEmail Compose(NotificationRecord record);
+    // LOC001 (#744) — locale defaults to English; callers that know the recipient's resolved locale
+    // (currently the service-wide Notification:DefaultLocale — see NotificationLocaleOptions) pass it
+    // explicitly so subject/heading/status/labels/next-action/footer all render in that language.
+    ComposedEmail Compose(NotificationRecord record, string locale = NotificationMessages.DefaultLocale);
 }
 
 /// <summary>Provider-agnostic composed email content. HtmlBody is already escaped and layout-wrapped.</summary>

@@ -12,6 +12,7 @@ import {
 } from '../api/profile';
 import { fetchMe, type MeResponse } from '../api/client';
 import { displayLocation } from '../displayLabels';
+import { t, tDynamic } from '../i18n';
 
 // Local-demo defaults. Until Profile/ProfileSnapshot carries a home
 // location/facility per user (out of scope for #477), HR/admin and
@@ -53,11 +54,11 @@ export function ProfilePage() {
         clear(); navigate('/session'); return;
       }
       if (meResult.kind !== 'ok') {
-        setState({ kind: 'error', message: 'message' in meResult ? meResult.message : 'Failed to load identity.' });
+        setState({ kind: 'error', message: 'message' in meResult ? meResult.message : t('profile.error.loadIdentity') });
         return;
       }
       if (profileResult.kind !== 'ok') {
-        setState({ kind: 'error', message: 'message' in profileResult ? profileResult.message : 'Failed to load profile.' });
+        setState({ kind: 'error', message: 'message' in profileResult ? profileResult.message : t('profile.error.loadProfile') });
         return;
       }
       setState({ kind: 'ok', me: meResult.data, profile: profileResult.data });
@@ -73,7 +74,7 @@ export function ProfilePage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!addForm.licensePlate.trim()) { setAddError('License plate is required.'); return; }
+    if (!addForm.licensePlate.trim()) { setAddError(t('profile.vehicles.addError.required')); return; }
     setBusy(true);
     setAddError('');
     const res = await addVehicle(cfg, {
@@ -83,20 +84,20 @@ export function ProfilePage() {
     });
     setBusy(false);
     if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (res.kind !== 'ok') { setAddError('message' in res ? res.message : 'Could not add vehicle.'); return; }
+    if (res.kind !== 'ok') { setAddError('message' in res ? res.message : t('profile.vehicles.addError.generic')); return; }
     setAddForm(emptyForm());
     setAddOpen(false);
     await reloadProfile();
   }
 
   async function handleRemove(vehicleId: string) {
-    if (!confirm('Remove this vehicle from your profile?')) return;
+    if (!confirm(t('profile.vehicles.removeConfirm'))) return;
     setBusy(true);
     setActionError('');
     const res = await removeVehicle(cfg, vehicleId);
     setBusy(false);
     if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (res.kind !== 'ok') { setActionError('Could not remove vehicle. Please try again.'); return; }
+    if (res.kind !== 'ok') { setActionError(t('profile.vehicles.removeError')); return; }
     await reloadProfile();
   }
 
@@ -106,11 +107,11 @@ export function ProfilePage() {
     const res = await setDefaultVehicle(cfg, vehicleId);
     setBusy(false);
     if (res.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (res.kind !== 'ok') { setActionError('Could not update default vehicle. Please try again.'); return; }
+    if (res.kind !== 'ok') { setActionError(t('profile.vehicles.defaultError')); return; }
     await reloadProfile();
   }
 
-  if (state.kind === 'loading') return <p style={muted}>Loading profile…</p>;
+  if (state.kind === 'loading') return <p style={muted}>{t('profile.loading')}</p>;
   if (state.kind === 'error') return <p style={{ color: '#b91c1c' }}>{state.message}</p>;
 
   const { me, profile } = state;
@@ -118,52 +119,52 @@ export function ProfilePage() {
 
   return (
     <div style={page}>
-      <h2 style={heading}>My Profile</h2>
+      <h2 style={heading}>{t('profile.heading')}</h2>
 
       <section style={card}>
-        <h3 style={cardTitle}>Account</h3>
-        <Row label="Roles" value={formatRoles(me.roles)} />
+        <h3 style={cardTitle}>{t('profile.account.title')}</h3>
+        <Row label={t('profile.account.roles')} value={formatRoles(me.roles)} />
         {/* Issue #477: surface known facility/location labels so the page
             stops looking as if facility data is missing. Pulled from the
             demo defaults until the snapshot carries per-user values. */}
-        <Row label="Facility" value={displayLocation(DEMO_FACILITY_ID) ?? 'Headquarters'} />
-        <Row label="Location" value={displayLocation(DEMO_LOCATION_ID) ?? DEMO_LOCATION_ID} />
+        <Row label={t('profile.account.facility')} value={displayLocation(DEMO_FACILITY_ID) ?? t('labels.location.GL-HQ')} />
+        <Row label={t('profile.account.location')} value={displayLocation(DEMO_LOCATION_ID) ?? DEMO_LOCATION_ID} />
       </section>
 
       <section style={card}>
-        <h3 style={cardTitle}>Spot Eligibility</h3>
-        <Row label="Profile status" value={profile.profileStatus} />
-        <Row label="Spot eligible" value={profile.parkingEligible ? 'Yes' : 'No'} />
-        <Row label="Company car" value={profile.hasCompanyCar ? 'Yes' : 'No'} />
-        <Row label="Accessibility eligible" value={profile.accessibilityEligible ? 'Yes' : 'No'} />
-        <Row label="Reserved space eligible" value={profile.reservedSpaceEligible ? 'Yes' : 'No'} />
-        <Row label="Snapshot version" value={profile.snapshotVersion} />
+        <h3 style={cardTitle}>{t('profile.eligibility.title')}</h3>
+        <Row label={t('profile.eligibility.profileStatus')} value={profile.profileStatus} />
+        <Row label={t('profile.eligibility.spotEligible')} value={profile.parkingEligible ? t('profile.yes') : t('profile.no')} />
+        <Row label={t('profile.eligibility.companyCar')} value={profile.hasCompanyCar ? t('profile.yes') : t('profile.no')} />
+        <Row label={t('profile.eligibility.accessibilityEligible')} value={profile.accessibilityEligible ? t('profile.yes') : t('profile.no')} />
+        <Row label={t('profile.eligibility.reservedSpaceEligible')} value={profile.reservedSpaceEligible ? t('profile.yes') : t('profile.no')} />
+        <Row label={t('profile.eligibility.snapshotVersion')} value={profile.snapshotVersion} />
       </section>
 
       <section style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <h3 style={{ ...cardTitle, margin: 0 }}>My Vehicles</h3>
+          <h3 style={{ ...cardTitle, margin: 0 }}>{t('profile.vehicles.title')}</h3>
           <button
             onClick={() => { setAddOpen(o => !o); setAddError(''); }}
             style={secondaryBtn}
           >
-            {addOpen ? 'Cancel' : '+ Add vehicle'}
+            {addOpen ? t('profile.vehicles.cancel') : t('profile.vehicles.addToggle')}
           </button>
         </div>
 
         {addOpen && (
           <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={fieldLabel}>License plate *</label>
+              <label style={fieldLabel}>{t('profile.vehicles.licensePlateLabel')}</label>
               <input
                 value={addForm.licensePlate}
                 onChange={e => setAddForm(f => ({ ...f, licensePlate: e.target.value }))}
-                placeholder="e.g. ABC-123"
+                placeholder={t('profile.vehicles.licensePlatePlaceholder')}
                 style={inputStyle}
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={fieldLabel}>Vehicle type *</label>
+              <label style={fieldLabel}>{t('profile.vehicles.vehicleTypeLabel')}</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {VEHICLE_TYPES.map(vt => (
                   <button
@@ -175,17 +176,17 @@ export function ProfilePage() {
                       background: addForm.vehicleType === vt ? '#1d4ed8' : '#fff',
                       color: addForm.vehicleType === vt ? '#fff' : '#374151',
                     }}
-                  >{vt}</button>
+                  >{tDynamic('profile.vehicleType', vt, vt)}</button>
                 ))}
               </div>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
               <input type="checkbox" checked={addForm.isElectric} onChange={e => setAddForm(f => ({ ...f, isElectric: e.target.checked }))} />
-              Electric vehicle
+              {t('profile.vehicles.electricCheckbox')}
             </label>
             {addError && <p style={{ margin: 0, fontSize: 13, color: '#b91c1c' }}>{addError}</p>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, opacity: busy ? 0.6 : 1 }}>
-              {busy ? 'Adding…' : 'Add vehicle'}
+              {busy ? t('profile.vehicles.adding') : t('profile.vehicles.addSubmit')}
             </button>
           </form>
         )}
@@ -193,7 +194,7 @@ export function ProfilePage() {
         {actionError && <p style={{ margin: '4px 0 0', fontSize: 13, color: '#b91c1c' }}>{actionError}</p>}
 
         {activeVehicles.length === 0 && !addOpen && (
-          <p style={muted}>No vehicles linked to your profile. Add one to speed up spot requests.</p>
+          <p style={muted}>{t('profile.vehicles.none')}</p>
         )}
 
         {activeVehicles.map(v => (
@@ -222,16 +223,16 @@ function VehicleCard({ vehicle, busy, onSetDefault, onRemove }: {
         <span style={{ fontWeight: 600, fontSize: 14 }}>{vehicle.licensePlate || vehicle.vehicleType}</span>
         {vehicle.isDefault && (
           <span style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', borderRadius: 4, padding: '1px 6px', textTransform: 'uppercase' }}>
-            Default
+            {t('profile.vehicles.default')}
           </span>
         )}
       </div>
-      <div style={{ ...muted, marginBottom: 8 }}>{vehicle.vehicleType} · {vehicle.isElectric ? 'Electric' : 'Standard'}</div>
+      <div style={{ ...muted, marginBottom: 8 }}>{vehicle.vehicleType} · {vehicle.isElectric ? t('profile.vehicles.electric') : t('profile.vehicles.standard')}</div>
       <div style={{ display: 'flex', gap: 8 }}>
         {!vehicle.isDefault && (
-          <button onClick={onSetDefault} disabled={busy} style={ghostBtn}>Set as default</button>
+          <button onClick={onSetDefault} disabled={busy} style={ghostBtn}>{t('profile.vehicles.setDefault')}</button>
         )}
-        <button onClick={onRemove} disabled={busy} style={{ ...ghostBtn, color: '#b91c1c', borderColor: '#fecaca' }}>Remove</button>
+        <button onClick={onRemove} disabled={busy} style={{ ...ghostBtn, color: '#b91c1c', borderColor: '#fecaca' }}>{t('profile.vehicles.remove')}</button>
       </div>
     </div>
   );

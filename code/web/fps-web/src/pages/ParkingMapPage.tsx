@@ -11,6 +11,7 @@ import { DateFilter } from '../components/DateFilter';
 import { toLocalDateString } from '../dateOptions';
 import { compareSlotLabels, parseSlotLabel, type SlotLabel } from '../slotLabel';
 import { SlotDetailDrawer } from './SlotDetailDrawer';
+import { t, tPlural } from '../i18n';
 
 const LOCATION_ID = 'Prague';
 
@@ -54,7 +55,7 @@ export function ParkingMapPage() {
     void fetchSlotMap({ apiBaseUrl, bearerToken }, LOCATION_ID).then(result => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') setState({ kind: 'ok', slots: result.data });
-      else setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load parking map.' });
+      else setState({ kind: 'error', message: 'message' in result ? result.message : t('profile.map.loadError') });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
@@ -129,7 +130,7 @@ export function ParkingMapPage() {
     <div className="page-stack">
       <div className="page-hero">
         <div>
-          <h2 style={{ margin: 0 }}>Parking Map</h2>
+          <h2 style={{ margin: 0 }}>{t('profile.map.title')}</h2>
           <p style={{ margin: '0.25rem 0 0 0', color: '#64748b' }}>
             {displayLocation(LOCATION_ID) ?? LOCATION_ID}
           </p>
@@ -137,25 +138,25 @@ export function ParkingMapPage() {
       </div>
 
       <div className="panel">
-        {state.kind === 'loading' && <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading parking map…</p>}
+        {state.kind === 'loading' && <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t('profile.map.loading')}</p>}
         {state.kind === 'error' && (
           <div>
             <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{state.message}</p>
-            <button onClick={load} className="btn-primary">Retry</button>
+            <button onClick={load} className="btn-primary">{t('profile.retry')}</button>
           </div>
         )}
         {state.kind === 'ok' && summary && (
           <>
             {/* Capacity summary */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <CapacityCard label="Total" value={summary.total} tone="primary" />
-              <CapacityCard label="Available" value={summary.available} tone="ok" />
-              <CapacityCard label="Company car" value={summary.companyCar} tone="info" />
-              <CapacityCard label="Reserved" value={summary.reserved} tone="warn" />
-              <CapacityCard label="EV charger" value={summary.ev} tone="info" />
-              <CapacityCard label="Accessible" value={summary.accessible} tone="info" />
-              <CapacityCard label="Motorcycle" value={summary.motorcycle} tone="info" />
-              <CapacityCard label="Inactive" value={summary.inactive} tone="muted" />
+              <CapacityCard label={t('profile.map.capacity.total')} value={summary.total} tone="primary" />
+              <CapacityCard label={t('profile.map.capacity.available')} value={summary.available} tone="ok" />
+              <CapacityCard label={t('profile.map.capacity.companyCar')} value={summary.companyCar} tone="info" />
+              <CapacityCard label={t('profile.map.capacity.reserved')} value={summary.reserved} tone="warn" />
+              <CapacityCard label={t('profile.map.capacity.evCharger')} value={summary.ev} tone="info" />
+              <CapacityCard label={t('profile.map.capacity.accessible')} value={summary.accessible} tone="info" />
+              <CapacityCard label={t('profile.map.capacity.motorcycle')} value={summary.motorcycle} tone="info" />
+              <CapacityCard label={t('profile.map.capacity.inactive')} value={summary.inactive} tone="muted" />
             </div>
 
             {/* HR-only allocation date filter — shared component (issue #476) */}
@@ -163,7 +164,7 @@ export function ParkingMapPage() {
               <div style={{ marginBottom: '1rem' }}>
                 <DateFilter
                   mode="day"
-                  label="Allocations for"
+                  label={t('profile.map.allocationsFor')}
                   value={selectedDate}
                   onChange={setSelectedDate}
                   dateBase={dateBase}
@@ -224,7 +225,7 @@ function FloorSection({
         letterSpacing: '0.04em', margin: '0 0 0.5rem 0' }}>
         {floorLabel}
         <span style={{ marginLeft: 8, color: '#94a3b8', fontWeight: 500 }}>
-          {items.length} space{items.length === 1 ? '' : 's'}
+          {tPlural('profile.map.spaceCount', items.length)}
         </span>
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.5rem' }}>
@@ -244,11 +245,11 @@ function FloorSection({
 }
 
 function tileStatus(slot: SlotMapDto, allocation: AllocationMap[string] | undefined) {
-  if (!slot.isActive) return { kind: 'inactive', bg: '#f3f4f6', color: '#6b7280', border: '#e5e7eb', label: 'Inactive' };
-  if (allocation) return { kind: 'allocated', bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe', label: 'Allocated' };
-  if (slot.isReserved) return { kind: 'reserved', bg: '#fffbeb', color: '#92400e', border: '#fcd34d', label: 'Reserved' };
-  if (slot.isCompanyCarOnly) return { kind: 'company', bg: '#ecfeff', color: '#155e75', border: '#a5f3fc', label: 'Company car' };
-  return { kind: 'available', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0', label: 'Available' };
+  if (!slot.isActive) return { kind: 'inactive', bg: '#f3f4f6', color: '#6b7280', border: '#e5e7eb', label: t('profile.map.status.inactive') };
+  if (allocation) return { kind: 'allocated', bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe', label: t('profile.map.status.allocated') };
+  if (slot.isReserved) return { kind: 'reserved', bg: '#fffbeb', color: '#92400e', border: '#fcd34d', label: t('profile.map.status.reserved') };
+  if (slot.isCompanyCarOnly) return { kind: 'company', bg: '#ecfeff', color: '#155e75', border: '#a5f3fc', label: t('profile.map.status.companyCar') };
+  return { kind: 'available', bg: '#f0fdf4', color: '#166534', border: '#bbf7d0', label: t('profile.map.status.available') };
 }
 
 function SlotTile({
@@ -266,7 +267,7 @@ function SlotTile({
   // bypass via tile click).
   const Tag: 'button' | 'div' = onSelect ? 'button' : 'div';
   const interactiveProps = onSelect
-    ? { onClick: onSelect, type: 'button' as const, 'aria-label': `Open ${label.longLabel} history` }
+    ? { onClick: onSelect, type: 'button' as const, 'aria-label': t('profile.map.openHistoryAria', { slot: label.longLabel }) }
     : {};
   return (
     <Tag
@@ -284,13 +285,13 @@ function SlotTile({
         </span>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {slot.hasCharger && <Chip label="EV" />}
+        {slot.hasCharger && <Chip label={t('profile.map.chip.ev')} />}
         {slot.isAccessible && <Chip label="♿" />}
-        {slot.isCompanyCarOnly && <Chip label="Co. car" />}
+        {slot.isCompanyCarOnly && <Chip label={t('profile.map.chip.coCar')} />}
         {slot.isMotorcycleCapacity && (
-          <Chip label={slot.motorcycleCapacityUnits > 1 ? `MC × ${slot.motorcycleCapacityUnits}` : 'MC'} />
+          <Chip label={slot.motorcycleCapacityUnits > 1 ? t('profile.map.chip.mcUnits', { count: slot.motorcycleCapacityUnits }) : t('profile.map.chip.mc')} />
         )}
-        {slot.isReserved && <Chip label="Res" />}
+        {slot.isReserved && <Chip label={t('profile.map.chip.res')} />}
       </div>
       {isHr && allocation?.displayName && (
         <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#1e293b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -336,14 +337,14 @@ function Legend({ isHr }: { isHr: boolean }) {
   return (
     <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: '#fafafa', borderRadius: 6,
       border: '1px solid #e5e7eb', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.75rem', color: '#475569' }}>
-      <strong style={{ marginRight: 4 }}>Legend:</strong>
-      <LegendSwatch label="Available" bg="#f0fdf4" border="#bbf7d0" />
-      {isHr && <LegendSwatch label="Allocated" bg="#eef2ff" border="#c7d2fe" />}
-      <LegendSwatch label="Company car" bg="#ecfeff" border="#a5f3fc" />
-      <LegendSwatch label="Reserved" bg="#fffbeb" border="#fcd34d" />
-      <LegendSwatch label="Inactive" bg="#f3f4f6" border="#e5e7eb" />
+      <strong style={{ marginRight: 4 }}>{t('profile.map.legend.title')}</strong>
+      <LegendSwatch label={t('profile.map.status.available')} bg="#f0fdf4" border="#bbf7d0" />
+      {isHr && <LegendSwatch label={t('profile.map.status.allocated')} bg="#eef2ff" border="#c7d2fe" />}
+      <LegendSwatch label={t('profile.map.status.companyCar')} bg="#ecfeff" border="#a5f3fc" />
+      <LegendSwatch label={t('profile.map.status.reserved')} bg="#fffbeb" border="#fcd34d" />
+      <LegendSwatch label={t('profile.map.status.inactive')} bg="#f3f4f6" border="#e5e7eb" />
       <span style={{ marginLeft: 'auto', color: '#94a3b8' }}>
-        EV = charger · ♿ = accessible · Co. car = company car · MC = motorcycle · Res = reserved
+        {t('profile.map.legend.note')}
       </span>
     </div>
   );

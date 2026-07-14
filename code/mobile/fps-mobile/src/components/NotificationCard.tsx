@@ -1,21 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NotificationItem } from '@/api/notifications';
 import { displayLocation } from '@/displayLabels';
+import { t, tDynamic } from '@/i18n';
+import { formatDateTime as formatLocaleDateTime } from '@/i18n/formatters';
 import { colors, radius, spacing } from '@/theme';
 
-const TYPE_LABEL: Record<string, string> = {
-  RequestSubmitted: 'Request submitted',
-  RequestRejected: 'Request rejected',
-  SlotAllocated: 'Slot allocated',
-  SlotAllocatedByReallocation: 'Slot reallocated',
-  RequestCancelledBeforeAllocation: 'Request cancelled',
-  AllocatedReservationCancelled: 'Reservation cancelled',
-  LateCancellationPenaltyApplied: 'Late cancellation penalty',
-  NoShowRecorded: 'No-show recorded',
-  NoShowPenaltyApplied: 'No-show penalty',
-  ManualCorrection: 'Manual correction',
-  DrawCompleted: 'Draw completed',
-};
+function typeLabel(notificationType: string): string {
+  return tDynamic('labels.notificationType', notificationType, notificationType);
+}
 
 const TYPE_BADGE_COLOR: Record<string, string> = {
   RequestSubmitted: colors.primary,
@@ -32,8 +24,7 @@ const TYPE_BADGE_COLOR: Record<string, string> = {
 };
 
 function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, {
+  return formatLocaleDateTime(new Date(iso), {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -48,7 +39,7 @@ type NotificationCardProps = {
 };
 
 export function NotificationCard({ notification, onMarkRead, testID }: NotificationCardProps) {
-  const label = TYPE_LABEL[notification.notificationType] ?? notification.notificationType;
+  const label = typeLabel(notification.notificationType);
   const badgeColor = TYPE_BADGE_COLOR[notification.notificationType] ?? colors.textMuted;
   const locationLabel = displayLocation(notification.locationId);
 
@@ -85,7 +76,7 @@ export function NotificationCard({ notification, onMarkRead, testID }: Notificat
           style={({ pressed }) => [styles.markRead, pressed && styles.markReadPressed]}
           testID={`mark-read-${notification.id}`}
         >
-          <Text style={styles.markReadText}>Mark as read</Text>
+          <Text style={styles.markReadText}>{t('notifications.markAsRead')}</Text>
         </Pressable>
       ) : null}
     </View>

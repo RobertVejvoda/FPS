@@ -1,5 +1,6 @@
 // AUTH012 (#795) — pure parsing/formatting helpers for the tenant-admin identity
 // settings form. Kept free of React/fetch so they can be unit-tested directly.
+import { t } from '../i18n';
 
 // Role claim names are edited as a comma-separated line ("groups, roles").
 export function parseRoleClaimNames(text: string): string[] {
@@ -28,15 +29,15 @@ export function parseRoleMapping(text: string): RoleMappingParse {
     if (line.length === 0) continue;
     const eq = line.indexOf('=');
     if (eq <= 0 || eq === line.length - 1) {
-      return { ok: false, error: `Each mapping line must look like "idp-group = fairspot-role" (problem line: "${line}").` };
+      return { ok: false, error: t('admin.identity.validation.mappingLineFormat', { line }) };
     }
     const key = line.slice(0, eq).trim();
     const role = line.slice(eq + 1).trim();
     if (!key || !role) {
-      return { ok: false, error: `Each mapping line must look like "idp-group = fairspot-role" (problem line: "${line}").` };
+      return { ok: false, error: t('admin.identity.validation.mappingLineFormat', { line }) };
     }
     if (Object.prototype.hasOwnProperty.call(value, key)) {
-      return { ok: false, error: `The group "${key}" is mapped more than once. Keep one line per group.` };
+      return { ok: false, error: t('admin.identity.validation.duplicateGroup', { key }) };
     }
     value[key] = role;
   }
@@ -65,9 +66,9 @@ export function validateRequiredIdentityFields(fields: {
   tenantClaimName: string;
   subjectClaimName: string;
 }): string | null {
-  if (fields.trustedIssuer.trim().length === 0) return 'Trusted issuer is required.';
-  if (fields.audience.trim().length === 0) return 'Audience is required.';
-  if (fields.tenantClaimName.trim().length === 0) return 'Tenant claim name is required. Use "tenant_id" unless your identity provider issues a different claim.';
-  if (fields.subjectClaimName.trim().length === 0) return 'Subject claim name is required. Use "sub" unless your identity provider issues a different claim.';
+  if (fields.trustedIssuer.trim().length === 0) return t('admin.identity.validation.issuerRequired');
+  if (fields.audience.trim().length === 0) return t('admin.identity.validation.audienceRequired');
+  if (fields.tenantClaimName.trim().length === 0) return t('admin.identity.validation.tenantClaimRequired');
+  if (fields.subjectClaimName.trim().length === 0) return t('admin.identity.validation.subjectClaimRequired');
   return null;
 }

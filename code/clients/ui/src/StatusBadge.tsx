@@ -10,7 +10,9 @@ const COLOR: Record<string, string> = {
   NoShow: '#b45309',
 };
 
-export function StatusBadge({ status }: { status: string }) {
+// LOC001 (#744): `label` lets the host app pass localized display text while
+// `status` keeps driving the color mapping from the stable machine value.
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const color = COLOR[status] ?? '#6b7280';
   return (
     <span style={{
@@ -23,7 +25,7 @@ export function StatusBadge({ status }: { status: string }) {
       fontWeight: 600,
       letterSpacing: '0.3px',
     }}>
-      {status}
+      {label ?? status}
     </span>
   );
 }

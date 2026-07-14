@@ -4,12 +4,14 @@ import { useAuth } from '../auth/AuthContext';
 import { defaultRoute } from '../auth/roles';
 import { discoverTenant } from '../api/customer';
 import { useEffect } from 'react';
+import { t, useLocale, type MessageKey } from '../i18n';
+import { LocaleSwitcher } from '../components/LocaleSwitcher';
 
-const phaseMessages: Record<string, string> = {
-  'login-cancelled': 'Sign in was cancelled. Try again.',
-  'login-failed': 'Sign in failed. Try again.',
-  'session-expired': 'Your session has expired. Please sign in again.',
-  'unreachable': 'Cannot reach the backend. Check your connection and try again.',
+const phaseMessageKeys: Record<string, MessageKey> = {
+  'login-cancelled': 'session.phase.loginCancelled',
+  'login-failed': 'session.phase.loginFailed',
+  'session-expired': 'session.phase.sessionExpired',
+  'unreachable': 'session.phase.unreachable',
 };
 
 export function SessionPage() {
@@ -34,16 +36,16 @@ export function SessionPage() {
         <div className="session-story">
           <BrandLockup branding={branding} />
           <div>
-            <p className="session-eyebrow">Workplace parking operations</p>
-            <h1>Fair allocation with evidence your business can trust.</h1>
-            <p>Request shared spots and seats, run policy-based Draws, and give HR a clear operational record without exposing private employee data.</p>
+            <p className="session-eyebrow">{t('session.eyebrow.workplace')}</p>
+            <h1>{t('session.hero.title1')}</h1>
+            <p>{t('session.hero.body1')}</p>
           </div>
           <SessionSnapshot />
         </div>
         <div className="session-panel-wrap">
           <div className="session-panel">
             <p>
-              {phase === 'validating' ? 'Verifying session…' : 'Loading…'}
+              {phase === 'validating' ? t('session.verifying') : t('common.loading')}
             </p>
           </div>
         </div>
@@ -57,18 +59,18 @@ export function SessionPage() {
         <div className="session-story">
           <BrandLockup branding={branding} />
           <div>
-            <p className="session-eyebrow">Runtime configuration</p>
-            <h1>Configuration needs attention.</h1>
-            <p>The app cannot load the runtime identity settings required for sign-in.</p>
+            <p className="session-eyebrow">{t('session.eyebrow.config')}</p>
+            <h1>{t('session.config.title')}</h1>
+            <p>{t('session.config.body')}</p>
           </div>
           <SessionSnapshot />
         </div>
         <div className="session-panel-wrap">
           <div className="session-panel">
-            <h2>Configuration error</h2>
-            <p>{phaseError ?? 'Unable to load /config.json.'}</p>
+            <h2>{t('session.config.errorHeading')}</h2>
+            <p>{phaseError ?? t('session.config.errorFallback')}</p>
             <p style={{ marginTop: 12 }}>
-              Ensure <code>/config.json</code> is served by the web server and contains valid OIDC settings.
+              {t('session.config.hintPrefix')} <code>/config.json</code> {t('session.config.hintSuffix')}
             </p>
           </div>
         </div>
@@ -76,12 +78,12 @@ export function SessionPage() {
     );
   }
 
-  const statusMessage = phaseMessages[phase];
+  const statusMessageKey = phaseMessageKeys[phase];
 
   async function handleDevSave(e: React.FormEvent) {
     e.preventDefault();
     if (!urlInput.trim() || !tokenInput.trim()) {
-      setFormError('Both fields are required.');
+      setFormError(t('session.dev.bothRequired'));
       return;
     }
     setFormError('');
@@ -95,35 +97,38 @@ export function SessionPage() {
       <div className="session-story">
         <BrandLockup branding={branding} />
         <div>
-          <p className="session-eyebrow">FairSpot for modern workplaces</p>
+          <p className="session-eyebrow">{t('session.eyebrow.brand')}</p>
           {/* UX008 (#781): module-neutral positioning — FairSpot allocates parking, seats, and future modules. */}
-          <h1>Fair allocation employees can understand.</h1>
-          <p>Give employees a clear answer, give HR operational control, and keep every Draw ready for review.</p>
+          <h1>{t('session.hero.title2')}</h1>
+          <p>{t('session.hero.body2')}</p>
         </div>
         <SessionSnapshot />
-        <Link className="session-legal-link" to="/legal">Legal notices</Link>
+        <Link className="session-legal-link" to="/legal">{t('session.legalLink')}</Link>
       </div>
 
       <div className="session-panel-wrap">
         <div className="session-panel">
           <BrandLockup branding={branding} compact />
-          <h2>Sign in</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ margin: 0 }}>{t('session.signIn.heading')}</h2>
+            <LocaleSwitcher />
+          </div>
           <p>
             {branding.tenantName
-              ? `Secure access for ${branding.tenantName}.`
-              : 'Secure access to employee and HR workspaces.'}
+              ? t('session.signIn.secureAccessFor', { tenantName: branding.tenantName })
+              : t('session.signIn.secureAccessDefault')}
           </p>
 
-          {statusMessage ? (
-            <p style={{ marginTop: 14, color: 'var(--danger)', fontSize: 13 }}>{statusMessage}</p>
+          {statusMessageKey ? (
+            <p style={{ marginTop: 14, color: 'var(--danger)', fontSize: 13 }}>{t(statusMessageKey)}</p>
           ) : null}
 
           <EmailFirstSignIn apiBaseUrl={apiBaseUrl} onLogin={login} />
 
           <div className="session-security-note">
-            <span>Fair allocation</span>
-            <span>Team policies</span>
-            <span>Clear outcomes</span>
+            <span>{t('session.security.fairAllocation')}</span>
+            <span>{t('session.security.teamPolicies')}</span>
+            <span>{t('session.security.clearOutcomes')}</span>
           </div>
 
           {devFallbackEnabled ? (
@@ -134,16 +139,16 @@ export function SessionPage() {
                 className="btn-ghost"
                 style={{ minHeight: 0, padding: 0, textDecoration: 'underline' }}
               >
-                {showDevForm ? 'Hide development access' : 'Development access'}
+                {showDevForm ? t('session.dev.hide') : t('session.dev.show')}
               </button>
 
               {showDevForm ? (
                 <form onSubmit={(e) => { void handleDevSave(e); }} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14 }}>
                   <p>
-                    Development only. Paste the token from the local smoke script.
+                    {t('session.dev.note')}
                   </p>
                   <label style={labelStyle}>
-                    API base URL
+                    {t('session.dev.apiBaseUrl')}
                     <input
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
@@ -153,7 +158,7 @@ export function SessionPage() {
                     />
                   </label>
                   <label style={labelStyle}>
-                    Bearer token
+                    {t('session.dev.bearerToken')}
                     <textarea
                       value={tokenInput}
                       onChange={(e) => setTokenInput(e.target.value)}
@@ -164,10 +169,10 @@ export function SessionPage() {
                   </label>
                   {formError ? <p style={{ color: 'var(--danger)', fontSize: 13 }}>{formError}</p> : null}
                   <button type="submit" disabled={saving} className="btn-primary">
-                    {saving ? 'Verifying…' : 'Use token'}
+                    {saving ? t('session.dev.verifying') : t('session.dev.useToken')}
                   </button>
                   <button type="button" onClick={clear} className="btn-secondary">
-                    Clear stored token
+                    {t('session.dev.clearToken')}
                   </button>
                 </form>
               ) : null}
@@ -196,6 +201,7 @@ function EmailFirstSignIn({
 }) {
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<SignInStep>('idle');
+  const { applyTenantDefault } = useLocale();
 
   const trimmed = email.trim();
   const atIndex = trimmed.indexOf('@');
@@ -218,6 +224,11 @@ function EmailFirstSignIn({
       // reachable for them.
       const sso = result.data.loginMode === 'CompanySso';
       setStep(sso ? 'routing-sso' : 'routing-local');
+      // LOC001 review (#802): apply the discovered tenant default locale before
+      // redirecting so Keycloak's ui_locales matches the tenant language even
+      // for a first-time visitor with an English browser. Transient tenant
+      // default only — a stored user language choice still wins.
+      applyTenantDefault(result.data.defaultLocale);
       await onLogin(trimmed, sso && result.data.idpAlias ? { idpHint: result.data.idpAlias } : undefined);
     } else if (result.kind === 'notfound') {
       setStep('notfound');
@@ -234,7 +245,7 @@ function EmailFirstSignIn({
   return (
     <form onSubmit={(e) => { void handleSubmit(e); }} style={{ marginTop: 22 }}>
       <label style={labelStyle}>
-        Email
+        {t('session.email.label')}
         <input
           type="email"
           value={email}
@@ -247,14 +258,11 @@ function EmailFirstSignIn({
       </label>
       {step === 'notfound' ? (
         <p style={discoveryMessageStyle}>
-          We couldn't find a sign-in route for that email. Check the address and try
-          again, or sign in with a FairSpot account. If you keep getting stuck, contact
-          your company's FairSpot administrator.
+          {t('session.email.notFound')}
         </p>
       ) : step === 'error' ? (
         <p style={discoveryMessageStyle}>
-          Something went wrong while finding your sign-in. Try again, or sign in with a
-          FairSpot account.
+          {t('session.email.error')}
         </p>
       ) : null}
       <button
@@ -263,10 +271,10 @@ function EmailFirstSignIn({
         className="btn-primary"
         style={{ width: '100%', marginTop: 10, minHeight: 46 }}
       >
-        {step === 'discovering' ? 'Finding your sign-in…'
-          : step === 'routing-sso' ? 'Taking you to your company sign-in…'
-          : step === 'routing-local' ? 'Taking you to FairSpot sign-in…'
-          : 'Continue'}
+        {step === 'discovering' ? t('session.email.finding')
+          : step === 'routing-sso' ? t('session.email.routingSso')
+          : step === 'routing-local' ? t('session.email.routingLocal')
+          : t('session.email.continue')}
       </button>
       {/* The FairSpot-local path stays reachable without discovery — demo users,
           small tenants, fallback, and break-glass accounts. A quiet secondary link,
@@ -277,7 +285,7 @@ function EmailFirstSignIn({
         className="btn-ghost"
         style={{ width: '100%', marginTop: 10, minHeight: 0, textDecoration: 'underline', fontSize: 13 }}
       >
-        Sign in with a FairSpot account instead
+        {t('session.email.signInFairspot')}
       </button>
     </form>
   );
@@ -299,21 +307,21 @@ function BrandLockup({ branding, compact = false }: { branding: { productName: s
 
 function SessionSnapshot() {
   return (
-    <div className="session-snapshot" aria-label="Operational highlights">
+    <div className="session-snapshot" aria-label={t('session.snapshot.ariaLabel')}>
       <div className="session-snapshot-card session-snapshot-card-strong">
-        <span>Next Draw</span>
+        <span>{t('session.snapshot.nextDraw')}</span>
         <strong>18:00</strong>
-        <small>Policy window visible to employees</small>
+        <small>{t('session.snapshot.nextDrawSub')}</small>
       </div>
       <div className="session-snapshot-card">
-        <span>HR view</span>
-        <strong>Live</strong>
-        <small>Requests, outcomes, and exceptions</small>
+        <span>{t('session.snapshot.hrView')}</span>
+        <strong>{t('session.snapshot.hrViewValue')}</strong>
+        <small>{t('session.snapshot.hrViewSub')}</small>
       </div>
       <div className="session-snapshot-card">
-        <span>Evidence</span>
-        <strong>Traceable</strong>
-        <small>Allocation decisions kept for review</small>
+        <span>{t('session.snapshot.evidence')}</span>
+        <strong>{t('session.snapshot.evidenceValue')}</strong>
+        <small>{t('session.snapshot.evidenceSub')}</small>
       </div>
     </div>
   );

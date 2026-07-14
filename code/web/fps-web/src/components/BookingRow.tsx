@@ -1,29 +1,36 @@
 import { useState } from 'react';
 import type { BookingListItem } from '../api/bookings';
-import { displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
+import { displayBookingStatus, displayLocation, displayNextDrawRun, displaySlot, shouldShowNextDraw } from '../displayLabels';
 import { StatusBadge } from '@robertvejvoda/fairspot-ui';
+import { t, formatDate as formatDateI18n, formatWallClock, type MessageKey } from '../i18n';
 
-const STATUS_MEANING: Record<string, string> = {
-  Submitted: 'Waiting for allocation',
-  Pending: 'Waiting for the scheduled Draw',
-  Allocated: 'Spot allocated',
-  Rejected: 'Request not fulfilled',
-  Cancelled: 'Cancelled',
-  Expired: 'Time slot has passed',
-  Waitlisted: 'Waiting for a released slot',
-  UsageConfirmed: 'Usage confirmed',
-  NoShow: 'No-show recorded',
+const STATUS_MEANING_KEYS: Record<string, MessageKey> = {
+  Submitted: 'bookings.statusMeaning.Submitted',
+  Pending: 'bookings.statusMeaning.Pending',
+  Allocated: 'bookings.statusMeaning.Allocated',
+  Rejected: 'bookings.statusMeaning.Rejected',
+  Cancelled: 'bookings.statusMeaning.Cancelled',
+  Expired: 'bookings.statusMeaning.Expired',
+  Waitlisted: 'bookings.statusMeaning.Waitlisted',
+  UsageConfirmed: 'bookings.statusMeaning.UsageConfirmed',
+  NoShow: 'bookings.statusMeaning.NoShow',
 };
+
+function statusMeaning(status: string): string | undefined {
+  const key = STATUS_MEANING_KEYS[status];
+  // BookingRow has no resourceType-aware noun (unlike BookingDetailPage); it
+  // always renders the generic parking wording, matching its prior behavior.
+  return key ? t(key, { noun: t('labels.resourceNoun.spot'), nounLower: t('labels.resourceNoun.spot').toLowerCase() }) : undefined;
+}
 
 function formatDate(s: string): string {
   const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDateI18n(new Date(y, m - 1, d), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatTime(t: string): string {
-  const [h, min] = t.split(':');
-  const hour = parseInt(h, 10);
-  return `${hour % 12 || 12}:${min.padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+function formatTime(time: string): string {
+  const [h, min] = time.split(':');
+  return formatWallClock(parseInt(h, 10), parseInt(min, 10));
 }
 
 type Props = {
@@ -36,7 +43,7 @@ type Props = {
 
 export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const meaning = STATUS_MEANING[booking.status];
+  const meaning = statusMeaning(booking.status);
   const locationLabel = displayLocation(booking.locationId);
   const slotLabel = displaySlot(booking.allocatedSlotId);
   const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
@@ -54,7 +61,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
             {locationLabel ? ` · ${locationLabel}` : ''}
           </span>
         </div>
-        <StatusBadge status={booking.status} />
+        <StatusBadge status={booking.status} label={displayBookingStatus(booking.status)} />
       </div>
 
       {booking.reason ? (
@@ -62,12 +69,12 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
       ) : null}
 
       {slotLabel ? (
-        <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Spot: {slotLabel}</p>
+        <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>{t('bookings.tile.spotLabel', { slot: slotLabel })}</p>
       ) : null}
 
       {nextDrawLabel ? (
         <p style={{ margin: 0, fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>
-          Next Draw: {nextDrawLabel}
+          {t('bookings.rowOutcome.nextDraw', { next: nextDrawLabel })}
         </p>
       ) : null}
 
@@ -78,16 +85,16 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
               onClick={() => setExpanded((e) => !e)}
               style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' }}
             >
-              {expanded ? 'Hide detail' : 'What does this mean?'}
+              {expanded ? t('bookingRow.hideDetail') : t('bookingRow.whatDoesThisMean')}
             </button>
           ) : null}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
           {booking.nextAction === 'cancel' && onCancel ? (
-            <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>Cancel request</button>
+            <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>{t('bookings.action.cancelRequest')}</button>
           ) : null}
           {booking.nextAction === 'confirmUsage' && onConfirmUsage ? (
-            <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('#15803d')}>Confirm usage</button>
+            <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('#15803d')}>{t('bookings.action.confirmUsage')}</button>
           ) : null}
         </div>
       </div>

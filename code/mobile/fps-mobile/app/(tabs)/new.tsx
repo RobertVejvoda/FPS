@@ -16,10 +16,14 @@ import { fetchBookings, submitBooking, type SubmitBookingResult } from '@/api/bo
 import { useTenantModules } from '@/api/tenantModules';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
-import { formatBookingRef, formatCutOffAt, humanizeRejectionReason } from '@/displayLabels';
+import { formatBookingRef, formatCutOffAt, humanizeRejectionReason, displayVehicleType, displayTimePreset } from '@/displayLabels';
 import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_SEATS_LOCATION } from '@/demoDefaults';
+import { t } from '@/i18n';
+import { formatDate as formatLocaleDate, formatWallClock } from '@/i18n/formatters';
 import { colors, radius, spacing } from '@/theme';
 
+// Wire values sent to the API — must stay untranslated; only the on-screen
+// label (via displayVehicleType) is localized.
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 
 // DEMO_FACILITY_ID and DEMO_LOCATION_ID are imported from @/demoDefaults
@@ -77,6 +81,8 @@ const DEPARTURE_TIMES = [
 
 // UX009 (#782) — the three preset time ranges, always shown as actual hours.
 // Same whole-day Parking default as the web app, the seed, and the draw schedule.
+// `name` is the English fallback; the on-screen label always goes through
+// displayTimePreset(key, name) so it localizes.
 const TIME_PRESETS = [
   { key: 'day', name: 'Whole day', startHour: 8, endHour: 18 },
   { key: 'morning', name: 'Morning', startHour: 8, endHour: 12 },
@@ -90,16 +96,14 @@ function availableDates(): Array<{ offset: number; label: string }> {
     return {
       offset: i,
       label: i === 0
-        ? 'Today'
-        : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+        ? t('common.today')
+        : formatLocaleDate(d, { weekday: 'short', month: 'short', day: 'numeric' }),
     };
   });
 }
 
 function formatTimeLabel(hour: number, minute: number): string {
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const h = hour % 12 || 12;
-  return `${h}:${String(minute).padStart(2, '0')} ${ampm}`;
+  return formatWallClock(hour, minute);
 }
 
 function toISO(offsetDays: number, hour: number, minute: number): string {
@@ -140,14 +144,14 @@ function validateTime(form: FormState): FieldErrors {
   const arrivalMins = form.arrivalHour * 60 + form.arrivalMinute;
   const departureMins = form.departureHour * 60 + form.departureMinute;
   if (departureMins <= arrivalMins) {
-    errors.plannedDeparture = 'Departure must be after arrival';
+    errors.plannedDeparture = t('booking.form.errorDeparture');
   }
   return errors;
 }
 
 function validateParking(form: FormState): FieldErrors {
   const errors: FieldErrors = {};
-  if (!form.licensePlate.trim()) errors.licensePlate = 'Select a vehicle or enter license plate';
+  if (!form.licensePlate.trim()) errors.licensePlate = t('booking.form.errorLicensePlate');
   return errors;
 }
 
@@ -270,14 +274,13 @@ export default function NewBookingRoute() {
   };
 
   const describeResult = (module: 'Parking' | 'Seats', result: SubmitBookingResult, requestedDate: string): ModuleOutcome => {
-    const noun = module === 'Seats' ? 'seat' : 'spot';
     if (result.kind === 'accepted') {
       return {
         module,
         ok: true,
         text: result.status === 'Allocated'
-          ? `Your ${noun} is allocated — no draw needed.`
-          : `Request submitted — you’ll find out in the draw.`,
+          ? (module === 'Seats' ? t('booking.form.resultAllocatedSeat') : t('booking.form.resultAllocatedSpot'))
+          : t('booking.form.resultPendingDraw'),
         requestId: result.requestId,
         requestedDate,
       };
@@ -285,13 +288,13 @@ export default function NewBookingRoute() {
     if (result.kind === 'rejected') {
       return { module, ok: false, text: humanizeRejectionReason(result.rejectionCode, result.reason) };
     }
-    return { module, ok: false, text: result.kind === 'unreachable' ? result.message : 'Something went wrong. Please try again.' };
+    return { module, ok: false, text: result.kind === 'unreachable' ? result.message : t('booking.form.resultSomethingWrong') };
   };
 
   const handleSubmit = async () => {
     setModuleError(null);
     if (!wantParking && !wantSeat) {
-      setModuleError('Select at least one request to submit.');
+      setModuleError(t('booking.form.errorSelectModule'));
       return;
     }
     const errors: FieldErrors = { ...validateTime(form), ...(wantParking ? validateParking(form) : {}) };
@@ -304,8 +307,8 @@ export default function NewBookingRoute() {
     // still submits (partial success is the default — UX009 #782 / review #790).
     const parkingClosed = drawStatus?.kind === 'ok' && !drawStatus.data.canRequest;
     const parkingClosedText = drawStatus?.kind === 'ok'
-      ? drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? 'Requests are closed for this time.'
-      : 'Requests are closed for this time.';
+      ? drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? t('booking.form.requestsClosed')
+      : t('booking.form.requestsClosed');
     if (wantParking && !wantSeat && parkingClosed) {
       setSubmitStatus({
         kind: 'done',
@@ -378,10 +381,10 @@ export default function NewBookingRoute() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successContainer}>
-          <Text style={styles.successTitle}>{allOk ? 'Request submitted' : 'Partially submitted'}</Text>
+          <Text style={styles.successTitle}>{allOk ? t('booking.form.submitted') : t('booking.form.partiallySubmitted')}</Text>
           {submitStatus.outcomes.map((o) => (
             <View key={o.module} style={[styles.outcomeCard, o.ok ? styles.outcomeCardOk : styles.outcomeCardFail]}>
-              <Text style={styles.outcomeModule}>{o.module === 'Seats' ? 'Seat' : 'Parking'}</Text>
+              <Text style={styles.outcomeModule}>{o.module === 'Seats' ? t('labels.module.Seats') : t('labels.module.Parking')}</Text>
               <Text style={[styles.outcomeText, o.ok ? styles.outcomeTextOk : styles.outcomeTextFail]}>{o.text}</Text>
               {o.ok && o.requestId ? (
                 <Text style={styles.refValueSmall}>{formatBookingRef(o.requestId, o.requestedDate)}</Text>
@@ -399,14 +402,14 @@ export default function NewBookingRoute() {
             }}
             accessibilityRole="button"
           >
-            <Text style={styles.primaryLabel}>New request</Text>
+            <Text style={styles.primaryLabel}>{t('booking.form.newRequest')}</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.secondary, pressed && styles.secondaryDimmed]}
             onPress={() => router.push('/(tabs)/bookings')}
             accessibilityRole="button"
           >
-            <Text style={styles.secondaryLabel}>My Reservations</Text>
+            <Text style={styles.secondaryLabel}>{t('booking.myReservations')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -419,19 +422,19 @@ export default function NewBookingRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Request</Text>
+        <Text style={styles.heading}>{t('booking.form.heading')}</Text>
 
         {profileLoading ? (
-          <Text style={styles.mutedText}>Loading vehicles…</Text>
+          <Text style={styles.mutedText}>{t('booking.form.loadingVehicles')}</Text>
         ) : (
           <>
-            <FieldRow label="Location">
+            <FieldRow label={t('booking.field.location')}>
               <View style={styles.readOnlyRow}>
-                <Text style={styles.readOnlyValue}>Prague · Headquarters</Text>
+                <Text style={styles.readOnlyValue}>{t('labels.location.Prague')} · {t('labels.location.GL-HQ')}</Text>
               </View>
             </FieldRow>
 
-            <FieldRow label="Date">
+            <FieldRow label={t('booking.field.date')}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {dates.map(({ offset, label }) => (
                   (() => {
@@ -456,7 +459,7 @@ export default function NewBookingRoute() {
                           form.dateOffset === offset && styles.chipTextActive,
                           disabled && styles.chipTextDisabled,
                         ]}>
-                          {label}{disabled ? ' closed' : ''}
+                          {disabled ? t('booking.form.dateClosed', { label }) : label}
                         </Text>
                       </Pressable>
                     );
@@ -472,18 +475,18 @@ export default function NewBookingRoute() {
                 <Text style={styles.scheduleText}>{drawStatus.data.safeMessage}</Text>
                 {drawStatus.data.nextDrawAt && (
                   <Text style={styles.scheduleSubText}>
-                    Next draw: {formatCutOffAt(drawStatus.data.nextDrawAt, drawStatus.data.timeZone)}
+                    {t('booking.form.nextDraw', { time: formatCutOffAt(drawStatus.data.nextDrawAt, drawStatus.data.timeZone) })}
                   </Text>
                 )}
                 {drawStatus.data.cutOffAt && (
                   <Text style={styles.scheduleSubText}>
-                    Cut-off: {formatCutOffAt(drawStatus.data.cutOffAt, drawStatus.data.timeZone)}
+                    {t('booking.tile.cutoff', { time: formatCutOffAt(drawStatus.data.cutOffAt, drawStatus.data.timeZone) })}
                   </Text>
                 )}
               </View>
             )}
 
-            <FieldRow label="Time">
+            <FieldRow label={t('booking.field.time')}>
               <View style={styles.pills}>
                 {TIME_PRESETS.map((preset) => {
                   const active = form.arrivalHour === preset.startHour && form.arrivalMinute === 0
@@ -499,7 +502,7 @@ export default function NewBookingRoute() {
                       accessibilityRole="button"
                     >
                       <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                        {preset.name} · {formatTimeLabel(preset.startHour, 0)} – {formatTimeLabel(preset.endHour, 0)}
+                        {displayTimePreset(preset.key, preset.name)} · {formatTimeLabel(preset.startHour, 0)} – {formatTimeLabel(preset.endHour, 0)}
                       </Text>
                     </Pressable>
                   );
@@ -507,7 +510,7 @@ export default function NewBookingRoute() {
               </View>
             </FieldRow>
 
-            <FieldRow label="Custom arrival time">
+            <FieldRow label={t('booking.form.customArrival')}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {ARRIVAL_TIMES.map(({ hour, minute }) => {
                   const active = form.arrivalHour === hour && form.arrivalMinute === minute;
@@ -527,7 +530,7 @@ export default function NewBookingRoute() {
               </ScrollView>
             </FieldRow>
 
-            <FieldRow label="Custom departure time" error={fieldErrors.plannedDeparture}>
+            <FieldRow label={t('booking.form.customDeparture')} error={fieldErrors.plannedDeparture}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {DEPARTURE_TIMES.map(({ hour, minute }) => {
                   const active = form.departureHour === hour && form.departureMinute === minute;
@@ -550,22 +553,22 @@ export default function NewBookingRoute() {
             {/* UX009 (#782) — module options for the selected date/time. Parking is the
                 fully wired module; Seats appears only when the tenant enables it. */}
             <ToggleRow
-              label="Parking spot"
-              hint="A parking spot allocated by the fair draw."
+              label={t('booking.toggle.parkingSpot.label')}
+              hint={t('booking.toggle.parkingSpot.hint')}
               value={wantParking}
               onValueChange={(v) => { setWantParking(v); setModuleError(null); }}
             />
             {hasSeats ? (
               <ToggleRow
-                label="Team seat"
-                hint="Requests any allowed team-area seat for the same date and time — no specific seat is chosen here yet. Allocation follows your company's seat-area and team-priority rules; preferences are inputs, not guarantees."
+                label={t('booking.toggle.teamSeat.label')}
+                hint={t('booking.toggle.teamSeat.hint')}
                 value={wantSeat}
                 onValueChange={(v) => { setWantSeat(v); setModuleError(null); }}
               />
             ) : null}
 
             {wantParking && profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
-              <FieldRow label="Vehicle" error={fieldErrors.licensePlate}>
+              <FieldRow label={t('booking.field.vehicle')} error={fieldErrors.licensePlate}>
                 <View style={styles.vehicleList}>
                   {profile.vehicles.filter(v => v.isActive).map((v) => (
                     <Pressable
@@ -580,7 +583,7 @@ export default function NewBookingRoute() {
                     >
                       <Text style={styles.vehicleCardPlate}>{v.licensePlate}</Text>
                       <Text style={styles.vehicleCardMeta}>
-                        {v.vehicleType} · {v.isElectric ? 'Electric' : 'Standard'}
+                        {t('booking.form.vehicleMeta', { type: displayVehicleType(v.vehicleType), electric: v.isElectric ? t('more.vehicles.electric') : t('more.vehicles.standard') })}
                       </Text>
                     </Pressable>
                   ))}
@@ -588,21 +591,21 @@ export default function NewBookingRoute() {
               </FieldRow>
             ) : wantParking ? (
               <>
-                <FieldRow label="License plate" error={fieldErrors.licensePlate}>
+                <FieldRow label={t('booking.form.licensePlate')} error={fieldErrors.licensePlate}>
                   <TextInput
                     style={[styles.input, fieldErrors.licensePlate ? styles.inputError : null]}
                     value={form.licensePlate}
                     onChangeText={v => set('licensePlate', v)}
-                    placeholder="e.g. ABC123"
+                    placeholder={t('booking.form.licensePlatePlaceholder')}
                     placeholderTextColor={colors.textMuted}
                     autoCapitalize="characters"
                   />
                   <Text style={styles.hint}>
-                    No vehicles in profile. Add vehicles in More → My Vehicles to speed up spot requests.
+                    {t('booking.form.noVehiclesHint')}
                   </Text>
                 </FieldRow>
 
-                <FieldRow label="Vehicle type" error={fieldErrors.vehicleType}>
+                <FieldRow label={t('booking.form.vehicleType')} error={fieldErrors.vehicleType}>
                   <View style={styles.pills}>
                     {VEHICLE_TYPES.map(vt => (
                       <Pressable
@@ -616,7 +619,7 @@ export default function NewBookingRoute() {
                         accessibilityRole="button"
                       >
                         <Text style={[styles.pillText, form.vehicleType === vt && styles.pillTextActive]}>
-                          {vt}
+                          {displayVehicleType(vt)}
                         </Text>
                       </Pressable>
                     ))}
@@ -629,21 +632,21 @@ export default function NewBookingRoute() {
               <>
                 {form.selectedVehicleId ? null : (
                   <ToggleRow
-                    label="Electric vehicle"
-                    hint="Enables EV charging spot allocation when available."
+                    label={t('booking.toggle.electricVehicle.label')}
+                    hint={t('booking.toggle.electricVehicle.hint')}
                     value={form.isElectric}
                     onValueChange={v => set('isElectric', v)}
                   />
                 )}
                 <ToggleRow
-                  label="Accessible spot required"
-                  hint="Requests a space close to an entrance or lift."
+                  label={t('booking.toggle.accessibleSpot.label')}
+                  hint={t('booking.toggle.accessibleSpot.hint')}
                   value={form.requiresAccessibleSpot}
                   onValueChange={v => set('requiresAccessibleSpot', v)}
                 />
                 <ToggleRow
-                  label="Company car"
-                  hint="Indicates this vehicle is owned or leased by your employer."
+                  label={t('booking.toggle.companyCar.label')}
+                  hint={t('booking.toggle.companyCar.hint')}
                   value={form.isCompanyCar}
                   onValueChange={v => set('isCompanyCar', v)}
                 />
@@ -654,7 +657,7 @@ export default function NewBookingRoute() {
 
         {submitStatus.kind === 'done' && !submitStatus.outcomes.some(o => o.ok) && submitStatus.outcomes.map((o) => (
           <View key={o.module} style={styles.rejectionBox}>
-            <Text style={styles.rejectionTitle}>{o.module === 'Seats' ? 'Seat' : 'Parking'}: request not fulfilled</Text>
+            <Text style={styles.rejectionTitle}>{t('booking.form.notFulfilledTitle', { module: o.module === 'Seats' ? t('labels.module.Seats') : t('labels.module.Parking') })}</Text>
             <Text style={styles.rejectionText}>{o.text}</Text>
           </View>
         ))}
@@ -671,7 +674,7 @@ export default function NewBookingRoute() {
           {isSubmitting ? (
             <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={styles.primaryLabel}>{wantParking && wantSeat ? 'Submit selected requests' : 'Submit request'}</Text>
+            <Text style={styles.primaryLabel}>{wantParking && wantSeat ? t('booking.form.submitSelected') : t('booking.form.submitOne')}</Text>
           )}
         </Pressable>
       </ScrollView>

@@ -191,6 +191,36 @@ public sealed class EmailNotificationComposerTests
         Assert.DoesNotContain(record.Id.ToString(), email.HtmlBody);
     }
 
+    // ── Locale plumbing (LOC001 #744) ─────────────────────────────────────────
+
+    [Fact]
+    public void Compose_CzechLocale_SlotAllocated_SubjectHeadingAndLabelsAreLocalized()
+    {
+        var email = composer.Compose(Record("booking.slotAllocated"), "cs-CZ");
+
+        Assert.Equal("Vaše parkovací místo je potvrzeno", email.Subject);
+        // TextBody is not HTML-entity-encoded, so it is the reliable place to assert raw Czech
+        // diacritics; HtmlEncode legitimately numeric-escapes non-ASCII characters in HtmlBody.
+        Assert.Contains("Parkovací místo přiděleno", email.TextBody);   // heading
+        Assert.Contains("Přiděleno", email.TextBody);                  // status
+        Assert.Contains("Datum", email.TextBody);                      // date label
+        Assert.Contains("Časový úsek", email.TextBody);                // time slot label
+        Assert.Contains("Lokalita", email.TextBody);                   // location label
+        Assert.Contains("14. 5. 2026", email.TextBody);                // culture-correct Czech date
+        // HtmlBody still carries the same content — just numeric-entity-encoded for non-ASCII chars.
+        Assert.Contains("Datum", email.HtmlBody);
+        Assert.Contains("Lokalita", email.HtmlBody);
+    }
+
+    [Fact]
+    public void Compose_UnknownLocale_FallsBackToEnglish()
+    {
+        var email = composer.Compose(Record("booking.slotAllocated"), "fr-FR");
+
+        Assert.Equal("Your parking spot is confirmed", email.Subject);
+        Assert.Contains("14 May 2026", email.HtmlBody);
+    }
+
     [Fact]
     public void Compose_SalesAlert_IsBusinessReadable()
     {

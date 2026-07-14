@@ -1,15 +1,13 @@
+// LOC001 (#744) — all user-visible labels resolve through the i18n catalog
+// (src/i18n/messages/labels.ts); machine codes stay internal and reach the
+// catalog only as lookup keys. Function signatures are unchanged from the
+// pre-localization helpers so call sites stay as they were.
+import { t, tDynamic, tPlural, formatDate, formatDateTime, formatTime, formatWallClock } from './i18n';
+
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
 
-const LOCATION_LABELS: Record<string, string> = {
-  Prague: 'Prague',
-  // UX009 review (#790) — employee screens must not show raw location ids.
-  'GL-HQ': 'Headquarters',
-  'GL-TEAMS': 'Team areas',
-};
-
-const FACILITY_LABELS: Record<string, string> = {
-  [DEMO_FACILITY_ID]: 'Headquarters',
-};
+// Location/facility ids with an employee-safe display name in the catalog.
+const KNOWN_LOCATION_IDS = new Set(['Prague', 'GL-HQ', 'GL-TEAMS']);
 
 function isGuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -17,20 +15,25 @@ function isGuid(value: string): boolean {
 
 export function displayLocation(value?: string | null): string | null {
   if (!value) return null;
-  return LOCATION_LABELS[value] ?? FACILITY_LABELS[value] ?? (isGuid(value) ? 'Selected location' : value);
+  // UX009 review (#790) — employee screens must not show raw location ids.
+  if (KNOWN_LOCATION_IDS.has(value)) return tDynamic('labels.location', value, value);
+  if (value === DEMO_FACILITY_ID) return t('labels.location.GL-HQ');
+  return isGuid(value) ? t('labels.location.selected') : value;
 }
 
 export function displaySlot(value?: string | null): string | null {
   if (!value) return null;
-  return isGuid(value) ? 'Assigned space' : value.replace(/^Prague-/, 'Space ');
+  if (isGuid(value)) return t('labels.slot.assigned');
+  if (value.startsWith('Prague-')) return t('labels.slot.spacePrefix', { id: value.slice('Prague-'.length) });
+  return value;
 }
 
 export function displayRequestorRef(value?: string | null): string {
-  if (!value) return 'Requestor';
+  if (!value) return t('labels.requestor');
 
   const compact = value.replace(/-/g, '');
   if (/^[0-9a-f]{32,}$/i.test(compact)) {
-    return `Requestor ${compact.slice(0, 6).toUpperCase()}`;
+    return t('labels.requestor.withRef', { ref: compact.slice(0, 6).toUpperCase() });
   }
 
   return value.length > 18 ? `${value.slice(0, 18)}...` : value;
@@ -59,21 +62,20 @@ export function isSeatsItem(item: { resourceType?: string | null }): boolean {
 }
 
 export function displayModule(resourceType?: string | null): string {
-  if (!resourceType || resourceType === 'Parking') return 'Parking';
-  if (resourceType === 'Seats') return 'Seat';
-  return resourceType;
+  if (!resourceType || resourceType === 'Parking') return t('labels.module.Parking');
+  return tDynamic('labels.module', resourceType, resourceType);
 }
 
 // The employee-facing name of the allocated resource: parking uses "Spot",
 // seats use "Seat". Keeps row/detail copy business-readable per module.
 export function displayResourceNoun(resourceType?: string | null): string {
-  return resourceType === 'Seats' ? 'Seat' : 'Spot';
+  return resourceType === 'Seats' ? t('labels.resourceNoun.seat') : t('labels.resourceNoun.spot');
 }
 
 export function displayDate(value?: string | null): string {
   if (!value) return '-';
   try {
-    return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { dateStyle: 'medium' });
+    return formatDate(new Date(`${value}T00:00:00`));
   } catch {
     return value;
   }
@@ -82,14 +84,10 @@ export function displayDate(value?: string | null): string {
 export function displayDateTime(value?: string | null): string {
   if (!value) return '-';
   try {
-    return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return formatDateTime(new Date(value));
   } catch {
     return value;
   }
-}
-
-function formatDisplayTime(hour: number, minute: number): string {
-  return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 
 export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '18:00'): string | null {
@@ -100,12 +98,8 @@ export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '
 
   const drawDate = new Date(year, month - 1, day);
   drawDate.setDate(drawDate.getDate() - 1);
-  const dateLabel = drawDate.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-  return `${dateLabel}, ${formatDisplayTime(hour, minute)}`;
+  const dateLabel = formatDate(drawDate, { weekday: 'short', month: 'short', day: 'numeric' });
+  return `${dateLabel}, ${formatWallClock(hour, minute)}`;
 }
 
 export function shouldShowNextDraw(status?: string | null): boolean {
@@ -115,7 +109,7 @@ export function shouldShowNextDraw(status?: string | null): boolean {
 export function formatCutOffAt(cutOffAt: string | null, timeZone: string): string {
   if (!cutOffAt) return '—';
   try {
-    return new Date(cutOffAt).toLocaleTimeString(undefined, {
+    return formatTime(new Date(cutOffAt), {
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
@@ -126,89 +120,92 @@ export function formatCutOffAt(cutOffAt: string | null, timeZone: string): strin
   }
 }
 
-const REJECTION_CODE_LABELS: Record<string, string> = {
-  PolicyCutoff: 'Booking deadline has passed for this date.',
-  IneligibleProfile: 'Your profile was not eligible for this allocation.',
-  MissingVehicleEligibility: 'Vehicle eligibility requirement was not met.',
-  NoMatchingCapacity: 'No available spaces matched this request.',
-  DrawNotSelected: 'Your request was not selected in this allocation draw.',
-};
-
-export function humanizeRejectionReason(reasonCode: string | null, reason: string | null): string {
-  if (reason) return reason;
-  if (reasonCode) return REJECTION_CODE_LABELS[reasonCode] ?? 'This request was not eligible for allocation.';
-  return 'This request was not eligible for allocation.';
+// Booking status pills — stable machine value in, localized display text out.
+export function displayBookingStatus(status: string): string {
+  return tDynamic('bookings.status', status, status);
 }
 
-const SCHEDULE_STATUS_LABELS: Record<string, string> = {
-  known: 'Schedule configured',
-  unknown: 'Not configured',
-  pending: 'Pending',
-  completed: 'Completed',
-  running: 'Running',
+// The draw-status API ships structured state (draw status, request-window
+// status, schedule status, cut-off) alongside an English safe-message. Derive
+// localized copy from the structured fields and keep the server text as the
+// fallback for combinations the client doesn't recognize. Stable message
+// codes on the API are a LOC001 follow-up.
+type ScheduleLike = {
+  status?: string;
+  requestWindowStatus?: string;
+  scheduleStatus?: string;
+  cutOffAt?: string | null;
+  timeZone?: string;
+  safeMessage?: string;
+  cannotRequestReason?: string | null;
 };
 
-const SCHEDULE_SOURCE_LABELS: Record<string, string> = {
-  tenantPolicy: 'Tenant policy',
-  locationOverride: 'Location override',
-  manualOnly: 'Manual only',
-  default: 'Default',
-};
+export function displayScheduleMessage(s: ScheduleLike): string | null {
+  // Wire values: draw status is PascalCase ("Completed"), while the schedule
+  // metadata enums serialize camelCase ("closed", "known", "notConfigured").
+  if (s.status === 'Completed') return t('labels.schedule.allocationComplete');
+  if (s.scheduleStatus === 'notConfigured') return t('labels.schedule.notConfigured');
+  if (s.requestWindowStatus === 'closed') return t('labels.schedule.windowClosed');
+  if (s.requestWindowStatus === 'open' && s.cutOffAt && s.timeZone) {
+    return t('labels.schedule.openUntil', { time: formatCutOffAt(s.cutOffAt, s.timeZone) });
+  }
+  return s.safeMessage || null;
+}
+
+export function displayCannotRequestReason(s: ScheduleLike): string | null {
+  if (!s.cannotRequestReason) return null;
+  if (s.status === 'Completed') return t('labels.schedule.allocationCompleteShort');
+  if (s.status === 'InProgress') return t('labels.schedule.drawInProgress');
+  if (s.cannotRequestReason === 'Date has passed') return t('labels.schedule.datePassed');
+  if (s.requestWindowStatus === 'closed') return displayScheduleMessage(s);
+  return s.cannotRequestReason;
+}
+
+export function humanizeRejectionReason(reasonCode: string | null, reason: string | null): string {
+  // A stable code localizes; the backend's free-text reason is the fallback
+  // for codes the catalog doesn't know yet.
+  if (reasonCode) return tDynamic('labels.rejection', reasonCode, reason ?? t('labels.rejection.fallback'));
+  if (reason) return reason;
+  return t('labels.rejection.fallback');
+}
 
 export function formatScheduleStatus(status: string): string {
-  return SCHEDULE_STATUS_LABELS[status] ?? status;
+  return tDynamic('labels.scheduleStatus', status, status);
 }
 
 export function formatScheduleSource(source: string): string {
-  return SCHEDULE_SOURCE_LABELS[source] ?? source;
+  return tDynamic('labels.scheduleSource', source, source);
 }
 
-const DRAW_STATUS_LABELS: Record<string, string> = {
-  NotScheduled: 'No draw has run yet',
-  Scheduled: 'Draw is scheduled',
-  InProgress: 'Draw is running',
-  Completed: 'Draw completed',
-  Failed: 'Draw failed',
-};
-
-const DEMAND_LEVEL_LABELS: Record<string, string> = {
-  Unknown: 'Demand unknown',
-  None: 'No demand',
-  Low: 'Low demand',
-  Medium: 'Medium demand',
-  High: 'High demand',
-};
-
 export function formatDrawStatus(status: string): string {
-  return DRAW_STATUS_LABELS[status] ?? status;
+  return tDynamic('labels.drawStatus', status, status);
 }
 
 export function formatDemandLevel(demandLevel: string): string {
-  return DEMAND_LEVEL_LABELS[demandLevel] ?? demandLevel;
+  return tDynamic('labels.demand', demandLevel, demandLevel);
 }
 
 export function formatDrawRequestSummary(requestCount: number, demandLevel: string): string {
   if (requestCount === 0 && demandLevel === 'Unknown') {
-    return 'No employee requests for this day yet. Demand will be calculated after requests exist.';
+    return t('labels.drawRequestSummary.none');
   }
 
-  const requestText = `${requestCount} employee request${requestCount !== 1 ? 's' : ''}`;
-  return `${requestText}. ${formatDemandLevel(demandLevel)}.`;
+  return `${tPlural('labels.drawRequestCount', requestCount)}. ${formatDemandLevel(demandLevel)}.`;
 }
 
 export function formatScheduleSummary(status: string, source: string): string {
-  if (status === 'known' && source === 'tenantPolicy') return 'Automatic schedule from tenant policy';
-  if (status === 'known' && source === 'locationOverride') return 'Automatic schedule from location settings';
-  if (status === 'known' && source === 'manualOnly') return 'Manual draw only';
-  if (status === 'known') return 'Automatic schedule configured';
-  if (status === 'unknown') return 'No automatic schedule configured';
+  if (status === 'known' && source === 'tenantPolicy') return t('labels.scheduleSummary.tenantPolicy');
+  if (status === 'known' && source === 'locationOverride') return t('labels.scheduleSummary.locationOverride');
+  if (status === 'known' && source === 'manualOnly') return t('labels.scheduleSummary.manualOnly');
+  if (status === 'known') return t('labels.scheduleSummary.configured');
+  if (status === 'unknown') return t('labels.scheduleSummary.none');
   return formatScheduleStatus(status);
 }
 
 export function formatDrawTimestamp(at: string | null, timeZone: string): string {
   if (!at) return '—';
   try {
-    return new Date(at).toLocaleString(undefined, {
+    return formatDateTime(new Date(at), {
       weekday: 'short', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
       timeZone, timeZoneName: 'short',
@@ -223,43 +220,16 @@ export function isTimestampInPast(isoTimestamp: string | null): boolean {
   return new Date(isoTimestamp) < new Date();
 }
 
-const HR_REJECTION_LABELS: Record<string, string> = {
-  PolicyCutoff: 'Cut-off deadline passed',
-  IneligibleProfile: 'Profile ineligible',
-  MissingVehicleEligibility: 'Vehicle eligibility not met',
-  NoMatchingCapacity: 'No matching capacity',
-  DrawNotSelected: 'Not selected in draw',
-};
-
 export function humanizeHrRejection(reasonCode: string | null, reason: string | null): string {
+  if (reasonCode) return tDynamic('labels.hrRejection', reasonCode, reason ?? reasonCode);
   if (reason) return reason;
-  if (reasonCode) return HR_REJECTION_LABELS[reasonCode] ?? reasonCode;
   return '—';
 }
 
 // Draw lifecycle step labels (DRAW004/DRAW009).
 // Names match the StepName values emitted by Booking workflow activities.
-const LIFECYCLE_STEP_LABELS: Record<string, string> = {
-  Scheduled: 'Draw scheduled',
-  RecoveryInitiated: 'Recovery initiated',
-  RequestWindowClosed: 'Request window closed',
-  RequestsLoaded: 'Requests loaded',
-  CapacityLoaded: 'Capacity loaded',
-  MetricsLoaded: 'Metrics loaded',
-  WeightedAllocationCompleted: 'Allocation completed',
-  DecisionsPersisted: 'Decisions saved',
-  EventsQueued: 'Notifications queued',
-  Completed: 'Completed',
-  DrawFailed: 'Draw failed',
-  // Legacy labels kept for pre-DRAW009 rows or other callers.
-  DrawInputReady: 'Input data ready',
-  DrawExecuted: 'Draw executed',
-  NotificationsSent: 'Notifications sent',
-  DrawCompleted: 'Draw completed',
-};
-
 export function formatLifecycleStepName(name: string): string {
-  return LIFECYCLE_STEP_LABELS[name] ?? name;
+  return tDynamic('labels.lifecycleStep', name, name);
 }
 
 const LIFECYCLE_STEP_STATUS_COLORS: Record<string, string> = {
@@ -274,70 +244,25 @@ export function lifecycleStepStatusColor(status: string): string {
 }
 
 // Audit event type display labels (AUDIT003)
-const AUDIT_EVENT_TYPE_LABELS: Record<string, string> = {
-  'booking.requestSubmitted': 'Booking request submitted',
-  'booking.requestRejected': 'Booking request rejected',
-  'booking.slotAllocated': 'Parking slot allocated',
-  'booking.requestCancelled': 'Booking request cancelled',
-  'booking.usageConfirmed': 'Usage confirmed',
-  'booking.noShowRecorded': 'No-show recorded',
-  'booking.requestExpired': 'Booking request expired',
-  'booking.drawStarted': 'Draw started',
-  'booking.drawCompleted': 'Draw completed',
-  'booking.drawFailed': 'Draw failed',
-  'booking.penaltyApplied': 'Penalty applied',
-  'booking.manualCorrectionApplied': 'Manual correction applied',
-  'privacy.erasureRequested': 'Privacy erasure requested',
-  'privacy.erasureCompleted': 'Privacy erasure completed',
-  'privacy.erasureRejected': 'Privacy erasure rejected',
-  'privacy.erasureStepRecorded': 'Privacy erasure step recorded',
-  'configuration.policyChanged': 'Policy configuration changed',
-  'configuration.capacityChanged': 'Capacity configuration changed',
-  'notification.deliveryChanged': 'Notification delivery status changed',
-};
-
 export function humanizeAuditEventType(eventType: string): string {
-  return AUDIT_EVENT_TYPE_LABELS[eventType] ?? eventType;
+  return tDynamic('labels.auditEvent', eventType, eventType);
 }
 
-// Audit action display labels (AUDIT003)
+// Audit action display labels (AUDIT003). Unknown actions fall back to a
+// camelCase split; known values arrive as audit event types and results.
 export function humanizeAuditAction(action: string): string {
   return action.charAt(0).toUpperCase() + action.slice(1).replace(/([A-Z])/g, ' $1').trim();
 }
 
 // Audit result display labels (AUDIT003)
-const AUDIT_RESULT_LABELS: Record<string, string> = {
-  accepted: 'Accepted',
-  rejected: 'Rejected',
-  allocated: 'Allocated',
-  cancelled: 'Cancelled',
-  started: 'Started',
-  completed: 'Completed',
-  failed: 'Failed',
-  recorded: 'Recorded',
-  applied: 'Applied',
-  updated: 'Updated',
-  confirmed: 'Confirmed',
-  expired: 'Expired',
-};
-
 export function humanizeAuditResult(result: string | null): string {
   if (!result) return '—';
-  return AUDIT_RESULT_LABELS[result] ?? result;
+  return tDynamic('labels.auditResult', result, result);
 }
 
 // Activity category display labels (AUDIT003)
 export function humanizeActivityCategory(category: string): string {
-  const labels: Record<string, string> = {
-    All: 'All activity',
-    BookingLifecycle: 'Booking lifecycle',
-    DrawEvents: 'Draw events',
-    PolicyChanges: 'Policy & configuration',
-    Notifications: 'Notifications',
-    PrivacyErasure: 'Privacy & erasure',
-    ManualCorrections: 'Manual corrections',
-  };
-  return labels[category] ?? category;
+  return tDynamic('labels.activityCategory', category, category);
 }
 
 export function displayActorRef(hash: string | null): string {
@@ -351,30 +276,10 @@ export function displayActorRef(hash: string | null): string {
 // emit actorType=hr_manager (#482 review); the older 'hr' value is kept for
 // backwards compatibility with any historical audit rows in the store.
 export function humanizeActorType(actorType: string): string {
-  const labels: Record<string, string> = {
-    employee: 'Employee',
-    hr: 'HR Manager',
-    hr_manager: 'HR Manager',
-    admin: 'Administrator',
-    system: 'System',
-    integration: 'Integration',
-  };
-  return labels[actorType] ?? actorType;
+  return tDynamic('labels.actorType', actorType, actorType);
 }
 
 // Entity type display labels (AUDIT003)
 export function humanizeEntityType(entityType: string): string {
-  const labels: Record<string, string> = {
-    bookingRequest: 'Booking request',
-    drawAttempt: 'Draw attempt',
-    policy: 'Policy',
-    capacity: 'Capacity',
-    notification: 'Notification',
-    erasureRequest: 'Erasure request',
-    allocation: 'Allocation',
-    penalty: 'Penalty',
-    profile: 'Profile',
-    tenant: 'Tenant',
-  };
-  return labels[entityType] ?? entityType;
+  return tDynamic('labels.entityType', entityType, entityType);
 }

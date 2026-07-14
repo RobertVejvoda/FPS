@@ -2,30 +2,32 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchNotifications, fetchUnreadCount, markNotificationRead, type NotificationItem } from '../api/notifications';
+import { t, formatDateTime, type MessageKey } from '../i18n';
 
-const TYPE_LABELS: Record<string, string> = {
-  'booking.requestSubmitted': 'Request submitted',
-  'booking.requestRejected': 'Request rejected',
-  'booking.slotAllocated': 'Spot allocated',
-  'booking.slotCancelled': 'Spot cancelled',
-  'booking.requestCancelled': 'Request cancelled',
-  'booking.drawCompleted': 'Draw completed',
-  'booking.drawStarted': 'Draw started',
-  'booking.noShowRecorded': 'No-show recorded',
-  'booking.penaltyApplied': 'Penalty applied',
-  'booking.usageConfirmed': 'Usage confirmed',
-  'booking.requestExpired': 'Request expired',
-  'booking.manualCorrectionApplied': 'Request updated',
+const TYPE_LABEL_KEYS: Record<string, MessageKey> = {
+  'booking.requestSubmitted': 'notifications.type.requestSubmitted',
+  'booking.requestRejected': 'notifications.type.requestRejected',
+  'booking.slotAllocated': 'notifications.type.slotAllocated',
+  'booking.slotCancelled': 'notifications.type.slotCancelled',
+  'booking.requestCancelled': 'notifications.type.requestCancelled',
+  'booking.drawCompleted': 'notifications.type.drawCompleted',
+  'booking.drawStarted': 'notifications.type.drawStarted',
+  'booking.noShowRecorded': 'notifications.type.noShowRecorded',
+  'booking.penaltyApplied': 'notifications.type.penaltyApplied',
+  'booking.usageConfirmed': 'notifications.type.usageConfirmed',
+  'booking.requestExpired': 'notifications.type.requestExpired',
+  'booking.manualCorrectionApplied': 'notifications.type.manualCorrectionApplied',
   // HR-targeted variants (NOTIF #478). The `.hr` suffix distinguishes the
   // audience: same source event, different label and recipient set.
-  'booking.requestSubmitted.hr': 'New parking request',
-  'booking.requestCancelled.hr': 'Request cancelled by employee',
-  'booking.drawCompleted.hr': 'Draw run completed',
+  'booking.requestSubmitted.hr': 'notifications.type.requestSubmittedHr',
+  'booking.requestCancelled.hr': 'notifications.type.requestCancelledHr',
+  'booking.drawCompleted.hr': 'notifications.type.drawCompletedHr',
 };
 
 function typeLabel(notificationType: string): string {
-  return TYPE_LABELS[notificationType]
-    ?? notificationType.replace(/^booking\./, '').replace(/\.hr$/, '').replace(/([A-Z])/g, ' $1').trim();
+  const key = TYPE_LABEL_KEYS[notificationType];
+  if (key) return t(key);
+  return notificationType.replace(/^booking\./, '').replace(/\.hr$/, '').replace(/([A-Z])/g, ' $1').trim();
 }
 
 type State =
@@ -52,7 +54,7 @@ export function NotificationsPage() {
     fetchNotifications({ apiBaseUrl, bearerToken }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') setState({ kind: 'ok', items: result.data.items });
-      else setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load notifications.' });
+      else setState({ kind: 'error', message: 'message' in result ? result.message : t('notifications.error.load') });
     });
     loadUnreadCount();
   }, [apiBaseUrl, bearerToken, clear, navigate, loadUnreadCount]);
@@ -80,35 +82,35 @@ export function NotificationsPage() {
     <div className="page-stack">
       <div className="page-hero">
         <div>
-          <h2>Notifications{unreadCount !== null && unreadCount > 0 ? ` (${unreadCount} unread)` : ''}</h2>
-          <p>Your booking activity and updates</p>
+          <h2>{unreadCount !== null && unreadCount > 0 ? t('notifications.titleUnread', { count: unreadCount }) : t('notifications.title')}</h2>
+          <p>{t('notifications.subtitle')}</p>
         </div>
       </div>
 
       <div className="panel">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <span style={{ fontSize: 14, color: 'var(--muted)' }}>
-            {state.kind === 'ok' ? `${visibleItems.length} ${filter === 'unread' ? 'unread' : 'total'}` : ''}
+            {state.kind === 'ok' ? t(filter === 'unread' ? 'notifications.count.unread' : 'notifications.count.total', { count: visibleItems.length }) : ''}
           </span>
           <div style={{ display: 'flex', gap: 0, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
             {(['all', 'unread'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
                 style={{ background: filter === f ? 'var(--brand-primary)' : '#fff', color: filter === f ? '#fff' : 'var(--muted)', border: 'none', padding: '7px 18px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                {f === 'all' ? 'All' : 'Unread'}
+                {f === 'all' ? t('notifications.filter.all') : t('notifications.filter.unread')}
               </button>
             ))}
           </div>
         </div>
 
-        {state.kind === 'loading' && <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading…</p>}
+        {state.kind === 'loading' && <p style={{ color: 'var(--muted)', fontSize: 14 }}>{t('common.loading')}</p>}
         {state.kind === 'error' && (
           <div>
             <p style={{ color: 'var(--danger)', fontSize: 14 }}>{state.message}</p>
-            <button onClick={load} className="btn-primary">Retry</button>
+            <button onClick={load} className="btn-primary">{t('notifications.retry')}</button>
           </div>
         )}
         {state.kind === 'ok' && visibleItems.length === 0 && (
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>No {filter === 'unread' ? 'unread ' : ''}notifications.</p>
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>{filter === 'unread' ? t('notifications.emptyUnread') : t('notifications.empty')}</p>
         )}
         {state.kind === 'ok' && visibleItems.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -118,7 +120,7 @@ export function NotificationsPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: n.isRead ? 400 : 600, marginBottom: 4 }}>{n.messageText}</div>
                     <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-                      {new Date(n.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                      {formatDateTime(new Date(n.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
                       {' · '}
                       <span style={{ fontWeight: 500 }}>{typeLabel(n.notificationType)}</span>
                     </div>
@@ -135,7 +137,7 @@ export function NotificationsPage() {
                       className="btn-secondary"
                       style={{ fontSize: 12, padding: '5px 12px', flexShrink: 0 }}
                     >
-                      {busyId === n.id ? '…' : 'Mark read'}
+                      {busyId === n.id ? '…' : t('notifications.markRead')}
                     </button>
                   )}
                 </div>

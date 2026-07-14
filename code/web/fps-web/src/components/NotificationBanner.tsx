@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchNotifications, markNotificationRead, type NotificationItem } from '../api/notifications';
-import { displayLocation } from '../displayLabels';
+import { displayDate, displayLocation } from '../displayLabels';
+import { t } from '../i18n';
 
 // Important notifications are critical operational events that require user attention
 function isImportantNotification(type: string): boolean {
@@ -119,7 +120,7 @@ export function NotificationBanner({ className, style }: NotificationBannerProps
         </div>
         {notification.relatedDate && (
           <div style={{ fontSize: 13, color: '#78350f' }}>
-            {notification.relatedDate}
+            {displayDate(notification.relatedDate)}
             {notification.relatedTimeSlot ? ` · ${notification.relatedTimeSlot}` : ''}
             {displayLocation(notification.locationId) ? ` · ${displayLocation(notification.locationId)}` : ''}
           </div>
@@ -141,7 +142,7 @@ export function NotificationBanner({ className, style }: NotificationBannerProps
             opacity: dismissing ? 0.5 : 1,
           }}
         >
-          View all
+          {t('notifications.banner.viewAll')}
         </button>
         <button
           onClick={handleDismiss}
@@ -158,7 +159,7 @@ export function NotificationBanner({ className, style }: NotificationBannerProps
             opacity: dismissing ? 0.5 : 1,
           }}
         >
-          {dismissing ? '…' : 'Dismiss'}
+          {dismissing ? '…' : t('notifications.banner.dismiss')}
         </button>
       </div>
     </div>

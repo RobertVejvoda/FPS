@@ -14,6 +14,9 @@ export interface TenantDiscoveryResponse {
   logoAssetId?: string;
   faviconAssetId?: string;
   legalFooterText?: string;
+  // LOC001 (#744) — tenant default UI locale, so the sign-in surface can
+  // localize before authentication for a discovered tenant.
+  defaultLocale?: string | null;
 }
 
 export type DiscoverResult =
@@ -113,6 +116,8 @@ export interface TenantResponse {
   displayName: string;
   region: string;
   timeZone: string;
+  // LOC001 (#744) — tenant default UI locale (BCP 47), or null when unset.
+  defaultLocale?: string | null;
   lifecycleState: string;
   supportContacts: TenantContactDto[];
   serviceCollections: Record<string, string>;
@@ -162,6 +167,9 @@ export async function fetchTenant(
 export interface TenantModulesResponse {
   primaryModule: string;
   enabledModules: string[];
+  // LOC001 (#744) — tenant default UI locale (BCP 47, e.g. "cs-CZ"). Presentation
+  // preference only; users can still switch languages. Null/absent → no tenant default.
+  defaultLocale?: string | null;
 }
 
 export async function fetchTenantModules(

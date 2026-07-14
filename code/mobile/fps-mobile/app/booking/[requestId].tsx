@@ -4,25 +4,22 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchDrawStatus, type DrawStatusResponse } from '@/api/draws';
 import { useAuth } from '@/auth/AuthContext';
-import { displayLocation, displayModule, displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displayLocation, displayModule, displayNextDrawRun, displayResourceNoun, displayResourceNounPlural, displaySlot, humanizeRejectionReason, shouldShowNextDraw, statusBadgeLabel, demandShortLabel } from '@/displayLabels';
+import { t, tDynamic } from '@/i18n';
+import { formatDate as formatLocaleDate, formatDateTime as formatLocaleDateTime, formatWallClock } from '@/i18n/formatters';
 import { colors, radius, spacing } from '@/theme';
 
 // UX008 (#781) — module-aware status meaning: allocated/waitlisted copy names the
 // module's resource (spot vs seat) instead of assuming parking.
 function statusLabelFor(status: string, resourceType?: string | null): string {
   const noun = displayResourceNoun(resourceType).toLowerCase();
-  const map: Record<string, string> = {
-    Submitted: 'Waiting for allocation',
-    Allocated: resourceType === 'Seats' ? 'Team seat allocated' : 'Parking spot allocated',
-    Rejected: 'Request not fulfilled',
-    Cancelled: 'Cancelled',
-    Expired: 'Time slot has passed',
-    Waitlisted: `Waiting for a released ${noun}`,
-    UsageConfirmed: 'Usage confirmed',
-    NoShow: 'No-show recorded',
-    Pending: 'Pending — draw in progress',
-  };
-  return map[status] ?? status;
+  if (status === 'Allocated') {
+    return resourceType === 'Seats' ? t('booking.detail.statusLong.AllocatedSeat') : t('booking.detail.statusLong.AllocatedSpot');
+  }
+  if (status === 'Waitlisted') {
+    return t('booking.detail.statusLong.Waitlisted', { noun });
+  }
+  return tDynamic('booking.detail.statusLong', status, status);
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -37,15 +34,9 @@ const STATUS_COLOR: Record<string, string> = {
   Pending: colors.primary,
 };
 
-const DEMAND_LABEL: Record<string, string> = {
-  Low: 'Low',
-  Medium: 'Medium',
-  High: 'High',
-};
-
 function formatDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+  return formatLocaleDate(new Date(y, m - 1, d), {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -53,14 +44,13 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function formatTime(t: string): string {
-  const [h, m] = t.split(':');
-  const hour = parseInt(h, 10);
-  return `${hour % 12 || 12}:${m.padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+function formatTime(timeStr: string): string {
+  const [h, m] = timeStr.split(':');
+  return formatWallClock(parseInt(h, 10), parseInt(m, 10));
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  return formatLocaleDateTime(new Date(iso), {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit',
   });
@@ -93,29 +83,29 @@ function AllocationExplanation({
   const isPreDraw = shouldShowNextDraw(status);
   const isCompleted = draw?.status === 'Completed';
   const isDrawCapacityRejection = reasonCode === 'DrawNotSelected' || (!reasonCode && isCompleted);
-  const nounPlural = `${displayResourceNoun(resourceType).toLowerCase()}s`;
-  const availableLabel = `Available ${nounPlural}`;
+  const nounPlural = displayResourceNounPlural(resourceType);
+  const availableLabel = t('booking.detail.available', { noun: nounPlural });
 
   if (!isPreDraw && status !== 'Allocated' && status !== 'Rejected') return null;
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Allocation explanation</Text>
+      <Text style={styles.sectionTitle}>{t('booking.detail.section.allocationExplanation')}</Text>
       <View style={styles.card}>
         {isPreDraw && (
           <>
-            {nextDrawLabel ? <Row label="Next draw" value={nextDrawLabel} /> : null}
+            {nextDrawLabel ? <Row label={t('booking.detail.nextDraw')} value={nextDrawLabel} /> : null}
             {draw ? (
               <>
-                <Row label="Demand so far" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
-                <Row label="Requests so far" value={String(draw.requestCount)} />
+                <Row label={t('booking.detail.demandSoFar')} value={demandShortLabel(draw.demandLevel)} />
+                <Row label={t('booking.detail.requestsSoFar')} value={String(draw.requestCount)} />
                 {Number(draw.availableSpotCount) > 0 ? (
                   <Row label={availableLabel} value={String(draw.availableSpotCount)} />
                 ) : null}
               </>
             ) : null}
             <Text style={styles.explanationText}>
-              You are eligible. Final allocation follows eligibility and fairness rules.
+              {t('booking.detail.eligibleMessage')}
             </Text>
           </>
         )}
@@ -123,22 +113,22 @@ function AllocationExplanation({
         {status === 'Allocated' && (
           <>
             {isCompleted && draw?.completedAt ? (
-              <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
+              <Row label={t('booking.detail.drawCompleted')} value={formatDateTime(draw.completedAt)} />
             ) : null}
             {draw ? (
               <>
-                <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
-                <Row label="Requests" value={String(draw.requestCount)} />
+                <Row label={t('booking.detail.demand')} value={demandShortLabel(draw.demandLevel)} />
+                <Row label={t('booking.detail.requests')} value={String(draw.requestCount)} />
                 {Number(draw.availableSpotCount) > 0 ? (
                   <Row label={availableLabel} value={String(draw.availableSpotCount)} />
                 ) : null}
               </>
             ) : null}
-            <Text style={[styles.resultLabel, { color: '#15803d' }]}>Result: Allocated</Text>
+            <Text style={[styles.resultLabel, { color: '#15803d' }]}>{t('booking.detail.resultAllocated')}</Text>
             <Text style={styles.explanationText}>
               {resourceType === 'Seats'
-                ? 'Your request matched an available team seat.'
-                : 'Your request matched an available parking spot.'}
+                ? t('booking.detail.matchedSeat')
+                : t('booking.detail.matchedSpot')}
             </Text>
           </>
         )}
@@ -146,21 +136,21 @@ function AllocationExplanation({
         {status === 'Rejected' && (
           <>
             {isDrawCapacityRejection && draw?.completedAt ? (
-              <Row label="Draw completed" value={formatDateTime(draw.completedAt)} />
+              <Row label={t('booking.detail.drawCompleted')} value={formatDateTime(draw.completedAt)} />
             ) : null}
             {isDrawCapacityRejection && draw ? (
               <>
-                <Row label="Demand" value={DEMAND_LABEL[draw.demandLevel] ?? draw.demandLevel} />
-                <Row label="Requests" value={String(draw.requestCount)} />
+                <Row label={t('booking.detail.demand')} value={demandShortLabel(draw.demandLevel)} />
+                <Row label={t('booking.detail.requests')} value={String(draw.requestCount)} />
                 {Number(draw.availableSpotCount) > 0 ? (
                   <Row label={availableLabel} value={String(draw.availableSpotCount)} />
                 ) : null}
               </>
             ) : null}
-            <Text style={[styles.resultLabel, { color: colors.danger }]}>Result: Not allocated</Text>
+            <Text style={[styles.resultLabel, { color: colors.danger }]}>{t('booking.detail.resultNotAllocated')}</Text>
             <Text style={styles.explanationText}>
               {isDrawCapacityRejection
-                ? `More eligible requests than available ${nounPlural}. The draw followed company policy.`
+                ? t('booking.detail.moreThanAvailable', { noun: nounPlural })
                 : humanizeRejectionReason(reasonCode ?? null, reason ?? null)}
             </Text>
           </>
@@ -219,14 +209,14 @@ export default function BookingDetailRoute() {
         <View style={[styles.statusBanner, { borderLeftColor: statusColor }]}>
           <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusBadgeText}>{STATUS_BADGE_LABEL[params.status] ?? params.status}</Text>
+            <Text style={styles.statusBadgeText}>{statusBadgeLabel(params.status)}</Text>
           </View>
         </View>
 
         {/* Rejection note — only for non-draw-explained rejections */}
         {params.status !== 'Rejected' && params.reason ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Note</Text>
+            <Text style={styles.sectionTitle}>{t('booking.detail.note')}</Text>
             <View style={styles.card}>
               <Text style={styles.explanationText}>{params.reason}</Text>
             </View>
@@ -245,26 +235,26 @@ export default function BookingDetailRoute() {
 
         {/* Booking info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Request</Text>
+          <Text style={styles.sectionTitle}>{t('booking.detail.request')}</Text>
           <View style={styles.card}>
-            <Row label="Date" value={formatDate(params.requestedDate)} />
-            <Row label="Time" value={`${formatTime(params.timeSlotStart)} – ${formatTime(params.timeSlotEnd)}`} />
-            {params.resourceType === 'Seats' ? <Row label="Module" value={displayModule(params.resourceType)} /> : null}
-            {locationLabel ? <Row label="Location" value={locationLabel} /> : null}
-            {slotLabel ? <Row label={`Allocated ${displayResourceNoun(params.resourceType).toLowerCase()}`} value={slotLabel} /> : null}
+            <Row label={t('booking.field.date')} value={formatDate(params.requestedDate)} />
+            <Row label={t('booking.field.time')} value={`${formatTime(params.timeSlotStart)} – ${formatTime(params.timeSlotEnd)}`} />
+            {params.resourceType === 'Seats' ? <Row label={t('booking.detail.module')} value={displayModule(params.resourceType)} /> : null}
+            {locationLabel ? <Row label={t('booking.field.location')} value={locationLabel} /> : null}
+            {slotLabel ? <Row label={t('booking.detail.allocatedNoun', { noun: displayResourceNoun(params.resourceType).toLowerCase() })} value={slotLabel} /> : null}
           </View>
         </View>
 
         {/* Timeline */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Timeline</Text>
+          <Text style={styles.sectionTitle}>{t('booking.detail.timeline')}</Text>
           <View style={styles.card}>
-            <Row label="Submitted" value={formatDateTime(params.createdAt)} />
-            {nextDrawLabel ? <Row label="Next draw" value={nextDrawLabel} /> : null}
+            <Row label={t('booking.detail.submittedAt')} value={formatDateTime(params.createdAt)} />
+            {nextDrawLabel ? <Row label={t('booking.detail.nextDraw')} value={nextDrawLabel} /> : null}
             {drawStatus?.completedAt && !shouldShowNextDraw(params.status) ? (
-              <Row label="Draw completed" value={formatDateTime(drawStatus.completedAt)} />
+              <Row label={t('booking.detail.drawCompleted')} value={formatDateTime(drawStatus.completedAt)} />
             ) : null}
-            <Row label="Last updated" value={formatDateTime(params.lastStatusChangedAt)} />
+            <Row label={t('booking.detail.lastUpdated')} value={formatDateTime(params.lastStatusChangedAt)} />
           </View>
         </View>
 

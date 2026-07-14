@@ -790,6 +790,7 @@ export interface components {
             displayName: string;
             timeZone: string;
             supportContacts: components["schemas"]["ContactDto"][];
+            defaultLocale?: null | string;
         };
     };
     responses: never;

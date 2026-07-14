@@ -8,6 +8,11 @@ public sealed class TenantWorkspace
     // TLD: at least two alnum chars. No scheme, path, port, wildcard, or whitespace.
     private static readonly Regex HostnamePattern =
         new(@"^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]{2,}$", RegexOptions.Compiled);
+    // LOC001 — a light BCP-47-ish check, not a full parser: a 2-8 letter primary subtag,
+    // optionally followed by a single hyphenated 2-8 letter subtag (region/script/variant),
+    // e.g. "cs-CZ", "en", "en-US". Deliberately loose, matching HostnamePattern's approach above.
+    private static readonly Regex LocaleTagPattern =
+        new(@"^[a-zA-Z]{2,8}(-[a-zA-Z]{2,8})?$", RegexOptions.Compiled);
     private readonly List<TenantStateTransition> transitions = [];
     private readonly List<TenantDiscoveryDomain> discoveryDomains = [];
     private readonly List<TenantDemoSeedEvent> seedEvents = [];
@@ -21,6 +26,10 @@ public sealed class TenantWorkspace
     public string DisplayName { get; set; } = string.Empty;
     public string Region { get; init; } = string.Empty;
     public string TimeZone { get; set; } = string.Empty;
+    // LOC001 (#744) — BCP 47 language tag such as "cs-CZ"; null means unset (no tenant default,
+    // callers fall back to their own locale detection). Mirrors TimeZone: a plain settable
+    // property, validated/normalized by the caller (TenantService) rather than the domain.
+    public string? DefaultLocale { get; set; }
     public IReadOnlyList<TenantSupportContact> SupportContacts { get; set; } = [];
     public TenantKind Kind { get; init; } = TenantKind.Production;
     // PLAT003A — durable, defense-in-depth marker for the resettable evaluation sandbox
@@ -129,8 +138,16 @@ public sealed class TenantWorkspace
 
     public void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 
+    // LOC001 — light format check for DefaultLocale; null (unset) is always valid. Mirrors
+    // TenantBrandingConfig.Validate's error style (a static, nullable-string validator).
+    public static string? ValidateDefaultLocale(string? locale) =>
+        locale is not null && !LocaleTagPattern.IsMatch(locale)
+            ? "DefaultLocale must be a valid BCP 47 language tag (e.g. 'cs-CZ')."
+            : null;
+
     internal static TenantWorkspace Restore(
         string tenantId, string slug, string displayName, string region, string timeZone,
+        string? defaultLocale,
         IReadOnlyList<TenantSupportContact> supportContacts,
         TenantKind kind,
         bool isResettableSandbox,
@@ -147,7 +164,7 @@ public sealed class TenantWorkspace
         var ws = new TenantWorkspace
         {
             TenantId = tenantId, Slug = slug, DisplayName = displayName,
-            Region = region, TimeZone = timeZone, SupportContacts = supportContacts,
+            Region = region, TimeZone = timeZone, DefaultLocale = defaultLocale, SupportContacts = supportContacts,
             Kind = kind, IsResettableSandbox = isResettableSandbox, Provisioning = provisioning, CreatedAt = createdAt,
         };
         ws.transitions.AddRange(storedTransitions);

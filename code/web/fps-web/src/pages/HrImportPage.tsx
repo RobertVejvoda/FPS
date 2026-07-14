@@ -5,8 +5,10 @@ import {
   previewHrImport,
   type HrImportCommitResult,
   type HrImportPreview,
+  type HrImportRowStatus,
   type HrVehicleImportStatus,
 } from '../api/hrImport';
+import { t, tDynamic, tPlural } from '../i18n';
 
 const HR_IMPORT_DOC_URL = 'https://github.com/RobertVejvoda/fairspot/blob/master/docs/hr-import.md';
 const EMPLOYEE_HEADER = 'external_subject,display_name,email,roles,home_location,preferred_zone,parking_eligible,has_company_car,accessibility_eligible,reserved_space_eligible,active';
@@ -43,6 +45,34 @@ const VEHICLE_STATUS_COLOR: Record<HrVehicleImportStatus, string> = {
   Rejected: '#b91c1c',
 };
 
+function rowStatusLabel(status: HrImportRowStatus): string {
+  return tDynamic('hr.import.rowStatus', status, status);
+}
+
+function vehicleRowStatusLabel(status: HrVehicleImportStatus): string {
+  return tDynamic('hr.import.vehicleRowStatus', status, status);
+}
+
+// Commit button label: "Commit N employee(s)[ and M vehicle(s)]" — English
+// wording is preserved exactly; only the rendered text is localized.
+function commitButtonLabel(created: number, updated: number, vehiclesValid: number): string {
+  const employees = tPlural('hr.import.commitEmployees', created + updated);
+  if (vehiclesValid > 0) {
+    return t('hr.import.commitWithVehicles', { employees, vehicles: tPlural('hr.import.commitVehicles', vehiclesValid) });
+  }
+  return t('hr.import.commitEmployeesOnly', { employees });
+}
+
+// "Fix N rejected employee row(s)[ and M rejected vehicle row(s)] before
+// committing." — built the same way the original template literal was,
+// just with each fragment routed through the catalog.
+function fixBeforeCommitMessage(rejected: number, vehiclesRejected: number): string {
+  const parts: string[] = [];
+  if (rejected > 0) parts.push(tPlural('hr.import.rejectedEmployeeRows', rejected));
+  if (vehiclesRejected > 0) parts.push(tPlural('hr.import.rejectedVehicleRows', vehiclesRejected));
+  return t('hr.import.fixBeforeCommit', { items: parts.join(` ${t('hr.import.and')} `) });
+}
+
 export function HrImportPage() {
   const { apiBaseUrl, bearerToken } = useAuth();
   const empFileRef = useRef<HTMLInputElement>(null);
@@ -58,7 +88,7 @@ export function HrImportPage() {
     if (result.kind === 'ok') {
       setPhase({ kind: 'preview', employees, vehicles, data: result.data });
     } else {
-      setPhase({ kind: 'error', message: result.kind === 'unreachable' ? result.message : result.kind === 'error' ? result.message : 'Authentication required.' });
+      setPhase({ kind: 'error', message: result.kind === 'unreachable' ? result.message : result.kind === 'error' ? result.message : t('hr.import.authRequired') });
     }
   }
 
@@ -69,7 +99,7 @@ export function HrImportPage() {
     if (result.kind === 'ok') {
       setPhase({ kind: 'committed', data: result.data });
     } else {
-      setPhase({ kind: 'error', message: result.kind === 'unreachable' ? result.message : result.kind === 'error' ? result.message : 'Authentication required.' });
+      setPhase({ kind: 'error', message: result.kind === 'unreachable' ? result.message : result.kind === 'error' ? result.message : t('hr.import.authRequired') });
     }
   }
 
@@ -79,28 +109,27 @@ export function HrImportPage() {
 
   return (
     <div>
-      <h2 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>HR Import</h2>
+      <h2 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>{t('hr.import.title')}</h2>
       <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-        Upload an employees CSV (required) and optionally a vehicles CSV, preview row-level changes, then commit.{' '}
-        <a href={HR_IMPORT_DOC_URL} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8' }}>Open import contract</a>.
+        {t('hr.import.intro')}{' '}
+        <a href={HR_IMPORT_DOC_URL} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8' }}>{t('hr.import.openContract')}</a>.
       </p>
 
       <section style={helpPanel}>
-        <h3 style={helpTitle}>employees.csv format (required)</h3>
+        <h3 style={helpTitle}>{t('hr.import.employeesFormatTitle')}</h3>
         <p style={helpText}>
-          Comma-separated columns. Roles use semicolons, for example <code>employee;hr_manager</code>.
-          Do not include passwords, employee numbers, national IDs, salaries, tokens, or manager notes.
-          Company-car and accessibility flags are HR-controlled and cannot be self-set by employees.
+          {t('hr.import.employeesHelp.line1')} <code>employee;hr_manager</code>.
+          {' '}{t('hr.import.employeesHelp.line2')}
+          {' '}{t('hr.import.employeesHelp.line3')}
         </p>
         <pre style={codeBlock}>{EMPLOYEE_EXAMPLE}</pre>
       </section>
 
       <section style={{ ...helpPanel, marginTop: '0.5rem' }}>
-        <h3 style={helpTitle}>vehicles.csv format (optional)</h3>
+        <h3 style={helpTitle}>{t('hr.import.vehiclesFormatTitle')}</h3>
         <p style={helpText}>
-          Each row links a vehicle to an employee. The <code>external_subject</code> must match a subject
-          in the employees file or an existing profile. One employee may have multiple vehicle rows.
-          Valid <code>vehicle_type</code> values: <code>car</code>, <code>motorcycle</code>, <code>van</code>.
+          {t('hr.import.vehiclesHelp.line1a')} <code>external_subject</code> {t('hr.import.vehiclesHelp.line1b')}
+          {' '}{t('hr.import.vehiclesHelp.line2a')} <code>vehicle_type</code>{t('hr.import.vehiclesHelp.line2b')} <code>car</code>, <code>motorcycle</code>, <code>van</code>.
         </p>
         <pre style={codeBlock}>{VEHICLE_EXAMPLE}</pre>
       </section>
@@ -108,13 +137,13 @@ export function HrImportPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <label style={{ fontSize: '0.875rem', minWidth: 120, color: '#374151' }}>
-            <strong>employees.csv</strong>
+            <strong>{t('hr.import.employeesFileLabel')}</strong>
           </label>
           <input ref={empFileRef} type="file" accept=".csv" style={{ fontSize: '0.875rem' }} />
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <label style={{ fontSize: '0.875rem', minWidth: 120, color: '#374151' }}>
-            vehicles.csv <span style={{ color: '#9ca3af' }}>(optional)</span>
+            {t('hr.import.vehiclesFileLabel')} <span style={{ color: '#9ca3af' }}>{t('hr.import.optional')}</span>
           </label>
           <input ref={vehFileRef} type="file" accept=".csv" style={{ fontSize: '0.875rem' }} />
         </div>
@@ -124,7 +153,7 @@ export function HrImportPage() {
             disabled={isLoading}
             style={{ padding: '6px 14px', fontSize: '0.875rem', cursor: 'pointer', border: '1px solid #d1d5db', borderRadius: 6, background: '#f9fafb' }}
           >
-            {isPreviewLoading ? 'Previewing…' : 'Preview'}
+            {isPreviewLoading ? t('hr.import.previewing') : t('hr.import.previewButton')}
           </button>
         </div>
       </div>
@@ -137,21 +166,21 @@ export function HrImportPage() {
 
       {phase.kind === 'preview' && (
         <>
-          <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>Employees</h3>
+          <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>{t('hr.import.employeesSectionTitle')}</h3>
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-            <span style={{ color: 'green' }}>Created: {phase.data.created}</span>
-            <span style={{ color: '#1d4ed8' }}>Updated: {phase.data.updated}</span>
-            <span style={{ color: '#6b7280' }}>Unchanged: {phase.data.unchanged}</span>
-            <span style={{ color: '#b91c1c' }}>Rejected: {phase.data.rejected}</span>
+            <span style={{ color: 'green' }}>{t('hr.import.summary.created', { count: phase.data.created })}</span>
+            <span style={{ color: '#1d4ed8' }}>{t('hr.import.summary.updated', { count: phase.data.updated })}</span>
+            <span style={{ color: '#6b7280' }}>{t('hr.import.summary.unchanged', { count: phase.data.unchanged })}</span>
+            <span style={{ color: '#b91c1c' }}>{t('hr.import.summary.rejected', { count: phase.data.rejected })}</span>
           </div>
           <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
               <thead>
                 <tr style={{ background: '#f3f4f6' }}>
-                  <th style={th}>Line</th>
-                  <th style={th}>Subject</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Note</th>
+                  <th style={th}>{t('hr.import.col.line')}</th>
+                  <th style={th}>{t('hr.import.col.subject')}</th>
+                  <th style={th}>{t('hr.import.col.status')}</th>
+                  <th style={th}>{t('hr.import.col.note')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,7 +188,7 @@ export function HrImportPage() {
                   <tr key={row.lineNumber}>
                     <td style={td}>{row.lineNumber}</td>
                     <td style={td}>{row.externalSubject || '—'}</td>
-                    <td style={{ ...td, color: STATUS_COLOR[row.status] ?? '#111827', fontWeight: 600 }}>{row.status}</td>
+                    <td style={{ ...td, color: STATUS_COLOR[row.status] ?? '#111827', fontWeight: 600 }}>{rowStatusLabel(row.status)}</td>
                     <td style={td}>{row.reason ?? ''}</td>
                   </tr>
                 ))}
@@ -169,20 +198,20 @@ export function HrImportPage() {
 
           {phase.data.vehicleRows.length > 0 && (
             <>
-              <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>Vehicles</h3>
+              <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.95rem', fontWeight: 700 }}>{t('hr.import.vehiclesSectionTitle')}</h3>
               <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-                <span style={{ color: 'green' }}>Valid: {phase.data.vehiclesValid}</span>
-                <span style={{ color: '#b91c1c' }}>Rejected: {phase.data.vehiclesRejected}</span>
+                <span style={{ color: 'green' }}>{t('hr.import.summary.valid', { count: phase.data.vehiclesValid })}</span>
+                <span style={{ color: '#b91c1c' }}>{t('hr.import.summary.rejected', { count: phase.data.vehiclesRejected })}</span>
               </div>
               <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                   <thead>
                     <tr style={{ background: '#f3f4f6' }}>
-                      <th style={th}>Line</th>
-                      <th style={th}>Subject</th>
-                      <th style={th}>Plate</th>
-                      <th style={th}>Status</th>
-                      <th style={th}>Note</th>
+                      <th style={th}>{t('hr.import.col.line')}</th>
+                      <th style={th}>{t('hr.import.col.subject')}</th>
+                      <th style={th}>{t('hr.import.col.plate')}</th>
+                      <th style={th}>{t('hr.import.col.status')}</th>
+                      <th style={th}>{t('hr.import.col.note')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -191,7 +220,7 @@ export function HrImportPage() {
                         <td style={td}>{row.lineNumber}</td>
                         <td style={td}>{row.externalSubject || '—'}</td>
                         <td style={td}>{row.licensePlate || '—'}</td>
-                        <td style={{ ...td, color: VEHICLE_STATUS_COLOR[row.status] ?? '#111827', fontWeight: 600 }}>{row.status}</td>
+                        <td style={{ ...td, color: VEHICLE_STATUS_COLOR[row.status] ?? '#111827', fontWeight: 600 }}>{vehicleRowStatusLabel(row.status)}</td>
                         <td style={td}>{row.reason ?? ''}</td>
                       </tr>
                     ))}
@@ -208,14 +237,12 @@ export function HrImportPage() {
               style={{ padding: '7px 18px', fontSize: '0.875rem', cursor: 'pointer', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600 }}
             >
               {isCommitLoading
-                ? 'Committing…'
-                : `Commit ${phase.data.created + phase.data.updated} employee(s)${phase.data.vehiclesValid > 0 ? ` and ${phase.data.vehiclesValid} vehicle(s)` : ''}`}
+                ? t('hr.import.committing')
+                : commitButtonLabel(phase.data.created, phase.data.updated, phase.data.vehiclesValid)}
             </button>
           ) : (
             <p style={{ fontSize: '0.875rem', color: '#92400e' }}>
-              Fix {phase.data.rejected > 0 ? `${phase.data.rejected} rejected employee row(s)` : ''}
-              {phase.data.rejected > 0 && phase.data.vehiclesRejected > 0 ? ' and ' : ''}
-              {phase.data.vehiclesRejected > 0 ? `${phase.data.vehiclesRejected} rejected vehicle row(s)` : ''} before committing.
+              {fixBeforeCommitMessage(phase.data.rejected, phase.data.vehiclesRejected)}
             </p>
           )}
         </>
@@ -223,11 +250,11 @@ export function HrImportPage() {
 
       {phase.kind === 'committed' && (
         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '1rem', fontSize: '0.875rem' }}>
-          <strong style={{ color: '#15803d' }}>Import complete.</strong>{' '}
-          {phase.data.applied} employee row(s) applied
-          {phase.data.rejected > 0 && `, ${phase.data.rejected} rejected`}
-          {phase.data.vehiclesApplied > 0 ? `, ${phase.data.vehiclesApplied} vehicle(s) applied` : ''}
-          {phase.data.vehiclesRejected > 0 ? `, ${phase.data.vehiclesRejected} vehicle(s) rejected` : ''}.
+          <strong style={{ color: '#15803d' }}>{t('hr.import.completeTitle')}</strong>{' '}
+          {tPlural('hr.import.appliedEmployeeRows', phase.data.applied)}
+          {phase.data.rejected > 0 && t('hr.import.rejectedCountSuffix', { count: phase.data.rejected })}
+          {phase.data.vehiclesApplied > 0 ? tPlural('hr.import.appliedVehicleRowsSuffix', phase.data.vehiclesApplied) : ''}
+          {phase.data.vehiclesRejected > 0 ? tPlural('hr.import.rejectedVehicleRowsSuffix', phase.data.vehiclesRejected) : ''}.
           {(phase.data.errors.length > 0 || phase.data.vehicleErrors.length > 0) && (
             <ul style={{ marginTop: '0.5rem', paddingLeft: '1.25rem', color: '#b91c1c' }}>
               {phase.data.errors.map((e, i) => <li key={i}>{e}</li>)}

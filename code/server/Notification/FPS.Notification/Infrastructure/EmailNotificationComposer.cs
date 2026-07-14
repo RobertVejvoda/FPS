@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Text;
 using FPS.Notification.Application;
@@ -18,56 +17,34 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
     private const string BrandName = "FairSpot";
     private const string HrSuffix = ".hr";
 
-    private sealed record EmailTemplate(string Subject, string Heading, string Status);
-
-    // Event-specific subjects/headings — never a generic subject. HR fan-out variants (".hr") and the
-    // sales alert get their own entries; unknown types fall back to a safe generic template.
-    private static readonly IReadOnlyDictionary<string, EmailTemplate> Templates =
-        new Dictionary<string, EmailTemplate>(StringComparer.Ordinal)
-        {
-            ["booking.requestSubmitted"] = new("Your parking request was submitted", "Parking request submitted", "Submitted"),
-            ["booking.requestSubmitted.hr"] = new("New parking request submitted", "New parking request", "Submitted"),
-            ["booking.requestRejected"] = new("Your parking request could not be allocated", "Parking request not allocated", "Not allocated"),
-            ["booking.slotAllocated"] = new("Your parking spot is confirmed", "Parking spot allocated", "Allocated"),
-            // Variant: a cancellation freed a spot that was reallocated to this requestor.
-            ["booking.slotAllocated.reallocation"] = new("A parking spot was reallocated to you", "Parking spot reallocated", "Reallocated"),
-            ["booking.requestCancelled"] = new("Your parking request was cancelled", "Parking request cancelled", "Cancelled"),
-            ["booking.requestCancelled.hr"] = new("A parking request was cancelled", "Parking request cancelled", "Cancelled"),
-            // Variant: an already-allocated reservation was cancelled (vs cancelled before allocation).
-            ["booking.requestCancelled.postAllocation"] = new("Your allocated parking reservation was cancelled", "Parking reservation cancelled", "Cancelled"),
-            ["booking.drawCompleted"] = new("Your parking allocation results", "Parking allocation complete", "Draw complete"),
-            ["booking.drawCompleted.hr"] = new("Parking draw completed", "Parking draw completed", "Draw complete"),
-            ["booking.noShowRecorded"] = new("Parking no-show recorded", "No-show recorded", "No-show"),
-            ["booking.penaltyApplied"] = new("A parking penalty was applied", "Parking penalty applied", "Penalty applied"),
-            // Variants: distinct penalty reasons get their own copy. Keys match the real producer
-            // value (Booking's PenaltyType enum → "LateCancellation" / "NoShow").
-            ["booking.penaltyApplied.LateCancellation"] = new("A late-cancellation penalty was applied", "Late-cancellation penalty", "Penalty applied"),
-            ["booking.penaltyApplied.NoShow"] = new("A no-show penalty was applied", "No-show penalty", "Penalty applied"),
-            ["booking.usageConfirmed"] = new("Parking usage confirmed", "Parking usage confirmed", "Confirmed"),
-            ["booking.requestExpired"] = new("Your parking request expired", "Parking request expired", "Expired"),
-            ["booking.manualCorrectionApplied"] = new("Your parking request was updated", "Parking request updated", "Updated"),
-            ["tenant-request.received"] = new("New FairSpot pilot request", "New pilot request", "New lead"),
-        };
-
-    private static readonly EmailTemplate Fallback = new("FairSpot notification", "FairSpot notification", "Update");
-
-    public ComposedEmail Compose(NotificationRecord record)
+    public ComposedEmail Compose(NotificationRecord record, string locale = NotificationMessages.DefaultLocale)
     {
-        // Prefer a variant-specific template (keyed on safe outcome differentiators), then the base
-        // NotificationType, then a safe generic fallback.
+        // Prefer a variant-specific template key (keyed on safe outcome differentiators), then the base
+        // NotificationType, then a safe generic fallback — same priority as before LOC001, now resolved
+        // through the message catalog instead of a locally hard-coded English dictionary.
         var refinedKey = ResolveVariantKey(record);
-        var template =
-            (refinedKey is not null && Templates.TryGetValue(refinedKey, out var v)) ? v
-            : Templates.TryGetValue(record.NotificationType, out var t) ? t
-            : Fallback;
-        var details = BuildDetails(record);
-        var nextAction = ResolveNextAction(record.NextAction);
-        var footer = ResolveFooter(record.NotificationType);
+        var subject = ResolveField(refinedKey, record.NotificationType, "subject", locale);
+        var heading = ResolveField(refinedKey, record.NotificationType, "heading", locale);
+        var status = ResolveField(refinedKey, record.NotificationType, "status", locale);
+
+        var details = BuildDetails(record, locale);
+        var nextAction = ResolveNextAction(record.NextAction, locale);
+        var footer = ResolveFooter(record.NotificationType, locale);
+        var nextStepLabel = NotificationMessages.Resolve(locale, "email.nextStepLabel");
 
         return new ComposedEmail(
-            template.Subject,
-            RenderHtml(template, record.MessageText, details, nextAction, footer),
-            RenderText(template, record.MessageText, details, nextAction, footer));
+            subject,
+            RenderHtml(heading, status, record.MessageText, details, nextAction, nextStepLabel, footer),
+            RenderText(heading, status, record.MessageText, details, nextAction, nextStepLabel, footer));
+    }
+
+    private static string ResolveField(string? refinedKey, string notificationType, string suffix, string locale)
+    {
+        if (refinedKey is not null && NotificationMessages.TryResolve(locale, $"{refinedKey}.{suffix}", out var refined))
+            return refined;
+        if (NotificationMessages.TryResolve(locale, $"{notificationType}.{suffix}", out var baseValue))
+            return baseValue;
+        return NotificationMessages.Resolve(locale, $"email.fallback.{suffix}");
     }
 
     // Maps shared NotificationTypes to a variant key using only business-safe differentiators. Returns
@@ -90,43 +67,38 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
         string.Equals(previousStatus, "Allocated", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(previousStatus, "Reallocated", StringComparison.OrdinalIgnoreCase);
 
-    private static IReadOnlyList<(string Label, string Value)> BuildDetails(NotificationRecord record)
+    private static IReadOnlyList<(string Label, string Value)> BuildDetails(NotificationRecord record, string locale)
     {
         var rows = new List<(string, string)>();
         if (!string.IsNullOrWhiteSpace(record.RelatedDate))
-            rows.Add(("Date", FormatDate(record.RelatedDate!)));
+            rows.Add((NotificationMessages.Resolve(locale, "email.label.date"), NotificationMessages.FormatDate(record.RelatedDate!, locale)));
         if (!string.IsNullOrWhiteSpace(record.RelatedTimeSlot))
-            rows.Add(("Time slot", record.RelatedTimeSlot!));
+            rows.Add((NotificationMessages.Resolve(locale, "email.label.timeSlot"), record.RelatedTimeSlot!));
         if (!string.IsNullOrWhiteSpace(record.LocationId))
-            rows.Add(("Location", record.LocationId!));
+            rows.Add((NotificationMessages.Resolve(locale, "email.label.location"), record.LocationId!));
         return rows;
     }
 
-    private static string FormatDate(string date) =>
-        DateOnly.TryParse(date, CultureInfo.InvariantCulture, out var d)
-            ? d.ToString("d MMM yyyy", CultureInfo.InvariantCulture)
-            : date;
-
-    private static string? ResolveNextAction(string? nextAction) => nextAction switch
+    private static string? ResolveNextAction(string? nextAction, string locale) => nextAction switch
     {
-        "confirmUsage" => "Please confirm your usage in FairSpot once you have parked.",
-        "cancel" => "You can cancel this request in FairSpot if your plans change.",
+        "confirmUsage" => NotificationMessages.Resolve(locale, "email.nextAction.confirmUsage"),
+        "cancel" => NotificationMessages.Resolve(locale, "email.nextAction.cancel"),
         _ => null,
     };
 
-    private static string ResolveFooter(string notificationType)
+    private static string ResolveFooter(string notificationType, string locale)
     {
         if (notificationType.EndsWith(HrSuffix, StringComparison.Ordinal))
-            return "You received this as an HR or facilities contact for your organisation's FairSpot workspace.";
+            return NotificationMessages.Resolve(locale, "email.footer.hr");
         if (notificationType == "tenant-request.received")
-            return "You received this because it was sent to the FairSpot sales inbox.";
-        return "You received this because it affects your FairSpot parking request.";
+            return NotificationMessages.Resolve(locale, "email.footer.salesInbox");
+        return NotificationMessages.Resolve(locale, "email.footer.default");
     }
 
     // ── HTML rendering (inline CSS, table layout, email-client safe) ────────────────
     private static string RenderHtml(
-        EmailTemplate template, string message, IReadOnlyList<(string Label, string Value)> details,
-        string? nextAction, string footer)
+        string heading, string status, string message, IReadOnlyList<(string Label, string Value)> details,
+        string? nextAction, string nextStepLabel, string footer)
     {
         var sb = new StringBuilder();
         sb.Append("<div style=\"margin:0;padding:0;background-color:#f4f5f7;\">");
@@ -140,8 +112,8 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
 
         // Title + status
         sb.Append("<tr><td style=\"padding:24px 24px 8px 24px;\">");
-        sb.Append($"<h1 style=\"margin:0;font-size:20px;color:#111827;\">{Encode(template.Heading)}</h1>");
-        sb.Append($"<p style=\"margin:8px 0 0 0;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;\">{Encode(template.Status)}</p>");
+        sb.Append($"<h1 style=\"margin:0;font-size:20px;color:#111827;\">{Encode(heading)}</h1>");
+        sb.Append($"<p style=\"margin:8px 0 0 0;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;\">{Encode(status)}</p>");
         sb.Append("</td></tr>");
 
         // Message
@@ -168,7 +140,7 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
         if (nextAction is not null)
         {
             sb.Append("<tr><td style=\"padding:16px 24px 0 24px;\">");
-            sb.Append($"<p style=\"margin:0;font-size:14px;line-height:1.5;color:#1f2937;\"><strong>Next step:</strong> {Encode(nextAction)}</p>");
+            sb.Append($"<p style=\"margin:0;font-size:14px;line-height:1.5;color:#1f2937;\"><strong>{Encode(nextStepLabel)}</strong> {Encode(nextAction)}</p>");
             sb.Append("</td></tr>");
         }
 
@@ -184,12 +156,12 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
 
     // ── Plain-text rendering ────────────────────────────────────────────────────────
     private static string RenderText(
-        EmailTemplate template, string message, IReadOnlyList<(string Label, string Value)> details,
-        string? nextAction, string footer)
+        string heading, string status, string message, IReadOnlyList<(string Label, string Value)> details,
+        string? nextAction, string nextStepLabel, string footer)
     {
         var sb = new StringBuilder();
         sb.Append(BrandName).Append('\n');
-        sb.Append(template.Heading).Append(" (").Append(template.Status).Append(")\n\n");
+        sb.Append(heading).Append(" (").Append(status).Append(")\n\n");
         sb.Append(message.Trim()).Append('\n');
         if (details.Count > 0)
         {
@@ -198,7 +170,7 @@ public sealed class EmailNotificationComposer : IEmailNotificationComposer
                 sb.Append(label).Append(": ").Append(value).Append('\n');
         }
         if (nextAction is not null)
-            sb.Append("\nNext step: ").Append(nextAction).Append('\n');
+            sb.Append('\n').Append(nextStepLabel).Append(' ').Append(nextAction).Append('\n');
         sb.Append("\n—\n").Append(footer).Append('\n');
         return sb.ToString();
     }

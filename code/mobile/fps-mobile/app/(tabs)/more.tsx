@@ -8,7 +8,8 @@ import type { VehicleSnapshot } from '@/api/profile';
 import { Screen } from '@/components/Screen';
 import { StateView } from '@/components/StateView';
 import { PlaceholderCard } from '@/components/PlaceholderCard';
-import { formatRoles } from '@/displayLabels';
+import { formatRoles, displayVehicleType } from '@/displayLabels';
+import { t, useLocale, type Locale } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 export default function MoreRoute() {
@@ -26,7 +27,7 @@ export default function MoreRoute() {
   if (sessionState.kind === 'idle' || sessionState.kind === 'loading') {
     return (
       <Screen>
-        <StateView kind="loading" title="Loading…" />
+        <StateView kind="loading" title={t('common.loading')} />
       </Screen>
     );
   }
@@ -36,9 +37,9 @@ export default function MoreRoute() {
       <Screen>
         <StateView
           kind="unauthenticated"
-          title="Not signed in"
-          message="Your session has expired. Please sign in again."
-          actionLabel="Sign in"
+          title={t('session.notSignedIn')}
+          message={t('session.expiredMessage')}
+          actionLabel={t('session.signIn')}
           onAction={() => router.replace('/login')}
         />
       </Screen>
@@ -50,8 +51,8 @@ export default function MoreRoute() {
       <Screen>
         <StateView
           kind={sessionState.kind}
-          title="Cannot load your account"
-          message="Please check your connection and try again."
+          title={t('more.account.cannotLoad')}
+          message={t('common.checkConnection')}
         />
       </Screen>
     );
@@ -61,25 +62,27 @@ export default function MoreRoute() {
 
   return (
     <Screen scroll>
-      <Text style={styles.heading}>More</Text>
+      <Text style={styles.heading}>{t('more.heading')}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Your Account</Text>
-        <FactRow label="Role" value={formatRoles(me.roles ?? [])} />
+        <Text style={styles.cardTitle}>{t('more.account.title')}</Text>
+        <FactRow label={t('more.account.role')} value={formatRoles(me.roles ?? [])} />
       </View>
+
+      <LanguageRow />
 
       <EligibilityPanel state={profileState} onRetry={refresh} />
 
       <PlaceholderCard
-        title="Notification preferences"
-        description="Reminder and channel preferences land in a later mobile slice."
+        title={t('more.notificationPrefs.title')}
+        description={t('more.notificationPrefs.description')}
       />
 
       <AboutCard />
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Sign out"
+        accessibilityLabel={t('session.signOut')}
         onPress={async () => {
           await signOut();
           router.replace('/login');
@@ -87,28 +90,62 @@ export default function MoreRoute() {
         style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}
         testID="button-sign-out"
       >
-        <Text style={styles.signOutLabel}>Sign out</Text>
+        <Text style={styles.signOutLabel}>{t('session.signOut')}</Text>
       </Pressable>
     </Screen>
+  );
+}
+
+// Language selector row (LOC001 #744). The row label is shown in both
+// languages at once ('Language / Jazyk') so it stays legible even to a user
+// currently stuck in the wrong language — it is intentionally not looked up
+// through the catalog. Each option always shows its own language's name,
+// matching standard language-picker convention.
+function LanguageRow() {
+  const { locale, setLocale } = useLocale();
+
+  return (
+    <View style={styles.card} testID="language-row">
+      <Text style={styles.cardTitle}>Language / Jazyk</Text>
+      <View style={styles.languageOptions}>
+        <LanguageOption code="en" label={t('more.language.english')} active={locale === 'en'} onPress={setLocale} />
+        <LanguageOption code="cs" label={t('more.language.czech')} active={locale === 'cs'} onPress={setLocale} />
+      </View>
+    </View>
+  );
+}
+
+function LanguageOption({ code, label, active, onPress }: { code: Locale; label: string; active: boolean; onPress: (locale: Locale) => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      onPress={() => onPress(code)}
+      style={({ pressed }) => [styles.languageOption, active && styles.languageOptionActive, pressed && { opacity: 0.7 }]}
+      testID={`language-option-${code}`}
+    >
+      <Text style={[styles.languageOptionText, active && styles.languageOptionTextActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
 function AboutCard() {
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>About FairSpot</Text>
-      <Text style={styles.bodyText}>FairSpot is AGPL-3.0-or-later open-source software.</Text>
-      <Text style={styles.bodyText}>Copyright © 2026 Robert Vejvoda.</Text>
+      <Text style={styles.cardTitle}>{t('more.about.title')}</Text>
+      <Text style={styles.bodyText}>{t('more.about.license')}</Text>
+      <Text style={styles.bodyText}>{t('more.about.copyright')}</Text>
       <Text style={styles.bodyText}>
-        The FairSpot name and logo identify Robert Vejvoda's project; modified or hosted forks must not imply endorsement.
+        {t('more.about.trademark')}
       </Text>
       <Pressable
         accessibilityRole="link"
-        accessibilityLabel="Open FairSpot source code"
+        accessibilityLabel={t('more.about.sourceLinkLabel')}
         onPress={() => { void Linking.openURL('https://github.com/RobertVejvoda/fairspot'); }}
         style={({ pressed }) => [styles.link, pressed && { opacity: 0.6 }]}
       >
-        <Text style={styles.linkText}>Source code and license</Text>
+        <Text style={styles.linkText}>{t('more.about.sourceLinkText')}</Text>
       </Pressable>
     </View>
   );
@@ -124,7 +161,7 @@ function EligibilityPanel({
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <View style={styles.card}>
-        <StateView kind="loading" title="Loading profile…" />
+        <StateView kind="loading" title={t('more.eligibility.loadingProfile')} />
       </View>
     );
   }
@@ -134,8 +171,8 @@ function EligibilityPanel({
   if (state.kind === 'notFound') {
     return (
       <PlaceholderCard
-        title="Spot eligibility unavailable"
-        description="No spot profile exists for this account yet."
+        title={t('more.eligibility.unavailableTitle')}
+        description={t('more.eligibility.unavailableMessage')}
         testID="profile-snapshot-not-found"
       />
     );
@@ -146,9 +183,9 @@ function EligibilityPanel({
       <View style={styles.card}>
         <StateView
           kind={state.kind}
-          title="Spot profile unavailable"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
+          title={t('more.eligibility.errorTitle')}
+          message={t('common.checkConnection')}
+          actionLabel={t('common.retry')}
           onAction={onRetry}
           testID="profile-snapshot-error"
         />
@@ -160,17 +197,17 @@ function EligibilityPanel({
   return (
     <>
       <View style={styles.card} testID="profile-eligibility-card">
-        <Text style={styles.cardTitle}>Spot Eligibility</Text>
-        <FactRow label="Spot eligible" value={formatBoolean(profile.parkingEligible)} />
-        <FactRow label="Accessible spot eligible" value={formatBoolean(profile.accessibilityEligible)} />
-        <FactRow label="Reserved space eligible" value={formatBoolean(profile.reservedSpaceEligible)} />
-        <FactRow label="Company car on file" value={formatBoolean(profile.hasCompanyCar)} />
+        <Text style={styles.cardTitle}>{t('more.eligibility.sectionTitle')}</Text>
+        <FactRow label={t('more.eligibility.spotEligible')} value={formatBoolean(profile.parkingEligible)} />
+        <FactRow label={t('more.eligibility.accessibleEligible')} value={formatBoolean(profile.accessibilityEligible)} />
+        <FactRow label={t('more.eligibility.reservedEligible')} value={formatBoolean(profile.reservedSpaceEligible)} />
+        <FactRow label={t('more.eligibility.companyCarOnFile')} value={formatBoolean(profile.hasCompanyCar)} />
       </View>
 
       <View style={styles.card} testID="profile-vehicles-card">
-        <Text style={styles.cardTitle}>My Vehicles</Text>
+        <Text style={styles.cardTitle}>{t('more.vehicles.title')}</Text>
         {profile.vehicles.length === 0 ? (
-          <Text style={styles.bodyText}>No vehicles are linked to your profile.</Text>
+          <Text style={styles.bodyText}>{t('more.vehicles.none')}</Text>
         ) : (
           profile.vehicles.map((v) => <VehicleRow key={v.vehicleId} vehicle={v} />)
         )}
@@ -192,21 +229,21 @@ function VehicleRow({ vehicle }: { vehicle: VehicleSnapshot }) {
   return (
     <View style={styles.vehicleRow}>
       <View style={styles.vehicleHeader}>
-        <Text style={styles.vehiclePlate}>{vehicle.licensePlate || 'Unknown plate'}</Text>
+        <Text style={styles.vehiclePlate}>{vehicle.licensePlate || t('more.vehicles.unknownPlate')}</Text>
         <View style={styles.vehicleTypeRow}>
-          {vehicle.isDefault && <Text style={styles.defaultBadge}>Default</Text>}
-          <Text style={styles.vehicleType}>{vehicle.vehicleType}</Text>
+          {vehicle.isDefault && <Text style={styles.defaultBadge}>{t('more.vehicles.default')}</Text>}
+          <Text style={styles.vehicleType}>{displayVehicleType(vehicle.vehicleType)}</Text>
         </View>
       </View>
       <Text style={styles.vehicleMeta}>
-        {vehicle.isElectric ? 'Electric' : 'Standard'} · {vehicle.isActive ? 'Active' : 'Inactive'}
+        {vehicle.isElectric ? t('more.vehicles.electric') : t('more.vehicles.standard')} · {vehicle.isActive ? t('more.vehicles.active') : t('more.vehicles.inactive')}
       </Text>
     </View>
   );
 }
 
 function formatBoolean(value: boolean) {
-  return value ? 'Yes' : 'No';
+  return value ? t('common.yes') : t('common.no');
 }
 
 const styles = StyleSheet.create({
@@ -220,6 +257,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  languageOptions: { flexDirection: 'row', gap: spacing.sm },
+  languageOption: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  languageOptionActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+  languageOptionText: { fontSize: 14, fontWeight: '500', color: colors.text },
+  languageOptionTextActive: { color: colors.primaryText, fontWeight: '700' },
   row: { gap: 2 },
   rowLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0 },
   rowValue: { fontSize: 15, color: colors.text, fontWeight: '500' },

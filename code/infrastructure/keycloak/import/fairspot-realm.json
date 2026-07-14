@@ -4,6 +4,12 @@
   "sslRequired": "external",
   "registrationAllowed": false,
   "loginTheme": "fairspot",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "cs"
+  ],
+  "defaultLocale": "en",
   "accessTokenLifespan": 3600,
   "ssoSessionIdleTimeout": 1800,
   "roles": {

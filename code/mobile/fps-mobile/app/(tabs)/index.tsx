@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,8 +7,10 @@ import { useBookings } from '@/api/useBookings';
 import { cancelBooking, confirmBookingUsage, type BookingListItem } from '@/api/bookings';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { StateView } from '@/components/StateView';
-import { displayModule, displaySlot, isSeatsItem, STATUS_BADGE_LABEL, formatCutOffAt } from '@/displayLabels';
+import { displayModule, displaySlot, isSeatsItem, statusBadgeLabel, formatCutOffAt } from '@/displayLabels';
 import { DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
+import { t } from '@/i18n';
+import { formatDate as formatLocaleDate } from '@/i18n/formatters';
 import { colors, radius, spacing } from '@/theme';
 
 function dateStr(d: Date): string {
@@ -32,17 +34,15 @@ function workdayCards(count = 4): Array<{ label: string; date: string; offset: n
   while (out.length < count) {
     if (isWorkday(cand)) {
       const offset = Math.round((cand.getTime() - base.getTime()) / 86_400_000);
-      const label = offset === 0 ? 'Today'
-        : offset === 1 ? 'Tomorrow'
-        : cand.toLocaleDateString(undefined, { weekday: 'long' });
+      const label = offset === 0 ? t('common.today')
+        : offset === 1 ? t('common.tomorrow')
+        : formatLocaleDate(cand, { weekday: 'long' });
       out.push({ label, date: dateStr(cand), offset });
     }
     cand.setDate(cand.getDate() + 1);
   }
   return out;
 }
-
-const DAYS = workdayCards(4);
 
 function bookingParams(item: BookingListItem) {
   return {
@@ -68,6 +68,10 @@ export default function HomeRoute() {
   const router = useRouter();
   const { apiBaseUrl, bearerToken, clearSession } = useAuth();
   const { state, refresh } = useBookings('all');
+  // Recomputed once per component instance — a fresh instance is created
+  // whenever the locale changes (LocaleProvider remounts the tree), so
+  // Today/Tomorrow/weekday labels stay in sync with the active language.
+  const DAYS = useMemo(() => workdayCards(4), []);
   const [drawStatuses, setDrawStatuses] = useState<(DrawStatusResult | null)[]>([]);
   const [drawLoading, setDrawLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -98,17 +102,17 @@ export default function HomeRoute() {
   }
 
   const handleCancel = useCallback(async (requestId: string) => {
-    Alert.alert('Cancel request', 'Are you sure you want to cancel this request?', [
-      { text: 'Keep it', style: 'cancel' },
+    Alert.alert(t('booking.dialog.cancelTitle'), t('booking.dialog.cancelMessage'), [
+      { text: t('booking.dialog.keepIt'), style: 'cancel' },
       {
-        text: 'Cancel request', style: 'destructive',
+        text: t('booking.dialog.cancelTitle'), style: 'destructive',
         onPress: async () => {
           setBusyId(requestId);
           const result = await cancelBooking({ apiBaseUrl, bearerToken }, requestId);
           setBusyId(null);
-          if (result.kind === 'ok') { showToast('Request cancelled.'); refresh(); }
+          if (result.kind === 'ok') { showToast(t('booking.toast.cancelled')); refresh(); }
           else if (result.kind === 'unauthenticated') { await clearSession(); router.replace('/login'); }
-          else showToast('message' in result ? result.message : 'Could not cancel.');
+          else showToast('message' in result ? result.message : t('booking.toast.couldNotCancel'));
         },
       },
     ]);
@@ -119,13 +123,13 @@ export default function HomeRoute() {
     const result = await confirmBookingUsage({ apiBaseUrl, bearerToken }, requestId);
     setBusyId(null);
     if (result.kind === 'confirmed') {
-      showToast(result.wasAlreadyConfirmed ? 'Usage was already recorded.' : 'Usage confirmed.');
+      showToast(result.wasAlreadyConfirmed ? t('booking.toast.usageAlreadyRecorded') : t('booking.toast.usageConfirmed'));
       refresh();
     } else if (result.kind === 'unauthenticated') {
       await clearSession();
       router.replace('/login');
     } else {
-      showToast('message' in result ? result.message : 'Could not confirm usage.');
+      showToast('message' in result ? result.message : t('booking.toast.couldNotConfirm'));
     }
   }, [apiBaseUrl, bearerToken, clearSession, refresh, router]);
 
@@ -137,7 +141,7 @@ export default function HomeRoute() {
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <SafeAreaView style={styles.safe}>
-        <StateView kind="loading" title="Loading your reservations…" />
+        <StateView kind="loading" title={t('booking.home.loading')} />
       </SafeAreaView>
     );
   }
@@ -147,9 +151,9 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind="unauthenticated"
-          title="Not signed in"
-          message="Your session has expired. Please sign in again."
-          actionLabel="Sign in"
+          title={t('session.notSignedIn')}
+          message={t('session.expiredMessage')}
+          actionLabel={t('session.signIn')}
           onAction={handleUnauthenticated}
         />
       </SafeAreaView>
@@ -161,9 +165,9 @@ export default function HomeRoute() {
       <SafeAreaView style={styles.safe}>
         <StateView
           kind={state.kind}
-          title="Cannot load your reservations"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
+          title={t('booking.home.cannotLoad')}
+          message={t('common.checkConnection')}
+          actionLabel={t('common.retry')}
           onAction={refresh}
         />
       </SafeAreaView>
@@ -173,7 +177,7 @@ export default function HomeRoute() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>My Reservations</Text>
+        <Text style={styles.heading}>{t('booking.myReservations')}</Text>
 
         {toastMsg && (
           <View style={styles.toast}>
@@ -214,7 +218,7 @@ export default function HomeRoute() {
           style={({ pressed }) => [styles.historyLink, pressed && { opacity: 0.6 }]}
           accessibilityRole="button"
         >
-          <Text style={styles.historyLinkText}>History &amp; all requests →</Text>
+          <Text style={styles.historyLinkText}>{t('booking.home.historyLink')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -236,10 +240,10 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
   onSeatDetails?: () => void;
 }) {
   const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus.data : null;
-  const badgeLabel = booking ? (STATUS_BADGE_LABEL[booking.status] ?? booking.status) : null;
+  const badgeLabel = booking ? statusBadgeLabel(booking.status) : null;
   const slot = booking ? displaySlot(booking.allocatedSlotId) : null;
   const d = new Date(date + 'T00:00:00');
-  const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const dateLabel = formatLocaleDate(d, { month: 'short', day: 'numeric' });
 
   return (
     <View style={styles.tile}>
@@ -253,13 +257,13 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
       </View>
 
       {/* Allocated slot */}
-      {slot && <Text style={styles.tileSlot}>Spot: {slot}</Text>}
+      {slot && <Text style={styles.tileSlot}>{t('booking.tile.spot', { slot })}</Text>}
 
       {/* Seat reservation for the day — compact badged row, only when one exists. */}
       {seatBooking && (
         <Pressable onPress={onSeatDetails} accessibilityRole="button" style={({ pressed }) => [styles.tileSeatRow, pressed && { opacity: 0.7 }]}>
           <Text style={styles.tileSeatBadge}>{displayModule(seatBooking.resourceType)}</Text>
-          <Text style={styles.tileSeatStatus}>{STATUS_BADGE_LABEL[seatBooking.status] ?? seatBooking.status}</Text>
+          <Text style={styles.tileSeatStatus}>{statusBadgeLabel(seatBooking.status)}</Text>
           {displaySlot(seatBooking.allocatedSlotId) ? (
             <Text style={styles.tileSeatLabel}>{displaySlot(seatBooking.allocatedSlotId)}</Text>
           ) : null}
@@ -269,10 +273,10 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
       {/* Schedule timing */}
       {drawLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.xs }} />}
       {!drawLoading && scheduleOk?.nextDrawAt && (
-        <Text style={styles.tileSchedule}>Draw: {formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone)}</Text>
+        <Text style={styles.tileSchedule}>{t('booking.tile.draw', { time: formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone) })}</Text>
       )}
       {!drawLoading && scheduleOk?.cutOffAt && (
-        <Text style={styles.tileSchedule}>Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}</Text>
+        <Text style={styles.tileSchedule}>{t('booking.tile.cutoff', { time: formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone) })}</Text>
       )}
       {!drawLoading && scheduleOk && !booking && scheduleOk.safeMessage && (
         <Text style={styles.tileSchedule}>{scheduleOk.safeMessage}</Text>
@@ -288,7 +292,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
               style={({ pressed }) => [styles.confirmBtn, (busy || pressed) && { opacity: 0.6 }]}
               accessibilityRole="button"
             >
-              <Text style={styles.confirmBtnText}>{busy ? 'Confirming…' : 'Confirm usage'}</Text>
+              <Text style={styles.confirmBtnText}>{busy ? t('booking.tile.confirming') : t('booking.confirmUsage')}</Text>
             </Pressable>
           )}
           {onCancel && (
@@ -298,12 +302,12 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
               style={({ pressed }) => [styles.cancelBtn, (busy || pressed) && { opacity: 0.6 }]}
               accessibilityRole="button"
             >
-              <Text style={styles.cancelBtnText}>{busy ? 'Cancelling…' : 'Cancel'}</Text>
+              <Text style={styles.cancelBtnText}>{busy ? t('booking.tile.cancelling') : t('common.cancel')}</Text>
             </Pressable>
           )}
           {!onCancel && !onConfirm && onDetails && (
             <Pressable onPress={onDetails} accessibilityRole="button">
-              <Text style={styles.detailsLink}>View details →</Text>
+              <Text style={styles.detailsLink}>{t('booking.tile.viewDetails')}</Text>
             </Pressable>
           )}
         </View>
@@ -313,7 +317,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
           style={({ pressed }) => [styles.requestBtn, pressed && { opacity: 0.7 }]}
           accessibilityRole="button"
         >
-          <Text style={styles.requestBtnText}>Request a spot</Text>
+          <Text style={styles.requestBtnText}>{t('booking.tile.requestSpot')}</Text>
         </Pressable>
       ) : !drawLoading && !scheduleOk?.canRequest && scheduleOk?.cannotRequestReason ? (
         <Text style={styles.tileUnavailable}>{scheduleOk.cannotRequestReason}</Text>

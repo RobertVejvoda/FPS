@@ -19,6 +19,9 @@ export type RuntimeConfig = {
   turnstileSiteKey: string;
   // Where the "Explore the Green Logistics demo" CTA points. Defaults to the sign-in page.
   demoUrl: string;
+  // LOC001 (#744) — deployment/demo default UI locale (e.g. "cs-CZ"). Sits below
+  // user preference and tenant default in the resolution order; empty → no default.
+  defaultLocale: string;
 };
 
 export type BrandingConfig = {
@@ -69,10 +72,11 @@ function validateConfig(raw: unknown): RuntimeConfig {
   const appVersion = typeof r['appVersion'] === 'string' ? r['appVersion'] : undefined;
   const turnstileSiteKey = optionalString(r, 'turnstileSiteKey', '');
   const demoUrl = optionalString(r, 'demoUrl', '/session') || '/session';
+  const defaultLocale = optionalString(r, 'defaultLocale', '');
   const branding = validateBranding(r['branding']);
   return {
     apiBaseUrl, oidc, branding, devTokenFallbackEnabled, environment,
-    simulationEnabled, appVersion, turnstileSiteKey, demoUrl,
+    simulationEnabled, appVersion, turnstileSiteKey, demoUrl, defaultLocale,
   };
 }
 

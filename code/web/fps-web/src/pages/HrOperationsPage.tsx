@@ -19,9 +19,16 @@ import { NotificationBanner } from '../components/NotificationBanner';
 import { nextWorkdayOptions } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { RequestorDetailDrawer } from './RequestorDetailDrawer';
+import { t, tDynamic, tPlural } from '../i18n';
 
 const LOCATION_ID = 'Prague';
 const STATUS_FILTERS = ['All', 'Pending', 'Allocated', 'Cancelled', 'Rejected'];
+
+// Displayed label for a booking status code. The underlying value (used for
+// state/filtering/API query params) always stays the English code.
+function statusLabel(status: string): string {
+  return tDynamic('hr.status', status, status);
+}
 
 type ListState =
   | { kind: 'loading' }
@@ -49,7 +56,7 @@ interface RequestRowProps {
 function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: RequestRowProps) {
   const primaryLabel = displayName ?? displayRequestorRef(item.requestorRef);
   const secondaryRef = displayName ? displayRequestorRef(item.requestorRef) : null;
-  const locationLabel = displayLocation(item.locationId) ?? displayLocation(LOCATION_ID) ?? 'Location not set';
+  const locationLabel = displayLocation(item.locationId) ?? displayLocation(LOCATION_ID) ?? t('hr.ops.locationNotSet');
   const timeWindow = item.timeSlotStart && item.timeSlotEnd
     ? `${item.timeSlotStart.slice(0, 5)}–${item.timeSlotEnd.slice(0, 5)}`
     : null;
@@ -66,7 +73,7 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
             <button
               type="button"
               onClick={() => onOpenDetail(item)}
-              title="Open requestor detail"
+              title={t('hr.ops.openRequestorDetail')}
               style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1d4ed8', background: 'transparent',
                 border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
                 textDecoration: 'underline', textDecorationStyle: 'dotted', textDecorationColor: '#cbd5e1',
@@ -76,7 +83,7 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
             </button>
             {secondaryRef && <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>{secondaryRef}</span>}
             <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(item.status) }}>
-              {item.status}
+              {statusLabel(item.status)}
             </span>
           </div>
           {/* Secondary row: parking day · location · time · slot */}
@@ -86,7 +93,7 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
             <span>{locationLabel}</span>
             {timeWindow && <><span style={{ color: '#cbd5e1' }}>·</span><span>{timeWindow}</span></>}
             {item.allocatedSlotId && (
-              <><span style={{ color: '#cbd5e1' }}>·</span><span style={{ fontWeight: 600, color: '#166534' }}>Space: {displaySlot(item.allocatedSlotId) ?? item.allocatedSlotId}</span></>
+              <><span style={{ color: '#cbd5e1' }}>·</span><span style={{ fontWeight: 600, color: '#166534' }}>{t('hr.ops.spaceLabel', { space: displaySlot(item.allocatedSlotId) ?? item.allocatedSlotId })}</span></>
             )}
           </div>
           {/* Reason box */}
@@ -97,7 +104,7 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
           )}
           {/* Tertiary row: updated + request ID */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginTop: '0.375rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.73rem', color: '#94a3b8' }}>Updated {displayDateTime(item.lastStatusChangedAt)}</span>
+            <span style={{ fontSize: '0.73rem', color: '#94a3b8' }}>{t('hr.ops.updatedAt', { time: displayDateTime(item.lastStatusChangedAt) })}</span>
             <span style={{ fontSize: '0.7rem', color: '#cbd5e1', fontFamily: 'monospace' }}>{shortId}</span>
           </div>
         </div>
@@ -109,7 +116,7 @@ function RequestRow({ item, busyId, onCancel, onOpenDetail, displayName }: Reque
             style={{ flexShrink: 0, padding: '0.3rem 0.875rem', borderRadius: 4, border: '1px solid #fca5a5',
               background: '#fff', color: '#dc2626', fontSize: '0.8rem', cursor: 'pointer', alignSelf: 'flex-start' }}
           >
-            Cancel
+            {t('hr.ops.cancel')}
           </button>
         )}
       </div>
@@ -158,7 +165,7 @@ export function HrOperationsPage() {
           });
         }
       } else {
-        setListState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load parking requests.' });
+        setListState({ kind: 'error', message: 'message' in result ? result.message : t('hr.ops.loadError') });
       }
     });
   }, [apiBaseUrl, bearerToken, clear, navigate, selectedDate, statusFilter]);
@@ -173,15 +180,15 @@ export function HrOperationsPage() {
     setCancelTarget(null);
     setCancelReason('');
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (result.kind === 'ok') { showToast(true, 'Request cancelled. Employee notified.'); loadBookings(); }
-    else showToast(false, 'message' in result ? result.message : 'Cancel failed.');
+    if (result.kind === 'ok') { showToast(true, t('hr.ops.toast.cancelSuccess')); loadBookings(); }
+    else showToast(false, 'message' in result ? result.message : t('hr.ops.toast.cancelFailed'));
   }
 
   return (
     <div className="page-stack">
       <div className="page-hero">
         <div>
-          <h2>Parking Requests</h2>
+          <h2>{t('hr.ops.title')}</h2>
           <p>{displayLocation(LOCATION_ID) ?? LOCATION_ID}</p>
         </div>
       </div>
@@ -223,30 +230,30 @@ export function HrOperationsPage() {
                 background: statusFilter === s ? '#eff6ff' : '#fff', color: statusFilter === s ? '#2563eb' : '#374151',
                 fontSize: '0.8rem', cursor: 'pointer' }}
             >
-              {s}
+              {statusLabel(s)}
             </button>
           ))}
         </div>
 
         {/* Request list */}
-        {listState.kind === 'loading' && <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading parking requests…</p>}
+        {listState.kind === 'loading' && <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t('hr.ops.loading')}</p>}
         {listState.kind === 'error' && (
           <div>
             <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{listState.message}</p>
-            <button onClick={loadBookings} className="btn-primary">Retry</button>
+            <button onClick={loadBookings} className="btn-primary">{t('hr.ops.retry')}</button>
           </div>
         )}
         {listState.kind === 'ok' && (
           <>
             <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-              {listState.totalCount} request{listState.totalCount !== 1 ? 's' : ''} for {displayDate(selectedDate)}
+              {tPlural('hr.ops.requestCount', listState.totalCount, { date: displayDate(selectedDate) })}
             </p>
             {listState.items.length === 0 && (
               <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: '1.5rem', textAlign: 'center' }}>
                 <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
                   {statusFilter !== 'All'
-                    ? `No requests with status "${statusFilter}" for ${displayDate(selectedDate)}.`
-                    : `No parking requests for ${displayDate(selectedDate)} yet. Requests will appear here as employees submit them.`
+                    ? t('hr.ops.emptyFiltered', { status: statusLabel(statusFilter), date: displayDate(selectedDate) })
+                    : t('hr.ops.emptyAll', { date: displayDate(selectedDate) })
                   }
                 </p>
               </div>
@@ -280,14 +287,14 @@ export function HrOperationsPage() {
       {cancelTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div style={{ background: '#fff', borderRadius: 8, padding: '1.5rem', width: '100%', maxWidth: 420, margin: '0 1rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Cancel request</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>{t('hr.ops.cancelModal.title')}</h2>
             <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem' }}>
-              The employee will be notified. An audit record will be created.
+              {t('hr.ops.cancelModal.body')}
             </p>
             <textarea
               value={cancelReason}
               onChange={e => setCancelReason(e.target.value)}
-              placeholder="Reason (required)"
+              placeholder={t('hr.ops.cancelModal.reasonPlaceholder')}
               rows={3}
               style={{ width: '100%', padding: '0.5rem', borderRadius: 4, border: '1px solid #d1d5db', fontSize: '0.875rem', boxSizing: 'border-box', resize: 'vertical' }}
             />
@@ -296,7 +303,7 @@ export function HrOperationsPage() {
                 onClick={() => { setCancelTarget(null); setCancelReason(''); }}
                 style={{ padding: '0.4rem 1rem', borderRadius: 4, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '0.875rem' }}
               >
-                Back
+                {t('hr.ops.cancelModal.back')}
               </button>
               <button
                 disabled={!cancelReason.trim() || busyId === cancelTarget}
@@ -305,7 +312,7 @@ export function HrOperationsPage() {
                   cursor: !cancelReason.trim() ? 'not-allowed' : 'pointer', fontSize: '0.875rem',
                   opacity: !cancelReason.trim() ? 0.5 : 1 }}
               >
-                {busyId === cancelTarget ? 'Cancelling…' : 'Confirm cancel'}
+                {busyId === cancelTarget ? t('hr.ops.cancelModal.cancelling') : t('hr.ops.cancelModal.confirm')}
               </button>
             </div>
           </div>

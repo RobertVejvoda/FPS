@@ -19,6 +19,8 @@ import {
   isPlatformPlane,
 } from './auth/roles';
 import { PlatformShell } from './platform/PlatformShell';
+import { t, formatDateTime } from './i18n';
+import { LocaleSwitcher } from './components/LocaleSwitcher';
 import { TenantModulesProvider, useTenantModules } from './tenant/TenantModulesContext';
 import { SeatOperationsPage } from './pages/SeatOperationsPage';
 import { SessionPage } from './pages/SessionPage';
@@ -57,7 +59,7 @@ function SeatsGuard({ roleAllowed, children }: { roleAllowed: boolean; children:
   const { roles } = useAuth();
   const { hasSeats, loading } = useTenantModules();
   if (!roleAllowed) return <Navigate to={defaultRoute(roles)} replace />;
-  if (loading) return <div className="page-stack"><p className="plat-muted">Loading…</p></div>;
+  if (loading) return <div className="page-stack"><p className="plat-muted">{t('common.loading')}</p></div>;
   if (!hasSeats) return <Navigate to={defaultRoute(roles)} replace />;
   return <>{children}</>;
 }
@@ -114,7 +116,7 @@ function AppFooter() {
   if (!hasContent) return null;
 
   function fmtTime(iso: string) {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return formatDateTime(new Date(iso));
   }
 
   return (
@@ -122,37 +124,37 @@ function AppFooter() {
       {environment && <span className="footer-env-badge">{environment}</span>}
       {appVersion && <span className="footer-version">v{appVersion}</span>}
       {sim?.simulationActive && (
-        <span className="footer-sim-banner" title="Non-production simulation mode is active. Virtual time is being used instead of real time.">
-          NON-PRODUCTION SIMULATION
+        <span className="footer-sim-banner" title={t('footer.simulationBannerTitle')}>
+          {t('footer.simulationBanner')}
         </span>
       )}
       {simulationEnabled && sim && (
-        <span className="footer-real-time" title="Current real-world time">Real: {fmtTime(sim.realNow)}</span>
+        <span className="footer-real-time" title={t('footer.realTimeTitle')}>{t('footer.realTime', { time: fmtTime(sim.realNow) })}</span>
       )}
       {simulationEnabled && sim?.simulationActive && sim.virtualNow && (
-        <span className="footer-sim-time" title="Current virtual/simulated time used for testing" style={{ fontWeight: 600, color: '#1d4ed8' }}>
-          Sim: {fmtTime(sim.virtualNow)}
+        <span className="footer-sim-time" title={t('footer.simTimeTitle')} style={{ fontWeight: 600, color: '#1d4ed8' }}>
+          {t('footer.simTime', { time: fmtTime(sim.virtualNow) })}
         </span>
       )}
       {simulationEnabled && !sim?.simulationActive && sim && (
         <span className="footer-sim-state" style={{ color: '#6b7280', fontSize: '0.8rem' }}>
-          Simulation: inactive (using real time)
+          {t('footer.simulationInactive')}
         </span>
       )}
       {simulationEnabled && canControl && simStatus === 'loading' && (
-        <span className="footer-sim-state">Loading simulation clock...</span>
+        <span className="footer-sim-state">{t('footer.simulationLoading')}</span>
       )}
       {simulationEnabled && canControl && simStatus === 'unavailable' && (
-        <span className="footer-sim-state">Simulation clock unavailable</span>
+        <span className="footer-sim-state">{t('footer.simulationUnavailable')}</span>
       )}
       {simulationEnabled && canControl && simStatus === 'error' && (
-        <span className="footer-sim-state">Simulation clock not reachable</span>
+        <span className="footer-sim-state">{t('footer.simulationUnreachable')}</span>
       )}
       {simulationEnabled && canControl && (
         <div className="footer-sim-controls">
           <button className="footer-sim-btn" disabled={busy} onClick={() => void handleAdvance(1)}>+1 h</button>
           <button className="footer-sim-btn" disabled={busy} onClick={() => void handleAdvance(8)}>+8 h</button>
-          <button className="footer-sim-btn" disabled={busy} onClick={() => void handleReset()}>Reset</button>
+          <button className="footer-sim-btn" disabled={busy} onClick={() => void handleReset()}>{t('footer.reset')}</button>
         </div>
       )}
     </footer>
@@ -171,22 +173,22 @@ function Shell() {
   const navItems = [
     // UX008 (#781) — one module-aware employee entry for reservation history/status.
     // Seat requesting stays reachable from My Reservations; no separate seats nav tree.
-    canAccessBookings(roles) && { to: '/bookings', label: 'My Reservations' },
+    canAccessBookings(roles) && { to: '/bookings', label: t('nav.myReservations') },
     // UX009 (#782) — one date-first employee Request entry for all enabled modules.
-    canAccessBookings(roles) && { to: '/bookings/new', label: 'Request' },
-    canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
-    canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
-    canAccessParkingMap(roles) && { to: '/parking-map', label: 'Parking Map' },
-    canAccessHrOperations(roles) && { to: '/hr-operations', label: 'Parking Requests' },
-    canAccessHrOperations(roles) && hasSeats && { to: '/seat-operations', label: 'Seat Requests' },
-    canAccessHrOperations(roles) && { to: '/hr-draw-history', label: 'Draws' },
-    canAccessReporting(roles) && { to: '/reporting', label: 'Reports' },
-    canAccessConfiguration(roles) && { to: '/configuration', label: 'Configuration' },
-    canAccessConfiguration(roles) && { to: '/hr-import', label: 'HR Import' },
-    canAccessAudit(roles) && { to: '/auditor-workspace', label: 'Auditor Workspace' },
-    canAccessAudit(roles) && { to: '/audit', label: 'Audit Console' },
-    canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: 'Admin' },
-    { to: '/legal', label: 'Legal' },
+    canAccessBookings(roles) && { to: '/bookings/new', label: t('nav.request') },
+    canAccessProfile(roles) && { to: '/profile', label: t('nav.profile') },
+    canAccessNotifications(roles) && { to: '/notifications', label: t('nav.notifications') },
+    canAccessParkingMap(roles) && { to: '/parking-map', label: t('nav.parkingMap') },
+    canAccessHrOperations(roles) && { to: '/hr-operations', label: t('nav.parkingRequests') },
+    canAccessHrOperations(roles) && hasSeats && { to: '/seat-operations', label: t('nav.seatRequests') },
+    canAccessHrOperations(roles) && { to: '/hr-draw-history', label: t('nav.draws') },
+    canAccessReporting(roles) && { to: '/reporting', label: t('nav.reports') },
+    canAccessConfiguration(roles) && { to: '/configuration', label: t('nav.configuration') },
+    canAccessConfiguration(roles) && { to: '/hr-import', label: t('nav.hrImport') },
+    canAccessAudit(roles) && { to: '/auditor-workspace', label: t('nav.auditorWorkspace') },
+    canAccessAudit(roles) && { to: '/audit', label: t('nav.auditConsole') },
+    canAccessTenantAdmin(roles) && { to: '/tenant-admin', label: t('nav.admin') },
+    { to: '/legal', label: t('nav.legal') },
   ].filter(Boolean) as { to: string; label: string }[];
 
   return (
@@ -201,7 +203,7 @@ function Shell() {
             {branding.tenantName ? <span>{branding.tenantName}</span> : null}
           </div>
         </div>
-        <nav className="app-nav" aria-label="Main navigation">
+        <nav className="app-nav" aria-label={t('nav.ariaLabel')}>
           {navItems.map(item => (
             <NavLink
               key={item.to}
@@ -212,11 +214,12 @@ function Shell() {
             </NavLink>
           ))}
         </nav>
+        <LocaleSwitcher />
         <button
           onClick={() => { void logout(); }}
           className="btn-danger"
         >
-          Sign out
+          {t('nav.signOut')}
         </button>
       </header>
       <main className="app-main">

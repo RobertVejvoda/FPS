@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { nextWorkdayOptions, toLocalDateString } from '../dateOptions';
+import { t, type MessageKey } from '../i18n';
 
 // Shared date filter (issue #476). One component, two modes:
 //
@@ -80,7 +81,7 @@ function DayFilter({ value, onChange, dateBase, simulationActive, presetCount = 
         <ChipButton
           active={customOpen && !isPreset}
           onClick={() => setCustomOpen(o => !o)}
-          label={customOpen ? 'Hide custom' : 'Custom date'}
+          label={customOpen ? t('dateFilter.hideCustom') : t('dateFilter.customDate')}
           subdued
         />
       </div>
@@ -88,7 +89,7 @@ function DayFilter({ value, onChange, dateBase, simulationActive, presetCount = 
         <div style={customRowStyle}>
           <input
             type="date"
-            aria-label="Custom date"
+            aria-label={t('dateFilter.customDate')}
             value={value}
             onChange={e => onChange(e.target.value || toLocalDateString(dateBase))}
             style={inputStyle}
@@ -101,14 +102,24 @@ function DayFilter({ value, onChange, dateBase, simulationActive, presetCount = 
 
 // ── Range mode ───────────────────────────────────────────────────────────
 
-const RANGE_PRESETS: Array<{ key: RangePresetKey; label: string }> = [
-  { key: 'All', label: 'All time' },
-  { key: 'Today', label: 'Today' },
-  { key: 'Yesterday', label: 'Yesterday' },
-  { key: 'ThisWeek', label: 'This week' },
-  { key: 'LastWeek', label: 'Last week' },
-  { key: 'ThisMonth', label: 'This month' },
-  { key: 'LastMonth', label: 'Last month' },
+const RANGE_PRESET_LABEL_KEYS: Record<RangePresetKey, MessageKey> = {
+  All: 'dateFilter.preset.allTime',
+  Today: 'labels.date.today',
+  Yesterday: 'dateFilter.preset.yesterday',
+  ThisWeek: 'dateFilter.preset.thisWeek',
+  LastWeek: 'dateFilter.preset.lastWeek',
+  ThisMonth: 'dateFilter.preset.thisMonth',
+  LastMonth: 'dateFilter.preset.lastMonth',
+};
+
+const RANGE_PRESETS: Array<{ key: RangePresetKey }> = [
+  { key: 'All' },
+  { key: 'Today' },
+  { key: 'Yesterday' },
+  { key: 'ThisWeek' },
+  { key: 'LastWeek' },
+  { key: 'ThisMonth' },
+  { key: 'LastMonth' },
 ];
 
 /**
@@ -198,33 +209,33 @@ function RangeFilter({ value, onChange, dateBase, label }: RangeProps) {
             key={p.key}
             active={activePresetKey === p.key}
             onClick={() => onChange(rangePresetToBounds(p.key, dateBase))}
-            label={p.label}
+            label={t(RANGE_PRESET_LABEL_KEYS[p.key])}
           />
         ))}
         <ChipButton
           active={customOpen && !activePresetKey}
           onClick={() => setCustomOpen(o => !o)}
-          label={customOpen ? 'Hide custom' : 'Custom range'}
+          label={customOpen ? t('dateFilter.hideCustom') : t('dateFilter.customRange')}
           subdued
         />
       </div>
       {customOpen && (
         <div style={customRowStyle}>
           <label style={customLabelStyle}>
-            From
+            {t('dateFilter.from')}
             <input
               type="date"
-              aria-label="Custom from date"
+              aria-label={t('dateFilter.customFromAria')}
               value={customFrom}
               onChange={e => emitCustom(e.target.value, customTo)}
               style={inputStyle}
             />
           </label>
           <label style={customLabelStyle}>
-            To
+            {t('dateFilter.to')}
             <input
               type="date"
-              aria-label="Custom to date"
+              aria-label={t('dateFilter.customToAria')}
               value={customTo}
               onChange={e => emitCustom(customFrom, e.target.value)}
               style={inputStyle}

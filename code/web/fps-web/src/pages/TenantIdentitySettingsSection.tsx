@@ -13,6 +13,7 @@ import {
   parseRoleMapping,
   validateRequiredIdentityFields,
 } from './identityConfigForm';
+import { t } from '../i18n';
 
 // AUTH012 (#795) — tenant-admin identity settings. Lets a tenant admin view and edit
 // the identity configuration (issuer, audience, claim names, role mapping, local
@@ -148,18 +149,16 @@ export function TenantIdentitySettingsSection({
 
   return (
     <section style={card}>
-      <h3 style={cardTitle}>Identity & Login Settings</h3>
+      <h3 style={cardTitle}>{t('admin.identity.title')}</h3>
       <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280' }}>
-        How your employees sign in. Company SSO settings come from your identity provider;
-        the sign-in screen passes the entered email as a prefill hint (<code>login_hint</code>).
-        Nothing here grants access by itself — access always comes from validated sign-in tokens.
+        {t('admin.identity.description.part1')}<code>login_hint</code>{t('admin.identity.description.part2')}
       </p>
 
-      {loadState.kind === 'loading' && <p style={muted}>Loading…</p>}
+      {loadState.kind === 'loading' && <p style={muted}>{t('common.loading')}</p>}
       {loadState.kind === 'error' && (
         <div>
           <p style={{ color: '#b91c1c', fontSize: 13 }}>{loadState.message}</p>
-          <button type="button" onClick={load} style={btnSm}>Retry</button>
+          <button type="button" onClick={load} style={btnSm}>{t('admin.common.retry')}</button>
         </div>
       )}
 
@@ -167,45 +166,45 @@ export function TenantIdentitySettingsSection({
         <form onSubmit={(e) => { void handleSave(e); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loadState.existing === null && (
             <p style={{ margin: 0, fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 6, padding: '8px 12px' }}>
-              Identity is not configured yet. Fill in the settings below to enable employee sign-in for this tenant.
+              {t('admin.identity.notConfigured')}
             </p>
           )}
 
-          <Field label="Trusted issuer" hint="The token issuer URL your identity provider uses (from your IdP or FairSpot operator).">
+          <Field label={t('admin.identity.issuer.label')} hint={t('admin.identity.issuer.hint')}>
             <input value={form.trustedIssuer} onChange={e => set('trustedIssuer', e.target.value)}
               placeholder="https://auth.example.com/realms/fairspot" style={input} />
           </Field>
 
-          <Field label="Audience" hint="The API audience expected in sign-in tokens.">
+          <Field label={t('admin.identity.audience.label')} hint={t('admin.identity.audience.hint')}>
             <input value={form.audience} onChange={e => set('audience', e.target.value)}
               placeholder="fairspot-api" style={input} />
           </Field>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Field label="Tenant claim name" hint="Token claim carrying the tenant." grow>
+            <Field label={t('admin.identity.tenantClaim.label')} hint={t('admin.identity.tenantClaim.hint')} grow>
               <input value={form.tenantClaimName} onChange={e => set('tenantClaimName', e.target.value)}
                 placeholder="tenant_id" style={input} />
             </Field>
-            <Field label="Subject claim name" hint="Token claim carrying the stable user id." grow>
+            <Field label={t('admin.identity.subjectClaim.label')} hint={t('admin.identity.subjectClaim.hint')} grow>
               <input value={form.subjectClaimName} onChange={e => set('subjectClaimName', e.target.value)}
                 placeholder="sub" style={input} />
             </Field>
           </div>
 
-          <Field label="Role claim names" hint="Comma-separated token claims to read groups/roles from (e.g. groups, roles).">
+          <Field label={t('admin.identity.roleClaimNames.label')} hint={t('admin.identity.roleClaimNames.hint')}>
             <input value={form.roleClaimNamesText} onChange={e => set('roleClaimNamesText', e.target.value)}
               placeholder="groups" style={input} />
           </Field>
 
-          <Field label="Role mapping" hint={'One mapping per line: "idp-group = fairspot-role". Valid FairSpot roles: employee, admin, hr_manager, report_viewer, auditor. Unmapped groups are ignored.'}>
+          <Field label={t('admin.identity.roleMapping.label')} hint={t('admin.identity.roleMapping.hint')}>
             <textarea value={form.roleMappingText} onChange={e => set('roleMappingText', e.target.value)}
               placeholder={'fairspot-admins = admin\nall-employees = employee'}
               rows={4} style={{ ...input, resize: 'vertical', fontFamily: 'monospace', fontSize: 12 }} />
           </Field>
 
           <Field
-            label="SSO broker alias (optional)"
-            hint={'Non-secret routing hint for company SSO: the Keycloak identity-provider broker alias for your company IdP. When set (and your login mode is Company SSO), the sign-in screen sends it as kc_idp_hint so employees skip the account chooser and go straight to your IdP. This is routing metadata only — never a client secret, and it does not grant access. Leave empty if no external IdP broker is configured.'}
+            label={t('admin.identity.brokerAlias.label')}
+            hint={t('admin.identity.brokerAlias.hint')}
           >
             <input value={form.idpBrokerAliasText} onChange={e => set('idpBrokerAliasText', e.target.value)}
               placeholder="acme-entra" autoComplete="off" style={input} />
@@ -215,10 +214,9 @@ export function TenantIdentitySettingsSection({
             <input type="checkbox" checked={form.localAccountPolicyEnabled}
               onChange={e => set('localAccountPolicyEnabled', e.target.checked)} style={{ marginTop: 2 }} />
             <span>
-              <strong>Allow FairSpot-local accounts</strong>
+              <strong>{t('admin.identity.localAccounts.label')}</strong>
               <span style={{ display: 'block', fontSize: 12, color: '#6b7280' }}>
-                Permits local fallback and break-glass accounts for this tenant. Tenants using the
-                combined login mode keep the standard sign-in screen, so local accounts stay reachable.
+                {t('admin.identity.localAccounts.description')}
               </span>
             </span>
           </label>
@@ -228,21 +226,21 @@ export function TenantIdentitySettingsSection({
           )}
           {saveState.kind === 'error' && (
             <p style={{ margin: 0, color: '#b91c1c', fontSize: 13 }}>
-              Saving failed: {saveState.message} Try again.
+              {t('admin.identity.saveError', { message: saveState.message })}
             </p>
           )}
           {saveState.kind === 'saved' && (
             <p style={{ margin: 0, color: '#166534', fontSize: 13 }}>
-              Identity settings saved. Readiness is being refreshed.
+              {t('admin.identity.saved')}
             </p>
           )}
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="submit" disabled={saveState.kind === 'saving'} style={btn}>
-              {saveState.kind === 'saving' ? 'Saving…' : 'Save identity settings'}
+              {saveState.kind === 'saving' ? t('admin.common.saving') : t('admin.identity.save')}
             </button>
             <button type="button" onClick={load} disabled={saveState.kind === 'saving'} style={btnSecondary}>
-              Discard changes
+              {t('admin.identity.discard')}
             </button>
           </div>
         </form>

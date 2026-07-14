@@ -1,6 +1,8 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BookingListItem } from '@/api/bookings';
-import { displayLocation, displayModule, displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw, STATUS_BADGE_LABEL } from '@/displayLabels';
+import { displayLocation, displayModule, displayNextDrawRun, displayResourceNoun, displaySlot, humanizeRejectionReason, isSeatsItem, shouldShowNextDraw, statusBadgeLabel } from '@/displayLabels';
+import { t } from '@/i18n';
+import { formatDate as formatLocaleDate, formatWallClock } from '@/i18n/formatters';
 import { colors, radius, spacing } from '@/theme';
 
 type BookingCardProps = {
@@ -26,14 +28,15 @@ const STATUS_BADGE_COLOR: Record<string, string> = {
   NoShow: '#b45309',
 };
 
-const NEXT_ACTION_LABEL: Record<string, string> = {
-  cancel: 'Cancel request',
-  confirmUsage: 'Confirm usage',
-};
+function nextActionLabel(action: string): string {
+  if (action === 'cancel') return t('booking.dialog.cancelTitle');
+  if (action === 'confirmUsage') return t('booking.confirmUsage');
+  return action;
+}
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+  return formatLocaleDate(new Date(year, month - 1, day), {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -42,10 +45,7 @@ function formatDate(dateStr: string): string {
 
 function formatTime(timeStr: string): string {
   const [h, m] = timeStr.split(':');
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${m.padStart(2, '0')} ${ampm}`;
+  return formatWallClock(parseInt(h, 10), parseInt(m, 10));
 }
 
 export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage, actionPending, showModule }: BookingCardProps) {
@@ -58,7 +58,7 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
   const slotLabel = displaySlot(booking.allocatedSlotId);
   const nextDrawLabel = shouldShowNextDraw(booking.status) ? displayNextDrawRun(booking.requestedDate) : null;
 
-  const badgeLabel = STATUS_BADGE_LABEL[booking.status] ?? booking.status;
+  const badgeLabel = statusBadgeLabel(booking.status);
   const rejectionReason = booking.status === 'Rejected'
     ? humanizeRejectionReason(booking.reasonCode ?? null, booking.reason ?? null)
     : null;
@@ -90,15 +90,15 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
       </Text>
 
       {locationLabel ? (
-        <Text style={styles.detail}>Location: {locationLabel}</Text>
+        <Text style={styles.detail}>{t('booking.card.location', { location: locationLabel })}</Text>
       ) : null}
 
       {slotLabel ? (
-        <Text style={styles.detail}>{displayResourceNoun(booking.resourceType)}: {slotLabel}</Text>
+        <Text style={styles.detail}>{t('booking.card.resourceValue', { noun: displayResourceNoun(booking.resourceType), value: slotLabel })}</Text>
       ) : null}
 
       {nextDrawLabel ? (
-        <Text style={styles.nextDraw}>Waiting for allocation. Next draw: {nextDrawLabel}</Text>
+        <Text style={styles.nextDraw}>{t('booking.card.waitingNextDraw', { nextDrawLabel })}</Text>
       ) : null}
 
       {rejectionReason ? (
@@ -117,7 +117,7 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
         >
           {actionPending
             ? <ActivityIndicator size="small" color="#ffffff" />
-            : <Text style={styles.actionButtonText}>{NEXT_ACTION_LABEL.cancel}</Text>}
+            : <Text style={styles.actionButtonText}>{nextActionLabel('cancel')}</Text>}
         </Pressable>
       ) : nextAction === 'confirmUsage' && onConfirmUsage ? (
         <Pressable
@@ -129,10 +129,10 @@ export function BookingCard({ booking, testID, onPress, onCancel, onConfirmUsage
         >
           {actionPending
             ? <ActivityIndicator size="small" color="#ffffff" />
-            : <Text style={styles.actionButtonText}>{NEXT_ACTION_LABEL.confirmUsage}</Text>}
+            : <Text style={styles.actionButtonText}>{nextActionLabel('confirmUsage')}</Text>}
         </Pressable>
       ) : nextAction ? (
-        <Text style={styles.nextAction}>{NEXT_ACTION_LABEL[nextAction] ?? nextAction}</Text>
+        <Text style={styles.nextAction}>{nextActionLabel(nextAction)}</Text>
       ) : null}
     </View>
     </Pressable>

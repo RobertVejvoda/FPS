@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { fetchMyOutcomes, type BookingOutcomeItem } from '../api/dataHub';
 import { displayLocation, displayModule, displaySlot } from '../displayLabels';
 import { ModuleBadge } from '../components/ModuleBadge';
+import { t, tDynamic, formatDate, formatDateTime } from '../i18n';
 
 type ListState =
   | { kind: 'loading' }
@@ -22,7 +23,7 @@ export function BookingHistoryPage() {
       if (result.kind === 'ok') {
         setState({ kind: 'ok', items: result.data.items, page: result.data.page, total: result.data.total });
       } else {
-        setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load history.' });
+        setState({ kind: 'error', message: 'message' in result ? result.message : t('bookings.history.loadError') });
       }
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
@@ -58,26 +59,26 @@ export function BookingHistoryPage() {
   return (
     <div className="page-stack">
       <section className="page-hero">
-        <h2>My Reservations — History</h2>
+        <h2>{t('bookings.history.title')}</h2>
       </section>
 
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <button onClick={() => navigate('/bookings')} style={backBtn}>← Back to My Reservations</button>
+          <button onClick={() => navigate('/bookings')} style={backBtn}>{t('bookings.history.backLink')}</button>
         </div>
 
         {state.kind === 'loading' && (
-          <div className="panel"><p style={{ color: '#6b7280', margin: 0 }}>Loading…</p></div>
+          <div className="panel"><p style={{ color: '#6b7280', margin: 0 }}>{t('common.loading')}</p></div>
         )}
         {state.kind === 'error' && (
           <div className="panel">
             <p style={{ color: '#b91c1c' }}>{state.message}</p>
-            <button onClick={load} className="btn-primary">Retry</button>
+            <button onClick={load} className="btn-primary">{t('bookings.retry')}</button>
           </div>
         )}
         {state.kind === 'ok' && state.items.length === 0 && (
           <div className="panel">
-            <p style={{ color: '#6b7280', margin: 0 }}>No past requests found.</p>
+            <p style={{ color: '#6b7280', margin: 0 }}>{t('bookings.history.empty')}</p>
           </div>
         )}
         {state.kind === 'ok' && state.items.length > 0 && (
@@ -85,33 +86,33 @@ export function BookingHistoryPage() {
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Date</th>
-                  {showModule && <th style={thStyle}>Module</th>}
-                  <th style={thStyle}>Time slot</th>
-                  <th style={thStyle}>Location</th>
-                  <th style={thStyle}>Spot</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Reason</th>
-                  <th style={thStyle}>Decided</th>
+                  <th style={thStyle}>{t('bookings.history.col.date')}</th>
+                  {showModule && <th style={thStyle}>{t('bookings.history.col.module')}</th>}
+                  <th style={thStyle}>{t('bookings.history.col.timeSlot')}</th>
+                  <th style={thStyle}>{t('bookings.history.col.location')}</th>
+                  <th style={thStyle}>{t('bookings.history.col.spot')}</th>
+                  <th style={thStyle}>{t('bookings.history.col.status')}</th>
+                  <th style={thStyle}>{t('bookings.history.col.reason')}</th>
+                  <th style={thStyle}>{t('bookings.history.col.decided')}</th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map(b => (
                   <tr key={b.bookingRequestId} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={tdStyle}>{new Date(b.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                    <td style={tdStyle}>{formatDate(new Date(b.date + 'T00:00:00'), { dateStyle: 'medium' })}</td>
                     {showModule && <td style={tdStyle}><ModuleBadge resourceType={b.resourceType} /></td>}
                     <td style={tdStyle}>{b.timeSlot}</td>
                     <td style={tdStyle}>{displayLocation(b.locationId) ?? '–'}</td>
                     <td style={tdStyle}>{displaySlot(b.slotId) ?? '–'}</td>
                     <td style={tdStyle}><StatusChip status={b.finalStatus} /></td>
                     <td style={tdStyle}>{b.safeReasonText ?? '–'}</td>
-                    <td style={tdStyle}>{b.decidedAt ? new Date(b.decidedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
+                    <td style={tdStyle}>{b.decidedAt ? formatDateTime(new Date(b.decidedAt), { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {hasMore && (
-              <button onClick={loadMore} style={loadMoreBtn}>Load more</button>
+              <button onClick={loadMore} style={loadMoreBtn}>{t('bookings.history.loadMore')}</button>
             )}
           </div>
         )}
@@ -129,7 +130,7 @@ function StatusChip({ status }: { status: string }) {
     : '#f9fafb';
   return (
     <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600, color, background: bg }}>
-      {status}
+      {tDynamic('bookings.status', status, status)}
     </span>
   );
 }

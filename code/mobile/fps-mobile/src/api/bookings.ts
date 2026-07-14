@@ -1,4 +1,5 @@
 import type { components } from '@robertvejvoda/fairspot-api-client/booking';
+import { t } from '@/i18n';
 import type { ApiClientConfig } from './client';
 
 export type BookingListItem = components['schemas']['BookingListItem'];
@@ -129,7 +130,7 @@ export async function submitBooking(
       }
       return { kind: 'accepted', requestId: data.requestId, status: data.status };
     } catch {
-      return { kind: 'error', status: response.status, message: 'Invalid response body.' };
+      return { kind: 'error', status: response.status, message: t('booking.api.invalidResponse') };
     }
   }
 
@@ -173,7 +174,7 @@ export async function cancelBooking(
   if (response.status === 404) {
     return {
       kind: 'notFound',
-      message: await readErrorMessage(response, 'This booking no longer exists.'),
+      message: await readErrorMessage(response, t('booking.api.notFound')),
     };
   }
   return {
@@ -211,13 +212,13 @@ export async function confirmBookingUsage(
       const data = (await response.json()) as ConfirmUsageResponse;
       return { kind: 'confirmed', wasAlreadyConfirmed: data.wasAlreadyConfirmed };
     } catch {
-      return { kind: 'error', status: 200, message: 'Invalid response body.' };
+      return { kind: 'error', status: 200, message: t('booking.api.invalidResponse') };
     }
   }
   if (response.status === 404) {
     return {
       kind: 'notFound',
-      message: await readErrorMessage(response, 'This booking no longer exists.'),
+      message: await readErrorMessage(response, t('booking.api.notFound')),
     };
   }
   return {

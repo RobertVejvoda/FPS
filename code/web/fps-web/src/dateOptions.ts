@@ -1,3 +1,5 @@
+import { formatDate, t } from './i18n';
+
 export type DateOption = {
   date: string;
   label: string;
@@ -51,15 +53,15 @@ export function labelRelativeWorkday(baseDate: Date, date: Date): string {
   const offsetDays = Math.round((target.getTime() - base.getTime()) / 86_400_000);
   const dateLabel = labelShortDate(target);
 
-  if (offsetDays === 0) return `Today · ${dateLabel}`;
-  if (offsetDays === 1) return `Tomorrow · ${dateLabel}`;
-  return `${target.toLocaleDateString(undefined, { weekday: 'long' })} · ${dateLabel}`;
+  if (offsetDays === 0) return `${t('labels.date.today')} · ${dateLabel}`;
+  if (offsetDays === 1) return `${t('labels.date.tomorrow')} · ${dateLabel}`;
+  return `${formatDate(target, { weekday: 'long' })} · ${dateLabel}`;
 }
 
 export function labelWeekdayDate(date: Date): string {
-  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  return formatDate(date, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
 function labelShortDate(date: Date): string {
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  return formatDate(date, { weekday: 'short', month: 'short', day: 'numeric' });
 }

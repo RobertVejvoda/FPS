@@ -305,6 +305,18 @@ select {
   background: transparent;
 }
 
+/* LOC001 (#744) — header UI-language selector */
+.locale-switcher {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 .page-stack {
   display: flex;
   flex-direction: column;

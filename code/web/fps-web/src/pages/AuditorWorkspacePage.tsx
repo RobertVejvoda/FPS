@@ -27,6 +27,7 @@ import {
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { DateFilter, type RangeFilterValue } from '../components/DateFilter';
 import { DrawProgressPanel, type ProgressState } from '../components/DrawProgressPanel';
+import { t, tDynamic, formatDate, formatDateTime, formatTime } from '../i18n';
 
 type State =
   | { kind: 'loading' }
@@ -50,12 +51,14 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
 
 function describeDateRange(range: RangeFilterValue): string | null {
   if (!range.after && !range.before) return null;
-  const fmt = (iso?: string) => iso ? new Date(iso).toLocaleDateString() : '…';
+  const fmt = (iso?: string) => iso ? formatDate(new Date(iso)) : '…';
   if (range.after && range.before) {
     if (range.after.slice(0, 10) === range.before.slice(0, 10)) return fmt(range.after);
     return `${fmt(range.after)} – ${fmt(range.before)}`;
   }
-  return range.after ? `from ${fmt(range.after)}` : `until ${fmt(range.before)}`;
+  return range.after
+    ? t('audit.workspace.dateRange.from', { date: fmt(range.after) })
+    : t('audit.workspace.dateRange.until', { date: fmt(range.before) });
 }
 
 function buildEmptyStateMessage(
@@ -69,11 +72,11 @@ function buildEmptyStateMessage(
   if (category !== 'All') parts.push(humanizeActivityCategory(category).toLowerCase());
   const rangeLabel = describeDateRange(range);
   if (rangeLabel) parts.push(rangeLabel);
-  if (entityId.trim()) parts.push(`entity ID "${entityId.trim()}"`);
-  if (actorRef.trim()) parts.push(`actor reference "${actorRef.trim()}"`);
-  if (result.trim()) parts.push(`result "${result.trim()}"`);
-  if (parts.length === 0) return 'No records match the current filters.';
-  return `No records found for ${parts.join(', ')}. Try a broader date range or clear some filters.`;
+  if (entityId.trim()) parts.push(t('audit.workspace.filterSummary.entityId', { value: entityId.trim() }));
+  if (actorRef.trim()) parts.push(t('audit.workspace.filterSummary.actorRef', { value: actorRef.trim() }));
+  if (result.trim()) parts.push(t('audit.workspace.filterSummary.result', { value: result.trim() }));
+  if (parts.length === 0) return t('audit.workspace.noMatch');
+  return t('audit.workspace.noRecordsFor', { parts: parts.join(', ') });
 }
 
 // Actor-resolution map used to surface names instead of opaque hashes.
@@ -144,7 +147,7 @@ export function AuditorWorkspacePage() {
       else
         setState({
           kind: 'error',
-          message: 'message' in res ? res.message : 'Failed to load audit records.',
+          message: 'message' in res ? res.message : t('audit.console.loadError'),
         });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate, category, dateRange, dateBase, entityId, actorRef, result]);
@@ -266,23 +269,23 @@ export function AuditorWorkspacePage() {
   function exportCsv() {
     if (state.kind !== 'ok' || state.records.length === 0) return;
     const headers = [
-      'Occurred At',
-      'Event Type',
-      'Action',
-      'Entity Type',
-      'Entity ID',
-      'Actor Type',
-      'Actor Name',
-      'Actor Reference',
-      'Actor Hash (Evidence)',
-      'Result',
-      'Reason Code',
-      'Summary',
+      t('audit.workspace.csv.occurredAt'),
+      t('audit.workspace.csv.eventType'),
+      t('audit.workspace.csv.action'),
+      t('audit.workspace.csv.entityType'),
+      t('audit.workspace.csv.entityId'),
+      t('audit.workspace.csv.actorType'),
+      t('audit.workspace.csv.actorName'),
+      t('audit.workspace.csv.actorReference'),
+      t('audit.workspace.csv.actorHash'),
+      t('audit.workspace.csv.result'),
+      t('audit.workspace.csv.reasonCode'),
+      t('audit.workspace.csv.summary'),
     ];
     const rows = state.records.map((r) => {
       const details = r.actorHash ? actorDetails[r.actorHash] : undefined;
       return [
-        new Date(r.occurredAt).toLocaleString(),
+        formatDateTime(new Date(r.occurredAt)),
         humanizeAuditEventType(r.eventType),
         humanizeAuditAction(r.action),
         humanizeEntityType(r.entityType),
@@ -311,18 +314,17 @@ export function AuditorWorkspacePage() {
   return (
     <div style={page}>
       <div style={header}>
-        <h2 style={title}>Auditor System Activity Workspace</h2>
+        <h2 style={title}>{t('audit.workspace.title')}</h2>
         <p style={subtitle}>
-          Business-readable evidence of system activity, including booking lifecycle, Draw events, policy
-          changes, and notifications.
+          {t('audit.workspace.subtitle')}
         </p>
       </div>
 
       <section style={card}>
-        <h3 style={cardTitle}>Filters</h3>
+        <h3 style={cardTitle}>{t('audit.workspace.filtersTitle')}</h3>
         <div style={filterGrid}>
           <div style={filterItem}>
-            <label style={label}>Activity Category</label>
+            <label style={label}>{t('audit.workspace.categoryLabel')}</label>
             <select value={category} onChange={(e) => setCategory(e.target.value as ActivityCategory)} style={select}>
               {ACTIVITY_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -333,7 +335,7 @@ export function AuditorWorkspacePage() {
           </div>
 
           <div style={{ ...filterItem, gridColumn: '1 / -1' }}>
-            <label style={label}>Date Range</label>
+            <label style={label}>{t('audit.workspace.dateRangeLabel')}</label>
             <DateFilter
               mode="range"
               value={dateRange}
@@ -343,34 +345,34 @@ export function AuditorWorkspacePage() {
           </div>
 
           <div style={filterItem}>
-            <label style={label}>Entity ID</label>
+            <label style={label}>{t('audit.workspace.entityIdLabel')}</label>
             <input
               type="text"
-              placeholder="Paste from the Entity column"
+              placeholder={t('audit.workspace.entityIdPlaceholder')}
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
               style={input}
             />
-            <span style={hint}>Booking ID, draw attempt ID, etc.</span>
+            <span style={hint}>{t('audit.workspace.entityIdHint')}</span>
           </div>
 
           <div style={filterItem}>
-            <label style={label}>Actor short ref</label>
+            <label style={label}>{t('audit.workspace.actorRefLabel')}</label>
             <input
               type="text"
-              placeholder="Paste from the Who column (e.g. A3F1B2)"
+              placeholder={t('audit.workspace.actorRefPlaceholder')}
               value={actorRef}
               onChange={(e) => setActorRef(e.target.value.toUpperCase())}
               style={input}
             />
-            <span style={hint}>6-character ref shown next to each actor.</span>
+            <span style={hint}>{t('audit.workspace.actorRefHint')}</span>
           </div>
 
           <div style={filterItem}>
-            <label style={label}>Result</label>
+            <label style={label}>{t('audit.workspace.resultLabel')}</label>
             <input
               type="text"
-              placeholder="e.g. allocated, rejected"
+              placeholder={t('audit.workspace.resultPlaceholder')}
               value={result}
               onChange={(e) => setResult(e.target.value)}
               style={input}
@@ -380,10 +382,10 @@ export function AuditorWorkspacePage() {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
           <button onClick={load} style={btn}>
-            Refresh
+            {t('audit.common.refresh')}
           </button>
           <button onClick={exportCsv} disabled={state.kind !== 'ok' || state.records.length === 0} style={btnSecondary}>
-            Export CSV
+            {t('audit.workspace.exportCsv')}
           </button>
         </div>
       </section>
@@ -391,20 +393,19 @@ export function AuditorWorkspacePage() {
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h3 style={{ ...cardTitle, margin: 0 }}>
-            System Activity Evidence
+            {t('audit.workspace.evidenceTitle')}
             {state.kind === 'ok' ? (
-              <span style={{ ...muted, fontWeight: 400 }}> ({state.totalCount} records)</span>
+              <span style={{ ...muted, fontWeight: 400 }}> {t('audit.workspace.recordsCount', { count: state.totalCount })}</span>
             ) : null}
           </h3>
         </div>
 
-        {state.kind === 'loading' && <p style={muted}>Loading activity records…</p>}
+        {state.kind === 'loading' && <p style={muted}>{t('audit.workspace.loadingRecords')}</p>}
 
         {state.kind === 'forbidden' && (
           <div style={errorBox}>
             <p style={{ margin: 0 }}>
-              You do not have permission to access the auditor workspace. This workspace is restricted to
-              auditor and administrator roles.
+              {t('audit.workspace.forbidden')}
             </p>
           </div>
         )}
@@ -417,11 +418,11 @@ export function AuditorWorkspacePage() {
 
         {state.kind === 'ok' && state.records.length === 0 && (
           <div style={emptyBox}>
-            <p style={{ margin: '0 0 8px', fontWeight: 500 }}>No activity records found</p>
+            <p style={{ margin: '0 0 8px', fontWeight: 500 }}>{t('audit.workspace.emptyTitle')}</p>
             <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>
               {hasActiveFilters
                 ? buildEmptyStateMessage(category, dateRange, entityId, actorRef, result)
-                : 'No audit records exist in the system yet. Activity evidence will appear here after booking requests, Draw events, policy changes, or other system actions occur.'}
+                : t('audit.workspace.emptyNoFilters')}
             </p>
           </div>
         )}
@@ -429,20 +430,20 @@ export function AuditorWorkspacePage() {
         {state.kind === 'ok' && state.records.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
             <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
-              Showing {totalDisplayed} of {state.totalCount}. Click a row to see the full actor and entity reference.
+              {t('audit.workspace.showingCount', { shown: totalDisplayed, total: state.totalCount })}
             </p>
             <table style={table}>
               <thead>
                 <tr>
                   {[
-                    'When',
-                    'What Happened',
-                    'Action',
-                    'Entity',
-                    'Entity ID',
-                    'Who',
-                    'Result',
-                    'Reason',
+                    t('audit.workspace.table.when'),
+                    t('audit.workspace.table.whatHappened'),
+                    t('audit.workspace.table.action'),
+                    t('audit.workspace.table.entity'),
+                    t('audit.workspace.table.entityId'),
+                    t('audit.workspace.table.who'),
+                    t('audit.workspace.table.result'),
+                    t('audit.workspace.table.reason'),
                   ].map((h) => (
                     <th key={h} style={th}>
                       {h}
@@ -460,10 +461,10 @@ export function AuditorWorkspacePage() {
                         onClick={() => setExpandedRowId(isExpanded ? null : r.auditRecordId)}>
                       <td style={td}>
                         <div style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-                          {new Date(r.occurredAt).toLocaleDateString()}
+                          {formatDate(new Date(r.occurredAt))}
                         </div>
                         <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                          {new Date(r.occurredAt).toLocaleTimeString()}
+                          {formatTime(new Date(r.occurredAt))}
                         </div>
                       </td>
                       <td style={td}>{humanizeAuditEventType(r.eventType)}</td>
@@ -471,14 +472,14 @@ export function AuditorWorkspacePage() {
                       <td style={td}>{humanizeEntityType(r.entityType)}</td>
                       <td
                         style={{ ...td, cursor: r.entityId ? 'pointer' : undefined }}
-                        title={r.entityId ? 'Click for entity details' : undefined}
+                        title={r.entityId ? t('audit.workspace.entityDetailsTitle') : undefined}
                         onClick={(e) => { if (r.entityId) { e.stopPropagation(); openEntityPanel(r); } }}
                       >
                         {renderEntityLabel(r.entityId)}
                       </td>
                       <td
                         style={{ ...td, cursor: r.actorHash ? 'pointer' : undefined }}
-                        title={r.actorHash ? 'Click for actor details' : undefined}
+                        title={r.actorHash ? t('audit.workspace.actorDetailsTitle') : undefined}
                         onClick={(e) => { if (r.actorHash) { e.stopPropagation(); openActorPanel(r, details); } }}
                       >
                         {renderActorLabel(r.actorType, r.actorHash, details)}
@@ -486,7 +487,7 @@ export function AuditorWorkspacePage() {
                       <td style={td}>
                         <span style={resultBadge(r.result)}>{humanizeAuditResult(r.result)}</span>
                       </td>
-                      <td style={{ ...td, color: '#6b7280', fontSize: 12 }}>{r.reasonCode ?? '—'}</td>
+                      <td style={{ ...td, color: '#6b7280', fontSize: 12 }}>{r.reasonCode ?? t('common.notAvailable')}</td>
                     </tr>
                     {isExpanded && (
                       <tr>
@@ -541,7 +542,7 @@ export function AuditorWorkspacePage() {
 // without needing to expand the row.
 function renderActorLabel(actorType: string, actorHash: string | null, details: ActorDetails | undefined): React.ReactNode {
   const typeLabel = humanizeActorType(actorType);
-  if (!actorHash) return <span style={{ color: '#9ca3af' }}>{typeLabel} · —</span>;
+  if (!actorHash) return <span style={{ color: '#9ca3af' }}>{typeLabel} · {t('common.notAvailable')}</span>;
   const ref = details?.shortRef ?? displayActorRef(actorHash);
   if (details?.displayName) {
     return (
@@ -563,7 +564,7 @@ function renderActorLabel(actorType: string, actorHash: string | null, details: 
 // Entity ID cell: keep a tight 8-character preview in the table so the
 // row stays readable; the full ID lives in the expand panel below.
 function renderEntityLabel(entityId: string | null): React.ReactNode {
-  if (!entityId) return <span style={{ color: '#9ca3af' }}>—</span>;
+  if (!entityId) return <span style={{ color: '#9ca3af' }}>{t('common.notAvailable')}</span>;
   const short = entityId.length > 8 ? entityId.slice(0, 8) + '…' : entityId;
   return <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#374151' }}>{short}</span>;
 }
@@ -588,41 +589,41 @@ function ExpandedDetail({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
       <div>
-        <div style={detailLabel}>Actor</div>
+        <div style={detailLabel}>{t('audit.workspace.detail.actor')}</div>
         {actor?.displayName ? (
           <div style={{ fontWeight: 500, marginBottom: 2 }}>{actor.displayName}</div>
         ) : (
-          <div style={{ color: '#9ca3af', marginBottom: 2 }}>No profile data available</div>
+          <div style={{ color: '#9ca3af', marginBottom: 2 }}>{t('audit.workspace.detail.noProfileData')}</div>
         )}
         <div style={{ ...muted, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
-          Short ref:
+          {t('audit.workspace.detail.shortRef')}
           <span style={detailValueChip}>{actor?.shortRef ?? displayActorRef(record.actorHash)}</span>
-          {actor?.shortRef && <CopyButton value={actor.shortRef} label="copy short ref" />}
+          {actor?.shortRef && <CopyButton value={actor.shortRef} label={t('audit.workspace.copyShortRef')} />}
         </div>
         <div style={{ ...muted, fontSize: 11, marginTop: 4 }}>{humanizeActorType(record.actorType)}</div>
       </div>
       <div>
-        <div style={detailLabel}>Entity</div>
+        <div style={detailLabel}>{t('audit.workspace.detail.entity')}</div>
         <div style={{ marginBottom: 2 }}>{humanizeEntityType(record.entityType)}</div>
         {record.entityId ? (
           <div style={{ ...muted, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            ID:
+            {t('audit.workspace.detail.id')}
             <span style={detailValueChip}>{record.entityId}</span>
-            <CopyButton value={record.entityId} label="copy entity id" />
+            <CopyButton value={record.entityId} label={t('audit.workspace.copyEntityId')} />
           </div>
         ) : (
-          <div style={{ ...muted }}>Not available for this event</div>
+          <div style={{ ...muted }}>{t('audit.workspace.detail.notAvailableForEvent')}</div>
         )}
       </div>
       {record.summary && (
         <div style={{ gridColumn: '1 / -1' }}>
-          <div style={detailLabel}>Summary</div>
+          <div style={detailLabel}>{t('audit.workspace.detail.summary')}</div>
           <div>{record.summary}</div>
         </div>
       )}
       {record.entityType === 'drawAttempt' && record.entityId && (
         <div style={{ gridColumn: '1 / -1' }}>
-          <div style={detailLabel}>Draw Lifecycle Progress</div>
+          <div style={detailLabel}>{t('audit.workspace.detail.drawProgress')}</div>
           {!drawProgress ? (
             <button
               type="button"
@@ -638,7 +639,7 @@ function ExpandedDetail({
                 cursor: 'pointer',
               }}
             >
-              View lifecycle progress
+              {t('audit.workspace.viewLifecycleProgress')}
             </button>
           ) : (
             <div style={{ marginTop: 8 }}>
@@ -669,35 +670,35 @@ function ActorDetailPanel({
     <div style={panelOverlay} onClick={onClose}>
       <div style={panelBoxSm} onClick={(e) => e.stopPropagation()}>
         <div style={panelHeader}>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Actor Detail</span>
-          <button type="button" onClick={onClose} style={panelCloseBtn} aria-label="Close actor detail">✕</button>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{t('audit.workspace.actorDetailTitle')}</span>
+          <button type="button" onClick={onClose} style={panelCloseBtn} aria-label={t('audit.workspace.closeActorDetail')}>✕</button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
           <div>
-            <div style={detailLabel}>Classification</div>
+            <div style={detailLabel}>{t('audit.workspace.detail.classification')}</div>
             <div style={{ fontSize: 14 }}>{humanizeActorType(actorType)}</div>
           </div>
           <div>
-            <div style={detailLabel}>Display Name</div>
+            <div style={detailLabel}>{t('audit.workspace.detail.displayName')}</div>
             {details?.displayName ? (
               <div style={{ fontSize: 14, fontWeight: 500 }}>{details.displayName}</div>
             ) : (
-              <div style={{ ...muted, fontStyle: 'italic' }}>Not available</div>
+              <div style={{ ...muted, fontStyle: 'italic' }}>{t('audit.workspace.detail.notAvailable')}</div>
             )}
           </div>
           <div>
-            <div style={detailLabel}>Short Ref</div>
+            <div style={detailLabel}>{t('audit.workspace.detail.shortRefLabel')}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ ...detailValueChip, fontFamily: 'monospace', fontWeight: 600, fontSize: 13 }}>{shortRef}</span>
-              <CopyButton value={shortRef} label="copy actor short ref" />
+              <CopyButton value={shortRef} label={t('audit.workspace.copyActorShortRef')} />
             </div>
             <div style={{ ...muted, fontSize: 11, marginTop: 4 }}>
-              Use this ref in the Actor short ref filter to find all activity by this actor.
+              {t('audit.workspace.shortRefHint')}
             </div>
           </div>
         </div>
         <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #e5e7eb', fontSize: 11, color: '#9ca3af' }}>
-          Actor details are pseudonymised. No raw identifiers are exposed.
+          {t('audit.workspace.pseudonymisedNotice')}
         </div>
       </div>
     </div>
@@ -730,29 +731,29 @@ function EntityDetailPanel({
     <div style={panelOverlay} onClick={onClose}>
       <div style={(isDrawAttempt || isBookingRequest) ? panelBoxLg : panelBoxSm} onClick={(e) => e.stopPropagation()}>
         <div style={panelHeader}>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{entityTypeName} Detail</span>
-          <button type="button" onClick={onClose} style={panelCloseBtn} aria-label="Close entity detail">✕</button>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{t('audit.workspace.entityDetailTitle', { entityType: entityTypeName })}</span>
+          <button type="button" onClick={onClose} style={panelCloseBtn} aria-label={t('audit.workspace.closeEntityDetail')}>✕</button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
           <div>
-            <div style={detailLabel}>Entity Type</div>
+            <div style={detailLabel}>{t('audit.workspace.detail.entityType')}</div>
             <div style={{ fontSize: 14 }}>{entityTypeName}</div>
           </div>
           {record.entityId && (
             <div>
-              <div style={detailLabel}>Entity ID</div>
+              <div style={detailLabel}>{t('audit.workspace.detail.entityId')}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={entityIdChip}>
                   {record.entityId}
                 </span>
-                <CopyButton value={record.entityId} label="copy entity id" />
+                <CopyButton value={record.entityId} label={t('audit.workspace.copyEntityId')} />
               </div>
             </div>
           )}
 
           {isDrawAttempt && record.entityId && (
             <div>
-              <div style={detailLabel}>Draw Lifecycle Progress</div>
+              <div style={detailLabel}>{t('audit.workspace.detail.drawProgress')}</div>
               {drawProgress ? (
                 <div style={{ marginTop: 8 }}>
                   <DrawProgressPanel progress={drawProgress} drawAttemptId={record.entityId} />
@@ -763,7 +764,7 @@ function EntityDetailPanel({
                   onClick={onLoadDrawProgress}
                   style={{ marginTop: 6, fontSize: 12, padding: '3px 10px', borderRadius: 4, border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer' }}
                 >
-                  View lifecycle progress
+                  {t('audit.workspace.viewLifecycleProgress')}
                 </button>
               )}
             </div>
@@ -771,7 +772,7 @@ function EntityDetailPanel({
 
           {isBookingRequest && record.entityId && (
             <div>
-              <div style={detailLabel}>Booking Request Details</div>
+              <div style={detailLabel}>{t('audit.workspace.detail.bookingRequestDetails')}</div>
               <div style={{ marginTop: 8 }}>
                 <BookingRequestDetailPanel
                   detail={bookingRequestDetail}
@@ -784,10 +785,9 @@ function EntityDetailPanel({
 
           {!hasDetailView && (
             <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
-              <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 13 }}>No detail view available yet</p>
+              <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: 13 }}>{t('audit.workspace.noDetailView')}</p>
               <p style={{ ...muted, margin: 0, fontSize: 12 }}>
-                No detail view is available for <strong>{entityTypeName}</strong> entities.
-                The entity type and ID above are available for investigation.
+                {t('audit.workspace.noDetailViewDescription.prefix')}<strong>{entityTypeName}</strong>{t('audit.workspace.noDetailViewDescription.suffix')}
               </p>
             </div>
           )}
@@ -816,17 +816,17 @@ function BookingRequestDetailPanel({
         onClick={onLoad}
         style={{ fontSize: 12, padding: '3px 10px', borderRadius: 4, border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer' }}
       >
-        View request details
+        {t('audit.workspace.viewRequestDetails')}
       </button>
     );
   }
   if (detail.kind === 'loading') {
-    return <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.85rem' }}>Loading request details…</p>;
+    return <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.85rem' }}>{t('audit.workspace.loadingRequestDetails')}</p>;
   }
   if (detail.kind === 'notFound') {
     return (
       <div style={{ padding: '8px 10px', background: '#fefce8', borderRadius: 5, border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>
-        No DataHub projection found for this booking request yet. The projection updates asynchronously — if this is a recent request, wait a moment and reopen the panel.
+        {t('audit.workspace.noProjectionFound')}
       </div>
     );
   }
@@ -862,28 +862,28 @@ function BookingRequestDetailPanel({
           color: statusStyle.color,
           border: `1px solid ${statusStyle.border}`,
         }}>
-          {data.status}
+          {tDynamic('audit.workspace.status', data.status, data.status)}
         </span>
       </div>
 
       {/* Requestor identity (safe short ref only — no raw userId) */}
       <div>
-        <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Requestor</div>
+        <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{t('audit.workspace.detail.requestor')}</div>
         <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, letterSpacing: '0.05em', background: '#f1f5f9', padding: '2px 8px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
-          {data.requestorShortRef || '—'}
+          {data.requestorShortRef || t('common.notAvailable')}
         </span>
       </div>
 
       {/* Core facts grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
-        <RequestFact label="Location / Facility" value={displayLocation(data.locationId) ?? data.locationId} />
-        <RequestFact label="Date" value={displayDate(data.date)} />
-        <RequestFact label="Time Slot" value={data.timeSlot} />
+        <RequestFact label={t('audit.workspace.detail.locationFacility')} value={displayLocation(data.locationId) ?? data.locationId} />
+        <RequestFact label={t('audit.workspace.detail.date')} value={displayDate(data.date)} />
+        <RequestFact label={t('audit.workspace.detail.timeSlot')} value={data.timeSlot} />
         {data.slotId && (
-          <RequestFact label="Assigned Space" value={displaySlot(data.slotId) ?? data.slotId} />
+          <RequestFact label={t('audit.workspace.detail.assignedSpace')} value={displaySlot(data.slotId) ?? data.slotId} />
         )}
         {data.allocationSource && (
-          <RequestFact label="Allocation Source" value={data.allocationSource} />
+          <RequestFact label={t('audit.workspace.detail.allocationSource')} value={data.allocationSource} />
         )}
       </div>
 
@@ -891,12 +891,16 @@ function BookingRequestDetailPanel({
       {(data.vehicleLicensePlate || data.vehicleType) && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
           {data.vehicleLicensePlate && (
-            <RequestFact label="License Plate" value={data.vehicleLicensePlate} />
+            <RequestFact label={t('audit.workspace.detail.licensePlate')} value={data.vehicleLicensePlate} />
           )}
           {data.vehicleType && (
             <RequestFact
-              label="Vehicle Type"
-              value={data.vehicleIsElectric === true ? `${data.vehicleType} (Electric)` : data.vehicleIsElectric === false ? `${data.vehicleType} (Combustion)` : data.vehicleType}
+              label={t('audit.workspace.detail.vehicleType')}
+              value={data.vehicleIsElectric === true
+                ? t('audit.workspace.detail.vehicleElectric', { vehicleType: data.vehicleType })
+                : data.vehicleIsElectric === false
+                  ? t('audit.workspace.detail.vehicleCombustion', { vehicleType: data.vehicleType })
+                  : data.vehicleType}
             />
           )}
         </div>
@@ -905,7 +909,7 @@ function BookingRequestDetailPanel({
       {/* Rejection / allocation reason */}
       {(data.reasonCode || data.safeReasonText) && (
         <div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Reason</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{t('audit.workspace.detail.reason')}</div>
           <div style={{ fontSize: '0.85rem', color: '#374151' }}>
             {humanizeHrRejection(data.reasonCode, data.safeReasonText)}
           </div>
@@ -914,21 +918,21 @@ function BookingRequestDetailPanel({
 
       {/* Lifecycle timestamps */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem 1.25rem' }}>
-        {data.submittedAt && <RequestFact label="Submitted" value={displayDateTime(data.submittedAt)} />}
-        {data.decidedAt && <RequestFact label="Decided" value={displayDateTime(data.decidedAt)} />}
+        {data.submittedAt && <RequestFact label={t('audit.workspace.detail.submitted')} value={displayDateTime(data.submittedAt)} />}
+        {data.decidedAt && <RequestFact label={t('audit.workspace.detail.decided')} value={displayDateTime(data.decidedAt)} />}
       </div>
 
       {/* Draw link if available */}
       {data.drawAttemptId && (
         <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-          Draw: <span style={{ fontFamily: 'monospace' }}>{data.drawAttemptId}</span>
+          {t('audit.workspace.detail.drawLabel')} <span style={{ fontFamily: 'monospace' }}>{data.drawAttemptId}</span>
         </div>
       )}
 
       {/* Support footer */}
       <div style={{ fontSize: '0.7rem', color: '#94a3b8', borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem' }}>
-        Request ID: <span style={{ fontFamily: 'monospace' }}>{bookingRequestId}</span>
-        {' · '}Projected: {displayDateTime(data.lastProjectedAt)}
+        {t('audit.workspace.detail.requestIdLabel')} <span style={{ fontFamily: 'monospace' }}>{bookingRequestId}</span>
+        {' · '}{t('audit.workspace.detail.projectedLabel', { date: displayDateTime(data.lastProjectedAt) })}
       </div>
     </div>
   );
@@ -969,7 +973,7 @@ function CopyButton({ value, label }: { value: string; label: string }): React.R
         cursor: 'pointer',
       }}
     >
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? t('audit.workspace.copied') : t('audit.workspace.copy')}
     </button>
   );
 }

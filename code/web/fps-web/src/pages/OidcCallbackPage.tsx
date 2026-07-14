@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, type AuthPhase } from '../auth/AuthContext';
+import { t } from '../i18n';
 
 const FAILURE_PHASES: AuthPhase[] = [
   'login-cancelled',
@@ -24,7 +25,7 @@ export function OidcCallbackPage() {
 
   return (
     <div style={outer}>
-      <p style={{ color: '#6b7280', fontSize: 14 }}>Completing sign in…</p>
+      <p style={{ color: '#6b7280', fontSize: 14 }}>{t('session.callback.completing')}</p>
     </div>
   );
 }
