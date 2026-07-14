@@ -172,6 +172,8 @@ services:
       <<: *fairspot-service-auth-env
       ASPNETCORE_URLS: "http://+:5157"
       ASPNETCORE_ENVIRONMENT: ${FPS_ASPNETCORE_ENVIRONMENT:-Production}
+      # LOC001 (#744) — Green Logistics demo stack sends Czech notification copy by default.
+      Notification__DefaultLocale: "cs-CZ"
     networks:
       - web
 

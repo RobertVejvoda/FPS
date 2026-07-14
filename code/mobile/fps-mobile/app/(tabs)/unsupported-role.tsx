@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme';
 import { useAuth } from '@/auth/AuthContext';
+import { t } from '@/i18n';
 
 export default function UnsupportedRoleScreen() {
   const { roles } = useAuth();
@@ -8,13 +9,13 @@ export default function UnsupportedRoleScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mobile Access Not Available</Text>
+      <Text style={styles.title}>{t('session.unsupportedRole.title')}</Text>
       <Text style={styles.body}>
-        The FairSpot mobile app is currently available for employees only.
+        {t('session.unsupportedRole.body')}
       </Text>
-      <Text style={styles.detail}>Your role: {roleList}</Text>
+      <Text style={styles.detail}>{t('session.unsupportedRole.roleLine', { roleList })}</Text>
       <Text style={styles.hint}>
-        Use the web app to access admin, reporting, or audit features.
+        {t('session.unsupportedRole.hint')}
       </Text>
     </View>
   );

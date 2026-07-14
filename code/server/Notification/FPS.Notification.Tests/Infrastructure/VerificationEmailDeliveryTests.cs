@@ -1,6 +1,7 @@
 using FPS.Notification.Application;
 using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FPS.Notification.Tests.Infrastructure;
@@ -83,6 +84,45 @@ public sealed class VerificationEmailDeliveryTests
         Assert.True(ok);
     }
 
+    // ── Locale plumbing (LOC001 #744) ─────────────────────────────────────────
+
+    [Fact]
+    public async Task DaprBinding_CzechLocale_SubjectIsLocalized()
+    {
+        var transport = new Mock<ISendGridEmailTransport>();
+        SendGridEmailMessage? sent = null;
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SendGridEmailMessage, CancellationToken>((m, _) => sent = m)
+            .ReturnsAsync(true);
+
+        await Delivery(transport.Object, "cs-CZ").SendAsync(new VerificationEmailRequest(Tenant, Recipient, Link));
+
+        Assert.NotNull(sent);
+        Assert.Equal("Ověřte svou e-mailovou adresu FairSpot", sent!.Subject);
+        // TextBody is not HTML-entity-encoded, so it is the reliable place to assert raw Czech
+        // diacritics; HtmlEncode legitimately numeric-escapes non-ASCII characters in HtmlBody.
+        Assert.Contains("Potvrďte svou e-mailovou adresu", sent.TextBody);
+    }
+
+    [Fact]
+    public async Task DaprBinding_UnknownLocale_FallsBackToEnglishSubject()
+    {
+        var transport = new Mock<ISendGridEmailTransport>();
+        SendGridEmailMessage? sent = null;
+        transport.Setup(t => t.SendAsync(It.IsAny<SendGridEmailMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SendGridEmailMessage, CancellationToken>((m, _) => sent = m)
+            .ReturnsAsync(true);
+
+        await Delivery(transport.Object, "de-DE").SendAsync(new VerificationEmailRequest(Tenant, Recipient, Link));
+
+        Assert.NotNull(sent);
+        Assert.Equal("Verify your FairSpot email address", sent!.Subject);
+    }
+
     private static DaprBindingVerificationEmailDelivery Delivery(ISendGridEmailTransport transport) =>
         new(transport, NullLogger<DaprBindingVerificationEmailDelivery>.Instance);
+
+    private static DaprBindingVerificationEmailDelivery Delivery(ISendGridEmailTransport transport, string locale) =>
+        new(transport, NullLogger<DaprBindingVerificationEmailDelivery>.Instance,
+            Options.Create(new NotificationLocaleOptions { DefaultLocale = locale }));
 }

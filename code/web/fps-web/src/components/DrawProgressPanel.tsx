@@ -1,6 +1,7 @@
 import React from 'react';
 import type { DrawProgressResponse } from '../api/dataHub';
 import { displayDateTime, formatLifecycleStepName, lifecycleStepStatusColor } from '../displayLabels';
+import { t, tDynamic } from '../i18n';
 
 export type ProgressState =
   | { kind: 'loading' }
@@ -8,13 +9,7 @@ export type ProgressState =
   | { kind: 'error'; message: string };
 
 export function humanizeTriggerSource(source: string): string {
-  const label: Record<string, string> = {
-    manual: 'Manual',
-    scheduled: 'Scheduled',
-    recovery: 'Recovery',
-    simulation: 'Simulation',
-  };
-  return label[source] ?? source;
+  return tDynamic('hr.drawProgress.trigger', source, source);
 }
 
 // Operator-safe short ref derived from the TriggeredBy value. For long
@@ -49,7 +44,7 @@ export function DrawProgressPanel({
   drawAttemptId: string;
 }): React.ReactElement {
   if (!progress || progress.kind === 'loading') {
-    return <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.85rem' }}>Loading progress…</p>;
+    return <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.85rem' }}>{t('hr.drawProgress.loading')}</p>;
   }
 
   if (progress.kind === 'error') {
@@ -62,11 +57,11 @@ export function DrawProgressPanel({
     <div>
       {/* Summary row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.5rem 1.25rem', marginBottom: '1rem' }}>
-        <ProgressFact label="Trigger" value={data.triggerSource ? humanizeTriggerSource(data.triggerSource) : '—'} />
-        {data.triggeredBy && <ProgressFact label="Run by" value={shortTriggeredByRef(data.triggeredBy) ?? data.triggeredBy} />}
-        {data.runReason && <ProgressFact label="Reason" value={`"${data.runReason}"`} />}
-        <ProgressFact label="Started" value={data.startedAt ? displayDateTime(data.startedAt) : '—'} />
-        {data.completedAt && <ProgressFact label="Completed" value={displayDateTime(data.completedAt)} />}
+        <ProgressFact label={t('hr.drawProgress.fact.trigger')} value={data.triggerSource ? humanizeTriggerSource(data.triggerSource) : '—'} />
+        {data.triggeredBy && <ProgressFact label={t('hr.drawProgress.fact.runBy')} value={shortTriggeredByRef(data.triggeredBy) ?? data.triggeredBy} />}
+        {data.runReason && <ProgressFact label={t('hr.drawProgress.fact.reason')} value={`"${data.runReason}"`} />}
+        <ProgressFact label={t('hr.drawProgress.fact.started')} value={data.startedAt ? displayDateTime(data.startedAt) : '—'} />
+        {data.completedAt && <ProgressFact label={t('hr.drawProgress.fact.completed')} value={displayDateTime(data.completedAt)} />}
       </div>
 
       {/* Safe failure reason + guidance */}
@@ -79,11 +74,10 @@ export function DrawProgressPanel({
           marginBottom: '0.75rem',
         }}>
           <p style={{ margin: '0 0 0.3rem', fontSize: '0.85rem', color: '#991b1b', fontWeight: 600 }}>
-            Draw failed: {data.safeFailureReason}
+            {t('hr.drawProgress.failedHeadline', { reason: data.safeFailureReason })}
           </p>
           <p style={{ margin: 0, fontSize: '0.8rem', color: '#b91c1c' }}>
-            HR managers may retry this Draw using the Retry Draw action in Upcoming Draws. If the
-            failure persists, contact your system administrator with the Draw attempt ID below.
+            {t('hr.drawProgress.failedGuidance')}
           </p>
         </div>
       )}
@@ -92,7 +86,7 @@ export function DrawProgressPanel({
       {data.steps && data.steps.length > 0 ? (
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
-            Lifecycle progress
+            {t('hr.drawProgress.lifecycleTitle')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             {data.steps.map((step, i) => {
@@ -126,13 +120,13 @@ export function DrawProgressPanel({
         </div>
       ) : (
         <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
-          {data.stepsNote ?? 'Lifecycle steps are not available for this Draw.'}
+          {data.stepsNote ?? t('hr.drawProgress.noSteps')}
         </p>
       )}
 
       {/* Draw attempt ID for support/audit reference */}
       <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-        Draw attempt ID: <span style={{ fontFamily: 'monospace' }}>{drawAttemptId}</span>
+        {t('hr.drawProgress.attemptIdLabel')} <span style={{ fontFamily: 'monospace' }}>{drawAttemptId}</span>
       </div>
     </div>
   );

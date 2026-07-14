@@ -55,6 +55,7 @@ public sealed class GreenLogisticsSeedHealerTests
             Slug = "greenlogistics",
             Kind = TenantKind.Sandbox,
             IsResettableSandbox = true,
+            DefaultLocale = "cs-CZ",
         };
         tenant.SetModules(TenantModule.Parking, [TenantModule.Parking, TenantModule.Seats]);
 
@@ -94,5 +95,55 @@ public sealed class GreenLogisticsSeedHealerTests
         Assert.False(changed);
         Assert.DoesNotContain(TenantModule.Seats, healed.EnabledModules);
         Assert.False(healed.IsResettableSandbox);
+    }
+
+    // ── Default locale backfill (LOC001 / #744) ───────────────────────────────
+
+    [Fact]
+    public void Heal_Pre744SandboxTenant_BackfillsCzechDefaultLocale()
+    {
+        var tenant = Pre710SandboxTenant();
+        Assert.Null(tenant.DefaultLocale); // sanity: predates LOC001
+
+        var (healed, changed) = GreenLogisticsSeedHealer.Heal(tenant);
+
+        Assert.True(changed);
+        Assert.Equal("cs-CZ", healed.DefaultLocale);
+    }
+
+    [Fact]
+    public void Heal_AlreadyHealedTenant_WithDefaultLocaleSet_ReportsNoChange()
+    {
+        var tenant = new TenantWorkspace
+        {
+            TenantId = "greenlogistics",
+            Slug = "greenlogistics",
+            Kind = TenantKind.Sandbox,
+            IsResettableSandbox = true,
+            DefaultLocale = "cs-CZ",
+        };
+        tenant.SetModules(TenantModule.Parking, [TenantModule.Parking, TenantModule.Seats]);
+
+        var (healed, changed) = GreenLogisticsSeedHealer.Heal(tenant);
+
+        Assert.False(changed);
+        Assert.Same(tenant, healed);
+        Assert.Equal("cs-CZ", healed.DefaultLocale);
+    }
+
+    [Fact]
+    public void Heal_NonSandboxTenant_LeavesDefaultLocaleUntouched()
+    {
+        var tenant = new TenantWorkspace
+        {
+            TenantId = "prod-co",
+            Slug = "prod-co",
+            Kind = TenantKind.Production,
+        };
+
+        var (healed, changed) = GreenLogisticsSeedHealer.Heal(tenant);
+
+        Assert.False(changed);
+        Assert.Null(healed.DefaultLocale);
     }
 }

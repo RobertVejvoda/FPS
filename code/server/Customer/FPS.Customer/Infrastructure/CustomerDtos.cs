@@ -9,6 +9,9 @@ internal sealed class TenantWorkspaceDto
     public string DisplayName { get; set; } = string.Empty;
     public string Region { get; set; } = string.Empty;
     public string TimeZone { get; set; } = string.Empty;
+    // LOC001 (#744) — BCP 47 language tag such as "cs-CZ"; null when unset (deserialises as null
+    // for tenants persisted before this field existed).
+    public string? DefaultLocale { get; set; }
     public List<TenantSupportContact> SupportContacts { get; set; } = [];
     public TenantKind Kind { get; set; } = TenantKind.Production;
     public bool IsResettableSandbox { get; set; }
@@ -27,7 +30,7 @@ internal sealed class TenantWorkspaceDto
     public DateTimeOffset UpdatedAt { get; set; }
 
     public TenantWorkspace ToDomain() => TenantWorkspace.Restore(
-        TenantId, Slug, DisplayName, Region, TimeZone, SupportContacts,
+        TenantId, Slug, DisplayName, Region, TimeZone, DefaultLocale, SupportContacts,
         Kind, IsResettableSandbox, LifecycleState, Transitions, Provisioning, Branding, DiscoveryDomains, SeedEvents, CreatedAt, UpdatedAt,
         PrimaryModule, EnabledModules);
 
@@ -38,6 +41,7 @@ internal sealed class TenantWorkspaceDto
         DisplayName = ws.DisplayName,
         Region = ws.Region,
         TimeZone = ws.TimeZone,
+        DefaultLocale = ws.DefaultLocale,
         SupportContacts = ws.SupportContacts.ToList(),
         Kind = ws.Kind,
         IsResettableSandbox = ws.IsResettableSandbox,

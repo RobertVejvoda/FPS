@@ -12,7 +12,10 @@ public sealed record TenantDiscoveryResponse(
     string? AccentColor,
     string? LogoAssetId,
     string? FaviconAssetId,
-    string? LegalFooterText);
+    string? LegalFooterText,
+    // LOC001 (#744): the tenant's BCP 47 default locale (e.g. "cs-CZ"), so the pre-auth sign-in
+    // surface can localize before the user has authenticated. Null when unset.
+    string? DefaultLocale);
 
 public sealed class TenantService(
     ITenantRepository repository,
@@ -27,11 +30,16 @@ public sealed class TenantService(
         TenantKind kind = TenantKind.Production,
         bool isResettableSandbox = false,
         TenantModule primaryModule = TenantModule.Parking,
-        IReadOnlyList<TenantModule>? enabledModules = null)
+        IReadOnlyList<TenantModule>? enabledModules = null,
+        // LOC001 (#744): optional BCP 47 default locale, e.g. "cs-CZ". Null/blank means unset.
+        string? defaultLocale = null)
     {
         if (string.IsNullOrWhiteSpace(displayName)) return (null, "Display name is required.");
         if (string.IsNullOrWhiteSpace(region)) return (null, "Region is required.");
         if (string.IsNullOrWhiteSpace(timeZone)) return (null, "Time zone is required.");
+        var normalizedLocale = string.IsNullOrWhiteSpace(defaultLocale) ? null : defaultLocale.Trim();
+        var localeError = TenantWorkspace.ValidateDefaultLocale(normalizedLocale);
+        if (localeError is not null) return (null, localeError);
 
         var safeSlug = TenantProvisioningMetadata.Sanitize(slug);
         if (string.IsNullOrEmpty(safeSlug)) return (null, "Slug is required and must contain at least one alphanumeric character.");
@@ -61,6 +69,7 @@ public sealed class TenantService(
             DisplayName = displayName.Trim(),
             Region = region.Trim(),
             TimeZone = timeZone.Trim(),
+            DefaultLocale = normalizedLocale,
             SupportContacts = supportContacts,
             Kind = kind,
             // PLAT003A: only a Sandbox tenant can be marked resettable — never a Production tenant.
@@ -86,7 +95,11 @@ public sealed class TenantService(
     public async Task<string?> UpdateAsync(
         string tenantId, string displayName, string timeZone,
         IReadOnlyList<TenantSupportContact> supportContacts,
-        CancellationToken ct)
+        CancellationToken ct,
+        // LOC001 (#744): optional BCP 47 default locale. Unlike TimeZone, which is required and
+        // always overwritten, DefaultLocale is optional on update — null (omitted) leaves the
+        // tenant's stored value unchanged; a non-null value is validated and overwrites it.
+        string? defaultLocale = null)
     {
         var tenant = await repository.GetAsync(tenantId, ct);
         if (tenant is null) return "Tenant not found.";
@@ -94,8 +107,17 @@ public sealed class TenantService(
         if (string.IsNullOrWhiteSpace(timeZone)) return "Time zone is required.";
         if (tenant.LifecycleState == TenantLifecycleState.Archived) return "Archived tenants cannot be updated.";
 
+        string? normalizedLocale = null;
+        if (defaultLocale is not null)
+        {
+            normalizedLocale = string.IsNullOrWhiteSpace(defaultLocale) ? null : defaultLocale.Trim();
+            var localeError = TenantWorkspace.ValidateDefaultLocale(normalizedLocale);
+            if (localeError is not null) return localeError;
+        }
+
         tenant.DisplayName = displayName.Trim();
         tenant.TimeZone = timeZone.Trim();
+        if (defaultLocale is not null) tenant.DefaultLocale = normalizedLocale;
         tenant.SupportContacts = supportContacts;
         tenant.Touch();
         await repository.SaveAsync(tenant, ct);
@@ -201,6 +223,7 @@ public sealed class TenantService(
             b.AccentColor,
             b.LogoAssetId,
             b.FaviconAssetId,
-            b.LegalFooterText);
+            b.LegalFooterText,
+            tenant.DefaultLocale);
     }
 }

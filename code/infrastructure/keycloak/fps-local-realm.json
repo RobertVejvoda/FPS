@@ -374,5 +374,11 @@
       "credentials": []
     }
   ],
-  "loginTheme": "fairspot"
+  "loginTheme": "fairspot",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "cs"
+  ],
+  "defaultLocale": "cs"
 }

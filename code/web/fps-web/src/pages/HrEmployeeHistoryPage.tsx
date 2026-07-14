@@ -15,9 +15,16 @@ import {
   displaySlot,
   humanizeHrRejection,
 } from '../displayLabels';
+import { t, tDynamic, tPlural } from '../i18n';
 
 const STATUS_FILTERS = ['All', 'Allocated', 'Pending', 'Rejected', 'Cancelled'];
 const DEFAULT_WINDOW_DAYS = 30;
+
+// Displayed label for a booking status code. The underlying value (used for
+// state/filtering/API query params) always stays the English code.
+function statusLabel(status: string): string {
+  return tDynamic('hr.status', status, status);
+}
 
 type PageState =
   | { kind: 'loading' }
@@ -78,7 +85,7 @@ export function HrEmployeeHistoryPage() {
       if (result.kind === 'ok') {
         setState({ kind: 'ok', summary: result.summary, items: result.items, totalCount: result.totalCount });
       } else {
-        setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load history.' });
+        setState({ kind: 'error', message: 'message' in result ? result.message : t('hr.empHistory.loadError') });
       }
     });
   }, [apiBaseUrl, bearerToken, clear, navigate, userId, from, to, statusFilter]);
@@ -102,13 +109,13 @@ export function HrEmployeeHistoryPage() {
     <div className="page-stack">
       <div className="page-hero" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ margin: 0, wordBreak: 'break-word' }}>Employee parking history</h2>
+          <h2 style={{ margin: 0, wordBreak: 'break-word' }}>{t('hr.empHistory.title')}</h2>
           <p>
-            {headerName} · Support ref {shortRef}
+            {t('hr.empHistory.headerLine', { name: headerName, ref: shortRef })}
           </p>
         </div>
         <Link to="/hr-operations" className="btn-secondary" style={{ flexShrink: 0, textDecoration: 'none' }}>
-          Back to Parking Requests
+          {t('hr.empHistory.backLink')}
         </Link>
       </div>
 
@@ -116,7 +123,7 @@ export function HrEmployeeHistoryPage() {
         {/* Filters */}
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '1rem' }}>
           <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem', color: '#475569' }}>
-            From
+            {t('hr.empHistory.from')}
             <input
               type="date"
               value={from}
@@ -125,7 +132,7 @@ export function HrEmployeeHistoryPage() {
             />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem', color: '#475569' }}>
-            To
+            {t('hr.empHistory.to')}
             <input
               type="date"
               value={to}
@@ -144,7 +151,7 @@ export function HrEmployeeHistoryPage() {
                   color: statusFilter === s ? '#2563eb' : '#374151',
                   fontSize: '0.8rem', cursor: 'pointer' }}
               >
-                {s}
+                {statusLabel(s)}
               </button>
             ))}
           </div>
@@ -153,29 +160,29 @@ export function HrEmployeeHistoryPage() {
         {/* Summary */}
         {state.kind === 'ok' && (
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <SummaryChip label="Total" value={state.summary.total} />
-            <SummaryChip label="Allocated" value={state.summary.allocated} tone="ok" />
-            <SummaryChip label="Pending" value={state.summary.pending} tone="warn" />
-            <SummaryChip label="Rejected" value={state.summary.rejected} tone="bad" />
-            <SummaryChip label="Cancelled / no-show" value={state.summary.cancelled} tone="muted" />
+            <SummaryChip label={t('hr.empHistory.summary.total')} value={state.summary.total} />
+            <SummaryChip label={t('hr.status.Allocated')} value={state.summary.allocated} tone="ok" />
+            <SummaryChip label={t('hr.status.Pending')} value={state.summary.pending} tone="warn" />
+            <SummaryChip label={t('hr.status.Rejected')} value={state.summary.rejected} tone="bad" />
+            <SummaryChip label={t('hr.empHistory.summary.cancelledNoShow')} value={state.summary.cancelled} tone="muted" />
           </div>
         )}
 
         {/* Table */}
-        {state.kind === 'loading' && <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading history…</p>}
+        {state.kind === 'loading' && <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t('hr.empHistory.loading')}</p>}
         {state.kind === 'forbidden' && (
-          <p style={{ color: '#991b1b', fontSize: '0.875rem' }}>You don't have permission to view this employee's history.</p>
+          <p style={{ color: '#991b1b', fontSize: '0.875rem' }}>{t('hr.empHistory.forbidden')}</p>
         )}
         {state.kind === 'error' && (
           <div>
             <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{state.message}</p>
-            <button onClick={load} className="btn-primary">Retry</button>
+            <button onClick={load} className="btn-primary">{t('hr.empHistory.retry')}</button>
           </div>
         )}
         {state.kind === 'ok' && state.items.length === 0 && (
           <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: '1.5rem', textAlign: 'center' }}>
             <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
-              No parking requests in the selected window.
+              {t('hr.empHistory.empty')}
             </p>
           </div>
         )}
@@ -184,12 +191,12 @@ export function HrEmployeeHistoryPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '0.5rem 0.5rem' }}>Date</th>
-                  <th style={{ padding: '0.5rem 0.5rem' }}>Time</th>
-                  <th style={{ padding: '0.5rem 0.5rem' }}>Location</th>
-                  <th style={{ padding: '0.5rem 0.5rem' }}>Outcome</th>
-                  <th style={{ padding: '0.5rem 0.5rem' }}>Space / reason</th>
-                  <th style={{ padding: '0.5rem 0.5rem' }}>Updated</th>
+                  <th style={{ padding: '0.5rem 0.5rem' }}>{t('hr.empHistory.col.date')}</th>
+                  <th style={{ padding: '0.5rem 0.5rem' }}>{t('hr.empHistory.col.time')}</th>
+                  <th style={{ padding: '0.5rem 0.5rem' }}>{t('hr.empHistory.col.location')}</th>
+                  <th style={{ padding: '0.5rem 0.5rem' }}>{t('hr.empHistory.col.outcome')}</th>
+                  <th style={{ padding: '0.5rem 0.5rem' }}>{t('hr.empHistory.col.spaceReason')}</th>
+                  <th style={{ padding: '0.5rem 0.5rem' }}>{t('hr.empHistory.col.updated')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,7 +206,7 @@ export function HrEmployeeHistoryPage() {
               </tbody>
             </table>
             <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.5rem' }}>
-              {state.totalCount} request{state.totalCount === 1 ? '' : 's'} match the current filter.
+              {tPlural('hr.empHistory.matchCount', state.totalCount)}
             </p>
           </div>
         )}
@@ -228,7 +235,7 @@ function HistoryRow({ item }: { item: HrEmployeeHistoryItem }) {
       </td>
       <td style={{ padding: '0.5rem' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(item.status) }}>
-          {item.status}
+          {statusLabel(item.status)}
         </span>
       </td>
       <td style={{ padding: '0.5rem', color: '#0f172a' }}>

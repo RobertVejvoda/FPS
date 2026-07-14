@@ -662,6 +662,110 @@ public sealed class TenantServiceTests
         Assert.NotNull(error);
         Assert.Contains("invalid", error, StringComparison.OrdinalIgnoreCase);
     }
+
+    // ── Default locale (LOC001 / #744) ────────────────────────────────────────
+
+    [Fact]
+    public async Task Create_WithValidDefaultLocale_PersistsLocale()
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "loc-co", "Loc Co", "eu", "UTC", [], CancellationToken.None, defaultLocale: "cs-CZ");
+
+        Assert.Null(error);
+        Assert.Equal("cs-CZ", tenant!.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task Create_WithoutDefaultLocale_LeavesLocaleNull()
+    {
+        var (tenant, _) = await service.CreateAsync("loc-none", "Loc None", "eu", "UTC", [], CancellationToken.None);
+
+        Assert.Null(tenant!.DefaultLocale);
+    }
+
+    [Theory]
+    [InlineData("not a locale")]
+    [InlineData("123")]
+    [InlineData("cs-CZ-extra-extra")]
+    [InlineData("cs_CZ")]
+    public async Task Create_InvalidDefaultLocale_ReturnsError(string locale)
+    {
+        var (tenant, error) = await service.CreateAsync(
+            "loc-bad", "Loc Bad", "eu", "UTC", [], CancellationToken.None, defaultLocale: locale);
+
+        Assert.Null(tenant);
+        Assert.NotNull(error);
+        Assert.Contains("DefaultLocale", error);
+    }
+
+    [Fact]
+    public async Task Update_WithDefaultLocale_OverwritesStoredLocale()
+    {
+        var (created, _) = await service.CreateAsync(
+            "loc-upd", "Loc Upd", "eu", "UTC", [], CancellationToken.None, defaultLocale: "en-US");
+
+        var error = await service.UpdateAsync(
+            created!.TenantId, "Loc Upd", "UTC", [], CancellationToken.None, defaultLocale: "cs-CZ");
+
+        Assert.Null(error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Equal("cs-CZ", tenant!.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task Update_WithoutDefaultLocale_LeavesStoredLocaleUnchanged()
+    {
+        var (created, _) = await service.CreateAsync(
+            "loc-noop", "Loc Noop", "eu", "UTC", [], CancellationToken.None, defaultLocale: "cs-CZ");
+
+        var error = await service.UpdateAsync(created!.TenantId, "Loc Noop Updated", "UTC", [], CancellationToken.None);
+
+        Assert.Null(error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Equal("cs-CZ", tenant!.DefaultLocale);
+        Assert.Equal("Loc Noop Updated", tenant.DisplayName);
+    }
+
+    [Fact]
+    public async Task Update_InvalidDefaultLocale_ReturnsErrorAndDoesNotPersistOtherChanges()
+    {
+        var (created, _) = await service.CreateAsync(
+            "loc-updbad", "Loc UpdBad", "eu", "UTC", [], CancellationToken.None, defaultLocale: "en-US");
+
+        var error = await service.UpdateAsync(
+            created!.TenantId, "Should Not Persist", "UTC", [], CancellationToken.None, defaultLocale: "???");
+
+        Assert.NotNull(error);
+        Assert.Contains("DefaultLocale", error);
+        var tenant = await service.GetAsync(created.TenantId, CancellationToken.None);
+        Assert.Equal("en-US", tenant!.DefaultLocale);
+        Assert.Equal("Loc UpdBad", tenant.DisplayName);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_ExposesDefaultLocale()
+    {
+        var (created, _) = await service.CreateAsync(
+            "loc-disc", "Loc Disc", "eu", "UTC", [], CancellationToken.None, defaultLocale: "cs-CZ");
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "loc-disc.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("loc-disc.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal("cs-CZ", response!.DefaultLocale);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_UnsetDefaultLocale_ReturnsNull()
+    {
+        var (created, _) = await service.CreateAsync("loc-discnull", "Loc DiscNull", "eu", "UTC", [], CancellationToken.None);
+        await service.RegisterDiscoveryDomainAsync(created!.TenantId, "loc-discnull.example", "h", CancellationToken.None);
+
+        var response = await service.DiscoverAsync("loc-discnull.example", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Null(response!.DefaultLocale);
+    }
 }
 
 /// <summary>
@@ -686,7 +790,10 @@ public sealed class GreenLogisticsSeedTests
                 new TenantSupportContact("GL Facilities", "facilities@greenlogistics.example", "Facilities"),
                 new TenantSupportContact("GL IT Support", "it@greenlogistics.example", "Identity"),
             ],
-            CancellationToken.None, requestedTenantId: tenantId);
+            CancellationToken.None, requestedTenantId: tenantId,
+            // LOC001 (#744): Green Logistics is the Czech-market showcase tenant — mirrors
+            // Program.cs's SeedGreenLogisticsTenantAsync, which sets this next to TimeZone.
+            defaultLocale: "cs-CZ");
 
         Assert.Null(error);
         Assert.NotNull(tenant);
@@ -712,6 +819,13 @@ public sealed class GreenLogisticsSeedTests
         var tenant = await SeedAsync();
         Assert.Equal("greenlogistics", tenant.TenantId);
         Assert.Equal("greenlogistics", tenant.Slug);
+    }
+
+    [Fact]
+    public async Task Seed_CarriesCzechDefaultLocale()
+    {
+        var tenant = await SeedAsync();
+        Assert.Equal("cs-CZ", tenant.DefaultLocale);
     }
 
     [Fact]

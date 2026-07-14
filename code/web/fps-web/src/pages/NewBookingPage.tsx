@@ -7,6 +7,8 @@ import { isWorkday, nextWorkdayOptions, toLocalDateString } from '../dateOptions
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { useTenantModules } from '../tenant/TenantModulesContext';
 import { ModuleBadge } from '../components/ModuleBadge';
+import { displayResourceNoun } from '../displayLabels';
+import { t, tDynamic, formatWallClock } from '../i18n';
 
 const VEHICLE_TYPES = ['Compact', 'Sedan', 'SUV', 'Van', 'Truck', 'Motorcycle'] as const;
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
@@ -19,9 +21,9 @@ const DEFAULT_SEATS_LOCATION = 'GL-TEAMS';
 // These reuse the established Parking whole-day default (08:00–18:00) that the
 // draw-status checks, seed, and day cards already use; morning/afternoon split it.
 const TIME_PRESETS = [
-  { key: 'day', name: 'Whole day', start: '08:00', end: '18:00' },
-  { key: 'morning', name: 'Morning', start: '08:00', end: '12:00' },
-  { key: 'afternoon', name: 'Afternoon', start: '12:00', end: '18:00' },
+  { key: 'day', labelKey: 'bookings.preset.day', start: '08:00', end: '18:00' },
+  { key: 'morning', labelKey: 'bookings.preset.morning', start: '08:00', end: '12:00' },
+  { key: 'afternoon', labelKey: 'bookings.preset.afternoon', start: '12:00', end: '18:00' },
 ] as const;
 
 type Form = {
@@ -89,9 +91,9 @@ function dateOffsetFromParam(dateStr: string | null): number {
 }
 
 function formatPresetHours(start: string, end: string): string {
-  const fmt = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+  const fmt = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return formatWallClock(h, m);
   };
   return `${fmt(start)} – ${fmt(end)}`;
 }
@@ -110,18 +112,18 @@ const initialForm = (offsetDays = 1): Form => ({
 });
 
 function describeSubmitResult(module: 'Parking' | 'Seats', res: SubmitResult): ModuleOutcome {
-  const noun = module === 'Seats' ? 'seat' : 'spot';
+  const noun = displayResourceNoun(module).toLowerCase();
   if (res.kind === 'accepted') {
     return {
       module,
       ok: true,
       text: res.status === 'Allocated'
-        ? `Your ${noun} is allocated — no draw needed.`
-        : `Request submitted — you’ll find out in the draw.`,
+        ? t('bookings.submit.allocated', { noun })
+        : t('bookings.submit.pendingDraw'),
     };
   }
-  if (res.kind === 'rejected') return { module, ok: false, text: res.reason ?? 'Request not accepted.' };
-  return { module, ok: false, text: 'message' in res ? res.message : 'Submission failed.' };
+  if (res.kind === 'rejected') return { module, ok: false, text: res.reason ?? t('bookings.submit.notAccepted') };
+  return { module, ok: false, text: 'message' in res ? res.message : t('bookings.submit.failed') };
 }
 
 export function NewBookingPage() {
@@ -295,18 +297,18 @@ export function NewBookingPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: typeof errors = {};
-    if (!wantParking && !wantSeat) errs.modules = 'Select at least one request to submit.';
-    if (wantParking && !form.facilityId.trim()) errs.facilityId = 'Required';
-    if (wantParking && !form.licensePlate.trim()) errs.licensePlate = 'Select a vehicle or enter license plate';
+    if (!wantParking && !wantSeat) errs.modules = t('bookings.error.selectAtLeastOne');
+    if (wantParking && !form.facilityId.trim()) errs.facilityId = t('bookings.error.required');
+    if (wantParking && !form.licensePlate.trim()) errs.licensePlate = t('bookings.error.selectVehicleOrPlate');
     const arrival = toIso(form.plannedArrival);
     const departure = toIso(form.plannedDeparture);
-    if (!arrival) errs.plannedArrival = 'Use YYYY-MM-DDTHH:MM';
-    if (!departure) errs.plannedDeparture = 'Use YYYY-MM-DDTHH:MM';
-    if (arrival && departure && departure <= arrival) errs.plannedDeparture = 'Must be after arrival';
+    if (!arrival) errs.plannedArrival = t('bookings.error.invalidDateTimeFormat');
+    if (!departure) errs.plannedDeparture = t('bookings.error.invalidDateTimeFormat');
+    if (arrival && departure && departure <= arrival) errs.plannedDeparture = t('bookings.error.mustBeAfterArrival');
     // A closed Parking window fully blocks only a parking-only selection; with a
     // seat also selected, Parking is reported as closed per-module and the seat
     // still submits (partial success is the default — UX009 #782 / review #790).
-    if (wantParking && !wantSeat && drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = drawStatus.cannotRequestReason || 'Requests are closed for this time.';
+    if (wantParking && !wantSeat && drawStatus?.kind === 'ok' && !drawStatus.canRequest) errs.plannedArrival = drawStatus.cannotRequestReason || t('bookings.error.requestsClosed');
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setSubmitting(true);
@@ -319,7 +321,7 @@ export function NewBookingPage() {
       results.push({
         module: 'Parking',
         ok: false,
-        text: (drawStatus.kind === 'ok' && drawStatus.cannotRequestReason) || 'Requests are closed for this time.',
+        text: (drawStatus.kind === 'ok' && drawStatus.cannotRequestReason) || t('bookings.error.requestsClosed'),
       });
     } else if (wantParking) {
       const res = await submitBooking({ apiBaseUrl, bearerToken }, {
@@ -364,16 +366,16 @@ export function NewBookingPage() {
   return (
     <div style={{ maxWidth: 560 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button onClick={() => navigate('/bookings')} style={backBtn}>← Back</button>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Request</h2>
+        <button onClick={() => navigate('/bookings')} style={backBtn}>{t('bookings.back')}</button>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('bookings.newRequest.heading')}</h2>
       </div>
 
       {profileLoading ? (
-        <p style={{ color: '#6b7280', fontSize: 14 }}>Loading…</p>
+        <p style={{ color: '#6b7280', fontSize: 14 }}>{t('common.loading')}</p>
       ) : (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* 1 — date first */}
-          <Field label="Date *" error={errors.plannedArrival}>
+          <Field label={t('bookings.field.date')} error={errors.plannedArrival}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {quickDates.map((option) => {
                 const status = dateStatuses[option.date];
@@ -398,7 +400,7 @@ export function NewBookingPage() {
                       opacity: closed ? 0.6 : 1,
                     }}
                   >
-                    {option.label}{closed ? ' - closed' : ''}
+                    {option.label}{closed ? t('bookings.date.closedSuffix') : ''}
                   </button>
                 );
               })}
@@ -411,11 +413,11 @@ export function NewBookingPage() {
               onChange={(e) => setRequestDate(e.target.value)}
               style={{ ...inputStyle, marginTop: 8 }}
             />
-            {dateStatusesLoading ? <span style={{ fontSize: 12, color: '#6b7280' }}>Checking available dates...</span> : null}
+            {dateStatusesLoading ? <span style={{ fontSize: 12, color: '#6b7280' }}>{t('bookings.status.checkingDates')}</span> : null}
           </Field>
 
           {/* 2 — time presets shown as actual hours */}
-          <Field label="Time *" error={errors.plannedDeparture}>
+          <Field label={t('bookings.field.time')} error={errors.plannedDeparture}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {TIME_PRESETS.map((preset) => {
                 const selected = activePresetKey === preset.key;
@@ -435,50 +437,56 @@ export function NewBookingPage() {
                       fontSize: 13,
                     }}
                   >
-                    {preset.name} · {formatPresetHours(preset.start, preset.end)}
+                    {t(preset.labelKey)} · {formatPresetHours(preset.start, preset.end)}
                   </button>
                 );
               })}
             </div>
             {/* Custom times remain available; editing them simply deselects the presets. */}
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <label style={{ flex: 1, fontSize: 12, color: '#6b7280' }}>Arrival
+              <label style={{ flex: 1, fontSize: 12, color: '#6b7280' }}>{t('bookings.field.arrival')}
                 <input type="time" value={timeFromDateTimeLocal(form.plannedArrival)} onChange={(e) => set('plannedArrival', withTime(form.plannedArrival, e.target.value))} style={inputStyle} />
               </label>
-              <label style={{ flex: 1, fontSize: 12, color: '#6b7280' }}>Departure
+              <label style={{ flex: 1, fontSize: 12, color: '#6b7280' }}>{t('bookings.field.departure')}
                 <input type="time" value={timeFromDateTimeLocal(form.plannedDeparture)} onChange={(e) => set('plannedDeparture', withTime(form.plannedDeparture, e.target.value))} style={inputStyle} />
               </label>
             </div>
           </Field>
 
           {/* 3 — module options for the selected date/time */}
-          <Field label={`For ${selectedDateLabel}, ${formatPresetHours(timeFromDateTimeLocal(form.plannedArrival), timeFromDateTimeLocal(form.plannedDeparture))}`} error={errors.modules}>
+          <Field
+            label={t('bookings.field.forDateTime', {
+              date: selectedDateLabel,
+              time: formatPresetHours(timeFromDateTimeLocal(form.plannedArrival), timeFromDateTimeLocal(form.plannedDeparture)),
+            })}
+            error={errors.modules}
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {/* Parking module card */}
               <div style={moduleCardStyle(wantParking)}>
                 <label style={moduleHeadStyle}>
                   <input type="checkbox" checked={wantParking} onChange={(e) => { setWantParking(e.target.checked); setErrors((er) => ({ ...er, modules: undefined })); }} />
                   <ModuleBadge resourceType="Parking" />
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>Parking spot</span>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{t('bookings.module.parkingSpot')}</span>
                 </label>
 
                 {wantParking && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 10 }}>
-                    <Field label="Facility *" error={errors.facilityId}>
+                    <Field label={t('bookings.field.facility')} error={errors.facilityId}>
                       <select value={form.facilityId} onChange={(e) => set('facilityId', e.target.value)} style={inputStyle}>
-                        <option value="">Select a facility…</option>
-                        <option value={DEMO_FACILITY_ID}>Headquarters</option>
+                        <option value="">{t('bookings.field.selectFacility')}</option>
+                        <option value={DEMO_FACILITY_ID}>{t('labels.location.GL-HQ')}</option>
                       </select>
                     </Field>
-                    <Field label="Location (optional)" error={errors.locationId}>
+                    <Field label={t('bookings.field.location')} error={errors.locationId}>
                       <select value={form.locationId} onChange={(e) => set('locationId', e.target.value)} style={inputStyle}>
-                        <option value="">Any location</option>
-                        <option value={DEMO_LOCATION_ID}>Prague</option>
+                        <option value="">{t('bookings.field.anyLocation')}</option>
+                        <option value={DEMO_LOCATION_ID}>{t('labels.location.Prague')}</option>
                       </select>
                     </Field>
 
                     {profile && profile.vehicles.filter(v => v.isActive).length > 0 ? (
-                      <Field label="Vehicle *" error={errors.licensePlate}>
+                      <Field label={t('bookings.field.vehicle')} error={errors.licensePlate}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {profile.vehicles.filter(v => v.isActive).map((v) => (
                             <button
@@ -498,7 +506,7 @@ export function NewBookingPage() {
                             >
                               <div style={{ fontWeight: 600 }}>{v.licensePlate}</div>
                               <div style={{ fontSize: 13, color: '#6b7280' }}>
-                                {v.vehicleType} · {v.isElectric ? 'Electric' : 'Standard'}
+                                {v.vehicleType} · {v.isElectric ? t('bookings.vehicle.electric') : t('bookings.vehicle.standard')}
                               </div>
                             </button>
                           ))}
@@ -506,18 +514,18 @@ export function NewBookingPage() {
                       </Field>
                     ) : (
                       <>
-                        <Field label="License plate *" error={errors.licensePlate}>
-                          <input value={form.licensePlate} onChange={(e) => set('licensePlate', e.target.value)} placeholder="e.g. ABC-123" style={inputStyle} />
-                          <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>No vehicles in profile. Add vehicles in Profile page to speed up spot requests.</p>
+                        <Field label={t('bookings.field.licensePlate')} error={errors.licensePlate}>
+                          <input value={form.licensePlate} onChange={(e) => set('licensePlate', e.target.value)} placeholder={t('bookings.field.licensePlatePlaceholder')} style={inputStyle} />
+                          <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>{t('bookings.vehicle.noneInProfile')}</p>
                         </Field>
-                        <Field label="Vehicle type *" error={errors.vehicleType}>
+                        <Field label={t('bookings.field.vehicleType')} error={errors.vehicleType}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                             {VEHICLE_TYPES.map((vt) => (
                               <button
                                 key={vt} type="button" onClick={() => set('vehicleType', vt)}
                                 style={{ padding: '6px 14px', borderRadius: 6, border: `2px solid ${form.vehicleType === vt ? '#1d4ed8' : '#e5e7eb'}`, background: form.vehicleType === vt ? '#1d4ed8' : '#fff', color: form.vehicleType === vt ? '#fff' : '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 13 }}
                               >
-                                {vt}
+                                {tDynamic('bookings.vehicleType', vt, vt)}
                               </button>
                             ))}
                           </div>
@@ -529,24 +537,24 @@ export function NewBookingPage() {
                       {form.selectedVehicleId ? null : (
                         <label style={checkboxRow}>
                           <input type="checkbox" checked={form.isElectric} onChange={(e) => set('isElectric', e.target.checked)} />
-                          Electric vehicle
+                          {t('bookings.field.electricVehicle')}
                         </label>
                       )}
                       <label style={checkboxRow}>
                         <input type="checkbox" checked={form.requiresAccessibleSpot} onChange={(e) => set('requiresAccessibleSpot', e.target.checked)} />
-                        Requires accessible spot
+                        {t('bookings.field.requiresAccessibleSpot')}
                       </label>
                       <label style={checkboxRow}>
                         <input type="checkbox" checked={form.isCompanyCar} onChange={(e) => set('isCompanyCar', e.target.checked)} />
-                        Company car
+                        {t('bookings.field.companyCar')}
                       </label>
                     </div>
 
                     {drawStatusLoading ? (
-                      <div style={{ fontSize: 13, color: '#6b7280' }}>Checking request window…</div>
+                      <div style={{ fontSize: 13, color: '#6b7280' }}>{t('bookings.status.checkingWindow')}</div>
                     ) : drawStatus?.kind === 'ok' && !drawStatus.canRequest ? (
                       <div style={{ padding: '10px 14px', borderRadius: 8, background: '#f9fafb', border: '1px solid #e5e7eb', color: '#6b7280', fontSize: 13 }}>
-                        {drawStatus.cannotRequestReason || drawStatus.safeMessage || 'Requests are closed for this time.'}
+                        {drawStatus.cannotRequestReason || drawStatus.safeMessage || t('bookings.error.requestsClosed')}
                       </div>
                     ) : null}
                   </div>
@@ -559,14 +567,11 @@ export function NewBookingPage() {
                   <label style={moduleHeadStyle}>
                     <input type="checkbox" checked={wantSeat} onChange={(e) => { setWantSeat(e.target.checked); setErrors((er) => ({ ...er, modules: undefined })); }} />
                     <ModuleBadge resourceType="Seats" />
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>Team seat</span>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{t('bookings.module.teamSeat')}</span>
                   </label>
                   {wantSeat && (
                     <p style={{ margin: '8px 0 0', fontSize: 13, color: '#6b7280' }}>
-                      Requests any allowed team-area seat for the selected date and time — no specific
-                      seat is chosen here yet. Allocation uses the same fair draw as parking and follows
-                      your company’s seat-area and team-priority rules; seat preferences are inputs to
-                      allocation, not guarantees.
+                      {t('bookings.module.seatDescription')}
                     </p>
                   )}
                 </div>
@@ -585,7 +590,7 @@ export function NewBookingPage() {
               ))}
               {outcomes.some(o => o.ok) && (
                 <button type="button" onClick={() => navigate('/bookings')} style={{ ...backBtn, alignSelf: 'flex-start' }}>
-                  View My Reservations →
+                  {t('bookings.viewMyReservations')}
                 </button>
               )}
             </div>
@@ -596,7 +601,7 @@ export function NewBookingPage() {
             disabled={submitting || (wantParking && !wantSeat && (drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest)))}
             style={{ ...primaryBtn, opacity: submitting || (wantParking && !wantSeat && (drawStatusLoading || (drawStatus?.kind === 'ok' && !drawStatus.canRequest))) ? 0.6 : 1 }}
           >
-            {submitting ? 'Submitting…' : wantParking && wantSeat ? 'Submit selected requests' : 'Submit request'}
+            {submitting ? t('bookings.submitting') : wantParking && wantSeat ? t('bookings.submitSelected') : t('bookings.submitRequest')}
           </button>
         </form>
       )}

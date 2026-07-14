@@ -1,5 +1,6 @@
 using FPS.Notification.Domain;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FPS.Notification.Application;
 
@@ -11,7 +12,8 @@ public sealed class BookingEventNotificationHandler(
     IEmailRecipientResolver emailRecipientResolver,
     INotificationPreferencesRepository preferencesRepository,
     INotificationAudienceResolver audienceResolver,
-    ILogger<BookingEventNotificationHandler> logger)
+    ILogger<BookingEventNotificationHandler> logger,
+    IOptions<NotificationLocaleOptions>? localeOptions = null)
 {
     // HR-variant notification types. The handler appends ".hr" to the
     // source event type when fanning out to HR users so the dedup key,
@@ -30,22 +32,10 @@ public sealed class BookingEventNotificationHandler(
         "booking.drawCompleted",
     };
 
-    // Maps ReasonCode values to employee-safe human-readable text.
-    // Codes correspond to BookingRejectionCode enum values.
-    private static readonly IReadOnlyDictionary<string, string> SafeRejectionReasons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["PastDate"]                  = "The requested date has already passed.",
-        ["CutOffPassed"]              = "The submission deadline for this time slot has passed.",
-        ["DailyCapExceeded"]          = "The maximum number of requests for this day has been reached.",
-        ["DuplicateRequest"]          = "You already have an active request for this time slot.",
-        ["VehicleConstraintUnmatched"] = "Your vehicle does not meet the requirements for this parking area.",
-        ["NoCapacityAvailable"]       = "There are no available spots for this time slot.",
-        ["RequestorIneligible"]       = "Your account is not currently eligible to request parking.",
-        ["SameDayBookingDisabled"]    = "Same-day parking requests are not enabled.",
-        ["NoCapacityForSameDay"]      = "No spots are available for same-day allocation.",
-        ["ProfileUnavailable"]        = "Your profile information could not be verified. Please check your account.",
-        ["DrawNotSelected"]           = "Your request was not selected in the draw for this time slot.",
-    };
+    // LOC001 (#744) — TODO: per-tenant/per-recipient locale resolution is a documented follow-up for a
+    // later slice. Until then every recipient notified by this service instance gets the same
+    // service-wide default locale (Notification:DefaultLocale), regardless of who they are.
+    private readonly string locale = NotificationMessages.NormalizeLocale(localeOptions?.Value.DefaultLocale);
 
     public async Task HandleAsync(BookingEventEnvelope envelope, CancellationToken cancellationToken = default)
     {
@@ -84,7 +74,7 @@ public sealed class BookingEventNotificationHandler(
         if (await repository.ExistsAsync(dedupKey, envelope.TenantId, cancellationToken))
             return;
 
-        var record = CreateRecord(envelope, delivery, NotificationChannel.InApp, dedupKey);
+        var record = CreateRecord(envelope, delivery, NotificationChannel.InApp, dedupKey, locale);
         await repository.SaveAsync(record, cancellationToken);
         // Best-effort — broadcaster failure must not affect persistence
         try { await broadcaster.BroadcastAsync(record, cancellationToken); } catch { }
@@ -96,7 +86,7 @@ public sealed class BookingEventNotificationHandler(
         if (await repository.ExistsAsync(dedupKey, envelope.TenantId, cancellationToken))
             return;
 
-        var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey);
+        var record = CreateRecord(envelope, delivery, NotificationChannel.Email, dedupKey, locale);
 
         // NOTIF #728 — resolve the recipient user ID to a verified email before any provider send.
         // Fail closed on an unresolved/unverified/malformed recipient: record a delivery-rejected
@@ -113,7 +103,7 @@ public sealed class BookingEventNotificationHandler(
             return;
         }
 
-        var composed = emailComposer.Compose(record);
+        var composed = emailComposer.Compose(record, locale);
         EmailSendResult result;
         try { result = await emailSender.SendAsync(record, recipient.Email!, composed, cancellationToken); }
         catch { result = EmailSendResult.Fail("Email delivery unavailable", EmailFailureCategory.ProviderUnavailable); }
@@ -135,7 +125,7 @@ public sealed class BookingEventNotificationHandler(
     }
 
     private static NotificationRecord CreateRecord(
-        BookingEventEnvelope envelope, DeliveryTarget delivery, string channel, string dedupKey) => new()
+        BookingEventEnvelope envelope, DeliveryTarget delivery, string channel, string dedupKey, string locale) => new()
     {
         Id = Guid.NewGuid(),
         DeduplicationKey = dedupKey,
@@ -143,7 +133,7 @@ public sealed class BookingEventNotificationHandler(
         RecipientId = delivery.RecipientId,
         NotificationType = delivery.EffectiveType,
         Channel = channel,
-        MessageText = ResolveMessage(envelope, delivery.EffectiveType),
+        MessageText = ResolveMessage(envelope, delivery.EffectiveType, locale),
         RelatedRequestId = envelope.Payload.BookingRequestId,
         RelatedDate = envelope.Payload.Date,
         RelatedTimeSlot = envelope.Payload.TimeSlot,
@@ -200,131 +190,124 @@ public sealed class BookingEventNotificationHandler(
 
     private sealed record DeliveryTarget(string RecipientId, string EffectiveType);
 
-    private static string ResolveMessage(BookingEventEnvelope envelope, string effectiveType)
+    private static string ResolveMessage(BookingEventEnvelope envelope, string effectiveType, string locale)
     {
         var p = envelope.Payload;
-        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
+        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot, locale);
 
         return effectiveType switch
         {
             "booking.requestSubmitted" =>
-                $"Your parking request{ctx} has been submitted and is waiting for draw allocation.",
+                NotificationMessages.Resolve(locale, "booking.requestSubmitted.message", ctx),
 
             "booking.requestSubmitted" + HrSuffix =>
-                $"A new parking request{ctx} has been submitted and is awaiting allocation.",
+                NotificationMessages.Resolve(locale, "booking.requestSubmitted.hr.message", ctx),
 
             "booking.requestRejected" =>
-                BuildRejectionMessage(p, ctx),
+                BuildRejectionMessage(p, ctx, locale),
 
             "booking.slotAllocated" =>
                 p.AllocationSource == "reallocation"
-                    ? $"A parking spot has been reallocated to your request{ctx} after a cancellation freed a slot."
-                    : $"A parking spot has been allocated to your request{ctx}.",
+                    ? NotificationMessages.Resolve(locale, "booking.slotAllocated.reallocation.message", ctx)
+                    : NotificationMessages.Resolve(locale, "booking.slotAllocated.message", ctx),
 
             "booking.requestCancelled" =>
-                BuildCancelledMessage(p, envelope.ActorType),
+                BuildCancelledMessage(p, envelope.ActorType, locale),
 
             "booking.requestCancelled" + HrSuffix =>
-                BuildHrCancellationMessage(p, ctx),
+                BuildHrCancellationMessage(p, ctx, locale),
 
             "booking.drawCompleted" =>
-                BuildDrawCompletedMessage(p, ctx, hrAudience: false),
+                BuildDrawCompletedMessage(p, ctx, hrAudience: false, locale),
 
             "booking.drawCompleted" + HrSuffix =>
-                BuildDrawCompletedMessage(p, ctx, hrAudience: true),
+                BuildDrawCompletedMessage(p, ctx, hrAudience: true, locale),
 
             "booking.noShowRecorded" =>
-                $"Your parking spot{ctx} was recorded as a no-show. This may affect your future allocation priority.",
+                NotificationMessages.Resolve(locale, "booking.noShowRecorded.message", ctx),
 
             "booking.penaltyApplied" =>
-                BuildPenaltyMessage(p),
+                BuildPenaltyMessage(p, locale),
 
             "booking.usageConfirmed" =>
-                $"Your parking usage{ctx} has been confirmed.",
+                NotificationMessages.Resolve(locale, "booking.usageConfirmed.message", ctx),
 
             "booking.requestExpired" =>
-                $"Your parking request{ctx} has expired and is no longer active.",
+                NotificationMessages.Resolve(locale, "booking.requestExpired.message", ctx),
 
             "booking.manualCorrectionApplied" =>
                 string.IsNullOrEmpty(p.ReasonText)
-                    ? "Your parking request was updated by an authorized administrator."
-                    : $"Your parking request was updated by an authorized administrator. Reason: {p.ReasonText}",
+                    ? NotificationMessages.Resolve(locale, "booking.manualCorrectionApplied.noReason.message")
+                    : NotificationMessages.Resolve(locale, "booking.manualCorrectionApplied.reason.message", p.ReasonText),
 
-            _ => $"A booking event occurred: {effectiveType}."
+            _ => NotificationMessages.Resolve(locale, "booking.unknown.message", effectiveType)
         };
     }
 
-    private static string BuildContext(string? date, string? locationId, string? timeSlot)
+    private static string BuildContext(string? date, string? locationId, string? timeSlot, string locale)
     {
         if (string.IsNullOrEmpty(date)) return string.Empty;
-        var datePart = TryFormatDate(date);
-        var location = string.IsNullOrEmpty(locationId) ? string.Empty : $" at {locationId}";
-        var slot = string.IsNullOrEmpty(timeSlot) ? string.Empty : $" ({timeSlot})";
-        return $" for {datePart}{location}{slot}";
+        var datePart = NotificationMessages.FormatDate(date, locale);
+        var location = string.IsNullOrEmpty(locationId) ? string.Empty : NotificationMessages.Resolve(locale, "context.location", locationId);
+        var slot = string.IsNullOrEmpty(timeSlot) ? string.Empty : NotificationMessages.Resolve(locale, "context.slot", timeSlot);
+        return NotificationMessages.Resolve(locale, "context.suffix", datePart, location, slot);
     }
 
-    private static string TryFormatDate(string date)
+    private static string BuildRejectionMessage(BookingEventPayload p, string ctx, string locale)
     {
-        return DateOnly.TryParse(date, out var d)
-            ? d.ToString("d MMM yyyy")
-            : date;
-    }
-
-    private static string BuildRejectionMessage(BookingEventPayload p, string ctx)
-    {
-        var reason = !string.IsNullOrEmpty(p.ReasonCode) && SafeRejectionReasons.TryGetValue(p.ReasonCode, out var safe)
+        var reason = !string.IsNullOrEmpty(p.ReasonCode) && NotificationMessages.TryResolve(locale, $"rejection.{p.ReasonCode}", out var safe)
             ? safe
             : !string.IsNullOrEmpty(p.ReasonText) ? p.ReasonText : null;
 
         return reason is not null
-            ? $"Your parking request{ctx} could not be processed. {reason}"
-            : $"Your parking request{ctx} could not be processed.";
+            ? NotificationMessages.Resolve(locale, "booking.requestRejected.reason.message", ctx, reason)
+            : NotificationMessages.Resolve(locale, "booking.requestRejected.noReason.message", ctx);
     }
 
-    private static string BuildCancelledMessage(BookingEventPayload p, string actorType)
+    private static string BuildCancelledMessage(BookingEventPayload p, string actorType, string locale)
     {
-        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot);
+        var ctx = BuildContext(p.Date, p.LocationId, p.TimeSlot, locale);
         var isHr = actorType is "hr_manager" or "admin";
         if (isHr)
         {
             return string.IsNullOrEmpty(p.ReasonText)
-                ? $"Your parking request{ctx} was cancelled by HR."
-                : $"Your parking request{ctx} was cancelled by HR. Reason: {p.ReasonText}";
+                ? NotificationMessages.Resolve(locale, "booking.requestCancelled.byHr.noReason.message", ctx)
+                : NotificationMessages.Resolve(locale, "booking.requestCancelled.byHr.reason.message", ctx, p.ReasonText);
         }
-        return $"Your parking request{ctx} has been cancelled.";
+        return NotificationMessages.Resolve(locale, "booking.requestCancelled.message", ctx);
     }
 
-    private static string BuildDrawCompletedMessage(BookingEventPayload p, string ctx, bool hrAudience)
+    private static string BuildDrawCompletedMessage(BookingEventPayload p, string ctx, bool hrAudience, string locale)
     {
         if (p.AllocatedCount.HasValue && p.RejectedCount.HasValue)
         {
             var total = p.AllocatedCount.Value + p.RejectedCount.Value + (p.WaitlistedCount ?? 0);
             return hrAudience
-                ? $"The parking draw{ctx} has completed: {p.AllocatedCount} of {total} requests allocated."
-                : $"Parking allocation{ctx} is complete: {p.AllocatedCount} of {total} requests allocated.";
+                ? NotificationMessages.Resolve(locale, "booking.drawCompleted.hr.withCounts.message", ctx, p.AllocatedCount, total)
+                : NotificationMessages.Resolve(locale, "booking.drawCompleted.withCounts.message", ctx, p.AllocatedCount, total);
         }
         return hrAudience
-            ? $"The parking draw{ctx} has completed."
-            : $"Parking allocation{ctx} is complete.";
+            ? NotificationMessages.Resolve(locale, "booking.drawCompleted.hr.noCounts.message", ctx)
+            : NotificationMessages.Resolve(locale, "booking.drawCompleted.noCounts.message", ctx);
     }
 
-    private static string BuildHrCancellationMessage(BookingEventPayload p, string ctx)
+    private static string BuildHrCancellationMessage(BookingEventPayload p, string ctx, string locale)
     {
         return string.IsNullOrEmpty(p.ReasonText)
-            ? $"An employee has cancelled their parking request{ctx}."
-            : $"An employee has cancelled their parking request{ctx}. Reason: {p.ReasonText}";
+            ? NotificationMessages.Resolve(locale, "booking.requestCancelled.hr.noReason.message", ctx)
+            : NotificationMessages.Resolve(locale, "booking.requestCancelled.hr.reason.message", ctx, p.ReasonText);
     }
 
-    private static string BuildPenaltyMessage(BookingEventPayload p)
+    private static string BuildPenaltyMessage(BookingEventPayload p, string locale)
     {
         // ReasonCode is Booking's PenaltyType enum name (e.g. "LateCancellation", "NoShow").
         var penaltyLabel = p.ReasonCode switch
         {
-            "NoShow"          => "no-show",
-            "LateCancellation" => "late cancellation",
-            _                 => "a booking violation"
+            "NoShow"           => NotificationMessages.Resolve(locale, "penalty.label.NoShow"),
+            "LateCancellation" => NotificationMessages.Resolve(locale, "penalty.label.LateCancellation"),
+            _                  => NotificationMessages.Resolve(locale, "penalty.label.generic")
         };
-        return $"A penalty was applied to your account due to {penaltyLabel}. This may affect your future allocation priority.";
+        return NotificationMessages.Resolve(locale, "booking.penaltyApplied.message", penaltyLabel);
     }
 
     private static string? ResolveNextAction(string eventType) =>

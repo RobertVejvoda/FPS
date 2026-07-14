@@ -16,6 +16,31 @@ import {
   displaySlot,
   humanizeHrRejection,
 } from '../displayLabels';
+import { t, tDynamic, tPlural } from '../i18n';
+
+// Displayed label for a booking status code. The underlying value stays the
+// English code wherever it drives logic.
+function statusLabel(status: string): string {
+  return tDynamic('hr.status', status, status);
+}
+
+function yesNo(value: boolean): string {
+  return value ? t('hr.drawer.yes') : t('hr.drawer.no');
+}
+
+// Profile status is a free-text field from the profile service; only the
+// well-known 'Active' value has a translation, everything else falls back
+// to the raw value (matches the tDynamic fallback pattern used elsewhere).
+function profileStatusLabel(status: string): string {
+  return tDynamic('hr.drawer.profileStatusValue', status, status);
+}
+
+// Vehicle type comes from the HR vehicle import (`car` | `motorcycle` | `van`,
+// see HrImportPage). Those machine values stay verbatim in the CSV contract;
+// here we only translate how they're displayed to HR.
+function vehicleTypeLabel(vehicleType: string): string {
+  return tDynamic('hr.drawer.vehicleTypeValue', vehicleType, vehicleType);
+}
 
 interface Props {
   request: HrBookingListItem;
@@ -40,7 +65,7 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
       if (cancelled) return;
       if (result.kind === 'ok') setState({ kind: 'ok', summary: result.data });
       else if (result.kind === 'not-found') setState({ kind: 'not-found', shortRef: result.shortRef });
-      else if (result.kind === 'unauthenticated') setState({ kind: 'error', message: 'Session expired. Please sign in again.' });
+      else if (result.kind === 'unauthenticated') setState({ kind: 'error', message: t('hr.drawer.sessionExpired') });
       else if (result.kind === 'unreachable') setState({ kind: 'error', message: result.message });
       else setState({ kind: 'error', message: result.message });
     });
@@ -54,12 +79,12 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
   }, [onClose]);
 
   const headerName = state.kind === 'ok'
-    ? (state.summary.displayName ?? `Requestor ${state.summary.shortRef}`)
+    ? (state.summary.displayName ?? t('labels.requestor.withRef', { ref: state.summary.shortRef }))
     : (displayName ?? displayRequestorRef(request.requestorRef));
   const headerShortRef = state.kind === 'ok' ? state.summary.shortRef : null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Requestor detail"
+    <div role="dialog" aria-modal="true" aria-label={t('hr.drawer.ariaLabel')}
          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
       {/* Backdrop */}
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(15, 23, 42, 0.4)' }} />
@@ -78,7 +103,7 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
               </div>
             )}
           </div>
-          <button onClick={onClose} aria-label="Close requestor detail"
+          <button onClick={onClose} aria-label={t('hr.drawer.closeAria')}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.1rem',
               padding: '0.25rem 0.5rem', borderRadius: 4, color: '#64748b', flexShrink: 0 }}>
             ✕
@@ -87,7 +112,7 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
 
         <div style={{ flex: 1, overflow: 'auto', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {state.kind === 'loading' && (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading requestor details…</p>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{t('hr.drawer.loading')}</p>
           )}
 
           {state.kind === 'error' && (
@@ -100,10 +125,10 @@ export function RequestorDetailDrawer({ request, displayName, onClose }: Props) 
           {state.kind === 'not-found' && (
             <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e',
               borderRadius: 6, padding: '0.625rem 0.75rem', fontSize: '0.85rem' }}>
-              Profile details are not available for this requestor.
+              {t('hr.drawer.notFound')}
               {state.shortRef && (
                 <div style={{ marginTop: 4, fontSize: '0.75rem', fontFamily: 'monospace', color: '#78350f' }}>
-                  Support ref: #{state.shortRef}
+                  {t('hr.drawer.supportRef', { ref: state.shortRef })}
                 </div>
               )}
             </div>
@@ -176,10 +201,10 @@ function ProfileFactsSection({
       return;
     }
     if (result.kind === 'error' && result.status === 403) {
-      setError('Only HR or admin can change eligibility.');
+      setError(t('hr.drawer.editForbidden'));
       return;
     }
-    setError('message' in result ? result.message : 'Could not save eligibility.');
+    setError('message' in result ? result.message : t('hr.drawer.saveError'));
   }
 
   const unchanged = draftCompanyCar === summary.hasCompanyCar
@@ -188,23 +213,23 @@ function ProfileFactsSection({
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <SectionHeading>Parking facts</SectionHeading>
+        <SectionHeading>{t('hr.drawer.parkingFactsTitle')}</SectionHeading>
         {!editing && (
-          <button onClick={startEdit} style={editLinkBtn} type="button">Edit</button>
+          <button onClick={startEdit} style={editLinkBtn} type="button">{t('hr.drawer.edit')}</button>
         )}
       </div>
-      <FactRow label="Profile status" value={summary.profileStatus} muted={summary.profileStatus !== 'Active'} />
-      <FactRow label="Parking eligible" value={summary.parkingEligible ? 'Yes' : 'No'} />
+      <FactRow label={t('hr.drawer.profileStatus')} value={profileStatusLabel(summary.profileStatus)} muted={summary.profileStatus !== 'Active'} />
+      <FactRow label={t('hr.drawer.parkingEligible')} value={yesNo(summary.parkingEligible)} />
       {editing ? (
         <>
           <EditableToggleRow
-            label="Company car"
+            label={t('hr.drawer.companyCar')}
             value={draftCompanyCar}
             onChange={setDraftCompanyCar}
             disabled={busy}
           />
           <EditableToggleRow
-            label="Accessibility eligible"
+            label={t('hr.drawer.accessibilityEligible')}
             value={draftAccessibility}
             onChange={setDraftAccessibility}
             disabled={busy}
@@ -212,11 +237,11 @@ function ProfileFactsSection({
         </>
       ) : (
         <>
-          <FactRow label="Company car" value={summary.hasCompanyCar ? 'Yes' : 'No'} />
-          <FactRow label="Accessibility eligible" value={summary.accessibilityEligible ? 'Yes' : 'No'} />
+          <FactRow label={t('hr.drawer.companyCar')} value={yesNo(summary.hasCompanyCar)} />
+          <FactRow label={t('hr.drawer.accessibilityEligible')} value={yesNo(summary.accessibilityEligible)} />
         </>
       )}
-      <FactRow label="Reserved space" value={summary.reservedSpaceEligible ? 'Yes' : 'No'} />
+      <FactRow label={t('hr.drawer.reservedSpace')} value={yesNo(summary.reservedSpaceEligible)} />
       {editing && (
         <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
@@ -225,10 +250,10 @@ function ProfileFactsSection({
             type="button"
             style={{ ...primaryBtn, opacity: busy || unchanged ? 0.5 : 1 }}
           >
-            {busy ? 'Saving…' : 'Save'}
+            {busy ? t('hr.drawer.saving') : t('hr.drawer.save')}
           </button>
           <button onClick={cancelEdit} disabled={busy} type="button" style={ghostBtn}>
-            Cancel
+            {t('hr.drawer.cancel')}
           </button>
           {error && <span style={{ color: '#b91c1c', fontSize: '0.78rem' }}>{error}</span>}
         </div>
@@ -257,7 +282,7 @@ function EditableToggleRow({
           onChange={e => onChange(e.target.checked)}
         />
         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
-          {value ? 'Yes' : 'No'}
+          {yesNo(value)}
         </span>
       </label>
     </div>
@@ -267,22 +292,22 @@ function EditableToggleRow({
 function VehicleSection({ summary }: { summary: RequestorSummary }) {
   return (
     <section>
-      <SectionHeading>Vehicle</SectionHeading>
+      <SectionHeading>{t('hr.drawer.vehicleTitle')}</SectionHeading>
       {summary.activeVehicleCount === 0 && (
-        <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>No active vehicle on file.</p>
+        <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0 }}>{t('hr.drawer.noVehicle')}</p>
       )}
       {summary.defaultVehicle && (
         <>
           <FactRow
-            label="Default plate"
+            label={t('hr.drawer.defaultPlate')}
             value={summary.defaultVehicle.licensePlate}
-            badge={summary.defaultVehicle.isDefault ? 'Default' : 'Active'}
+            badge={summary.defaultVehicle.isDefault ? t('hr.drawer.badgeDefault') : t('hr.drawer.badgeActive')}
           />
-          <FactRow label="Type" value={summary.defaultVehicle.vehicleType} />
-          <FactRow label="Electric" value={summary.defaultVehicle.isElectric ? 'Yes' : 'No'} />
+          <FactRow label={t('hr.drawer.vehicleType')} value={vehicleTypeLabel(summary.defaultVehicle.vehicleType)} />
+          <FactRow label={t('hr.drawer.electric')} value={yesNo(summary.defaultVehicle.isElectric)} />
           {summary.activeVehicleCount > 1 && (
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>
-              +{summary.activeVehicleCount - 1} more active vehicle{summary.activeVehicleCount - 1 === 1 ? '' : 's'}.
+              {tPlural('hr.drawer.moreVehicles', summary.activeVehicleCount - 1)}
             </p>
           )}
         </>
@@ -301,15 +326,15 @@ function RequestSection({ request }: { request: HrBookingListItem }) {
 
   return (
     <section>
-      <SectionHeading>This request</SectionHeading>
-      <FactRow label="Status" value={request.status} />
-      <FactRow label="Date" value={displayDate(request.requestedDate)} />
-      <FactRow label="Location" value={displayLocation(request.locationId) ?? request.locationId ?? '—'} />
-      {timeWindow && <FactRow label="Time" value={timeWindow} />}
+      <SectionHeading>{t('hr.drawer.requestTitle')}</SectionHeading>
+      <FactRow label={t('hr.drawer.status')} value={statusLabel(request.status)} />
+      <FactRow label={t('hr.drawer.date')} value={displayDate(request.requestedDate)} />
+      <FactRow label={t('hr.drawer.location')} value={displayLocation(request.locationId) ?? request.locationId ?? '—'} />
+      {timeWindow && <FactRow label={t('hr.drawer.time')} value={timeWindow} />}
       {request.allocatedSlotId && (
-        <FactRow label="Space" value={displaySlot(request.allocatedSlotId) ?? request.allocatedSlotId} />
+        <FactRow label={t('hr.drawer.space')} value={displaySlot(request.allocatedSlotId) ?? request.allocatedSlotId} />
       )}
-      <FactRow label="Last updated" value={displayDateTime(request.lastStatusChangedAt)} muted />
+      <FactRow label={t('hr.drawer.lastUpdated')} value={displayDateTime(request.lastStatusChangedAt)} muted />
       {reasonText && (
         <div style={{ marginTop: '0.625rem', fontSize: '0.8rem', color: '#92400e', background: '#fffbeb',
           border: '1px solid #fcd34d', borderRadius: 4, padding: '0.4rem 0.625rem' }}>
@@ -324,7 +349,7 @@ function HistoryLink({ userId, onNavigate }: { userId: string; onNavigate: () =>
   if (!userId) return null;
   return (
     <section>
-      <SectionHeading>History</SectionHeading>
+      <SectionHeading>{t('hr.drawer.historyTitle')}</SectionHeading>
       <Link
         to={`/hr-operations/employees/${encodeURIComponent(userId)}/history`}
         onClick={onNavigate}
@@ -333,7 +358,7 @@ function HistoryLink({ userId, onNavigate }: { userId: string; onNavigate: () =>
           color: '#1d4ed8', textDecoration: 'none', fontSize: '0.85rem',
           fontWeight: 600, border: '1px solid #bfdbfe' }}
       >
-        View parking history →
+        {t('hr.drawer.viewHistory')}
       </Link>
     </section>
   );

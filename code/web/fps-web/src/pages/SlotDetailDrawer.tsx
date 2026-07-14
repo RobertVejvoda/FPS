@@ -11,6 +11,7 @@ import {
   humanizeHrRejection,
 } from '../displayLabels';
 import { parseSlotLabel } from '../slotLabel';
+import { t, tDynamic } from '../i18n';
 
 interface Props {
   slot: SlotMapDto;
@@ -71,7 +72,7 @@ export function SlotDetailDrawer({ slot, locationId, selectedDate, selectedDayOc
         return;
       }
       if (result.kind !== 'ok') {
-        setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load history.' });
+        setState({ kind: 'error', message: 'message' in result ? result.message : t('bookings.history.loadError') });
         return;
       }
       setState({ kind: 'ok', items: result.items, totalCount: result.totalCount });
@@ -92,7 +93,7 @@ export function SlotDetailDrawer({ slot, locationId, selectedDate, selectedDayOc
   }, [onClose]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Slot ${label.longLabel} detail`}
+    <div role="dialog" aria-modal="true" aria-label={t('bookings.slotDrawer.detailAriaLabel', { slot: label.longLabel })}
          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(15, 23, 42, 0.4)' }} />
       <aside style={{
@@ -107,7 +108,7 @@ export function SlotDetailDrawer({ slot, locationId, selectedDate, selectedDayOc
               {displayLocation(locationId) ?? locationId}
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close slot detail"
+          <button onClick={onClose} aria-label={t('bookings.slotDrawer.close')}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.1rem',
               padding: '0.25rem 0.5rem', borderRadius: 4, color: '#64748b', flexShrink: 0 }}>
             ✕
@@ -136,18 +137,18 @@ export function SlotDetailDrawer({ slot, locationId, selectedDate, selectedDayOc
 function CapabilitiesSection({ slot }: { slot: SlotMapDto }) {
   return (
     <section>
-      <SectionHeading>Capabilities</SectionHeading>
+      <SectionHeading>{t('bookings.slotDrawer.capabilities')}</SectionHeading>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {!slot.isActive && <Chip tone="muted" label="Inactive" />}
-        {slot.hasCharger && <Chip tone="info" label="EV charger" />}
-        {slot.isAccessible && <Chip tone="info" label="Accessible" />}
-        {slot.isCompanyCarOnly && <Chip tone="info" label="Company car" />}
+        {!slot.isActive && <Chip tone="muted" label={t('bookings.slotDrawer.inactive')} />}
+        {slot.hasCharger && <Chip tone="info" label={t('bookings.slotDrawer.evCharger')} />}
+        {slot.isAccessible && <Chip tone="info" label={t('bookings.slotDrawer.accessible')} />}
+        {slot.isCompanyCarOnly && <Chip tone="info" label={t('bookings.field.companyCar')} />}
         {slot.isMotorcycleCapacity && (
-          <Chip tone="info" label={slot.motorcycleCapacityUnits > 1 ? `Motorcycle × ${slot.motorcycleCapacityUnits}` : 'Motorcycle'} />
+          <Chip tone="info" label={slot.motorcycleCapacityUnits > 1 ? t('bookings.slotDrawer.motorcycleUnits', { count: slot.motorcycleCapacityUnits }) : t('bookings.slotDrawer.motorcycle')} />
         )}
-        {slot.isReserved && <Chip tone="warn" label="Reserved" />}
+        {slot.isReserved && <Chip tone="warn" label={t('bookings.slotDrawer.reserved')} />}
         {slot.isActive && !slot.isReserved && !slot.isCompanyCarOnly && !slot.isMotorcycleCapacity && (
-          <Chip tone="ok" label="General" />
+          <Chip tone="ok" label={t('bookings.slotDrawer.general')} />
         )}
       </div>
     </section>
@@ -164,7 +165,7 @@ function SelectedDaySection({
 }) {
   return (
     <section>
-      <SectionHeading>On {displayDate(date)}</SectionHeading>
+      <SectionHeading>{t('bookings.slotDrawer.onDate', { date: displayDate(date) })}</SectionHeading>
       {occupant ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
@@ -174,14 +175,14 @@ function SelectedDaySection({
             {occupant.displayName ?? displayRequestorRef(occupant.requestorRef)}
           </span>
           <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(occupant.status) }}>
-            {occupant.status}
+            {tDynamic('bookings.status', occupant.status, occupant.status)}
           </span>
         </div>
       ) : (
         <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
-          {slotInactive ? 'Slot is inactive.' :
-            slotReserved ? 'Reserved capacity — no allocation for this day.' :
-            'No allocation for this day.'}
+          {slotInactive ? t('bookings.slotDrawer.slotInactive') :
+            slotReserved ? t('bookings.slotDrawer.reservedCapacity') :
+            t('bookings.slotDrawer.noAllocation')}
         </p>
       )}
     </section>
@@ -196,13 +197,13 @@ function HistorySection({
 }) {
   return (
     <section>
-      <SectionHeading>Recent allocations</SectionHeading>
+      <SectionHeading>{t('bookings.slotDrawer.recentAllocations')}</SectionHeading>
       {state.kind === 'loading' && (
-        <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>Loading…</p>
+        <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>{t('common.loading')}</p>
       )}
       {state.kind === 'forbidden' && (
         <p style={{ color: '#991b1b', fontSize: '0.85rem', margin: 0 }}>
-          You don't have permission to view this slot's history.
+          {t('bookings.slotDrawer.forbidden')}
         </p>
       )}
       {state.kind === 'error' && (
@@ -213,7 +214,7 @@ function HistorySection({
       )}
       {state.kind === 'ok' && state.items.length === 0 && (
         <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: 0 }}>
-          No allocations in the last 30 days.
+          {t('bookings.slotDrawer.noneInWindow')}
         </p>
       )}
       {state.kind === 'ok' && state.items.length > 0 && (
@@ -223,7 +224,7 @@ function HistorySection({
           ))}
           {state.totalCount > state.items.length && (
             <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
-              Showing {state.items.length} of {state.totalCount}.
+              {t('bookings.slotDrawer.showingOf', { shown: state.items.length, total: state.totalCount })}
             </p>
           )}
         </div>
@@ -246,14 +247,14 @@ function HistoryRow({ item, displayName }: { item: HrSlotHistoryItem; displayNam
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>{primary}</span>
         <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.6rem', borderRadius: 12, ...statusBadgeStyle(item.status) }}>
-          {item.status}
+          {tDynamic('bookings.status', item.status, item.status)}
         </span>
       </div>
       <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: '#475569', flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 600, color: '#1e293b' }}>{displayDate(item.requestedDate)}</span>
         {timeWindow && <><span style={{ color: '#cbd5e1' }}>·</span><span>{timeWindow}</span></>}
         <span style={{ color: '#cbd5e1' }}>·</span>
-        <span style={{ color: '#94a3b8' }}>Updated {displayDateTime(item.lastStatusChangedAt)}</span>
+        <span style={{ color: '#94a3b8' }}>{t('bookings.slotDrawer.updated', { date: displayDateTime(item.lastStatusChangedAt) })}</span>
       </div>
       {reasonText && (
         <div style={{ marginTop: 4, fontSize: '0.75rem', color: '#92400e', background: '#fffbeb',

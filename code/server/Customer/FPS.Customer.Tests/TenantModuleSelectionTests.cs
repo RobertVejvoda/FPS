@@ -180,3 +180,66 @@ public sealed class TenantModuleSelectionTests
         Assert.Contains("Unknown module", error);
     }
 }
+
+// LOC001 (#744) — DefaultLocale restore/round-trip coverage, mirroring TimeZone's DTO wiring.
+public sealed class TenantDefaultLocaleDomainTests
+{
+    [Fact]
+    public void Restore_LegacyDtoWithoutDefaultLocale_RestoresNull()
+    {
+        // A tenant persisted before LOC001: DefaultLocale deserialises as null (unset).
+        var legacy = new TenantWorkspaceDto
+        {
+            TenantId = "legacy", Slug = "legacy", DisplayName = "Legacy", Region = "eu",
+            TimeZone = "Europe/Prague",
+        };
+
+        var tenant = legacy.ToDomain();
+
+        Assert.Null(tenant.DefaultLocale);
+    }
+
+    [Fact]
+    public void Dto_RoundTrip_PreservesDefaultLocale()
+    {
+        var tenant = new TenantWorkspace { TenantId = "t", Slug = "t", DefaultLocale = "cs-CZ" };
+
+        var restored = TenantWorkspaceDto.FromDomain(tenant).ToDomain();
+
+        Assert.Equal("cs-CZ", restored.DefaultLocale);
+    }
+
+    [Fact]
+    public void Dto_RoundTrip_PreservesNullDefaultLocale()
+    {
+        var tenant = new TenantWorkspace { TenantId = "t", Slug = "t" };
+
+        var restored = TenantWorkspaceDto.FromDomain(tenant).ToDomain();
+
+        Assert.Null(restored.DefaultLocale);
+    }
+
+    [Theory]
+    [InlineData("cs-CZ")]
+    [InlineData("en")]
+    [InlineData("en-US")]
+    [InlineData(null)]
+    public void ValidateDefaultLocale_ValidValues_ReturnsNull(string? locale)
+    {
+        Assert.Null(TenantWorkspace.ValidateDefaultLocale(locale));
+    }
+
+    [Theory]
+    [InlineData("not a locale")]
+    [InlineData("123")]
+    [InlineData("cs-CZ-extra-extra")]
+    [InlineData("cs_CZ")]
+    [InlineData("")]
+    public void ValidateDefaultLocale_InvalidValues_ReturnsError(string locale)
+    {
+        var error = TenantWorkspace.ValidateDefaultLocale(locale);
+
+        Assert.NotNull(error);
+        Assert.Contains("DefaultLocale", error);
+    }
+}

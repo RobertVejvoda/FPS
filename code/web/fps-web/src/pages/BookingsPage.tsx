@@ -9,6 +9,7 @@ import { ModuleBadge } from '../components/ModuleBadge';
 import { addCalendarDays, fromLocalDateString, labelRelativeWorkday, labelWeekdayDate, nextWorkdayOptions, toLocalDateString } from '../dateOptions';
 import { useTenantDateContext } from '../hooks/useTenantDateBase';
 import { useTenantModules } from '../tenant/TenantModulesContext';
+import { t, formatDate, formatWallClock } from '../i18n';
 
 const FALLBACK_LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
@@ -50,12 +51,12 @@ export function BookingsPage() {
     fetchBookings({ apiBaseUrl, bearerToken }, { from: todayStr }).then((result) => {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'ok') setUpcoming({ kind: 'ok', items: result.items, totalCount: result.totalCount });
-      else setUpcoming({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load your reservations.' });
+      else setUpcoming({ kind: 'error', message: 'message' in result ? result.message : t('bookings.error.loadUpcoming') });
     });
     fetchBookings({ apiBaseUrl, bearerToken }, { to: yesterdayStr }).then((result) => {
       if (result.kind === 'unauthenticated') return; // the upcoming fetch already handles the redirect
       if (result.kind === 'ok') setRecent({ kind: 'ok', items: result.items, totalCount: result.totalCount });
-      else setRecent({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load recent requests.' });
+      else setRecent({ kind: 'error', message: 'message' in result ? result.message : t('bookings.error.loadRecent') });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate, todayStr, yesterdayStr]);
 
@@ -86,13 +87,13 @@ export function BookingsPage() {
   }
 
   async function handleCancel(requestId: string) {
-    if (!confirm('Cancel this request?')) return;
+    if (!confirm(t('bookings.cancelConfirm'))) return;
     setBusyId(requestId);
     const result = await cancelBooking({ apiBaseUrl, bearerToken }, requestId);
     setBusyId(null);
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (result.kind === 'ok') { showToast(true, 'Request cancelled.'); load(); }
-    else showToast(false, 'message' in result ? result.message : 'Could not cancel this request.');
+    if (result.kind === 'ok') { showToast(true, t('bookings.toast.cancelled')); load(); }
+    else showToast(false, 'message' in result ? result.message : t('bookings.toast.cancelError'));
   }
 
   async function handleConfirm(requestId: string) {
@@ -101,9 +102,9 @@ export function BookingsPage() {
     setBusyId(null);
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (result.kind === 'ok') {
-      showToast(true, result.data.wasAlreadyConfirmed ? 'Usage was already recorded.' : 'Usage confirmed.');
+      showToast(true, result.data.wasAlreadyConfirmed ? t('bookings.toast.usageAlready') : t('bookings.toast.usageConfirmed'));
       load();
-    } else showToast(false, 'message' in result ? result.message : 'Could not confirm usage.');
+    } else showToast(false, 'message' in result ? result.message : t('bookings.toast.confirmError'));
   }
 
   const recentItems = recent.kind === 'ok' ? recent.items.slice(0, RECENT_WINDOW) : [];
@@ -149,7 +150,7 @@ export function BookingsPage() {
   return (
     <div className="page-stack">
       <section className="page-hero">
-        <h2>My Reservations</h2>
+        <h2>{t('bookings.title')}</h2>
       </section>
 
       <NotificationBanner />
@@ -163,7 +164,7 @@ export function BookingsPage() {
       {upcoming.kind === 'error' && (
         <div className="panel">
           <p style={{ color: '#b91c1c', margin: '0 0 8px' }}>{upcoming.message}</p>
-          <button onClick={load} className="btn-primary">Retry</button>
+          <button onClick={load} className="btn-primary">{t('bookings.retry')}</button>
         </div>
       )}
 
@@ -198,26 +199,26 @@ export function BookingsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 13 }}>
         <div style={{ display: 'flex', gap: 16 }}>
           <button onClick={() => navigate('/bookings/new')} style={linkBtn}>
-            Request for another date →
+            {t('bookings.requestAnotherDate')}
           </button>
           {hasSeats && (
             <button onClick={() => navigate('/bookings/new?module=seats')} style={linkBtn}>
-              Request a seat →
+              {t('bookings.requestSeat')}
             </button>
           )}
         </div>
         <button onClick={() => navigate('/bookings/history')} style={linkBtn}>
-          History &amp; all requests →
+          {t('bookings.historyLink')}
         </button>
       </div>
 
       {/* Date-grouped reservation and request list across enabled modules. */}
       <section className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, fontSize: 15 }}>My requests</span>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>{t('bookings.myRequests')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {showModuleFilter && (
-              <div className="module-filter" role="group" aria-label="Filter by module">
+              <div className="module-filter" role="group" aria-label={t('bookings.filter.ariaLabel')}>
                 {(['all', 'Parking', 'Seats'] as const).map(f => (
                   <button
                     key={f}
@@ -225,21 +226,21 @@ export function BookingsPage() {
                     className={`module-filter-chip${moduleFilter === f ? ' module-filter-chip-active' : ''}`}
                     aria-pressed={moduleFilter === f}
                   >
-                    {f === 'all' ? 'All' : f === 'Seats' ? 'Seats' : 'Parking'}
+                    {f === 'all' ? t('bookings.filter.all') : f === 'Seats' ? t('bookings.filter.seats') : t('bookings.filter.parking')}
                   </button>
                 ))}
               </div>
             )}
             {totalCount > 0 && (
-              <span style={{ fontSize: 12, color: '#6b7280' }}>Showing {shownCount} of {totalCount} records</span>
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{t('bookings.showingCount', { shown: shownCount, total: totalCount })}</span>
             )}
           </div>
         </div>
 
-        {upcoming.kind === 'loading' && <p style={{ color: '#6b7280', margin: 0, fontSize: 13 }}>Loading…</p>}
+        {upcoming.kind === 'loading' && <p style={{ color: '#6b7280', margin: 0, fontSize: 13 }}>{t('common.loading')}</p>}
         {upcoming.kind === 'ok' && dateGroups.length === 0 && earlierItems.length === 0 && (
           <p style={{ color: '#6b7280', margin: 0, fontSize: 13 }}>
-            No requests yet. Use the day cards above to request a spot{hasSeats ? ' or a seat' : ''}.
+            {hasSeats ? t('bookings.empty.noRequestsWithSeat') : t('bookings.empty.noRequests')}
           </p>
         )}
 
@@ -259,7 +260,7 @@ export function BookingsPage() {
 
         {earlierItems.length > 0 && (
           <div className="resv-group">
-            <div className="resv-group-label">Earlier</div>
+            <div className="resv-group-label">{t('bookings.earlier')}</div>
             {earlierItems.map(item => (
               <ReservationRow
                 key={item.requestId}
@@ -269,7 +270,7 @@ export function BookingsPage() {
               />
             ))}
             <button onClick={() => navigate('/bookings/history')} style={{ ...linkBtn, alignSelf: 'flex-start', marginTop: 4 }}>
-              Full history →
+              {t('bookings.fullHistory')}
             </button>
           </div>
         )}
@@ -288,18 +289,17 @@ function rowOutcome(item: BookingListItem): string | null {
   if (slotLabel) return `${displayResourceNoun(item.resourceType)}: ${slotLabel}`;
   if (shouldShowNextDraw(item.status)) {
     const next = displayNextDrawRun(item.requestedDate);
-    return next ? `Next draw: ${next}` : null;
+    return next ? t('bookings.rowOutcome.nextDraw', { next }) : null;
   }
-  if (item.status === 'Waitlisted') return 'Waiting for a released ' + displayResourceNoun(item.resourceType).toLowerCase();
+  if (item.status === 'Waitlisted') return t('bookings.rowOutcome.waitingReleased', { noun: displayResourceNoun(item.resourceType).toLowerCase() });
   if (item.status === 'Rejected') return humanizeRejectionReason(item.reasonCode ?? null, item.reason ?? null);
-  if (item.status === 'Cancelled') return 'Cancelled';
+  if (item.status === 'Cancelled') return t('bookings.rowOutcome.cancelled');
   return item.reason ?? null;
 }
 
-function formatRowTime(t: string): string {
-  const [h, m] = t.split(':');
-  const hour = parseInt(h, 10);
-  return `${hour % 12 || 12}:${m.padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+function formatRowTime(time: string): string {
+  const [h, m] = time.split(':');
+  return formatWallClock(parseInt(h, 10), parseInt(m, 10));
 }
 
 function ReservationRow({ item, showModule, onOpen }: {
@@ -335,7 +335,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
 }) {
   const scheduleOk = drawStatus?.kind === 'ok' ? drawStatus : null;
   const d = new Date(date + 'T00:00:00');
-  const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const dateLabel = formatDate(d, { month: 'short', day: 'numeric' });
 
   return (
     <div style={tileStyle}>
@@ -351,7 +351,7 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
       {/* Allocated spot */}
       {booking && displaySlot(booking.allocatedSlotId) && (
         <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginTop: 6 }}>
-          Spot: {displaySlot(booking.allocatedSlotId)}
+          {t('bookings.tile.spotLabel', { slot: displaySlot(booking.allocatedSlotId) ?? '' })}
         </div>
       )}
 
@@ -367,15 +367,15 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
       )}
 
       {/* Draw/schedule timing */}
-      {drawLoading && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>Loading schedule…</div>}
+      {drawLoading && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>{t('bookings.tile.loadingSchedule')}</div>}
       {!drawLoading && scheduleOk?.nextDrawAt && (
         <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
-          Draw: {formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone)}
+          {t('bookings.tile.draw', { time: formatCutOffAt(scheduleOk.nextDrawAt, scheduleOk.timeZone) })}
         </div>
       )}
       {!drawLoading && scheduleOk?.cutOffAt && (
         <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
-          Cut-off: {formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone)}
+          {t('bookings.tile.cutoff', { time: formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone) })}
         </div>
       )}
       {!drawLoading && scheduleOk?.safeMessage && !booking && (
@@ -388,23 +388,23 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {onConfirm && (
               <button onClick={onConfirm} disabled={busy} style={confirmBtnStyle}>
-                {busy ? 'Confirming…' : 'Confirm usage'}
+                {busy ? t('bookings.action.confirming') : t('bookings.action.confirmUsage')}
               </button>
             )}
             {onCancel && (
               <button onClick={onCancel} disabled={busy} style={cancelBtnStyle}>
-                {busy ? 'Cancelling…' : 'Cancel'}
+                {busy ? t('bookings.action.cancelling') : t('bookings.action.cancel')}
               </button>
             )}
             {!onCancel && !onConfirm && onDetails && (
-              <button onClick={onDetails} style={detailsBtnStyle}>View details →</button>
+              <button onClick={onDetails} style={detailsBtnStyle}>{t('bookings.action.viewDetails')}</button>
             )}
           </div>
         ) : !drawLoading && scheduleOk?.canRequest ? (
-          <button onClick={onRequest} style={requestBtnStyle}>Request a spot →</button>
+          <button onClick={onRequest} style={requestBtnStyle}>{t('bookings.action.requestSpot')}</button>
         ) : !drawLoading && !scheduleOk ? null : !drawLoading && !scheduleOk?.canRequest ? (
           <div style={{ fontSize: 11, color: '#9ca3af' }}>
-            {scheduleOk?.cannotRequestReason || 'Requests not open'}
+            {scheduleOk?.cannotRequestReason || t('bookings.tile.requestsNotOpen')}
           </div>
         ) : null}
       </div>

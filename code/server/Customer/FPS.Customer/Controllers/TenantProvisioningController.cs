@@ -47,7 +47,8 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
         var (tenant, error) = await service.CreateAsync(
             request.Slug, request.DisplayName, request.Region, request.TimeZone,
             request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct, request.TenantId, kind, request.ResettableSandbox, primaryModule, enabledModules);
+            ct, request.TenantId, kind, request.ResettableSandbox, primaryModule, enabledModules,
+            request.DefaultLocale);
 
         if (error is not null) return BadRequest(new { error });
         // Location points at the tenant-scoped read on TenantController ("Tenant" controller, "Get" action).
@@ -67,7 +68,7 @@ public sealed class TenantProvisioningController(TenantService service, ICurrent
         t.Provisioning.ServiceCollections,
         t.PrimaryModule.ToString(),
         t.EnabledModules.Select(m => m.ToString()).ToList(),
-        t.CreatedAt, t.UpdatedAt);
+        t.CreatedAt, t.UpdatedAt, t.DefaultLocale);
 }
 
 // Operator-only request body for tenant provisioning (moves to fairspot-platform with the controller).
@@ -87,4 +88,6 @@ public sealed record CreateTenantRequest(
     // PLAT007B: the primary module (default Parking) and any additional enabled modules. The
     // primary must be among the enabled set; omit EnabledModules to enable just the primary.
     string? PrimaryModule = null,
-    IReadOnlyList<string>? EnabledModules = null);
+    IReadOnlyList<string>? EnabledModules = null,
+    // LOC001 (#744): optional BCP 47 default locale, e.g. "cs-CZ". Omit to leave unset.
+    string? DefaultLocale = null);

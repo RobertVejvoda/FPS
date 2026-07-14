@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { fetchAuditRecords, erasePiiMapping, type AuditRecord } from '../api/audit';
 import { displayActorRef, humanizeActorType, humanizeEntityType } from '../displayLabels';
+import { t, formatDateTime } from '../i18n';
 
 type State =
   | { kind: 'loading' }
@@ -24,7 +25,7 @@ export function AuditPage() {
       if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (result.kind === 'error' && result.status === 403) { setState({ kind: 'forbidden' }); return; }
       if (result.kind === 'ok') setState({ kind: 'ok', records: result.data.items, totalCount: result.data.totalCount });
-      else setState({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load audit records.' });
+      else setState({ kind: 'error', message: 'message' in result ? result.message : t('audit.console.loadError') });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
@@ -34,27 +35,27 @@ export function AuditPage() {
     e.preventDefault();
     const uid = erasureUserId.trim();
     if (!uid) return;
-    if (!confirm(`Permanently erase PII mapping for user ID: ${uid}?\n\nThis action cannot be undone.`)) return;
+    if (!confirm(t('audit.console.erasureConfirm', { uid }))) return;
     setErasureBusy(true);
     const result = await erasePiiMapping({ apiBaseUrl, bearerToken }, uid);
     setErasureBusy(false);
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (result.kind === 'ok') {
-      setErasureMsg({ ok: true, text: `PII mapping erased for user ID: ${uid}` });
+      setErasureMsg({ ok: true, text: t('audit.console.erasureSuccess', { uid }) });
       setErasureUserId('');
     } else {
-      setErasureMsg({ ok: false, text: 'message' in result ? result.message : 'Erasure failed.' });
+      setErasureMsg({ ok: false, text: 'message' in result ? result.message : t('audit.console.erasureFailed') });
     }
     setTimeout(() => setErasureMsg(null), 6000);
   }
 
   return (
     <div style={page}>
-      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Audit Console</h2>
+      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('audit.console.title')}</h2>
 
       <section style={card}>
-        <h3 style={cardTitle}>GDPR PII Mapping Erasure</h3>
-        <p style={muted}>Permanently removes the PII mapping for a user ID. Audit records remain in pseudonymised form.</p>
+        <h3 style={cardTitle}>{t('audit.console.erasureTitle')}</h3>
+        <p style={muted}>{t('audit.console.erasureDescription')}</p>
         {erasureMsg && (
           <div style={{ padding: '8px 14px', borderRadius: 6, background: erasureMsg.ok ? '#ecfdf5' : '#fef2f2', border: `1px solid ${erasureMsg.ok ? '#bbf7d0' : '#fecaca'}`, color: erasureMsg.ok ? '#166534' : '#b91c1c', fontSize: 13, marginBottom: 10 }}>
             {erasureMsg.text}
@@ -62,17 +63,17 @@ export function AuditPage() {
         )}
         <form onSubmit={handleErasure} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
-            <label style={muted}>User ID</label>
+            <label style={muted}>{t('audit.console.userIdLabel')}</label>
             <input
               value={erasureUserId}
               onChange={e => setErasureUserId(e.target.value)}
-              placeholder="e.g. a1b2c3d4-..."
+              placeholder={t('audit.console.userIdPlaceholder')}
               style={{ border: '1px solid #d1d5db', borderRadius: 6, padding: '7px 10px', fontSize: 14, outline: 'none' }}
             />
           </div>
           <button type="submit" disabled={erasureBusy || !erasureUserId.trim()}
             style={{ ...dangerBtn, opacity: !erasureUserId.trim() || erasureBusy ? 0.5 : 1 }}>
-            {erasureBusy ? 'Erasing…' : 'Erase PII mapping'}
+            {erasureBusy ? t('audit.console.erasing') : t('audit.console.erasePiiMapping')}
           </button>
         </form>
       </section>
@@ -80,21 +81,28 @@ export function AuditPage() {
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h3 style={{ ...cardTitle, margin: 0 }}>
-            Audit Records {state.kind === 'ok' ? <span style={{ ...muted, fontWeight: 400 }}>({state.totalCount} total)</span> : null}
+            {t('audit.console.recordsTitle')} {state.kind === 'ok' ? <span style={{ ...muted, fontWeight: 400 }}>{t('audit.console.recordsTotal', { count: state.totalCount })}</span> : null}
           </h3>
-          <button onClick={load} style={btn}>Refresh</button>
+          <button onClick={load} style={btn}>{t('audit.common.refresh')}</button>
         </div>
 
-        {state.kind === 'loading' && <p style={muted}>Loading…</p>}
-        {state.kind === 'forbidden' && <p style={{ color: '#b91c1c' }}>You do not have permission to query audit records.</p>}
+        {state.kind === 'loading' && <p style={muted}>{t('common.loading')}</p>}
+        {state.kind === 'forbidden' && <p style={{ color: '#b91c1c' }}>{t('audit.console.forbidden')}</p>}
         {state.kind === 'error' && <p style={{ color: '#b91c1c' }}>{state.message}</p>}
-        {state.kind === 'ok' && state.records.length === 0 && <p style={muted}>No audit records found.</p>}
+        {state.kind === 'ok' && state.records.length === 0 && <p style={muted}>{t('audit.console.noRecords')}</p>}
         {state.kind === 'ok' && state.records.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Occurred', 'Event type', 'Entity type', 'Entity ID', 'Actor type', 'Actor short ref'].map(h => (
+                  {[
+                    t('audit.console.table.occurred'),
+                    t('audit.console.table.eventType'),
+                    t('audit.console.table.entityType'),
+                    t('audit.console.table.entityId'),
+                    t('audit.console.table.actorType'),
+                    t('audit.console.table.actorRef'),
+                  ].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '7px 10px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -102,15 +110,15 @@ export function AuditPage() {
               <tbody>
                 {state.records.map(r => (
                   <tr key={r.auditRecordId} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={td}>{new Date(r.occurredAt).toLocaleString()}</td>
+                    <td style={td}>{formatDateTime(new Date(r.occurredAt))}</td>
                     <td style={td}>{r.eventType}</td>
                     <td style={td}>{humanizeEntityType(r.entityType)}</td>
                     <td style={{ ...td, color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>
-                      {r.entityId ? (r.entityId.length > 12 ? r.entityId.slice(0, 12) + '…' : r.entityId) : '—'}
+                      {r.entityId ? (r.entityId.length > 12 ? r.entityId.slice(0, 12) + '…' : r.entityId) : t('common.notAvailable')}
                     </td>
                     <td style={td}>{humanizeActorType(r.actorType)}</td>
                     <td style={{ ...td, color: '#374151', fontFamily: 'monospace', fontSize: 12, letterSpacing: '0.05em' }}>
-                      {r.actorHash ? displayActorRef(r.actorHash) : '—'}
+                      {r.actorHash ? displayActorRef(r.actorHash) : t('common.notAvailable')}
                     </td>
                   </tr>
                 ))}

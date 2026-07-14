@@ -331,6 +331,8 @@ static async Task SeedGreenLogisticsTenantAsync(IServiceProvider services)
         DisplayName = "Green Logistics",
         Region = "EU",
         TimeZone = "Europe/Prague",
+        // LOC001 (#744): Green Logistics is the Czech-market showcase tenant.
+        DefaultLocale = "cs-CZ",
         Kind = TenantKind.Sandbox,
         IsResettableSandbox = true,
         SupportContacts =

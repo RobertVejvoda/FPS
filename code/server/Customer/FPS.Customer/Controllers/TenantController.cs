@@ -49,7 +49,8 @@ public sealed class TenantController(TenantService service, ICurrentUser current
             if (tenant is null) return NotFound();
             return Ok(new TenantModulesResponse(
                 tenant.PrimaryModule.ToString(),
-                tenant.EnabledModules.Select(m => m.ToString()).ToList()));
+                tenant.EnabledModules.Select(m => m.ToString()).ToList(),
+                tenant.DefaultLocale));
         }
         catch (ArgumentException)
         {
@@ -66,7 +67,7 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         var error = await service.UpdateAsync(
             tenantId, request.DisplayName, request.TimeZone,
             request.SupportContacts.Select(c => new TenantSupportContact(c.Name, c.Email, c.Role)).ToList(),
-            ct);
+            ct, request.DefaultLocale);
 
         if (error == "Tenant not found.") return NotFound();
         if (error is not null) return BadRequest(new { error });
@@ -181,13 +182,17 @@ public sealed class TenantController(TenantService service, ICurrentUser current
         t.Provisioning.ServiceCollections,
         t.PrimaryModule.ToString(),
         t.EnabledModules.Select(m => m.ToString()).ToList(),
-        t.CreatedAt, t.UpdatedAt);
+        t.CreatedAt, t.UpdatedAt, t.DefaultLocale);
 }
 
 public sealed record UpdateTenantRequest(
     string DisplayName,
     string TimeZone,
-    IReadOnlyList<ContactDto> SupportContacts);
+    IReadOnlyList<ContactDto> SupportContacts,
+    // LOC001 (#744): optional BCP 47 default locale, e.g. "cs-CZ". Null means "leave unchanged" —
+    // unlike TimeZone (required, always overwritten), omitting this field on update never clears
+    // an existing tenant default locale.
+    string? DefaultLocale = null);
 
 public sealed record TransitionRequest(string To, string? Reason, string? Evidence);
 
@@ -208,10 +213,14 @@ public sealed record TenantResponse(
     string PrimaryModule,
     IReadOnlyList<string> EnabledModules,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    // LOC001 (#744): the tenant's BCP 47 default locale (e.g. "cs-CZ"); null when unset.
+    string? DefaultLocale);
 
 // PLAT-seats (#710) — the tenant's module selection for the tenant app UI.
-public sealed record TenantModulesResponse(string PrimaryModule, IReadOnlyList<string> EnabledModules);
+// LOC001 (#744): also carries DefaultLocale so any tenant member can localize the app without a
+// second call — this endpoint is intentionally readable by any authenticated member (see GetModules).
+public sealed record TenantModulesResponse(string PrimaryModule, IReadOnlyList<string> EnabledModules, string? DefaultLocale);
 
 public sealed record ProvisioningResponse(
     string TenantId,

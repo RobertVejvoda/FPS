@@ -8,6 +8,8 @@ import { useBookings } from '@/api/useBookings';
 import { cancelBooking, confirmBookingUsage } from '@/api/bookings';
 import { useAuth } from '@/auth/AuthContext';
 import { isSeatsItem } from '@/displayLabels';
+import { t } from '@/i18n';
+import { formatDate as formatLocaleDate } from '@/i18n/formatters';
 import { colors, radius, spacing } from '@/theme';
 import type { BookingListItem } from '@/api/bookings';
 
@@ -26,10 +28,10 @@ function localTomorrowStr(): string {
 }
 
 function dateSectionLabel(date: string): string {
-  if (date === localTodayStr()) return 'Today';
-  if (date === localTomorrowStr()) return 'Tomorrow';
+  if (date === localTodayStr()) return t('common.today');
+  if (date === localTomorrowStr()) return t('common.tomorrow');
   const [y, m, d] = date.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+  return formatLocaleDate(new Date(y, m - 1, d), {
     weekday: 'long', month: 'short', day: 'numeric',
   });
 }
@@ -47,12 +49,11 @@ function toDateSections(items: BookingListItem[]): Array<{ title: string; data: 
   return sections;
 }
 
-const FILTERS = [
-  { key: 'upcoming' as const, label: 'Upcoming' },
-  { key: 'recent' as const, label: 'Recent' },
-];
-
 export default function BookingsRoute() {
+  const FILTERS = [
+    { key: 'upcoming' as const, label: t('booking.filter.upcoming') },
+    { key: 'recent' as const, label: t('booking.filter.recent') },
+  ];
   const [filter, setFilter] = useState<'upcoming' | 'recent'>('upcoming');
   const { state, refresh, loadMore } = useBookings(filter);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
@@ -62,12 +63,12 @@ export default function BookingsRoute() {
 
   const handleCancel = useCallback((requestId: string) => {
     Alert.alert(
-      'Cancel request',
-      'Are you sure you want to cancel this request?',
+      t('booking.dialog.cancelTitle'),
+      t('booking.dialog.cancelMessage'),
       [
-        { text: 'Keep', style: 'cancel' },
+        { text: t('booking.dialog.keep'), style: 'cancel' },
         {
-          text: 'Cancel request',
+          text: t('booking.dialog.cancelTitle'),
           style: 'destructive',
           onPress: async () => {
             setActionMessage(null);
@@ -78,7 +79,7 @@ export default function BookingsRoute() {
               await clearSession();
               router.replace('/login');
             } else if (result.kind === 'ok') {
-              setActionMessage({ kind: 'success', text: 'Booking cancelled.' });
+              setActionMessage({ kind: 'success', text: t('booking.list.cancelled') });
               refresh();
             } else if (result.kind === 'notFound') {
               setActionMessage({ kind: 'error', text: result.message });
@@ -104,9 +105,9 @@ export default function BookingsRoute() {
       router.replace('/login');
     } else if (result.kind === 'confirmed') {
       if (result.wasAlreadyConfirmed) {
-        setActionMessage({ kind: 'success', text: 'Your spot usage was already recorded.' });
+        setActionMessage({ kind: 'success', text: t('booking.list.usageAlreadyRecorded') });
       } else {
-        setActionMessage({ kind: 'success', text: 'Spot usage confirmed.' });
+        setActionMessage({ kind: 'success', text: t('booking.list.usageConfirmed') });
       }
       refresh();
     } else if (result.kind === 'notFound') {
@@ -138,14 +139,14 @@ export default function BookingsRoute() {
 
   function renderContent() {
     if (state.kind === 'idle' || state.kind === 'loading') {
-      return <StateView kind="loading" title="Loading your reservations…" />;
+      return <StateView kind="loading" title={t('booking.home.loading')} />;
     }
     if (state.kind === 'unauthenticated') {
       return (
         <StateView
           kind="unauthenticated"
-          title="Not signed in"
-          message="Your session has expired. Please sign in again."
+          title={t('session.notSignedIn')}
+          message={t('session.expiredMessage')}
         />
       );
     }
@@ -153,9 +154,9 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="unreachable"
-          title="Cannot load your reservations"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
+          title={t('booking.home.cannotLoad')}
+          message={t('common.checkConnection')}
+          actionLabel={t('common.retry')}
           onAction={refresh}
         />
       );
@@ -164,9 +165,9 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="error"
-          title="Cannot load your reservations"
-          message="Please check your connection and try again."
-          actionLabel="Retry"
+          title={t('booking.home.cannotLoad')}
+          message={t('common.checkConnection')}
+          actionLabel={t('common.retry')}
           onAction={refresh}
         />
       );
@@ -175,9 +176,9 @@ export default function BookingsRoute() {
       return (
         <StateView
           kind="empty"
-          title="No reservations yet"
-          message="Your requests and reservations will appear here."
-          actionLabel="Refresh"
+          title={t('booking.list.empty.title')}
+          message={t('booking.list.empty.message')}
+          actionLabel={t('common.refresh')}
           onAction={refresh}
         />
       );
@@ -239,7 +240,7 @@ export default function BookingsRoute() {
               {state.loadingMore ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Text style={styles.loadMoreText}>Load more</Text>
+                <Text style={styles.loadMoreText}>{t('booking.list.loadMore')}</Text>
               )}
             </Pressable>
           ) : null

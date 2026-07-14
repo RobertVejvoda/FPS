@@ -11,6 +11,7 @@ import {
 } from '../api/reporting';
 import { displayLocation, displayRequestorRef, shortRequestorRef } from '../displayLabels';
 import { fetchHrDisplayNames } from '../api/profile';
+import { t, formatDate } from '../i18n';
 
 type DashState = { kind: 'loading' } | { kind: 'ok'; data: DashboardResponse } | { kind: 'forbidden' } | { kind: 'error'; message: string };
 type SumState = { kind: 'loading' } | { kind: 'ok'; data: SummaryResponse } | { kind: 'skip' } | { kind: 'error'; message: string };
@@ -57,49 +58,49 @@ export function ReportingPage() {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'error' && r.status === 403) { setDash({ kind: 'forbidden' }); return; }
       if (r.kind === 'ok') setDash({ kind: 'ok', data: r.data });
-      else setDash({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load dashboard.' });
+      else setDash({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.dashboard') });
     });
 
     fetchReportingSummary(cfg).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'error' && r.status === 403) { setSum({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setSum({ kind: 'ok', data: r.data });
-      else setSum({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load summary.' });
+      else setSum({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.summary') });
     });
 
     fetchReportingFairness(cfg).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'error' && r.status === 403) { setFair({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setFair({ kind: 'ok', data: r.data });
-      else setFair({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load fairness.' });
+      else setFair({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.fairness') });
     });
 
     fetchUtilizationReport(cfg).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'error' && r.status === 403) { setUtil({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setUtil({ kind: 'ok', data: r.data });
-      else setUtil({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load utilization.' });
+      else setUtil({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.utilization') });
     });
 
     fetchReasonCodeReport(cfg).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'error' && r.status === 403) { setRc({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setRc({ kind: 'ok', data: r.data });
-      else setRc({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load reason codes.' });
+      else setRc({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.reasonCodes') });
     });
 
     fetchEmployeeImpact(cfg, 2).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'error' && r.status === 403) { setEmpImpact({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setEmpImpact({ kind: 'ok', data: r.data });
-      else setEmpImpact({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load employee impact.' });
+      else setEmpImpact({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.employeeImpact') });
     });
 
     fetchOperationalExceptions(cfg).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'error' && r.status === 403) { setOps({ kind: 'skip' }); return; }
       if (r.kind === 'ok') setOps({ kind: 'ok', data: r.data });
-      else setOps({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load operational exceptions.' });
+      else setOps({ kind: 'error', message: 'message' in r ? r.message : t('reporting.error.operationalExceptions') });
     });
   }, [apiBaseUrl, bearerToken, clear, navigate]);
 
@@ -140,7 +141,7 @@ export function ReportingPage() {
   function rowLabel(ref: string): string {
     const name = displayNames[ref];
     if (name) return name;
-    if (displayNamesLoaded) return `Unknown requestor · ${shortRequestorRef(ref)}`;
+    if (displayNamesLoaded) return t('reporting.unknownRequestor', { ref: shortRequestorRef(ref) });
     return displayRequestorRef(ref);
   }
 
@@ -167,17 +168,17 @@ export function ReportingPage() {
     if (result.kind === 'ok') triggerDownload(result.blob, 'parking-allocation-outcomes.csv');
   }
 
-  if (dash.kind === 'loading') return <p style={muted}>Loading report…</p>;
+  if (dash.kind === 'loading') return <p style={muted}>{t('reporting.loadingReport')}</p>;
   if (dash.kind === 'forbidden') return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ color: '#b91c1c', margin: 0 }}>Reporting data is not available for your current role.</p>
-      <p style={{ ...muted, margin: 0 }}>HR and administrator accounts can access reports. If you expect access, contact your administrator.</p>
+      <p style={{ color: '#b91c1c', margin: 0 }}>{t('reporting.forbiddenTitle')}</p>
+      <p style={{ ...muted, margin: 0 }}>{t('reporting.forbiddenDetail')}</p>
     </div>
   );
   if (dash.kind === 'error') return (
     <div>
       <p style={{ color: '#b91c1c' }}>{dash.message}</p>
-      <button onClick={load} style={btn}>Retry</button>
+      <button onClick={load} style={btn}>{t('reporting.retry')}</button>
     </div>
   );
 
@@ -187,38 +188,38 @@ export function ReportingPage() {
   return (
     <div style={page}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Parking Reports</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('reporting.title')}</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={handleOutcomesCsvDownload} disabled={outcomesBusy} style={btnSm}>
-            {outcomesBusy ? 'Downloading…' : 'Allocation outcomes CSV'}
+            {outcomesBusy ? t('reporting.downloading') : t('reporting.outcomesCsv')}
           </button>
           <button onClick={handleCsvDownload} disabled={csvBusy} style={btn}>
-            {csvBusy ? 'Downloading…' : 'Download summary CSV'}
+            {csvBusy ? t('reporting.downloading') : t('reporting.summaryCsv')}
           </button>
         </div>
       </div>
 
       {!hasData && (
         <section style={{ ...card, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#374151' }}>No report data yet</p>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#374151' }}>{t('reporting.noDataTitle')}</p>
           <p style={{ ...muted, margin: '6px 0 0' }}>
-            Reports are generated from completed allocation draws. Run a draw from HR Operations to see allocation outcomes, rejection reasons, and utilization data here.
+            {t('reporting.noDataDetail')}
           </p>
         </section>
       )}
 
       <div style={grid}>
-        <StatCard label="Total demand" value={d.totalDemand} />
-        <StatCard label="Allocations" value={d.totalAllocations} />
-        <StatCard label="Allocation rate" value={`${(d.overallAllocationRate * 100).toFixed(1)}%`} />
-        <StatCard label="Rejections" value={d.totalRejections} />
-        <StatCard label="Cancellations" value={d.totalCancellations} />
-        <StatCard label="No-shows" value={d.totalNoShows} />
+        <StatCard label={t('reporting.stat.totalDemand')} value={d.totalDemand} />
+        <StatCard label={t('reporting.stat.allocations')} value={d.totalAllocations} />
+        <StatCard label={t('reporting.stat.allocationRate')} value={`${(d.overallAllocationRate * 100).toFixed(1)}%`} />
+        <StatCard label={t('reporting.stat.rejections')} value={d.totalRejections} />
+        <StatCard label={t('reporting.stat.cancellations')} value={d.totalCancellations} />
+        <StatCard label={t('reporting.stat.noShows')} value={d.totalNoShows} />
       </div>
 
       {Object.keys(d.rejectionsByReason).length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Rejections By Reason</h3>
+          <h3 style={cardTitle}>{t('reporting.rejectionsByReason')}</h3>
           {Object.entries(d.rejectionsByReason).map(([reason, count]) => (
             <div key={reason} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
               <span style={muted}>{reason}</span>
@@ -230,10 +231,15 @@ export function ReportingPage() {
 
       {d.dailyTrend.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Daily Trend</h3>
+          <h3 style={cardTitle}>{t('reporting.dailyTrend')}</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Date', 'Demand', 'Allocations', 'Rate'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.dailyTrendTable.date'),
+                t('reporting.dailyTrendTable.demand'),
+                t('reporting.dailyTrendTable.allocations'),
+                t('reporting.dailyTrendTable.rate'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {d.dailyTrend.map(row => (
                   <tr key={row.date}>
@@ -251,10 +257,18 @@ export function ReportingPage() {
 
       {util.kind === 'ok' && util.data.items.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Utilization By Location</h3>
+          <h3 style={cardTitle}>{t('reporting.utilizationByLocation')}</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Location', 'Demand', 'Allocated', 'Rate', 'Rejected', 'Cancelled', 'No-shows'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.utilizationTable.location'),
+                t('reporting.utilizationTable.demand'),
+                t('reporting.utilizationTable.allocated'),
+                t('reporting.utilizationTable.rate'),
+                t('reporting.utilizationTable.rejected'),
+                t('reporting.utilizationTable.cancelled'),
+                t('reporting.utilizationTable.noShows'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {util.data.items.map(row => (
                   <tr key={row.locationId}>
@@ -272,15 +286,19 @@ export function ReportingPage() {
           </div>
         </section>
       )}
-      {util.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Utilization: {util.message}</p>}
+      {util.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('reporting.utilizationError', { message: util.message })}</p>}
 
       {rc.kind === 'ok' && rc.data.items.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Reason Codes</h3>
-          <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>Total demand: {rc.data.totalDemand}</p>
+          <h3 style={cardTitle}>{t('reporting.reasonCodes')}</h3>
+          <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>{t('reporting.totalDemand', { count: rc.data.totalDemand })}</p>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Reason', 'Count', '% of demand'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.reasonCodeTable.reason'),
+                t('reporting.reasonCodeTable.count'),
+                t('reporting.reasonCodeTable.percentOfDemand'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {rc.data.items.map(row => (
                   <tr key={row.reasonCode}>
@@ -294,14 +312,24 @@ export function ReportingPage() {
           </div>
         </section>
       )}
-      {rc.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Reason codes: {rc.message}</p>}
+      {rc.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('reporting.reasonCodesError', { message: rc.message })}</p>}
 
       {sum.kind === 'ok' && sum.data.items.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Daily Summary</h3>
+          <h3 style={cardTitle}>{t('reporting.dailySummary')}</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Date', 'Location', 'Slot', 'Demand', 'Alloc', 'Rate', 'Rejected', 'Cancelled', 'No-shows'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.summaryTable.date'),
+                t('reporting.summaryTable.location'),
+                t('reporting.summaryTable.slot'),
+                t('reporting.summaryTable.demand'),
+                t('reporting.summaryTable.alloc'),
+                t('reporting.summaryTable.rate'),
+                t('reporting.summaryTable.rejected'),
+                t('reporting.summaryTable.cancelled'),
+                t('reporting.summaryTable.noShows'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {sum.data.items.map((row, i) => (
                   <tr key={i}>
@@ -321,14 +349,19 @@ export function ReportingPage() {
           </div>
         </section>
       )}
-      {sum.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Summary: {sum.message}</p>}
+      {sum.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('reporting.summaryError', { message: sum.message })}</p>}
 
       {fair.kind === 'ok' && fair.data.items.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Fairness</h3>
+          <h3 style={cardTitle}>{t('reporting.fairness')}</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Requestor', 'Requests', 'Allocations', 'Rate'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.fairnessTable.requestor'),
+                t('reporting.fairnessTable.requests'),
+                t('reporting.fairnessTable.allocations'),
+                t('reporting.fairnessTable.rate'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {fair.data.items.map(row => (
                   <tr key={row.requestorRef}>
@@ -343,17 +376,22 @@ export function ReportingPage() {
           </div>
         </section>
       )}
-      {fair.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Fairness: {fair.message}</p>}
+      {fair.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('reporting.fairnessError', { message: fair.message })}</p>}
 
       {empImpact.kind === 'ok' && empImpact.data.items.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Employee Impact Summary</h3>
+          <h3 style={cardTitle}>{t('reporting.employeeImpact')}</h3>
           <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
-            Employees with {empImpact.data.minRejectionThreshold}+ rejections in the selected period (pseudonymized for privacy)
+            {t('reporting.employeeImpactSubtitle', { threshold: empImpact.data.minRejectionThreshold })}
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Requestor', 'Total Requests', 'Rejections', 'Allocations'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.employeeImpactTable.requestor'),
+                t('reporting.employeeImpactTable.totalRequests'),
+                t('reporting.employeeImpactTable.rejections'),
+                t('reporting.employeeImpactTable.allocations'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {empImpact.data.items.map(row => (
                   <tr key={row.requestorRef}>
@@ -368,23 +406,30 @@ export function ReportingPage() {
           </div>
         </section>
       )}
-      {empImpact.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Employee impact: {empImpact.message}</p>}
+      {empImpact.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('reporting.employeeImpactError', { message: empImpact.message })}</p>}
 
       {ops.kind === 'ok' && ops.data.items.length > 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Operational Exceptions</h3>
+          <h3 style={cardTitle}>{t('reporting.operationalExceptions')}</h3>
           <p style={{ ...muted, marginTop: 0, marginBottom: 10 }}>
-            Dates with draw failures, missing allocations, or fully rejected demand.
+            {t('reporting.operationalExceptionsSubtitle')}
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table style={tbl}>
-              <thead><tr>{['Date', 'Location', 'Issue', 'Demand', 'Allocated', 'Rejected'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{[
+                t('reporting.exceptionsTable.date'),
+                t('reporting.exceptionsTable.location'),
+                t('reporting.exceptionsTable.issue'),
+                t('reporting.exceptionsTable.demand'),
+                t('reporting.exceptionsTable.allocated'),
+                t('reporting.exceptionsTable.rejected'),
+              ].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {ops.data.items.map((row, i) => (
                   <tr key={i}>
-                    <td style={td}>{new Date(row.date + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                    <td style={td}>{formatDate(new Date(row.date + 'T00:00:00'), { dateStyle: 'medium' })}</td>
                     <td style={td}>{displayLocation(row.locationId) ?? row.locationId}</td>
-                    <td style={{ ...td, color: '#b45309', fontWeight: 500 }}>{row.exceptionType === 'demand_no_allocations' ? 'No allocations' : row.exceptionType === 'failed_draw' ? row.description : 'All rejected'}</td>
+                    <td style={{ ...td, color: '#b45309', fontWeight: 500 }}>{row.exceptionType === 'demand_no_allocations' ? t('reporting.exception.noAllocations') : row.exceptionType === 'failed_draw' ? row.description : t('reporting.exception.allRejected')}</td>
                     <td style={td}>{row.totalDemand}</td>
                     <td style={td}>{row.totalAllocations}</td>
                     <td style={{ ...td, color: '#dc2626' }}>{row.totalRejections}</td>
@@ -397,11 +442,11 @@ export function ReportingPage() {
       )}
       {ops.kind === 'ok' && ops.data.items.length === 0 && (
         <section style={card}>
-          <h3 style={cardTitle}>Operational Exceptions</h3>
-          <p style={{ ...muted, margin: 0 }}>No operational exceptions found in the selected period.</p>
+          <h3 style={cardTitle}>{t('reporting.operationalExceptions')}</h3>
+          <p style={{ ...muted, margin: 0 }}>{t('reporting.noExceptions')}</p>
         </section>
       )}
-      {ops.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Operational exceptions: {ops.message}</p>}
+      {ops.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('reporting.operationalExceptionsError', { message: ops.message })}</p>}
     </div>
   );
 }

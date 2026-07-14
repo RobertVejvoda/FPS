@@ -16,7 +16,7 @@
       <div class="fairspot-logo-mark" aria-hidden="true">F</div>
       <div class="fairspot-brand-text">
         <span class="fairspot-brand-name">FairSpot</span>
-        <span class="fairspot-brand-tagline">Fair parking for everyone</span>
+        <span class="fairspot-brand-tagline">${msg("fairspotTagline")}</span>
       </div>
     </header>
 

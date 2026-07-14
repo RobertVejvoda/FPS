@@ -2,6 +2,7 @@ using FPS.Notification.Application;
 using FPS.Notification.Domain;
 using FPS.Notification.Infrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace FPS.Notification.Tests;
@@ -478,6 +479,48 @@ public sealed class BookingEventNotificationHandlerTests
             It.Is<NotificationRecord>(n => n.RecipientId == "hr-other"),
             It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // ── Locale plumbing (LOC001 #744) ─────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_CzechLocale_SlotAllocated_MessageIsLocalized()
+    {
+        var handlerCs = BuildHandler("cs-CZ");
+
+        await handlerCs.HandleAsync(BuildEnvelope("booking.slotAllocated", "user-1"));
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("Parkovací místo bylo přiděleno") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CzechLocale_RejectedWithKnownReasonCode_UsesLocalizedSafeText()
+    {
+        var handlerCs = BuildHandler("cs-CZ");
+        var envelope = BuildEnvelopeFull("booking.requestRejected", "user-1",
+            reasonCode: "DrawNotSelected", reasonText: "Internal draw detail that should not appear");
+
+        await handlerCs.HandleAsync(envelope);
+
+        repository.Verify(r => r.SaveAsync(
+            It.Is<NotificationRecord>(n =>
+                n.MessageText.Contains("nebyla vybrána v losování") &&
+                !n.MessageText.Contains("Internal draw detail") &&
+                n.Channel == NotificationChannel.InApp),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private BookingEventNotificationHandler BuildHandler(string locale) => new(
+        repository.Object, broadcaster.Object, emailSender.Object,
+        new EmailNotificationComposer(),
+        recipientResolver.Object,
+        new InMemoryNotificationPreferencesRepository(),
+        new RosterBackedAudienceResolver(roster),
+        NullLogger<BookingEventNotificationHandler>.Instance,
+        Options.Create(new NotificationLocaleOptions { DefaultLocale = locale }));
 
     private static BookingEventEnvelope BuildEnvelope(
         string eventType, string requestorId,

@@ -29,6 +29,7 @@ import {
   humanizeTriggerSource,
   shortTriggeredByRef,
 } from '../components/DrawProgressPanel';
+import { t } from '../i18n';
 
 const LOCATION_ID = 'Prague';
 const WORKDAY_START = '08:00:00';
@@ -50,9 +51,19 @@ function isPastStatus(status: string): boolean {
 }
 
 function outcomeText(draw: DrawHistoryItem): string {
-  const parts = [`${draw.allocatedCount} allocated`, `${draw.rejectedCount} rejected`];
-  if (draw.waitlistedCount > 0) parts.push(`${draw.waitlistedCount} waitlisted`);
+  const parts = [
+    t('hr.draws.outcomeAllocated', { count: draw.allocatedCount }),
+    t('hr.draws.outcomeRejected', { count: draw.rejectedCount }),
+  ];
+  if (draw.waitlistedCount > 0) parts.push(t('hr.draws.outcomeWaitlisted', { count: draw.waitlistedCount }));
   return parts.join(' / ');
+}
+
+// runLabel is an internal sentinel ('Retry Draw' | 'Run Draw') used for
+// comparisons throughout this component; only display call sites route it
+// through this helper to get the localized text.
+function runLabelText(runLabel: string): string {
+  return runLabel === 'Retry Draw' ? t('hr.draws.retryDraw') : t('hr.draws.runDraw');
 }
 
 function statusColor(status: string): string {
@@ -127,7 +138,7 @@ export function HrDrawHistoryPage() {
       if (result.kind === 'ok') {
         setHistory({ kind: 'ok', draws: result.data.items, total: result.data.total });
       } else {
-        setHistory({ kind: 'error', message: 'message' in result ? result.message : 'Failed to load draws.' });
+        setHistory({ kind: 'error', message: 'message' in result ? result.message : t('hr.draws.loadHistoryError') });
       }
     });
   }, [apiBaseUrl, bearerToken, clear, navigate, pastRange]);
@@ -137,7 +148,7 @@ export function HrDrawHistoryPage() {
 
   async function handleRunDraw() {
     const reason = drawReason.trim();
-    if (!reason) { showToast(false, 'Reason is required to run a Draw.'); return; }
+    if (!reason) { showToast(false, t('hr.draws.toast.reasonRequired')); return; }
 
     setDrawRunning(true);
     const result = await triggerDraw({ apiBaseUrl, bearerToken }, {
@@ -152,13 +163,13 @@ export function HrDrawHistoryPage() {
     setDrawReason('');
 
     if (result.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
-    if (result.kind === 'forbidden') { showToast(false, 'Not authorized to run a Draw.'); return; }
+    if (result.kind === 'forbidden') { showToast(false, t('hr.draws.toast.notAuthorized')); return; }
     if (result.kind === 'accepted') {
-      showToast(true, result.wasAlreadyCompleted ? 'Draw was already completed.' : 'Draw started.');
+      showToast(true, result.wasAlreadyCompleted ? t('hr.draws.toast.alreadyCompleted') : t('hr.draws.toast.started'));
       loadDrawData();
       loadHistory();
     } else {
-      showToast(false, 'message' in result ? result.message : 'Draw failed.');
+      showToast(false, 'message' in result ? result.message : t('hr.draws.toast.failed'));
     }
   }
 
@@ -193,6 +204,7 @@ export function HrDrawHistoryPage() {
   const canRun = effectiveStatus !== null
     && effectiveStatus !== 'Completed'
     && effectiveStatus !== 'InProgress';
+  // Internal sentinel, not rendered directly — see runLabelText() for display.
   const runLabel = effectiveStatus === 'Failed' ? 'Retry Draw' : 'Run Draw';
 
   // Toggle the expanded progress row for a Past Draw. Fetches and caches
@@ -214,7 +226,7 @@ export function HrDrawHistoryPage() {
       } else {
         setProgressCache(prev => ({
           ...prev,
-          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : 'Failed to load progress.' },
+          [drawAttemptId]: { kind: 'error', message: 'message' in result ? result.message : t('hr.draws.loadProgressError') },
         }));
       }
     });
@@ -224,8 +236,8 @@ export function HrDrawHistoryPage() {
     <div className="page-stack">
       <div className="page-hero">
         <div>
-          <h2>Draws</h2>
-          <p>Plan upcoming allocation draws and review historical runs for your tenant.</p>
+          <h2>{t('hr.draws.pageTitle')}</h2>
+          <p>{t('hr.draws.pageSubtitle')}</p>
         </div>
       </div>
 
@@ -243,8 +255,8 @@ export function HrDrawHistoryPage() {
       )}
 
       <section className="panel">
-        <h3 style={sectionTitle}>Upcoming Draws</h3>
-        <p style={sectionLead}>Next planned allocation draws. Pick a day to see its schedule and run it when the deadline arrives.</p>
+        <h3 style={sectionTitle}>{t('hr.draws.upcomingTitle')}</h3>
+        <p style={sectionLead}>{t('hr.draws.upcomingSubtitle')}</p>
 
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
           {dateChips.map((chip, i) => (
@@ -267,7 +279,7 @@ export function HrDrawHistoryPage() {
           ))}
         </div>
 
-        {drawLoading && <p style={{ color: 'var(--muted)' }}>Loading draw status…</p>}
+        {drawLoading && <p style={{ color: 'var(--muted)' }}>{t('hr.draws.loadingStatus')}</p>}
 
         {!drawLoading && drawStatus?.kind === 'ok' && (
           <UpcomingDrawCard
@@ -289,7 +301,7 @@ export function HrDrawHistoryPage() {
 
         {!drawLoading && drawStatus && drawStatus.kind !== 'ok' && (
           <p style={{ color: 'var(--danger)', fontSize: '0.875rem' }}>
-            {'message' in drawStatus ? drawStatus.message : 'Draw schedule is unavailable.'}
+            {'message' in drawStatus ? drawStatus.message : t('hr.draws.scheduleUnavailable')}
           </p>
         )}
       </section>
@@ -297,8 +309,8 @@ export function HrDrawHistoryPage() {
       <section className="panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
           <div>
-            <h3 style={sectionTitle}>Past Draws</h3>
-            <p style={sectionLead}>Completed and failed runs with allocation outcomes.</p>
+            <h3 style={sectionTitle}>{t('hr.draws.pastTitle')}</h3>
+            <p style={sectionLead}>{t('hr.draws.pastSubtitle')}</p>
           </div>
           <div style={{ minWidth: 280 }}>
             <DateFilter mode="range" value={pastRange} onChange={setPastRange} dateBase={dateBase} />
@@ -308,7 +320,7 @@ export function HrDrawHistoryPage() {
         {history.kind === 'error' && (
           <div style={{ marginBottom: '1rem' }}>
             <p style={{ color: 'var(--danger)', fontSize: 14 }}>{history.message}</p>
-            <button onClick={loadHistory} className="btn-primary">Retry</button>
+            <button onClick={loadHistory} className="btn-primary">{t('hr.draws.retry')}</button>
           </div>
         )}
 
@@ -316,17 +328,20 @@ export function HrDrawHistoryPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Date', 'Time', 'Location', 'Status', 'Outcome', 'Completed at', 'Run details', ''].map((header, i) => (
+                {[
+                  t('hr.draws.col.date'), t('hr.draws.col.time'), t('hr.draws.col.location'), t('hr.draws.col.status'),
+                  t('hr.draws.col.outcome'), t('hr.draws.col.completedAt'), t('hr.draws.col.runDetails'), '',
+                ].map((header, i) => (
                   <th key={i} style={th}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {history.kind === 'loading' && (
-                <tr><td colSpan={8} style={tdMuted}>Loading past draws…</td></tr>
+                <tr><td colSpan={8} style={tdMuted}>{t('hr.draws.loadingPast')}</td></tr>
               )}
               {history.kind === 'ok' && pastDraws.length === 0 && (
-                <tr><td colSpan={8} style={tdMuted}>No completed draws match the current filter.</td></tr>
+                <tr><td colSpan={8} style={tdMuted}>{t('hr.draws.noPastMatches')}</td></tr>
               )}
               {pastDraws.map(draw => {
                 const isExpanded = expandedRowId === draw.drawAttemptId;
@@ -336,7 +351,7 @@ export function HrDrawHistoryPage() {
                     <tr style={{ background: isExpanded ? '#f9fafb' : undefined }}>
                       <td style={tdStrong}>{displayDate(draw.date)}</td>
                       <td style={td}>{draw.timeSlot}</td>
-                      <td style={td}>{displayLocation(draw.locationId) ?? 'Location not set'}</td>
+                      <td style={td}>{displayLocation(draw.locationId) ?? t('hr.draws.locationNotSet')}</td>
                       <td style={{ ...td, color: statusColor(draw.status), fontWeight: 700 }}>{formatDrawStatus(draw.status)}</td>
                       <td style={td}>{outcomeText(draw)}</td>
                       <td style={td}>{draw.completedAt ? displayDateTime(draw.completedAt) : draw.startedAt ? displayDateTime(draw.startedAt) : '-'}</td>
@@ -356,7 +371,7 @@ export function HrDrawHistoryPage() {
                           }}
                           aria-expanded={isExpanded}
                         >
-                          {isExpanded ? 'Hide progress' : 'Progress'}
+                          {isExpanded ? t('hr.draws.hideProgress') : t('hr.draws.showProgress')}
                         </button>
                       </td>
                     </tr>
@@ -386,13 +401,13 @@ function RunDetailsCell({ draw }: { draw: DrawHistoryItem }): React.ReactElement
   const runnerRef = shortTriggeredByRef(draw.triggeredBy);
   const headline = source && runnerRef
     ? `${source} · ${runnerRef}`
-    : source ?? (runnerRef ? `Run by ${runnerRef}` : null);
+    : source ?? (runnerRef ? t('hr.draws.runBy', { ref: runnerRef }) : null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {headline
         ? <span style={{ fontSize: '0.85rem' }}>{headline}</span>
-        : <span style={{ color: 'var(--muted)' }}>—</span>}
+        : <span style={{ color: 'var(--muted)' }}>{t('common.notAvailable')}</span>}
       {draw.runReason && (
         <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
           “{draw.runReason}”
@@ -442,14 +457,14 @@ function UpcomingDrawCard({
   return (
     <div style={upcomingCard}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem 1.5rem' }}>
-        <Fact label="Date" value={displayDate(selectedDate)} />
-        <Fact label="Time" value={scheduledTimeSlot()} />
-        <Fact label="Location" value={displayLocation(LOCATION_ID) ?? 'Location not set'} />
-        <Fact label="Status" value={formatDrawStatus(effectiveStatus)} valueColor={statusColor(effectiveStatus)} />
-        <Fact label="Requests" value={requestSummary} />
-        <Fact label="Schedule" value={schedule} />
+        <Fact label={t('hr.draws.fact.date')} value={displayDate(selectedDate)} />
+        <Fact label={t('hr.draws.fact.time')} value={scheduledTimeSlot()} />
+        <Fact label={t('hr.draws.fact.location')} value={displayLocation(LOCATION_ID) ?? t('hr.draws.locationNotSet')} />
+        <Fact label={t('hr.draws.fact.status')} value={formatDrawStatus(effectiveStatus)} valueColor={statusColor(effectiveStatus)} />
+        <Fact label={t('hr.draws.fact.requests')} value={requestSummary} />
+        <Fact label={t('hr.draws.fact.schedule')} value={schedule} />
         {historyMatch && (
-          <Fact label="Outcome" value={outcomeText(historyMatch)} />
+          <Fact label={t('hr.draws.fact.outcome')} value={outcomeText(historyMatch)} />
         )}
       </div>
 
@@ -461,7 +476,7 @@ function UpcomingDrawCard({
         <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
-            placeholder={`Reason to ${runLabel === 'Retry Draw' ? 'retry' : 'run'} this Draw`}
+            placeholder={runLabel === 'Retry Draw' ? t('hr.draws.reasonPlaceholderRetry') : t('hr.draws.reasonPlaceholderRun')}
             value={drawReason}
             onChange={e => onReasonChange(e.target.value)}
             style={{ flex: '1 1 220px', maxWidth: 360, padding: '0.45rem 0.65rem', borderRadius: 4, border: '1px solid #d1d5db', fontSize: '0.875rem' }}
@@ -480,16 +495,16 @@ function UpcomingDrawCard({
               opacity: drawRunning || !drawReason.trim() ? 0.5 : 1,
             }}
           >
-            {drawRunning ? 'Running…' : runLabel}
+            {drawRunning ? t('hr.draws.running') : runLabelText(runLabel)}
           </button>
         </div>
       ) : (
         <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--muted)' }}>
           {effectiveStatus === 'Completed'
-            ? 'This draw is already complete — see Past Draws below for the outcome.'
+            ? t('hr.draws.completeExplain')
             : effectiveStatus === 'InProgress'
-              ? 'A draw run is already in progress for this date.'
-              : 'No run action is available right now.'}
+              ? t('hr.draws.inProgressExplain')
+              : t('hr.draws.noRunAction')}
         </p>
       )}
 
@@ -512,7 +527,7 @@ function UpcomingDrawCard({
             }}
             aria-expanded={inProgressExpanded}
           >
-            {inProgressExpanded ? 'Hide progress' : 'Progress'}
+            {inProgressExpanded ? t('hr.draws.hideProgress') : t('hr.draws.showProgress')}
           </button>
           {inProgressExpanded && (
             <div style={{ marginTop: '0.75rem', padding: '1rem', background: '#fff', borderRadius: 6, border: '1px solid var(--border)' }}>

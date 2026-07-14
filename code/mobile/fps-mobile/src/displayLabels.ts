@@ -1,15 +1,12 @@
+// LOC001 (#744) — display-label helpers converted to the i18n catalog.
+// Stable machine codes (location ids, rejection codes, statuses, roles) stay
+// untranslated internally; only the label looked up via tDynamic()/t() is
+// locale-aware. See src/i18n/messages/booking.ts and messages/more.ts for
+// the `labels.*` catalog entries this file looks up.
+import { t, tDynamic } from '@/i18n';
+import { formatDate, formatTime, formatWallClock } from '@/i18n/formatters';
+
 const DEMO_FACILITY_ID = '00000000-0000-0000-0000-000000000001';
-
-const LOCATION_LABELS: Record<string, string> = {
-  Prague: 'Prague',
-  // UX009 review (#790) — employee screens must not show raw location ids.
-  'GL-HQ': 'Headquarters',
-  'GL-TEAMS': 'Team areas',
-};
-
-const FACILITY_LABELS: Record<string, string> = {
-  [DEMO_FACILITY_ID]: 'Headquarters',
-};
 
 function isGuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -17,12 +14,17 @@ function isGuid(value: string): boolean {
 
 export function displayLocation(value?: string | null): string | null {
   if (!value) return null;
-  return LOCATION_LABELS[value] ?? FACILITY_LABELS[value] ?? (isGuid(value) ? 'Selected location' : value);
+  if (value === 'Prague') return t('labels.location.Prague');
+  if (value === 'GL-HQ' || value === DEMO_FACILITY_ID) return t('labels.location.GL-HQ');
+  if (value === 'GL-TEAMS') return t('labels.location.GL-TEAMS');
+  return isGuid(value) ? t('labels.location.selected') : value;
 }
 
 export function displaySlot(value?: string | null): string | null {
   if (!value) return null;
-  return isGuid(value) ? 'Assigned space' : value.replace(/^Prague-/, 'Space ');
+  if (isGuid(value)) return t('labels.slot.assigned');
+  const match = value.match(/^Prague-(.+)$/);
+  return match ? t('labels.slot.spacePrefix', { id: match[1] }) : value;
 }
 
 // UX008 (#781) — employee-safe module labels for the module-aware reservations
@@ -33,19 +35,22 @@ export function isSeatsItem(item: { resourceType?: string | null }): boolean {
 }
 
 export function displayModule(resourceType?: string | null): string {
-  if (!resourceType || resourceType === 'Parking') return 'Parking';
-  if (resourceType === 'Seats') return 'Seat';
+  if (!resourceType || resourceType === 'Parking') return t('labels.module.Parking');
+  if (resourceType === 'Seats') return t('labels.module.Seats');
   return resourceType;
 }
 
 // The employee-facing name of the allocated resource: parking uses "Spot",
 // seats use "Seat". Keeps card/detail copy business-readable per module.
 export function displayResourceNoun(resourceType?: string | null): string {
-  return resourceType === 'Seats' ? 'Seat' : 'Spot';
+  return resourceType === 'Seats' ? t('labels.resourceNoun.seat') : t('labels.resourceNoun.spot');
 }
 
-function formatDisplayTime(hour: number, minute: number): string {
-  return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+// The plural form of the resource noun ("spots"/"seats"), used in copy like
+// "Available {noun}" where English pluralization ("+s") doesn't carry over
+// to Czech grammar.
+export function displayResourceNounPlural(resourceType?: string | null): string {
+  return resourceType === 'Seats' ? t('labels.resourceNounPlural.seat') : t('labels.resourceNounPlural.spot');
 }
 
 export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '18:00'): string | null {
@@ -56,35 +61,18 @@ export function displayNextDrawRun(requestedDate?: string | null, cutOffTime = '
 
   const drawDate = new Date(year, month - 1, day);
   drawDate.setDate(drawDate.getDate() - 1);
-  const dateLabel = drawDate.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-  return `${dateLabel}, ${formatDisplayTime(hour, minute)}`;
+  const dateLabel = formatDate(drawDate, { weekday: 'short', month: 'short', day: 'numeric' });
+  return `${dateLabel}, ${formatWallClock(hour, minute)}`;
 }
 
 export function shouldShowNextDraw(status?: string | null): boolean {
   return status === 'Pending' || status === 'Submitted';
 }
 
-const REJECTION_CODE_LABELS: Record<string, string> = {
-  PolicyCutoff: 'Booking deadline has passed for this date.',
-  IneligibleProfile: 'Your profile was not eligible for this allocation.',
-  MissingVehicleEligibility: 'Vehicle eligibility requirement was not met.',
-  NoMatchingCapacity: 'No available spaces matched this request.',
-  DrawNotSelected: 'Your request was not selected in this allocation draw.',
-};
-
 export function formatCutOffAt(cutOffAt: string | null, timeZone: string): string {
-  if (!cutOffAt) return '—';
+  if (!cutOffAt) return t('common.notAvailable');
   try {
-    return new Date(cutOffAt).toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone,
-      timeZoneName: 'short',
-    });
+    return formatTime(new Date(cutOffAt), { hour: '2-digit', minute: '2-digit', timeZone, timeZoneName: 'short' });
   } catch {
     return cutOffAt;
   }
@@ -93,9 +81,9 @@ export function formatCutOffAt(cutOffAt: string | null, timeZone: string): strin
 export function humanizeRejectionReason(rejectionCode: string | null, reason: string | null): string {
   if (reason) return reason;
   if (rejectionCode) {
-    return REJECTION_CODE_LABELS[rejectionCode] ?? 'This request was not eligible for allocation. Details are not available yet.';
+    return tDynamic('labels.rejection', rejectionCode, t('labels.rejection.fallback'));
   }
-  return 'This request was not eligible for allocation. Details are not available yet.';
+  return t('labels.rejection.fallback');
 }
 
 export function formatBookingRef(requestId: string, requestedDate?: string): string {
@@ -106,58 +94,47 @@ export function formatBookingRef(requestId: string, requestedDate?: string): str
   return `BK-${datePart}-${shortCode}`;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  // PascalCase forms (identity token claims)
-  EmployeeMobile: 'Employee',
-  Employee: 'Employee',
-  Admin: 'Administrator',
-  Auditor: 'Auditor',
-  HrManager: 'HR Manager',
-  ReportViewer: 'Report Viewer',
-  // snake_case forms (backend role values)
-  employee: 'Employee',
-  admin: 'Administrator',
-  auditor: 'Auditor',
-  hr_manager: 'HR Manager',
-  report_viewer: 'Report Viewer',
-};
-
 export function formatRoles(roles: string[]): string {
   const seen = new Set<string>();
   const labels: string[] = [];
   for (const r of roles) {
-    const label = ROLE_LABELS[r] ?? r;
+    const label = tDynamic('labels.role', r, r);
     if (!seen.has(label)) {
       seen.add(label);
       labels.push(label);
     }
   }
-  return labels.join(', ') || 'Employee';
+  return labels.join(', ') || t('labels.role.Employee');
 }
 
-export const STATUS_BADGE_LABEL: Record<string, string> = {
-  Submitted: 'Submitted',
-  Pending: 'Pending',
-  Allocated: 'Allocated',
-  Rejected: 'Not Allocated',
-  Cancelled: 'Cancelled',
-  Expired: 'Expired',
-  Waitlisted: 'Waitlisted',
-  UsageConfirmed: 'Confirmed',
-  NoShow: 'No Show',
-};
-
-const DEMAND_EXPLANATIONS: Record<string, string> = {
-  Low: 'Demand is low — most requests are typically fulfilled.',
-  Medium: 'Demand is moderate — some requests may not receive a space.',
-  High: 'Demand is high — spaces are limited. Final allocation follows eligibility and fairness rules.',
-  Unknown: 'Demand information is not yet available for this date.',
-};
+export function statusBadgeLabel(status: string): string {
+  return tDynamic('labels.statusBadge', status, status);
+}
 
 export function displayDemandLevel(level: string | null | undefined): { label: string; explanation: string } | null {
   if (!level || level === 'Unknown') return null;
+  const shortLabel = tDynamic('labels.demand', level, level);
   return {
-    label: `Demand: ${level}`,
-    explanation: DEMAND_EXPLANATIONS[level] ?? DEMAND_EXPLANATIONS['Unknown'],
+    label: t('labels.demandLabel', { level: shortLabel }),
+    explanation: tDynamic('labels.demandExplanation', level, t('labels.demandExplanation.Unknown')),
   };
+}
+
+// Short demand label without the "Demand: " prefix (booking/[requestId].tsx
+// row values, e.g. "Low" / "Nízká").
+export function demandShortLabel(level: string): string {
+  return tDynamic('labels.demand', level, level);
+}
+
+// Vehicle type display label (VEHICLE_TYPES in app/(tabs)/new.tsx) — the
+// wire value (e.g. "Sedan") stays in the submitted payload; only the shown
+// label is localized.
+export function displayVehicleType(vehicleType: string): string {
+  return tDynamic('labels.vehicleType', vehicleType, vehicleType);
+}
+
+// Time preset display name (TIME_PRESETS in app/(tabs)/new.tsx), keyed by
+// the preset's stable `key`.
+export function displayTimePreset(presetKey: string, fallback: string): string {
+  return tDynamic('labels.timePreset', presetKey, fallback);
 }

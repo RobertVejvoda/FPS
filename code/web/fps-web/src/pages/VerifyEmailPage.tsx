@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { confirmEmailVerification } from '../api/emailVerification';
+import { t } from '../i18n';
 
 // AUTH008B (#734) — landing page for the emailed verification link
 // (https://app.fairspot.net/verify-email?token=…). The token is the Secret: this page reads it once from
@@ -65,13 +66,13 @@ export function VerifyEmailPage() {
           <div className="brand-mark" aria-hidden="true">F</div>
           <div className="brand-title">
             <strong>FairSpot</strong>
-            <span>Email verification</span>
+            <span>{t('session.verify.brandSubtitle')}</span>
           </div>
         </div>
-        <h1>Confirm your email address</h1>
+        <h1>{t('session.verify.heading')}</h1>
         {renderBody(phase, reason)}
         <div className="legal-actions">
-          <Link className="btn-primary" to="/session">Go to FairSpot</Link>
+          <Link className="btn-primary" to="/session">{t('session.verify.goToFairspot')}</Link>
         </div>
       </div>
     </div>
@@ -82,26 +83,24 @@ function renderBody(phase: Phase, reason: string | null) {
   switch (phase) {
     case 'reading':
     case 'verifying':
-      return <p className="plat-muted">Confirming your email address…</p>;
+      return <p className="plat-muted">{t('session.verify.confirming')}</p>;
     case 'verified':
-      return <p>Your email address is confirmed. You can now receive FairSpot notifications.</p>;
+      return <p>{t('session.verify.verified')}</p>;
     case 'need-signin':
       return (
         <p>
-          Please sign in to FairSpot with this account, then open the verification link from your email
-          again to confirm. Confirmation is tied to your own signed-in session.
+          {t('session.verify.needSignIn')}
         </p>
       );
     case 'rejected':
       return (
         <p>
-          This verification link is no longer valid{reason === 'expired' ? ' — it has expired' : ''}. Request a
-          new verification email from your FairSpot profile and try again.
+          {reason === 'expired' ? t('session.verify.rejectedExpired') : t('session.verify.rejected')}
         </p>
       );
     case 'no-token':
-      return <p>This link is missing its verification code. Open the link directly from your FairSpot email.</p>;
+      return <p>{t('session.verify.noToken')}</p>;
     default:
-      return <p>We couldn’t confirm your email right now. Please try the link again shortly.</p>;
+      return <p>{t('session.verify.error')}</p>;
   }
 }

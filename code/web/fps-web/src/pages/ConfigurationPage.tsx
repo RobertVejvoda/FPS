@@ -14,6 +14,7 @@ import { FpsRole, hasRole } from '../auth/roles';
 import { fetchTenantParkingBootstrap, type TenantBootstrapLocationDto } from '../api/customer';
 import { fetchMe } from '../api/client';
 import { fetchCompanyCarLocationSummary, type CompanyCarLocationSummary } from '../api/profile';
+import { t, tPlural } from '../i18n';
 
 type TenantState =
   | { kind: 'loading' }
@@ -100,7 +101,7 @@ export function ConfigurationPage() {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'error' && r.status === 403) { setTenant({ kind: 'forbidden' }); return; }
       if (r.kind === 'ok') setTenant({ kind: 'ok', policy: r.data, dirty: {}, saved: false });
-      else setTenant({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load policy.' });
+      else setTenant({ kind: 'error', message: 'message' in r ? r.message : t('admin.configuration.loadPolicyError') });
     });
   }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -153,10 +154,10 @@ export function ConfigurationPage() {
     setSaving(false);
     if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (r.kind === 'ok') {
-      setSaveMsg({ ok: true, text: 'Policy saved.' });
+      setSaveMsg({ ok: true, text: t('admin.configuration.policySaved') });
       setTenant(prev => prev.kind === 'ok' ? { ...prev, policy: merged, dirty: {}, saved: true } : prev);
     } else {
-      setSaveMsg({ ok: false, text: 'message' in r ? r.message : 'Failed to save policy.' });
+      setSaveMsg({ ok: false, text: 'message' in r ? r.message : t('admin.configuration.savePolicyError') });
     }
     setTimeout(() => setSaveMsg(null), 4000);
   }
@@ -182,13 +183,13 @@ export function ConfigurationPage() {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'error' && r.status === 403) { setLocState({ kind: 'forbidden' }); return; }
       if (r.kind === 'ok') setLocState({ kind: 'ok', policy: r.data, dirty: {} });
-      else setLocState({ kind: 'error', message: 'message' in r ? r.message : 'No location policy.' });
+      else setLocState({ kind: 'error', message: 'message' in r ? r.message : t('admin.configuration.noLocationPolicy') });
     });
 
     fetchLocationPolicyHistory(cfg, id).then((r) => {
       if (r.kind === 'unauthenticated') return;
       if (r.kind === 'ok') setLocHistory({ kind: 'ok', items: r.data });
-      else setLocHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load location history.' });
+      else setLocHistory({ kind: 'error', message: 'message' in r ? r.message : t('admin.configuration.locationHistoryError') });
     });
 
     Promise.all([fetchSlots(cfg, id), fetchSlotHistory(cfg, id)]).then(([sr, hr]) => {
@@ -196,7 +197,7 @@ export function ConfigurationPage() {
         setSlots({ kind: 'ok', slots: sr.data, dirty: {}, history: hr.data });
       } else {
         const msg = sr.kind !== 'ok' && 'message' in sr ? sr.message
-          : hr.kind !== 'ok' && 'message' in hr ? hr.message : 'Failed to load slots.';
+          : hr.kind !== 'ok' && 'message' in hr ? hr.message : t('admin.configuration.slotsLoadError');
         setSlots({ kind: 'error', message: msg });
       }
     });
@@ -209,7 +210,7 @@ export function ConfigurationPage() {
     fetchLocationPolicyHistory(cfg, id).then(r => {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'ok') setLocHistory({ kind: 'ok', items: r.data });
-      else setLocHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load location history.' });
+      else setLocHistory({ kind: 'error', message: 'message' in r ? r.message : t('admin.configuration.locationHistoryError') });
     });
   }
 
@@ -228,10 +229,10 @@ export function ConfigurationPage() {
     setLocSaving(false);
     if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (r.kind === 'ok') {
-      setLocSaveMsg({ ok: true, text: 'Location policy saved.' });
+      setLocSaveMsg({ ok: true, text: t('admin.configuration.locationPolicySaved') });
       setLocState(prev => prev.kind === 'ok' ? { ...prev, policy: merged, dirty: {} } : prev);
     } else {
-      setLocSaveMsg({ ok: false, text: 'message' in r ? r.message : 'Failed to save location policy.' });
+      setLocSaveMsg({ ok: false, text: 'message' in r ? r.message : t('admin.configuration.saveLocationPolicyError') });
     }
     setTimeout(() => setLocSaveMsg(null), 4000);
   }
@@ -252,11 +253,11 @@ export function ConfigurationPage() {
     setSlotsSaving(false);
     if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (r.kind === 'ok') {
-      setSlotsSaveMsg({ ok: true, text: 'Slots saved.' });
+      setSlotsSaveMsg({ ok: true, text: t('admin.configuration.slotsSaved') });
       setSlots(prev => prev.kind === 'ok' ? { ...prev, slots: merged, dirty: {} } : prev);
       setSlotsChangeReason('');
     } else {
-      setSlotsSaveMsg({ ok: false, text: 'message' in r ? r.message : 'Failed to save slots.' });
+      setSlotsSaveMsg({ ok: false, text: 'message' in r ? r.message : t('admin.configuration.saveSlotsError') });
     }
     setTimeout(() => setSlotsSaveMsg(null), 4000);
   }
@@ -266,7 +267,7 @@ export function ConfigurationPage() {
     fetchPolicyHistory(cfg).then((r) => {
       if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
       if (r.kind === 'ok') setTenantHistory({ kind: 'ok', items: r.data });
-      else setTenantHistory({ kind: 'error', message: 'message' in r ? r.message : 'Failed to load history.' });
+      else setTenantHistory({ kind: 'error', message: 'message' in r ? r.message : t('admin.configuration.tenantHistoryError') });
     });
   }, [apiBaseUrl, bearerToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -299,22 +300,28 @@ export function ConfigurationPage() {
     setDemoDrawBusy(false);
     if (r.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
     if (r.kind === 'accepted') {
-      const status = r.wasAlreadyCompleted ? 'already completed' : 'completed';
+      const key = r.wasAlreadyCompleted
+        ? 'admin.configuration.demoDraw.resultAlreadyCompleted'
+        : 'admin.configuration.demoDraw.resultCompleted';
       setDemoDrawMsg({
         ok: true,
-        text: `Draw ${status}: ${r.data.allocatedCount} allocated, ${r.data.rejectedCount} rejected, ${r.data.waitlistedCount} waitlisted.`,
+        text: t(key, {
+          allocated: r.data.allocatedCount,
+          rejected: r.data.rejectedCount,
+          waitlisted: r.data.waitlistedCount,
+        }),
       });
     } else {
-      setDemoDrawMsg({ ok: false, text: 'message' in r ? r.message : 'Draw failed.' });
+      setDemoDrawMsg({ ok: false, text: 'message' in r ? r.message : t('admin.configuration.demoDrawFailed') });
     }
   }
 
-  if (tenant.kind === 'loading') return <p style={muted}>Loading policy…</p>;
-  if (tenant.kind === 'forbidden') return <p style={{ color: '#b91c1c' }}>You do not have permission to view or edit configuration.</p>;
+  if (tenant.kind === 'loading') return <p style={muted}>{t('admin.configuration.loadingPolicy')}</p>;
+  if (tenant.kind === 'forbidden') return <p style={{ color: '#b91c1c' }}>{t('admin.configuration.forbidden')}</p>;
   if (tenant.kind === 'error') return (
     <div>
       <p style={{ color: '#b91c1c' }}>{tenant.message}</p>
-      <button onClick={loadTenant} style={btn}>Retry</button>
+      <button onClick={loadTenant} style={btn}>{t('admin.common.retry')}</button>
     </div>
   );
 
@@ -324,44 +331,44 @@ export function ConfigurationPage() {
   return (
     <div style={page}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Configuration</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('admin.configuration.title')}</h2>
         <button onClick={handleSaveTenant} disabled={saving || !hasDirty} style={{ ...btn, opacity: !hasDirty || saving ? 0.5 : 1 }}>
-          {saving ? 'Saving…' : 'Save policy'}
+          {saving ? t('admin.common.saving') : t('admin.configuration.savePolicy')}
         </button>
       </div>
 
       {saveMsg && <SaveBanner ok={saveMsg.ok} text={saveMsg.text} />}
 
       <section style={card}>
-        <h3 style={cardTitle}>Tenant Parking Policy</h3>
+        <h3 style={cardTitle}>{t('admin.configuration.tenantPolicyTitle')}</h3>
         <PolicyForm policy={current} onPatch={patchTenant} />
         <div style={{ marginTop: 10 }}>
-          <span style={muted}>Version: {tenant.policy.version}</span>
+          <span style={muted}>{t('admin.configuration.version', { version: tenant.policy.version })}</span>
         </div>
       </section>
 
       {isTenantAdmin ? (
         <section style={card}>
-          <h3 style={cardTitle}>Demo Draw</h3>
+          <h3 style={cardTitle}>{t('admin.configuration.demoDrawTitle')}</h3>
           {demoDrawMsg && <SaveBanner ok={demoDrawMsg.ok} text={demoDrawMsg.text} />}
           <div style={fieldGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={muted}>Location</label>
+              <label style={muted}>{t('admin.configuration.locationLabel')}</label>
               <select
                 value={demoDraw.locationId}
                 onChange={e => setDemoDraw(prev => ({ ...prev, locationId: e.target.value }))}
                 style={input}
               >
-                <option value="Prague">Prague</option>
+                <option value="Prague">{t('labels.location.Prague')}</option>
               </select>
             </div>
-            <Field label="Parking date" value={demoDraw.date} type="date" onChange={v => setDemoDraw(prev => ({ ...prev, date: v }))} />
-            <Field label="Arrival time" value={demoDraw.timeSlotStart} type="time" onChange={v => setDemoDraw(prev => ({ ...prev, timeSlotStart: v }))} />
-            <Field label="Departure time" value={demoDraw.timeSlotEnd} type="time" onChange={v => setDemoDraw(prev => ({ ...prev, timeSlotEnd: v }))} />
+            <Field label={t('admin.configuration.parkingDate')} value={demoDraw.date} type="date" onChange={v => setDemoDraw(prev => ({ ...prev, date: v }))} />
+            <Field label={t('admin.configuration.arrivalTime')} value={demoDraw.timeSlotStart} type="time" onChange={v => setDemoDraw(prev => ({ ...prev, timeSlotStart: v }))} />
+            <Field label={t('admin.configuration.departureTime')} value={demoDraw.timeSlotEnd} type="time" onChange={v => setDemoDraw(prev => ({ ...prev, timeSlotEnd: v }))} />
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 280px' }}>
-              <label style={muted}>Reason</label>
+              <label style={muted}>{t('admin.configuration.reason')}</label>
               <input
                 value={demoDraw.reason}
                 onChange={e => setDemoDraw(prev => ({ ...prev, reason: e.target.value }))}
@@ -373,36 +380,36 @@ export function ConfigurationPage() {
               disabled={demoDrawBusy || !demoDraw.date || !demoDraw.locationId || !demoDraw.timeSlotStart || !demoDraw.timeSlotEnd}
               style={{ ...btn, opacity: demoDrawBusy ? 0.5 : 1 }}
             >
-              {demoDrawBusy ? 'Running Draw…' : 'Run Draw now'}
+              {demoDrawBusy ? t('admin.configuration.runningDraw') : t('admin.configuration.runDrawNow')}
             </button>
           </div>
           <p style={{ ...muted, margin: '10px 0 0' }}>
-            Runs one explicit Draw key. Re-running the same location, date, and time slot returns the completed result without reallocating.
+            {t('admin.configuration.demoDrawNote')}
           </p>
         </section>
       ) : null}
 
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ ...cardTitle, marginBottom: 0 }}>Tenant Policy Version History</h3>
-          {tenantHistory.kind === 'loading' && <span style={muted}>Loading…</span>}
+          <h3 style={{ ...cardTitle, marginBottom: 0 }}>{t('admin.configuration.tenantHistoryTitle')}</h3>
+          {tenantHistory.kind === 'loading' && <span style={muted}>{t('common.loading')}</span>}
         </div>
         {tenantHistory.kind === 'ok' && (
-          tenantHistory.items.length === 0 ? <p style={muted}>No history yet.</p> : (
+          tenantHistory.items.length === 0 ? <p style={muted}>{t('admin.configuration.noHistory')}</p> : (
             <HistoryTable items={tenantHistory.items} />
           )
         )}
         {tenantHistory.kind === 'error' && (
           <div>
             <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 8px' }}>{tenantHistory.message}</p>
-            <button onClick={loadTenantHistory} style={btnSm}>Retry</button>
+            <button onClick={loadTenantHistory} style={btnSm}>{t('admin.common.retry')}</button>
           </div>
         )}
       </section>
 
       <section style={card}>
         <h3 style={cardTitle}>
-          Location Configuration
+          {t('admin.configuration.locationConfigTitle')}
           {locationId && knownLocations.length === 1 && (
             <span style={{ ...muted, marginLeft: 8, fontSize: 13, fontWeight: 400 }}>
               · {displayLocation(locationId) ?? locationId}
@@ -432,7 +439,7 @@ export function ConfigurationPage() {
                 >
                   {displayLocation(loc.locationId) ?? loc.locationId}
                   {loc.activeSlotCount > 0 && (
-                    <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.75 }}>· {loc.activeSlotCount} slots</span>
+                    <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.75 }}>· {tPlural('admin.configuration.slotsCount', loc.activeSlotCount)}</span>
                   )}
                 </button>
               );
@@ -440,21 +447,26 @@ export function ConfigurationPage() {
           </div>
         )}
 
-        {locState.kind === 'loading' && <p style={muted}>Loading location policy…</p>}
-        {locState.kind === 'forbidden' && <p style={{ color: '#b91c1c', fontSize: 13 }}>Insufficient permissions for this location.</p>}
+        {locState.kind === 'loading' && <p style={muted}>{t('admin.configuration.loadingLocationPolicy')}</p>}
+        {locState.kind === 'forbidden' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{t('admin.configuration.locationForbidden')}</p>}
         {locState.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13 }}>{locState.message}</p>}
 
         {locState.kind === 'ok' && (
           <div>
             {locSaveMsg && <SaveBanner ok={locSaveMsg.ok} text={locSaveMsg.text} />}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={muted}>Location: {displayLocation(locationId) ?? locationId} · Version: {locState.policy.version}</span>
+              <span style={muted}>
+                {t('admin.configuration.locationVersion', {
+                  location: displayLocation(locationId) ?? locationId,
+                  version: locState.policy.version,
+                })}
+              </span>
               <button
                 onClick={handleSaveLocation}
                 disabled={locSaving || Object.keys(locState.dirty).length === 0}
                 style={{ ...btnSm, opacity: Object.keys(locState.dirty).length === 0 || locSaving ? 0.5 : 1 }}
               >
-                {locSaving ? 'Saving…' : 'Save location policy'}
+                {locSaving ? t('admin.common.saving') : t('admin.configuration.saveLocationPolicy')}
               </button>
             </div>
             <PolicyForm policy={{ ...locState.policy, ...locState.dirty }} onPatch={patchLoc} />
@@ -463,35 +475,35 @@ export function ConfigurationPage() {
 
         {locHistory.kind !== 'idle' && (
           <div style={{ marginTop: 20 }}>
-            <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>Location Policy History</h4>
-            {locHistory.kind === 'loading' && <p style={muted}>Loading…</p>}
-            {locHistory.kind === 'ok' && locHistory.items.length === 0 && <p style={muted}>No location policy history yet.</p>}
+            <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>{t('admin.configuration.locationHistoryTitle')}</h4>
+            {locHistory.kind === 'loading' && <p style={muted}>{t('common.loading')}</p>}
+            {locHistory.kind === 'ok' && locHistory.items.length === 0 && <p style={muted}>{t('admin.configuration.noLocationHistory')}</p>}
             {locHistory.kind === 'ok' && locHistory.items.length > 0 && <HistoryTable items={locHistory.items} />}
             {locHistory.kind === 'error' && (
               <div>
                 <p style={{ color: '#b91c1c', fontSize: 13, margin: '0 0 8px' }}>{locHistory.message}</p>
-                <button onClick={reloadLocHistory} style={btnSm}>Retry</button>
+                <button onClick={reloadLocHistory} style={btnSm}>{t('admin.common.retry')}</button>
               </div>
             )}
           </div>
         )}
 
-        {slots.kind === 'loading' && <p style={{ ...muted, marginTop: 16 }}>Loading slots…</p>}
+        {slots.kind === 'loading' && <p style={{ ...muted, marginTop: 16 }}>{t('admin.configuration.loadingSlots')}</p>}
         {slots.kind === 'error' && <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 16 }}>{slots.message}</p>}
         {slots.kind === 'ok' && (
           <div style={{ marginTop: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Slots ({slots.slots.length})</h4>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{t('admin.configuration.slotsHeading', { count: slots.slots.length })}</h4>
               {Object.keys(slots.dirty).length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     value={slotsChangeReason}
                     onChange={e => setSlotsChangeReason(e.target.value)}
-                    placeholder="Change reason (optional)"
+                    placeholder={t('admin.configuration.changeReasonPlaceholder')}
                     style={{ border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 10px', fontSize: 13, outline: 'none', width: 220 }}
                   />
                   <button onClick={handleSaveSlots} disabled={slotsSaving} style={{ ...btnSm, opacity: slotsSaving ? 0.5 : 1 }}>
-                    {slotsSaving ? 'Saving…' : 'Save slots'}
+                    {slotsSaving ? t('admin.common.saving') : t('admin.configuration.saveSlots')}
                   </button>
                 </div>
               )}
@@ -502,12 +514,21 @@ export function ConfigurationPage() {
               slots={slots.slots.map(s => ({ ...s, ...(slots.dirty[s.slotId] ?? {}) }))}
               summary={companyCarSummary}
             />
-            {slots.slots.length === 0 ? <p style={muted}>No slots configured.</p> : (
+            {slots.slots.length === 0 ? <p style={muted}>{t('admin.configuration.noSlots')}</p> : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={tbl}>
                   <thead>
                     <tr>
-                      {['Slot ID', 'Active', 'Charger', 'Accessible', 'Company car', 'Moto', 'Moto units', 'Reserved for'].map(h => (
+                      {[
+                        t('admin.configuration.slotTable.slotId'),
+                        t('admin.configuration.slotTable.active'),
+                        t('admin.configuration.slotTable.charger'),
+                        t('admin.configuration.slotTable.accessible'),
+                        t('admin.configuration.slotTable.companyCar'),
+                        t('admin.configuration.slotTable.moto'),
+                        t('admin.configuration.slotTable.motoUnits'),
+                        t('admin.configuration.slotTable.reservedFor'),
+                      ].map(h => (
                         <th key={h} style={th}>{h}</th>
                       ))}
                     </tr>
@@ -532,8 +553,8 @@ export function ConfigurationPage() {
                               disabled={!v.isMotorcycleCapacity}
                               value={v.motorcycleCapacityUnits ?? ''}
                               onChange={e => patchSlot(s.slotId, 'motorcycleCapacityUnits', e.target.value === '' ? null : Number(e.target.value))}
-                              placeholder={v.isMotorcycleCapacity ? '4' : '—'}
-                              title={v.isMotorcycleCapacity ? 'Defaults to 4 when blank' : 'Only used for motorcycle-specific slots'}
+                              placeholder={v.isMotorcycleCapacity ? '4' : t('common.notAvailable')}
+                              title={v.isMotorcycleCapacity ? t('admin.configuration.slotTable.motoDefaultTitle') : t('admin.configuration.slotTable.motoOnlyTitle')}
                               style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: '3px 6px', fontSize: 12, width: 60, outline: 'none' }}
                             />
                           </td>
@@ -541,7 +562,7 @@ export function ConfigurationPage() {
                             <input
                               value={v.reservedForUserId ?? ''}
                               onChange={e => patchSlot(s.slotId, 'reservedForUserId', e.target.value || null)}
-                              placeholder="—"
+                              placeholder={t('common.notAvailable')}
                               style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: '3px 6px', fontSize: 12, width: 120, outline: 'none' }}
                             />
                           </td>
@@ -555,12 +576,18 @@ export function ConfigurationPage() {
 
             {slots.history.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>Slot History</h4>
+                <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>{t('admin.configuration.slotHistoryTitle')}</h4>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={tbl}>
                     <thead>
                       <tr>
-                        {['Version', 'Changed at', 'Changed by', 'Reason', 'Count'].map(h => (
+                        {[
+                          t('admin.configuration.slotHistoryTable.version'),
+                          t('admin.configuration.slotHistoryTable.changedAt'),
+                          t('admin.configuration.slotHistoryTable.changedBy'),
+                          t('admin.configuration.slotHistoryTable.reason'),
+                          t('admin.configuration.slotHistoryTable.count'),
+                        ].map(h => (
                           <th key={h} style={th}>{h}</th>
                         ))}
                       </tr>
@@ -570,8 +597,8 @@ export function ConfigurationPage() {
                         <tr key={item.version}>
                           <td style={td}>{item.version}</td>
                           <td style={td}>{item.changedAt}</td>
-                          <td style={td}>{item.changedByHash ?? '—'}</td>
-                          <td style={td}>{item.changeReason ?? '—'}</td>
+                          <td style={td}>{item.changedByHash ?? t('common.notAvailable')}</td>
+                          <td style={td}>{item.changeReason ?? t('common.notAvailable')}</td>
                           <td style={td}>{item.slotCount}</td>
                         </tr>
                       ))}
@@ -591,31 +618,31 @@ function PolicyForm({ policy, onPatch }: { policy: ParkingPolicy; onPatch: (fiel
   return (
     <div>
       <div style={fieldGrid}>
-        <Field label="Time zone" value={policy.timeZone} onChange={v => onPatch('timeZone', v)} />
-        <Field label="Draw cut-off time" value={policy.drawCutOffTime} onChange={v => onPatch('drawCutOffTime', v)} />
-        <NumField label="Daily request cap" value={policy.dailyRequestCap} onChange={v => onPatch('dailyRequestCap', v)} />
-        <NumField label="Allocation lookback days" value={policy.allocationLookbackDays} onChange={v => onPatch('allocationLookbackDays', v)} />
-        <NumField label="Late cancellation penalty" value={policy.lateCancellationPenalty} onChange={v => onPatch('lateCancellationPenalty', v)} />
-        <NumField label="No-show penalty" value={policy.noShowPenalty} onChange={v => onPatch('noShowPenalty', v)} />
-        <NumField label="Usage confirmation window (min)" value={policy.usageConfirmationWindowMinutes} onChange={v => onPatch('usageConfirmationWindowMinutes', v)} />
+        <Field label={t('admin.configuration.policy.timeZone')} value={policy.timeZone} onChange={v => onPatch('timeZone', v)} />
+        <Field label={t('admin.configuration.policy.drawCutOffTime')} value={policy.drawCutOffTime} onChange={v => onPatch('drawCutOffTime', v)} />
+        <NumField label={t('admin.configuration.policy.dailyRequestCap')} value={policy.dailyRequestCap} onChange={v => onPatch('dailyRequestCap', v)} />
+        <NumField label={t('admin.configuration.policy.allocationLookbackDays')} value={policy.allocationLookbackDays} onChange={v => onPatch('allocationLookbackDays', v)} />
+        <NumField label={t('admin.configuration.policy.lateCancellationPenalty')} value={policy.lateCancellationPenalty} onChange={v => onPatch('lateCancellationPenalty', v)} />
+        <NumField label={t('admin.configuration.policy.noShowPenalty')} value={policy.noShowPenalty} onChange={v => onPatch('noShowPenalty', v)} />
+        <NumField label={t('admin.configuration.policy.usageConfirmationWindowMinutes')} value={policy.usageConfirmationWindowMinutes} onChange={v => onPatch('usageConfirmationWindowMinutes', v)} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-        <CheckField label="Manual adjustment enabled" checked={policy.manualAdjustmentEnabled} onChange={v => onPatch('manualAdjustmentEnabled', v)} />
-        <CheckField label="Same-day booking enabled" checked={policy.sameDayBookingEnabled} onChange={v => onPatch('sameDayBookingEnabled', v)} />
-        <CheckField label="Same-day uses request cap" checked={policy.sameDayUsesRequestCap} onChange={v => onPatch('sameDayUsesRequestCap', v)} />
-        <CheckField label="Automatic reallocation" checked={policy.automaticReallocationEnabled} onChange={v => onPatch('automaticReallocationEnabled', v)} />
-        <CheckField label="Usage confirmation required" checked={policy.usageConfirmationRequired} onChange={v => onPatch('usageConfirmationRequired', v)} />
-        <CheckField label="No-show detection enabled" checked={policy.noShowDetectionEnabled} onChange={v => onPatch('noShowDetectionEnabled', v)} />
-        <CheckField label="Company car tier 1 enabled" checked={policy.companyCarTier1Enabled} onChange={v => onPatch('companyCarTier1Enabled', v)} />
+        <CheckField label={t('admin.configuration.policy.manualAdjustmentEnabled')} checked={policy.manualAdjustmentEnabled} onChange={v => onPatch('manualAdjustmentEnabled', v)} />
+        <CheckField label={t('admin.configuration.policy.sameDayBookingEnabled')} checked={policy.sameDayBookingEnabled} onChange={v => onPatch('sameDayBookingEnabled', v)} />
+        <CheckField label={t('admin.configuration.policy.sameDayUsesRequestCap')} checked={policy.sameDayUsesRequestCap} onChange={v => onPatch('sameDayUsesRequestCap', v)} />
+        <CheckField label={t('admin.configuration.policy.automaticReallocationEnabled')} checked={policy.automaticReallocationEnabled} onChange={v => onPatch('automaticReallocationEnabled', v)} />
+        <CheckField label={t('admin.configuration.policy.usageConfirmationRequired')} checked={policy.usageConfirmationRequired} onChange={v => onPatch('usageConfirmationRequired', v)} />
+        <CheckField label={t('admin.configuration.policy.noShowDetectionEnabled')} checked={policy.noShowDetectionEnabled} onChange={v => onPatch('noShowDetectionEnabled', v)} />
+        <CheckField label={t('admin.configuration.policy.companyCarTier1Enabled')} checked={policy.companyCarTier1Enabled} onChange={v => onPatch('companyCarTier1Enabled', v)} />
       </div>
     </div>
   );
 }
 
 function displayActorRef(hash: string | null): string {
-  if (!hash) return '—';
+  if (!hash) return t('common.notAvailable');
   const compact = hash.replace(/-/g, '');
-  if (/^[0-9a-f]{32,}$/i.test(compact)) return `Admin ·${compact.slice(0, 6).toUpperCase()}`;
+  if (/^[0-9a-f]{32,}$/i.test(compact)) return t('admin.configuration.adminActor', { ref: compact.slice(0, 6).toUpperCase() });
   return hash.length > 20 ? `${hash.slice(0, 20)}…` : hash;
 }
 
@@ -625,7 +652,12 @@ function HistoryTable({ items }: { items: PolicyHistoryItem[] }) {
       <table style={tbl}>
         <thead>
           <tr>
-            {['Version', 'Published at', 'Published by', 'Reason'].map(h => (
+            {[
+              t('admin.configuration.historyTable.version'),
+              t('admin.configuration.historyTable.publishedAt'),
+              t('admin.configuration.historyTable.publishedBy'),
+              t('admin.configuration.historyTable.reason'),
+            ].map(h => (
               <th key={h} style={th}>{h}</th>
             ))}
           </tr>
@@ -636,7 +668,7 @@ function HistoryTable({ items }: { items: PolicyHistoryItem[] }) {
               <td style={td}><strong>{item.version}</strong></td>
               <td style={td}>{displayDateTime(item.publishedAt)}</td>
               <td style={td}>{displayActorRef(item.publishedByHash)}</td>
-              <td style={td}>{item.publicationReason ?? '—'}</td>
+              <td style={td}>{item.publicationReason ?? t('common.notAvailable')}</td>
             </tr>
           ))}
         </tbody>
@@ -731,16 +763,16 @@ function CompanyCarCapacityBanner({
     >
       <div style={{ fontWeight: 600, marginBottom: 4 }}>
         {ok
-          ? 'Company-car capacity covered'
-          : 'Company-car capacity exceeded'}
+          ? t('admin.configuration.companyCar.covered')
+          : t('admin.configuration.companyCar.exceeded')}
       </div>
       <div>
-        {employeeCount} company-car employee{employeeCount === 1 ? '' : 's'} assigned to this location;
-        {' '}{guaranteedSlotCount} active fixed slot{guaranteedSlotCount === 1 ? '' : 's'} reserved for a specific user.
+        {tPlural('admin.configuration.companyCar.employeeCount', employeeCount)};
+        {' '}{tPlural('admin.configuration.companyCar.slotCount', guaranteedSlotCount)}.
         {' '}
         {ok
-          ? 'Every assigned employee has a guaranteed slot.'
-          : `${unreservedEmployees} employee${unreservedEmployees === 1 ? ' has' : 's have'} no guaranteed slot and will rely on the normal draw.`}
+          ? t('admin.configuration.companyCar.allCovered')
+          : tPlural('admin.configuration.companyCar.someUncovered', unreservedEmployees)}
       </div>
     </div>
   );
