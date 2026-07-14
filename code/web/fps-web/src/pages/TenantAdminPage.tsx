@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { fetchMe } from '../api/client';
 import { fetchTenant, fetchTenantReadiness } from '../api/customer';
 import type { TenantResponse, ReadinessReportResponse, ReadinessCheckDto } from '../api/customer';
+import { TenantIdentitySettingsSection } from './TenantIdentitySettingsSection';
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ const CHECK_META: Record<string, CheckMeta> = {
   IdentityConfig: {
     label: 'Identity & login',
     purpose: 'SSO login must be configured so employees can sign in.',
-    nextAction: 'Configure your identity provider in the tenant settings, or contact your operator.',
+    nextAction: 'Configure your identity provider in the Identity & Login Settings section below.',
   },
   ActiveAdmin: {
     label: 'Administrator account',
@@ -52,7 +53,7 @@ const CHECK_META: Record<string, CheckMeta> = {
   RoleMapping: {
     label: 'Role configuration',
     purpose: 'Roles must map to valid FairSpot roles (employee, admin, hr_manager, report_viewer, auditor).',
-    nextAction: 'Fix the role mapping in your identity configuration, or contact your operator.',
+    nextAction: 'Fix the role mapping in the Identity & Login Settings section below.',
   },
   ParkingPolicy: {
     label: 'Parking policy',
@@ -187,6 +188,17 @@ export function TenantAdminPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // AUTH012: refresh readiness alone after identity settings are saved, so the
+  // IdentityConfig/RoleMapping checks update without remounting the whole page.
+  const refreshReadiness = useCallback(() => {
+    if (me.kind !== 'ready') return;
+    fetchTenantReadiness(cfg, me.tenantId).then(rr => {
+      if (rr.kind === 'unauthenticated') { clear(); navigate('/session'); return; }
+      if (rr.kind === 'ok') setReadinessState({ kind: 'ok', report: rr.data });
+      else setReadinessState({ kind: 'error', message: 'message' in rr ? rr.message : 'Failed to load readiness.' });
+    });
+  }, [apiBaseUrl, bearerToken, me]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (me.kind === 'loading') return <p style={muted}>Loading…</p>;
   if (me.kind === 'error') return (
     <div><p style={{ color: '#b91c1c' }}>{me.message}</p><button onClick={load} style={btn}>Retry</button></div>
@@ -257,6 +269,16 @@ export function TenantAdminPage() {
           </div>
         )}
       </section>
+
+      {/* Identity & login settings (AUTH012) */}
+      {me.kind === 'ready' && (
+        <TenantIdentitySettingsSection
+          cfg={cfg}
+          tenantId={me.tenantId}
+          onSaved={refreshReadiness}
+          onUnauthenticated={() => { clear(); navigate('/session'); }}
+        />
+      )}
 
       {/* Next action */}
       {nextAction && (

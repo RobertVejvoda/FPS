@@ -220,6 +220,108 @@ export async function fetchTenantParkingBootstrap(
   }
 }
 
+// AUTH012 (#795) — tenant-admin identity settings. The generated customer client types
+// the ConfigureIdentityRequest body but not the GET response content (the endpoint
+// returns an untyped IActionResult), so the response shape is typed locally here and
+// kept in sync with IdentityConfigResponse in TenantIdentityController.cs.
+export interface TenantIdentityConfigResponse {
+  tenantId: string;
+  trustedIssuer: string;
+  audience: string;
+  tenantClaimName: string;
+  subjectClaimName: string;
+  roleClaimNames: string[];
+  roleMapping: Record<string, string>;
+  localAccountPolicyEnabled: boolean;
+  // Non-secret Keycloak broker alias (AUTH011): routing metadata for kc_idp_hint,
+  // never a client secret and never access authority.
+  idpBrokerAlias: string | null;
+  configuredByHash: string;
+  configuredAt: string;
+  updatedAt: string | null;
+}
+
+export interface TenantIdentityConfigInput {
+  trustedIssuer: string;
+  audience: string;
+  tenantClaimName: string;
+  subjectClaimName: string;
+  roleClaimNames: string[];
+  roleMapping: Record<string, string>;
+  localAccountPolicyEnabled: boolean;
+  idpBrokerAlias: string | null;
+}
+
+// 404 is a normal state here — a tenant that has never configured identity gets an
+// empty/default setup form, not an error page.
+export type IdentityConfigResult =
+  | { kind: 'ok'; data: TenantIdentityConfigResponse }
+  | { kind: 'notconfigured' }
+  | { kind: 'unauthenticated' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function fetchTenantIdentityConfig(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  tenantId: string,
+): Promise<IdentityConfigResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/tenants/${encodeURIComponent(tenantId)}/identity-config`, {
+      headers: { Authorization: `Bearer ${bearerToken}`, Accept: 'application/json' },
+    });
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 404) return { kind: 'notconfigured' };
+    if (!res.ok) return { kind: 'error', status: res.status, message: `GET /tenants/{tenantId}/identity-config returned ${res.status}` };
+    return { kind: 'ok', data: (await res.json()) as TenantIdentityConfigResponse };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
+export type SaveIdentityConfigResult =
+  | { kind: 'ok' }
+  // Server-side validation problem in business-readable form (e.g. the IdpBrokerAlias
+  // format message) — shown to the admin as-is.
+  | { kind: 'invalid'; message: string }
+  | { kind: 'unauthenticated' }
+  | { kind: 'unreachable'; message: string }
+  | { kind: 'error'; status: number; message: string };
+
+export async function saveTenantIdentityConfig(
+  { apiBaseUrl, bearerToken }: ApiClientConfig,
+  tenantId: string,
+  input: TenantIdentityConfigInput,
+): Promise<SaveIdentityConfigResult> {
+  if (!apiBaseUrl || !bearerToken) return { kind: 'unauthenticated' };
+  try {
+    const res = await fetch(`${apiBaseUrl}/tenants/${encodeURIComponent(tenantId)}/identity-config`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        trustedIssuer: input.trustedIssuer,
+        audience: input.audience,
+        tenantClaimName: input.tenantClaimName,
+        subjectClaimName: input.subjectClaimName,
+        roleClaimNames: input.roleClaimNames,
+        roleMapping: input.roleMapping,
+        idpBrokerAlias: input.idpBrokerAlias,
+        localAccountPolicyEnabled: input.localAccountPolicyEnabled,
+      }),
+    });
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthenticated' };
+    if (res.status === 404) return { kind: 'error', status: 404, message: 'Tenant not found.' };
+    if (res.status === 400) {
+      const problem = (await res.json().catch(() => null)) as { error?: string } | null;
+      return { kind: 'invalid', message: problem?.error ?? 'Please check the identity settings and try again.' };
+    }
+    if (!res.ok) return { kind: 'error', status: res.status, message: `PUT /tenants/{tenantId}/identity-config returned ${res.status}` };
+    return { kind: 'ok' };
+  } catch (e) {
+    return { kind: 'unreachable', message: e instanceof Error ? e.message : 'network error' };
+  }
+}
+
 export async function fetchTenantReadiness(
   { apiBaseUrl, bearerToken }: ApiClientConfig,
   tenantId: string,

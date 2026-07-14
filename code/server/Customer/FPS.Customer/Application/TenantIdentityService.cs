@@ -23,6 +23,11 @@ public sealed class TenantIdentityService(
             return "Audience is required.";
         if (string.IsNullOrWhiteSpace(config.SubjectClaimName))
             return "Subject claim name is required.";
+        // A blank tenant claim would fail closed at sign-in (TenantClaimsTransformation
+        // cannot resolve the tenant) while readiness still passes — reject it here so a
+        // UI save can never persist a config that locks tenant users out (PR #796).
+        if (string.IsNullOrWhiteSpace(config.TenantClaimName))
+            return "Tenant claim name is required.";
         if (config.IdpBrokerAlias is not null && !IdpBrokerAliasPattern.IsMatch(config.IdpBrokerAlias))
             return "IdpBrokerAlias must be 1-64 characters: alphanumerics, dot, underscore, or hyphen, starting alphanumeric.";
 

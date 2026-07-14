@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { submitPilotRequest } from './customer';
+import { fetchTenantIdentityConfig, saveTenantIdentityConfig, submitPilotRequest } from './customer';
+import type { TenantIdentityConfigInput } from './customer';
 
 // PLAT004c — the public pilot request maps HTTP outcomes to business-readable result kinds.
 // These pin the status→kind contract the page relies on (202 ack, 400 detail, 429 rate-limit).
@@ -69,5 +70,85 @@ describe('submitPilotRequest', () => {
     vi.stubGlobal('fetch', fetchMock);
     await submitPilotRequest('http://api', { ...input, verificationToken: '' });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).turnstileToken).toBeNull();
+  });
+});
+
+// AUTH012 (#795) — tenant-admin identity settings API helpers. These pin the
+// status→kind contract the settings form relies on (200 config, 404 empty form,
+// 204 saved, 400 business-readable validation message).
+
+const cfg = { apiBaseUrl: 'http://api', bearerToken: 'tok' };
+
+const identityInput: TenantIdentityConfigInput = {
+  trustedIssuer: 'https://auth.example.com/realms/fairspot',
+  audience: 'fairspot-api',
+  tenantClaimName: 'tenant_id',
+  subjectClaimName: 'sub',
+  roleClaimNames: ['groups'],
+  roleMapping: { 'fairspot-admins': 'admin' },
+  localAccountPolicyEnabled: true,
+  idpBrokerAlias: 'acme-entra',
+};
+
+describe('fetchTenantIdentityConfig', () => {
+  it('maps 200 to ok with the config payload', async () => {
+    const payload = { tenantId: 't1', trustedIssuer: 'iss', audience: 'aud', tenantClaimName: 'tenant_id', subjectClaimName: 'sub', roleClaimNames: [], roleMapping: {}, localAccountPolicyEnabled: false, idpBrokerAlias: 'acme-entra', configuredByHash: 'h', configuredAt: 'now', updatedAt: null };
+    vi.stubGlobal('fetch', mockFetch(200, payload));
+    const result = await fetchTenantIdentityConfig(cfg, 't1');
+    expect(result).toEqual({ kind: 'ok', data: payload });
+  });
+
+  it('maps 404 to notconfigured — an empty setup form, not an error', async () => {
+    vi.stubGlobal('fetch', mockFetch(404, null));
+    const result = await fetchTenantIdentityConfig(cfg, 't1');
+    expect(result).toEqual({ kind: 'notconfigured' });
+  });
+
+  it('maps 401 to unauthenticated', async () => {
+    vi.stubGlobal('fetch', mockFetch(401, null));
+    const result = await fetchTenantIdentityConfig(cfg, 't1');
+    expect(result).toEqual({ kind: 'unauthenticated' });
+  });
+});
+
+describe('saveTenantIdentityConfig', () => {
+  it('maps 204 to ok and sends the wire body with idpBrokerAlias', async () => {
+    const fetchMock = mockFetch(204, null);
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await saveTenantIdentityConfig(cfg, 't1', identityInput);
+    expect(result).toEqual({ kind: 'ok' });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api/tenants/t1/identity-config');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body)).toEqual({
+      trustedIssuer: identityInput.trustedIssuer,
+      audience: identityInput.audience,
+      tenantClaimName: 'tenant_id',
+      subjectClaimName: 'sub',
+      roleClaimNames: ['groups'],
+      roleMapping: { 'fairspot-admins': 'admin' },
+      idpBrokerAlias: 'acme-entra',
+      localAccountPolicyEnabled: true,
+    });
+  });
+
+  it('sends null for an unconfigured broker alias', async () => {
+    const fetchMock = mockFetch(204, null);
+    vi.stubGlobal('fetch', fetchMock);
+    await saveTenantIdentityConfig(cfg, 't1', { ...identityInput, idpBrokerAlias: null });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).idpBrokerAlias).toBeNull();
+  });
+
+  it('surfaces the server validation message from a 400 response', async () => {
+    vi.stubGlobal('fetch', mockFetch(400, { error: 'IdpBrokerAlias must be 1-64 characters: alphanumerics, dot, underscore, or hyphen, starting alphanumeric.' }));
+    const result = await saveTenantIdentityConfig(cfg, 't1', identityInput);
+    expect(result.kind).toBe('invalid');
+    if (result.kind === 'invalid') expect(result.message).toContain('IdpBrokerAlias');
+  });
+
+  it('maps 401 to unauthenticated', async () => {
+    vi.stubGlobal('fetch', mockFetch(401, null));
+    const result = await saveTenantIdentityConfig(cfg, 't1', identityInput);
+    expect(result).toEqual({ kind: 'unauthenticated' });
   });
 });
