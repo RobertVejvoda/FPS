@@ -1008,9 +1008,6 @@ select {
 
 /* PLAT-seats (#710) — module switch + seat surfaces */
 
-.seat-request-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-.seat-request-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.seat-request-row input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; }
 
 
 .seat-metric { font-size: 30px; font-weight: 800; margin: 6px 0 0; }

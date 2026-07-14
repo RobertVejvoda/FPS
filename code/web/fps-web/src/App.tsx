@@ -20,7 +20,6 @@ import {
 } from './auth/roles';
 import { PlatformShell } from './platform/PlatformShell';
 import { TenantModulesProvider, useTenantModules } from './tenant/TenantModulesContext';
-import { SeatsPage } from './pages/SeatsPage';
 import { SeatOperationsPage } from './pages/SeatOperationsPage';
 import { SessionPage } from './pages/SessionPage';
 import { OidcCallbackPage } from './pages/OidcCallbackPage';
@@ -173,6 +172,8 @@ function Shell() {
     // UX008 (#781) — one module-aware employee entry for reservation history/status.
     // Seat requesting stays reachable from My Reservations; no separate seats nav tree.
     canAccessBookings(roles) && { to: '/bookings', label: 'My Reservations' },
+    // UX009 (#782) — one date-first employee Request entry for all enabled modules.
+    canAccessBookings(roles) && { to: '/bookings/new', label: 'Request' },
     canAccessProfile(roles) && { to: '/profile', label: 'Profile' },
     canAccessNotifications(roles) && { to: '/notifications', label: 'Notifications' },
     canAccessParkingMap(roles) && { to: '/parking-map', label: 'Parking Map' },
@@ -224,7 +225,8 @@ function Shell() {
           <Route path="/bookings/history" element={<Guard allowed={canAccessBookings(roles)}><BookingHistoryPage /></Guard>} />
           <Route path="/bookings/new" element={<Guard allowed={canAccessBookings(roles)}><NewBookingPage /></Guard>} />
           <Route path="/bookings/:requestId" element={<Guard allowed={canAccessBookings(roles)}><BookingDetailPage /></Guard>} />
-          <Route path="/seats" element={<SeatsGuard roleAllowed={canAccessBookings(roles)}><SeatsPage /></SeatsGuard>} />
+          {/* UX009 (#782) — /seats stays as a compatibility deep link into the unified Request page. */}
+          <Route path="/seats" element={<SeatsGuard roleAllowed={canAccessBookings(roles)}><Navigate to="/bookings/new?module=seats" replace /></SeatsGuard>} />
           <Route path="/seat-operations" element={<SeatsGuard roleAllowed={canAccessHrOperations(roles)}><SeatOperationsPage /></SeatsGuard>} />
           <Route path="/profile" element={<Guard allowed={canAccessProfile(roles)}><ProfilePage /></Guard>} />
           <Route path="/notifications" element={<Guard allowed={canAccessNotifications(roles)}><NotificationsPage /></Guard>} />
