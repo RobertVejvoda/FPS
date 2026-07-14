@@ -10,6 +10,9 @@ import {
 } from 'react';
 import { UserManager } from 'oidc-client-ts';
 import { fetchMe } from '../api/client';
+// LOC001 (#744) — locale store only (not LocaleContext) to avoid a circular
+// import; the login redirect forwards the active UI locale to Keycloak.
+import { getCurrentLocale } from '../i18n/locale';
 import { loadRuntimeConfig, type BrandingConfig, type RuntimeConfig } from './runtimeConfig';
 import { clearCredentials, loadBaseUrl, loadToken, saveCredentials } from './authStorage';
 
@@ -40,6 +43,8 @@ type AuthState = {
   appVersion: string;
   turnstileSiteKey: string;
   demoUrl: string;
+  // LOC001 (#744): deployment default UI locale from config.json ('' when unset).
+  defaultLocale: string;
   // AUTH010 (#788): loginHint prefills the Keycloak sign-in field. idpHint is
   // plumbing only — nothing passes it yet; it forwards kc_idp_hint so a brokered
   // SSO tenant can skip the generic account chooser once an external IdP broker
@@ -101,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [appVersion, setAppVersion] = useState('');
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
   const [demoUrl, setDemoUrl] = useState('/session');
+  const [defaultLocale, setDefaultLocale] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAppVersion(config.appVersion ?? '');
         setTurnstileSiteKey(config.turnstileSiteKey);
         setDemoUrl(config.demoUrl);
+        setDefaultLocale(config.defaultLocale);
         applyBranding(config.branding);
 
         // On the callback page, handle the OIDC redirect inline.
@@ -223,8 +230,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await um.signinRedirect({
         prompt: 'login',
         login_hint: loginHint,
-        // Keycloak-specific broker routing hint — harmless when no broker matches.
-        ...(opts?.idpHint ? { extraQueryParams: { kc_idp_hint: opts.idpHint } } : {}),
+        extraQueryParams: {
+          // LOC001 (#744): ask Keycloak to render its screens in the UI
+          // language the user sees in the app (standard OIDC ui_locales).
+          ui_locales: getCurrentLocale(),
+          // Keycloak-specific broker routing hint — harmless when no broker matches.
+          ...(opts?.idpHint ? { kc_idp_hint: opts.idpHint } : {}),
+        },
       });
     } catch {
       setPhase('login-failed');
@@ -288,12 +300,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       appVersion,
       turnstileSiteKey,
       demoUrl,
+      defaultLocale,
       login,
       logout,
       save,
       clear,
     }),
-    [phase, phaseError, apiBaseUrl, bearerToken, roles, tenantId, devFallbackEnabled, branding, environment, simulationEnabled, appVersion, turnstileSiteKey, demoUrl, login, logout, save, clear],
+    [phase, phaseError, apiBaseUrl, bearerToken, roles, tenantId, devFallbackEnabled, branding, environment, simulationEnabled, appVersion, turnstileSiteKey, demoUrl, defaultLocale, login, logout, save, clear],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
