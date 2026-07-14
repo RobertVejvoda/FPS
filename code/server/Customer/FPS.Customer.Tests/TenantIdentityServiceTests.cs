@@ -33,12 +33,13 @@ public sealed class TenantIdentityServiceTests
         string audience = "fairspot-api",
         bool localAccounts = false,
         Dictionary<string, string>? roleMapping = null,
-        string? idpBrokerAlias = null) => new()
+        string? idpBrokerAlias = null,
+        string tenantClaimName = "tenant_id") => new()
     {
         TenantId = tenantId,
         TrustedIssuer = issuer,
         Audience = audience,
-        TenantClaimName = "tenant_id",
+        TenantClaimName = tenantClaimName,
         SubjectClaimName = "sub",
         RoleClaimNames = ["groups"],
         RoleMapping = roleMapping ?? new Dictionary<string, string> { ["fairspot-admins"] = "admin" },
@@ -146,6 +147,24 @@ public sealed class TenantIdentityServiceTests
         var restored = legacy.ToDomain();
 
         Assert.Null(restored.IdpBrokerAlias);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Configure_BlankTenantClaimName_ReturnsError(string claimName)
+    {
+        // Regression for PR #796 review: a persisted empty tenant claim makes
+        // TenantClaimsTransformation fail closed at sign-in while readiness still
+        // passes — the service must reject it before persistence.
+        var tenantId = await CreateTenant($"claim-blank-{Guid.NewGuid():N}"[..16]);
+        var config = MakeConfig(tenantId, tenantClaimName: claimName);
+
+        var error = await service.ConfigureAsync(config, CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("Tenant claim name", error);
+        Assert.Null(await service.GetConfigAsync(tenantId, CancellationToken.None));
     }
 
     [Fact]

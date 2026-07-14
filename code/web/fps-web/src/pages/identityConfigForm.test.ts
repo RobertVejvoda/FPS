@@ -5,6 +5,7 @@ import {
   normalizeIdpBrokerAlias,
   parseRoleClaimNames,
   parseRoleMapping,
+  validateRequiredIdentityFields,
 } from './identityConfigForm';
 
 // AUTH012 (#795) — pure form helpers for the tenant-admin identity settings.
@@ -72,5 +73,35 @@ describe('normalizeIdpBrokerAlias', () => {
   it('treats empty and whitespace-only input as not configured (null)', () => {
     expect(normalizeIdpBrokerAlias('')).toBeNull();
     expect(normalizeIdpBrokerAlias('   ')).toBeNull();
+  });
+});
+
+describe('validateRequiredIdentityFields', () => {
+  const valid = {
+    trustedIssuer: 'https://auth.example.com/realms/fairspot',
+    audience: 'fairspot-api',
+    tenantClaimName: 'tenant_id',
+    subjectClaimName: 'sub',
+  };
+
+  it('accepts a complete set of required fields', () => {
+    expect(validateRequiredIdentityFields(valid)).toBeNull();
+  });
+
+  // Regression for PR #796 review: a blank tenant claim persisted from the form
+  // would lock every tenant user out at sign-in while readiness still passes.
+  it.each(['', '   '])('rejects a blank tenant claim name (%j)', (blank) => {
+    const error = validateRequiredIdentityFields({ ...valid, tenantClaimName: blank });
+    expect(error).toContain('Tenant claim name is required');
+  });
+
+  it.each(['', '   '])('rejects a blank subject claim name (%j)', (blank) => {
+    const error = validateRequiredIdentityFields({ ...valid, subjectClaimName: blank });
+    expect(error).toContain('Subject claim name is required');
+  });
+
+  it('rejects a blank trusted issuer and audience', () => {
+    expect(validateRequiredIdentityFields({ ...valid, trustedIssuer: ' ' })).toContain('Trusted issuer');
+    expect(validateRequiredIdentityFields({ ...valid, audience: '' })).toContain('Audience');
   });
 });

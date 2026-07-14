@@ -55,3 +55,19 @@ export function normalizeIdpBrokerAlias(input: string): string | null {
   const trimmed = input.trim();
   return trimmed.length === 0 ? null : trimmed;
 }
+
+// Required-field guard run before submit. Blank claim names are dangerous, not just
+// invalid: a persisted empty tenant claim makes sign-in fail closed for every tenant
+// user while readiness still passes, so the form must never send one (PR #796).
+export function validateRequiredIdentityFields(fields: {
+  trustedIssuer: string;
+  audience: string;
+  tenantClaimName: string;
+  subjectClaimName: string;
+}): string | null {
+  if (fields.trustedIssuer.trim().length === 0) return 'Trusted issuer is required.';
+  if (fields.audience.trim().length === 0) return 'Audience is required.';
+  if (fields.tenantClaimName.trim().length === 0) return 'Tenant claim name is required. Use "tenant_id" unless your identity provider issues a different claim.';
+  if (fields.subjectClaimName.trim().length === 0) return 'Subject claim name is required. Use "sub" unless your identity provider issues a different claim.';
+  return null;
+}

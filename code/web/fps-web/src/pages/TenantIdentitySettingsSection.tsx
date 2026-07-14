@@ -11,6 +11,7 @@ import {
   normalizeIdpBrokerAlias,
   parseRoleClaimNames,
   parseRoleMapping,
+  validateRequiredIdentityFields,
 } from './identityConfigForm';
 
 // AUTH012 (#795) — tenant-admin identity settings. Lets a tenant admin view and edit
@@ -108,6 +109,12 @@ export function TenantIdentitySettingsSection({
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+
+    const requiredError = validateRequiredIdentityFields(form);
+    if (requiredError) {
+      setSaveState({ kind: 'invalid', message: requiredError });
+      return;
+    }
 
     const mapping = parseRoleMapping(form.roleMappingText);
     if (!mapping.ok) {
