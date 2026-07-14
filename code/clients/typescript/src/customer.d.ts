@@ -723,6 +723,7 @@ export interface components {
             roleMapping: null | {
                 [key: string]: string;
             };
+            idpBrokerAlias: null | string;
             localAccountPolicyEnabled: boolean;
         };
         ContactDto: {

@@ -760,6 +760,7 @@
           "subjectClaimName",
           "roleClaimNames",
           "roleMapping",
+          "idpBrokerAlias",
           "localAccountPolicyEnabled"
         ],
         "type": "object",
@@ -805,6 +806,12 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "idpBrokerAlias": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "localAccountPolicyEnabled": {
             "type": "boolean"

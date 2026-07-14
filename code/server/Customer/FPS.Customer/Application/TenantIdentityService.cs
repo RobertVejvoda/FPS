@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FPS.Customer.Domain;
 using FPS.SharedKernel.Identity;
 
@@ -9,6 +10,11 @@ public sealed class TenantIdentityService(
     InMemoryTenantIdentityConfigStore configStore,
     InMemoryTenantRoleMappingStore roleMappingStore)
 {
+    // Keycloak broker alias shape: starts alphanumeric, then alphanumerics, dot,
+    // underscore, or hyphen, max 64 chars (AUTH011). Non-secret routing metadata.
+    private static readonly Regex IdpBrokerAliasPattern =
+        new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$", RegexOptions.Compiled);
+
     public async Task<string?> ConfigureAsync(TenantIdentityConfig config, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(config.TrustedIssuer))
@@ -17,6 +23,8 @@ public sealed class TenantIdentityService(
             return "Audience is required.";
         if (string.IsNullOrWhiteSpace(config.SubjectClaimName))
             return "Subject claim name is required.";
+        if (config.IdpBrokerAlias is not null && !IdpBrokerAliasPattern.IsMatch(config.IdpBrokerAlias))
+            return "IdpBrokerAlias must be 1-64 characters: alphanumerics, dot, underscore, or hyphen, starting alphanumeric.";
 
         var tenant = await tenantRepository.GetAsync(config.TenantId, ct);
         if (tenant is null) return "Tenant not found.";

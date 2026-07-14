@@ -210,14 +210,15 @@ function EmailFirstSignIn({
     const result = await discoverTenant(apiBaseUrl, domain);
     if (result.kind === 'ok') {
       // Route automatically by the tenant's configured login mode. The email is
-      // passed only as an OIDC login_hint; it is never stored. AUTH010 routes with
-      // login_hint only — the discovery contract carries no IdP alias yet, so no
-      // kc_idp_hint is sent. Wiring an alias through discovery is an AUTH006
-      // follow-up once an external IdP broker exists (AuthContext.login already
-      // accepts an idpHint for it).
+      // passed only as an OIDC login_hint; it is never stored. AUTH011 (#793):
+      // discovery returns a non-secret broker alias only for CompanySso tenants —
+      // when present it is sent as kc_idp_hint so Keycloak skips the account
+      // chooser and goes straight to the company IdP. Both/LocalAccount tenants
+      // never get an alias, so the Keycloak chooser (and local fallback) stays
+      // reachable for them.
       const sso = result.data.loginMode === 'CompanySso';
       setStep(sso ? 'routing-sso' : 'routing-local');
-      await onLogin(trimmed);
+      await onLogin(trimmed, sso && result.data.idpAlias ? { idpHint: result.data.idpAlias } : undefined);
     } else if (result.kind === 'notfound') {
       setStep('notfound');
     } else {

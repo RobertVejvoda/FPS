@@ -29,6 +29,7 @@ public sealed class TenantIdentityController(
             RoleClaimNames = request.RoleClaimNames ?? [],
             RoleMapping = request.RoleMapping ?? new Dictionary<string, string>(),
             LocalAccountPolicyEnabled = request.LocalAccountPolicyEnabled,
+            IdpBrokerAlias = string.IsNullOrWhiteSpace(request.IdpBrokerAlias) ? null : request.IdpBrokerAlias.Trim(),
             ConfiguredByHash = Hash(currentUser.UserId),
             ConfiguredAt = DateTimeOffset.UtcNow,
         };
@@ -104,6 +105,7 @@ public sealed record ConfigureIdentityRequest(
     string? SubjectClaimName,
     IReadOnlyList<string>? RoleClaimNames,
     IReadOnlyDictionary<string, string>? RoleMapping,
+    string? IdpBrokerAlias,
     bool LocalAccountPolicyEnabled);
 
 public sealed record RegisterAdminRequest(
@@ -121,6 +123,7 @@ public sealed record IdentityConfigResponse(
     IReadOnlyList<string> RoleClaimNames,
     IReadOnlyDictionary<string, string> RoleMapping,
     bool LocalAccountPolicyEnabled,
+    string? IdpBrokerAlias,
     string ConfiguredByHash,
     DateTimeOffset ConfiguredAt,
     DateTimeOffset? UpdatedAt);
@@ -132,5 +135,6 @@ file static class Extensions
         c.TenantClaimName, c.SubjectClaimName,
         c.RoleClaimNames, c.RoleMapping,
         c.LocalAccountPolicyEnabled,
+        c.IdpBrokerAlias,
         c.ConfiguredByHash, c.ConfiguredAt, c.UpdatedAt);
 }

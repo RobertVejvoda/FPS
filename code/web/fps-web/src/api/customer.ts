@@ -5,6 +5,10 @@ export interface TenantDiscoveryResponse {
   slug: string;
   displayName: string;
   loginMode: string;
+  // AUTH011 (#793): non-secret Keycloak broker alias, returned only for CompanySso
+  // tenants with a configured broker. Passed to Keycloak as kc_idp_hint so the
+  // browser skips the account chooser. Routing metadata only — never access.
+  idpAlias?: string | null;
   primaryColor?: string;
   accentColor?: string;
   logoAssetId?: string;

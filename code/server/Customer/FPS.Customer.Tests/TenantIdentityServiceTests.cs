@@ -32,7 +32,8 @@ public sealed class TenantIdentityServiceTests
         string issuer = "https://idp.example.com",
         string audience = "fairspot-api",
         bool localAccounts = false,
-        Dictionary<string, string>? roleMapping = null) => new()
+        Dictionary<string, string>? roleMapping = null,
+        string? idpBrokerAlias = null) => new()
     {
         TenantId = tenantId,
         TrustedIssuer = issuer,
@@ -42,6 +43,7 @@ public sealed class TenantIdentityServiceTests
         RoleClaimNames = ["groups"],
         RoleMapping = roleMapping ?? new Dictionary<string, string> { ["fairspot-admins"] = "admin" },
         LocalAccountPolicyEnabled = localAccounts,
+        IdpBrokerAlias = idpBrokerAlias,
         ConfiguredByHash = "actor-hash",
         ConfiguredAt = DateTimeOffset.UtcNow,
     };
@@ -58,6 +60,62 @@ public sealed class TenantIdentityServiceTests
         Assert.Null(error);
         Assert.True(configStore.IsConfigured(tenantId));
         Assert.True(configStore.IsEnforcementActive);
+    }
+
+    // ── IdP broker alias (AUTH011) ───────────────────────────────────────────
+
+    [Fact]
+    public async Task Configure_ValidIdpBrokerAlias_Persists()
+    {
+        var tenantId = await CreateTenant("alias-co");
+        var config = MakeConfig(tenantId, idpBrokerAlias: "alias-co-entra");
+
+        var error = await service.ConfigureAsync(config, CancellationToken.None);
+
+        Assert.Null(error);
+        var saved = await service.GetConfigAsync(tenantId, CancellationToken.None);
+        Assert.Equal("alias-co-entra", saved!.IdpBrokerAlias);
+    }
+
+    [Theory]
+    [InlineData("-leading-hyphen")]
+    [InlineData(".leading-dot")]
+    [InlineData("has space")]
+    [InlineData("bad/slash")]
+    [InlineData("")]
+    public async Task Configure_InvalidIdpBrokerAlias_ReturnsError(string alias)
+    {
+        var tenantId = await CreateTenant($"alias-bad-{Guid.NewGuid():N}"[..16]);
+        var config = MakeConfig(tenantId, idpBrokerAlias: alias);
+
+        var error = await service.ConfigureAsync(config, CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("IdpBrokerAlias", error);
+    }
+
+    [Fact]
+    public async Task Configure_NullIdpBrokerAlias_IsAllowed()
+    {
+        var tenantId = await CreateTenant("alias-none");
+
+        var error = await service.ConfigureAsync(MakeConfig(tenantId), CancellationToken.None);
+
+        Assert.Null(error);
+        var saved = await service.GetConfigAsync(tenantId, CancellationToken.None);
+        Assert.Null(saved!.IdpBrokerAlias);
+    }
+
+    [Fact]
+    public async Task Configure_TooLongIdpBrokerAlias_ReturnsError()
+    {
+        var tenantId = await CreateTenant("alias-long");
+        var config = MakeConfig(tenantId, idpBrokerAlias: new string('a', 65));
+
+        var error = await service.ConfigureAsync(config, CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Contains("IdpBrokerAlias", error);
     }
 
     [Fact]
