@@ -4,12 +4,7 @@ import type { ApiClientConfig, FetchResult } from './client';
 export interface TenantDiscoveryResponse {
   slug: string;
   displayName: string;
-  // 'LocalAccount' | 'CompanySso' | 'Both' — routing hint only, never authorization.
   loginMode: string;
-  // Keycloak identity-provider broker alias for this tenant's company SSO, when one is
-  // configured (AUTH006). Optional: absent until the server contract adds it; the web
-  // passes it through as kc_idp_hint so a known SSO tenant skips the account chooser.
-  idpAlias?: string;
   primaryColor?: string;
   accentColor?: string;
   logoAssetId?: string;

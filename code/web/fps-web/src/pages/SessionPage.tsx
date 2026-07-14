@@ -118,7 +118,19 @@ export function SessionPage() {
             <p style={{ marginTop: 14, color: 'var(--danger)', fontSize: 13 }}>{statusMessage}</p>
           ) : null}
 
-          <EmailFirstSignIn apiBaseUrl={apiBaseUrl} onLogin={login} />
+          <CompanySsoPath apiBaseUrl={apiBaseUrl} onLogin={login} />
+
+          <div style={dividerStyle}>
+            <span style={dividerLabelStyle}>or</span>
+          </div>
+
+          <button
+            onClick={() => { void login(); }}
+            className="btn-secondary"
+            style={{ width: '100%', minHeight: 46 }}
+          >
+            Sign in with FairSpot account
+          </button>
 
           <div className="session-security-note">
             <span>Fair parking</span>
@@ -179,24 +191,20 @@ export function SessionPage() {
   );
 }
 
-// AUTH010 (#788): email-first sign-in. The user enters one email; discovery picks the
-// route (company SSO broker vs FairSpot-local credentials) and continues automatically.
-// Discovery is routing only — access still comes from validated token claims and /me.
-type SignInStep = 'idle' | 'discovering' | 'redirecting' | 'notfound' | 'error';
+type SsoStep = 'idle' | 'discovering' | 'notfound' | 'error';
 
-function EmailFirstSignIn({
+function CompanySsoPath({
   apiBaseUrl,
   onLogin,
 }: {
   apiBaseUrl: string;
-  onLogin: (loginHint?: string, idpHint?: string) => Promise<void>;
+  onLogin: (loginHint?: string) => Promise<void>;
 }) {
   const [email, setEmail] = useState('');
-  const [step, setStep] = useState<SignInStep>('idle');
-  const [routeName, setRouteName] = useState('');
+  const [step, setStep] = useState<SsoStep>('idle');
 
   const domain = email.includes('@') ? email.slice(email.indexOf('@') + 1).trim() : '';
-  const canSubmit = domain.length > 1 && step !== 'discovering' && step !== 'redirecting';
+  const canSubmit = domain.length > 1 && step !== 'discovering';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -204,14 +212,7 @@ function EmailFirstSignIn({
     setStep('discovering');
     const result = await discoverTenant(apiBaseUrl, domain);
     if (result.kind === 'ok') {
-      // Known domain: continue automatically to the discovered route. Company SSO
-      // tenants get the broker hint (when configured) so Keycloak can skip the
-      // account chooser; local-account tenants land on the credentials form with
-      // the email prefilled. Both routes end at the same trusted issuer.
-      setRouteName(result.data.displayName);
-      setStep('redirecting');
-      const isSso = result.data.loginMode === 'CompanySso' || result.data.loginMode === 'Both';
-      await onLogin(email, isSso ? result.data.idpAlias : undefined);
+      await onLogin(email);
     } else if (result.kind === 'notfound') {
       setStep('notfound');
     } else {
@@ -225,65 +226,37 @@ function EmailFirstSignIn({
   }
 
   return (
-    <>
-      <form onSubmit={(e) => { void handleSubmit(e); }} style={{ marginTop: 22 }}>
-        <label style={labelStyle}>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={handleChange}
-            placeholder="you@yourcompany.com"
-            autoComplete="email"
-            autoCapitalize="none"
-            disabled={step === 'redirecting'}
-            style={inputStyle}
-          />
-        </label>
-        {step === 'notfound' ? (
-          <p style={discoveryMessageStyle}>
-            We couldn't match that email to a sign-in route. Check the address and try
-            again, or sign in with a FairSpot account below. If the problem continues,
-            contact your workplace administrator.
-          </p>
-        ) : step === 'error' ? (
-          <p style={discoveryMessageStyle}>
-            Something went wrong finding your sign-in route. Try again, or sign in with
-            a FairSpot account below.
-          </p>
-        ) : step === 'redirecting' ? (
-          <p style={discoveryMessageStyle} role="status">
-            {routeName ? `Taking you to sign in for ${routeName}…` : 'Taking you to sign in…'}
-          </p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="btn-primary"
-          style={{ width: '100%', marginTop: 10, minHeight: 46 }}
-        >
-          {step === 'discovering'
-            ? 'Finding your sign-in…'
-            : step === 'redirecting'
-              ? 'Redirecting…'
-              : 'Continue'}
-        </button>
-      </form>
-
-      {/* Fallback path stays reachable for provisioned FairSpot-local users (demo,
-          break-glass, small tenants) whose email domain is not registered for
-          discovery — secondary by design, not an equal first choice. */}
-      <p style={{ marginTop: 14, fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
-        <button
-          type="button"
-          onClick={() => { void onLogin(); }}
-          className="btn-ghost"
-          style={{ minHeight: 0, padding: 0, textDecoration: 'underline', fontSize: 13 }}
-        >
-          Sign in with a FairSpot account instead
-        </button>
-      </p>
-    </>
+    <form onSubmit={(e) => { void handleSubmit(e); }} style={{ marginTop: 22 }}>
+      <label style={labelStyle}>
+        Work email
+        <input
+          type="email"
+          value={email}
+          onChange={handleChange}
+          placeholder="you@yourcompany.com"
+          autoComplete="email"
+          autoCapitalize="none"
+          style={inputStyle}
+        />
+      </label>
+      {step === 'notfound' ? (
+        <p style={discoveryMessageStyle}>
+          We couldn't find your company. Check your work email address or use a FairSpot account to sign in.
+        </p>
+      ) : step === 'error' ? (
+        <p style={discoveryMessageStyle}>
+          Something went wrong. Try again or use a FairSpot account to sign in.
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="btn-primary"
+        style={{ width: '100%', marginTop: 10, minHeight: 46 }}
+      >
+        {step === 'discovering' ? 'Looking up your company…' : 'Continue with company SSO'}
+      </button>
+    </form>
   );
 }
 
@@ -341,6 +314,21 @@ const inputStyle: React.CSSProperties = {
   background: '#fff',
   width: '100%',
   boxSizing: 'border-box',
+};
+
+const dividerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  margin: '18px 0',
+  color: 'var(--muted)',
+  fontSize: 12,
+};
+
+const dividerLabelStyle: React.CSSProperties = {
+  flexShrink: 0,
+  padding: '0 6px',
+  background: '#fff',
 };
 
 const discoveryMessageStyle: React.CSSProperties = {
