@@ -132,7 +132,7 @@ function AppFooter() {
         <span className="footer-real-time" title={t('footer.realTimeTitle')}>{t('footer.realTime', { time: fmtTime(sim.realNow) })}</span>
       )}
       {simulationEnabled && sim?.simulationActive && sim.virtualNow && (
-        <span className="footer-sim-time" title={t('footer.simTimeTitle')} style={{ fontWeight: 600, color: '#1d4ed8' }}>
+        <span className="footer-sim-time" title={t('footer.simTimeTitle')} style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
           {t('footer.simTime', { time: fmtTime(sim.virtualNow) })}
         </span>
       )}

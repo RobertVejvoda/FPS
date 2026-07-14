@@ -136,8 +136,8 @@ export function SessionPage() {
               <button
                 type="button"
                 onClick={() => { setShowDevForm(v => !v); }}
-                className="btn-ghost"
-                style={{ minHeight: 0, padding: 0, textDecoration: 'underline' }}
+                className="btn-link"
+                style={{ color: 'var(--muted)', marginLeft: -12 }}
               >
                 {showDevForm ? t('session.dev.hide') : t('session.dev.show')}
               </button>
@@ -282,8 +282,8 @@ function EmailFirstSignIn({
       <button
         type="button"
         onClick={() => { void onLogin(trimmed || undefined); }}
-        className="btn-ghost"
-        style={{ width: '100%', marginTop: 10, minHeight: 0, textDecoration: 'underline', fontSize: 13 }}
+        className="btn-link"
+        style={{ width: '100%', marginTop: 10, color: 'var(--muted)' }}
       >
         {t('session.email.signInFairspot')}
       </button>

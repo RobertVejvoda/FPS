@@ -11,7 +11,7 @@ import { displayModule, displaySlot, isSeatsItem, statusBadgeLabel, formatCutOff
 import { DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
 import { t } from '@/i18n';
 import { formatDate as formatLocaleDate } from '@/i18n/formatters';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, touchTarget } from '@/theme';
 
 function dateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -306,7 +306,11 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
             </Pressable>
           )}
           {!onCancel && !onConfirm && onDetails && (
-            <Pressable onPress={onDetails} accessibilityRole="button">
+            <Pressable
+              onPress={onDetails}
+              style={({ pressed }) => [styles.detailsBtn, pressed && { opacity: 0.6 }]}
+              accessibilityRole="button"
+            >
               <Text style={styles.detailsLink}>{t('booking.tile.viewDetails')}</Text>
             </Pressable>
           )}
@@ -333,11 +337,11 @@ const styles = StyleSheet.create({
   toast: {
     padding: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: colors.successSoft,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: colors.successBorder,
   },
-  toastText: { fontSize: 13, color: '#166534', fontWeight: '500' },
+  toastText: { fontSize: 13, color: colors.successText, fontWeight: '500' },
   tile: {
     padding: spacing.md,
     borderRadius: radius.md,
@@ -367,8 +371,8 @@ const styles = StyleSheet.create({
   tileSeatBadge: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#166534',
-    backgroundColor: '#ecfdf5',
+    color: colors.accent,
+    backgroundColor: colors.accentSoft,
     borderRadius: 999,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -384,31 +388,45 @@ const styles = StyleSheet.create({
   requestBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
+    minHeight: touchTarget,
     paddingVertical: spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.xs,
   },
   requestBtnText: { color: colors.primaryText, fontWeight: '700', fontSize: 14 },
   confirmBtn: {
-    backgroundColor: '#15803d',
+    backgroundColor: colors.success,
     borderRadius: radius.sm,
+    minHeight: touchTarget,
     paddingVertical: spacing.xs,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   confirmBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   cancelBtn: {
     borderRadius: radius.sm,
+    minHeight: touchTarget,
     paddingVertical: spacing.xs,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#b91c1c',
+    borderColor: colors.danger,
     backgroundColor: colors.cardBackground,
   },
-  cancelBtnText: { color: '#b91c1c', fontWeight: '600', fontSize: 13 },
-  detailsLink: { fontSize: 13, color: colors.primary, textDecorationLine: 'underline' },
+  cancelBtnText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+  detailsBtn: {
+    minHeight: touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailsLink: { fontSize: 14, color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' },
   historyLink: {
     alignSelf: 'center',
+    minHeight: touchTarget,
+    justifyContent: 'center',
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
-  historyLinkText: { fontSize: 13, color: colors.primary, fontWeight: '500', textDecorationLine: 'underline' },
+  historyLinkText: { fontSize: 14, color: colors.primary, fontWeight: '600', textDecorationLine: 'underline' },
 });

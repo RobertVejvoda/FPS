@@ -73,7 +73,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
       ) : null}
 
       {nextDrawLabel ? (
-        <p style={{ margin: 0, fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--brand-primary)', fontWeight: 600 }}>
           {t('bookings.rowOutcome.nextDraw', { next: nextDrawLabel })}
         </p>
       ) : null}
@@ -83,7 +83,8 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
           {meaning ? (
             <button
               onClick={() => setExpanded((e) => !e)}
-              style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--brand-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+              className="btn-link"
+              style={{ marginLeft: -12 }}
             >
               {expanded ? t('bookingRow.hideDetail') : t('bookingRow.whatDoesThisMean')}
             </button>
@@ -91,10 +92,10 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
           {booking.nextAction === 'cancel' && onCancel ? (
-            <button onClick={onCancel} disabled={busy} style={actionStyle('#b91c1c')}>{t('bookings.action.cancelRequest')}</button>
+            <button onClick={onCancel} disabled={busy} style={actionStyle('var(--danger)')}>{t('bookings.action.cancelRequest')}</button>
           ) : null}
           {booking.nextAction === 'confirmUsage' && onConfirmUsage ? (
-            <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('#15803d')}>{t('bookings.action.confirmUsage')}</button>
+            <button onClick={onConfirmUsage} disabled={busy} style={actionStyle('var(--success)')}>{t('bookings.action.confirmUsage')}</button>
           ) : null}
         </div>
       </div>
@@ -108,6 +109,7 @@ export function BookingRow({ booking, onCancel, onConfirmUsage, onNavigate, busy
   );
 }
 
+// UXPOL001 (#798): row actions share the 38px minimum target of the .btn-* classes.
 function actionStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+  return { background: bg, color: '#fff', border: 'none', borderRadius: 6, minHeight: 38, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
 }

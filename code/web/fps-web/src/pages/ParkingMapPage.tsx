@@ -315,7 +315,7 @@ function Chip({ label }: { label: string }) {
 function CapacityCard({ label, value, tone }: { label: string; value: number; tone: 'primary' | 'ok' | 'info' | 'warn' | 'muted' }) {
   const toneStyle = (() => {
     switch (tone) {
-      case 'primary': return { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' };
+      case 'primary': return { bg: '#eff6ff', border: '#bfdbfe', color: 'var(--brand-primary)' };
       case 'ok':      return { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' };
       case 'info':    return { bg: '#ecfeff', border: '#a5f3fc', color: '#155e75' };
       case 'warn':    return { bg: '#fffbeb', border: '#fcd34d', color: '#92400e' };

@@ -840,7 +840,7 @@ function BookingRequestDetailPanel({
     Allocated: { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
     Rejected: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
     Cancelled: { bg: '#f9fafb', color: '#374151', border: '#e5e7eb' },
-    Submitted: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    Submitted: { bg: '#eff6ff', color: 'var(--brand-primary)', border: '#bfdbfe' },
     Used: { bg: '#f0fdf4', color: '#14532d', border: '#86efac' },
     NoShow: { bg: '#fff7ed', color: '#9a3412', border: '#fed7aa' },
     Waitlisted: { bg: '#fefce8', color: '#854d0e', border: '#fde68a' },
@@ -1037,7 +1037,7 @@ const select: React.CSSProperties = {
   background: '#fff',
 };
 const btn: React.CSSProperties = {
-  background: '#1d4ed8',
+  background: 'var(--brand-primary)',
   color: '#fff',
   border: 'none',
   borderRadius: 6,

@@ -131,7 +131,8 @@ export function NotificationBanner({ className, style }: NotificationBannerProps
           onClick={handleViewAll}
           disabled={dismissing}
           style={{
-            padding: '5px 12px',
+            minHeight: 38,
+            padding: '8px 12px',
             borderRadius: 6,
             border: '1px solid #d97706',
             background: '#fff',
@@ -148,10 +149,13 @@ export function NotificationBanner({ className, style }: NotificationBannerProps
           onClick={handleDismiss}
           disabled={dismissing}
           style={{
-            padding: '5px 12px',
+            minHeight: 38,
+            padding: '8px 12px',
             borderRadius: 6,
             border: 'none',
-            background: '#d97706',
+            // UXPOL001 (#798): var(--warning) #b45309 gives white text 5.0:1
+            // contrast; the previous #d97706 only reached 2.6:1.
+            background: 'var(--warning)',
             color: '#fff',
             fontSize: 13,
             fontWeight: 600,

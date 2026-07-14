@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { fetchMyOutcomes, type BookingOutcomeItem } from '../api/dataHub';
 import { displayLocation, displayModule, displaySlot } from '../displayLabels';
 import { ModuleBadge } from '../components/ModuleBadge';
+import { statusSoftTone } from '@robertvejvoda/fairspot-ui';
 import { t, tDynamic, formatDate, formatDateTime } from '../i18n';
 
 type ListState =
@@ -64,7 +65,7 @@ export function BookingHistoryPage() {
 
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <button onClick={() => navigate('/bookings')} style={backBtn}>{t('bookings.history.backLink')}</button>
+          <button onClick={() => navigate('/bookings')} className="btn-link" style={{ marginLeft: -12 }}>{t('bookings.history.backLink')}</button>
         </div>
 
         {state.kind === 'loading' && (
@@ -122,14 +123,11 @@ export function BookingHistoryPage() {
 }
 
 function StatusChip({ status }: { status: string }) {
-  const color = status === 'Allocated' || status === 'Used' ? '#166534'
-    : status === 'Rejected' || status === 'Cancelled' ? '#b91c1c'
-    : '#374151';
-  const bg = status === 'Allocated' || status === 'Used' ? '#f0fdf4'
-    : status === 'Rejected' || status === 'Cancelled' ? '#fef2f2'
-    : '#f9fafb';
+  // UXPOL001 (#798): shared status palette — keeps history chips consistent
+  // with StatusBadge and the HR views.
+  const tone = statusSoftTone(status);
   return (
-    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600, color, background: bg }}>
+    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600, color: tone.color, background: tone.background, border: `1px solid ${tone.border}` }}>
       {tDynamic('bookings.status', status, status)}
     </span>
   );
@@ -138,5 +136,4 @@ function StatusChip({ status }: { status: string }) {
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 14 };
 const thStyle: React.CSSProperties = { textAlign: 'left', padding: '8px 12px', fontWeight: 600, fontSize: 12, color: '#6b7280', borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' };
 const tdStyle: React.CSSProperties = { padding: '10px 12px', verticalAlign: 'top' };
-const backBtn: React.CSSProperties = { background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 500, color: 'var(--brand-primary)', cursor: 'pointer' };
-const loadMoreBtn: React.CSSProperties = { background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 600, color: 'var(--brand-primary)', cursor: 'pointer', width: '100%', marginTop: 12 };
+const loadMoreBtn: React.CSSProperties = { background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, minHeight: 38, padding: '10px', fontSize: 14, fontWeight: 600, color: 'var(--brand-primary)', cursor: 'pointer', width: '100%', marginTop: 12 };

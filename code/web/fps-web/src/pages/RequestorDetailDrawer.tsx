@@ -355,7 +355,7 @@ function HistoryLink({ userId, onNavigate }: { userId: string; onNavigate: () =>
         onClick={onNavigate}
         style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '0.45rem 0.75rem', borderRadius: 6, background: '#eff6ff',
-          color: '#1d4ed8', textDecoration: 'none', fontSize: '0.85rem',
+          color: 'var(--brand-primary)', textDecoration: 'none', fontSize: '0.85rem',
           fontWeight: 600, border: '1px solid #bfdbfe' }}
       >
         {t('hr.drawer.viewHistory')}
@@ -379,13 +379,13 @@ const editLinkBtn: React.CSSProperties = {
   padding: 0,
   fontSize: '0.75rem',
   fontWeight: 600,
-  color: '#1d4ed8',
+  color: 'var(--brand-primary)',
   cursor: 'pointer',
   textDecoration: 'underline',
 };
 
 const primaryBtn: React.CSSProperties = {
-  background: '#1d4ed8',
+  background: 'var(--brand-primary)',
   color: '#fff',
   border: 'none',
   borderRadius: 6,

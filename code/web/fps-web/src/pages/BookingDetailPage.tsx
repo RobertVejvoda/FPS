@@ -157,8 +157,8 @@ function TimelineStep({ label, value, done }: { label: string; value?: string; d
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
       <div style={{
         width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-        background: done ? '#1d4ed8' : 'transparent',
-        border: `2px solid ${done ? '#1d4ed8' : '#d1d5db'}`,
+        background: done ? 'var(--brand-primary)' : 'transparent',
+        border: `2px solid ${done ? 'var(--brand-primary)' : '#d1d5db'}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         {done && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}

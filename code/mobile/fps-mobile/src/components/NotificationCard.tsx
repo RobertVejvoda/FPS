@@ -3,7 +3,7 @@ import type { NotificationItem } from '@/api/notifications';
 import { displayLocation } from '@/displayLabels';
 import { t, tDynamic } from '@/i18n';
 import { formatDateTime as formatLocaleDateTime } from '@/i18n/formatters';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, touchTarget } from '@/theme';
 
 function typeLabel(notificationType: string): string {
   return tDynamic('labels.notificationType', notificationType, notificationType);
@@ -12,12 +12,12 @@ function typeLabel(notificationType: string): string {
 const TYPE_BADGE_COLOR: Record<string, string> = {
   RequestSubmitted: colors.primary,
   RequestRejected: colors.danger,
-  SlotAllocated: '#15803d',
-  SlotAllocatedByReallocation: '#15803d',
+  SlotAllocated: colors.success,
+  SlotAllocatedByReallocation: colors.success,
   RequestCancelledBeforeAllocation: colors.textMuted,
   AllocatedReservationCancelled: colors.textMuted,
-  LateCancellationPenaltyApplied: '#b45309',
-  NoShowRecorded: '#b45309',
+  LateCancellationPenaltyApplied: colors.warningStrong,
+  NoShowRecorded: colors.warningStrong,
   NoShowPenaltyApplied: colors.danger,
   ManualCorrection: '#6d28d9',
   DrawCompleted: colors.primary,
@@ -136,15 +136,17 @@ const styles = StyleSheet.create({
   markRead: {
     alignSelf: 'flex-start',
     marginTop: spacing.xs,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
+    minHeight: touchTarget,
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.primary,
   },
   markReadPressed: { opacity: 0.6 },
   markReadText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
   },

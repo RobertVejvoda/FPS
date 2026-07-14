@@ -172,8 +172,8 @@ export function ProfilePage() {
                     onClick={() => setAddForm(f => ({ ...f, vehicleType: vt }))}
                     style={{
                       padding: '5px 12px', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                      border: `2px solid ${addForm.vehicleType === vt ? '#1d4ed8' : '#e5e7eb'}`,
-                      background: addForm.vehicleType === vt ? '#1d4ed8' : '#fff',
+                      border: `2px solid ${addForm.vehicleType === vt ? 'var(--brand-primary)' : '#e5e7eb'}`,
+                      background: addForm.vehicleType === vt ? 'var(--brand-primary)' : '#fff',
                       color: addForm.vehicleType === vt ? '#fff' : '#374151',
                     }}
                   >{tDynamic('profile.vehicleType', vt, vt)}</button>
@@ -222,7 +222,7 @@ function VehicleCard({ vehicle, busy, onSetDefault, onRemove }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
         <span style={{ fontWeight: 600, fontSize: 14 }}>{vehicle.licensePlate || vehicle.vehicleType}</span>
         {vehicle.isDefault && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', borderRadius: 4, padding: '1px 6px', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', background: '#eff6ff', borderRadius: 4, padding: '1px 6px', textTransform: 'uppercase' }}>
             {t('profile.vehicles.default')}
           </span>
         )}
@@ -254,6 +254,7 @@ const cardTitle: React.CSSProperties = { margin: '0 0 8px', fontSize: 15, fontWe
 const muted: React.CSSProperties = { color: '#6b7280', fontSize: 14 };
 const inputStyle: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 6, padding: '7px 10px', fontSize: 14, color: '#111827', background: '#fff', width: '100%', boxSizing: 'border-box' };
 const fieldLabel: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: '#111827' };
-const primaryBtn: React.CSSProperties = { background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-const secondaryBtn: React.CSSProperties = { background: '#fff', color: '#1d4ed8', border: '1px solid #1d4ed8', borderRadius: 6, padding: '5px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-const ghostBtn: React.CSSProperties = { background: '#fff', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 500, cursor: 'pointer' };
+// UXPOL001 (#798): brand tokens instead of hardcoded blues; 38px minimum targets.
+const primaryBtn: React.CSSProperties = { background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 6, minHeight: 38, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const secondaryBtn: React.CSSProperties = { background: '#fff', color: 'var(--brand-primary)', border: '1px solid var(--brand-primary)', borderRadius: 6, minHeight: 38, padding: '8px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const ghostBtn: React.CSSProperties = { background: '#fff', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 6, minHeight: 38, padding: '8px 12px', fontSize: 13, fontWeight: 500, cursor: 'pointer' };

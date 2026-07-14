@@ -19,13 +19,13 @@ type BookingCardProps = {
 const STATUS_BADGE_COLOR: Record<string, string> = {
   Submitted: colors.primary,
   Pending: colors.primary,
-  Allocated: '#15803d',
+  Allocated: colors.success,
   Rejected: colors.danger,
   Cancelled: colors.textMuted,
   Expired: colors.textMuted,
-  Waitlisted: '#92400e',
-  UsageConfirmed: '#15803d',
-  NoShow: '#b45309',
+  Waitlisted: colors.warning,
+  UsageConfirmed: colors.success,
+  NoShow: colors.warningStrong,
 };
 
 function nextActionLabel(action: string): string {
@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   moduleBadgeSeats: {
-    color: '#166534',
-    backgroundColor: '#ecfdf5',
+    color: colors.accent,
+    backgroundColor: colors.accentSoft,
   },
   date: {
     fontSize: 15,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   confirmButton: {
-    backgroundColor: '#15803d',
+    backgroundColor: colors.success,
   },
   actionButtonDimmed: {
     opacity: 0.55,
