@@ -111,6 +111,36 @@ public sealed class SeatMapControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    // Enum.TryParse would accept these numeric strings ("999" as an undefined value,
+    // "2" as an ordinal); the API must only accept business category names (PR #797 review).
+    [Theory]
+    [InlineData("999")]
+    [InlineData("2")]
+    [InlineData("-1")]
+    public async Task AddSeatBlock_NumericReason_ReturnsBadRequestAndStoresNothing(string reason)
+    {
+        await SeedMap();
+        var request = new AddSeatBlockRequest("N-01", new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 3), reason, null);
+
+        var result = await controller.AddSeatBlock("GL-HQ", request, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await service.GetBlocksAsync("tenant-1", "GL-HQ", default));
+    }
+
+    [Fact]
+    public async Task AddSeatBlock_ReasonNameIsCaseInsensitive()
+    {
+        await SeedMap();
+        var request = new AddSeatBlockRequest("N-01", new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 3), "maintenance", null);
+
+        var result = await controller.AddSeatBlock("GL-HQ", request, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var block = Assert.Single(await service.GetBlocksAsync("tenant-1", "GL-HQ", default));
+        Assert.Equal(SeatBlockReason.Maintenance, block.Reason);
+    }
+
     [Fact]
     public async Task RemoveSeatBlock_Unknown_ReturnsNotFound()
     {

@@ -16,6 +16,13 @@ public sealed class SeatMapController(SeatMapService service, ICurrentUser curre
 {
     private const string HrAdminRoles = $"{ConfigurationRoles.Admin},{ConfigurationRoles.HrManager}";
 
+    // Strict name-based reason lookup. Enum.TryParse also accepts numeric strings
+    // (e.g. "999" parses to an undefined value; "2" to an ordinal), which would let a
+    // non-business reason reach storage and the employee-safe map — only the four
+    // business category names are valid input (PR #797 review).
+    private static readonly Dictionary<string, SeatBlockReason> BlockReasonsByName =
+        Enum.GetValues<SeatBlockReason>().ToDictionary(r => r.ToString(), r => r, StringComparer.OrdinalIgnoreCase);
+
     [HttpGet("/configuration/locations/{locationId}/seat-map")]
     [Authorize(Roles = HrAdminRoles)]
     public async Task<IActionResult> GetSeatMap(string locationId, CancellationToken ct)
@@ -67,7 +74,7 @@ public sealed class SeatMapController(SeatMapService service, ICurrentUser curre
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.TenantId) || string.IsNullOrEmpty(currentUser.UserId))
             return Unauthorized();
 
-        if (!Enum.TryParse<SeatBlockReason>(request.Reason, ignoreCase: true, out var reason))
+        if (request.Reason is null || !BlockReasonsByName.TryGetValue(request.Reason.Trim(), out var reason))
             return BadRequest(new { errors = new[] { $"Unknown block reason: {request.Reason}. Use Maintenance, Reserved, Facilities, or Other." } });
 
         var (blockId, errors) = await service.AddBlockAsync(
