@@ -40,9 +40,10 @@ type AuthState = {
   appVersion: string;
   turnstileSiteKey: string;
   demoUrl: string;
-  // AUTH010 (#788): loginHint prefills the Keycloak sign-in field; idpHint forwards
-  // kc_idp_hint so a brokered SSO tenant can skip the generic account chooser once an
-  // external IdP broker is configured (AUTH006).
+  // AUTH010 (#788): loginHint prefills the Keycloak sign-in field. idpHint is
+  // plumbing only — nothing passes it yet; it forwards kc_idp_hint so a brokered
+  // SSO tenant can skip the generic account chooser once an external IdP broker
+  // and a discovery alias exist (AUTH006 follow-up).
   login: (loginHint?: string, opts?: { idpHint?: string }) => Promise<void>;
   logout: () => Promise<void>;
   save: (apiBaseUrl: string, token: string) => Promise<void>;

@@ -15,7 +15,7 @@ FairSpot still supports two login **routes**, but the user no longer chooses bet
 | Company SSO | Automatically, when the email domain maps to a tenant whose login mode is `CompanySso` | Normal login for employees of an SSO-integrated company |
 | FairSpot account | Automatically for `LocalAccount`/`Both` tenants, and always reachable via a quiet "Sign in with a FairSpot account instead" link | Demo users, small tenants without SSO, break-glass admin, and fallback local accounts |
 
-Both routes use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly. The entered email is passed only as an OIDC `login_hint` (and, once an external broker is configured per AUTH006, a `kc_idp_hint` for `CompanySso` tenants so Keycloak can skip its account chooser); it is not stored and never grants access.
+Both routes use the same Keycloak instance. Company SSO is brokered through Keycloak's identity-provider broker to the company's external IdP. FairSpot-local accounts are stored in Keycloak and validated directly. The entered email is passed only as an OIDC `login_hint`; it is not stored and never grants access. (Future, AUTH006: once an external IdP broker exists and discovery carries a non-secret IdP alias, `CompanySso` tenants can additionally send Keycloak a `kc_idp_hint` to skip its account chooser — the web login plumbing for this exists, but nothing sends it today.)
 
 The current labels are workplace-oriented because parking is the first proof path. The durable model is broader: a tenant may later label the brokered path as an organization, club, venue, or public-participant login and may allow user-owned identity providers such as Google, Apple, or Microsoft when the tenant policy permits it.
 
@@ -51,8 +51,9 @@ User types: alice@greenlogistics.example
                         │
                         ▼
      Continue automatically to Keycloak with login_hint
-     (and kc_idp_hint for brokered SSO tenants — AUTH006)
 ```
+
+(Future, AUTH006: brokered `CompanySso` tenants will additionally send `kc_idp_hint` once an external IdP broker and a discovery-supplied alias exist.)
 
 A quiet "Sign in with a FairSpot account instead" link stays available before and after discovery, so provisioned local users (demo, small tenants, break-glass) are never blocked by discovery.
 
