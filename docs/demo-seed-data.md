@@ -38,7 +38,7 @@ If `FPS_GL_EMPLOYEE_COUNT` is set above 10, the extra `gl-employee*` users are l
 
 Password for all demo users: `Dev1234!` (local Keycloak realm `fps-local` only).
 
-The two login paths an evaluator sees on the sign-in screen — **Company SSO** (work-email tenant discovery, the `greenlogistics.example` domain) and **FairSpot account** (local accounts) — are explained in [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes).
+The sign-in screen is email-first (AUTH010): an evaluator enters an email, and tenant discovery routes automatically — the `greenlogistics.example` domain maps to Green Logistics, and a quiet "Sign in with a FairSpot account instead" link keeps the local-account route reachable for the seeded demo users. The underlying login routes (company SSO and FairSpot account) are explained in [Tenant Discovery and Login Modes](./business-layer/tenant-login-modes).
 
 ---
 
