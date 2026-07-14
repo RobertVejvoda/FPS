@@ -145,7 +145,9 @@ public sealed class DrawsController : ControllerBase
             RequestCount: result.RequestCount,
             AvailableSpotCount: result.AvailableSpotCount,
             CanRequest: result.CanRequest,
-            CannotRequestReason: result.CannotRequestReason));
+            CannotRequestReason: result.CannotRequestReason,
+            ScheduleMessageCode: result.ScheduleMessageCode,
+            CannotRequestCode: result.CannotRequestCode));
     }
 
     [HttpGet("my-outcomes")]
