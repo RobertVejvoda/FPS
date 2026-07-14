@@ -10,14 +10,14 @@
 
 This document explains the smallest safe path for testing Keycloak's identity-provider (IdP) broker with an external identity provider. It covers option selection, mandatory claims, Keycloak configuration steps, local validation, and rollback — without committing any secrets.
 
-After following this guide, `ivana@greenlogistics.example` (or any user from a configured external IdP) can authenticate through "Continue with company SSO" on the FairSpot login screen. Keycloak acts as the broker and issues a FairSpot token; FPS services see only Keycloak tokens and require no code changes per tenant.
+After following this guide, `ivana@greenlogistics.example` (or any user from a configured external IdP) can authenticate through the email-first FairSpot login screen (AUTH010): the user enters their work email and discovery routes them to the company-SSO path automatically. Keycloak acts as the broker and issues a FairSpot token; FPS services see only Keycloak tokens and require no code changes per tenant.
 
 ---
 
 ## How This Fits the Company SSO Path
 
 ```
-User enters work email → domain discovery → "Continue with company SSO"
+User enters work email → domain discovery → routes to company SSO automatically
         │
         ▼
 Keycloak login page
@@ -180,7 +180,7 @@ After completing provider setup:
 2. **Test the SSO login flow manually:**
    - Open `http://localhost:5173` (or whichever port the web app runs on).
    - Enter an email address from the configured provider (e.g. `alice@greenlogistics.example` if the domain is mapped, or any Google/Entra account for a plain broker test).
-   - Click **Continue with company SSO**.
+   - Click **Continue** — discovery routes the sign-in automatically (AUTH010 email-first flow).
    - You should be redirected to Google or Microsoft for authentication.
    - After authentication, you should land back on the FairSpot app.
 
