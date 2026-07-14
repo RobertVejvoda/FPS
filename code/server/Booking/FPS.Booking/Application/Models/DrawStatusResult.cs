@@ -29,7 +29,11 @@ public record DrawStatusResult(
     string SafeMessage,
     int AvailableSpotCount = 0,
     bool CanRequest = true,
-    string? CannotRequestReason = null);
+    string? CannotRequestReason = null,
+    // LOC002 (#799): stable machine codes mirroring SafeMessage / CannotRequestReason
+    // so clients localize by code instead of matching English text.
+    string ScheduleMessageCode = "",
+    string? CannotRequestCode = null);
 
 public static class RequestWindowStatus
 {
@@ -44,6 +48,26 @@ public static class ScheduleStatus
     public const string NotConfigured = "notConfigured";
     public const string Disabled = "disabled";
     public const string Unknown = "unknown";
+}
+
+// LOC002 (#799): stable codes for the employee-safe schedule banner message.
+// Clients localize by code; SafeMessage stays as the English fallback.
+public static class ScheduleMessageCode
+{
+    public const string NotConfigured = "schedule.notConfigured";
+    public const string WindowClosed = "schedule.windowClosed";
+    public const string OpenUntil = "schedule.openUntil";
+    public const string AllocationComplete = "schedule.allocationComplete";
+}
+
+// LOC002 (#799): stable codes for why a request is blocked. Clients localize by
+// code; CannotRequestReason stays as the English fallback.
+public static class CannotRequestCode
+{
+    public const string DatePassed = "request.datePassed";
+    public const string AllocationComplete = "request.allocationComplete";
+    public const string DrawInProgress = "request.drawInProgress";
+    public const string WindowClosed = "request.windowClosed";
 }
 
 public static class ScheduleSource

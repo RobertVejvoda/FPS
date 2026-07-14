@@ -17,4 +17,8 @@ public record DrawStatusResponse(
     int RequestCount = 0,
     int AvailableSpotCount = 0,
     bool CanRequest = true,
-    string? CannotRequestReason = null);
+    string? CannotRequestReason = null,
+    // LOC002 (#799): stable machine codes alongside the free-text fields so
+    // clients localize by code and only fall back to the English text.
+    string ScheduleMessageCode = "",
+    string? CannotRequestCode = null);

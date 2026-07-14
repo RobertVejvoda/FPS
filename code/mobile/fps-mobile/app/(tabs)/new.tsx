@@ -16,7 +16,7 @@ import { fetchBookings, submitBooking, type SubmitBookingResult } from '@/api/bo
 import { useTenantModules } from '@/api/tenantModules';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { fetchProfileSnapshot, type ProfileSnapshot } from '@/api/profile';
-import { formatBookingRef, formatCutOffAt, humanizeRejectionReason, displayVehicleType, displayTimePreset } from '@/displayLabels';
+import { displayCannotRequestReason, displayScheduleMessage, formatBookingRef, formatCutOffAt, humanizeRejectionReason, displayVehicleType, displayTimePreset } from '@/displayLabels';
 import { DEMO_FACILITY_ID, DEMO_LOCATION_ID, DEFAULT_SEATS_LOCATION } from '@/demoDefaults';
 import { t } from '@/i18n';
 import { formatDate as formatLocaleDate, formatWallClock } from '@/i18n/formatters';
@@ -307,7 +307,7 @@ export default function NewBookingRoute() {
     // still submits (partial success is the default — UX009 #782 / review #790).
     const parkingClosed = drawStatus?.kind === 'ok' && !drawStatus.data.canRequest;
     const parkingClosedText = drawStatus?.kind === 'ok'
-      ? drawStatus.data.cannotRequestReason ?? drawStatus.data.safeMessage ?? t('booking.form.requestsClosed')
+      ? displayCannotRequestReason(drawStatus.data) ?? displayScheduleMessage(drawStatus.data) ?? t('booking.form.requestsClosed')
       : t('booking.form.requestsClosed');
     if (wantParking && !wantSeat && parkingClosed) {
       setSubmitStatus({
@@ -472,7 +472,7 @@ export default function NewBookingRoute() {
             {wantParking && drawStatus?.kind === 'ok' && (
               <View style={[styles.scheduleBanner,
                 drawStatus.data.requestWindowStatus === 'open' ? styles.scheduleBannerOpen : styles.scheduleBannerClosed]}>
-                <Text style={styles.scheduleText}>{drawStatus.data.safeMessage}</Text>
+                <Text style={styles.scheduleText}>{displayScheduleMessage(drawStatus.data)}</Text>
                 {drawStatus.data.nextDrawAt && (
                   <Text style={styles.scheduleSubText}>
                     {t('booking.form.nextDraw', { time: formatCutOffAt(drawStatus.data.nextDrawAt, drawStatus.data.timeZone) })}

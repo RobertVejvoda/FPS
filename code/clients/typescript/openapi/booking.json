@@ -2288,6 +2288,16 @@
               "null",
               "string"
             ]
+          },
+          "scheduleMessageCode": {
+            "type": "string",
+            "default": ""
+          },
+          "cannotRequestCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

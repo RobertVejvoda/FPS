@@ -170,6 +170,16 @@ const en = {
   'labels.rejection.DrawNotSelected': 'Your request was not selected in this allocation draw.',
   'labels.rejection.fallback': 'This request was not eligible for allocation. Details are not available yet.',
 
+  // LOC002 (#799) — draw-status schedule/cannot-request copy localized from
+  // the stable machine codes; English mirrors the server's safe messages.
+  'labels.schedule.allocationComplete': 'Allocation is complete. Check your result in My Reservations.',
+  'labels.schedule.allocationCompleteShort': 'Spot allocation is complete for this date',
+  'labels.schedule.windowClosed': 'The request window is closed for this date.',
+  'labels.schedule.drawInProgress': 'Draw in progress',
+  'labels.schedule.datePassed': 'Date has passed',
+  'labels.schedule.notConfigured': 'Allocation schedule is not yet configured for this location.',
+  'labels.schedule.openUntil': 'Requests are open until {time}.',
+
   'labels.statusBadge.Submitted': 'Submitted',
   'labels.statusBadge.Pending': 'Pending',
   'labels.statusBadge.Allocated': 'Allocated',
@@ -336,6 +346,14 @@ const cs: Catalog<keyof typeof en> = {
   'labels.rejection.NoMatchingCapacity': 'Žádosti neodpovídala žádná volná místa.',
   'labels.rejection.DrawNotSelected': 'Vaše žádost nebyla v losování vybrána.',
   'labels.rejection.fallback': 'Tato žádost nesplňovala podmínky pro přidělení. Podrobnosti zatím nejsou k dispozici.',
+
+  'labels.schedule.allocationComplete': 'Přidělování je dokončeno. Výsledek najdete v Mých rezervacích.',
+  'labels.schedule.allocationCompleteShort': 'Přidělování míst pro tento den je dokončeno',
+  'labels.schedule.windowClosed': 'Příjem žádostí pro tento den je uzavřen.',
+  'labels.schedule.drawInProgress': 'Losování právě probíhá',
+  'labels.schedule.datePassed': 'Tento den již proběhl',
+  'labels.schedule.notConfigured': 'Plán přidělování pro tuto lokalitu zatím není nastaven.',
+  'labels.schedule.openUntil': 'Žádosti lze podávat do {time}.',
 
   'labels.statusBadge.Submitted': 'Odesláno',
   'labels.statusBadge.Pending': 'Čeká',

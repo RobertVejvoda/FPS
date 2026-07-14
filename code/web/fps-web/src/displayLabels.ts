@@ -138,11 +138,24 @@ type ScheduleLike = {
   timeZone?: string;
   safeMessage?: string;
   cannotRequestReason?: string | null;
+  // LOC002 (#799) stable machine codes from the draw-status API.
+  scheduleMessageCode?: string | null;
+  cannotRequestCode?: string | null;
 };
 
 export function displayScheduleMessage(s: ScheduleLike): string | null {
-  // Wire values: draw status is PascalCase ("Completed"), while the schedule
-  // metadata enums serialize camelCase ("closed", "known", "notConfigured").
+  // LOC002 (#799): localize by stable code first.
+  switch (s.scheduleMessageCode) {
+    case 'schedule.allocationComplete': return t('labels.schedule.allocationComplete');
+    case 'schedule.notConfigured': return t('labels.schedule.notConfigured');
+    case 'schedule.windowClosed': return t('labels.schedule.windowClosed');
+    case 'schedule.openUntil':
+      if (s.cutOffAt && s.timeZone) return t('labels.schedule.openUntil', { time: formatCutOffAt(s.cutOffAt, s.timeZone) });
+      break;
+  }
+  // Fallback for missing/unknown codes (older servers): derive from the
+  // structured fields. Wire values: draw status is PascalCase ("Completed"),
+  // while the schedule metadata enums serialize camelCase ("closed", "known").
   if (s.status === 'Completed') return t('labels.schedule.allocationComplete');
   if (s.scheduleStatus === 'notConfigured') return t('labels.schedule.notConfigured');
   if (s.requestWindowStatus === 'closed') return t('labels.schedule.windowClosed');
@@ -153,12 +166,20 @@ export function displayScheduleMessage(s: ScheduleLike): string | null {
 }
 
 export function displayCannotRequestReason(s: ScheduleLike): string | null {
-  if (!s.cannotRequestReason) return null;
+  // LOC002 (#799): localize by stable code first.
+  switch (s.cannotRequestCode) {
+    case 'request.datePassed': return t('labels.schedule.datePassed');
+    case 'request.allocationComplete': return t('labels.schedule.allocationCompleteShort');
+    case 'request.drawInProgress': return t('labels.schedule.drawInProgress');
+    case 'request.windowClosed': return displayScheduleMessage(s);
+  }
+  // Fallback for missing/unknown codes: derive from the structured fields,
+  // then show the server free text as-is.
+  if (!s.cannotRequestReason && !s.cannotRequestCode) return null;
   if (s.status === 'Completed') return t('labels.schedule.allocationCompleteShort');
   if (s.status === 'InProgress') return t('labels.schedule.drawInProgress');
-  if (s.cannotRequestReason === 'Date has passed') return t('labels.schedule.datePassed');
   if (s.requestWindowStatus === 'closed') return displayScheduleMessage(s);
-  return s.cannotRequestReason;
+  return s.cannotRequestReason ?? null;
 }
 
 export function humanizeRejectionReason(reasonCode: string | null, reason: string | null): string {

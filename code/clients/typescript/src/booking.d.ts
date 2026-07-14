@@ -1345,6 +1345,9 @@ export interface components {
             /** @default true */
             canRequest: boolean;
             cannotRequestReason?: null | string;
+            /** @default  */
+            scheduleMessageCode: string;
+            cannotRequestCode?: null | string;
         };
         EvaluateNoShowResult: {
             /** Format: int32 */

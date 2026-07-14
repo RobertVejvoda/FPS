@@ -48,7 +48,7 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, tz).DateTime);
 
         var schedule = BuildScheduleMetadata(policy, query.Date, attempt?.Status, today, now);
-        var (canRequest, cannotRequestReason) = ResolveCanRequest(query.Date, attempt?.Status, today, schedule);
+        var (canRequest, cannotRequestReason, cannotRequestCode) = ResolveCanRequest(query.Date, attempt?.Status, today, schedule);
 
         if (attempt is null)
         {
@@ -80,7 +80,9 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 SafeMessage: schedule.SafeMessage,
                 AvailableSpotCount: availableSpotCount,
                 CanRequest: canRequest,
-                CannotRequestReason: cannotRequestReason);
+                CannotRequestReason: cannotRequestReason,
+                ScheduleMessageCode: schedule.MessageCode,
+                CannotRequestCode: cannotRequestCode);
         }
 
         var companyCarOverflowCount = attempt.Decisions
@@ -122,21 +124,23 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             SafeMessage: schedule.SafeMessage,
             AvailableSpotCount: availableSpotCount,
             CanRequest: canRequest,
-            CannotRequestReason: cannotRequestReason);
+            CannotRequestReason: cannotRequestReason,
+            ScheduleMessageCode: schedule.MessageCode,
+            CannotRequestCode: cannotRequestCode);
     }
 
-    private static (bool CanRequest, string? CannotRequestReason) ResolveCanRequest(
+    private static (bool CanRequest, string? CannotRequestReason, string? CannotRequestCode) ResolveCanRequest(
         DateOnly date, string? drawStatus, DateOnly today, ScheduleMeta schedule)
     {
         if (date < today)
-            return (false, "Date has passed");
+            return (false, "Date has passed", Models.CannotRequestCode.DatePassed);
         if (drawStatus is "Completed")
-            return (false, "Spot allocation is complete for this date");
+            return (false, "Spot allocation is complete for this date", Models.CannotRequestCode.AllocationComplete);
         if (drawStatus is "InProgress")
-            return (false, "Draw in progress");
+            return (false, "Draw in progress", Models.CannotRequestCode.DrawInProgress);
         if (schedule.RequestWindowStatus == Models.RequestWindowStatus.Closed)
-            return (false, schedule.SafeMessage);
-        return (true, null);
+            return (false, schedule.SafeMessage, Models.CannotRequestCode.WindowClosed);
+        return (true, null, null);
     }
 
     private static ScheduleMeta BuildScheduleMetadata(
@@ -158,7 +162,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 ScheduleStatus: Models.ScheduleStatus.NotConfigured,
                 ScheduleSource: Models.ScheduleSource.TenantPolicy,
                 LastCalculatedAt: calculatedAt,
-                SafeMessage: "Allocation schedule is not yet configured for this location.");
+                SafeMessage: "Allocation schedule is not yet configured for this location.",
+                MessageCode: Models.ScheduleMessageCode.NotConfigured);
         }
 
         var tz = GetTimeZone(policy.TimeZoneId);
@@ -184,6 +189,12 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
                 ? "The request window is closed for this date."
                 : $"Requests are open until {policy.DrawCutOffTime:HH:mm} ({policy.TimeZoneId}).";
 
+        var messageCode = drawStatus is "Completed"
+            ? Models.ScheduleMessageCode.AllocationComplete
+            : windowClosed
+                ? Models.ScheduleMessageCode.WindowClosed
+                : Models.ScheduleMessageCode.OpenUntil;
+
         return new ScheduleMeta(
             CutOffAt: cutOffAt,
             NextDrawAt: cutOffAt,
@@ -192,7 +203,8 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
             ScheduleStatus: Models.ScheduleStatus.Known,
             ScheduleSource: Models.ScheduleSource.TenantPolicy,
             LastCalculatedAt: calculatedAt,
-            SafeMessage: safeMessage);
+            SafeMessage: safeMessage,
+            MessageCode: messageCode);
     }
 
     private static TimeZoneInfo GetTimeZone(string tzId)
@@ -213,5 +225,6 @@ public sealed class GetDrawStatusHandler : IRequestHandler<GetDrawStatusQuery, D
         string ScheduleStatus,
         string ScheduleSource,
         DateTime LastCalculatedAt,
-        string SafeMessage);
+        string SafeMessage,
+        string MessageCode);
 }

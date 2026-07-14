@@ -26,6 +26,10 @@ export type DrawStatusResult =
       completedAt: string | null;
       canRequest: boolean;
       cannotRequestReason: string | null;
+      // LOC002 (#799) stable machine codes; clients localize by code and fall
+      // back to safeMessage / cannotRequestReason free text.
+      scheduleMessageCode: string;
+      cannotRequestCode: string | null;
       // DRAW005 schedule metadata
       cutOffAt: string | null;
       nextDrawAt: string | null;
@@ -177,6 +181,7 @@ export async function fetchDrawStatus(
     const data = (await res.json()) as {
       status: string; demandLevel: string; requestCount: number | string; availableSpotCount: number | string;
       completedAt: string | null; canRequest: boolean; cannotRequestReason: string | null;
+      scheduleMessageCode?: string; cannotRequestCode?: string | null;
       cutOffAt: string | null; nextDrawAt: string | null; timeZone: string;
       requestWindowStatus: string; scheduleStatus: string; scheduleSource: string;
       lastCalculatedAt: string; safeMessage: string;
@@ -190,6 +195,8 @@ export async function fetchDrawStatus(
       completedAt: data.completedAt ?? null,
       canRequest: data.canRequest,
       cannotRequestReason: data.cannotRequestReason ?? null,
+      scheduleMessageCode: data.scheduleMessageCode ?? '',
+      cannotRequestCode: data.cannotRequestCode ?? null,
       cutOffAt: data.cutOffAt ?? null,
       nextDrawAt: data.nextDrawAt ?? null,
       timeZone: data.timeZone ?? 'UTC',

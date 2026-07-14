@@ -179,6 +179,34 @@ public sealed class DrawsControllerTests
         Assert.True(body.CanRequest);
     }
 
+    [Fact]
+    public async Task GetDrawStatus_MapsStableMessageCodes()
+    {
+        // LOC002 (#799): the machine codes must pass through to the response
+        // alongside the free-text fallback fields.
+        mediator.Setup(m => m.Send(It.IsAny<GetDrawStatusQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DrawStatusResult(
+                "draw-key", "tenant-1", "loc-1", DrawDate,
+                "NotScheduled", 0, 0, 0, 0, 0, [], string.Empty, 0, null,
+                null, null, "Unknown",
+                CutOffAt: "2026-06-02T18:00:00+00:00", NextDrawAt: null, TimeZone: "UTC",
+                RequestWindowStatus: "closed", ScheduleStatus: "known", ScheduleSource: "tenantPolicy",
+                LastCalculatedAt: DateTime.UtcNow, SafeMessage: "The request window is closed for this date.",
+                CanRequest: false,
+                CannotRequestReason: "The request window is closed for this date.",
+                ScheduleMessageCode: ScheduleMessageCode.WindowClosed,
+                CannotRequestCode: CannotRequestCode.WindowClosed));
+
+        var result = await controller.GetDrawStatus(DrawDate, "loc-1", SlotStart, SlotEnd, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<DrawStatusResponse>(ok.Value);
+        Assert.Equal("schedule.windowClosed", body.ScheduleMessageCode);
+        Assert.Equal("request.windowClosed", body.CannotRequestCode);
+        Assert.Equal("The request window is closed for this date.", body.SafeMessage);
+        Assert.Equal("The request window is closed for this date.", body.CannotRequestReason);
+    }
+
     // ── GET /draws/{date}/lifecycle – missing time params (#561) ─────────────
 
     [Theory]

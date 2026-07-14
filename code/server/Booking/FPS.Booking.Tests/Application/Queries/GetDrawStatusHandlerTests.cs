@@ -437,6 +437,129 @@ public sealed class GetDrawStatusHandlerTests
         Assert.NotEmpty(result.SafeMessage);
     }
 
+    // ── LOC002 (#799): stable machine codes for employee-visible copy ────────
+    // The full stable code list clients localize against:
+    //   scheduleMessageCode: schedule.notConfigured | schedule.windowClosed |
+    //                        schedule.openUntil | schedule.allocationComplete
+    //   cannotRequestCode:   request.datePassed | request.allocationComplete |
+    //                        request.drawInProgress | request.windowClosed
+
+    [Fact]
+    public void StableCodeList_IsDocumentedAndUnchanged()
+    {
+        Assert.Equal("schedule.notConfigured", ScheduleMessageCode.NotConfigured);
+        Assert.Equal("schedule.windowClosed", ScheduleMessageCode.WindowClosed);
+        Assert.Equal("schedule.openUntil", ScheduleMessageCode.OpenUntil);
+        Assert.Equal("schedule.allocationComplete", ScheduleMessageCode.AllocationComplete);
+        Assert.Equal("request.datePassed", CannotRequestCode.DatePassed);
+        Assert.Equal("request.allocationComplete", CannotRequestCode.AllocationComplete);
+        Assert.Equal("request.drawInProgress", CannotRequestCode.DrawInProgress);
+        Assert.Equal("request.windowClosed", CannotRequestCode.WindowClosed);
+    }
+
+    [Fact]
+    public async Task Handle_PastDate_ReturnsDatePassedCode()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var pastQuery = new GetDrawStatusQuery(
+            TenantId: "tenant-1",
+            LocationId: "loc-1",
+            Date: new DateOnly(2025, 1, 1),
+            TimeSlotStart: new DateTime(2025, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+            TimeSlotEnd: new DateTime(2025, 1, 1, 17, 0, 0, DateTimeKind.Utc));
+
+        var result = await handler.Handle(pastQuery, CancellationToken.None);
+
+        Assert.Equal(CannotRequestCode.DatePassed, result.CannotRequestCode);
+        // The free-text field stays as the backwards-compatible fallback.
+        Assert.Equal("Date has passed", result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedDraw_ReturnsAllocationCompleteCodes()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAttempt(allocated: 3, rejected: 2, waitlisted: 1));
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal(ScheduleMessageCode.AllocationComplete, result.ScheduleMessageCode);
+        Assert.Equal(CannotRequestCode.AllocationComplete, result.CannotRequestCode);
+        Assert.NotEmpty(result.SafeMessage);
+        Assert.NotNull(result.CannotRequestReason);
+    }
+
+    [Fact]
+    public async Task Handle_InProgressDraw_ReturnsDrawInProgressCode()
+    {
+        var attempt = CompletedAttempt(0, 0, 0);
+        attempt.Status = "InProgress";
+        attempt.CompletedAt = null;
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attempt);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal(CannotRequestCode.DrawInProgress, result.CannotRequestCode);
+        // An in-flight draw closes the request window for the banner message.
+        Assert.Equal(ScheduleMessageCode.WindowClosed, result.ScheduleMessageCode);
+    }
+
+    [Fact]
+    public async Task Handle_NoDraw_AfterPolicyCutOff_ReturnsWindowClosedCodes()
+    {
+        var tomorrow = new DateOnly(2026, 6, 11);
+        var currentTime = new DateTimeOffset(2026, 6, 10, 19, 0, 0, TimeSpan.Zero);
+        var handlerAfterCutOff = new GetDrawStatusHandler(
+            drawRepository.Object,
+            slotService.Object,
+            policyService.Object,
+            new FixedClock(currentTime));
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var result = await handlerAfterCutOff.Handle(new GetDrawStatusQuery(
+            TenantId: "tenant-1",
+            LocationId: "loc-1",
+            Date: tomorrow,
+            TimeSlotStart: tomorrow.ToDateTime(new TimeOnly(8, 0), DateTimeKind.Utc),
+            TimeSlotEnd: tomorrow.ToDateTime(new TimeOnly(18, 0), DateTimeKind.Utc)),
+            CancellationToken.None);
+
+        Assert.Equal(ScheduleMessageCode.WindowClosed, result.ScheduleMessageCode);
+        Assert.Equal(CannotRequestCode.WindowClosed, result.CannotRequestCode);
+    }
+
+    [Fact]
+    public async Task Handle_NoDraw_WindowOpen_ReturnsOpenUntilCodeAndNoCannotRequestCode()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.True(result.CanRequest);
+        Assert.Equal(ScheduleMessageCode.OpenUntil, result.ScheduleMessageCode);
+        Assert.Null(result.CannotRequestCode);
+    }
+
+    [Fact]
+    public async Task Handle_NoPolicy_ReturnsNotConfiguredCode()
+    {
+        drawRepository.Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DrawAttemptDto?)null);
+        policyService
+            .Setup(p => p.GetEffectivePolicyAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TenantPolicy)null!);
+
+        var result = await handler.Handle(ValidQuery(), CancellationToken.None);
+
+        Assert.Equal(ScheduleMessageCode.NotConfigured, result.ScheduleMessageCode);
+        Assert.Equal("notConfigured", result.ScheduleStatus);
+    }
+
     private static GetDrawStatusQuery ValidQuery() => new(
         TenantId: "tenant-1",
         LocationId: "loc-1",

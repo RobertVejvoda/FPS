@@ -7,7 +7,7 @@ import { useBookings } from '@/api/useBookings';
 import { cancelBooking, confirmBookingUsage, type BookingListItem } from '@/api/bookings';
 import { fetchDrawStatus, type DrawStatusResult } from '@/api/draws';
 import { StateView } from '@/components/StateView';
-import { displayModule, displaySlot, isSeatsItem, statusBadgeLabel, formatCutOffAt } from '@/displayLabels';
+import { displayCannotRequestReason, displayModule, displayScheduleMessage, displaySlot, isSeatsItem, statusBadgeLabel, formatCutOffAt } from '@/displayLabels';
 import { DEMO_LOCATION_ID, DEFAULT_TIME_SLOT_START, DEFAULT_TIME_SLOT_END } from '@/demoDefaults';
 import { t } from '@/i18n';
 import { formatDate as formatLocaleDate } from '@/i18n/formatters';
@@ -278,8 +278,8 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
       {!drawLoading && scheduleOk?.cutOffAt && (
         <Text style={styles.tileSchedule}>{t('booking.tile.cutoff', { time: formatCutOffAt(scheduleOk.cutOffAt, scheduleOk.timeZone) })}</Text>
       )}
-      {!drawLoading && scheduleOk && !booking && scheduleOk.safeMessage && (
-        <Text style={styles.tileSchedule}>{scheduleOk.safeMessage}</Text>
+      {!drawLoading && scheduleOk && !booking && displayScheduleMessage(scheduleOk) && (
+        <Text style={styles.tileSchedule}>{displayScheduleMessage(scheduleOk)}</Text>
       )}
 
       {/* Primary action */}
@@ -323,8 +323,8 @@ function DayTile({ label, date, booking, seatBooking, drawStatus, drawLoading, b
         >
           <Text style={styles.requestBtnText}>{t('booking.tile.requestSpot')}</Text>
         </Pressable>
-      ) : !drawLoading && !scheduleOk?.canRequest && scheduleOk?.cannotRequestReason ? (
-        <Text style={styles.tileUnavailable}>{scheduleOk.cannotRequestReason}</Text>
+      ) : !drawLoading && scheduleOk && !scheduleOk.canRequest && displayCannotRequestReason(scheduleOk) ? (
+        <Text style={styles.tileUnavailable}>{displayCannotRequestReason(scheduleOk)}</Text>
       ) : null}
     </View>
   );
