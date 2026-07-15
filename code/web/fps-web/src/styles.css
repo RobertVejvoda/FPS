@@ -619,36 +619,9 @@ select {
   }
 }
 
-/* ── Platform operator console (PLAT008A) ──────────────────────────────────────
-   The shell scopes its OWN brand palette here. Descendants reading var(--brand-*)
-   resolve against this block, never the tenant-loaded :root values applied by
-   AuthContext.applyBranding — the structural guarantee that the operator console
-   never uses tenant theme variables. Operator skin = graphite + cyan. */
-.platform-shell {
-  --brand-primary: #1f2a37;
-  --brand-accent: #0ea5e9;
-  --surface: #ffffff;
-  --surface-muted: #f5f7fa;
-}
-
-.plat-role-badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--brand-accent) 14%, #ffffff);
-  border: 1px solid color-mix(in srgb, var(--brand-accent) 40%, #ffffff);
-  color: var(--brand-primary);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.nav-link-disabled {
-  color: var(--muted);
-  opacity: 0.55;
-  cursor: not-allowed;
-  font-style: italic;
-}
-
+/* ── Shared card/panel utilities (originally PLAT008A; the operator console moved to the
+   private platform repo in PLAT008F #805 — these stay because tenant screens use them,
+   e.g. HR seat operations and email verification). */
 .plat-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -662,134 +635,11 @@ select {
   padding: 18px 20px;
 }
 
-.plat-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.plat-card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
 .plat-muted {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
   margin: 6px 0 0;
-}
-
-.plat-cost-line {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.plat-admin-tag {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--brand-accent);
-}
-
-.avail-badge {
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-  border: 1px solid transparent;
-}
-
-.avail-not-wired {
-  background: #f1f5f9;
-  border-color: var(--border);
-  color: #475569;
-}
-
-.avail-partial {
-  background: #fef9c3;
-  border-color: #fbbf24;
-  color: #92400e;
-}
-
-.avail-live {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: var(--success);
-}
-
-.avail-slice {
-  font-weight: 600;
-  opacity: 0.8;
-}
-
-/* PLAT008D — platform health strip */
-.health-strip-head { margin-bottom: 4px; }
-.health-strip-head h3 { margin: 0; font-size: 15px; }
-
-.health-card { display: flex; flex-direction: column; }
-.health-card-body { flex: 1; }
-
-.health-source {
-  margin: 12px 0 0;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.health-pill {
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-  border: 1px solid transparent;
-}
-
-.health-ok { background: #dcfce7; border-color: #86efac; color: var(--success); }
-.health-warning { background: #fef9c3; border-color: #fbbf24; color: #92400e; }
-.health-unavailable { background: #fee2e2; border-color: #fca5a5; color: var(--danger); }
-.health-not-wired { background: #f1f5f9; border-color: var(--border); color: #475569; }
-
-.plat-access-denied {
-  max-width: 560px;
-  margin: 64px auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 32px;
-}
-
-.plat-access-denied h1 {
-  margin: 0 0 12px;
-  font-size: 22px;
-  color: var(--danger);
-}
-
-.plat-access-denied p {
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.plat-access-denied code {
-  background: var(--surface-muted);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 12px;
 }
 
 /* ── Public "Start a FairSpot Pilot" page (PLAT004c) ───────────────────────────
@@ -1013,7 +863,8 @@ select {
   .site-topnav a:not(.btn-green) { display: none; }
 }
 
-/* ── PLAT008B platform tenant directory + detail ──────────────────────────── */
+/* ── Shared page scaffolding (originally PLAT008B; kept for tenant screens after the
+   PLAT008F #805 console removal — HR seat operations uses these). */
 .plat-page { display: flex; flex-direction: column; gap: 16px; }
 .plat-page-head h1 { margin: 0 0 4px; font-size: 22px; }
 .plat-page-head p { margin: 0; }
@@ -1024,33 +875,6 @@ select {
 }
 .plat-input:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 1px; }
 .plat-error { color: var(--danger); font-size: 14px; margin: 0; }
-.plat-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.plat-table th, .plat-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.plat-table th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
-.plat-table a { color: var(--brand-accent); font-weight: 650; text-decoration: none; }
-.plat-table a:hover { text-decoration: underline; }
-.plat-sub { font-size: 12px; }
-.plat-na { color: var(--muted); font-style: italic; font-size: 13px; margin: 0; }
-.plat-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); }
-.plat-tab { padding: 8px 14px; border: 0; background: transparent; color: var(--muted); font-weight: 650; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
-.plat-tab:hover { color: var(--text); }
-.plat-tab-active { color: var(--brand-accent); border-bottom-color: var(--brand-accent); }
-.plat-dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
-.plat-dl dt { color: var(--muted); }
-.plat-dl dd { margin: 0; color: var(--text); }
-.plat-checks { margin: 6px 0 0; padding-left: 18px; font-size: 14px; color: var(--text); display: grid; gap: 4px; }
-@media (max-width: 640px) {
-  .plat-table thead { display: none; }
-  .plat-table, .plat-table tbody, .plat-table tr, .plat-table td { display: block; width: 100%; }
-  .plat-table tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
-  .plat-table td { border: 0; padding: 4px 0; }
-}
-
-/* ── PLAT008C onboarding queue ─────────────────────────────────────────────── */
-.plat-queue-group { margin-top: 8px; }
-.plat-queue-head { font-size: 15px; margin: 0 0 8px; }
-.plat-queue-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
-.plat-queue-actions .plat-input { flex: 1 1 180px; }
 
 /* PLAT-seats (#710) — module switch + seat surfaces */
 

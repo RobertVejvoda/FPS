@@ -38,6 +38,12 @@ const en = {
   'footer.simulationUnavailable': 'Simulation clock unavailable',
   'footer.simulationUnreachable': 'Simulation clock not reachable',
   'footer.reset': 'Reset',
+
+  // PLAT008F (#805) — shown to platform-plane identities; the operator console
+  // lives in the private platform deployment, not in this tenant app.
+  'platform.moved.title': 'Operator console has moved',
+  'platform.moved.body': 'This is the FairSpot tenant app. Platform operator identities use the dedicated operator console — open it at your organization’s operator console address.',
+  'platform.moved.signOut': 'Sign out',
 } as const;
 
 const cs: Record<keyof typeof en, string> = {
@@ -75,6 +81,10 @@ const cs: Record<keyof typeof en, string> = {
   'footer.simulationUnavailable': 'Simulační hodiny nejsou k dispozici',
   'footer.simulationUnreachable': 'Simulační hodiny nejsou dosažitelné',
   'footer.reset': 'Reset',
+
+  'platform.moved.title': 'Konzole operátora se přesunula',
+  'platform.moved.body': 'Toto je aplikace FairSpot pro nájemce. Identity operátora platformy používají samostatnou konzoli operátora — otevřete ji na adrese konzole operátora vaší organizace.',
+  'platform.moved.signOut': 'Odhlásit se',
 };
 
 export const commonMessages = { en, cs };

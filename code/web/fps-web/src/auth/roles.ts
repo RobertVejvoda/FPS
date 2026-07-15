@@ -74,28 +74,13 @@ export function canControlSimulation(roles: string[]): boolean {
   return hasRole(roles, FpsRole.HrManager, FpsRole.Admin);
 }
 
-// ── Platform plane (PLAT008A) ───────────────────────────────────────────────
-// The console is reachable only by a platform-plane identity. The web app cannot see the
-// token issuer; it infers the plane purely from the presence of a platform_* role (the
-// backend has already gated issuer → roles). Any platform_* role => platform plane.
+// ── Platform plane (PLAT008A/PLAT008F) ──────────────────────────────────────
+// The web app cannot see the token issuer; it infers the plane purely from the presence of a
+// platform_* role (the backend has already gated issuer → roles). Any platform_* role =>
+// platform plane. The operator console itself moved to the private fairspot-platform repo
+// (PLAT008F, #805); the tenant app only uses this to keep platform identities off tenant pages.
 export function isPlatformPlane(roles: string[]): boolean {
   return hasRole(roles, FpsRole.PlatformAdmin, FpsRole.PlatformOperator, FpsRole.PlatformAuditor);
-}
-
-// Route guard for the operator console surface. Alias of isPlatformPlane — a tenant/customer
-// token (any tenant role, even admin) is not a platform identity and is denied.
-export function canAccessPlatformConsole(roles: string[]): boolean {
-  return isPlatformPlane(roles);
-}
-
-// Only platform_admin sees real $ cost (the locked rule that cost stays platform-internal).
-export function isPlatformAdmin(roles: string[]): boolean {
-  return hasRole(roles, FpsRole.PlatformAdmin);
-}
-
-// Onboarding triage (approve/reject) is admin/operator; platform_auditor is read-only.
-export function canTriagePlatformOnboarding(roles: string[]): boolean {
-  return hasRole(roles, FpsRole.PlatformAdmin, FpsRole.PlatformOperator);
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -121,10 +106,12 @@ export function formatRoles(roles: string[]): string {
 
 // Returns the first route this user can access, for default redirects.
 // Priority: platform → employee → admin → hr_manager → reporting → audit → profile.
-// A platform identity has no tenant surfaces, so it always lands in the operator console.
+// A platform identity has no tenant surfaces; since the operator console moved to the private
+// platform repo (PLAT008F, #805) it lands on '/', where the shell shows an operator-console
+// notice instead of any tenant page.
 // Admin is checked before hr-operations because canAccessHrOperations also matches admin.
 export function defaultRoute(roles: string[]): string {
-  if (isPlatformPlane(roles)) return '/platform/overview';
+  if (isPlatformPlane(roles)) return '/';
   if (canAccessBookings(roles)) return '/bookings';
   if (canAccessTenantAdmin(roles)) return '/tenant-admin';
   if (canAccessHrOperations(roles)) return '/hr-operations';
