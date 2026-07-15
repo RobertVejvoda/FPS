@@ -18,7 +18,6 @@ import {
   defaultRoute,
   isPlatformPlane,
 } from './auth/roles';
-import { PlatformShell } from './platform/PlatformShell';
 import { t, formatDateTime } from './i18n';
 import { LocaleSwitcher } from './components/LocaleSwitcher';
 import { TenantModulesProvider, useTenantModules } from './tenant/TenantModulesContext';
@@ -161,14 +160,32 @@ function AppFooter() {
   );
 }
 
+// PLAT008F (#805): honest landing for platform-plane identities now that the operator console
+// ships from the private platform deployment instead of this app.
+function OperatorConsoleMovedNotice({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="legal-page">
+      <div className="legal-panel" role="status">
+        <h1>{t('platform.moved.title')}</h1>
+        <p>{t('platform.moved.body')}</p>
+        <div className="legal-actions" style={{ marginTop: 24 }}>
+          <button className="btn-secondary" onClick={onSignOut}>{t('platform.moved.signOut')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Shell() {
   const { isConfigured, logout, branding, roles } = useAuth();
   // PLAT-seats (#710) — only surface seat nav entries when the tenant actually enables Seats.
   const { hasSeats } = useTenantModules();
 
   if (!isConfigured) return <Navigate to="/session" replace />;
-  // A platform-plane identity has no tenant surfaces — send it to the operator console.
-  if (isPlatformPlane(roles)) return <Navigate to="/platform/overview" replace />;
+  // PLAT008F (#805): the operator console moved to the private fairspot-platform deployment. A
+  // platform-plane identity has no tenant surfaces here, so show an honest notice instead of
+  // routing into tenant pages (or a console this app no longer ships).
+  if (isPlatformPlane(roles)) return <OperatorConsoleMovedNotice onSignOut={() => { void logout(); }} />;
 
   const navItems = [
     // UX008 (#781) — one module-aware employee entry for reservation history/status.
@@ -262,7 +279,6 @@ export function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/pilot" element={<PilotPage />} />
-        <Route path="/platform/*" element={<PlatformShell />} />
         <Route path="/*" element={<TenantModulesProvider><Shell /></TenantModulesProvider>} />
       </Routes>
     </BrowserRouter>
