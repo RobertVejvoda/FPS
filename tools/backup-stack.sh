@@ -27,11 +27,14 @@
 # fairspot-platform runbook, #684) — this script only produces the artifacts.
 #
 # Usage:
-#   ./tools/backup-stack.sh [--nas|--local] [--env-file PATH] [--out DIR]
-#                           [--retention N] [--quiesce]
+#   ./tools/backup-stack.sh [--nas|--digitalocean|--local] [--env-file PATH]
+#                           [--out DIR] [--retention N] [--quiesce]
 #
-#   --nas / --local    Which stack to back up (default: local).
-#   --env-file PATH    Compose env file (NAS default: code/infrastructure/nas.env).
+#   --nas / --digitalocean / --local
+#                      Which stack to back up (default: local). --nas and
+#                      --digitalocean are the hosted durable profiles.
+#   --env-file PATH    Compose env file (NAS default: code/infrastructure/nas.env;
+#                      DigitalOcean default: code/infrastructure/do.env).
 #   --out DIR          Backup root (default: ./backups).
 #   --retention N      Keep the newest N runs, prune older (default: 7).
 #   --quiesce          Stop the writers (fairspot-* app services + keycloak)
@@ -45,7 +48,8 @@
 # script — its unseal keys are split-knowledge secrets.
 #
 # Exit codes: 0 all requested stores backed up; 1 prerequisite/store failure
-#             (in --nas mode a Vault it cannot snapshot is a failure).
+#             (in a hosted profile, --nas/--digitalocean, a Vault it cannot
+#             snapshot is a failure).
 
 set -euo pipefail
 
@@ -62,14 +66,15 @@ QUIESCE=""   # non-empty when --quiesce: stop app writers around the dumps
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --nas)        MODE="nas" ;;
-    --local)      MODE="local" ;;
-    --env-file)   ENV_FILE="${2:-}"; shift ;;
-    --out)        OUT="${2:-}"; shift ;;
-    --retention)  RETENTION="${2:-}"; shift ;;
-    --quiesce)    QUIESCE="true" ;;
-    -h|--help)    sed -n '2,42p' "$0"; exit 0 ;;
-    *)            die "Unknown argument: $1 (see --help)" ;;
+    --nas)          MODE="nas" ;;
+    --digitalocean) MODE="digitalocean" ;;
+    --local)        MODE="local" ;;
+    --env-file)     ENV_FILE="${2:-}"; shift ;;
+    --out)          OUT="${2:-}"; shift ;;
+    --retention)    RETENTION="${2:-}"; shift ;;
+    --quiesce)      QUIESCE="true" ;;
+    -h|--help)      sed -n '2,45p' "$0"; exit 0 ;;
+    *)              die "Unknown argument: $1 (see --help)" ;;
   esac
   shift
 done
@@ -160,11 +165,11 @@ backup_postgres() {
   fi
 }
 
-# ── Keycloak Postgres (NAS durable identity; #768) ───────────────────────────
+# ── Keycloak Postgres (hosted durable identity; #768) ────────────────────────
 backup_keycloak_pg() {
   if ! _running keycloak-postgres; then
-    [[ "$MODE" == "nas" ]] && warn "keycloak-postgres not running — skipping" \
-                           || log "Keycloak uses ephemeral H2 in local mode — nothing to back up"
+    is_hosted_profile && warn "keycloak-postgres not running — skipping" \
+                      || log "Keycloak uses ephemeral H2 in local mode — nothing to back up"
     return
   fi
   log "Keycloak Postgres: pg_dump"
@@ -212,10 +217,11 @@ backup_vault() {
   fi
   rm -f "$DEST/$VAULT_SNAPSHOT_ARTIFACT"
 
-  # NAS/server mode MUST NOT silently fall back to a live-directory tar: tarring
-  # /vault/file while Vault is writing produces an inconsistent, unrestorable
-  # artifact that only looks like a backup. Fail closed so the gap is visible.
-  if [[ "$MODE" == "nas" ]]; then
+  # Hosted server mode MUST NOT silently fall back to a live-directory tar:
+  # tarring /vault/file while Vault is writing produces an inconsistent,
+  # unrestorable artifact that only looks like a backup. Fail closed so the gap
+  # is visible. Applies to every hosted profile (nas, digitalocean).
+  if is_hosted_profile; then
     FAILED+=(vault)
     if [[ -z "$token" ]]; then
       warn "Vault: no VAULT_TOKEN (shell env or --env-file) — cannot take a raft snapshot. FAILING CLOSED."

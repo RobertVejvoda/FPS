@@ -19,12 +19,16 @@
 # So this drill automates recovery of the durable DATA, OBJECT, and IDENTITY
 # stores; Vault secret-store restore is a declared manual step (see #684).
 #
-# DESTRUCTIVE. Requires --yes. Targets the LOCAL stack by default; refuses --nas
-# unless --force-nas is also given (a NAS restore overwrites live customer data).
+# DESTRUCTIVE. Requires --yes. Targets the LOCAL stack by default. A hosted
+# restore overwrites live customer data, so it refuses each hosted profile unless
+# its OWN force flag is given: --nas needs --force-nas, --digitalocean needs
+# --force-digitalocean (a DigitalOcean restore never falls through to NAS or
+# local behavior).
 #
 # Usage:
-#   ./tools/restore-drill.sh --from <backup-dir> [--yes] [--local|--nas --force-nas]
-#                            [--env-file PATH] [--skip-smoke]
+#   ./tools/restore-drill.sh --from <backup-dir> [--yes]
+#       [--local | --nas --force-nas | --digitalocean --force-digitalocean]
+#       [--env-file PATH] [--skip-smoke]
 #
 # Exit codes: 0 data/object/identity stores restored + smoke + data-return passed;
 #             1 a hard failure.
@@ -41,19 +45,22 @@ ENV_FILE=""
 FROM=""
 CONFIRMED=false
 FORCE_NAS=false
+FORCE_DO=false
 SKIP_SMOKE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --from)       FROM="${2:-}"; shift ;;
-    --nas)        MODE="nas" ;;
-    --local)      MODE="local" ;;
-    --force-nas)  FORCE_NAS=true ;;
-    --env-file)   ENV_FILE="${2:-}"; shift ;;
-    --yes)        CONFIRMED=true ;;
-    --skip-smoke) SKIP_SMOKE=true ;;
-    -h|--help)    sed -n '2,30p' "$0"; exit 0 ;;
-    *)            die "Unknown argument: $1 (see --help)" ;;
+    --from)                FROM="${2:-}"; shift ;;
+    --nas)                 MODE="nas" ;;
+    --digitalocean)        MODE="digitalocean" ;;
+    --local)               MODE="local" ;;
+    --force-nas)           FORCE_NAS=true ;;
+    --force-digitalocean)  FORCE_DO=true ;;
+    --env-file)            ENV_FILE="${2:-}"; shift ;;
+    --yes)                 CONFIRMED=true ;;
+    --skip-smoke)          SKIP_SMOKE=true ;;
+    -h|--help)             sed -n '2,32p' "$0"; exit 0 ;;
+    *)                     die "Unknown argument: $1 (see --help)" ;;
   esac
   shift
 done
@@ -67,6 +74,9 @@ FROM="$(cd "$FROM" && pwd)"
 
 if [[ "$MODE" == "nas" && "$FORCE_NAS" != "true" ]]; then
   die "Refusing to run a restore drill against NAS (it overwrites live data). Add --force-nas if you really mean it."
+fi
+if [[ "$MODE" == "digitalocean" && "$FORCE_DO" != "true" ]]; then
+  die "Refusing to run a restore drill against the DigitalOcean profile (it overwrites live data). Add --force-digitalocean if you really mean it."
 fi
 if [[ "$CONFIRMED" != "true" ]]; then
   die "This DESTROYS the '$MODE' stack and its volumes, then restores from $FROM. Re-run with --yes to proceed."
@@ -89,7 +99,7 @@ ok "Stack + volumes removed"
 
 # ── 3. Bring infra back up (clean volumes) ───────────────────────────────────
 INFRA_SERVICES=(mongodb mongodb-init postgres minio vault)
-[[ "$MODE" == "nas" ]] && INFRA_SERVICES+=(keycloak-postgres)
+is_hosted_profile && INFRA_SERVICES+=(keycloak-postgres)
 log "Starting infra: ${INFRA_SERVICES[*]}"
 "${COMPOSE_CMD[@]}" up -d "${INFRA_SERVICES[@]}"
 
@@ -110,7 +120,7 @@ _wait_healthy() {
 _wait_healthy mongodb
 _wait_healthy postgres
 _wait_healthy minio
-[[ "$MODE" == "nas" ]] && _wait_healthy keycloak-postgres
+is_hosted_profile && _wait_healthy keycloak-postgres
 
 # ── 4. Restore each store ────────────────────────────────────────────────────
 if _has "$MONGO_ARTIFACT"; then
@@ -132,7 +142,7 @@ if _has "$PG_DATAHUB_ARTIFACT"; then
   ok "Postgres restored"
 fi
 
-if [[ "$MODE" == "nas" ]] && _has "$KC_PG_ARTIFACT"; then
+if is_hosted_profile && _has "$KC_PG_ARTIFACT"; then
   log "Keycloak Postgres: psql restore"
   gunzip -c "$FROM/$KC_PG_ARTIFACT" | "${COMPOSE_CMD[@]}" exec -T keycloak-postgres sh -c \
     'PGPASSWORD="$POSTGRES_PASSWORD" psql -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null'
@@ -208,7 +218,9 @@ if [[ "$SKIP_SMOKE" == "true" ]]; then
 else
   log "Running stack smoke (health/readiness)"
   smoke_args=()
-  [[ "$MODE" == "nas" ]] && smoke_args+=(--nas)
+  # Pass the hosted profile flag through so the smoke resolves the same compose
+  # files (nas -> --nas, digitalocean -> --digitalocean).
+  is_hosted_profile && smoke_args+=("--$MODE")
   [[ -n "$ENV_FILE" ]] && smoke_args+=(--env-file "$ENV_FILE")
   if "$SCRIPT_DIR/start-container-stack.sh" ${smoke_args[@]+"${smoke_args[@]}"} --skip-e2e; then
     ok "Stack smoke passed"

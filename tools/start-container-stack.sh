@@ -22,11 +22,19 @@
 #   ./tools/start-container-stack.sh --nas
 #   ./tools/start-container-stack.sh --nas --domain fairspot.net
 #
+# Usage (DigitalOcean Droplet — NAS baseline + public-port suppression, do.env):
+#   ./tools/start-container-stack.sh --digitalocean --domain fairspot.net
+#   (usually invoked via tools/deploy-digitalocean.sh)
+#
 # Flags:
 #   --nas              Apply NAS overlay (restart policies + required credential check).
+#   --digitalocean     Apply the NAS overlay plus the DigitalOcean delta overlay
+#                      (docker-compose.digitalocean.yml) that suppresses public
+#                      host-port bindings for an internet-addressable host (#766).
 #   --env-file PATH    Env file for the selected mode.
 #                      Local default: code/infrastructure/local-docker.env if present.
 #                      NAS default: code/infrastructure/nas.env.
+#                      DigitalOcean default: code/infrastructure/do.env.
 #   --seed             LOCAL ONLY. After services are healthy, configure Keycloak
 #                      and seed demo + Green Logistics data, then run the local E2E
 #                      smoke (booking -> notification -> audit) to validate pub/sub
@@ -73,31 +81,43 @@ REALM_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --nas)        MODE="nas" ;;
-    --env-file)   ENV_FILE="$2"; shift ;;
-    --realm)      REALM_OVERRIDE="$2"; shift ;;
-    --skip-e2e)   SKIP_E2E=true ;;
-    --seed)       SEED=true ;;
-    --down)       TEARDOWN=true ;;
-    --domain)     PUBLIC_DOMAIN="$2"; shift ;;
+    --nas)          MODE="nas" ;;
+    --digitalocean) MODE="digitalocean" ;;
+    --env-file)     ENV_FILE="$2"; shift ;;
+    --realm)        REALM_OVERRIDE="$2"; shift ;;
+    --skip-e2e)     SKIP_E2E=true ;;
+    --seed)         SEED=true ;;
+    --down)         TEARDOWN=true ;;
+    --domain)       PUBLIC_DOMAIN="$2"; shift ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
   shift
 done
 
+# True for the hosted durable profiles (nas, digitalocean): image-mode services,
+# durable Keycloak Postgres + server-mode Vault, and the NAS hardening overlays.
+# The DigitalOcean profile adds one delta overlay (public-port suppression) on
+# top; everything else is shared, so the two can never drift.
+is_hosted() { [[ "$MODE" == "nas" || "$MODE" == "digitalocean" ]]; }
+
 # Compose mounts VAULT_TOKEN into Dapr sidecars as a Docker secret file for the
-# Vault component. Local-container mode uses the checked-in dev Vault token. NAS
-# mode must get a real value from --env-file and is enforced below.
+# Vault component. Local-container mode uses the checked-in dev Vault token.
+# Hosted modes (nas/digitalocean) must get real values from --env-file and are
+# enforced below.
 if [[ "$MODE" == "local" ]]; then
   ENV_FILE="${ENV_FILE:-$INFRA_DIR/local-docker.env}"
   export VAULT_TOKEN="${VAULT_TOKEN:-dev-only-token}"
   # DataHub's connection string now fails closed on production-like profiles
   # (no committed Postgres password). The local dev default lives here, in the
-  # LOCAL-only path, mirroring VAULT_TOKEN above — NAS supplies POSTGRES_PASSWORD
-  # from nas.env instead.
+  # LOCAL-only path, mirroring VAULT_TOKEN above — hosted modes supply
+  # POSTGRES_PASSWORD from nas.env / do.env instead.
   export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-fps}"
 else
-  ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
+  if [[ "$MODE" == "digitalocean" ]]; then
+    ENV_FILE="${ENV_FILE:-$INFRA_DIR/do.env}"
+  else
+    ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
+  fi
   export ALERTMANAGER_CONFIG_FILE="${ALERTMANAGER_CONFIG_FILE:-runtime/config.yaml}"
 fi
 
@@ -128,19 +148,19 @@ fail() {
 
 # ── Flag-combination guards ──────────────────────────────────────────────────────
 
-if [[ "$MODE" == "nas" && "$SEED" == "true" ]]; then
-  echo "ERROR: --seed is LOCAL-ONLY and cannot be combined with --nas."
+if is_hosted && [[ "$SEED" == "true" ]]; then
+  echo "ERROR: --seed is LOCAL-ONLY and cannot be combined with --$MODE."
   echo
   echo "The seed/E2E helpers (dev-setup-auth.sh, dev-seed.sh, smoke-hosted.sh) use the"
   echo "fps-local Keycloak realm and local dev credentials, which do not match the"
-  echo "NAS-enforced secrets in your nas.env file."
+  echo "enforced secrets in your hosted env file."
   echo
-  echo "For NAS validation, start the stack and probe the public domain instead:"
-  echo "  ./tools/start-container-stack.sh --nas --env-file <env> --domain <domain>"
+  echo "For hosted validation, start the stack and probe the public domain instead:"
+  echo "  ./tools/start-container-stack.sh --$MODE --env-file <env> --domain <domain>"
   echo "  APP_URL=https://app.<domain> AUTH_URL=https://auth.<domain> \\"
   echo "    OIDC_REALM=fairspot ./tools/smoke-hosted.sh"
   echo
-  echo "NAS-aware seeding is tracked as a follow-up to #604."
+  echo "Hosted-aware seeding is tracked as a follow-up to #604."
   exit 1
 fi
 
@@ -160,9 +180,9 @@ PUBLIC_REALM="${REALM_OVERRIDE:-fairspot}"
 
 # ── Build compose command ───────────────────────────────────────────────────────
 
-# NAS pulls pre-built images from the registry (no source build context or SDK);
-# local mode builds images from source.
-if [[ "$MODE" == "nas" ]]; then
+# Hosted profiles pull pre-built images from the registry (no source build
+# context or SDK); local mode builds images from source.
+if is_hosted; then
   SERVICES_FILE="docker-compose.services.images.yml"
 else
   SERVICES_FILE="docker-compose.services.yml"
@@ -173,12 +193,17 @@ COMPOSE_FILES=(
   "-f" "$INFRA_DIR/$SERVICES_FILE"
   "-f" "$INFRA_DIR/docker-compose.dapr.yml"
 )
-if [[ "$MODE" == "nas" ]]; then
+if is_hosted; then
   COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.nas.yml")
   COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.services.nas.yml")
 fi
+# DigitalOcean adds one delta overlay on top of the NAS baseline: it suppresses
+# public host-port bindings for an internet-addressable single host (#766).
+if [[ "$MODE" == "digitalocean" ]]; then
+  COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.digitalocean.yml")
+fi
 
-if [[ "$MODE" == "nas" ]]; then
+if is_hosted; then
   COMPOSE_CMD=(docker compose --project-directory "$INFRA_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
 elif [[ -f "$ENV_FILE" ]]; then
   COMPOSE_CMD=(docker compose --project-directory "$INFRA_DIR" --env-file "$ENV_FILE" "${COMPOSE_FILES[@]}")
@@ -188,15 +213,18 @@ fi
 
 # Human-readable compose command shown in log messages (no secrets).
 COMPOSE_HUMAN="docker compose --project-directory code/infrastructure"
-if [[ "$MODE" == "nas" ]]; then
-  COMPOSE_HUMAN+=" --env-file code/infrastructure/nas.env"
+if is_hosted; then
+  COMPOSE_HUMAN+=" --env-file code/infrastructure/$(basename "$ENV_FILE")"
 elif [[ -f "$ENV_FILE" ]]; then
   COMPOSE_HUMAN+=" --env-file code/infrastructure/local-docker.env"
 fi
 COMPOSE_HUMAN+=" -f docker-compose.yaml -f $SERVICES_FILE -f docker-compose.dapr.yml"
-if [[ "$MODE" == "nas" ]]; then
+if is_hosted; then
   COMPOSE_HUMAN+=" -f docker-compose.nas.yml"
   COMPOSE_HUMAN+=" -f docker-compose.services.nas.yml"
+fi
+if [[ "$MODE" == "digitalocean" ]]; then
+  COMPOSE_HUMAN+=" -f docker-compose.digitalocean.yml"
 fi
 
 # ── Docker-only inspection helpers ───────────────────────────────────────────────
@@ -262,11 +290,11 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 ok "docker compose: $(docker compose version | head -1)"
 
-if [[ "$MODE" == "nas" ]]; then
+if is_hosted; then
   if [[ ! -f "$ENV_FILE" ]]; then
-    echo "ERROR: --nas mode requires an env file at: $ENV_FILE"
+    echo "ERROR: --$MODE mode requires an env file at: $ENV_FILE"
     echo "Copy the template and fill in all values:"
-    echo "  cp code/infrastructure/nas.env.example code/infrastructure/nas.env"
+    echo "  cp code/infrastructure/nas.env.example $ENV_FILE"
     exit 1
   fi
   ok "env file: $ENV_FILE (exists — values not printed)"
@@ -294,10 +322,10 @@ if [[ "$TEARDOWN" == "true" ]]; then
   exit 0
 fi
 
-# NAS Alertmanager notifications are rendered from the ignored operator env file.
-# If no ALERTMANAGER_* notification values are set, the renderer keeps the
+# Hosted Alertmanager notifications are rendered from the ignored operator env
+# file. If no ALERTMANAGER_* notification values are set, the renderer keeps the
 # local-only receiver so the stack remains non-notifying by default.
-if [[ "$MODE" == "nas" ]]; then
+if is_hosted; then
   hdr "Alertmanager notification config"
   "$REPO_ROOT/tools/render-alertmanager-nas-config.sh" "$ENV_FILE"
 fi
@@ -369,8 +397,8 @@ require_vault_unsealed() {
   fi
 }
 
-if [[ "$MODE" == "nas" ]]; then
-  # NAS runs pre-built images from a registry — pull, then start (never build).
+if is_hosted; then
+  # Hosted profiles run pre-built images from a registry — pull, then start (never build).
   echo "Registry: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}  Tag: ${FPS_IMAGE_TAG:-latest}"
   echo "If the packages are private, run 'docker login ghcr.io' first."
   echo "Command: $COMPOSE_HUMAN pull, then a two-stage up -d (Vault first, then the rest)"
@@ -690,8 +718,8 @@ for svc in "${GATEWAY_SERVICES[@]}"; do
   fi
 done
 
-# ── Web SPA smoke (NAS image stack only; local mode runs web via Vite) ───────────
-if [[ "$MODE" == "nas" ]]; then
+# ── Web SPA smoke (hosted image stack only; local mode runs web via Vite) ────────
+if is_hosted; then
   echo
   echo "Web app (fairspot-web)..."
   web_cid="$(_cid fairspot-web)"
@@ -856,10 +884,18 @@ printf "${GREEN}All checks passed.${NC}\n"
 if [[ -z "$PUBLIC_DOMAIN" ]]; then
   echo
   echo "Stack is running in $MODE-container mode."
-  echo "  Gateway:   http://localhost:10000"
-  echo "  Keycloak:  http://localhost:8180"
-  echo "  Grafana:   http://localhost:$GRAFANA_HOST_PORT"
-  if [[ "$SEED" != "true" && "$MODE" != "nas" ]]; then
+  if [[ "$MODE" == "digitalocean" ]]; then
+    # The DigitalOcean profile suppresses public host ports; only Grafana stays
+    # host-bound (loopback). Ingress is the Cloudflare Tunnel — pass --domain
+    # to run the public smoke.
+    echo "  Ingress:   Cloudflare Tunnel (no public host ports; re-run with --domain for the public smoke)"
+    echo "  Grafana:   http://127.0.0.1:$GRAFANA_HOST_PORT (loopback only; reach via ssh -L)"
+  else
+    echo "  Gateway:   http://localhost:10000"
+    echo "  Keycloak:  http://localhost:8180"
+    echo "  Grafana:   http://localhost:$GRAFANA_HOST_PORT"
+  fi
+  if [[ "$MODE" == "local" && "$SEED" != "true" ]]; then
     echo
     echo "To seed demo data and run the local E2E smoke, re-run with --seed."
   fi

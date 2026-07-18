@@ -55,9 +55,11 @@ package-lock.json
 # Secrets
 .env
 code/infrastructure/nas.env
+code/infrastructure/do.env
 code/infrastructure/local-docker.env
 *.env.local
 *.env.nas
+*.env.do
 
 # Old separate repos (superseded by monorepo)
 FPS.code/
