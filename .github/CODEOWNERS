@@ -1,0 +1,38 @@
+# CODEOWNERS — high-risk paths require review from a human (@RobertVejvoda),
+# enforcing "Reviewer != Implementer" and keeping bot auto-merge out of
+# security / infra / architecture-sensitive changes. Pairs with the
+# "Require review from Code Owners" branch ruleset. Paths NOT listed here are
+# eligible for low-risk auto-merge once the AUTO_MERGE_ENABLED variable is true.
+#
+# NOTE: keep this list in sync with the HIGH_RISK pattern in
+# .github/workflows/agent-auto-merge.yml.
+
+# CI, automation, and the guardrails themselves (self-modification protection)
+/.github/                         @RobertVejvoda
+/tools/security-gate.sh           @RobertVejvoda
+/tools/llm-review.mjs             @RobertVejvoda
+/tools/review-permission.sh       @RobertVejvoda
+
+# Auth / security / secrets
+**/auth/                          @RobertVejvoda
+**/security/                      @RobertVejvoda
+
+# Infrastructure / deployment
+/code/infrastructure/             @RobertVejvoda
+/tools/deploy-*.sh                @RobertVejvoda
+**/Dockerfile                     @RobertVejvoda
+**/docker-compose*.yml            @RobertVejvoda
+
+# Database migrations
+**/Migrations/                    @RobertVejvoda
+
+# Dependencies / supply chain
+**/package.json                   @RobertVejvoda
+**/package-lock.json              @RobertVejvoda
+**/*.csproj                       @RobertVejvoda
+**/Directory.Packages.props       @RobertVejvoda
+**/Directory.Build.props          @RobertVejvoda
+
+# Fairness / draw runtime core  (TUNE: confirm exact paths for this repo)
+**/Draw/                          @RobertVejvoda
+**/*Draw*.cs                      @RobertVejvoda

@@ -1,0 +1,26 @@
+name: Security gate
+
+# Required status check: re-imposes the local agent security rules on every PR,
+# because the Copilot coding agent runs in the cloud and never executes the
+# local Claude/Codex hooks. Deterministic, no secrets, read-only.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deny-list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce agent security rules on the diff
+        run: ./tools/security-gate.sh "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}"
