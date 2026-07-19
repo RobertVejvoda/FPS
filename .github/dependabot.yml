@@ -39,3 +39,12 @@ updates:
     groups:
       mobile:
         patterns: ["*"]
+    ignore:
+      # Expo-managed: react-native / react are pinned by the Expo SDK and must be
+      # upgraded together via an `expo` SDK bump, not à la carte — bumping them
+      # standalone breaks the peer tree (npm ci ERESOLVE). See closed PR #809.
+      - dependency-name: "react-native"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
