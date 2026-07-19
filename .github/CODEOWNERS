@@ -37,6 +37,14 @@
 # Application configuration (connection strings, auth/JWT, provider endpoints)
 **/appsettings*.json              @RobertVejvoda
 
+# Runtime / client configuration (OIDC authority, API base URL, entrypoints, orchestration)
+code/web/fps-web/public/config.json   @RobertVejvoda
+**/docker-entrypoint.sh               @RobertVejvoda
+code/mobile/fps-mobile/app.config.js  @RobertVejvoda
+code/mobile/fps-mobile/app.json       @RobertVejvoda
+code/mobile/fps-mobile/eas.json       @RobertVejvoda
+/dapr.yaml                            @RobertVejvoda
+
 # Database migrations
 **/Migrations/                    @RobertVejvoda
 
