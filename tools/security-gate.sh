@@ -24,8 +24,8 @@ violation() { printf '::error::%s\n' "$1"; fail=1; }
 warn()      { printf '::warning::%s\n' "$1"; }
 
 # 1. Secret-bearing files must never be committed.
-if printf '%s\n' "$changed" | grep -Eq '(^|/)\.env($|\.)|\.pem$|\.p12$|(^|/)id_rsa|(^|/)secrets?/'; then
-  violation "Secret-bearing file added/modified (.env / *.pem / id_rsa / secrets/). Blocked — review manually."
+if printf '%s\n' "$changed" | grep -Eq '(^|/)\.env($|\.)|\.(pem|p12|pfx|key)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)([._]|$)|(^|/)secrets?/'; then
+  violation "Secret-bearing file added/modified (.env / *.pem / *.pfx / *.key / id_* private key / secrets/). Blocked — review manually."
 fi
 
 # 2. Tests must not be deleted.

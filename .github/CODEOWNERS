@@ -13,9 +13,12 @@
 /tools/llm-review.mjs             @RobertVejvoda
 /tools/review-permission.sh       @RobertVejvoda
 
-# Auth / security / secrets / identity (JWT, tokens, authz)
+# Auth / security / secrets / identity (JWT, tokens, authz).
+# CODEOWNERS is case-sensitive, so list both case variants.
 **/auth/                          @RobertVejvoda
+**/Auth/                          @RobertVejvoda
 **/security/                      @RobertVejvoda
+**/Security/                      @RobertVejvoda
 **/Identity/                      @RobertVejvoda
 /code/server/Identity/            @RobertVejvoda
 
