@@ -23,7 +23,7 @@ public sealed class NotificationBroadcasterTests
     [Fact]
     public async Task Broadcast_DeliverToMatchingSubscriber()
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var record = MakeRecord("t1", "u1");
 
         var received = new List<NotificationRecord>();
@@ -33,9 +33,17 @@ public sealed class NotificationBroadcasterTests
                 received.Add(n);
         });
 
-        await Task.Delay(50); // let subscription register
+        // Poll until the subscription is registered, then until delivery arrives.
+        // SubscribeAsync registers synchronously on first MoveNextAsync, so a fixed
+        // delay before broadcasting races the thread pool under load. (Matches the
+        // pattern already used by Broadcast_DeliverToMultipleMatchingSubscribers.)
+        while (broadcaster.SubscriptionCount < 1 && !cts.Token.IsCancellationRequested)
+            await Task.Delay(5);
+
         await broadcaster.BroadcastAsync(record);
-        await Task.Delay(50); // let delivery complete
+
+        while (received.Count == 0 && !cts.Token.IsCancellationRequested)
+            await Task.Delay(5);
 
         cts.Cancel();
         await subscribing.ContinueWith(_ => { }); // ignore cancellation exception
@@ -47,7 +55,7 @@ public sealed class NotificationBroadcasterTests
     [Fact]
     public async Task Broadcast_DoesNotDeliverToOtherTenant()
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
         var received = new List<NotificationRecord>();
         var subscribing = Task.Run(async () =>
@@ -56,7 +64,12 @@ public sealed class NotificationBroadcasterTests
                 received.Add(n);
         });
 
-        await Task.Delay(50);
+        // Wait until the subscription is registered so the test genuinely exercises
+        // the tenant filter (not a not-yet-subscribed no-op), then broadcast a
+        // non-matching record and give any erroneous delivery time to arrive.
+        while (broadcaster.SubscriptionCount < 1 && !cts.Token.IsCancellationRequested)
+            await Task.Delay(5);
+
         await broadcaster.BroadcastAsync(MakeRecord("t2", "u1")); // different tenant
         await Task.Delay(50);
 
@@ -69,7 +82,7 @@ public sealed class NotificationBroadcasterTests
     [Fact]
     public async Task Broadcast_DoesNotDeliverToOtherRecipient()
     {
-        using var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
         var received = new List<NotificationRecord>();
         var subscribing = Task.Run(async () =>
@@ -78,7 +91,12 @@ public sealed class NotificationBroadcasterTests
                 received.Add(n);
         });
 
-        await Task.Delay(50);
+        // Wait until the subscription is registered so the test genuinely exercises
+        // the recipient filter, then broadcast a non-matching record and give any
+        // erroneous delivery time to arrive.
+        while (broadcaster.SubscriptionCount < 1 && !cts.Token.IsCancellationRequested)
+            await Task.Delay(5);
+
         await broadcaster.BroadcastAsync(MakeRecord("t1", "u2")); // different recipient
         await Task.Delay(50);
 
