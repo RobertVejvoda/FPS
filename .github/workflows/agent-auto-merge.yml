@@ -60,6 +60,7 @@ jobs:
           AUTHOR_ID=$(printf '%s' "$PR_JSON" | jq -r '.user.id')
           HEAD_REPO=$(printf '%s' "$PR_JSON" | jq -r '.head.repo.full_name')
           DRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft')
+          CHANGED_FILES=$(printf '%s' "$PR_JSON" | jq -r '.changed_files')
           DEFAULT_BRANCH=$(gh api "/repos/$REPO" --jq '.default_branch')
 
           # 3. Provenance guards. Match the EXACT Copilot coding-agent bot by its
@@ -73,6 +74,7 @@ jobs:
           [ "$HEAD_REPO" = "$REPO" ] || skip "PR is from a fork ($HEAD_REPO)"
           [ "$BASE_REF" = "$DEFAULT_BRANCH" ] || skip "PR does not target the default branch"
           [ "$DRAFT" = "false" ] || skip "PR is still a draft"
+          [ "${CHANGED_FILES:-0}" -ge 1 ] || skip "PR has no file changes (empty) — nothing to merge"
 
           # 4. Reviewed-commit must match current head (no post-review pushes).
           REVIEWED_SHA=$(printf '%s' "$COMMENT_BODY" | grep -oiE 'reviewed commit[:` ]*[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1)
