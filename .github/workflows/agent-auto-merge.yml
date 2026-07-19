@@ -55,13 +55,19 @@ jobs:
           PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
           HEAD_SHA=$(printf '%s' "$PR_JSON" | jq -r '.head.sha')
           BASE_REF=$(printf '%s' "$PR_JSON" | jq -r '.base.ref')
-          AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login' | tr 'A-Z' 'a-z')
+          AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
+          AUTHOR_TYPE=$(printf '%s' "$PR_JSON" | jq -r '.user.type')
           HEAD_REPO=$(printf '%s' "$PR_JSON" | jq -r '.head.repo.full_name')
           DRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft')
           DEFAULT_BRANCH=$(gh api "/repos/$REPO" --jq '.default_branch')
 
-          # 3. Provenance guards.
-          case "$AUTHOR" in *copilot*) : ;; *) skip "PR author '$AUTHOR' is not the Copilot agent" ;; esac
+          # 3. Provenance guards. Match the EXACT Copilot coding-agent bot
+          #    (login "Copilot", type "Bot"; GitHub user id 198982749) rather than a
+          #    substring, so a collaborator whose login merely contains "copilot"
+          #    cannot spoof Copilot provenance and reach the auto-merge path.
+          if [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
+            skip "PR author '$AUTHOR' (type=$AUTHOR_TYPE) is not the Copilot coding agent"
+          fi
           [ "$HEAD_REPO" = "$REPO" ] || skip "PR is from a fork ($HEAD_REPO)"
           [ "$BASE_REF" = "$DEFAULT_BRANCH" ] || skip "PR does not target the default branch"
           [ "$DRAFT" = "false" ] || skip "PR is still a draft"
@@ -84,7 +90,7 @@ jobs:
           # 6. Low-risk only: no high-risk path in the diff.
           #    Keep in sync with .github/CODEOWNERS.
           FILES=$(gh api "/repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
-          HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|[Dd]raw'
+          HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|^tools/(deploy|backup|restore|provision|start-container)|^tools/lib/|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|(^|/)appsettings[^/]*\.json$|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|[Dd]raw'
           if printf '%s\n' "$FILES" | grep -Eq "$HIGH_RISK"; then
             skip "diff touches high-risk paths — human merge required"
           fi

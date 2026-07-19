@@ -22,11 +22,20 @@
 **/Identity/                      @RobertVejvoda
 /code/server/Identity/            @RobertVejvoda
 
-# Infrastructure / deployment
+# Infrastructure / deployment / ops scripts
 /code/infrastructure/             @RobertVejvoda
 /tools/deploy-*.sh                @RobertVejvoda
+/tools/backup-*.sh                @RobertVejvoda
+/tools/restore-*.sh               @RobertVejvoda
+/tools/provision-*.sh             @RobertVejvoda
+/tools/start-container-stack.sh   @RobertVejvoda
+/tools/lib/                       @RobertVejvoda
 **/Dockerfile                     @RobertVejvoda
 **/docker-compose*.yml            @RobertVejvoda
+**/docker-compose*.yaml           @RobertVejvoda
+
+# Application configuration (connection strings, auth/JWT, provider endpoints)
+**/appsettings*.json              @RobertVejvoda
 
 # Database migrations
 **/Migrations/                    @RobertVejvoda
