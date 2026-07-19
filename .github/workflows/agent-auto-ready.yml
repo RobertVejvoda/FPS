@@ -1,0 +1,51 @@
+name: Agent auto-ready
+
+# Copilot opens its PR as a draft and, when it finishes, requests review but often
+# does NOT flip the draft to "ready for review" — so agent-review-handoff (which
+# fires on ready_for_review) never runs and the pipeline stalls. This marks a
+# Copilot PR ready the moment it actually has changes, so the review -> merge chain
+# proceeds hands-off. Guarded to NON-EMPTY PRs so an empty/premature review request
+# cannot push a no-op into review (see closed #822).
+
+on:
+  pull_request:
+    types: [review_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  auto-ready:
+    if: >
+      github.event.pull_request.draft == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Mark ready if it's a non-empty Copilot PR
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+        run: |
+          set -uo pipefail
+          # Exact Copilot coding-agent identity (login "Copilot", type "Bot").
+          if [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
+            echo "PR author '$AUTHOR' (type=$AUTHOR_TYPE) is not the Copilot agent — no auto-ready."
+            exit 0
+          fi
+          CF=$(gh api "/repos/$REPO/pulls/$PR" --jq '.changed_files')
+          if [ "${CF:-0}" -lt 1 ]; then
+            echo "Copilot PR #$PR has no file changes yet ($CF) — leaving it as a draft."
+            exit 0
+          fi
+          gh pr ready "$PR" --repo "$REPO"
+          echo "Marked Copilot PR #$PR ready ($CF files changed) — review handoff will fire."
