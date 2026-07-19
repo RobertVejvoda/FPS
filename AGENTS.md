@@ -89,6 +89,23 @@ Delivery ownership is state-machine-first. GitHub Project fields `Status`, `Owne
 
 The next automation target is a delivery state orchestrator that reads issue and pull request events, reconciles `Status` / `Owner` / `Implementer`, and treats labels only as taxonomy or temporary compatibility triggers. Board sync is intentionally non-blocking. If the repository token cannot write to the user-owned GitHub Project, configure `PROJECT_SYNC_TOKEN` with Project access; otherwise agents should update the board manually after changing responsibility.
 
+### Delivery automation: Copilot implement → Codex review → App-bot merge
+
+The realised delivery pipeline (the "B2" model). Roles are functions and the one hard invariant is **Reviewer ≠ Implementer ≠ Merger**:
+
+- **Implementer — GitHub Copilot coding agent** (`app/copilot-swe-agent`, billed as Copilot premium requests). A human assigns a `Ready` issue with one click ("Assign to Agent → Copilot"). This step stays human on purpose: **a GitHub App / installation token cannot assign the Copilot agent — only a user can** (Copilot is not surfaced to App tokens via `suggestedActors`; the App token sees only `anthropic-code-agent` and `openai-code-agent`). The click is also the deliberate "spend Copilot budget?" checkpoint.
+- **Reviewer — Codex** (`chatgpt-codex-connector[bot]`). Codex reviews as a PR **comment** (not a formal approval) carrying a `Reviewed commit: <sha>` marker. Its "On PR open" auto-review **skips drafts**, and Copilot opens drafts, so `.github/workflows/agent-review-handoff.yml` posts `@codex review` when the PR is marked ready.
+- **Merger — the "Fairspot Delivery Bot" GitHub App** (App ID `4339995`; per-repo secret `APP_PRIVATE_KEY` + variable `APP_ID`; perms Contents/Issues/Pull requests R&W). `.github/workflows/agent-auto-merge.yml` squash-merges as the App bot only when every guard passes — clean Codex verdict, Copilot author, same-repo, reviewed-SHA == head, `mergeable_state == clean`, and a **low-risk diff**. It is **OFF by default**; activate per repo with the `AUTO_MERGE_ENABLED=true` repository variable (set it `false` to emergency-stop).
+
+**When Codex is the implementer** (for example it authors a documentation change): Codex is the Implementer for that PR and must not review it, so the automated pipeline deliberately does not apply — the auto-merge gate requires a Copilot author and skips Codex-authored PRs, and the review handoff only pings Codex for Copilot PRs, so it never asks Codex to review its own work. Route the review to Robert (or Claude, if an independent read is worth the API cost) and merge by a human. The same holds for any human-authored PR: it is reviewed and merged through the normal flow, not the bot pipeline.
+
+Guardrails:
+
+- `.github/workflows/security-gate.yml` (`tools/security-gate.sh`) is a **required PR check** re-imposing the local agent deny-list — secret-bearing files, test deletion, sensitive code changed without tests, forbidden commands — in CI, because the cloud Copilot agent never runs the local hooks (`tools/llm-review.mjs`, `tools/review-permission.sh`).
+- `.github/CODEOWNERS` routes **high-risk paths** (CI/guards, auth, infra, deps, DB migrations, draw/fairness core) to a **human** reviewer; the auto-merge gate refuses those and branch protection's "Require review from Code Owners" backs it up. This is how architecture/security decisions keep human sign-off.
+
+Per-repo setup, in order: (1) add the repo to Codex code-review preferences; (2) **create a Codex cloud environment** for it at `chatgpt.com/codex/cloud/settings/environments` — otherwise review fails with "To use Codex here, create an environment for this repo"; (3) install the Delivery Bot App and add `APP_ID` / `APP_PRIVATE_KEY`; (4) add a branch ruleset requiring `Security gate` + `CI` + Code Owner review and blocking force/direct pushes; (5) allow auto-merge + auto-delete head branches; (6) set `AUTO_MERGE_ENABLED=true`. Rolling out on `fairspot` first, then `fairspot-platform`, `atlas`, and `fairspot-architecture` (the architecture repo keeps a broad high-risk carve-out — most of it is human-merged by design).
+
 ### Implementer routing
 
 There are two implementer agents available: **Claude** (Anthropic) and **GitHub Copilot agent** (assign-an-issue model, billed under the GitHub subscription). Codex's specs can be routed to either one. Default routing rule:

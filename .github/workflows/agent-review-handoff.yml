@@ -1,0 +1,43 @@
+name: Agent review handoff
+
+# When the Copilot coding agent marks its PR ready for review, ask Codex to
+# review it. Codex's own "On PR open" auto-review skips drafts, so without this
+# nudge a Copilot PR never gets reviewed. Runs as the GitHub App bot.
+
+on:
+  pull_request:
+    types: [ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  request-codex-review:
+    runs-on: ubuntu-latest
+    # only PRs from a branch in THIS repo (never forks)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Ask Codex to review (Copilot-authored PRs only)
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+        run: |
+          set -uo pipefail
+          # Exact Copilot coding-agent identity (login "Copilot", type "Bot"), not a
+          # substring, so a login merely containing "copilot" does not trigger a handoff.
+          if [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
+            echo "PR author '$AUTHOR' (type=$AUTHOR_TYPE) is not the Copilot agent — no handoff."
+            exit 0
+          fi
+          gh pr comment "$PR" --repo "$REPO" --body "@codex review"
+          echo "Requested Codex review on PR #$PR"

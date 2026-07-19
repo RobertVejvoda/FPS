@@ -1,0 +1,63 @@
+# CODEOWNERS — high-risk paths require review from a human (@RobertVejvoda),
+# enforcing "Reviewer != Implementer" and keeping bot auto-merge out of
+# security / infra / architecture-sensitive changes. Pairs with the
+# "Require review from Code Owners" branch ruleset. Paths NOT listed here are
+# eligible for low-risk auto-merge once the AUTO_MERGE_ENABLED variable is true.
+#
+# NOTE: keep this list in sync with the HIGH_RISK pattern in
+# .github/workflows/agent-auto-merge.yml.
+
+# CI, automation, and the guardrails themselves (self-modification protection)
+/.github/                         @RobertVejvoda
+/tools/security-gate.sh           @RobertVejvoda
+/tools/llm-review.mjs             @RobertVejvoda
+/tools/review-permission.sh       @RobertVejvoda
+
+# Auth / security / secrets / identity (JWT, tokens, authz).
+# CODEOWNERS is case-sensitive, so list both case variants.
+**/auth/                          @RobertVejvoda
+**/Auth/                          @RobertVejvoda
+**/security/                      @RobertVejvoda
+**/Security/                      @RobertVejvoda
+**/Identity/                      @RobertVejvoda
+/code/server/Identity/            @RobertVejvoda
+
+# Infrastructure / deployment / ops scripts
+/code/infrastructure/             @RobertVejvoda
+/tools/deploy-*.sh                @RobertVejvoda
+/tools/backup-*.sh                @RobertVejvoda
+/tools/restore-*.sh               @RobertVejvoda
+/tools/provision-*.sh             @RobertVejvoda
+/tools/start-container-stack.sh   @RobertVejvoda
+/tools/lib/                       @RobertVejvoda
+**/Dockerfile                     @RobertVejvoda
+**/docker-compose*.yml            @RobertVejvoda
+**/docker-compose*.yaml           @RobertVejvoda
+
+# Application configuration (connection strings, auth/JWT, provider endpoints)
+**/appsettings*.json              @RobertVejvoda
+
+# Runtime / client configuration (OIDC authority, API base URL, entrypoints, orchestration)
+code/web/fps-web/public/config.json   @RobertVejvoda
+**/docker-entrypoint.sh               @RobertVejvoda
+code/mobile/fps-mobile/app.config.js  @RobertVejvoda
+code/mobile/fps-mobile/app.json       @RobertVejvoda
+code/mobile/fps-mobile/eas.json       @RobertVejvoda
+/dapr.yaml                            @RobertVejvoda
+
+# Database migrations
+**/Migrations/                    @RobertVejvoda
+
+# Dependencies / supply chain
+**/package.json                   @RobertVejvoda
+**/package-lock.json              @RobertVejvoda
+**/yarn.lock                      @RobertVejvoda
+**/pnpm-lock.yaml                 @RobertVejvoda
+**/*.csproj                       @RobertVejvoda
+**/Directory.Packages.props       @RobertVejvoda
+**/Directory.Build.props          @RobertVejvoda
+**/global.json                    @RobertVejvoda
+
+# Fairness / draw runtime core  (TUNE: confirm exact paths for this repo)
+**/Draw/                          @RobertVejvoda
+**/*Draw*.cs                      @RobertVejvoda

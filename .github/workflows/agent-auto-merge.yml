@@ -1,0 +1,111 @@
+name: Agent auto-merge gate
+
+# Squash-merges a Copilot PR ONLY when every guard passes:
+#   - the trigger is a CLEAN review comment from Codex (the reviewer);
+#   - the PR was authored by the Copilot agent, from a branch in this repo;
+#   - Codex reviewed the CURRENT head commit (no post-review pushes);
+#   - the PR is fully mergeable (CI green + any required Code Owner review done);
+#   - the diff is LOW-RISK (no high-risk path — those stay human-merged).
+# Merges as the GitHub App bot, so Merger != Reviewer != Implementer.
+#
+# OFF BY DEFAULT. Activate only after branch protection is in place by setting
+# the repository variable AUTO_MERGE_ENABLED=true. Emergency stop: set it false.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    if: >
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.login == 'chatgpt-codex-connector[bot]' &&
+      vars.AUTO_MERGE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Evaluate merge gate
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -uo pipefail
+          skip() { echo "AUTO-MERGE SKIPPED: $1"; exit 0; }
+
+          # 1. Codex verdict must be clean (no blocking findings).
+          if printf '%s' "$COMMENT_BODY" | grep -Eiq 'p0|p1|blocking|must fix|changes? requested|found (an?|[0-9]+) '; then
+            skip "Codex reported blocking findings"
+          fi
+          if ! printf '%s' "$COMMENT_BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|\"findings\" *: *\[ *\]|looks good|lgtm|swish"; then
+            skip "Codex comment is not a recognised clean verdict"
+          fi
+
+          # 2. PR facts.
+          PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
+          HEAD_SHA=$(printf '%s' "$PR_JSON" | jq -r '.head.sha')
+          BASE_REF=$(printf '%s' "$PR_JSON" | jq -r '.base.ref')
+          AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
+          AUTHOR_TYPE=$(printf '%s' "$PR_JSON" | jq -r '.user.type')
+          AUTHOR_ID=$(printf '%s' "$PR_JSON" | jq -r '.user.id')
+          HEAD_REPO=$(printf '%s' "$PR_JSON" | jq -r '.head.repo.full_name')
+          DRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft')
+          DEFAULT_BRANCH=$(gh api "/repos/$REPO" --jq '.default_branch')
+
+          # 3. Provenance guards. Match the EXACT Copilot coding-agent bot by its
+          #    stable GitHub user id (198982749) AND login "Copilot" AND type "Bot",
+          #    not a substring — so no collaborator whose login merely contains
+          #    "copilot", and no look-alike bot, can spoof provenance and reach the
+          #    auto-merge path.
+          if [ "$AUTHOR_ID" != "198982749" ] || [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
+            skip "PR author '$AUTHOR' (type=$AUTHOR_TYPE id=$AUTHOR_ID) is not the Copilot coding agent (expected id 198982749)"
+          fi
+          [ "$HEAD_REPO" = "$REPO" ] || skip "PR is from a fork ($HEAD_REPO)"
+          [ "$BASE_REF" = "$DEFAULT_BRANCH" ] || skip "PR does not target the default branch"
+          [ "$DRAFT" = "false" ] || skip "PR is still a draft"
+
+          # 4. Reviewed-commit must match current head (no post-review pushes).
+          REVIEWED_SHA=$(printf '%s' "$COMMENT_BODY" | grep -oiE 'reviewed commit[:` ]*[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1)
+          [ -n "${REVIEWED_SHA:-}" ] || skip "Codex comment has no 'Reviewed commit' marker to verify freshness"
+          case "$HEAD_SHA" in "$REVIEWED_SHA"*) : ;; *) skip "Codex reviewed $REVIEWED_SHA but head is $HEAD_SHA (stale)" ;; esac
+
+          # 5. Fully mergeable (CI green + required reviews incl. code owners).
+          #    GitHub computes mergeable_state asynchronously — poll briefly.
+          STATE="unknown"
+          for _ in 1 2 3 4 5 6; do
+            STATE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.mergeable_state')
+            [ "$STATE" != "unknown" ] && break
+            sleep 5
+          done
+          [ "$STATE" = "clean" ] || skip "mergeable_state='$STATE' (CI not green, conflicts, or a required review is missing)"
+
+          # 6. Low-risk only: no high-risk path in the diff.
+          #    Keep in sync with .github/CODEOWNERS.
+          FILES=$(gh api "/repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
+          HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|^tools/(deploy|backup|restore|provision|start-container)|^tools/lib/|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|(^|/)appsettings[^/]*\.json$|(^|/)public/config\.json$|docker-entrypoint\.sh$|(^|/)app\.config\.js$|(^|/)app\.json$|(^|/)eas\.json$|(^|/)dapr\.yaml$|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|[Dd]raw'
+          if printf '%s\n' "$FILES" | grep -Eq "$HIGH_RISK"; then
+            skip "diff touches high-risk paths — human merge required"
+          fi
+
+          # 7. All gates passed → squash-merge as the app bot. Pin to the reviewed
+          #    head (--match-head-commit) so a push landing between the checks above
+          #    and this merge cannot slip an unreviewed commit through (TOCTOU), and
+          #    fail the workflow loudly if the merge is rejected (the run is not
+          #    retried, so a silent false-success would leave an approved PR unmerged).
+          echo "All gates passed — merging PR #$PR at reviewed head $HEAD_SHA"
+          if gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"; then
+            echo "AUTO-MERGE: DONE for PR #$PR"
+          else
+            echo "::error::Merge of PR #$PR rejected (head moved, a required check regressed, or not mergeable). Left unmerged for a human."
+            exit 1
+          fi
