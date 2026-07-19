@@ -34,6 +34,8 @@
 # Dependencies / supply chain
 **/package.json                   @RobertVejvoda
 **/package-lock.json              @RobertVejvoda
+**/yarn.lock                      @RobertVejvoda
+**/pnpm-lock.yaml                 @RobertVejvoda
 **/*.csproj                       @RobertVejvoda
 **/Directory.Packages.props       @RobertVejvoda
 **/Directory.Build.props          @RobertVejvoda
