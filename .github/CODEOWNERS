@@ -13,9 +13,11 @@
 /tools/llm-review.mjs             @RobertVejvoda
 /tools/review-permission.sh       @RobertVejvoda
 
-# Auth / security / secrets
+# Auth / security / secrets / identity (JWT, tokens, authz)
 **/auth/                          @RobertVejvoda
 **/security/                      @RobertVejvoda
+**/Identity/                      @RobertVejvoda
+/code/server/Identity/            @RobertVejvoda
 
 # Infrastructure / deployment
 /code/infrastructure/             @RobertVejvoda
