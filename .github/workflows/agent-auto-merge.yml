@@ -89,7 +89,15 @@ jobs:
             skip "diff touches high-risk paths — human merge required"
           fi
 
-          # 7. All gates passed → squash-merge as the app bot.
-          echo "All gates passed — merging PR #$PR (head $HEAD_SHA)"
-          gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
-          echo "AUTO-MERGE: DONE for PR #$PR"
+          # 7. All gates passed → squash-merge as the app bot. Pin to the reviewed
+          #    head (--match-head-commit) so a push landing between the checks above
+          #    and this merge cannot slip an unreviewed commit through (TOCTOU), and
+          #    fail the workflow loudly if the merge is rejected (the run is not
+          #    retried, so a silent false-success would leave an approved PR unmerged).
+          echo "All gates passed — merging PR #$PR at reviewed head $HEAD_SHA"
+          if gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"; then
+            echo "AUTO-MERGE: DONE for PR #$PR"
+          else
+            echo "::error::Merge of PR #$PR rejected (head moved, a required check regressed, or not mergeable). Left unmerged for a human."
+            exit 1
+          fi
