@@ -39,6 +39,7 @@
 **/*.csproj                       @RobertVejvoda
 **/Directory.Packages.props       @RobertVejvoda
 **/Directory.Build.props          @RobertVejvoda
+**/global.json                    @RobertVejvoda
 
 # Fairness / draw runtime core  (TUNE: confirm exact paths for this repo)
 **/Draw/                          @RobertVejvoda
