@@ -81,10 +81,11 @@ jobs:
           # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
           if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$PR_NODE" >/dev/null 2>&1; then
             echo "Converted PR #$PR to Draft (inline finding)."
+            gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
           else
-            echo "::warning::could not convert PR #$PR to Draft"
+            echo "::error::could not convert PR #$PR to Draft"
+            gh pr comment "$PR" --repo "$REPO" --body "⚠️ Codex flagged a **P0/P1/P2** finding, but auto-converting this PR to Draft **failed** — it remains Ready. A maintainer should address the findings and draft it manually if needed." || true
           fi
-          gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
 
   # Path 2: Codex posted a finding as a PR-conversation comment (issue_comment is trusted).
   from-comment:
@@ -134,7 +135,8 @@ jobs:
           # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
           if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$NODE" >/dev/null 2>&1; then
             echo "Converted PR #$PR to Draft (comment finding)."
+            gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the findings, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
           else
-            echo "::warning::could not convert PR #$PR to Draft"
+            echo "::error::could not convert PR #$PR to Draft"
+            gh pr comment "$PR" --repo "$REPO" --body "⚠️ Codex flagged a **P0/P1/P2** finding, but auto-converting this PR to Draft **failed** — it remains Ready. A maintainer should address the findings and draft it manually if needed." || true
           fi
-          gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the findings, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
