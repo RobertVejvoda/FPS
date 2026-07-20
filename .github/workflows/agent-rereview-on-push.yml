@@ -1,0 +1,47 @@
+name: Agent re-review on push
+
+# After a Copilot PR is updated (a fix pushed while it is Ready — e.g. addressing a Codex
+# finding that draft-on-findings-apply routed back with @copilot), re-request Codex review so
+# the verdict reflects the new head, and clear the addressing-feedback stage. Copilot findings
+# leave the PR Ready (the auto-merge gate blocks a merge without a clean verdict), so there is
+# nothing to un-draft here.
+#
+# SECURITY: pull_request_target runs the trusted default-branch version of this workflow — NOT
+# the PR branch's — so a same-repo contributor cannot alter this secret-bearing workflow to
+# exfiltrate the App key. Safe because it never checks out or runs PR head code; it only calls
+# gh api with PR metadata. Same-repo Copilot PRs only.
+
+on:
+  pull_request_target:
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  rereview:
+    if: >
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == 'Copilot' &&
+      github.event.pull_request.user.type == 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Re-request Codex review after the Copilot push
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          # The fix landed — clear the addressing-feedback stage and re-request review.
+          gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:addressing-feedback" >/dev/null 2>&1 || true
+          gh pr comment "$PR" --repo "$REPO" --body "@codex review"
+          echo "Re-requested Codex review on PR #$PR after a push."
