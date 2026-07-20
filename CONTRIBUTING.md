@@ -43,7 +43,7 @@ Codex merges docs/<topic> to master independently — no ordering dependency
 
 Scopes do not overlap, so merge order does not matter.
 
-## Master Protection Rules
+## Main Protection Rules
 
 - Never push directly to `master` — always via PR
 - Never `git push --force` on any branch
