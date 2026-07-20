@@ -157,8 +157,11 @@ jobs:
             gh pr comment "$PR" --repo "$REPO" --body "🔀 **Auto-merged.** Codex verdict was clean, CI green, reviewed head matched, and the diff is low-risk." >/dev/null 2>&1 || true
             echo "AUTO-MERGE: DONE for PR #$PR"
           else
-            set_stage needs-human
-            gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Auto-merge rejected** (head moved, a required check regressed, or not mergeable). Left for a human to merge." >/dev/null 2>&1 || true
-            echo "::error::Merge of PR #$PR rejected (head moved, a required check regressed, or not mergeable). Left unmerged for a human."
+            # A rejection here (a push landed between the checks and this merge, so
+            # --match-head-commit no longer matches, or a required check regressed) is
+            # transient and re-reviewable — do NOT install the terminal pipeline:needs-human
+            # hold (that is reserved for a capped loop). The next clean verdict re-runs the gate.
+            gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Auto-merge not applied** — the head moved or a check regressed since the review. This will retry automatically on the next clean verdict." >/dev/null 2>&1 || true
+            echo "::error::Merge of PR #$PR rejected (head moved or a required check regressed) — will retry on the next clean verdict."
             exit 1
           fi
