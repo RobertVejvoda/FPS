@@ -623,7 +623,7 @@ jobs:
               ;;
           esac
           if [[ "$COMMENT_AUTHOR" == *"[bot]" ]] &&
-             { [[ "$COMMENT_AUTHOR" == *copilot* ]] || [[ "$COMMENT_AUTHOR" == *claude* ]] || [[ "$COMMENT_AUTHOR" == fairspot-delivery-bot* ]]; }; then
+             { [[ "$COMMENT_AUTHOR" == *copilot* ]] || [[ "$COMMENT_AUTHOR" == *claude* ]]; }; then
             ALLOWED="true"
           fi
           if [ "$ALLOWED" != "true" ]; then

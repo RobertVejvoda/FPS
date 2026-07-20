@@ -1,25 +1,25 @@
 name: Agent re-review on push
 
-# After a Copilot PR is updated (a fix pushed while it is Ready — e.g. addressing a Codex
-# finding that draft-on-findings-apply routed back with @copilot), re-request Codex review so
-# the verdict reflects the new head, and clear the addressing-feedback stage. Copilot findings
-# leave the PR Ready (the auto-merge gate blocks a merge without a clean verdict), so there is
-# nothing to un-draft here.
+# When a Copilot PR is updated (a fix pushed while Ready), resume review of the new head via the
+# same transition reducer. A capped loop is held (the adapter ignores the push).
 #
-# SECURITY: pull_request_target runs the trusted default-branch version of this workflow — NOT
-# the PR branch's — so a same-repo contributor cannot alter this secret-bearing workflow to
-# exfiltrate the App key. Safe because it never checks out or runs PR head code; it only calls
-# gh api with PR metadata. Same-repo Copilot PRs only.
+# SECURITY: pull_request_target runs the trusted DEFAULT-BRANCH version and checks out the base
+# (main) tools/ — it never checks out or runs PR head code; it only calls the reducer/adapter and
+# gh with PR metadata. Same-repo Copilot PRs only.
 
 on:
   pull_request_target:
     types: [synchronize]
 
+concurrency:
+  group: agent-loop-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
-  rereview:
+  push:
     if: >
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -27,42 +27,20 @@ jobs:
       github.event.pull_request.user.type == 'Bot'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4     # base ref (main) — trusted, never PR head
       - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Re-request Codex review after the Copilot push
+      - name: Run the loop adapter (push)
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          EVENT: push
         run: |
           set -uo pipefail
-          # Single-label pipeline stage: provision (stable colour) + add + clear the others.
-          set_stage() {
-            case "$1" in
-              in-review) c=0E8A16 ;; addressing-feedback) c=FBCA04 ;; auto-merging) c=8250DF ;;
-              merged) c=1A7F37 ;; needs-human) c=D73A4A ;; *) c=EDEDED ;;
-            esac
-            gh label create "pipeline:$1" --repo "$REPO" --color "$c" >/dev/null 2>&1 || true
-            gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
-            for s in in-review addressing-feedback auto-merging merged needs-human; do
-              [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
-            done
-          }
-          # A capped loop is held for a human — never silently re-enable it. Only a human
-          # deliberately routing it back (which clears pipeline:needs-human) resumes review.
-          LABELS=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || true)
-          if printf '%s\n' "$LABELS" | grep -qx "autofix-capped"; then
-            echo "PR #$PR is autofix-capped — held for a human, not re-requesting review."
-            exit 0
-          fi
-          # The fix landed — move to the in-review stage (clears every other stage) and re-review.
-          set_stage in-review
-          gh pr comment "$PR" --repo "$REPO" --body "@codex review"
-          # Return the durable board to Codex (an earlier round set Owner=Copilot for the fix).
-          gh pr comment "$PR" --repo "$REPO" --body "/fps-route codex-review" || true
-          echo "Re-requested Codex review on PR #$PR after a push."
+          node tools/agent-loop-adapter.mjs

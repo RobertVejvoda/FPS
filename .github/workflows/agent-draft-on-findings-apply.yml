@@ -1,22 +1,13 @@
 name: Agent draft on blocking findings (apply)
 
-# PRIVILEGED half of draft-on-findings. Codex delivers findings on TWO paths; both triggers
-# run the trusted DEFAULT-BRANCH version of this file, so holding the App key here is safe
-# (a PR branch cannot alter it):
+# PRIVILEGED half of the delivery loop. Both triggers run the trusted DEFAULT-BRANCH version of
+# this file (workflow_run / issue_comment), so this is the only place the App key + PROJECT_SYNC
+# token are used. It checks out the trusted base tools/, then invokes the repository-neutral
+# transition reducer via tools/agent-loop-adapter.mjs, which fetches + verifies the Codex verdict,
+# gathers durable state, reduces, and applies exactly one transition.
 #
-#   - workflow_run  ← the unprivileged pull_request_review stage (agent-draft-on-findings)
-#                     signals via an artifact when it sees a substantive inline finding.
-#   - issue_comment ← Codex also posts verdicts as PR-conversation comments (the same path
-#                     the auto-merge gate keys on); a P0/P1/P2 there is handled directly.
-#
-# On a substantive P0/P1/P2 finding the reaction depends on the PR's author:
-#   - Copilot-authored PRs → the AUTONOMOUS LOOP: nudge Copilot to fix (capped at MAX_ROUNDS)
-#     and tag `pipeline:addressing-feedback`. They stay Ready — the auto-merge gate already
-#     refuses to merge without a clean Codex verdict — and agent-rereview-on-push re-requests
-#     review after Copilot's fix push.
-#   - everyone else (Claude / human) → convert to Draft (unmergeable, gate skips it) so the
-#     orchestrator's pr-converted-to-draft job routes the issue to Needs changes / Owner=Impl.
-# Clean verdicts and P3-only nits are no-ops.
+# A per-PR concurrency group serializes transitions; the adapter's ledger marker (and a re-check
+# just before acting) backstops any residual cross-channel race.
 
 on:
   workflow_run:
@@ -25,15 +16,16 @@ on:
   issue_comment:
     types: [created]
 
+concurrency:
+  group: agent-loop-${{ github.event.issue.number || github.event.workflow_run.id }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   actions: read
 
-env:
-  MAX_ROUNDS: "3"
-
 jobs:
-  # Path 1: the pull_request_review stage signalled a substantive inline finding.
+  # Path 1: a formal review (via the unprivileged stage-1 signal).
   from-review:
     if: >
       github.event_name == 'workflow_run' &&
@@ -42,16 +34,16 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Download the draft signal (absent unless a substantive finding)
+      - uses: actions/checkout@v4
+      - name: Download the stage-1 signal (absent unless a Codex review fired)
         id: dl
         uses: actions/download-artifact@v4
         with:
-          name: draft-signal
+          name: agent-loop-signal
           path: signal
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
         continue-on-error: true
-
       - name: Mint app token
         if: steps.dl.outcome == 'success'
         id: app
@@ -59,110 +51,21 @@ jobs:
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Draft (non-Copilot) or nudge Copilot on the finding
+      - name: Run the loop adapter (verdict via formal review)
         if: steps.dl.outcome == 'success'
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: verdict
         run: |
           set -uo pipefail
-          # Single-label pipeline stage: provision (stable colour) + add + clear the others.
-          set_stage() {
-            case "$1" in
-              in-review) c=0E8A16 ;; addressing-feedback) c=FBCA04 ;; auto-merging) c=8250DF ;;
-              merged) c=1A7F37 ;; needs-human) c=D73A4A ;; *) c=EDEDED ;;
-            esac
-            gh label create "pipeline:$1" --repo "$REPO" --color "$c" >/dev/null 2>&1 || true
-            gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
-            for s in in-review addressing-feedback auto-merging merged needs-human; do
-              [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
-            done
-          }
-          # Resolve the reviewed PR. Stage 1 recorded the exact PR number, but its contents are
-          # untrusted (stage 1 runs PR-branch code), so only trust that number if it is among the
-          # OPEN PRs actually associated with the run's head SHA — a tampered stage 1 can then at
-          # most target a PR sharing this commit, never an unrelated one, and it also picks the
-          # RIGHT PR when the SHA maps to several (not just .[0]).
-          ASSOC=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -c '[.[] | select(.state=="open") | .number]' || echo '[]')
-          SIGNAL_PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
-          if [ -n "$SIGNAL_PR" ] && printf '%s' "$ASSOC" | jq -e --argjson n "$SIGNAL_PR" 'index($n) != null' >/dev/null 2>&1; then
-            PR="$SIGNAL_PR"
-          elif [ "$(printf '%s' "$ASSOC" | jq 'length')" = "1" ]; then
-            PR=$(printf '%s' "$ASSOC" | jq -r '.[0]')
-          else
-            echo "Cannot uniquely resolve the reviewed PR for head $HEAD_SHA (signal='$SIGNAL_PR', assoc=$ASSOC) — no-op."
-            exit 0
-          fi
+          PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
+          REVIEW_ID=$(tr -dc '0-9' < signal/review-id.txt 2>/dev/null || true)
+          [ -n "$PR" ] && [ -n "$REVIEW_ID" ] || { echo "no signal — nothing to do"; exit 0; }
+          PR="$PR" REVIEW_ID="$REVIEW_ID" node tools/agent-loop-adapter.mjs
 
-          PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
-          [ "$(printf '%s' "$PR_JSON" | jq -r '.draft')" = "false" ] || { echo "PR #$PR already a draft — no-op."; exit 0; }
-
-          # Freshness: skip if the PR head moved since the review (a fix already landed). Uses the
-          # head SHA stage 1 recorded from the review event — reliable, unlike workflow_run.head_sha.
-          # Prevents a stale review from re-nudging / re-incrementing the cap on an already-fixed PR.
-          RECORDED_HEAD=$(tr -dc '0-9a-f' < signal/pr-head-sha.txt 2>/dev/null || true)
-          LIVE_HEAD=$(printf '%s' "$PR_JSON" | jq -r '.head.sha // empty')
-          if [ -n "$RECORDED_HEAD" ] && [ -n "$LIVE_HEAD" ] && [ "$RECORDED_HEAD" != "$LIVE_HEAD" ]; then
-            echo "Stale: PR #$PR head moved since the review ($RECORDED_HEAD -> $LIVE_HEAD) — no-op."
-            exit 0
-          fi
-
-          AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
-          if [ "$AUTHOR" = "Copilot" ]; then
-            # Autonomous loop: nudge Copilot to fix (capped) + tag the stage; the PR stays Ready.
-            set_stage addressing-feedback
-            ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate --jq '[.[] | select((.user.type == "Bot") and (.body | test("address the review — round")))] | length' 2>/dev/null || echo 0)
-            if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
-              gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
-              set_stage needs-human
-              # Distinct machine marker so the re-review handler and the gate hold ONLY a capped
-              # loop — pipeline:needs-human is also set by the gate for high-risk / not-mergeable
-              # PRs, which must still be re-reviewable.
-              gh label create "autofix-capped" --repo "$REPO" --color B60205 >/dev/null 2>&1 || true
-              gh pr edit "$PR" --repo "$REPO" --add-label "autofix-capped" >/dev/null 2>&1 || true
-              # autofix-capped is the cap's sole enforcement (the re-review handler and the gate
-              # check only it), so verify it stuck. If not, fall back to a durable hold that does
-              # not depend on it — convert to Draft, which both the gate and re-review handler skip.
-              if ! gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null | grep -qx "autofix-capped"; then
-                echo "::warning::autofix-capped did not stick on #$PR — converting to Draft as a fallback hold."
-                CAP_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
-                for _ in 1 2 3; do
-                  # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-                  gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
-                  [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" = "true" ] && break
-                  sleep 2
-                done
-                if [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" != "true" ]; then
-                  gh pr comment "$PR" --repo "$REPO" --body "🛑 **Cap enforcement failed** — could not apply \`autofix-capped\` or convert #$PR to Draft. A human must hold this PR: do **not** merge until the findings are resolved." || true
-                  echo "::error::cap enforcement failed on #$PR — neither autofix-capped nor Draft could be applied."
-                  exit 1
-                fi
-              fi
-              # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
-              # non-durable and an earlier round set Owner=Copilot.
-              gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
-            else
-              gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex found issues — please address the review — round $((ROUNDS + 1)) of $MAX_ROUNDS. Read Codex's review comments above, fix them, and push to this branch." || true
-              # Durable board hand-back: route the linked issue to Needs changes / Owner=Copilot
-              # (the orchestrator's route-comment-command honours the delivery bot — see dso allowlist).
-              gh pr comment "$PR" --repo "$REPO" --body "/fps-route copilot-fix" || true
-            fi
-          else
-            # Non-Copilot: draft + hand back (a human might otherwise merge with open findings).
-            NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id')
-            # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-            if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$NODE" >/dev/null 2>&1; then
-              echo "Converted PR #$PR to Draft."
-              gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
-            else
-              echo "::error::could not convert PR #$PR to Draft"
-              gh pr comment "$PR" --repo "$REPO" --body "⚠️ Codex flagged a **P0/P1/P2** finding, but auto-converting this PR to Draft **failed** — it remains Ready. A maintainer should address the findings and draft it manually if needed." || true
-            fi
-          fi
-
-  # Path 2: Codex posted a finding as a PR-conversation comment (issue_comment is trusted).
+  # Path 2: a conversation verdict (issue_comment is trusted; author verified in the guard).
   from-comment:
     if: >
       github.event_name == 'issue_comment' &&
@@ -170,105 +73,21 @@ jobs:
       github.event.comment.user.login == 'chatgpt-codex-connector[bot]'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Draft (non-Copilot) or nudge Copilot on a comment finding
+      - name: Run the loop adapter (verdict via conversation comment)
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.issue.number }}
-          BODY: ${{ github.event.comment.body }}
+          EVENT: verdict
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -uo pipefail
-          # Single-label pipeline stage: provision (stable colour) + add + clear the others.
-          set_stage() {
-            case "$1" in
-              in-review) c=0E8A16 ;; addressing-feedback) c=FBCA04 ;; auto-merging) c=8250DF ;;
-              merged) c=1A7F37 ;; needs-human) c=D73A4A ;; *) c=EDEDED ;;
-            esac
-            gh label create "pipeline:$1" --repo "$REPO" --color "$c" >/dev/null 2>&1 || true
-            gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
-            for s in in-review addressing-feedback auto-merging merged needs-human; do
-              [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
-            done
-          }
-          # Clean verdict → nothing to do (the auto-merge gate handles clean comments).
-          if printf '%s' "$BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish"; then
-            echo "Codex comment reads clean — nothing to do."
-            exit 0
-          fi
-          # Substantive severity only (P3/advisory or unlabelled → leave Ready).
-          if ! printf '%s' "$BODY" | grep -Eiq '\bP[012]\b'; then
-            echo "Comment has no P0/P1/P2 severity — leaving PR #$PR Ready."
-            exit 0
-          fi
-
-          PR_JSON=$(gh api "/repos/$REPO/pulls/$PR" 2>/dev/null || true)
-          [ "$(printf '%s' "$PR_JSON" | jq -r '.state // empty')" = "open" ] || { echo "PR #$PR not open — skipping."; exit 0; }
-          [ "$(printf '%s' "$PR_JSON" | jq -r '.draft // empty')" = "false" ] || { echo "PR #$PR already a draft — skipping."; exit 0; }
-
-          # Freshness: the comment carries Codex's "Reviewed commit: <sha>" marker. If it no
-          # longer prefixes the PR's current head, a fix landed after the review — no-op.
-          REVIEWED=$(printf '%s' "$BODY" | grep -oiE 'reviewed commit[^0-9a-f]{0,16}[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1 || true)
-          CUR_HEAD=$(printf '%s' "$PR_JSON" | jq -r '.head.sha // empty')
-          if [ -n "$REVIEWED" ] && [ -n "$CUR_HEAD" ]; then
-            case "$CUR_HEAD" in "$REVIEWED"*) : ;; *) echo "Stale: PR #$PR head moved since reviewed commit $REVIEWED — no-op."; exit 0 ;; esac
-          fi
-
-          AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
-          if [ "$AUTHOR" = "Copilot" ]; then
-            # Autonomous loop: nudge Copilot to fix (capped) + tag the stage; the PR stays Ready.
-            set_stage addressing-feedback
-            ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate --jq '[.[] | select((.user.type == "Bot") and (.body | test("address the review — round")))] | length' 2>/dev/null || echo 0)
-            if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
-              gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
-              set_stage needs-human
-              # Distinct machine marker so the re-review handler and the gate hold ONLY a capped
-              # loop — pipeline:needs-human is also set by the gate for high-risk / not-mergeable
-              # PRs, which must still be re-reviewable.
-              gh label create "autofix-capped" --repo "$REPO" --color B60205 >/dev/null 2>&1 || true
-              gh pr edit "$PR" --repo "$REPO" --add-label "autofix-capped" >/dev/null 2>&1 || true
-              # autofix-capped is the cap's sole enforcement (the re-review handler and the gate
-              # check only it), so verify it stuck. If not, fall back to a durable hold that does
-              # not depend on it — convert to Draft, which both the gate and re-review handler skip.
-              if ! gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null | grep -qx "autofix-capped"; then
-                echo "::warning::autofix-capped did not stick on #$PR — converting to Draft as a fallback hold."
-                CAP_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
-                for _ in 1 2 3; do
-                  # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-                  gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
-                  [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" = "true" ] && break
-                  sleep 2
-                done
-                if [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" != "true" ]; then
-                  gh pr comment "$PR" --repo "$REPO" --body "🛑 **Cap enforcement failed** — could not apply \`autofix-capped\` or convert #$PR to Draft. A human must hold this PR: do **not** merge until the findings are resolved." || true
-                  echo "::error::cap enforcement failed on #$PR — neither autofix-capped nor Draft could be applied."
-                  exit 1
-                fi
-              fi
-              # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
-              # non-durable and an earlier round set Owner=Copilot.
-              gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
-            else
-              gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex found issues — please address the review — round $((ROUNDS + 1)) of $MAX_ROUNDS. Read Codex's review comments above, fix them, and push to this branch." || true
-              # Durable board hand-back: route the linked issue to Needs changes / Owner=Copilot
-              # (the orchestrator's route-comment-command honours the delivery bot — see dso allowlist).
-              gh pr comment "$PR" --repo "$REPO" --body "/fps-route copilot-fix" || true
-            fi
-          else
-            # Non-Copilot: draft + hand back (a human might otherwise merge with open findings).
-            NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id')
-            # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-            if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$NODE" >/dev/null 2>&1; then
-              echo "Converted PR #$PR to Draft."
-              gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
-            else
-              echo "::error::could not convert PR #$PR to Draft"
-              gh pr comment "$PR" --repo "$REPO" --body "⚠️ Codex flagged a **P0/P1/P2** finding, but auto-converting this PR to Draft **failed** — it remains Ready. A maintainer should address the findings and draft it manually if needed." || true
-            fi
-          fi
+          node tools/agent-loop-adapter.mjs
