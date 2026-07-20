@@ -170,6 +170,10 @@ test("classifySeverity: a 'looks good' summary WITH an inline P1 is 'blocking', 
 test("classifySeverity: a clean summary with only P3 nits inline stays 'clean'", () => {
   assert.equal(classifySeverity("Didn't find any major issues.", ["**P3 Badge** a nit"]), "clean");
 });
+test("classifySeverity: Codex's JSON empty-findings response is 'clean' (gate parity)", () => {
+  assert.equal(classifySeverity('{"findings": []}', []), "clean");
+  assert.equal(classifySeverity('{ "findings" : [ ] }', []), "clean");
+});
 
 // reviewedCommitFrom: tolerant of Codex's markdown marker.
 test("reviewedCommitFrom: extracts the SHA from a markdown 'Reviewed commit' marker", () => {

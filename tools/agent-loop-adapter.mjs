@@ -23,7 +23,9 @@ import { readFileSync } from "node:fs";
 import { transition } from "./agent-loop-reducer.mjs";
 
 export const MARKER_RE = /agent-loop v1 sha=([0-9a-fA-F]{7,40}) round=([0-9]+|-)/g;
-const CLEAN_RE = /did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish/i;
+// Keep in sync with the merge gate's clean-verdict patterns (agent-auto-merge.yml) — includes
+// Codex's JSON empty-findings form `{"findings": []}`.
+const CLEAN_RE = /did.?n.?t find|no (major |significant )?(issues|findings)|no findings|"findings"\s*:\s*\[\s*\]|looks good|lgtm|swish/i;
 const SEVERITY_RE = /\bP[012]\b/;
 const REVIEWED_COMMIT_RE = /reviewed commit[^0-9a-f]{0,16}([0-9a-f]{7,40})/i;
 
