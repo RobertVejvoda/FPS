@@ -49,6 +49,18 @@ jobs:
 
           # Best-effort delivery-pipeline stage label (a label op must never break the gate).
           set_stage() {
+            # Provision the label idempotently (stable colour) so a fresh repo shows the
+            # state instead of silently no-opping; every op is non-fatal so a label
+            # hiccup can never break the pipeline.
+            case "$1" in
+              in-review)           c=0E8A16 ;;
+              addressing-feedback) c=FBCA04 ;;
+              auto-merging)        c=8250DF ;;
+              merged)              c=1A7F37 ;;
+              needs-human)         c=D73A4A ;;
+              *)                   c=EDEDED ;;
+            esac
+            gh label create "pipeline:$1" --repo "$REPO" --color "$c" >/dev/null 2>&1 || true
             gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
             for s in in-review addressing-feedback auto-merging merged needs-human; do
               [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
