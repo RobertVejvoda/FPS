@@ -1,18 +1,17 @@
 name: Agent draft on blocking findings (apply)
 
-# PRIVILEGED half of draft-on-findings. Codex delivers findings on TWO paths, so this
-# covers both — and both triggers run the trusted DEFAULT-BRANCH version of this file,
-# so holding the App key here is safe (a PR branch cannot alter it):
+# PRIVILEGED half of the delivery loop. Both triggers run the trusted DEFAULT-BRANCH version of
+# this file (workflow_run / issue_comment), so this is the only place the App key + PROJECT_SYNC
+# token are used. It checks out the trusted base tools/, then invokes the repository-neutral
+# transition reducer via tools/agent-loop-adapter.mjs, which fetches + verifies the Codex verdict,
+# gathers durable state, reduces, and applies exactly one transition.
 #
-#   - workflow_run  ← the unprivileged pull_request_review stage (agent-draft-on-findings)
-#                     signals via an artifact when it sees a substantive inline finding.
-#   - issue_comment ← Codex also posts verdicts as PR-conversation comments (the same path
-#                     the auto-merge gate keys on); a P0/P1/P2 there is handled directly.
-#
-# On a substantive P0/P1/P2 finding, convert the PR to Draft: it becomes unmergeable, the
-# auto-merge gate skips drafts, and the orchestrator's pr-converted-to-draft job routes
-# the linked issue to Needs changes / Owner=Implementer. Clean verdicts and P3-only nits
-# are no-ops.
+# Serialization is JOB-level and keyed by the TRUSTED PR number, so both verdict channels share
+# one `agent-loop-<pr>` group (a workflow-level group could not: workflow_run events lack the PR
+# number at group-eval time). The review channel first RESOLVES the trusted PR from
+# workflow_run.head_branch — the artifact only gets to agree, never to choose the key — then the
+# processing job queues behind any comment-channel run for the same PR (and vice versa). The
+# authenticated ledger + pre-effect re-read in the adapter remain as defense-in-depth.
 
 on:
   workflow_run:
@@ -26,139 +25,102 @@ permissions:
   actions: read
 
 jobs:
-  # Path 1: the pull_request_review stage signalled a substantive inline finding.
-  from-review:
+  # Step 0 (formal-review channel): resolve the TRUSTED PR number before any concurrency
+  # gating. Unprivileged — reads the artifact + open-PR list only; no App key.
+  resolve:
     if: >
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request_review' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    outputs:
+      pr: ${{ steps.res.outputs.pr }}
+      review: ${{ steps.res.outputs.review }}
     steps:
-      - name: Download the draft signal (absent unless a substantive finding)
+      - uses: actions/checkout@v4
+      - name: Download the stage-1 signal (absent unless a Codex review fired)
         id: dl
         uses: actions/download-artifact@v4
         with:
-          name: draft-signal
+          name: agent-loop-signal
           path: signal
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
         continue-on-error: true
-
-      - name: Mint app token
+      - name: Resolve the trusted PR and verify the artifact binding
         if: steps.dl.outcome == 'success'
+        id: res
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: resolve
+          # Trusted binding source: the branch the triggering (stage-1) run executed on.
+          WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -uo pipefail
+          ARTIFACT_PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
+          REVIEW_ID=$(tr -dc '0-9' < signal/review-id.txt 2>/dev/null || true)
+          [ -n "$ARTIFACT_PR" ] && [ -n "$REVIEW_ID" ] || { echo "no signal — nothing to do"; exit 0; }
+          ARTIFACT_PR="$ARTIFACT_PR" REVIEW_ID="$REVIEW_ID" node tools/agent-loop-adapter.mjs
+
+  # Path 1: a formal review. Serialized per trusted PR with the comment channel below.
+  from-review:
+    needs: resolve
+    if: needs.resolve.outputs.pr != ''
+    concurrency:
+      group: agent-loop-${{ needs.resolve.outputs.pr }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Convert the PR to Draft + hand back to the implementer
-        if: steps.dl.outcome == 'success'
+      - name: Run the loop adapter (verdict via formal review)
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: verdict
+          PR: ${{ needs.resolve.outputs.pr }}
+          REVIEW_ID: ${{ needs.resolve.outputs.review }}
+          # Defense-in-depth: the adapter re-checks the PR's head branch against the
+          # trusted triggering-run branch (confused-deputy guard).
+          WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -uo pipefail
-          # The artifact's mere EXISTENCE is the "substantive finding" signal; its contents
-          # are untrusted (stage 1 runs the PR branch's code). Resolve the PR from the run's
-          # head SHA — trusted event data — via the commits->pulls endpoint. For a
-          # pull_request_review run this SHA is the synthetic refs/pull/N/merge commit, which
-          # is associated with exactly that PR, so take the open PR it maps to (no .head.sha
-          # match — the PR head is the contributor-branch commit, a different SHA). A tampered
-          # stage 1 cannot change head_sha, so it can never draft an unrelated PR.
-          # Precisely resolve the reviewed PR. Stage 1 recorded the exact PR number it
-          # reviewed; its contents are untrusted (stage 1 runs PR-branch code), so only trust
-          # that number if it is among the OPEN PRs actually associated with the run's head SHA
-          # — a tampered stage 1 can then at most target a PR sharing this commit, never an
-          # unrelated one. This also picks the RIGHT PR when the SHA maps to several (not .[0]).
-          ASSOC=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -c '[.[] | select(.state=="open") | .number]' || echo '[]')
-          SIGNAL_PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
-          if [ -n "$SIGNAL_PR" ] && printf '%s' "$ASSOC" | jq -e --argjson n "$SIGNAL_PR" 'index($n) != null' >/dev/null 2>&1; then
-            PR="$SIGNAL_PR"
-          elif [ "$(printf '%s' "$ASSOC" | jq 'length')" = "1" ]; then
-            PR=$(printf '%s' "$ASSOC" | jq -r '.[0]')
-          else
-            echo "Cannot uniquely resolve the reviewed PR for head $HEAD_SHA (signal='$SIGNAL_PR', assoc=$ASSOC) — no-op."
-            exit 0
-          fi
+          node tools/agent-loop-adapter.mjs
 
-          # No SHA-based freshness check: workflow_run.head_sha semantics for
-          # pull_request_review runs are unreliable, and a rare draft of an already-fixed PR
-          # is low-harm (a human just re-marks it Ready). Only skip a PR that is already a draft.
-          PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
-          [ "$(printf '%s' "$PR_JSON" | jq -r '.draft')" = "false" ] || { echo "PR #$PR already a draft — no-op."; exit 0; }
-
-          PR_NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id')
-          # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-          if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$PR_NODE" >/dev/null 2>&1; then
-            echo "Converted PR #$PR to Draft (inline finding)."
-            gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
-          else
-            echo "::error::could not convert PR #$PR to Draft"
-            gh pr comment "$PR" --repo "$REPO" --body "⚠️ Codex flagged a **P0/P1/P2** finding, but auto-converting this PR to Draft **failed** — it remains Ready. A maintainer should address the findings and draft it manually if needed." || true
-          fi
-
-  # Path 2: Codex posted a finding as a PR-conversation comment (issue_comment is trusted).
+  # Path 2: a conversation verdict (issue_comment is trusted; author verified in the guard).
   from-comment:
-    # Non-Copilot PRs only (see agent-draft-on-findings.yml): a drafted Copilot PR would
-    # stall its auto-fix loop until #837's re-ready handler exists. issue.user is the PR author.
     if: >
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request != null &&
-      github.event.comment.user.login == 'chatgpt-codex-connector[bot]' &&
-      github.event.issue.user.login != 'Copilot'
+      github.event.comment.user.login == 'chatgpt-codex-connector[bot]'
+    concurrency:
+      group: agent-loop-${{ github.event.issue.number }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Draft on a substantive finding posted as a PR comment
+      - name: Run the loop adapter (verdict via conversation comment)
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.issue.number }}
-          BODY: ${{ github.event.comment.body }}
+          EVENT: verdict
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -uo pipefail
-
-          # Clean verdict → nothing to draft (the auto-merge gate handles clean comments).
-          if printf '%s' "$BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish"; then
-            echo "Codex comment reads clean — nothing to draft."
-            exit 0
-          fi
-          # Substantive severity only (P3/advisory or unlabelled → leave Ready).
-          if ! printf '%s' "$BODY" | grep -Eiq '\bP[012]\b'; then
-            echo "Comment has no P0/P1/P2 severity — leaving PR #$PR Ready."
-            exit 0
-          fi
-
-          PR_JSON=$(gh api "/repos/$REPO/pulls/$PR" 2>/dev/null || true)
-          STATE=$(printf '%s' "$PR_JSON" | jq -r '.state // empty')
-          ISDRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft // empty')
-          NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id // empty')
-          CUR_HEAD=$(printf '%s' "$PR_JSON" | jq -r '.head.sha // empty')
-          [ "$STATE" = "open" ] || { echo "PR #$PR not open — skipping."; exit 0; }
-          [ "$ISDRAFT" = "false" ] || { echo "PR #$PR already a draft — skipping."; exit 0; }
-
-          # Freshness: the comment carries Codex's "Reviewed commit: <sha>" marker. If it no
-          # longer prefixes the PR's current head, a fix landed after the review — don't draft
-          # an already-fixed PR (guards the race where the fix beats this queued job).
-          REVIEWED=$(printf '%s' "$BODY" | grep -oiE 'reviewed commit[^0-9a-f]{0,16}[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1 || true)
-          if [ -n "$REVIEWED" ] && [ -n "$CUR_HEAD" ]; then
-            case "$CUR_HEAD" in "$REVIEWED"*) : ;; *) echo "Stale: PR #$PR head moved since reviewed commit $REVIEWED — no-op."; exit 0 ;; esac
-          fi
-
-          # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-          if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$NODE" >/dev/null 2>&1; then
-            echo "Converted PR #$PR to Draft (comment finding)."
-            gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the findings, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
-          else
-            echo "::error::could not convert PR #$PR to Draft"
-            gh pr comment "$PR" --repo "$REPO" --body "⚠️ Codex flagged a **P0/P1/P2** finding, but auto-converting this PR to Draft **failed** — it remains Ready. A maintainer should address the findings and draft it manually if needed." || true
-          fi
+          node tools/agent-loop-adapter.mjs
