@@ -128,8 +128,17 @@ jobs:
               if ! gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null | grep -qx "autofix-capped"; then
                 echo "::warning::autofix-capped did not stick on #$PR — converting to Draft as a fallback hold."
                 CAP_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
-                # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-                gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
+                for _ in 1 2 3; do
+                  # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
+                  gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
+                  [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" = "true" ] && break
+                  sleep 2
+                done
+                if [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" != "true" ]; then
+                  gh pr comment "$PR" --repo "$REPO" --body "🛑 **Cap enforcement failed** — could not apply \`autofix-capped\` or convert #$PR to Draft. A human must hold this PR: do **not** merge until the findings are resolved." || true
+                  echo "::error::cap enforcement failed on #$PR — neither autofix-capped nor Draft could be applied."
+                  exit 1
+                fi
               fi
               # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
               # non-durable and an earlier round set Owner=Copilot.
@@ -230,8 +239,17 @@ jobs:
               if ! gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null | grep -qx "autofix-capped"; then
                 echo "::warning::autofix-capped did not stick on #$PR — converting to Draft as a fallback hold."
                 CAP_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
-                # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
-                gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
+                for _ in 1 2 3; do
+                  # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
+                  gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
+                  [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" = "true" ] && break
+                  sleep 2
+                done
+                if [ "$(gh api "/repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" != "true" ]; then
+                  gh pr comment "$PR" --repo "$REPO" --body "🛑 **Cap enforcement failed** — could not apply \`autofix-capped\` or convert #$PR to Draft. A human must hold this PR: do **not** merge until the findings are resolved." || true
+                  echo "::error::cap enforcement failed on #$PR — neither autofix-capped nor Draft could be applied."
+                  exit 1
+                fi
               fi
               # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
               # non-durable and an earlier round set Owner=Copilot.
