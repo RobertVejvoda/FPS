@@ -116,6 +116,13 @@ jobs:
           [ -n "${REVIEWED_SHA:-}" ] || skip "Codex comment has no 'Reviewed commit' marker to verify freshness"
           case "$HEAD_SHA" in "$REVIEWED_SHA"*) : ;; *) skip "Codex reviewed $REVIEWED_SHA but head is $HEAD_SHA (stale)" ;; esac
 
+          # Held for a human: a capped autonomous loop routes the PR to pipeline:needs-human.
+          # Never auto-merge it, even on a fresh clean verdict, until a human deliberately
+          # clears that stage — a later push/@codex must not silently re-enable a capped loop.
+          if printf '%s' "$PR_JSON" | jq -e '.labels[]? | select(.name == "pipeline:needs-human")' >/dev/null 2>&1; then
+            needs_human "PR is labelled pipeline:needs-human (a capped/held loop) — a human must route it back before it can merge"
+          fi
+
           # Past this point it is a genuine auto-merge candidate: a clean Codex verdict
           # on a non-draft, non-empty Copilot PR that targets the default branch, with
           # the reviewed commit == current head. Make that visible.
