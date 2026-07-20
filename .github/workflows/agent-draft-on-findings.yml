@@ -1,23 +1,15 @@
 name: Agent draft on blocking findings
 
-# When Codex posts a review with a substantive finding (P0/P1/P2) on ANY PR, convert
-# the PR to Draft. A Draft PR cannot be merged and the auto-merge gate skips drafts,
-# so a blocking finding can never sit on a mergeable-looking PR (the gap that let a
-# reviewed-with-findings PR still look ready to merge).
+# Stage 1 of 2 (UNPRIVILEGED). When Codex submits a review with a substantive finding
+# (P0/P1/P2) on any PR, signal stage 2 to convert the PR to Draft.
 #
-# Converting to Draft also fires the orchestrator's `pr-converted-to-draft` job, which
-# routes the linked issue to Status=Needs changes / Owner=Implementer — so the PR is
-# handed back to whoever implemented it, with no extra routing here. The implementer
-# fixes the findings and marks the PR Ready again, which re-triggers Codex; a clean
-# re-review then lets it proceed. P3-only nits are advisory and leave the PR Ready.
+# SECURITY: pull_request_review runs the PR branch's version of this workflow for
+# same-repo PRs, so a contributor could alter it — therefore this stage holds NO
+# secrets and only reads public review data, emitting a signal artifact. The privileged
+# draft + reassign happens in agent-draft-on-findings-apply.yml, which runs the trusted
+# default-branch version via workflow_run and is the only place the App key is minted.
 #
-# Applies to Copilot, Claude, and human PRs alike. Runs as the App bot — a non-default
-# token, so the draft conversion triggers the downstream orchestrator workflow.
-#
-# NOTE (Copilot auto-fix loop): a drafted Copilot PR must be re-readied after Copilot
-# pushes its fix so the re-review can run. That un-draft belongs in the loop's push
-# handler (agent-rereview-on-push, tracked in #837); non-Copilot PRs are re-readied by
-# their human/Claude implementer.
+# Clean verdicts and P3-only/advisory reviews emit no signal, so stage 2 no-ops.
 
 on:
   pull_request_review:
@@ -25,59 +17,49 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
-  draft-on-findings:
+  signal:
     if: >
       github.event.review.user.login == 'chatgpt-codex-connector[bot]' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Mint app token
-        id: app
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Draft the PR on a substantive (P0/P1/P2) Codex finding
+      - name: Detect a substantive (P0/P1/P2) Codex finding
+        id: detect
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
-          PR_NODE: ${{ github.event.pull_request.node_id }}
           REVIEW_ID: ${{ github.event.review.id }}
           REVIEW_BODY: ${{ github.event.review.body }}
         run: |
           set -uo pipefail
 
-          # 1. A clean verdict is not a finding — leave the PR Ready (the auto-merge
-          #    gate handles clean verdicts).
+          # A clean verdict is not a finding.
           if printf '%s' "$REVIEW_BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish"; then
-            echo "Codex review reads clean — nothing to draft."
+            echo "Codex review reads clean — no signal."
             exit 0
           fi
 
-          # 2. Severity gate. Codex tags findings P0..P3; the summary body carries some,
-          #    the inline comments the rest. Draft only on a substantive P0/P1/P2 — a
-          #    P3-only (or unlabelled) review is advisory and stays Ready.
+          # Severity gate: signal only on a substantive P0/P1/P2; P3-only is advisory.
           INLINE=$(gh api "/repos/$REPO/pulls/$PR/comments" --paginate \
             --jq "[.[] | select(.pull_request_review_id == ${REVIEW_ID:-0}) | .body] | join(\"\n\")" 2>/dev/null || true)
           if ! printf '%s\n%s' "$REVIEW_BODY" "$INLINE" | grep -Eiq '\bP[012]\b'; then
-            echo "Codex findings are P3/advisory only — leaving PR #$PR Ready."
+            echo "Codex findings are P3/advisory only — no signal."
             exit 0
           fi
 
-          # 3. Convert to Draft. Makes the PR unmergeable, the auto-merge gate skips it,
-          #    and the orchestrator's pr-converted-to-draft job routes the linked issue
-          #    to Needs changes / Owner=Implementer.
-          # shellcheck disable=SC2016  # $id is a GraphQL variable, intentionally not shell-expanded
-          if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$PR_NODE" >/dev/null 2>&1; then
-            echo "Converted PR #$PR to Draft (substantive Codex finding)."
-          else
-            echo "::warning::could not convert PR #$PR to Draft — left Ready for a human"
-          fi
+          echo "Substantive P0/P1/P2 finding on PR #$PR — signalling stage 2."
+          printf '%s\n' "$PR" > pr-number.txt
+          echo "signal=true" >> "$GITHUB_OUTPUT"
 
-          # 4. Make the hand-back visible.
-          gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
+      - name: Upload draft signal
+        if: steps.detect.outputs.signal == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-signal
+          path: pr-number.txt
+          retention-days: 1
