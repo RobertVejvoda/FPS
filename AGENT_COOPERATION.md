@@ -1,14 +1,19 @@
 # Agent Cooperation Guide
-> How Codex (Product Owner) and Claude (Implementer) work together on FPS
+> How Codex, Claude, and Copilot work together on FPS — roles follow the invocation, not the agent name
 
 ---
 
 ## Roles
 
-| Agent | Role | Responsibilities |
-|-------|------|-----------------|
-| **Codex** | Product Owner | Write task specs, validate results, open PRs, manage backlog |
-| **Claude** | Implementer | Read specs, implement, write results, flag blockers |
+**Roles follow the invocation, not the agent name.** The same agent can act in different roles depending on how it is invoked, and the invariant **Reviewer ≠ Implementer ≠ Merger** holds *per pull request*: whoever implemented a PR must not review or merge it.
+
+| Agent | Invoked as… | How it's invoked |
+|-------|-------------|------------------|
+| **Codex** (`openai-code-agent` / `chatgpt-codex-connector`) | Product Owner & Reviewer by default; **Implementer** when assigned an issue | `@codex review` (or auto-review) → reviewer; issue assignment → implementer (opens a branch/PR) |
+| **Claude** (`anthropic-code-agent`) | **Implementer** when assigned an issue; may review others' PRs | issue assignment → implementer |
+| **Copilot** (`copilot-swe-agent`) | **Implementer** when assigned an issue | issue assignment → implementer |
+
+A **Codex-authored** PR is reviewed by Claude or a human — never by Codex. **Claude** never reviews or merges its own implementation. The **Delivery App bot** (eligible Copilot PRs) or a **human** performs the merge.
 
 Neither agent makes architectural decisions alone — those go to `docs/decisions.md` and require human approval.
 
