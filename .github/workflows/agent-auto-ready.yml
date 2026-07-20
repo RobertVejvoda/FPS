@@ -37,6 +37,13 @@ jobs:
           AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
         run: |
           set -uo pipefail
+          # Best-effort delivery-pipeline stage label (a label op must never break the pipeline).
+          set_stage() {
+            gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
+            for s in in-review addressing-feedback auto-merging merged needs-human; do
+              [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
+            done
+          }
           # Exact Copilot coding-agent identity (login "Copilot", type "Bot").
           if [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
             echo "PR author '$AUTHOR' (type=$AUTHOR_TYPE) is not the Copilot agent — no auto-ready."
@@ -48,4 +55,5 @@ jobs:
             exit 0
           fi
           gh pr ready "$PR" --repo "$REPO"
+          set_stage in-review
           echo "Marked Copilot PR #$PR ready ($CF files changed) — review handoff will fire."
