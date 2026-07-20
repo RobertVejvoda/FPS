@@ -19,7 +19,7 @@
 // mutation; it must never degrade into an empty ledger, which would reset dedup and round counts.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, appendFileSync } from "node:fs";
 import { transition } from "./agent-loop-reducer.mjs";
 
 export const MARKER_RE = /agent-loop v1 sha=([0-9a-fA-F]{7,40}) round=([0-9]+|-)/g;
@@ -55,6 +55,34 @@ export function reviewedCommitFrom(body) {
  */
 export function boundToTriggeringRun(prHeadRef, wrHeadBranch) {
   return !wrHeadBranch || (prHeadRef || "") === wrHeadBranch;
+}
+
+/**
+ * Resolve the TRUSTED PR number for a formal-review run from the open PRs whose head is the
+ * trusted workflow_run.head_branch. Exactly one match is required — zero (PR closed meanwhile)
+ * or several (ambiguous) resolve to null, and the caller must not act. Never derived from
+ * artifact contents. @param {Array<{number:number, headRef:string}>} pulls
+ * @returns {number|null}
+ */
+export function trustedPrForBranch(pulls, branch) {
+  if (!branch) return null;
+  const matches = (pulls || []).filter((p) => p && p.headRef === branch);
+  return matches.length === 1 ? matches[0].number : null;
+}
+
+/** Does the untrusted artifact-named PR match the trusted resolved one? Fail closed on absence. */
+export function artifactBindingOk(artifactPr, trustedPr) {
+  return !!artifactPr && !!trustedPr && String(artifactPr) === String(trustedPr);
+}
+
+/**
+ * The per-PR serialization group. Both verdict channels MUST key on the same trusted PR number —
+ * .github/workflows/agent-draft-on-findings-apply.yml uses this exact `agent-loop-<pr>` pattern
+ * at the job level (comment channel: the event's issue number; review channel: the resolve job's
+ * trusted output). Keep the YAML and this contract in sync.
+ */
+export function loopConcurrencyGroup(pr) {
+  return `agent-loop-${pr}`;
 }
 
 /** Classify the PR author + changed files into neutral reducer facts. @returns {{implementerKind:"loop"|"manual", isHighRisk:boolean}} */
@@ -210,7 +238,31 @@ async function main() {
   const pr = process.env.PR;
   const appTok = process.env.APP_TOKEN;
   const boardTok = process.env.BOARD_TOKEN;
-  const event = process.env.EVENT;           // "verdict" | "push"
+  const event = process.env.EVENT;           // "resolve" | "verdict" | "push"
+
+  if (event === "resolve") {
+    // Formal-review channel, step 0: resolve the TRUSTED PR number from workflow_run.head_branch
+    // (event payload) so the processing job's concurrency group serializes with the comment
+    // channel on the SAME per-PR key. The artifact only gets to AGREE with the trusted value —
+    // a mismatch fails the job (fail closed); the concurrency key is never artifact-derived.
+    const branch = process.env.WR_HEAD_BRANCH || "";
+    const artifactPr = process.env.ARTIFACT_PR || "";
+    const reviewId = process.env.REVIEW_ID || "";
+    if (!branch) { console.log("::error::resolve: no trusted head branch on the triggering run — refusing"); process.exitCode = 1; return; }
+    const owner = repo.split("/")[0];
+    const pulls = JSON.parse(gh(["api", `/repos/${repo}/pulls?state=open&head=${owner}:${branch}`, "--jq", "[.[] | {number: .number, headRef: .head.ref}]"]));
+    const trusted = trustedPrForBranch(pulls, branch);
+    if (!trusted) { console.log(`::notice::resolve: no single open PR with head '${branch}' — nothing to do`); return; }
+    if (!artifactBindingOk(artifactPr, trusted)) {
+      console.log(`::error::resolve: artifact names PR '${artifactPr}' but the trusted PR for branch '${branch}' is #${trusted} — refusing (fail closed)`);
+      process.exitCode = 1;
+      return;
+    }
+    appendFileSync(process.env.GITHUB_OUTPUT, `pr=${trusted}\nreview=${reviewId}\n`);
+    console.log(`resolve: trusted PR #${trusted} (review ${reviewId})`);
+    return;
+  }
+
   let verdict, reviewedSha = "";
 
   if (event === "verdict") {

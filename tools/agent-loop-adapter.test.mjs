@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { classify, parseLedger, buildInput, resolveRoute, commentBody, classifySeverity, reviewedCommitFrom, boundToTriggeringRun } from "./agent-loop-adapter.mjs";
+import { classify, parseLedger, buildInput, resolveRoute, commentBody, classifySeverity, reviewedCommitFrom, boundToTriggeringRun, trustedPrForBranch, artifactBindingOk, loopConcurrencyGroup } from "./agent-loop-adapter.mjs";
 import { transition } from "./agent-loop-reducer.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -178,6 +178,41 @@ test("classifySeverity: Codex's JSON empty-findings response is 'clean' (gate pa
 // reviewedCommitFrom: tolerant of Codex's markdown marker.
 test("reviewedCommitFrom: extracts the SHA from a markdown 'Reviewed commit' marker", () => {
   assert.equal(reviewedCommitFrom("Breezy!\n**Reviewed commit:** `820c1ffed1`"), "820c1ffed1");
+});
+
+// Per-PR serialization: both verdict channels must key concurrency on the same trusted PR.
+test("serialization: both channels resolve to the SAME concurrency group", () => {
+  // Review channel: trusted PR resolved from workflow_run.head_branch, never the artifact.
+  const pulls = [{ number: 842, headRef: "feat/x" }, { number: 900, headRef: "other" }];
+  const reviewChannelPr = trustedPrForBranch(pulls, "feat/x");
+  // Comment channel: the event's own issue number.
+  const commentChannelPr = 842;
+  assert.equal(loopConcurrencyGroup(reviewChannelPr), loopConcurrencyGroup(commentChannelPr));
+  assert.equal(loopConcurrencyGroup(reviewChannelPr), "agent-loop-842");
+});
+test("serialization: trusted PR resolution fails closed on zero or ambiguous matches", () => {
+  assert.equal(trustedPrForBranch([], "feat/x"), null);                     // PR closed meanwhile
+  assert.equal(trustedPrForBranch([{ number: 1, headRef: "feat/x" }, { number: 2, headRef: "feat/x" }], "feat/x"), null); // ambiguous
+  assert.equal(trustedPrForBranch([{ number: 1, headRef: "feat/x" }], ""), null);   // no trusted branch
+});
+test("serialization: an artifact PR that mismatches the trusted PR fails closed", () => {
+  assert.equal(artifactBindingOk("842", 842), true);
+  assert.equal(artifactBindingOk("999", 842), false);   // tampered artifact names another PR
+  assert.equal(artifactBindingOk("", 842), false);
+  assert.equal(artifactBindingOk("842", null), false);
+});
+test("serialization: simultaneous dual-channel delivery produces only ONE nudge", () => {
+  const sha = "820c1ffed1ea0c0c93b09bfb12003e26a510e556";
+  const facts = { implementerKind: "loop", isHighRisk: false };
+  // Run 1 (whichever channel wins the shared queue): empty ledger -> nudge + marker comment.
+  const s1 = { ledger: parseLedger([], config.ledgerWriters), capped: false, isDraft: false };
+  const d1 = transition(buildInput({ event: "verdict", verdict: "blocking", reviewedSha: sha, headSha: sha }, facts, s1, config));
+  assert.equal(d1.action, "nudge-loop");
+  const posted = commentBody(d1, { round: 1, maxRounds: config.maxRounds, reviewedSha: sha });
+  // Run 2 (the other channel, queued behind run 1 in the same group): reads run 1's marker.
+  const s2 = { ledger: parseLedger([bot(posted)], config.ledgerWriters), capped: false, isDraft: false };
+  const d2 = transition(buildInput({ event: "verdict", verdict: "blocking", reviewedSha: sha, headSha: sha }, facts, s2, config));
+  assert.equal(d2.action, "ignore-duplicate");          // exactly one @copilot nudge
 });
 
 // boundToTriggeringRun: the confused-deputy guard.

@@ -6,8 +6,12 @@ name: Agent draft on blocking findings (apply)
 # transition reducer via tools/agent-loop-adapter.mjs, which fetches + verifies the Codex verdict,
 # gathers durable state, reduces, and applies exactly one transition.
 #
-# A per-PR concurrency group serializes transitions; the adapter's ledger marker (and a re-check
-# just before acting) backstops any residual cross-channel race.
+# Serialization is JOB-level and keyed by the TRUSTED PR number, so both verdict channels share
+# one `agent-loop-<pr>` group (a workflow-level group could not: workflow_run events lack the PR
+# number at group-eval time). The review channel first RESOLVES the trusted PR from
+# workflow_run.head_branch — the artifact only gets to agree, never to choose the key — then the
+# processing job queues behind any comment-channel run for the same PR (and vice versa). The
+# authenticated ledger + pre-effect re-read in the adapter remain as defense-in-depth.
 
 on:
   workflow_run:
@@ -16,26 +20,23 @@ on:
   issue_comment:
     types: [created]
 
-# Serialize per PR (comment path) / per head SHA (review path). Perfect cross-channel serialization
-# is not achievable — workflow_run lacks the PR at group-eval time — so round INTEGRITY is guaranteed
-# instead by counting DISTINCT reviewed SHAs (agent-loop-adapter parseLedger), not comment markers.
-concurrency:
-  group: agent-loop-${{ github.event.issue.number || github.event.workflow_run.head_sha }}
-  cancel-in-progress: false
-
 permissions:
   contents: read
   actions: read
 
 jobs:
-  # Path 1: a formal review (via the unprivileged stage-1 signal).
-  from-review:
+  # Step 0 (formal-review channel): resolve the TRUSTED PR number before any concurrency
+  # gating. Unprivileged — reads the artifact + open-PR list only; no App key.
+  resolve:
     if: >
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request_review' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
+    outputs:
+      pr: ${{ steps.res.outputs.pr }}
+      review: ${{ steps.res.outputs.review }}
     steps:
       - uses: actions/checkout@v4
       - name: Download the stage-1 signal (absent unless a Codex review fired)
@@ -47,29 +48,52 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
         continue-on-error: true
-      - name: Mint app token
+      - name: Resolve the trusted PR and verify the artifact binding
         if: steps.dl.outcome == 'success'
+        id: res
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: resolve
+          # Trusted binding source: the branch the triggering (stage-1) run executed on.
+          WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -uo pipefail
+          ARTIFACT_PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
+          REVIEW_ID=$(tr -dc '0-9' < signal/review-id.txt 2>/dev/null || true)
+          [ -n "$ARTIFACT_PR" ] && [ -n "$REVIEW_ID" ] || { echo "no signal — nothing to do"; exit 0; }
+          ARTIFACT_PR="$ARTIFACT_PR" REVIEW_ID="$REVIEW_ID" node tools/agent-loop-adapter.mjs
+
+  # Path 1: a formal review. Serialized per trusted PR with the comment channel below.
+  from-review:
+    needs: resolve
+    if: needs.resolve.outputs.pr != ''
+    concurrency:
+      group: agent-loop-${{ needs.resolve.outputs.pr }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Run the loop adapter (verdict via formal review)
-        if: steps.dl.outcome == 'success'
         env:
           APP_TOKEN: ${{ steps.app.outputs.token }}
           BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
           EVENT: verdict
-          # Trusted binding: the branch the triggering (stage-1) run executed on. The adapter
-          # requires the resolved PR's head branch to match this (confused-deputy guard).
+          PR: ${{ needs.resolve.outputs.pr }}
+          REVIEW_ID: ${{ needs.resolve.outputs.review }}
+          # Defense-in-depth: the adapter re-checks the PR's head branch against the
+          # trusted triggering-run branch (confused-deputy guard).
           WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -uo pipefail
-          PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
-          REVIEW_ID=$(tr -dc '0-9' < signal/review-id.txt 2>/dev/null || true)
-          [ -n "$PR" ] && [ -n "$REVIEW_ID" ] || { echo "no signal — nothing to do"; exit 0; }
-          PR="$PR" REVIEW_ID="$REVIEW_ID" node tools/agent-loop-adapter.mjs
+          node tools/agent-loop-adapter.mjs
 
   # Path 2: a conversation verdict (issue_comment is trusted; author verified in the guard).
   from-comment:
@@ -77,6 +101,9 @@ jobs:
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request != null &&
       github.event.comment.user.login == 'chatgpt-codex-connector[bot]'
+    concurrency:
+      group: agent-loop-${{ github.event.issue.number }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
