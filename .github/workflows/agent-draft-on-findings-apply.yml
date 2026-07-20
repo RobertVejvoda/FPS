@@ -94,9 +94,12 @@ jobs:
             ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate --jq '[.[] | select((.user.type == "Bot") and (.body | test("address the review — round")))] | length' 2>/dev/null || echo 0)
             if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
               gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
-              gh pr edit "$PR" --repo "$REPO" --add-label "needs-human" >/dev/null 2>&1 || true
+              gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:addressing-feedback" --add-label "pipeline:needs-human" >/dev/null 2>&1 || true
             else
               gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex found issues — please address the review — round $((ROUNDS + 1)) of $MAX_ROUNDS. Read Codex's review comments above, fix them, and push to this branch." || true
+              # Durable board hand-back: route the linked issue to Needs changes / Owner=Copilot
+              # (the orchestrator's route-comment-command honours the delivery bot — see dso allowlist).
+              gh pr comment "$PR" --repo "$REPO" --body "/fps-route copilot-fix" || true
             fi
           else
             # Non-Copilot: draft + hand back (a human might otherwise merge with open findings).
@@ -164,9 +167,12 @@ jobs:
             ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate --jq '[.[] | select((.user.type == "Bot") and (.body | test("address the review — round")))] | length' 2>/dev/null || echo 0)
             if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
               gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
-              gh pr edit "$PR" --repo "$REPO" --add-label "needs-human" >/dev/null 2>&1 || true
+              gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:addressing-feedback" --add-label "pipeline:needs-human" >/dev/null 2>&1 || true
             else
               gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex found issues — please address the review — round $((ROUNDS + 1)) of $MAX_ROUNDS. Read Codex's review comments above, fix them, and push to this branch." || true
+              # Durable board hand-back: route the linked issue to Needs changes / Owner=Copilot
+              # (the orchestrator's route-comment-command honours the delivery bot — see dso allowlist).
+              gh pr comment "$PR" --repo "$REPO" --body "/fps-route copilot-fix" || true
             fi
           else
             # Non-Copilot: draft + hand back (a human might otherwise merge with open findings).
