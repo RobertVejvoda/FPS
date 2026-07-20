@@ -11,6 +11,12 @@
 // Dedup is "already a marker for this reviewed SHA"; the repair-round count is "number of round
 // markers". A per-PR concurrency group in the workflows serializes transitions; the marker (and
 // a re-check just before acting) backstops any residual race.
+//
+// Ledger authenticity: hidden comments are NOT an authenticity boundary — anyone can type a
+// marker. Provenance is therefore the comment AUTHOR, not the content: markers count only when
+// written by a configured trusted ledger writer (config.ledgerWriters — normally the delivery-bot
+// App identity). A failed ledger read (fetch, parse, or missing writer config) aborts BEFORE any
+// mutation; it must never degrade into an empty ledger, which would reset dedup and round counts.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -54,18 +60,32 @@ export function classify({ authorLogin, authorType, files }, config) {
 }
 
 /**
- * Parse the durable ledger from the bot's prior comments. A repair round is a DISTINCT reviewed
- * SHA that was marked as a round — so a verdict delivered through both channels (two markers for
- * the same SHA) counts once, and a cross-channel race cannot inflate the round count.
+ * Parse the durable ledger from prior comments, counting markers ONLY when authored by a trusted
+ * ledger writer (config.ledgerWriters). Hidden comments are not an authenticity boundary — a
+ * forged marker from any other author is ignored, so it can neither suppress a genuine verdict
+ * (fake dedup) nor inflate/deflate the round count. Throws when no trusted writers are configured:
+ * an unauthenticated ledger must fail closed, not silently accept everything or nothing.
+ * A repair round is a DISTINCT reviewed SHA that was marked as a round — so a verdict delivered
+ * through both channels (two markers for the same SHA) counts once, and a cross-channel race
+ * cannot inflate the round count.
+ * @param {Array<{authorLogin:string, authorType?:string, body:string}>} comments
+ * @param {Array<{login:string, type?:string}>} trustedWriters
  * @returns {{priorRounds:number, processedShas:Set<string>}}
  */
-export function parseLedger(commentBodies) {
+export function parseLedger(comments, trustedWriters) {
+  if (!Array.isArray(trustedWriters) || trustedWriters.length === 0) {
+    throw new Error("ledger authentication misconfigured: config.ledgerWriters is missing or empty — refusing to read the ledger (fail closed)");
+  }
+  const isTrusted = (c) => trustedWriters.some(
+    (w) => w.login === (c.authorLogin || "") && (!w.type || w.type === (c.authorType || ""))
+  );
   const processedShas = new Set();
   const roundShas = new Set();
-  for (const body of commentBodies || []) {
+  for (const c of comments || []) {
+    if (!c || typeof c.body !== "string" || !isTrusted(c)) continue;
     MARKER_RE.lastIndex = 0;
     let m;
-    while ((m = MARKER_RE.exec(body)) !== null) {
+    while ((m = MARKER_RE.exec(c.body)) !== null) {
       const sha = m[1].toLowerCase();
       processedShas.add(sha);
       if (m[2] !== "-") roundShas.add(sha);
@@ -224,22 +244,31 @@ async function main() {
     return;
   }
   const files = gh(["api", `/repos/${repo}/pulls/${pr}/files`, "--paginate", "--jq", ".[].filename"], appTok).split("\n").filter(Boolean);
-  const commentBodies = JSON.parse(ghSafe(["api", `/repos/${repo}/issues/${pr}/comments`, "--paginate", "--jq", "[.[].body]"], appTok) || "[]");
+  // Ledger comments carry AUTHOR IDENTITY (login + type), not just bodies — parseLedger only
+  // trusts markers from config.ledgerWriters. Deliberately gh, not ghSafe: a failed or
+  // unparseable fetch must throw and abort BEFORE any mutation (fail closed), never degrade
+  // into an empty ledger that would reset dedup + round counts.
+  const fetchLedgerComments = () => JSON.parse(gh(["api", `/repos/${repo}/issues/${pr}/comments`, "--paginate", "--jq",
+    '[.[] | {authorLogin: (.user.login // ""), authorType: (.user.type // ""), body: (.body // "")}]'], appTok));
+  const ledgerComments = fetchLedgerComments();
   const labelNames = (prJson.labels || []).map((l) => l.name);
   const capMarker = config.labels?.capMarker?.name || "autofix-capped";
 
   const facts = classify({ authorLogin: prJson.user?.login, authorType: prJson.user?.type, files }, config);
-  const state = { ledger: parseLedger(commentBodies), capped: labelNames.includes(capMarker), isDraft: !!prJson.draft };
+  const state = { ledger: parseLedger(ledgerComments, config.ledgerWriters), capped: labelNames.includes(capMarker), isDraft: !!prJson.draft };
   const input = buildInput({ event, verdict, reviewedSha, headSha: prJson.head?.sha }, facts, state, config);
 
   const decision = transition(input);
   console.log(`decision: ${decision.action} — ${decision.reason}`);
   if (decision.action.startsWith("ignore")) return;
 
-  // Re-check dedup right before acting (narrows the residual race window).
+  // Re-check dedup right before acting (narrows the residual race window). Same authenticated,
+  // fail-closed read as the initial one — a forged marker must not pass here either, and a
+  // failed refetch throws before any mutation. Prefix match, consistent with buildInput.
   if (event === "verdict" && reviewedSha) {
-    const fresh = parseLedger(JSON.parse(ghSafe(["api", `/repos/${repo}/issues/${pr}/comments`, "--paginate", "--jq", "[.[].body]"], appTok) || "[]"));
-    if (fresh.processedShas.has(reviewedSha.toLowerCase())) { console.log("re-check: already processed — skipping"); return; }
+    const fresh = parseLedger(fetchLedgerComments(), config.ledgerWriters);
+    const shaLc = reviewedSha.toLowerCase();
+    if ([...fresh.processedShas].some((s) => s.startsWith(shaLc) || shaLc.startsWith(s))) { console.log("re-check: already processed — skipping"); return; }
   }
 
   const round = state.ledger.priorRounds + 1;

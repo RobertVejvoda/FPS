@@ -39,6 +39,10 @@
 
   "reviewerBot": "chatgpt-codex-connector[bot]",
 
+  "ledgerWriters": [
+    { "login": "fairspot-delivery-bot[bot]", "type": "Bot" }
+  ],
+
   "labels": {
     "in-review": { "name": "pipeline:in-review", "color": "0E8A16" },
     "addressing-feedback": { "name": "pipeline:addressing-feedback", "color": "FBCA04" },
