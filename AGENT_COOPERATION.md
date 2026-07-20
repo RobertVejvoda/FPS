@@ -5,7 +5,7 @@
 
 ## Roles
 
-**Roles follow the invocation, not the agent name.** The same agent can act in different roles depending on how it is invoked, and the invariant **Reviewer ≠ Implementer ≠ Merger** holds *per pull request*: whoever implemented a PR must not review or merge it.
+**Roles follow the invocation, not the agent name.** The same agent can act in different roles depending on how it is invoked. Per pull request, the Implementer must differ from both Reviewer and Merger; Reviewer and Merger may be the same actor for low-risk work. Whoever implemented a PR must not review or merge it.
 
 | Agent | Invoked as… | How it's invoked |
 |-------|-------------|------------------|
@@ -13,7 +13,7 @@
 | **Claude** (`anthropic-code-agent`) | **Implementer** when assigned an issue; may review others' PRs | issue assignment → implementer |
 | **Copilot** (`copilot-swe-agent`) | **Implementer** when assigned an issue | issue assignment → implementer |
 
-The restriction is narrow: an agent must not review or merge *the PR it implemented itself*. A **Codex-authored** PR is reviewed by Claude or a human — but Codex keeps reviewing every *other* PR as the default reviewer. **Claude** never reviews or merges its own implementation. The **Delivery App bot** (eligible Copilot PRs) or a **human** performs the merge.
+The restriction is narrow: an agent must not review or merge *the PR it implemented itself*. A **Codex-authored** PR is reviewed by Claude or a human — but Codex keeps reviewing every *other* PR as the default reviewer. **Claude** and **Copilot** never review or merge their own implementations. The accepting independent reviewer may merge a low-risk business or documentation PR after confirming the reviewed SHA is still current, applicable checks are green, no actionable finding or terminal hold remains, and no repository-defined high-risk path or decision is involved. Eligible Copilot PRs may instead use the **Delivery App bot**; high-risk or uncertain work stays human-controlled.
 
 Neither agent makes architectural decisions alone — those go to `docs/decisions.md` and require human approval.
 
