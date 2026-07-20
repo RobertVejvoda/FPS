@@ -44,19 +44,25 @@ export function classify({ authorLogin, authorType, files }, config) {
   return { implementerKind: isLoop ? "loop" : "manual", isHighRisk };
 }
 
-/** Parse the durable ledger from the bot's prior comments. @returns {{priorRounds:number, processedShas:Set<string>}} */
+/**
+ * Parse the durable ledger from the bot's prior comments. A repair round is a DISTINCT reviewed
+ * SHA that was marked as a round — so a verdict delivered through both channels (two markers for
+ * the same SHA) counts once, and a cross-channel race cannot inflate the round count.
+ * @returns {{priorRounds:number, processedShas:Set<string>}}
+ */
 export function parseLedger(commentBodies) {
   const processedShas = new Set();
-  let priorRounds = 0;
+  const roundShas = new Set();
   for (const body of commentBodies || []) {
     MARKER_RE.lastIndex = 0;
     let m;
     while ((m = MARKER_RE.exec(body)) !== null) {
-      processedShas.add(m[1].toLowerCase());
-      if (m[2] !== "-") priorRounds += 1;
+      const sha = m[1].toLowerCase();
+      processedShas.add(sha);
+      if (m[2] !== "-") roundShas.add(sha);
     }
   }
-  return { priorRounds, processedShas };
+  return { priorRounds: roundShas.size, processedShas };
 }
 
 /** Build the neutral reducer input from facts + gathered state. */
@@ -212,30 +218,33 @@ async function main() {
   const ctx = { round, maxRounds: config.maxRounds || 3, reviewedSha };
 
   if (decision.applyStage) setStage(pr, repo, decision.applyStage, config, appTok);
-  if (decision.route) routeProject(pr, repo, resolveRoute(decision.route, config), config, boardTok);
 
-  if (decision.setDraft === true) ghSafe(["api", "graphql", "-f", "query=mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}", "-f", `id=${prJson.node_id}`], appTok);
-  if (decision.setDraft === false) ghSafe(["pr", "ready", pr, "--repo", repo], appTok);
-
+  // Add the cap marker BEFORE drafting, so the orchestrator's converted_to_draft handler (and the
+  // gate) both see it and leave the terminal Blocked/Robert route intact.
   if (decision.addCapMarker) {
     ghSafe(["label", "create", capMarker, "--repo", repo, "--color", config.labels.capMarker.color], appTok);
     ghSafe(["pr", "edit", pr, "--repo", repo, "--add-label", capMarker], appTok);
-    // The marker is the cap's sole enforcement — verify it stuck; else fall back to a durable Draft hold.
-    const has = ghSafe(["pr", "view", pr, "--repo", repo, "--json", "labels", "--jq", ".labels[].name"], appTok).split("\n").includes(capMarker);
-    if (!has) {
-      console.log(`::warning::${capMarker} did not stick on #${pr} — forcing Draft fallback hold`);
-      for (let a = 0; a < 3; a++) {
-        ghSafe(["api", "graphql", "-f", "query=mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}", "-f", `id=${prJson.node_id}`], appTok);
-        if (ghSafe(["api", `/repos/${repo}/pulls/${pr}`, "--jq", ".draft"], appTok) === "true") break;
-      }
-      if (ghSafe(["api", `/repos/${repo}/pulls/${pr}`, "--jq", ".draft"], appTok) !== "true") {
-        ghSafe(["pr", "comment", pr, "--repo", repo, "--body", `🛑 **Cap enforcement failed** on #${pr} — a human must hold this PR; do not merge until findings are resolved.`], appTok);
-        console.log(`::error::cap enforcement failed on #${pr}`);
-        process.exitCode = 1;
-        return;
-      }
+    if (!ghSafe(["pr", "view", pr, "--repo", repo, "--json", "labels", "--jq", ".labels[].name"], appTok).split("\n").includes(capMarker))
+      console.log(`::warning::${capMarker} did not stick on #${pr} — the Draft hold below is the primary enforcement`);
+  }
+
+  // Route AFTER the marker so the draft event cannot overwrite the terminal route (the handler
+  // now skips autofix-capped PRs), and BEFORE the draft so the route is settled first.
+  if (decision.route) routeProject(pr, repo, resolveRoute(decision.route, config), config, boardTok);
+
+  const draftMutate = () => ghSafe(["api", "graphql", "-f", "query=mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}", "-f", `id=${prJson.node_id}`], appTok);
+  const draftNow = () => ghSafe(["api", `/repos/${repo}/pulls/${pr}`, "--jq", ".draft"], appTok) === "true";
+  if (decision.setDraft === true) {
+    // Draft is the durable hold; for a capped PR it is the PRIMARY fail-closed control, so verify it.
+    for (let a = 0; a < 3 && !draftNow(); a++) draftMutate();
+    if (decision.addCapMarker && !draftNow()) {
+      ghSafe(["pr", "comment", pr, "--repo", repo, "--body", `🛑 **Cap enforcement failed** on #${pr} — a human must hold this PR; do not merge until findings are resolved.`], appTok);
+      console.log(`::error::cap enforcement failed on #${pr}`);
+      process.exitCode = 1;
+      return;
     }
   }
+  if (decision.setDraft === false) ghSafe(["pr", "ready", pr, "--repo", repo], appTok);
 
   const body = commentBody(decision, ctx);
   if (body) ghSafe(["pr", "comment", pr, "--repo", repo, "--body", body], appTok);

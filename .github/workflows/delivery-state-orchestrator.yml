@@ -367,10 +367,13 @@ jobs:
   pr-converted-to-draft:
     name: PR converted to draft — Needs changes / Owner=Implementer
     runs-on: ubuntu-latest
+    # A capped autonomous loop drafts the PR itself and owns the terminal Blocked/Owner=Robert
+    # route (it adds autofix-capped before drafting) — do NOT overwrite it with Needs changes.
     if: >
       github.event_name == 'pull_request_target' &&
       github.event.action == 'converted_to_draft' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, 'autofix-capped')
     steps:
       - name: Set linked issues Status=Needs changes Owner=Implementer
         continue-on-error: true

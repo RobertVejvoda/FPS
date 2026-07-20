@@ -16,8 +16,11 @@ on:
   issue_comment:
     types: [created]
 
+# Serialize per PR (comment path) / per head SHA (review path). Perfect cross-channel serialization
+# is not achievable — workflow_run lacks the PR at group-eval time — so round INTEGRITY is guaranteed
+# instead by counting DISTINCT reviewed SHAs (agent-loop-adapter parseLedger), not comment markers.
 concurrency:
-  group: agent-loop-${{ github.event.issue.number || github.event.workflow_run.id }}
+  group: agent-loop-${{ github.event.issue.number || github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 
 permissions:

@@ -44,6 +44,13 @@ test("parseLedger: the same SHA marked twice counts once in the set", () => {
   const { processedShas } = parseLedger(["<!-- agent-loop v1 sha=abc1234 round=1 -->", "<!-- agent-loop v1 sha=ABC1234 round=1 -->"]);
   assert.equal(processedShas.size, 1);                   // case-insensitive dedup
 });
+test("parseLedger: a dual-channel race (same SHA marked twice) counts as ONE round, not two", () => {
+  const both = parseLedger([
+    "@copilot fix\n<!-- agent-loop v1 sha=abc1234 round=1 -->",
+    "@copilot fix\n<!-- agent-loop v1 sha=abc1234 round=1 -->",   // second channel, same reviewed SHA
+  ]);
+  assert.equal(both.priorRounds, 1);                     // rounds are DISTINCT SHAs, not markers
+});
 
 // buildInput: derives headMoved + alreadyProcessed from state.
 test("buildInput: headMoved true when reviewed SHA != head", () => {
