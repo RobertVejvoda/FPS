@@ -71,16 +71,20 @@ jobs:
           PR=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -r '[.[] | select(.state=="open")] | .[0].number // empty' || true)
           [ -n "$PR" ] || { echo "No open PR for run head $HEAD_SHA — nothing to draft."; exit 0; }
 
+          # Freshness (fail-safe): a delayed run must not draft a PR that already moved on.
+          # .merge_commit_sha is null while GitHub computes mergeability, so poll briefly; if
+          # it never resolves — or no longer equals the reviewed SHA — treat the signal as
+          # stale and no-op, rather than risk stalling a Ready PR.
           PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
-          # Freshness: a delayed run must not draft a PR that already moved on. If the PR's
-          # current test-merge commit no longer equals the SHA this run reviewed, the head
-          # (or base) advanced — the finding may already be fixed and re-reviewed clean — so
-          # treat it as a stale signal and no-op (safer than stalling a Ready PR).
           CUR_MERGE=$(printf '%s' "$PR_JSON" | jq -r '.merge_commit_sha // empty')
-          if [ -n "$CUR_MERGE" ] && [ "$CUR_MERGE" != "$HEAD_SHA" ]; then
-            echo "Stale signal: PR #$PR merge commit moved ($HEAD_SHA -> $CUR_MERGE) — no-op."
-            exit 0
-          fi
+          for _ in 1 2 3 4 5; do
+            [ -n "$CUR_MERGE" ] && break
+            sleep 3
+            PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
+            CUR_MERGE=$(printf '%s' "$PR_JSON" | jq -r '.merge_commit_sha // empty')
+          done
+          [ -n "$CUR_MERGE" ] || { echo "PR #$PR merge SHA still unavailable — failing closed (no-op)."; exit 0; }
+          [ "$CUR_MERGE" = "$HEAD_SHA" ] || { echo "Stale signal: PR #$PR merge commit moved ($HEAD_SHA -> $CUR_MERGE) — no-op."; exit 0; }
           [ "$(printf '%s' "$PR_JSON" | jq -r '.draft')" = "false" ] || { echo "PR #$PR already a draft — no-op."; exit 0; }
 
           PR_NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id')
