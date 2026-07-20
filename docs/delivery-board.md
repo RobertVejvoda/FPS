@@ -115,7 +115,9 @@ If any of these are missing, keep the issue in `Backlog` or `Blocked` rather tha
 
 ## Reviewer Independence
 
-Implementers must not approve, merge, or mark done their own PRs. This applies to Claude, Copilot, Codex, and human implementers.
+Implementers must not approve, merge, or mark done their own PRs. This applies to Claude, Copilot, Codex, and human implementers. The Implementer must therefore differ from both Reviewer and Merger; Reviewer and Merger do not need to be different actors for every PR.
+
+The independent reviewer who records acceptance may also merge a low-risk business or documentation PR when the accepted SHA is still the current head, applicable checks are green, no unresolved actionable current-head finding or terminal automation hold remains, and the diff contains no repository-defined high-risk path or architecture, security, privacy, production, or commercially material decision requiring human approval. A new commit invalidates the acceptance. If risk classification is uncertain, treat the PR as high-risk and route it to human-controlled merge. The separate Delivery App merger remains the default automated route for eligible Copilot PRs.
 
 When Claude or Copilot finishes implementation, the correct handoff is:
 
@@ -125,7 +127,7 @@ When Claude or Copilot finishes implementation, the correct handoff is:
 - set or request `Status = In review`, `Owner = Codex`;
 - wait for Codex or a human reviewer to approve, request changes, merge, or close the issue.
 
-Implementer validation is evidence, not acceptance. Acceptance requires an independent reviewer.
+Implementer validation is evidence, not acceptance. Acceptance requires an independent reviewer; merge execution may be performed by that reviewer only under the low-risk rule above.
 
 ## Copilot CLI Identity and PR Merge Workflow
 
