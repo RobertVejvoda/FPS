@@ -119,8 +119,8 @@ jobs:
           # Held for a human: a capped autonomous loop routes the PR to pipeline:needs-human.
           # Never auto-merge it, even on a fresh clean verdict, until a human deliberately
           # clears that stage — a later push/@codex must not silently re-enable a capped loop.
-          if printf '%s' "$PR_JSON" | jq -e '.labels[]? | select(.name == "pipeline:needs-human")' >/dev/null 2>&1; then
-            needs_human "PR is labelled pipeline:needs-human (a capped/held loop) — a human must route it back before it can merge"
+          if printf '%s' "$PR_JSON" | jq -e '.labels[]? | select(.name == "autofix-capped")' >/dev/null 2>&1; then
+            needs_human "PR is labelled autofix-capped (the autonomous loop hit its round cap) — a human must clear it before it can merge"
           fi
 
           # Past this point it is a genuine auto-merge candidate: a clean Codex verdict
