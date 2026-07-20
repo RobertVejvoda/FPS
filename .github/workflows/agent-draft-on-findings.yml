@@ -21,14 +21,11 @@ permissions:
 
 jobs:
   signal:
-    # Skip Copilot-authored PRs for now: drafting one would stall its auto-fix loop until
-    # the re-ready-on-fix handler lands (agent-rereview-on-push, #837). Copilot PRs are
-    # already gate-protected (they need a CLEAN Codex verdict to auto-merge), so nothing
-    # merges with an open finding meanwhile. #837 adds Copilot drafting + re-ready together.
+    # Signals for ALL non-draft same-repo PRs. Stage 2 decides the reaction by author:
+    # Copilot PRs get the autonomous @copilot nudge (they stay Ready); others are drafted.
     if: >
       github.event.review.user.login == 'chatgpt-codex-connector[bot]' &&
       github.event.pull_request.draft == false &&
-      github.event.pull_request.user.login != 'Copilot' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
