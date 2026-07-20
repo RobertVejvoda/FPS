@@ -27,10 +27,10 @@ jobs:
       github.event.pull_request.user.type == 'Bot'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4     # base ref (main) — trusted, never PR head
+      - uses: actions/checkout@v7     # base ref (main) — trusted, never PR head
       - name: Mint app token
         id: app
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
