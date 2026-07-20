@@ -90,11 +90,16 @@ jobs:
           AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
           if [ "$AUTHOR" = "Copilot" ]; then
             # Autonomous loop: nudge Copilot to fix (capped) + tag the stage; the PR stays Ready.
+            gh label create "pipeline:addressing-feedback" --repo "$REPO" --color FBCA04 >/dev/null 2>&1 || true
             gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:addressing-feedback" >/dev/null 2>&1 || true
             ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate --jq '[.[] | select((.user.type == "Bot") and (.body | test("address the review — round")))] | length' 2>/dev/null || echo 0)
             if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
               gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
+              gh label create "pipeline:needs-human" --repo "$REPO" --color D73A4A >/dev/null 2>&1 || true
               gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:addressing-feedback" --add-label "pipeline:needs-human" >/dev/null 2>&1 || true
+              # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
+              # non-durable and an earlier round set Owner=Copilot.
+              gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
             else
               gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex found issues — please address the review — round $((ROUNDS + 1)) of $MAX_ROUNDS. Read Codex's review comments above, fix them, and push to this branch." || true
               # Durable board hand-back: route the linked issue to Needs changes / Owner=Copilot
@@ -163,11 +168,16 @@ jobs:
           AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
           if [ "$AUTHOR" = "Copilot" ]; then
             # Autonomous loop: nudge Copilot to fix (capped) + tag the stage; the PR stays Ready.
+            gh label create "pipeline:addressing-feedback" --repo "$REPO" --color FBCA04 >/dev/null 2>&1 || true
             gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:addressing-feedback" >/dev/null 2>&1 || true
             ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate --jq '[.[] | select((.user.type == "Bot") and (.body | test("address the review — round")))] | length' 2>/dev/null || echo 0)
             if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
               gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
+              gh label create "pipeline:needs-human" --repo "$REPO" --color D73A4A >/dev/null 2>&1 || true
               gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:addressing-feedback" --add-label "pipeline:needs-human" >/dev/null 2>&1 || true
+              # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
+              # non-durable and an earlier round set Owner=Copilot.
+              gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
             else
               gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex found issues — please address the review — round $((ROUNDS + 1)) of $MAX_ROUNDS. Read Codex's review comments above, fix them, and push to this branch." || true
               # Durable board hand-back: route the linked issue to Needs changes / Owner=Copilot
