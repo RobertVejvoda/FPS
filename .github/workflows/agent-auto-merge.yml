@@ -42,6 +42,10 @@ jobs:
         run: |
           set -uo pipefail
           skip() { echo "AUTO-MERGE SKIPPED: $1"; exit 0; }
+          # GitHub's default `run:` shell adds `-e`, so any unguarded command that
+          # returns non-zero aborts the gate silently (exit 1, no log) and leaves the
+          # PR unmerged with no diagnostic. Make an unexpected failure visible.
+          trap 'echo "::warning::auto-merge gate hit an unexpected error and stopped — this PR was left for a human to merge."' ERR
 
           # 1. Codex verdict must be clean (no blocking findings).
           if printf '%s' "$COMMENT_BODY" | grep -Eiq 'p0|p1|blocking|must fix|changes? requested|found (an?|[0-9]+) '; then
@@ -77,7 +81,10 @@ jobs:
           [ "${CHANGED_FILES:-0}" -ge 1 ] || skip "PR has no file changes (empty) — nothing to merge"
 
           # 4. Reviewed-commit must match current head (no post-review pushes).
-          REVIEWED_SHA=$(printf '%s' "$COMMENT_BODY" | grep -oiE 'reviewed commit[:` ]*[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1)
+          # Tolerate Codex's markdown formatting ("**Reviewed commit:** `<sha>`") —
+          # any non-hex separators between the label and the sha. `|| true` keeps a
+          # no-match from aborting the gate under `-e`; the check below handles it.
+          REVIEWED_SHA=$(printf '%s' "$COMMENT_BODY" | grep -oiE 'reviewed commit[^0-9a-f]{0,16}[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1 || true)
           [ -n "${REVIEWED_SHA:-}" ] || skip "Codex comment has no 'Reviewed commit' marker to verify freshness"
           case "$HEAD_SHA" in "$REVIEWED_SHA"*) : ;; *) skip "Codex reviewed $REVIEWED_SHA but head is $HEAD_SHA (stale)" ;; esac
 
