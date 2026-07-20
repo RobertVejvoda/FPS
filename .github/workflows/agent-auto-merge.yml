@@ -47,6 +47,34 @@ jobs:
           # PR unmerged with no diagnostic. Make an unexpected failure visible.
           trap 'echo "::warning::auto-merge gate hit an unexpected error and stopped — this PR was left for a human to merge."' ERR
 
+          # Best-effort delivery-pipeline stage label (a label op must never break the gate).
+          set_stage() {
+            # Provision the label idempotently (stable colour) so a fresh repo shows the
+            # state instead of silently no-opping; every op is non-fatal so a label
+            # hiccup can never break the pipeline.
+            case "$1" in
+              in-review)           c=0E8A16 ;;
+              addressing-feedback) c=FBCA04 ;;
+              auto-merging)        c=8250DF ;;
+              merged)              c=1A7F37 ;;
+              needs-human)         c=D73A4A ;;
+              *)                   c=EDEDED ;;
+            esac
+            gh label create "pipeline:$1" --repo "$REPO" --color "$c" >/dev/null 2>&1 || true
+            gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
+            for s in in-review addressing-feedback auto-merging merged needs-human; do
+              [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
+            done
+          }
+          # Terminal "a human should look" outcome: label it, say why on the PR, and stop.
+          # Used only past the provenance checks, so it never touches unrelated PRs/comments.
+          needs_human() {
+            set_stage needs-human
+            gh pr comment "$PR" --repo "$REPO" --body "⏸️ **Not auto-merged.** $1 — left for a human to review and merge." >/dev/null 2>&1 || true
+            echo "AUTO-MERGE NEEDS-HUMAN: $1"
+            exit 0
+          }
+
           # 1. Codex verdict must be clean (no blocking findings).
           if printf '%s' "$COMMENT_BODY" | grep -Eiq 'p0|p1|blocking|must fix|changes? requested|found (an?|[0-9]+) '; then
             skip "Codex reported blocking findings"
@@ -88,6 +116,11 @@ jobs:
           [ -n "${REVIEWED_SHA:-}" ] || skip "Codex comment has no 'Reviewed commit' marker to verify freshness"
           case "$HEAD_SHA" in "$REVIEWED_SHA"*) : ;; *) skip "Codex reviewed $REVIEWED_SHA but head is $HEAD_SHA (stale)" ;; esac
 
+          # Past this point it is a genuine auto-merge candidate: a clean Codex verdict
+          # on a non-draft, non-empty Copilot PR that targets the default branch, with
+          # the reviewed commit == current head. Make that visible.
+          set_stage auto-merging
+
           # 5. Fully mergeable (CI green + required reviews incl. code owners).
           #    GitHub computes mergeable_state asynchronously — poll briefly.
           STATE="unknown"
@@ -96,14 +129,14 @@ jobs:
             [ "$STATE" != "unknown" ] && break
             sleep 5
           done
-          [ "$STATE" = "clean" ] || skip "mergeable_state='$STATE' (CI not green, conflicts, or a required review is missing)"
+          [ "$STATE" = "clean" ] || needs_human "mergeable_state='$STATE' (CI not green, conflicts, or a required review is missing)"
 
           # 6. Low-risk only: no high-risk path in the diff.
           #    Keep in sync with .github/CODEOWNERS.
           FILES=$(gh api "/repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
           HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|^tools/(deploy|backup|restore|provision|start-container)|^tools/lib/|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|(^|/)appsettings[^/]*\.json$|(^|/)public/config\.json$|docker-entrypoint\.sh$|(^|/)app\.config\.js$|(^|/)app\.json$|(^|/)eas\.json$|(^|/)dapr\.yaml$|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|[Dd]raw'
           if printf '%s\n' "$FILES" | grep -Eq "$HIGH_RISK"; then
-            skip "diff touches high-risk paths — human merge required"
+            needs_human "diff touches high-risk paths — human merge required"
           fi
 
           # 7. All gates passed → squash-merge as the app bot. Pin to the reviewed
@@ -113,8 +146,12 @@ jobs:
           #    retried, so a silent false-success would leave an approved PR unmerged).
           echo "All gates passed — merging PR #$PR at reviewed head $HEAD_SHA"
           if gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"; then
+            set_stage merged
+            gh pr comment "$PR" --repo "$REPO" --body "🔀 **Auto-merged.** Codex verdict was clean, CI green, reviewed head matched, and the diff is low-risk." >/dev/null 2>&1 || true
             echo "AUTO-MERGE: DONE for PR #$PR"
           else
+            set_stage needs-human
+            gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Auto-merge rejected** (head moved, a required check regressed, or not mergeable). Left for a human to merge." >/dev/null 2>&1 || true
             echo "::error::Merge of PR #$PR rejected (head moved, a required check regressed, or not mergeable). Left unmerged for a human."
             exit 1
           fi
