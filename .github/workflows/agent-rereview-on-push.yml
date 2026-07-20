@@ -41,7 +41,15 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -uo pipefail
-          # The fix landed — clear the addressing-feedback stage and re-request review.
-          gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:addressing-feedback" >/dev/null 2>&1 || true
+          # A capped loop is held for a human — never silently re-enable it. Only a human
+          # deliberately routing it back (which clears pipeline:needs-human) resumes review.
+          LABELS=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || true)
+          if printf '%s\n' "$LABELS" | grep -qx "pipeline:needs-human"; then
+            echo "PR #$PR is pipeline:needs-human (capped) — not re-requesting review."
+            exit 0
+          fi
+          # The fix landed — move to the in-review stage (clears addressing-feedback) and re-review.
+          gh label create "pipeline:in-review" --repo "$REPO" --color 0E8A16 >/dev/null 2>&1 || true
+          gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:in-review" --remove-label "pipeline:addressing-feedback" >/dev/null 2>&1 || true
           gh pr comment "$PR" --repo "$REPO" --body "@codex review"
           echo "Re-requested Codex review on PR #$PR after a push."
