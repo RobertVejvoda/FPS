@@ -34,6 +34,15 @@ export function reviewedCommitFrom(body) {
   return m ? m[1] : "";
 }
 
+/**
+ * Confused-deputy binding: is the artifact-named PR the one that actually triggered this run? The
+ * PR's head branch must equal the trusted workflow_run.head_branch. Absent a trusted branch (e.g.
+ * a channel where it does not apply), the check is skipped. @returns {boolean} true = OK to act.
+ */
+export function boundToTriggeringRun(prHeadRef, wrHeadBranch) {
+  return !wrHeadBranch || (prHeadRef || "") === wrHeadBranch;
+}
+
 /** Classify the PR author + changed files into neutral reducer facts. @returns {{implementerKind:"loop"|"manual", isHighRisk:boolean}} */
 export function classify({ authorLogin, authorType, files }, config) {
   const isLoop = (config.loopImplementers || []).some(
@@ -204,6 +213,16 @@ async function main() {
 
   // Gather state (single PR fetch + comments).
   const prJson = JSON.parse(gh(["api", `/repos/${repo}/pulls/${pr}`], appTok));
+
+  // Confused-deputy guard (from-review only): the unprivileged stage-1 artifact NAMED the PR +
+  // review, but a tampered stage-1 could name an unrelated PR that has an existing Codex review.
+  // Bind them to the TRUSTED triggering run — the resolved PR's head branch must equal
+  // workflow_run.head_branch — so an untrusted run can only ever act on its own PR.
+  if (event === "verdict" && process.env.REVIEW_ID &&
+      !boundToTriggeringRun(prJson.head?.ref, process.env.WR_HEAD_BRANCH)) {
+    console.log(`::warning::PR #${pr} head branch '${prJson.head?.ref}' != triggering run branch '${process.env.WR_HEAD_BRANCH}' — refusing (confused-deputy guard)`);
+    return;
+  }
   const files = gh(["api", `/repos/${repo}/pulls/${pr}/files`, "--paginate", "--jq", ".[].filename"], appTok).split("\n").filter(Boolean);
   const commentBodies = JSON.parse(ghSafe(["api", `/repos/${repo}/issues/${pr}/comments`, "--paginate", "--jq", "[.[].body]"], appTok) || "[]");
   const labelNames = (prJson.labels || []).map((l) => l.name);

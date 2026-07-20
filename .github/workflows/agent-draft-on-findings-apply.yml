@@ -61,6 +61,9 @@ jobs:
           BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
           REPO: ${{ github.repository }}
           EVENT: verdict
+          # Trusted binding: the branch the triggering (stage-1) run executed on. The adapter
+          # requires the resolved PR's head branch to match this (confused-deputy guard).
+          WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -uo pipefail
           PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)

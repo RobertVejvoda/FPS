@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { classify, parseLedger, buildInput, resolveRoute, commentBody, classifySeverity, reviewedCommitFrom } from "./agent-loop-adapter.mjs";
+import { classify, parseLedger, buildInput, resolveRoute, commentBody, classifySeverity, reviewedCommitFrom, boundToTriggeringRun } from "./agent-loop-adapter.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, "agent-loop-config.fairspot.json"), "utf8"));
@@ -123,4 +123,15 @@ test("classifySeverity: findings without P0/P1/P2 are 'advisory'", () => {
 // reviewedCommitFrom: tolerant of Codex's markdown marker.
 test("reviewedCommitFrom: extracts the SHA from a markdown 'Reviewed commit' marker", () => {
   assert.equal(reviewedCommitFrom("Breezy!\n**Reviewed commit:** `820c1ffed1`"), "820c1ffed1");
+});
+
+// boundToTriggeringRun: the confused-deputy guard.
+test("boundToTriggeringRun: matching head branch is bound (act)", () => {
+  assert.equal(boundToTriggeringRun("feat/x", "feat/x"), true);
+});
+test("boundToTriggeringRun: a different branch is NOT bound (refuse) — blocks cross-PR targeting", () => {
+  assert.equal(boundToTriggeringRun("victim-branch", "attacker-branch"), false);
+});
+test("boundToTriggeringRun: no trusted branch -> skip the check", () => {
+  assert.equal(boundToTriggeringRun("anything", ""), true);
 });
