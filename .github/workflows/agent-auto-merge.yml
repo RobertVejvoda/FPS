@@ -157,11 +157,22 @@ jobs:
             gh pr comment "$PR" --repo "$REPO" --body "🔀 **Auto-merged.** Codex verdict was clean, CI green, reviewed head matched, and the diff is low-risk." >/dev/null 2>&1 || true
             echo "AUTO-MERGE: DONE for PR #$PR"
           else
-            # A rejection here (a push landed between the checks and this merge, so
-            # --match-head-commit no longer matches, or a required check regressed) is
-            # transient and re-reviewable — do NOT install the terminal pipeline:needs-human
-            # hold (that is reserved for a capped loop). The next clean verdict re-runs the gate.
-            gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Auto-merge not applied** — the head moved or a check regressed since the review. This will retry automatically on the next clean verdict." >/dev/null 2>&1 || true
-            echo "::error::Merge of PR #$PR rejected (head moved or a required check regressed) — will retry on the next clean verdict."
-            exit 1
+            # A rejection is one of two DISTINCT states — separate them (do not lump both
+            # under one "retries on the next clean verdict" claim, which is only true for one):
+            CURRENT_HEAD=$(gh api "/repos/$REPO/pulls/$PR" --jq '.head.sha' 2>/dev/null || echo "")
+            if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$HEAD_SHA" ]; then
+              # (a) A push landed between the checks and this merge (--match-head-commit no
+              #     longer matches). agent-rereview-on-push re-reviews the new head, whose
+              #     clean verdict re-runs this gate. Genuinely transient/self-healing — do
+              #     NOT install the terminal pipeline:needs-human hold. Fail loudly so the
+              #     rejection is visible; the retry is automatic.
+              gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Auto-merge not applied** — the head moved since the review. This will retry automatically once the new push is re-reviewed." >/dev/null 2>&1 || true
+              echo "::error::Merge of PR #$PR rejected (head moved) — will retry on the re-review of the new push."
+              exit 1
+            fi
+            # (b) The head did NOT move: a required check regressed after the gate passed.
+            #     If it later recovers on its own there is no push and no new Codex verdict,
+            #     so nothing re-triggers this gate — it is genuinely stuck, not transient.
+            #     Hand off explicitly rather than leaving it in pipeline:auto-merging forever.
+            needs_human "a required check regressed after the merge gate passed, with no new push to re-trigger review — rerun the check (or push a fix) and re-request a Codex review"
           fi
