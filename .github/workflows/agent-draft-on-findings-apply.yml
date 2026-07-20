@@ -68,8 +68,21 @@ jobs:
           # is associated with exactly that PR, so take the open PR it maps to (no .head.sha
           # match — the PR head is the contributor-branch commit, a different SHA). A tampered
           # stage 1 cannot change head_sha, so it can never draft an unrelated PR.
-          PR=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -r '[.[] | select(.state=="open")] | .[0].number // empty' || true)
-          [ -n "$PR" ] || { echo "No open PR for run head $HEAD_SHA — nothing to draft."; exit 0; }
+          # Precisely resolve the reviewed PR. Stage 1 recorded the exact PR number it
+          # reviewed; its contents are untrusted (stage 1 runs PR-branch code), so only trust
+          # that number if it is among the OPEN PRs actually associated with the run's head SHA
+          # — a tampered stage 1 can then at most target a PR sharing this commit, never an
+          # unrelated one. This also picks the RIGHT PR when the SHA maps to several (not .[0]).
+          ASSOC=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -c '[.[] | select(.state=="open") | .number]' || echo '[]')
+          SIGNAL_PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
+          if [ -n "$SIGNAL_PR" ] && printf '%s' "$ASSOC" | jq -e --argjson n "$SIGNAL_PR" 'index($n) != null' >/dev/null 2>&1; then
+            PR="$SIGNAL_PR"
+          elif [ "$(printf '%s' "$ASSOC" | jq 'length')" = "1" ]; then
+            PR=$(printf '%s' "$ASSOC" | jq -r '.[0]')
+          else
+            echo "Cannot uniquely resolve the reviewed PR for head $HEAD_SHA (signal='$SIGNAL_PR', assoc=$ASSOC) — no-op."
+            exit 0
+          fi
 
           # No SHA-based freshness check: workflow_run.head_sha semantics for
           # pull_request_review runs are unreliable, and a rare draft of an already-fixed PR
