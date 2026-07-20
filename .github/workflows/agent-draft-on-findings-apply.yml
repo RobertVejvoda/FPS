@@ -99,6 +99,16 @@ jobs:
           PR_JSON=$(gh api "/repos/$REPO/pulls/$PR")
           [ "$(printf '%s' "$PR_JSON" | jq -r '.draft')" = "false" ] || { echo "PR #$PR already a draft — no-op."; exit 0; }
 
+          # Freshness: skip if the PR head moved since the review (a fix already landed). Uses the
+          # head SHA stage 1 recorded from the review event — reliable, unlike workflow_run.head_sha.
+          # Prevents a stale review from re-nudging / re-incrementing the cap on an already-fixed PR.
+          RECORDED_HEAD=$(tr -dc '0-9a-f' < signal/pr-head-sha.txt 2>/dev/null || true)
+          LIVE_HEAD=$(printf '%s' "$PR_JSON" | jq -r '.head.sha // empty')
+          if [ -n "$RECORDED_HEAD" ] && [ -n "$LIVE_HEAD" ] && [ "$RECORDED_HEAD" != "$LIVE_HEAD" ]; then
+            echo "Stale: PR #$PR head moved since the review ($RECORDED_HEAD -> $LIVE_HEAD) — no-op."
+            exit 0
+          fi
+
           AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.user.login')
           if [ "$AUTHOR" = "Copilot" ]; then
             # Autonomous loop: nudge Copilot to fix (capped) + tag the stage; the PR stays Ready.
@@ -107,6 +117,11 @@ jobs:
             if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
               gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
               set_stage needs-human
+              # Distinct machine marker so the re-review handler and the gate hold ONLY a capped
+              # loop — pipeline:needs-human is also set by the gate for high-risk / not-mergeable
+              # PRs, which must still be re-reviewable.
+              gh label create "autofix-capped" --repo "$REPO" --color B60205 >/dev/null 2>&1 || true
+              gh pr edit "$PR" --repo "$REPO" --add-label "autofix-capped" >/dev/null 2>&1 || true
               # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
               # non-durable and an earlier round set Owner=Copilot.
               gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
@@ -195,6 +210,11 @@ jobs:
             if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
               gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused after $MAX_ROUNDS Codex rounds without a clean verdict — a human should take it from here." || true
               set_stage needs-human
+              # Distinct machine marker so the re-review handler and the gate hold ONLY a capped
+              # loop — pipeline:needs-human is also set by the gate for high-risk / not-mergeable
+              # PRs, which must still be re-reviewable.
+              gh label create "autofix-capped" --repo "$REPO" --color B60205 >/dev/null 2>&1 || true
+              gh pr edit "$PR" --repo "$REPO" --add-label "autofix-capped" >/dev/null 2>&1 || true
               # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
               # non-durable and an earlier round set Owner=Copilot.
               gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
