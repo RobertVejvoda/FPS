@@ -13,7 +13,7 @@
 | **Claude** (`anthropic-code-agent`) | **Implementer** when assigned an issue; may review others' PRs | issue assignment → implementer |
 | **Copilot** (`copilot-swe-agent`) | **Implementer** when assigned an issue | issue assignment → implementer |
 
-A **Codex-authored** PR is reviewed by Claude or a human — never by Codex. **Claude** never reviews or merges its own implementation. The **Delivery App bot** (eligible Copilot PRs) or a **human** performs the merge.
+The restriction is narrow: an agent must not review or merge *the PR it implemented itself*. A **Codex-authored** PR is reviewed by Claude or a human — but Codex keeps reviewing every *other* PR as the default reviewer. **Claude** never reviews or merges its own implementation. The **Delivery App bot** (eligible Copilot PRs) or a **human** performs the merge.
 
 Neither agent makes architectural decisions alone — those go to `docs/decisions.md` and require human approval.
 
