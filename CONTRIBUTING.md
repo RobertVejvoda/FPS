@@ -34,20 +34,20 @@ Codex pushes docs/<topic> branch with completed requirements
   ↓
 Claude cron watcher detects new branch and notifies Robert
   ↓
-Claude reads requirements from the branch (no need to wait for master merge)
+Claude reads requirements from the branch (no need to wait for main merge)
   ↓
-Claude implements in feature/* branch, merges to master via PR
+Claude implements in feature/* branch, merges to main via PR
   ↓
-Codex merges docs/<topic> to master independently — no ordering dependency
+Codex merges docs/<topic> to main independently — no ordering dependency
 ```
 
 Scopes do not overlap, so merge order does not matter.
 
 ## Main Protection Rules
 
-- Never push directly to `master` — always via PR
+- Never push directly to `main` — always via PR
 - Never `git push --force` on any branch
-- Never `git rebase` on `master` or any `docs/*` branch
+- Never `git rebase` on `main` or any `docs/*` branch
 - No `--no-verify` on commits
 
 ## Shared Files
@@ -64,11 +64,11 @@ A small number of files appear in both scopes:
 ## Conflict Prevention
 
 - Pull from `origin/main` before starting any new branch
-- If `FPS.sln` or a shared config file needs updating, the agent doing the work pulls master first
+- If `FPS.sln` or a shared config file needs updating, the agent doing the work pulls main first
 - Codex does not touch `FPS.sln`, `*.csproj`, or `code/` files
 
 ## Signalling
 
 When Codex completes a requirements branch, push it to `origin/docs/<topic>`. Claude's watcher will detect it within 10 minutes and notify Robert.
 
-When Claude completes an implementation slice and merges to master, the CI run on master is the confirmation signal.
+When Claude completes an implementation slice and merges to main, the CI run on main is the confirmation signal.
