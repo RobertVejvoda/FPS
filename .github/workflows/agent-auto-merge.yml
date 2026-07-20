@@ -134,7 +134,7 @@ jobs:
           # 6. Low-risk only: no high-risk path in the diff.
           #    Keep in sync with .github/CODEOWNERS.
           FILES=$(gh api "/repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
-          HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|^tools/(deploy|backup|restore|provision|start-container)|^tools/lib/|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|(^|/)appsettings[^/]*\.json$|(^|/)public/config\.json$|docker-entrypoint\.sh$|(^|/)app\.config\.js$|(^|/)app\.json$|(^|/)eas\.json$|(^|/)dapr\.yaml$|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|[Dd]raw'
+          HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|^tools/(deploy|backup|restore|provision|start-container)|^tools/lib/|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|(^|/)appsettings[^/]*\.json$|(^|/)public/config\.json$|docker-entrypoint\.sh$|(^|/)app\.config\.js$|(^|/)app\.json$|(^|/)eas\.json$|(^|/)dapr\.yaml$|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|^AGENTS\.md$|^AGENT_COOPERATION\.md$|[Dd]raw'
           if printf '%s\n' "$FILES" | grep -Eq "$HIGH_RISK"; then
             needs_human "diff touches high-risk paths — human merge required"
           fi
