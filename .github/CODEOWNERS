@@ -7,11 +7,15 @@
 # NOTE: keep this list in sync with the HIGH_RISK pattern in
 # .github/workflows/agent-auto-merge.yml.
 
-# CI, automation, and the guardrails themselves (self-modification protection)
+# CI, automation, and the guardrails themselves (self-modification protection).
+# Includes the agent-governance docs — they control agent behaviour (e.g. the
+# "documentation-first" line once muzzled Copilot), so a change to them is critical.
 /.github/                         @RobertVejvoda
 /tools/security-gate.sh           @RobertVejvoda
 /tools/llm-review.mjs             @RobertVejvoda
 /tools/review-permission.sh       @RobertVejvoda
+/AGENTS.md                        @RobertVejvoda
+/AGENT_COOPERATION.md             @RobertVejvoda
 
 # Auth / security / secrets / identity (JWT, tokens, authz).
 # CODEOWNERS is case-sensitive, so list both case variants.
