@@ -56,8 +56,8 @@ jobs:
           # A capped loop is held for a human — never silently re-enable it. Only a human
           # deliberately routing it back (which clears pipeline:needs-human) resumes review.
           LABELS=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || true)
-          if printf '%s\n' "$LABELS" | grep -qx "pipeline:needs-human"; then
-            echo "PR #$PR is pipeline:needs-human (capped) — not re-requesting review."
+          if printf '%s\n' "$LABELS" | grep -qx "autofix-capped"; then
+            echo "PR #$PR is autofix-capped — held for a human, not re-requesting review."
             exit 0
           fi
           # The fix landed — move to the in-review stage (clears every other stage) and re-review.
