@@ -37,6 +37,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REVIEW_ID: ${{ github.event.review.id }}
           REVIEW_BODY: ${{ github.event.review.body }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -uo pipefail
 
@@ -55,7 +56,9 @@ jobs:
           fi
 
           echo "Substantive P0/P1/P2 finding on PR #$PR — signalling stage 2."
-          printf '%s\n' "$PR" > pr-number.txt
+          mkdir -p signal
+          printf '%s\n' "$PR" > signal/pr-number.txt
+          printf '%s\n' "$HEAD_SHA" > signal/pr-head-sha.txt
           echo "signal=true" >> "$GITHUB_OUTPUT"
 
       - name: Upload draft signal
@@ -63,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: draft-signal
-          path: pr-number.txt
+          path: signal/
           retention-days: 1
