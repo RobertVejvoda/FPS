@@ -63,7 +63,7 @@ A small number of files appear in both scopes:
 
 ## Conflict Prevention
 
-- Pull from `origin/master` before starting any new branch
+- Pull from `origin/main` before starting any new branch
 - If `FPS.sln` or a shared config file needs updating, the agent doing the work pulls master first
 - Codex does not touch `FPS.sln`, `*.csproj`, or `code/` files
 

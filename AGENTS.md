@@ -23,7 +23,7 @@ This repository is documentation-first unless the user explicitly asks for code 
 - For documentation-only changes, review the changed Markdown for clarity and internal consistency.
 - For code changes, run `./tools/validate.sh` when feasible and report the result.
 - Keep pull requests focused on one logical unit of work.
-- Start every implementation branch from the latest `origin/master`, not from whatever branch is currently checked out. Fetch first, then branch from `origin/master` or switch to updated `master` before creating the work branch.
+- Start every implementation branch from the latest `origin/main`, not from whatever branch is currently checked out. Fetch first, then branch from `origin/main` or switch to updated `main` before creating the work branch.
 
 ### Cross-Agent Validation
 

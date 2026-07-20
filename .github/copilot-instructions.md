@@ -33,7 +33,7 @@ GitHub Copilot agent is an implementer. By default, use it for mechanical, file-
 ## Ready Signals
 
 - Start only when the issue is assigned to Copilot and has a clear implementation scope.
-- Create implementation branches from the latest `origin/master`, never from an arbitrary current branch.
+- Create implementation branches from the latest `origin/main`, never from an arbitrary current branch.
 - Treat Project `Status = Ready` as the preferred readiness signal; `ready-to-implement` is optional and secondary.
 - If `blocked-question` is present, do not implement; comment with the unresolved question if needed.
 - If a PR already exists for the same slice, do not start parallel work.
@@ -78,7 +78,7 @@ When using GitHub Copilot CLI for local agent work:
 
 - Run from the repository root.
 - Read and follow `AGENTS.md` before editing any file.
-- Create implementation branches from the latest `origin/master`; never branch from an arbitrary current branch.
+- Create implementation branches from the latest `origin/main`; never branch from an arbitrary current branch.
 - Implement only the assigned issue; do not absorb adjacent or future slices.
 - Prefer focused file reads and searches over broad repository scans.
 - Run `./tools/validate.sh` before reporting ready when feasible; if not feasible, state why and list the narrower checks run.

@@ -9,7 +9,7 @@
 # Exit 0 = pass, 1 = one or more hard violations.
 set -uo pipefail
 
-BASE="${1:-origin/master}"
+BASE="${1:-origin/main}"
 HEAD="${2:-HEAD}"
 
 changed="$(git diff --name-only "$BASE" "$HEAD")"
