@@ -6,9 +6,15 @@ name: Agent auto-ready
 # Copilot PR ready the moment it actually has changes, so the review -> merge chain
 # proceeds hands-off. Guarded to NON-EMPTY PRs so an empty/premature review request
 # cannot push a no-op into review (see closed #822).
+#
+# SECURITY: uses pull_request_target, so it runs the trusted default-branch version of
+# this workflow — NOT the PR branch's version. A same-repo contributor therefore cannot
+# alter this secret-bearing workflow on their branch to exfiltrate the App key before
+# CODEOWNERS review. Safe because the job never checks out or runs PR head code; it only
+# calls gh api with PR metadata from the event. Same-repo PRs only (no forks).
 
 on:
-  pull_request:
+  pull_request_target:
     types: [review_requested]
 
 permissions:

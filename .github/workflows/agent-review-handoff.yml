@@ -3,9 +3,15 @@ name: Agent review handoff
 # When the Copilot coding agent marks its PR ready for review, ask Codex to
 # review it. Codex's own "On PR open" auto-review skips drafts, so without this
 # nudge a Copilot PR never gets reviewed. Runs as the GitHub App bot.
+#
+# SECURITY: uses pull_request_target, so it runs the trusted default-branch version of
+# this workflow — NOT the PR branch's version — so a same-repo contributor cannot alter
+# this secret-bearing workflow on their branch to exfiltrate the App key. Safe because
+# the job never checks out or runs PR head code; it only calls gh api with PR metadata.
+# Same-repo PRs only (no forks).
 
 on:
-  pull_request:
+  pull_request_target:
     types: [ready_for_review]
 
 permissions:

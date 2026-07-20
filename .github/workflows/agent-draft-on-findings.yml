@@ -1,0 +1,70 @@
+name: Agent draft on blocking findings
+
+# Stage 1 of 2 (UNPRIVILEGED). When Codex submits a review with a substantive finding
+# (P0/P1/P2) on any PR, signal stage 2 to convert the PR to Draft.
+#
+# SECURITY: pull_request_review runs the PR branch's version of this workflow for
+# same-repo PRs, so a contributor could alter it — therefore this stage holds NO
+# secrets and only reads public review data, emitting a signal artifact. The privileged
+# draft + reassign happens in agent-draft-on-findings-apply.yml, which runs the trusted
+# default-branch version via workflow_run and is the only place the App key is minted.
+#
+# Clean verdicts and P3-only/advisory reviews emit no signal, so stage 2 no-ops.
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  signal:
+    # Skip Copilot-authored PRs for now: drafting one would stall its auto-fix loop until
+    # the re-ready-on-fix handler lands (agent-rereview-on-push, #837). Copilot PRs are
+    # already gate-protected (they need a CLEAN Codex verdict to auto-merge), so nothing
+    # merges with an open finding meanwhile. #837 adds Copilot drafting + re-ready together.
+    if: >
+      github.event.review.user.login == 'chatgpt-codex-connector[bot]' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.user.login != 'Copilot' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect a substantive (P0/P1/P2) Codex finding
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
+          REVIEW_BODY: ${{ github.event.review.body }}
+        run: |
+          set -uo pipefail
+
+          # A clean verdict is not a finding.
+          if printf '%s' "$REVIEW_BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish"; then
+            echo "Codex review reads clean — no signal."
+            exit 0
+          fi
+
+          # Severity gate: signal only on a substantive P0/P1/P2; P3-only is advisory.
+          INLINE=$(gh api "/repos/$REPO/pulls/$PR/comments" --paginate \
+            --jq "[.[] | select(.pull_request_review_id == ${REVIEW_ID:-0}) | .body] | join(\"\n\")" 2>/dev/null || true)
+          if ! printf '%s\n%s' "$REVIEW_BODY" "$INLINE" | grep -Eiq '\bP[012]\b'; then
+            echo "Codex findings are P3/advisory only — no signal."
+            exit 0
+          fi
+
+          echo "Substantive P0/P1/P2 finding on PR #$PR — signalling stage 2."
+          printf '%s\n' "$PR" > pr-number.txt
+          echo "signal=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload draft signal
+        if: steps.detect.outputs.signal == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-signal
+          path: pr-number.txt
+          retention-days: 1
