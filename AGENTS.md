@@ -48,7 +48,7 @@ When requesting Claude validation, ask for a focused review of gaps, contradicti
 See `AGENT_COOPERATION.md` at the repo root for the full Codex / Claude cooperation reference. The sections below record which parts of that guide are in effect for FPS today; treat any guidance in the file that contradicts this list as background context, not policy.
 
 **In effect**
-- Roles: Codex is Product Owner (writes specs, validates, reviews). Claude and GitHub Copilot agent are Implementers.
+- Roles follow the **invocation, not the agent name**. **By default Codex is the Product Owner and reviewer** (`chatgpt-codex-connector`, via `@codex review`) — it keeps reviewing everyone else's PRs as normal. **Assigning Codex an issue** instead invokes its coding-agent / **implementer** role (`openai-code-agent`, opens a branch/PR), exactly as issue-assigning Claude (`anthropic-code-agent`) or Copilot (`copilot-swe-agent`) does. The invariant **Reviewer ≠ Implementer ≠ Merger** binds *per PR*, and the **only** restriction it places on Codex is that it must not **review or merge a PR it implemented itself** (such a PR is reviewed by Claude or a human) — Codex's default reviewer role is otherwise unchanged. Likewise Claude never reviews or merges its own implementation.
 - Default Claude model for routine implementation: `claude-sonnet-4.6`. Escalate to Opus only for hard problems.
 - GitHub Copilot Pro+ may be used as an implementation route for controlled experiments and broader slices when Codex prepares tight scope, acceptance criteria, expected files, and validation evidence.
 - Architectural decisions go to `docs/versions-and-decisions.md` and require human approval (neither agent decides alone).
@@ -67,7 +67,7 @@ All agents should keep session history small and handoffs explicit:
 - Do not ask another agent to re-read broad directories or full conversation history when a focused summary is enough.
 
 **Not in effect (FPS-specific overrides)**
-- PR ownership: Claude opens PRs; Codex reviews. (The guide's "Codex opens PRs" rule does not apply.)
+- PR ownership: whoever is invoked as the implementer opens the PR (Claude, Copilot, or Codex via issue assignment); review is done by a *different* party — `@codex review`, Claude, or a human. (The guide's fixed "Codex opens PRs" rule does not apply — roles are per-invocation.)
 - Task tracking: GitHub issues, not `.codex/tasks/active/` or `.codex/results/` files. TASK-XXX / RESULT-XXX schemas are reference material only.
 - Delivery board: use the [FPS Delivery Kanban](https://github.com/users/RobertVejvoda/projects/2). GitHub issues are the canonical slice cards; phase draft cards are optional high-level markers only and do not contain work. New implementation slices should be added to the board with `Milestone`, `Phase`, `Priority`, and `Status` set. Board rules are documented in `docs/delivery-board.md`.
 - Agent index file: this `AGENTS.md` is the canonical session index. No `CLAUDE.md` is maintained.
@@ -97,7 +97,7 @@ The realised delivery pipeline (the "B2" model). Roles are functions and the one
 - **Reviewer — Codex** (`chatgpt-codex-connector[bot]`). Codex reviews as a PR **comment** (not a formal approval) carrying a `Reviewed commit: <sha>` marker. Its "On PR open" auto-review **skips drafts**, and Copilot opens drafts, so `.github/workflows/agent-review-handoff.yml` posts `@codex review` when the PR is marked ready.
 - **Merger — the "Fairspot Delivery Bot" GitHub App** (App ID `4339995`; per-repo secret `APP_PRIVATE_KEY` + variable `APP_ID`; perms Contents/Issues/Pull requests R&W). `.github/workflows/agent-auto-merge.yml` squash-merges as the App bot only when every guard passes — clean Codex verdict, Copilot author, same-repo, reviewed-SHA == head, `mergeable_state == clean`, and a **low-risk diff**. It is **OFF by default**; activate per repo with the `AUTO_MERGE_ENABLED=true` repository variable (set it `false` to emergency-stop).
 
-**When Codex is the implementer** (for example it authors a documentation change): Codex is the Implementer for that PR and must not review it, so the automated pipeline deliberately does not apply — the auto-merge gate requires a Copilot author and skips Codex-authored PRs, and the review handoff only pings Codex for Copilot PRs, so it never asks Codex to review its own work. Route the review to Robert (or Claude, if an independent read is worth the API cost) and merge by a human. The same holds for any human-authored PR: it is reviewed and merged through the normal flow, not the bot pipeline.
+**Codex has two invocation modes — role follows the invocation, not the name.** Assigning an *issue* to Codex (`openai-code-agent`) invokes it as an **Implementer** — it opens a branch/PR, exactly as assigning an issue to Claude (`anthropic-code-agent`) or Copilot (`copilot-swe-agent`) does. A `@codex review` comment (or configured auto-review) invokes `chatgpt-codex-connector` as the **Reviewer** — its default role. The restriction is narrow: Codex must **not** review or merge *the PR it implemented itself*; it still reviews every other PR as usual. When Codex is the implementer of a PR the automated pipeline deliberately does not apply — the auto-merge gate requires a Copilot author and skips Codex-authored PRs, and the review handoff only pings Codex for Copilot PRs, so it never asks Codex to review its own work. Route a Codex-authored PR's review to **Claude or a human**, and have a human merge it. The same holds for Claude- and human-authored PRs: reviewed by someone else and merged through the normal flow, never self-reviewed or self-merged. (Corollary: use *bounded, per-PR `@codex review`* requests for review work — assigning a review/triage task to Codex as an **issue** invokes the implementer channel instead and opens a WIP PR, as issue #842 showed.)
 
 Guardrails:
 
@@ -112,7 +112,7 @@ Per-repo setup, in order: (1) add the repo to Codex code-review preferences; (2)
 
 ### Implementer routing
 
-There are two implementer agents available: **Claude** (Anthropic) and **GitHub Copilot agent** (assign-an-issue model, billed under the GitHub subscription). Codex's specs can be routed to either one. Default routing rule:
+Three agents can be invoked as **implementers** by assigning them an issue: **Claude** (`anthropic-code-agent`), the **GitHub Copilot agent** (`copilot-swe-agent`, billed under the GitHub subscription), and **Codex** (`openai-code-agent`). A spec can be routed to any of them. (Codex is also the default *reviewer* via `@codex review` — a different invocation of the same agent; the one that implements a given PR must not review it, so a Codex-implemented PR is reviewed by Claude or a human.) Default routing rule:
 
 - **Issue placement first** — before creating, routing, splitting, or moving an issue, classify it as one of:
   - **Public open-core**: runtime, fairness, tenant self-administration, auth/security capability, self-hosted/BYOC capability, public product validation, or other work a self-hosted operator reasonably needs. Keep in `fairspot`.
