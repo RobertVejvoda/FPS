@@ -63,4 +63,6 @@ jobs:
           # The fix landed — move to the in-review stage (clears every other stage) and re-review.
           set_stage in-review
           gh pr comment "$PR" --repo "$REPO" --body "@codex review"
+          # Return the durable board to Codex (an earlier round set Owner=Copilot for the fix).
+          gh pr comment "$PR" --repo "$REPO" --body "/fps-route codex-review" || true
           echo "Re-requested Codex review on PR #$PR after a push."
