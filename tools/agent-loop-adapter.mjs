@@ -27,11 +27,17 @@ const CLEAN_RE = /did.?n.?t find|no (major |significant )?(issues|findings)|no f
 const SEVERITY_RE = /\bP[012]\b/;
 const REVIEWED_COMMIT_RE = /reviewed commit[^0-9a-f]{0,16}([0-9a-f]{7,40})/i;
 
-/** Classify a Codex verdict from its text. @returns {"clean"|"blocking"|"advisory"} */
+/**
+ * Classify a Codex verdict from its text. Blocking severities are checked FIRST across the
+ * combined summary + inline text — a "looks good" summary alongside an inline P1 must classify
+ * as blocking, never clean (misclassifying toward blocking means more review; toward clean
+ * means an unaddressed finding). Same precedence as the merge gate.
+ * @returns {"clean"|"blocking"|"advisory"}
+ */
 export function classifySeverity(body, inlineBodies = []) {
-  if (CLEAN_RE.test(body || "")) return "clean";
   const haystack = [body || "", ...inlineBodies].join("\n");
-  return SEVERITY_RE.test(haystack) ? "blocking" : "advisory";
+  if (SEVERITY_RE.test(haystack)) return "blocking";
+  return CLEAN_RE.test(body || "") ? "clean" : "advisory";
 }
 
 /** Extract Codex's reviewed-commit SHA from a conversation comment (markdown-tolerant). */
@@ -215,7 +221,10 @@ async function main() {
       catch { console.log(`::warning::could not fetch review ${reviewId} for PR #${pr} — aborting`); return; }
       if ((review.user?.login || "") !== config.reviewerBot) { console.log(`review author '${review.user?.login}' is not the reviewer bot — ignoring`); return; }
       reviewedSha = review.commit_id || "";
-      const inline = JSON.parse(ghSafe(["api", `/repos/${repo}/pulls/${pr}/comments`, "--paginate", "--jq", `[.[] | select(.pull_request_review_id == ${Number(reviewId)}) | .body]`], appTok) || "[]");
+      // Deliberately gh, not ghSafe: Codex's P0/P1/P2 badges usually live in the INLINE comments,
+      // so a failed fetch degraded to [] would classify a blocking review as advisory and the
+      // one-shot workflow_run would succeed without acting. Fail the job instead (fail closed).
+      const inline = JSON.parse(gh(["api", `/repos/${repo}/pulls/${pr}/comments`, "--paginate", "--jq", `[.[] | select(.pull_request_review_id == ${Number(reviewId)}) | .body]`], appTok));
       verdict = classifySeverity(review.body, inline);
     } else {
       // from-comment: the conversation verdict (comment author verified in the workflow guard).
@@ -227,8 +236,8 @@ async function main() {
       reviewedSha = abbrev ? (ghSafe(["api", `/repos/${repo}/commits/${abbrev}`, "--jq", ".sha"], appTok) || abbrev) : "";
       verdict = classifySeverity(body, []);
     }
-    // The loop adapter only acts on findings; a clean verdict is the merge gate's job.
-    if (verdict === "clean") { console.log("clean verdict — handled by the merge gate, not the loop"); return; }
+    // Clean verdicts flow through the reducer like any other (its dup/stale/capped guards apply);
+    // the apply phase below routes the board and leaves merging + stage labels to the merge gate.
   }
 
   // Gather state (single PR fetch + comments).
@@ -261,6 +270,16 @@ async function main() {
   const decision = transition(input);
   console.log(`decision: ${decision.action} — ${decision.reason}`);
   if (decision.action.startsWith("ignore")) return;
+
+  // Clean verdict: merging and stage labels belong to the merge gate (one label writer per
+  // event; on a merge, the orchestrator routes linked issues to Done). The loop applies only
+  // the durable Project route, and only when NO auto-merge will follow (high-risk → human
+  // merge pending) — otherwise this write would race the orchestrator's merge routing. This
+  // returns the board from the repair loop's Needs changes/implementer to In review/reviewer.
+  if (decision.action === "clean-verdict") {
+    if (!decision.mergeEligible && decision.route) routeProject(pr, repo, resolveRoute(decision.route, config), config, boardTok);
+    return;
+  }
 
   // Re-check dedup right before acting (narrows the residual race window). Same authenticated,
   // fail-closed read as the initial one — a forged marker must not pass here either, and a

@@ -164,6 +164,12 @@ test("classifySeverity: a P1 inline finding is 'blocking'", () => {
 test("classifySeverity: findings without P0/P1/P2 are 'advisory'", () => {
   assert.equal(classifySeverity("### Codex Review", ["**P3 Badge** a nit"]), "advisory");
 });
+test("classifySeverity: a 'looks good' summary WITH an inline P1 is 'blocking', never clean", () => {
+  assert.equal(classifySeverity("Looks good overall!", ["**P1 Badge** broken invariant"]), "blocking");
+});
+test("classifySeverity: a clean summary with only P3 nits inline stays 'clean'", () => {
+  assert.equal(classifySeverity("Didn't find any major issues.", ["**P3 Badge** a nit"]), "clean");
+});
 
 // reviewedCommitFrom: tolerant of Codex's markdown marker.
 test("reviewedCommitFrom: extracts the SHA from a markdown 'Reviewed commit' marker", () => {
