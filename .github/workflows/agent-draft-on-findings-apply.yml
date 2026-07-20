@@ -122,6 +122,15 @@ jobs:
               # PRs, which must still be re-reviewable.
               gh label create "autofix-capped" --repo "$REPO" --color B60205 >/dev/null 2>&1 || true
               gh pr edit "$PR" --repo "$REPO" --add-label "autofix-capped" >/dev/null 2>&1 || true
+              # autofix-capped is the cap's sole enforcement (the re-review handler and the gate
+              # check only it), so verify it stuck. If not, fall back to a durable hold that does
+              # not depend on it — convert to Draft, which both the gate and re-review handler skip.
+              if ! gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null | grep -qx "autofix-capped"; then
+                echo "::warning::autofix-capped did not stick on #$PR — converting to Draft as a fallback hold."
+                CAP_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
+                # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
+                gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
+              fi
               # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
               # non-durable and an earlier round set Owner=Copilot.
               gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
@@ -215,6 +224,15 @@ jobs:
               # PRs, which must still be re-reviewable.
               gh label create "autofix-capped" --repo "$REPO" --color B60205 >/dev/null 2>&1 || true
               gh pr edit "$PR" --repo "$REPO" --add-label "autofix-capped" >/dev/null 2>&1 || true
+              # autofix-capped is the cap's sole enforcement (the re-review handler and the gate
+              # check only it), so verify it stuck. If not, fall back to a durable hold that does
+              # not depend on it — convert to Draft, which both the gate and re-review handler skip.
+              if ! gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null | grep -qx "autofix-capped"; then
+                echo "::warning::autofix-capped did not stick on #$PR — converting to Draft as a fallback hold."
+                CAP_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
+                # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
+                gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$CAP_NODE" >/dev/null 2>&1 || true
+              fi
               # Durable board hand-off to a human (Blocked / Owner=Robert) — labels are
               # non-durable and an earlier round set Owner=Copilot.
               gh pr comment "$PR" --repo "$REPO" --body "/fps-route robert-decision" || true
