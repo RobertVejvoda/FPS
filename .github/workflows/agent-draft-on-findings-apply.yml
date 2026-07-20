@@ -62,12 +62,14 @@ jobs:
         run: |
           set -uo pipefail
           # The artifact's mere EXISTENCE is the "substantive finding" signal; its contents
-          # are untrusted (stage 1 runs the PR branch's code). Derive the PR from the run's
-          # head SHA — trusted event data — so a tampered stage 1 can never draft an unrelated
-          # PR (worst case it drafts its own triggering PR). workflow_run.pull_requests is
-          # always empty for pull_request_review-triggered runs, so it cannot be used here.
-          PR=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -r --arg sha "$HEAD_SHA" 'map(select(.state=="open" and .head.sha==$sha)) | .[0].number // empty' || true)
-          [ -n "$PR" ] || { echo "No open PR with head $HEAD_SHA — nothing to draft."; exit 0; }
+          # are untrusted (stage 1 runs the PR branch's code). Resolve the PR from the run's
+          # head SHA — trusted event data — via the commits->pulls endpoint. For a
+          # pull_request_review run this SHA is the synthetic refs/pull/N/merge commit, which
+          # is associated with exactly that PR, so take the open PR it maps to (no .head.sha
+          # match — the PR head is the contributor-branch commit, a different SHA). A tampered
+          # stage 1 cannot change head_sha, so it can never draft an unrelated PR.
+          PR=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -r '[.[] | select(.state=="open")] | .[0].number // empty' || true)
+          [ -n "$PR" ] || { echo "No open PR for run head $HEAD_SHA — nothing to draft."; exit 0; }
 
           PR_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
           # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
