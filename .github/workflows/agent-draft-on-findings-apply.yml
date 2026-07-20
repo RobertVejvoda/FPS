@@ -142,8 +142,17 @@ jobs:
           STATE=$(printf '%s' "$PR_JSON" | jq -r '.state // empty')
           ISDRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft // empty')
           NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id // empty')
+          CUR_HEAD=$(printf '%s' "$PR_JSON" | jq -r '.head.sha // empty')
           [ "$STATE" = "open" ] || { echo "PR #$PR not open — skipping."; exit 0; }
           [ "$ISDRAFT" = "false" ] || { echo "PR #$PR already a draft — skipping."; exit 0; }
+
+          # Freshness: the comment carries Codex's "Reviewed commit: <sha>" marker. If it no
+          # longer prefixes the PR's current head, a fix landed after the review — don't draft
+          # an already-fixed PR (guards the race where the fix beats this queued job).
+          REVIEWED=$(printf '%s' "$BODY" | grep -oiE 'reviewed commit[^0-9a-f]{0,16}[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1 || true)
+          if [ -n "$REVIEWED" ] && [ -n "$CUR_HEAD" ]; then
+            case "$CUR_HEAD" in "$REVIEWED"*) : ;; *) echo "Stale: PR #$PR head moved since reviewed commit $REVIEWED — no-op."; exit 0 ;; esac
+          fi
 
           # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
           if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$NODE" >/dev/null 2>&1; then
