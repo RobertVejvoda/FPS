@@ -58,19 +58,16 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           REPO: ${{ github.repository }}
-          WR_PRS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -uo pipefail
-          PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
-          [ -n "$PR" ] || { echo "No PR number in signal — nothing to do."; exit 0; }
-
-          # Defence-in-depth: a tampered stage 1 cannot target an unrelated PR.
-          if [ "$(printf '%s' "$WR_PRS" | jq 'length')" -gt 0 ]; then
-            if ! printf '%s' "$WR_PRS" | jq -e --argjson n "$PR" 'any(.[]; .number == $n)' >/dev/null 2>&1; then
-              echo "::warning::Signalled PR #$PR is not associated with the triggering run — ignoring."
-              exit 0
-            fi
-          fi
+          # The artifact's mere EXISTENCE is the "substantive finding" signal; its contents
+          # are untrusted (stage 1 runs the PR branch's code). Derive the PR from the run's
+          # head SHA — trusted event data — so a tampered stage 1 can never draft an unrelated
+          # PR (worst case it drafts its own triggering PR). workflow_run.pull_requests is
+          # always empty for pull_request_review-triggered runs, so it cannot be used here.
+          PR=$(gh api "/repos/$REPO/commits/$HEAD_SHA/pulls" 2>/dev/null | jq -r --arg sha "$HEAD_SHA" 'map(select(.state=="open" and .head.sha==$sha)) | .[0].number // empty' || true)
+          [ -n "$PR" ] || { echo "No open PR with head $HEAD_SHA — nothing to draft."; exit 0; }
 
           PR_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
           # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
