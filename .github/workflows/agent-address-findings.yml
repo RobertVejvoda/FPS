@@ -1,0 +1,70 @@
+name: Agent address findings
+
+# When Codex submits a review WITH findings on a Copilot PR, route it back to
+# Copilot to fix — closing the find -> fix -> re-review -> merge loop with no human
+# step. Codex posts findings as a pull_request_review (state "commented"); a clean
+# verdict comes as a plain issue comment, handled by the auto-merge gate instead.
+# Capped at MAX_ROUNDS to prevent a runaway loop; beyond that it escalates to a human.
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+
+env:
+  MAX_ROUNDS: "3"
+
+jobs:
+  route-findings:
+    if: >
+      github.event.review.user.login == 'chatgpt-codex-connector[bot]' &&
+      github.event.review.state != 'approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Route Codex findings back to Copilot (capped)
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          BODY: ${{ github.event.review.body }}
+        run: |
+          set -uo pipefail
+
+          # Copilot-authored PRs only (never Claude/human PRs — those are human-merged).
+          if [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
+            echo "PR author '$AUTHOR' (type=$AUTHOR_TYPE) is not the Copilot agent — no auto-fix."
+            exit 0
+          fi
+
+          # If the review body actually reads clean, there's nothing to address
+          # (the auto-merge gate handles clean verdicts).
+          if printf '%s' "$BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish"; then
+            echo "Codex review reads clean — nothing to address."
+            exit 0
+          fi
+
+          # Loop cap: count how many times we've already routed findings back.
+          ROUNDS=$(gh api "/repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '[.[] | select((.user.type == "Bot") and (.body | test("@copilot .*address the review")))] | length')
+          if [ "${ROUNDS:-0}" -ge "$MAX_ROUNDS" ]; then
+            gh pr comment "$PR" --repo "$REPO" --body "⚠️ Auto-fix loop paused: this PR has cycled through $MAX_ROUNDS Codex review rounds without a clean verdict. A human should take it from here."
+            gh pr edit "$PR" --repo "$REPO" --add-label "needs-human" 2>/dev/null || true
+            echo "Loop cap ($MAX_ROUNDS) reached — escalated to a human."
+            exit 0
+          fi
+
+          NEXT=$((ROUNDS + 1))
+          gh pr comment "$PR" --repo "$REPO" --body "@copilot Codex's review found issues on this PR (round $NEXT of $MAX_ROUNDS). Please read Codex's review comments above, address them, and push the fix to this branch."
+          echo "Routed Codex findings back to Copilot (round $NEXT)."

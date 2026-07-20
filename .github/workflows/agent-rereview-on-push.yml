@@ -1,0 +1,43 @@
+name: Agent re-review on push
+
+# After a Copilot PR is updated (a new commit pushed while it is ready for review),
+# re-request Codex review so the review always reflects the current head. Codex
+# does not auto-re-review on a plain push, so this closes the fix -> re-review loop.
+# Runs as the App bot; Copilot-authored PRs only.
+
+on:
+  pull_request:
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  rereview:
+    if: >
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Re-request Codex review (Copilot PRs only)
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+        run: |
+          set -uo pipefail
+          if [ "$AUTHOR" != "Copilot" ] || [ "$AUTHOR_TYPE" != "Bot" ]; then
+            echo "PR author '$AUTHOR' (type=$AUTHOR_TYPE) is not the Copilot agent — no re-review."
+            exit 0
+          fi
+          gh pr comment "$PR" --repo "$REPO" --body "@codex review"
+          echo "Re-requested Codex review on PR #$PR after push."
