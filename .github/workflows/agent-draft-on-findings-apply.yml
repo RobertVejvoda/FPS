@@ -1,26 +1,35 @@
 name: Agent draft on blocking findings (apply)
 
-# Stage 2 of 2 (PRIVILEGED). Triggered when stage 1 (agent-draft-on-findings) completes.
+# PRIVILEGED half of draft-on-findings. Codex delivers findings on TWO paths, so this
+# covers both — and both triggers run the trusted DEFAULT-BRANCH version of this file,
+# so holding the App key here is safe (a PR branch cannot alter it):
 #
-# SECURITY: workflow_run always runs the trusted DEFAULT-BRANCH version of this file, so
-# a PR branch cannot alter it — this is why the App key is minted here and never in the
-# pull_request_review stage. If stage 1 emitted the "draft-signal" artifact (a substantive
-# P0/P1/P2 finding), convert the PR to Draft: it becomes unmergeable, the auto-merge gate
-# skips drafts, and the orchestrator's pr-converted-to-draft job routes the linked issue
-# to Needs changes / Owner=Implementer. No signal artifact => no-op.
+#   - workflow_run  ← the unprivileged pull_request_review stage (agent-draft-on-findings)
+#                     signals via an artifact when it sees a substantive inline finding.
+#   - issue_comment ← Codex also posts verdicts as PR-conversation comments (the same path
+#                     the auto-merge gate keys on); a P0/P1/P2 there is handled directly.
+#
+# On a substantive P0/P1/P2 finding, convert the PR to Draft: it becomes unmergeable, the
+# auto-merge gate skips drafts, and the orchestrator's pr-converted-to-draft job routes
+# the linked issue to Needs changes / Owner=Implementer. Clean verdicts and P3-only nits
+# are no-ops.
 
 on:
   workflow_run:
     workflows: ["Agent draft on blocking findings"]
     types: [completed]
+  issue_comment:
+    types: [created, edited]
 
 permissions:
   contents: read
   actions: read
 
 jobs:
-  apply:
+  # Path 1: the pull_request_review stage signalled a substantive inline finding.
+  from-review:
     if: >
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request_review' &&
       github.event.workflow_run.head_repository.full_name == github.repository
@@ -49,17 +58,13 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           REPO: ${{ github.repository }}
-          # Authoritative PR list from the workflow_run event (from GitHub, not the artifact).
           WR_PRS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
         run: |
           set -uo pipefail
-
           PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
           [ -n "$PR" ] || { echo "No PR number in signal — nothing to do."; exit 0; }
 
-          # Defence-in-depth: if the run reported associated PRs, the signalled PR must be
-          # among them, so a tampered stage 1 cannot target an unrelated PR. (The App key is
-          # never exposed regardless — this only bounds which PR can be drafted.)
+          # Defence-in-depth: a tampered stage 1 cannot target an unrelated PR.
           if [ "$(printf '%s' "$WR_PRS" | jq 'length')" -gt 0 ]; then
             if ! printf '%s' "$WR_PRS" | jq -e --argjson n "$PR" 'any(.[]; .number == $n)' >/dev/null 2>&1; then
               echo "::warning::Signalled PR #$PR is not associated with the triggering run — ignoring."
@@ -70,9 +75,58 @@ jobs:
           PR_NODE=$(gh api "/repos/$REPO/pulls/$PR" --jq '.node_id')
           # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
           if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$PR_NODE" >/dev/null 2>&1; then
-            echo "Converted PR #$PR to Draft (substantive Codex finding)."
+            echo "Converted PR #$PR to Draft (inline finding)."
           else
-            echo "::warning::could not convert PR #$PR to Draft — left Ready for a human"
+            echo "::warning::could not convert PR #$PR to Draft"
+          fi
+          gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
+
+  # Path 2: Codex posted a finding as a PR-conversation comment (issue_comment is trusted).
+  from-comment:
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.login == 'chatgpt-codex-connector[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Draft on a substantive finding posted as a PR comment
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          set -uo pipefail
+
+          # Clean verdict → nothing to draft (the auto-merge gate handles clean comments).
+          if printf '%s' "$BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|looks good|lgtm|swish"; then
+            echo "Codex comment reads clean — nothing to draft."
+            exit 0
+          fi
+          # Substantive severity only (P3/advisory or unlabelled → leave Ready).
+          if ! printf '%s' "$BODY" | grep -Eiq '\bP[012]\b'; then
+            echo "Comment has no P0/P1/P2 severity — leaving PR #$PR Ready."
+            exit 0
           fi
 
-          gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the review comments above, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
+          PR_JSON=$(gh api "/repos/$REPO/pulls/$PR" 2>/dev/null || true)
+          STATE=$(printf '%s' "$PR_JSON" | jq -r '.state // empty')
+          ISDRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft // empty')
+          NODE=$(printf '%s' "$PR_JSON" | jq -r '.node_id // empty')
+          [ "$STATE" = "open" ] || { echo "PR #$PR not open — skipping."; exit 0; }
+          [ "$ISDRAFT" = "false" ] || { echo "PR #$PR already a draft — skipping."; exit 0; }
+
+          # shellcheck disable=SC2016  # $id is a GraphQL variable, not a shell var
+          if gh api graphql -f query='mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}' -f id="$NODE" >/dev/null 2>&1; then
+            echo "Converted PR #$PR to Draft (comment finding)."
+          else
+            echo "::warning::could not convert PR #$PR to Draft"
+          fi
+          gh pr comment "$PR" --repo "$REPO" --body "⏸️ Codex flagged a **P0/P1/P2** finding, so this PR was converted to **Draft** and handed back to its implementer (Status → Needs changes). Address the findings, then mark it **Ready for review** to re-trigger Codex. (P3-only nits leave a PR Ready.)" || true
