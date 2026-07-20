@@ -170,20 +170,28 @@ if docker compose version >/dev/null 2>&1; then
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/nope.env" --domain example.test --tag sha-x
   expect_fail "deploy: missing image tag"   "immutable image tag" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test
-  expect_fail "deploy: latest tag rejected" "immutable image tag" -- \
+  expect_fail "deploy: latest tag rejected" "mutable" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag latest
+  expect_fail "deploy: mutable tag rejected" "not an immutable" -- \
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag staging
 else
   skip "docker compose CLI unavailable — deploy preflight negative paths skipped"
 fi
 
-expect_fail "restore: --digitalocean needs --force-digitalocean" "force-digitalocean" -- \
-  "$RESTORE" --from "$STUB_BK" --digitalocean
-expect_fail "restore: --force-digitalocean still needs --yes"    "Re-run with --yes" -- \
-  "$RESTORE" --from "$STUB_BK" --digitalocean --force-digitalocean
-expect_fail "restore: --force-nas does NOT unlock a DO restore"  "force-digitalocean" -- \
-  "$RESTORE" --from "$STUB_BK" --digitalocean --force-nas
-expect_fail "backup: unknown argument rejected"                  "Unknown argument" -- \
-  "$BACKUP" --bogus-flag
+# restore-drill.sh / backup-stack.sh check `command -v docker` early, so their
+# flag/confirmation gate assertions are Docker-dependent. Guard them separately.
+if command -v docker >/dev/null 2>&1; then
+  expect_fail "restore: --digitalocean needs --force-digitalocean" "force-digitalocean" -- \
+    "$RESTORE" --from "$STUB_BK" --digitalocean
+  expect_fail "restore: --force-digitalocean still needs --yes"    "Re-run with --yes" -- \
+    "$RESTORE" --from "$STUB_BK" --digitalocean --force-digitalocean
+  expect_fail "restore: --force-nas does NOT unlock a DO restore"  "force-digitalocean" -- \
+    "$RESTORE" --from "$STUB_BK" --digitalocean --force-nas
+  expect_fail "backup: unknown argument rejected"                  "Unknown argument" -- \
+    "$BACKUP" --bogus-flag
+else
+  skip "docker CLI unavailable — restore/backup gate assertions skipped"
+fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 hdr "Summary"

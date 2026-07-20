@@ -170,19 +170,40 @@ if [[ "$SKIP_PUBLIC" != "true" && -n "$AUTH_AUTHORITY" && "$AUTH_AUTHORITY" != h
   exit 1
 fi
 
-# 5. Immutable image tag (reject missing/"latest" unless explicitly overridden).
+# 5. Immutable image tag (only sha-<commit> or v* release tags; reject mutable tags).
 IMAGE_TAG="${IMAGE_TAG:-${FPS_IMAGE_TAG:-}}"
 if [[ "$SKIP_PUBLIC" != "true" ]]; then
-  if [[ -z "$IMAGE_TAG" || "$IMAGE_TAG" == "latest" ]]; then
+  _tag_is_immutable() {
+    [[ "$1" == sha-* || "$1" == v*.*.* || "$1" == v*.* || "$1" == v* ]]
+  }
+  if [[ -z "$IMAGE_TAG" ]]; then
     if [[ "$ALLOW_LATEST" != "true" ]]; then
       echo "ERROR (DigitalOcean profile): a public/evidence deployment requires an immutable image tag."
+      echo "  Pin a sha-<commit> (or a v* release tag) so the deploy is reproducible and recorded:"
+      echo "    ./tools/deploy-digitalocean.sh --domain ${DOMAIN:-<domain>} --tag sha-<commit>"
+      echo "  To deploy with a mutable tag anyway (not valid for evidence), add --allow-latest."
+      exit 1
+    fi
+    echo "  WARNING: no image tag supplied (--allow-latest). Not valid for release evidence."
+  elif [[ "$IMAGE_TAG" == "latest" ]]; then
+    if [[ "$ALLOW_LATEST" != "true" ]]; then
+      echo "ERROR (DigitalOcean profile): tag 'latest' is mutable and not valid for evidence deployments."
       echo "  Pin a sha-<commit> (or a v* release tag) so the deploy is reproducible and recorded:"
       echo "    ./tools/deploy-digitalocean.sh --domain ${DOMAIN:-<domain>} --tag sha-<commit>"
       echo "  To deploy the moving 'latest' tag anyway (not valid for evidence), add --allow-latest."
       exit 1
     fi
     echo "  WARNING: deploying moving tag 'latest' (--allow-latest). Not valid for release evidence."
-    IMAGE_TAG="latest"
+  elif ! _tag_is_immutable "$IMAGE_TAG"; then
+    if [[ "$ALLOW_LATEST" != "true" ]]; then
+      echo "ERROR (DigitalOcean profile): tag '$IMAGE_TAG' is not an immutable sha-<commit> or v* tag."
+      echo "  Registry tags (other than digests) are mutable by default — the same tag can later point"
+      echo "  to a different image, making the deploy non-reproducible and invalid for evidence."
+      echo "  Use a pinned tag:  --tag sha-<commit>   or   --tag v1.2.3"
+      echo "  To deploy a mutable tag anyway (not valid for evidence), add --allow-latest."
+      exit 1
+    fi
+    echo "  WARNING: deploying mutable tag '$IMAGE_TAG' (--allow-latest). Not valid for release evidence."
   fi
 fi
 if [[ -n "$IMAGE_TAG" ]]; then

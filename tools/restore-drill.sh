@@ -183,7 +183,25 @@ elif _has "$VAULT_TAR_ARTIFACT"; then
   warn "Vault volume-tar present (local/dev, no durable secrets) — nothing to restore."
 fi
 
-# ── 5. Bring the full stack up (only needed for the smoke) ───────────────────
+# ── 5. DigitalOcean: Vault seal/init boundary before full-stack start ─────────
+# A DigitalOcean server-mode Vault is sealed/uninitialized after `down -v`.
+# The full-stack start path (start-container-stack.sh --digitalocean) calls
+# require_vault_unsealed and will exit immediately on a fresh node. Attempting
+# an automated full-stack smoke here would race the operator or silently fail.
+# The drill scope therefore stops at the data/object/identity assertion point;
+# full-stack smoke requires manual Vault init + unseal first (see notes above).
+if [[ "$MODE" == "digitalocean" ]] && [[ "$SKIP_SMOKE" != "true" ]]; then
+  warn "DigitalOcean: the full-stack smoke requires a sealed/initialized Vault."
+  warn "  A fresh server-mode Vault is unsealed/uninitialized after 'down -v'."
+  warn "  Complete the manual Vault DR steps above, then re-run with --skip-smoke"
+  warn "  to assert data-return, or proceed to full-smoke manually via:"
+  warn "    ./tools/start-container-stack.sh --digitalocean [--env-file PATH]"
+  warn ""
+  warn "Stopping drill at the data/object/identity store assertions (Vault DR boundary)."
+  SKIP_SMOKE=true
+fi
+
+# ── 6 (was 5). Bring the full stack up (only needed for the smoke) ───────────
 # The data-return assertions below query the restored stores directly, which are
 # already up from step 3 — so a --skip-smoke drill proves recovery without the
 # full app stack (and without services like Grafana that the smoke would need).
@@ -233,7 +251,11 @@ echo
 [[ "$DATA_OK" == "true" ]] || die "Restore drill: data-return assertions FAILED"
 
 msg="Restore drill PASSED — data/object/identity stores rebuilt from $FROM; data returned"
-[[ "$SKIP_SMOKE" != "true" ]] && msg="$msg; smoke green"
+if [[ "$SKIP_SMOKE" != "true" ]]; then
+  msg="$msg; smoke green"
+elif [[ "$MODE" == "digitalocean" ]]; then
+  msg="$msg; full-stack smoke deferred (Vault DR boundary — complete manual Vault init/unseal first)"
+fi
 ok "$msg"
 if [[ "$VAULT_MANUAL" == "true" ]]; then
   warn "SCOPE: Vault secret-store restore is a separate MANUAL DR step (see above / #684)"
