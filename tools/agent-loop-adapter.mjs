@@ -68,11 +68,16 @@ export function parseLedger(commentBodies) {
 /** Build the neutral reducer input from facts + gathered state. */
 export function buildInput({ event, verdict, reviewedSha, headSha }, facts, state, config) {
   const shaLc = (reviewedSha || "").toLowerCase();
+  const headLc = (headSha || "").toLowerCase();
+  // Compare by prefix — Codex's conversation marker is often an abbreviated SHA, so a strict !==
+  // against the 40-char head would spuriously read as "moved". (Same idea as the auto-merge gate.)
+  const sameHead = !!shaLc && !!headLc && (headLc.startsWith(shaLc) || shaLc.startsWith(headLc));
+  const processed = [...state.ledger.processedShas].some((s) => s.startsWith(shaLc) || shaLc.startsWith(s));
   return {
     event,
     verdict,
-    headMoved: event === "verdict" && !!reviewedSha && !!headSha && shaLc !== headSha.toLowerCase(),
-    alreadyProcessed: event === "verdict" && state.ledger.processedShas.has(shaLc),
+    headMoved: event === "verdict" && !!reviewedSha && !!headSha && !sameHead,
+    alreadyProcessed: event === "verdict" && !!shaLc && processed,
     implementerKind: facts.implementerKind,
     isHighRisk: facts.isHighRisk,
     priorRounds: state.ledger.priorRounds,
@@ -186,7 +191,11 @@ async function main() {
     } else {
       // from-comment: the conversation verdict (comment author verified in the workflow guard).
       const body = process.env.COMMENT_BODY || "";
-      reviewedSha = reviewedCommitFrom(body);
+      const abbrev = reviewedCommitFrom(body);
+      // Resolve the (often abbreviated) marker SHA to the full SHA so the ledger stays consistent
+      // with the formal-review channel (which carries the full commit_id) — keeps dedup + round
+      // counting exact across channels.
+      reviewedSha = abbrev ? (ghSafe(["api", `/repos/${repo}/commits/${abbrev}`, "--jq", ".sha"], appTok) || abbrev) : "";
       verdict = classifySeverity(body, []);
     }
     // The loop adapter only acts on findings; a clean verdict is the merge gate's job.
@@ -220,12 +229,17 @@ async function main() {
   if (decision.applyStage) setStage(pr, repo, decision.applyStage, config, appTok);
 
   // Add the cap marker BEFORE drafting, so the orchestrator's converted_to_draft handler (and the
-  // gate) both see it and leave the terminal Blocked/Robert route intact.
+  // gate) both see it and leave the terminal Blocked/Robert route intact. Verify with retry — the
+  // marker gates dso's route preservation.
+  let capMarked = true;
   if (decision.addCapMarker) {
-    ghSafe(["label", "create", capMarker, "--repo", repo, "--color", config.labels.capMarker.color], appTok);
-    ghSafe(["pr", "edit", pr, "--repo", repo, "--add-label", capMarker], appTok);
-    if (!ghSafe(["pr", "view", pr, "--repo", repo, "--json", "labels", "--jq", ".labels[].name"], appTok).split("\n").includes(capMarker))
-      console.log(`::warning::${capMarker} did not stick on #${pr} — the Draft hold below is the primary enforcement`);
+    capMarked = false;
+    for (let a = 0; a < 3 && !capMarked; a++) {
+      ghSafe(["label", "create", capMarker, "--repo", repo, "--color", config.labels.capMarker.color], appTok);
+      ghSafe(["pr", "edit", pr, "--repo", repo, "--add-label", capMarker], appTok);
+      capMarked = ghSafe(["pr", "view", pr, "--repo", repo, "--json", "labels", "--jq", ".labels[].name"], appTok).split("\n").includes(capMarker);
+    }
+    if (!capMarked) console.log(`::warning::${capMarker} could not be applied after retries — will re-assert the terminal route after drafting`);
   }
 
   // Route AFTER the marker so the draft event cannot overwrite the terminal route (the handler
@@ -245,6 +259,10 @@ async function main() {
     }
   }
   if (decision.setDraft === false) ghSafe(["pr", "ready", pr, "--repo", repo], appTok);
+
+  // If the cap marker never stuck, dso's draft handler will have overwritten the terminal route —
+  // restore it (best-effort; the Draft above still holds the PR regardless).
+  if (decision.addCapMarker && !capMarked && decision.route) routeProject(pr, repo, resolveRoute(decision.route, config), config, boardTok);
 
   const body = commentBody(decision, ctx);
   if (body) ghSafe(["pr", "comment", pr, "--repo", repo, "--body", body], appTok);

@@ -66,6 +66,18 @@ test("buildInput: alreadyProcessed true when the reviewed SHA is in the ledger",
   const i = buildInput({ event: "verdict", verdict: "blocking", reviewedSha: "AAA1111", headSha: "aaa1111" }, facts, state, config);
   assert.equal(i.alreadyProcessed, true);
 });
+test("buildInput: an ABBREVIATED reviewed SHA that prefixes the head is NOT headMoved", () => {
+  const facts = { implementerKind: "loop", isHighRisk: false };
+  const state = { ledger: { priorRounds: 0, processedShas: new Set() }, capped: false, isDraft: false };
+  const i = buildInput({ event: "verdict", verdict: "blocking", reviewedSha: "820c1ffed1", headSha: "820c1ffed1ea0c0c93b09bfb12003e26a510e556" }, facts, state, config);
+  assert.equal(i.headMoved, false);   // comment-channel abbreviated marker must not read as stale
+});
+test("buildInput: dedup matches an abbreviated SHA against a full-SHA ledger entry (cross-channel)", () => {
+  const facts = { implementerKind: "loop", isHighRisk: false };
+  const state = { ledger: { priorRounds: 1, processedShas: new Set(["820c1ffed1ea0c0c93b09bfb12003e26a510e556"]) }, capped: false, isDraft: false };
+  const i = buildInput({ event: "verdict", verdict: "blocking", reviewedSha: "820c1ffed1", headSha: "820c1ffed1ea0c0c93b09bfb12003e26a510e556" }, facts, state, config);
+  assert.equal(i.alreadyProcessed, true);
+});
 
 // resolveRoute: abstract roles -> concrete Project option IDs from config.
 test("resolveRoute: needs-changes / implementer maps to the loop-implementer option IDs", () => {
