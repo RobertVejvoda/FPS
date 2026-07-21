@@ -87,13 +87,13 @@ test("a draft opened event preserves Status when already In progress (no-op, not
 test("ready_for_review routes a linked issue to In review / Codex", () => {
   const d = route({ action: "ready_for_review", isDraft: false, currentStatus: "In progress" });
   assert.equal(d.action, "route-in-review");
-  assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
+  assert.deepEqual(d.route, { status: "in-review", owner: "codex", ownerOption: "codex" });
 });
 
 test("ready_for_review still routes to In review / Codex even from Needs changes", () => {
   const d = route({ action: "ready_for_review", isDraft: false, currentStatus: "Needs changes" });
   assert.equal(d.action, "route-in-review");
-  assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
+  assert.deepEqual(d.route, { status: "in-review", owner: "codex", ownerOption: "codex" });
 });
 
 // --- A non-draft PR opened directly (human PR, or already-ready agent PR) still routes normally ---
@@ -101,9 +101,38 @@ test("a non-draft opened/synchronize/reopened event still routes to In review / 
   for (const action of ["opened", "synchronize", "reopened"]) {
     const d = route({ action, isDraft: false, currentStatus: "Assigned" });
     assert.equal(d.action, "route-in-review");
-    assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
+    assert.deepEqual(d.route, { status: "in-review", owner: "codex", ownerOption: "codex" });
   }
 });
+
+// --- Codex-implemented PRs are NEVER routed back to Codex for review (AGENTS.md) ---
+// Codex may act as implementer when an issue is assigned to it, but a PR it authored must be
+// reviewed by Claude or a human — never by Codex itself. The gate must hand such a PR's review
+// to Human (Robert) instead of the default Codex reviewer.
+for (const action of ["ready_for_review", "opened", "synchronize", "reopened"]) {
+  test(`Codex-implemented PR (${action}, non-draft) routes review to Human, not Codex`, () => {
+    const d = route({ action, isDraft: false, currentStatus: "In progress", currentImplementer: "Codex" });
+    assert.equal(d.action, "route-in-review");
+    assert.equal(d.route.status, "in-review");
+    assert.equal(d.route.owner, "human");
+    assert.equal(d.route.ownerOption, "robert");
+  });
+}
+
+test("Codex-implemented ready_for_review from Needs changes still routes to Human, not Codex", () => {
+  const d = route({ action: "ready_for_review", isDraft: false, currentStatus: "Needs changes", currentImplementer: "Codex" });
+  assert.equal(d.action, "route-in-review");
+  assert.equal(d.route.ownerOption, "robert");
+});
+
+for (const implementer of ["Claude", "Copilot", "Human", "", undefined, "SomeUnknownValue"]) {
+  test(`non-Codex-implemented (Implementer=${JSON.stringify(implementer)}) ready_for_review routes review to Codex`, () => {
+    const d = route({ action: "ready_for_review", isDraft: false, currentStatus: "In progress", currentImplementer: implementer });
+    assert.equal(d.action, "route-in-review");
+    assert.equal(d.route.owner, "codex");
+    assert.equal(d.route.ownerOption, "codex");
+  });
+}
 
 // --- CLI conformance: the actual invocation contract the production workflow relies on ---
 test("CLI: draft opened on Assigned with recognized Implementer -> route-in-progress JSON with mapped ownerOption", () => {
@@ -127,13 +156,25 @@ test("CLI: draft synchronize on Needs changes -> preserve JSON", () => {
 test("CLI: ready_for_review -> route-in-review JSON regardless of prior status", () => {
   const d = runGateCli({ action: "ready_for_review", isDraft: false, currentStatus: "Blocked" });
   assert.equal(d.action, "route-in-review");
-  assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
+  assert.deepEqual(d.route, { status: "in-review", owner: "codex", ownerOption: "codex" });
 });
 
 test("CLI: non-draft opened -> route-in-review JSON", () => {
   const d = runGateCli({ action: "opened", isDraft: false, currentStatus: "Assigned" });
   assert.equal(d.action, "route-in-review");
-  assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
+  assert.deepEqual(d.route, { status: "in-review", owner: "codex", ownerOption: "codex" });
+});
+
+test("CLI: Codex-implemented ready_for_review -> route-in-review JSON with ownerOption robert (Human)", () => {
+  const d = runGateCli({ action: "ready_for_review", isDraft: false, currentStatus: "In progress", currentImplementer: "Codex" });
+  assert.equal(d.action, "route-in-review");
+  assert.deepEqual(d.route, { status: "in-review", owner: "human", ownerOption: "robert" });
+});
+
+test("CLI: Codex-implemented non-draft opened -> route-in-review JSON routed to Human, not Codex", () => {
+  const d = runGateCli({ action: "opened", isDraft: false, currentStatus: "Assigned", currentImplementer: "Codex" });
+  assert.equal(d.action, "route-in-review");
+  assert.equal(d.route.ownerOption, "robert");
 });
 
 // --- Owner-preservation fallback: an empty/unrecognized Implementer must never become Owner=None ---

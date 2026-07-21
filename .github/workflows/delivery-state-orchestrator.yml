@@ -240,14 +240,26 @@ jobs:
 
             case "$DECISION_ACTION" in
               route-in-review)
+                # DECISION_OWNER_OPTION is the review-owner resolved by tools/delivery-draft-gate.mjs:
+                # "codex" by default, "robert" when the linked issue's Implementer is "Codex"
+                # (per AGENTS.md, Codex must not review a PR it implemented itself — hand a
+                # Codex-authored PR to a Human reviewer instead).
+                REVIEW_OWNER_OPTION=""
+                REVIEW_OWNER_DISPLAY="Codex"
+                case "$DECISION_OWNER_OPTION" in
+                  codex)   REVIEW_OWNER_OPTION="$OPT_OWNER_CODEX";  REVIEW_OWNER_DISPLAY="Codex" ;;
+                  robert)  REVIEW_OWNER_OPTION="$OPT_OWNER_ROBERT"; REVIEW_OWNER_DISPLAY="Robert" ;;
+                  *)       REVIEW_OWNER_OPTION="$OPT_OWNER_CODEX";  REVIEW_OWNER_DISPLAY="Codex" ;;
+                esac
+
                 gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
                   --field-id "$FIELD_STATUS" --single-select-option-id "$OPT_STATUS_IN_REVIEW" \
                   && echo "::notice::Issue #$ISSUE_NUM Status -> In review ($DECISION_REASON)" \
                   || echo "::warning::Failed to set Status for issue #$ISSUE_NUM"
 
                 gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-                  --field-id "$FIELD_OWNER" --single-select-option-id "$OPT_OWNER_CODEX" \
-                  && echo "::notice::Issue #$ISSUE_NUM Owner -> Codex" \
+                  --field-id "$FIELD_OWNER" --single-select-option-id "$REVIEW_OWNER_OPTION" \
+                  && echo "::notice::Issue #$ISSUE_NUM Owner -> $REVIEW_OWNER_DISPLAY" \
                   || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
 
                 if [ -n "$IMPL_OPTION" ]; then

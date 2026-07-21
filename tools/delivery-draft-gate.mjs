@@ -11,7 +11,7 @@
 
 /**
  * @typedef {"opened"|"synchronize"|"reopened"|"ready_for_review"} PrAction
- * @typedef {"codex"|"implementer"} OwnerRole
+ * @typedef {"codex"|"implementer"|"human"} OwnerRole
  * @typedef {"in-review"|"in-progress"} RouteStatus
  * @typedef {"claude"|"copilot"|"codex"|"robert"|null} OwnerOption
  */
@@ -28,10 +28,15 @@
  * @typedef {Object} Route
  * @property {RouteStatus}    status
  * @property {OwnerRole}      owner
- * @property {OwnerOption}    [ownerOption] // route-in-progress only: resolved Owner option, or
- *                                          // null when Implementer is empty/unrecognized — in
- *                                          // that case the caller MUST NOT write Owner=None and
- *                                          // must instead preserve the existing Owner value.
+ * @property {OwnerOption}    [ownerOption] // resolved Owner option to write on the linked issue.
+ *                                          // For route-in-progress: null when Implementer is
+ *                                          // empty/unrecognized — the caller MUST NOT write
+ *                                          // Owner=None and must instead preserve the existing
+ *                                          // Owner value.
+ *                                          // For route-in-review: "codex" by default, "robert"
+ *                                          // when the linked issue's Implementer is "Codex" (a
+ *                                          // Codex-implemented PR must not be reviewed by Codex,
+ *                                          // per AGENTS.md; route to a Human reviewer instead).
  */
 
 /**
@@ -80,12 +85,23 @@ export function route(input) {
   const status = i.currentStatus || "";
 
   // Only an explicit ready_for_review event, or an opened/synchronize/reopened event on a PR
-  // that is ALREADY ready (never a draft), may hand the linked issue to Codex review.
+  // that is ALREADY ready (never a draft), may hand the linked issue to review. Codex is the
+  // default reviewer, EXCEPT when the linked issue's Implementer is "Codex" — a Codex-authored
+  // PR must not be reviewed by Codex (AGENTS.md: "Codex must not review or merge a PR it
+  // implemented itself … Route a Codex-authored PR's review to Claude or a human"). In that
+  // case route the review handoff to Human (Robert) instead of Codex.
   if (i.action === "ready_for_review" || !i.isDraft) {
+    const codexImplemented = i.currentImplementer === "Codex";
     return decision(
       "route-in-review",
-      "PR is ready for review (or was already ready) — hand the linked issue to Codex",
-      { status: "in-review", owner: "codex" },
+      codexImplemented
+        ? "PR ready for review — Codex-implemented, hand to Human (Codex must not review its own PR)"
+        : "PR is ready for review (or was already ready) — hand the linked issue to Codex",
+      {
+        status: "in-review",
+        owner: codexImplemented ? "human" : "codex",
+        ownerOption: codexImplemented ? "robert" : "codex",
+      },
     );
   }
 
