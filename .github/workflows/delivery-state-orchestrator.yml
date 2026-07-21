@@ -233,9 +233,10 @@ jobs:
             CURRENT_IMPLEMENTER="$(echo "$FIELD_VALUES" | jq -r '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' 2>/dev/null || true)"
 
             DECISION_JSON="$(PR_ACTION="$PR_ACTION" PR_IS_DRAFT="$PR_IS_DRAFT" ISSUE_CURRENT_STATUS="$CURRENT_STATUS" \
-              node tools/delivery-draft-gate.mjs)"
+              ISSUE_CURRENT_IMPLEMENTER="$CURRENT_IMPLEMENTER" node tools/delivery-draft-gate.mjs)"
             DECISION_ACTION="$(echo "$DECISION_JSON" | jq -r '.action')"
             DECISION_REASON="$(echo "$DECISION_JSON" | jq -r '.reason')"
+            DECISION_OWNER_OPTION="$(echo "$DECISION_JSON" | jq -r '.route.ownerOption // empty')"
 
             case "$DECISION_ACTION" in
               route-in-review)
@@ -258,12 +259,18 @@ jobs:
                 ;;
 
               route-in-progress)
-                case "$CURRENT_IMPLEMENTER" in
-                  Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
-                  Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
-                  Codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
-                  Human)   OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
-                  *)       OWNER_OPTION="$OPT_OWNER_NONE" ;;
+                # DECISION_OWNER_OPTION is the role resolved by tools/delivery-draft-gate.mjs's
+                # mapImplementerToOwnerOption() from the linked issue's Implementer field — never
+                # computed independently here. It is empty when Implementer is empty/unrecognized,
+                # in which case the existing Owner is intentionally left untouched (never set to
+                # None, since an empty/unrecognized Implementer is not evidence of no owner).
+                OWNER_OPTION=""
+                case "$DECISION_OWNER_OPTION" in
+                  claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
+                  copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+                  codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
+                  robert)  OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
+                  *)       OWNER_OPTION="" ;;
                 esac
 
                 gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
@@ -271,10 +278,14 @@ jobs:
                   && echo "::notice::Issue #$ISSUE_NUM Status -> In progress ($DECISION_REASON)" \
                   || echo "::warning::Failed to set Status for issue #$ISSUE_NUM"
 
-                gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-                  --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
-                  && echo "::notice::Issue #$ISSUE_NUM Owner -> ${CURRENT_IMPLEMENTER:-None}" \
-                  || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+                if [ -n "$OWNER_OPTION" ]; then
+                  gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                    --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
+                    && echo "::notice::Issue #$ISSUE_NUM Owner -> $CURRENT_IMPLEMENTER" \
+                    || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+                else
+                  echo "::notice::Issue #$ISSUE_NUM Implementer=\"${CURRENT_IMPLEMENTER:-(unset)}\" is empty/unrecognized; preserving existing Owner"
+                fi
                 ;;
 
               *)

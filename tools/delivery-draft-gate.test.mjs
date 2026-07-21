@@ -11,21 +11,23 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { route } from "./delivery-draft-gate.mjs";
+import { route, mapImplementerToOwnerOption } from "./delivery-draft-gate.mjs";
 
 const GATE_PATH = fileURLToPath(new URL("./delivery-draft-gate.mjs", import.meta.url));
 
 // Invokes the gate exactly as `.github/workflows/delivery-state-orchestrator.yml`
 // (`pr-event-routing` job) does: as a subprocess reading PR_ACTION / PR_IS_DRAFT /
-// ISSUE_CURRENT_STATUS from the environment and parsing its stdout as JSON. This proves the CLI
-// contract the production workflow actually depends on, not just the exported `route()` function.
-function runGateCli({ action, isDraft, currentStatus }) {
+// ISSUE_CURRENT_STATUS / ISSUE_CURRENT_IMPLEMENTER from the environment and parsing its stdout as
+// JSON. This proves the CLI contract the production workflow actually depends on, not just the
+// exported `route()` function.
+function runGateCli({ action, isDraft, currentStatus, currentImplementer }) {
   const stdout = execFileSync(process.execPath, [GATE_PATH], {
     env: {
       ...process.env,
       PR_ACTION: action,
       PR_IS_DRAFT: String(isDraft),
       ISSUE_CURRENT_STATUS: currentStatus || "",
+      ISSUE_CURRENT_IMPLEMENTER: currentImplementer || "",
     },
     encoding: "utf8",
   });
@@ -35,9 +37,13 @@ function runGateCli({ action, isDraft, currentStatus }) {
 // --- The #854/#855 regression scenario, for each coding-agent implementer ---
 for (const implementer of ["Copilot", "Claude", "Codex"]) {
   test(`${implementer}: first draft PR on an Assigned issue moves it to In progress, not Codex review`, () => {
-    const d = route({ action: "opened", isDraft: true, currentStatus: "Assigned" });
+    const d = route({ action: "opened", isDraft: true, currentStatus: "Assigned", currentImplementer: implementer });
     assert.equal(d.action, "route-in-progress");
-    assert.deepEqual(d.route, { status: "in-progress", owner: "implementer" });
+    assert.deepEqual(d.route, {
+      status: "in-progress",
+      owner: "implementer",
+      ownerOption: mapImplementerToOwnerOption(implementer),
+    });
   });
 
   test(`${implementer}: a further draft push (synchronize) does not move the issue to Codex review`, () => {
@@ -100,10 +106,16 @@ test("a non-draft opened/synchronize/reopened event still routes to In review / 
 });
 
 // --- CLI conformance: the actual invocation contract the production workflow relies on ---
-test("CLI: draft opened on Assigned -> route-in-progress JSON", () => {
-  const d = runGateCli({ action: "opened", isDraft: true, currentStatus: "Assigned" });
+test("CLI: draft opened on Assigned with recognized Implementer -> route-in-progress JSON with mapped ownerOption", () => {
+  const d = runGateCli({ action: "opened", isDraft: true, currentStatus: "Assigned", currentImplementer: "Copilot" });
   assert.equal(d.action, "route-in-progress");
-  assert.deepEqual(d.route, { status: "in-progress", owner: "implementer" });
+  assert.deepEqual(d.route, { status: "in-progress", owner: "implementer", ownerOption: "copilot" });
+});
+
+test("CLI: draft opened on Assigned with empty/unrecognized Implementer -> ownerOption null (preserve existing Owner)", () => {
+  const d = runGateCli({ action: "opened", isDraft: true, currentStatus: "Assigned", currentImplementer: "" });
+  assert.equal(d.action, "route-in-progress");
+  assert.deepEqual(d.route, { status: "in-progress", owner: "implementer", ownerOption: null });
 });
 
 test("CLI: draft synchronize on Needs changes -> preserve JSON", () => {
@@ -123,3 +135,23 @@ test("CLI: non-draft opened -> route-in-review JSON", () => {
   assert.equal(d.action, "route-in-review");
   assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
 });
+
+// --- Owner-preservation fallback: an empty/unrecognized Implementer must never become Owner=None ---
+test("mapImplementerToOwnerOption maps each recognized Implementer to its Owner option role", () => {
+  assert.equal(mapImplementerToOwnerOption("Claude"), "claude");
+  assert.equal(mapImplementerToOwnerOption("Copilot"), "copilot");
+  assert.equal(mapImplementerToOwnerOption("Codex"), "codex");
+  assert.equal(mapImplementerToOwnerOption("Human"), "robert");
+});
+
+for (const currentImplementer of [undefined, "", "Robert", "SomeUnknownValue"]) {
+  test(`mapImplementerToOwnerOption(${JSON.stringify(currentImplementer)}) returns null so Owner is preserved, not set to None`, () => {
+    assert.equal(mapImplementerToOwnerOption(currentImplementer), null);
+  });
+
+  test(`route(): draft on Assigned with Implementer=${JSON.stringify(currentImplementer)} yields ownerOption null (preserve Owner)`, () => {
+    const d = route({ action: "opened", isDraft: true, currentStatus: "Assigned", currentImplementer });
+    assert.equal(d.action, "route-in-progress");
+    assert.equal(d.route.ownerOption, null);
+  });
+}

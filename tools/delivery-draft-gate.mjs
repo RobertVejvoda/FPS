@@ -13,19 +13,25 @@
  * @typedef {"opened"|"synchronize"|"reopened"|"ready_for_review"} PrAction
  * @typedef {"codex"|"implementer"} OwnerRole
  * @typedef {"in-review"|"in-progress"} RouteStatus
+ * @typedef {"claude"|"copilot"|"codex"|"robert"|null} OwnerOption
  */
 
 /**
  * @typedef {Object} Input
  * @property {PrAction} action
- * @property {boolean}  isDraft         // PR draft state as of this event
- * @property {string}   [currentStatus] // linked issue's current Status field value, if any
+ * @property {boolean}  isDraft             // PR draft state as of this event
+ * @property {string}   [currentStatus]     // linked issue's current Status field value, if any
+ * @property {string}   [currentImplementer] // linked issue's current Implementer field value, if any
  */
 
 /**
  * @typedef {Object} Route
- * @property {RouteStatus} status
- * @property {OwnerRole}   owner
+ * @property {RouteStatus}    status
+ * @property {OwnerRole}      owner
+ * @property {OwnerOption}    [ownerOption] // route-in-progress only: resolved Owner option, or
+ *                                          // null when Implementer is empty/unrecognized — in
+ *                                          // that case the caller MUST NOT write Owner=None and
+ *                                          // must instead preserve the existing Owner value.
  */
 
 /**
@@ -38,6 +44,29 @@
 /** @param {string} action, {string} reason, {Route|null} [route] @returns {Decision} */
 function decision(action, reason, route = null) {
   return { action, reason, route };
+}
+
+/**
+ * Map a linked issue's Implementer field value to the Owner option that should be written when a
+ * draft nudges the issue from Assigned to In progress. Returns null for an empty/unrecognized
+ * Implementer so the caller preserves the existing Owner instead of overwriting it with None —
+ * an empty/unrecognized Implementer is not evidence the issue has no owner.
+ * @param {string} [currentImplementer]
+ * @returns {OwnerOption}
+ */
+export function mapImplementerToOwnerOption(currentImplementer) {
+  switch (currentImplementer) {
+    case "Claude":
+      return "claude";
+    case "Copilot":
+      return "copilot";
+    case "Codex":
+      return "codex";
+    case "Human":
+      return "robert";
+    default:
+      return null;
+  }
 }
 
 /**
@@ -68,7 +97,11 @@ export function route(input) {
     return decision(
       "route-in-progress",
       "first draft on an Assigned slice — move to In progress under the existing Implementer",
-      { status: "in-progress", owner: "implementer" },
+      {
+        status: "in-progress",
+        owner: "implementer",
+        ownerOption: mapImplementerToOwnerOption(i.currentImplementer),
+      },
     );
   }
 
@@ -83,8 +116,8 @@ export function route(input) {
 //
 // `.github/workflows/delivery-state-orchestrator.yml` (`pr-event-routing` job) invokes this file
 // directly as the single source of truth for the routing decision, instead of duplicating the
-// branching in inline bash/YAML. Reads PR_ACTION / PR_IS_DRAFT / ISSUE_CURRENT_STATUS from the
-// environment and writes the Decision as JSON to stdout.
+// branching in inline bash/YAML. Reads PR_ACTION / PR_IS_DRAFT / ISSUE_CURRENT_STATUS /
+// ISSUE_CURRENT_IMPLEMENTER from the environment and writes the Decision as JSON to stdout.
 function isMainModule() {
   return process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
 }
@@ -94,6 +127,7 @@ if (isMainModule()) {
     action: process.env.PR_ACTION,
     isDraft: process.env.PR_IS_DRAFT === "true",
     currentStatus: process.env.ISSUE_CURRENT_STATUS || "",
+    currentImplementer: process.env.ISSUE_CURRENT_IMPLEMENTER || "",
   });
   process.stdout.write(JSON.stringify(result));
 }

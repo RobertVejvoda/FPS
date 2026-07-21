@@ -201,7 +201,8 @@ Use GitHub Project built-in auto-add workflows to add FPS repository issues to t
 | Event | State-machine update |
 | --- | --- |
 | Issue opened | `Status = Backlog`, `Owner = Codex` if Status is not already set. |
-| PR opened, synchronized, or reopened | Linked closing issues: `Status = In review`, `Owner = Codex`; `Implementer` set from `implemented-by: claude` or `implemented-by: copilot` attribution labels when present. |
+| PR opened, synchronized, or reopened, non-draft (or `ready_for_review`) | Linked closing issues: `Status = In review`, `Owner = Codex`; `Implementer` set from `implemented-by: claude` or `implemented-by: copilot` attribution labels when present. |
+| PR opened, synchronized, or reopened while still a draft | Linked closing issues: never routed to Codex review. If `Status = Assigned`, advances to `Status = In progress` with `Owner` set from the existing `Implementer` (preserved, not overwritten to `None`, when `Implementer` is empty/unrecognized); any other `Status` (`Needs changes`, `Blocked`, a capped hold, `Done`, `In review`, ...) is left untouched (AUT-007, `tools/delivery-draft-gate.mjs`). |
 | PR review submits `CHANGES_REQUESTED` | Linked closing issues: `Status = Needs changes`, `Owner = current Implementer`. |
 | Repository owner comments `/fps-state needs-changes [owner]` on PR | Linked closing issues: `Status = Needs changes`, `Owner = explicit owner or current Implementer`. Use this path when a formal CHANGES_REQUESTED review cannot be submitted (same-account limitation). |
 | Repository owner comments `/fps-state in-review` on PR | Linked closing issues: `Status = In review`, `Owner = Codex`. |
