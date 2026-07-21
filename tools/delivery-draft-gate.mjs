@@ -1,10 +1,9 @@
 // Draft-PR routing gate for the transitional delivery-state orchestrator (AUT-007).
 //
-// A REPOSITORY-NEUTRAL, pure decision function documenting exactly which of the
-// `.github/workflows/delivery-state-orchestrator.yml` PR-event jobs (`pr-in-review` /
-// `pr-draft-open-in-progress`) should act on a given `pull_request_target` event, and what it
-// should do to the linked issue's Status/Owner. It exists to give the routing table used by that
-// workflow's inline bash a single, unit-testable source of truth, without pulling the whole
+// A REPOSITORY-NEUTRAL, pure decision function documenting exactly what the single
+// `.github/workflows/delivery-state-orchestrator.yml` `pr-event-routing` job should do to a
+// linked issue's Status/Owner for a given `pull_request_target` event. It exists to give the
+// routing table used by that workflow's inline bash a single, unit-testable source of truth, without pulling the whole
 // orchestrator into the broader AUT-005 shared-engine effort (which remains blocked/out of
 // scope). Same contract style as tools/agent-loop-reducer.mjs: `route(input) -> Decision` is a
 // pure function over plain data.
