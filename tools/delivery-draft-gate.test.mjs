@@ -9,7 +9,28 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { route } from "./delivery-draft-gate.mjs";
+
+const GATE_PATH = fileURLToPath(new URL("./delivery-draft-gate.mjs", import.meta.url));
+
+// Invokes the gate exactly as `.github/workflows/delivery-state-orchestrator.yml`
+// (`pr-event-routing` job) does: as a subprocess reading PR_ACTION / PR_IS_DRAFT /
+// ISSUE_CURRENT_STATUS from the environment and parsing its stdout as JSON. This proves the CLI
+// contract the production workflow actually depends on, not just the exported `route()` function.
+function runGateCli({ action, isDraft, currentStatus }) {
+  const stdout = execFileSync(process.execPath, [GATE_PATH], {
+    env: {
+      ...process.env,
+      PR_ACTION: action,
+      PR_IS_DRAFT: String(isDraft),
+      ISSUE_CURRENT_STATUS: currentStatus || "",
+    },
+    encoding: "utf8",
+  });
+  return JSON.parse(stdout);
+}
 
 // --- The #854/#855 regression scenario, for each coding-agent implementer ---
 for (const implementer of ["Copilot", "Claude", "Codex"]) {
@@ -76,4 +97,29 @@ test("a non-draft opened/synchronize/reopened event still routes to In review / 
     assert.equal(d.action, "route-in-review");
     assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
   }
+});
+
+// --- CLI conformance: the actual invocation contract the production workflow relies on ---
+test("CLI: draft opened on Assigned -> route-in-progress JSON", () => {
+  const d = runGateCli({ action: "opened", isDraft: true, currentStatus: "Assigned" });
+  assert.equal(d.action, "route-in-progress");
+  assert.deepEqual(d.route, { status: "in-progress", owner: "implementer" });
+});
+
+test("CLI: draft synchronize on Needs changes -> preserve JSON", () => {
+  const d = runGateCli({ action: "synchronize", isDraft: true, currentStatus: "Needs changes" });
+  assert.equal(d.action, "preserve");
+  assert.equal(d.route, null);
+});
+
+test("CLI: ready_for_review -> route-in-review JSON regardless of prior status", () => {
+  const d = runGateCli({ action: "ready_for_review", isDraft: false, currentStatus: "Blocked" });
+  assert.equal(d.action, "route-in-review");
+  assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
+});
+
+test("CLI: non-draft opened -> route-in-review JSON", () => {
+  const d = runGateCli({ action: "opened", isDraft: false, currentStatus: "Assigned" });
+  assert.equal(d.action, "route-in-review");
+  assert.deepEqual(d.route, { status: "in-review", owner: "codex" });
 });

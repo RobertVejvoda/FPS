@@ -117,15 +117,17 @@ Common option IDs:
 | Status | `In review` | `4cc61d42` |
 | Status | `Needs changes` | `57f4a681` |
 | Status | `Done` | `98236657` |
+| Status | `In progress` | `47fc9ee4` |
 | Owner | `Codex` | `7694f322` |
 | Owner | `Claude` | `765bf827` |
 | Owner | `None` | `a0ebe14c` |
 | Implementer | `Claude` | `907ea51b` |
 
-`Status = In progress` has no catalogued option ID yet. The `pr-draft-open-in-progress` job
-(AUT-007) reads it from the `FPS_STATUS_IN_PROGRESS_OPTION_ID` repository variable; until that
-variable is set, a draft PR on an `Assigned` slice reaffirms `Owner` only and leaves
-`Status = Assigned` unchanged rather than guessing an option ID.
+The `pr-event-routing` job (AUT-007) uses `tools/delivery-draft-gate.mjs` as the single routing
+decision for both the ready-for-review Codex handoff and the draft `Assigned` → `In progress`
+nudge, invoking it as a CLI (`PR_ACTION`/`PR_IS_DRAFT`/`ISSUE_CURRENT_STATUS` env vars, JSON on
+stdout); `tools/delivery-draft-gate.test.mjs` exercises that exact CLI contract in addition to the
+exported `route()` function.
 
 Find a Project item ID for an issue:
 

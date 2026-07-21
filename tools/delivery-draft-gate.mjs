@@ -78,3 +78,22 @@ export function route(input) {
     null,
   );
 }
+
+// --- CLI entry point ---
+//
+// `.github/workflows/delivery-state-orchestrator.yml` (`pr-event-routing` job) invokes this file
+// directly as the single source of truth for the routing decision, instead of duplicating the
+// branching in inline bash/YAML. Reads PR_ACTION / PR_IS_DRAFT / ISSUE_CURRENT_STATUS from the
+// environment and writes the Decision as JSON to stdout.
+function isMainModule() {
+  return process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+}
+
+if (isMainModule()) {
+  const result = route({
+    action: process.env.PR_ACTION,
+    isDraft: process.env.PR_IS_DRAFT === "true",
+    currentStatus: process.env.ISSUE_CURRENT_STATUS || "",
+  });
+  process.stdout.write(JSON.stringify(result));
+}
