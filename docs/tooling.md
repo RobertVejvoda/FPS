@@ -122,6 +122,11 @@ Common option IDs:
 | Owner | `None` | `a0ebe14c` |
 | Implementer | `Claude` | `907ea51b` |
 
+`Status = In progress` has no catalogued option ID yet. The `pr-draft-open-in-progress` job
+(AUT-007) reads it from the `FPS_STATUS_IN_PROGRESS_OPTION_ID` repository variable; until that
+variable is set, a draft PR on an `Assigned` slice reaffirms `Owner` only and leaves
+`Status = Assigned` unchanged rather than guessing an option ID.
+
 Find a Project item ID for an issue:
 
 ```sh
