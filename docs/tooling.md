@@ -57,7 +57,7 @@ When a formal PR review cannot be submitted (for example, because the reviewer a
 | Command | Status | Owner |
 | --- | --- | --- |
 | `/fps-state needs-changes [Claude\|Copilot\|Codex\|Robert]` | `Needs changes` | Explicit owner, or current `Implementer` field if omitted |
-| `/fps-state in-review` | `In review` | `Codex` |
+| `/fps-state in-review` | `In review` | `Codex` by default; overridden to `Robert` per linked issue when that issue's `Implementer = Codex` (reviewer-independence). Draft-gated: no board mutation when the PR is still a draft — mark the completed draft ready for review first. |
 | `/fps-state done` | `Done` | `None` |
 | `/fps-state blocked [Robert\|Codex]` | `Blocked` | `Robert` if omitted |
 
@@ -88,13 +88,14 @@ When an implementer needs to hand work to another actor, post `/fps-route <comma
 
 | Command | Status | Owner | Implementer |
 | --- | --- | --- | --- |
-| `/fps-route codex-review` | `In review` | `Codex` | unchanged |
+| `/fps-route codex-review` | `In review` | `Codex` by default; overridden to `Robert` per target issue when that issue's `Implementer = Codex` (reviewer-independence). Draft-gated on PR targets: no board mutation and no Codex review handoff when the PR is still a draft — mark the completed draft ready for review first. Issue (non-PR) targets are unaffected by the draft gate. | unchanged |
 | `/fps-route claude-fix` | `Needs changes` | `Claude` | `Claude` |
 | `/fps-route copilot-fix` | `Needs changes` | `Copilot` | `Copilot` |
 | `/fps-route claude-question` | `Blocked` | `Codex` | `Claude` |
 | `/fps-route robert-decision` | `Blocked` | `Robert` | unchanged |
 | `/fps-route assign Claude` | `Assigned` | `Claude` | `Claude` |
 | `/fps-route assign Copilot` | `Assigned` | `Copilot` | `Copilot` |
+| `/fps-route assign Codex` | `Assigned` | `Codex` | `Codex` |
 | `/fps-route blocked [Robert\|Codex\|Claude\|Copilot]` | `Blocked` | explicit owner, or `Robert` if omitted | unchanged |
 
 Restrictions: `/fps-route` is accepted from trusted repository collaborators and known agent bots whose login identifies them as Copilot or Claude. It is for normal handoff only. Repository-owner `/fps-state` remains the authoritative override for correcting bad state.
@@ -117,10 +118,20 @@ Common option IDs:
 | Status | `In review` | `4cc61d42` |
 | Status | `Needs changes` | `57f4a681` |
 | Status | `Done` | `98236657` |
+| Status | `In progress` | `47fc9ee4` |
 | Owner | `Codex` | `7694f322` |
 | Owner | `Claude` | `765bf827` |
 | Owner | `None` | `a0ebe14c` |
 | Implementer | `Claude` | `907ea51b` |
+| Implementer | `Copilot` | `b9bfc717` |
+| Implementer | `Codex` | `533f5ac2` |
+| Implementer | `None` | `571cc0a4` |
+
+The `pr-event-routing` job (AUT-007) uses `tools/delivery-draft-gate.mjs` as the single routing
+decision for both the ready-for-review Codex handoff and the draft `Assigned` → `In progress`
+nudge, invoking it as a CLI (`PR_ACTION`/`PR_IS_DRAFT`/`ISSUE_CURRENT_STATUS` env vars, JSON on
+stdout); `tools/delivery-draft-gate.test.mjs` exercises that exact CLI contract in addition to the
+exported `route()` function.
 
 Find a Project item ID for an issue:
 
