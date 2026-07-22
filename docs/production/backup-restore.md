@@ -24,7 +24,7 @@ locations, credentials, and the recorded drill **evidence** stay in the private
 | Script | Purpose |
 | --- | --- |
 | `tools/backup-stack.sh` | Backs up every durable store in one command — MongoDB (`mongodump`), Postgres/DataHub and Keycloak Postgres (`pg_dump`), MinIO (volume tar), and Vault (native `raft snapshot`). Writes a timestamped directory with a `SHA256SUMS` integrity file and `manifest.json`, and prunes runs beyond `--retention`. Credentials are read from each container's own environment (or, for the Vault token, a single key parsed from `--env-file`) — none touch the host or the repo. `--quiesce` stops the writers (app services + Keycloak) around the dumps for a consistent snapshot. |
-| `tools/restore-drill.sh` | Verifies a backup's checksums, tears the stack down **with its volumes**, restores the **data / object / identity** stores (Mongo, Postgres, Keycloak Postgres, MinIO), brings the stack back up, runs the hosted smoke, and asserts data actually returned. Vault secret-store restore is a **declared manual step** (below), not automated. Destructive: requires `--yes`, targets the local stack by default, and refuses each hosted profile without its **own** force flag (`--nas`→`--force-nas`, `--digitalocean`→`--force-digitalocean`; a DigitalOcean restore never falls through to NAS/local). |
+| `tools/restore-drill.sh` | Verifies a backup's checksums, tears the stack down **with its volumes**, restores the **data / object / identity** stores (Mongo, Postgres, Keycloak Postgres, MinIO), and asserts data actually returned. Vault secret-store restore is a **declared manual step** (below), not automated. The DigitalOcean path therefore exits after the store assertions with full-stack smoke explicitly deferred: the operator must complete Vault DR, start the stack, and run hosted smoke manually. Destructive: requires `--yes`, targets the local stack by default, and refuses each hosted profile without its **own** force flag (`--nas`→`--force-nas`, `--digitalocean`→`--force-digitalocean`; a DigitalOcean restore never falls through to NAS/local). |
 
 Output goes to a git-ignored `./backups/` directory. Vault artifacts are
 **sensitive** (they contain encrypted secret material) and must be handled as
@@ -67,6 +67,11 @@ Hosted profiles take a profile flag — `--nas`, or `--digitalocean` for the
 ./tools/backup-stack.sh --digitalocean
 ./tools/restore-drill.sh --from ./backups/<stamp> --digitalocean --force-digitalocean --yes
 ```
+
+For DigitalOcean, success from the second command covers the restored-store
+assertions, not the full-stack smoke. Complete the printed manual Vault DR,
+start the DigitalOcean stack, and run the hosted smoke manually; do not rerun
+the destructive drill after Vault recovery.
 
 ## Public References
 

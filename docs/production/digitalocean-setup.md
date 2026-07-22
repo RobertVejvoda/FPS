@@ -180,13 +180,18 @@ encrypted off-box copies, and storage locations are private-operator concerns
 ./tools/restore-drill.sh --from <backup-dir> --digitalocean --force-digitalocean --yes
 ```
 
-**DESTRUCTIVE.** It wipes the stack + volumes and rebuilds from the backup, then
-asserts data actually returned and runs the smoke. The DigitalOcean profile
+**DESTRUCTIVE.** It wipes the stack + volumes, rebuilds the data/object/identity
+stores from the backup, and asserts that data returned. The DigitalOcean profile
 requires its **own** force flag — `--force-digitalocean` — and never falls
-through to `--nas` or local behavior; `--yes` is also required. Vault secret-
-store restore is a **human-supervised manual DR step** (init/unseal/snapshot-
-restore/re-unseal), not run by the drill — the drill prints the exact steps.
-Record every drill in the private runbook (companion #38).
+through to `--nas` or local behavior; `--yes` is also required.
+
+The command deliberately **defers the full-stack smoke** at the Vault boundary:
+after the volume wipe, server-mode Vault is sealed/uninitialized. Complete the
+human-supervised Vault DR steps printed by the drill (init/unseal/snapshot
+restore/re-unseal), start the stack, and run the hosted smoke manually. Do not
+rerun the destructive restore drill after recovering Vault. Record both the
+data assertions and the subsequent manual smoke in the private runbook
+(companion #38).
 
 ## 9. Troubleshooting
 
