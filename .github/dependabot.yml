@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # GitHub Actions used by our workflows — supply-chain hygiene (keeps
+  # actions/checkout, actions/create-github-app-token, etc. current & pinnable).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # .NET server solution
+  - package-ecosystem: "nuget"
+    directory: "/code/server"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      nuget:
+        patterns: ["*"]
+
+  # Web app
+  - package-ecosystem: "npm"
+    directory: "/code/web/fps-web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      web:
+        patterns: ["*"]
+
+  # Mobile app
+  - package-ecosystem: "npm"
+    directory: "/code/mobile/fps-mobile"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      mobile:
+        patterns: ["*"]

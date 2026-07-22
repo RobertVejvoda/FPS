@@ -54,6 +54,7 @@ env:
   OPT_STATUS_NEEDS_CHANGES: 57f4a681
   OPT_STATUS_DONE: 98236657
   OPT_STATUS_BLOCKED: 12d8c996
+  OPT_STATUS_IN_PROGRESS: 47fc9ee4
   OPT_OWNER_CODEX: 7694f322
   OPT_OWNER_CLAUDE: 765bf827
   OPT_OWNER_COPILOT: 412d3a0c
@@ -61,6 +62,7 @@ env:
   OPT_OWNER_NONE: a0ebe14c
   OPT_IMPL_CLAUDE: 907ea51b
   OPT_IMPL_COPILOT: b9bfc717
+  OPT_IMPL_CODEX: 533f5ac2
   OPT_IMPL_NONE: 571cc0a4
 
 jobs:
@@ -152,15 +154,26 @@ jobs:
             && echo "::notice::Issue Owner -> None" \
             || echo "::warning::Failed to set Owner=None"
 
-  pr-in-review:
-    name: PR open/push — linked issues In review / Codex
+  pr-event-routing:
+    name: PR event routing — In review/Codex or draft In progress/Implementer
     runs-on: ubuntu-latest
+    # Covers both the ready-for-review handoff and the draft WIP nudge in one job so both share a
+    # single routing decision: `tools/delivery-draft-gate.mjs` (AUT-007). That module — not this
+    # YAML — is the source of truth for whether an event hands the linked issue to Codex review,
+    # nudges an Assigned slice to In progress, or leaves the board untouched; its unit/CLI tests
+    # (tools/delivery-draft-gate.test.mjs) exercise the exact CLI contract invoked below, so a
+    # workflow regression in that decision cannot pass the test suite silently.
     if: >
       github.event_name == 'pull_request_target' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(fromJson('["opened","synchronize","reopened"]'), github.event.action)
+      contains(fromJson('["opened","synchronize","reopened","ready_for_review"]'), github.event.action)
     steps:
-      - name: Move linked issues to In review and set Implementer from attribution
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/delivery-draft-gate.mjs
+          sparse-checkout-cone-mode: false
+      - name: Route via delivery-draft-gate and update linked issues
         continue-on-error: true
         env:
           BOARD_PAT: ${{ secrets.PROJECT_SYNC_TOKEN }}
@@ -168,6 +181,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           set -euo pipefail
           if [ -n "${BOARD_PAT:-}" ]; then
@@ -210,22 +225,86 @@ jobs:
               continue
             fi
 
-            gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-              --field-id "$FIELD_STATUS" --single-select-option-id "$OPT_STATUS_IN_REVIEW" \
-              && echo "::notice::Issue #$ISSUE_NUM Status -> In review" \
-              || echo "::warning::Failed to set Status for issue #$ISSUE_NUM"
+            FIELD_VALUES="$(gh api graphql \
+              -f query='query($id:ID!){node(id:$id){...on ProjectV2Item{fieldValues(first:20){nodes{...on ProjectV2ItemFieldSingleSelectValue{name,field{...on ProjectV2SingleSelectField{name}}}}}}}}' \
+              -f id="$ITEM_ID" \
+              2>/dev/null || true)"
 
-            gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-              --field-id "$FIELD_OWNER" --single-select-option-id "$OPT_OWNER_CODEX" \
-              && echo "::notice::Issue #$ISSUE_NUM Owner -> Codex" \
-              || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+            CURRENT_STATUS="$(echo "$FIELD_VALUES" | jq -r '.data.node.fieldValues.nodes[] | select(.field.name == "Status") | .name // empty' 2>/dev/null || true)"
+            CURRENT_IMPLEMENTER="$(echo "$FIELD_VALUES" | jq -r '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' 2>/dev/null || true)"
 
-            if [ -n "$IMPL_OPTION" ]; then
-              gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-                --field-id "$FIELD_IMPLEMENTER" --single-select-option-id "$IMPL_OPTION" \
-                && echo "::notice::Issue #$ISSUE_NUM Implementer -> $IMPL_NAME" \
-                || echo "::warning::Failed to set Implementer for issue #$ISSUE_NUM"
-            fi
+            DECISION_JSON="$(PR_ACTION="$PR_ACTION" PR_IS_DRAFT="$PR_IS_DRAFT" ISSUE_CURRENT_STATUS="$CURRENT_STATUS" \
+              ISSUE_CURRENT_IMPLEMENTER="$CURRENT_IMPLEMENTER" node tools/delivery-draft-gate.mjs)"
+            DECISION_ACTION="$(echo "$DECISION_JSON" | jq -r '.action')"
+            DECISION_REASON="$(echo "$DECISION_JSON" | jq -r '.reason')"
+            DECISION_OWNER_OPTION="$(echo "$DECISION_JSON" | jq -r '.route.ownerOption // empty')"
+
+            case "$DECISION_ACTION" in
+              route-in-review)
+                # DECISION_OWNER_OPTION is the review-owner resolved by tools/delivery-draft-gate.mjs:
+                # "codex" by default, "robert" when the linked issue's Implementer is "Codex"
+                # (per AGENTS.md, Codex must not review a PR it implemented itself — hand a
+                # Codex-authored PR to a Human reviewer instead).
+                REVIEW_OWNER_OPTION=""
+                REVIEW_OWNER_DISPLAY="Codex"
+                case "$DECISION_OWNER_OPTION" in
+                  codex)   REVIEW_OWNER_OPTION="$OPT_OWNER_CODEX";  REVIEW_OWNER_DISPLAY="Codex" ;;
+                  robert)  REVIEW_OWNER_OPTION="$OPT_OWNER_ROBERT"; REVIEW_OWNER_DISPLAY="Robert" ;;
+                  *)       REVIEW_OWNER_OPTION="$OPT_OWNER_CODEX";  REVIEW_OWNER_DISPLAY="Codex" ;;
+                esac
+
+                gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                  --field-id "$FIELD_STATUS" --single-select-option-id "$OPT_STATUS_IN_REVIEW" \
+                  && echo "::notice::Issue #$ISSUE_NUM Status -> In review ($DECISION_REASON)" \
+                  || echo "::warning::Failed to set Status for issue #$ISSUE_NUM"
+
+                gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                  --field-id "$FIELD_OWNER" --single-select-option-id "$REVIEW_OWNER_OPTION" \
+                  && echo "::notice::Issue #$ISSUE_NUM Owner -> $REVIEW_OWNER_DISPLAY" \
+                  || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+
+                if [ -n "$IMPL_OPTION" ]; then
+                  gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                    --field-id "$FIELD_IMPLEMENTER" --single-select-option-id "$IMPL_OPTION" \
+                    && echo "::notice::Issue #$ISSUE_NUM Implementer -> $IMPL_NAME" \
+                    || echo "::warning::Failed to set Implementer for issue #$ISSUE_NUM"
+                fi
+                ;;
+
+              route-in-progress)
+                # DECISION_OWNER_OPTION is the role resolved by tools/delivery-draft-gate.mjs's
+                # mapImplementerToOwnerOption() from the linked issue's Implementer field — never
+                # computed independently here. It is empty when Implementer is empty/unrecognized,
+                # in which case the existing Owner is intentionally left untouched (never set to
+                # None, since an empty/unrecognized Implementer is not evidence of no owner).
+                OWNER_OPTION=""
+                case "$DECISION_OWNER_OPTION" in
+                  claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
+                  copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+                  codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
+                  robert)  OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
+                  *)       OWNER_OPTION="" ;;
+                esac
+
+                gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                  --field-id "$FIELD_STATUS" --single-select-option-id "$OPT_STATUS_IN_PROGRESS" \
+                  && echo "::notice::Issue #$ISSUE_NUM Status -> In progress ($DECISION_REASON)" \
+                  || echo "::warning::Failed to set Status for issue #$ISSUE_NUM"
+
+                if [ -n "$OWNER_OPTION" ]; then
+                  gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
+                    --field-id "$FIELD_OWNER" --single-select-option-id "$OWNER_OPTION" \
+                    && echo "::notice::Issue #$ISSUE_NUM Owner -> $CURRENT_IMPLEMENTER" \
+                    || echo "::warning::Failed to set Owner for issue #$ISSUE_NUM"
+                else
+                  echo "::notice::Issue #$ISSUE_NUM Implementer=\"${CURRENT_IMPLEMENTER:-(unset)}\" is empty/unrecognized; preserving existing Owner"
+                fi
+                ;;
+
+              *)
+                echo "::notice::Issue #$ISSUE_NUM: $DECISION_REASON"
+                ;;
+            esac
           done
 
   pr-merged-done:
@@ -343,6 +422,7 @@ jobs:
             case "$IMPLEMENTER_NAME" in
               Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
               Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+              Codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
               Human)   OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
               *)       OWNER_OPTION="$OPT_OWNER_NONE" ;;
             esac
@@ -367,10 +447,13 @@ jobs:
   pr-converted-to-draft:
     name: PR converted to draft — Needs changes / Owner=Implementer
     runs-on: ubuntu-latest
+    # A capped autonomous loop drafts the PR itself and owns the terminal Blocked/Owner=Robert
+    # route (it adds autofix-capped before drafting) — do NOT overwrite it with Needs changes.
     if: >
       github.event_name == 'pull_request_target' &&
       github.event.action == 'converted_to_draft' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, 'autofix-capped')
     steps:
       - name: Set linked issues Status=Needs changes Owner=Implementer
         continue-on-error: true
@@ -420,6 +503,7 @@ jobs:
             case "$IMPLEMENTER_NAME" in
               Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
               Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+              Codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
               Human)   OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
               *)       OWNER_OPTION="$OPT_OWNER_NONE" ;;
             esac
@@ -508,6 +592,37 @@ jobs:
           REPO_OWNER_NAME="${GH_REPO%%/*}"
           REPO_NAME="${GH_REPO##*/}"
 
+          # Draft-PR guard for /fps-state in-review (AUT-007): a manual review handoff must not
+          # mutate linked-issue Status/Owner while the PR is still a draft. Codex intentionally
+          # skips draft PRs, so an In-review handoff while draft would produce a false review
+          # state. Emit a clear notice pointing the implementer at "mark ready for review" and
+          # exit before any board writes. Other /fps-state commands (needs-changes, done,
+          # blocked) are unaffected.
+          if [ "$COMMAND" = "in-review" ]; then
+            PR_IS_DRAFT_STATE="$(gh api graphql \
+              -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){isDraft}}}' \
+              -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
+              --jq '.data.repository.pullRequest.isDraft' \
+              2>/dev/null || true)"
+            # Fail-closed guard (AUT-007): only an explicit "false" may fall through to
+            # non-draft routing. "true" preserves state with the mark-ready notice. Any
+            # empty/null/unexpected/error value also preserves state and warns, so an
+            # API/permission/parse error cannot silently produce a false review handoff.
+            case "$PR_IS_DRAFT_STATE" in
+              true)
+                echo "::notice::PR #$PR_NUMBER is still a draft; /fps-state in-review does not route review while draft — mark the PR ready for review first"
+                exit 0
+                ;;
+              false)
+                :
+                ;;
+              *)
+                echo "::warning::Could not verify draft state for PR #$PR_NUMBER (isDraft='$PR_IS_DRAFT_STATE'); /fps-state in-review preserving board state — retry after confirming the PR is marked ready for review"
+                exit 0
+                ;;
+            esac
+          fi
+
           LINKED_ISSUES="$(gh api graphql \
             -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){closingIssuesReferences(first:10){nodes{number}}}}}' \
             -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
@@ -550,9 +665,30 @@ jobs:
               case "$IMPLEMENTER_NAME" in
                 Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE";  OWNER_DISPLAY="Claude" ;;
                 Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT"; OWNER_DISPLAY="Copilot" ;;
+                Codex)   OWNER_OPTION="$OPT_OWNER_CODEX";   OWNER_DISPLAY="Codex" ;;
                 Human)   OWNER_OPTION="$OPT_OWNER_ROBERT";  OWNER_DISPLAY="Robert" ;;
                 *)       OWNER_OPTION="$OPT_OWNER_NONE";    OWNER_DISPLAY="None" ;;
               esac
+            fi
+
+            # Reviewer-independence exception (AGENTS.md, AUT-007):
+            # /fps-state in-review must not route review back to the same actor that implemented
+            # the PR. The default `in-review` owner is Codex (set above); when the linked issue
+            # records Implementer=Codex, override to Robert so Codex never reviews its own
+            # implementation. An explicit non-Codex reviewer (Robert/Human/Claude/Copilot/None)
+            # is preserved as-is. Implementer is resolved per-linked-issue inside this loop, so
+            # a multi-issue PR cannot leak the first issue's result into later iterations.
+            if [ "$COMMAND" = "in-review" ] && [ "$OWNER_DISPLAY" = "Codex" ]; then
+              IMPLEMENTER_NAME_REVIEW="$(gh api graphql \
+                -f query='query($id:ID!){node(id:$id){...on ProjectV2Item{fieldValues(first:20){nodes{...on ProjectV2ItemFieldSingleSelectValue{name,field{...on ProjectV2SingleSelectField{name}}}}}}}}' \
+                -f id="$ITEM_ID" \
+                --jq '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' \
+                2>/dev/null || true)"
+              if [ "$IMPLEMENTER_NAME_REVIEW" = "Codex" ]; then
+                OWNER_OPTION="$OPT_OWNER_ROBERT"
+                OWNER_DISPLAY="Robert"
+                echo "::notice::Issue #$ISSUE_NUM Implementer=Codex; overriding in-review Owner to Robert (reviewer-independence)"
+              fi
             fi
 
             gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
@@ -642,6 +778,10 @@ jobs:
           IMPL_OPTION=""
           IMPL_DISPLAY=""
           CLAUDE_INVOCATION_REQUIRED="false"
+          # When true, per-target-issue Owner resolution is deferred into the target loop below
+          # so the reviewer-independence exception (Implementer=Codex -> Owner=Robert) can be
+          # applied per linked issue without leaking one issue's result into the next.
+          CODEX_REVIEW_ROUTE="false"
 
           set_owner() {
             case "$1" in
@@ -661,9 +801,10 @@ jobs:
             case "$1" in
               Claude)  IMPL_OPTION="$OPT_IMPL_CLAUDE";  IMPL_DISPLAY="Claude" ;;
               Copilot) IMPL_OPTION="$OPT_IMPL_COPILOT"; IMPL_DISPLAY="Copilot" ;;
+              Codex)   IMPL_OPTION="$OPT_IMPL_CODEX";   IMPL_DISPLAY="Codex" ;;
               None)    IMPL_OPTION="$OPT_IMPL_NONE";    IMPL_DISPLAY="None" ;;
               *)
-                echo "::notice::Unsupported route implementer '$1'; supported: Claude, Copilot, None"
+                echo "::notice::Unsupported route implementer '$1'; supported: Claude, Copilot, Codex, None"
                 exit 0
                 ;;
             esac
@@ -673,7 +814,9 @@ jobs:
             codex-review)
               STATUS_OPT="$OPT_STATUS_IN_REVIEW"
               STATUS_NAME="In review"
-              set_owner Codex
+              # Owner is resolved per-linked-issue below: Codex by default, Robert when the
+              # linked issue records Implementer=Codex (AGENTS.md reviewer-independence).
+              CODEX_REVIEW_ROUTE="true"
               ;;
             claude-fix)
               STATUS_OPT="$OPT_STATUS_NEEDS_CHANGES"
@@ -713,6 +856,7 @@ jobs:
                   CLAUDE_INVOCATION_REQUIRED="true"
                   ;;
                 Copilot) set_implementer "$ARG_OWNER" ;;
+                Codex)   set_implementer "$ARG_OWNER" ;;
               esac
               ;;
             blocked)
@@ -729,6 +873,39 @@ jobs:
 
           REPO_OWNER_NAME="${GH_REPO%%/*}"
           REPO_NAME="${GH_REPO##*/}"
+
+          # Draft-PR guard for /fps-route codex-review (AUT-007): when the comment target is a
+          # PR and that PR is still a draft, do not mutate linked-issue Status/Owner and do not
+          # hand review to Codex. Codex intentionally skips draft PRs, so a review handoff while
+          # draft would produce a false review state. Emit a clear notice pointing the
+          # implementer at "mark ready for review" and exit before any board writes. Once
+          # non-draft, per-linked-issue routing (including Implementer=Codex -> Owner=Robert)
+          # applies as before. Other /fps-route commands and issue (non-PR) targets are
+          # unaffected.
+          if [ "$CODEX_REVIEW_ROUTE" = "true" ] && [ "$IS_PR_COMMENT" = "true" ]; then
+            PR_IS_DRAFT_STATE="$(gh api graphql \
+              -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){isDraft}}}' \
+              -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$ISSUE_NUMBER" \
+              --jq '.data.repository.pullRequest.isDraft' \
+              2>/dev/null || true)"
+            # Fail-closed guard (AUT-007): only an explicit "false" may fall through to
+            # non-draft routing. "true" preserves state with the mark-ready notice. Any
+            # empty/null/unexpected/error value also preserves state and warns, so an
+            # API/permission/parse error cannot silently produce a false review handoff.
+            case "$PR_IS_DRAFT_STATE" in
+              true)
+                echo "::notice::PR #$ISSUE_NUMBER is still a draft; /fps-route codex-review does not route review while draft — mark the PR ready for review first"
+                exit 0
+                ;;
+              false)
+                :
+                ;;
+              *)
+                echo "::warning::Could not verify draft state for PR #$ISSUE_NUMBER (isDraft='$PR_IS_DRAFT_STATE'); /fps-route codex-review preserving board state — retry after confirming the PR is marked ready for review"
+                exit 0
+                ;;
+            esac
+          fi
 
           if [ "$IS_PR_COMMENT" = "true" ]; then
             TARGET_ISSUES="$(gh api graphql \
@@ -752,6 +929,25 @@ jobs:
             if [ -z "$ITEM_ID" ]; then
               echo "::warning::Could not get project item for issue #$TARGET_ISSUE; skipping"
               continue
+            fi
+
+            # /fps-route codex-review: resolve Owner per linked issue so a multi-issue PR cannot
+            # leak the first issue's Implementer lookup into subsequent iterations. Default is
+            # Codex; when the issue's Implementer field is Codex, override to Robert so Codex
+            # never reviews its own implementation (AGENTS.md reviewer-independence, AUT-007).
+            if [ "$CODEX_REVIEW_ROUTE" = "true" ]; then
+              OWNER_OPTION="$OPT_OWNER_CODEX"
+              OWNER_DISPLAY="Codex"
+              CR_IMPLEMENTER_NAME="$(gh api graphql \
+                -f query='query($id:ID!){node(id:$id){...on ProjectV2Item{fieldValues(first:20){nodes{...on ProjectV2ItemFieldSingleSelectValue{name,field{...on ProjectV2SingleSelectField{name}}}}}}}}' \
+                -f id="$ITEM_ID" \
+                --jq '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' \
+                2>/dev/null || true)"
+              if [ "$CR_IMPLEMENTER_NAME" = "Codex" ]; then
+                OWNER_OPTION="$OPT_OWNER_ROBERT"
+                OWNER_DISPLAY="Robert"
+                echo "::notice::Issue #$TARGET_ISSUE Implementer=Codex; overriding codex-review Owner to Robert (reviewer-independence)"
+              fi
             fi
 
             gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \

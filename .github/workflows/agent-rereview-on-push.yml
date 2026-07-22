@@ -1,0 +1,46 @@
+name: Agent re-review on push
+
+# When a Copilot PR is updated (a fix pushed while Ready), resume review of the new head via the
+# same transition reducer. A capped loop is held (the adapter ignores the push).
+#
+# SECURITY: pull_request_target runs the trusted DEFAULT-BRANCH version and checks out the base
+# (main) tools/ — it never checks out or runs PR head code; it only calls the reducer/adapter and
+# gh with PR metadata. Same-repo Copilot PRs only.
+
+on:
+  pull_request_target:
+    types: [synchronize]
+
+concurrency:
+  group: agent-loop-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    if: >
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == 'Copilot' &&
+      github.event.pull_request.user.type == 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4     # base ref (main) — trusted, never PR head
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - name: Run the loop adapter (push)
+        env:
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          BOARD_TOKEN: ${{ secrets.PROJECT_SYNC_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          EVENT: push
+        run: |
+          set -uo pipefail
+          node tools/agent-loop-adapter.mjs
