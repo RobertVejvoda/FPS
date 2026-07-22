@@ -38,7 +38,7 @@ jobs:
       pr: ${{ steps.res.outputs.pr }}
       review: ${{ steps.res.outputs.review }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Download the stage-1 signal (absent unless a Codex review fired)
         id: dl
         uses: actions/download-artifact@v4
@@ -73,7 +73,7 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
@@ -106,7 +106,7 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Mint app token
         id: app
         uses: actions/create-github-app-token@v1
