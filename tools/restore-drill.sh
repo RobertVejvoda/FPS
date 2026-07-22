@@ -30,8 +30,9 @@
 #       [--local | --nas --force-nas | --digitalocean --force-digitalocean]
 #       [--env-file PATH] [--skip-smoke]
 #
-# Exit codes: 0 data/object/identity stores restored + smoke + data-return passed;
-#             1 a hard failure.
+# Exit codes: 0 data/object/identity stores restored and assertions passed; the
+#             hosted smoke also passed unless DigitalOcean explicitly deferred
+#             it at the manual Vault DR boundary. 1 means a hard failure.
 
 set -euo pipefail
 
@@ -191,10 +192,11 @@ fi
 # The drill scope therefore stops at the data/object/identity assertion point;
 # full-stack smoke requires manual Vault init + unseal first (see notes above).
 if [[ "$MODE" == "digitalocean" ]] && [[ "$SKIP_SMOKE" != "true" ]]; then
-  warn "DigitalOcean: the full-stack smoke requires a sealed/initialized Vault."
-  warn "  A fresh server-mode Vault is unsealed/uninitialized after 'down -v'."
-  warn "  Complete the manual Vault DR steps above, then re-run with --skip-smoke"
-  warn "  to assert data-return, or proceed to full-smoke manually via:"
+  warn "DigitalOcean: the full-stack smoke requires an initialized, unsealed Vault."
+  warn "  A fresh server-mode Vault is sealed/uninitialized after 'down -v'."
+  warn "  This run continues through the restored data/object/identity assertions."
+  warn "  After completing the manual Vault DR steps above, start the stack and"
+  warn "  run the hosted smoke manually (do not rerun this destructive drill):"
   warn "    ./tools/start-container-stack.sh --digitalocean [--env-file PATH]"
   warn ""
   warn "Stopping drill at the data/object/identity store assertions (Vault DR boundary)."
