@@ -411,9 +411,9 @@ test("workflow /fps-state in-review is draft-gated: exits before any board mutat
   );
   assert.ok(inStateHandler, "/fps-state comment handler section not found");
   const section = inStateHandler[0];
-  assert.match(section, /if \[ "\$COMMAND" = "in-review" \]; then[\s\S]{0,600}pullRequest\(number:\$pr\)\{isDraft\}/,
+  assert.match(section, /if \[ "\$COMMAND" = "in-review" \]; then[\s\S]{0,800}pullRequest\(number:\$pr\)\{isDraft\}/,
     "/fps-state in-review must query PR isDraft when COMMAND=in-review");
-  assert.match(section, /\$PR_IS_DRAFT_STATE" = "true"[\s\S]{0,400}exit 0/,
+  assert.match(section, /case "\$PR_IS_DRAFT_STATE" in[\s\S]{0,800}true\)[\s\S]{0,400}exit 0/,
     "/fps-state in-review must exit 0 when the PR is a draft (no board mutation)");
   // Structural: the draft guard must precede the LINKED_ISSUES lookup so no writes happen first.
   const guardIdx = section.indexOf('"$COMMAND" = "in-review"');
@@ -432,12 +432,12 @@ test("workflow /fps-route codex-review is draft-gated: exits before any board mu
   // be affected — codex-review on an issue must continue to route to In review).
   assert.match(
     section,
-    /\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true"[\s\S]{0,600}pullRequest\(number:\$pr\)\{isDraft\}/,
+    /\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true"[\s\S]{0,800}pullRequest\(number:\$pr\)\{isDraft\}/,
     "/fps-route codex-review must query PR isDraft when the target is a PR",
   );
   assert.match(
     section,
-    /\$PR_IS_DRAFT_STATE" = "true"[\s\S]{0,400}exit 0/,
+    /case "\$PR_IS_DRAFT_STATE" in[\s\S]{0,800}true\)[\s\S]{0,400}exit 0/,
     "/fps-route codex-review must exit 0 when the PR target is a draft",
   );
   // Structural: the draft guard must precede the TARGET_ISSUES resolution and per-issue loop.
@@ -455,22 +455,36 @@ test("workflow /fps-route codex-review draft guard does not fire for issue (non-
   assert.ok(guardLine, "codex-review draft guard must be jointly gated on CODEX_REVIEW_ROUTE and IS_PR_COMMENT");
 });
 
-test("workflow: draft-gated manual In-review commands still reach non-draft behavior (guard exits only when isDraft=true)", () => {
-  // The guard body must only exit 0 inside the `isDraft = true` branch — a non-draft PR falls
-  // through to the existing linked-issue lookup and per-issue routing, so all previously-covered
-  // non-draft conformance tests (route-in-review, Implementer=Codex → Robert override, explicit
-  // reviewer preservation, per-issue reset) remain reachable.
+test("workflow: draft-gated manual In-review commands fall through only on explicit isDraft=false (fail-closed)", () => {
+  // AUT-007 fail-closed contract: only an explicit "false" value for PR_IS_DRAFT_STATE may fall
+  // through to the existing non-draft routing. "true" preserves state with the mark-ready
+  // notice. Empty/null/unexpected/error values also preserve state and emit a warning — an
+  // API/permission/parse error must not silently produce a false review handoff.
   const stateGuard = ORCH_YAML.match(
-    /if \[ "\$COMMAND" = "in-review" \]; then[\s\S]+?fi\n/,
+    /if \[ "\$COMMAND" = "in-review" \]; then[\s\S]+?\n {10}fi\n/,
   );
   assert.ok(stateGuard, "in-review guard block not found");
-  assert.match(stateGuard[0], /if \[ "\$PR_IS_DRAFT_STATE" = "true" \]; then[\s\S]+?exit 0[\s\S]+?fi/,
-    "in-review guard must only exit when PR_IS_DRAFT_STATE=true");
+  const stateBody = stateGuard[0];
+  assert.match(stateBody, /case "\$PR_IS_DRAFT_STATE" in/,
+    "in-review guard must use a case statement on PR_IS_DRAFT_STATE (not a bare = 'true' test)");
+  assert.match(stateBody, /true\)[\s\S]{0,400}exit 0/,
+    "in-review guard 'true' arm must exit 0 with the mark-ready notice");
+  assert.match(stateBody, /false\)\s*\n\s*:\s*\n\s*;;/,
+    "in-review guard must have an explicit 'false' arm that is the only fallthrough to non-draft routing");
+  assert.match(stateBody, /\*\)[\s\S]{0,600}::warning::[\s\S]{0,400}exit 0/,
+    "in-review guard '*' (unknown/error) arm must warn and exit 0 without mutating the board");
 
   const routeGuard = ORCH_YAML.match(
-    /if \[ "\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true" \]; then[\s\S]+?fi\n/,
+    /if \[ "\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true" \]; then[\s\S]+?\n {10}fi\n/,
   );
   assert.ok(routeGuard, "codex-review guard block not found");
-  assert.match(routeGuard[0], /if \[ "\$PR_IS_DRAFT_STATE" = "true" \]; then[\s\S]+?exit 0[\s\S]+?fi/,
-    "codex-review guard must only exit when PR_IS_DRAFT_STATE=true");
+  const routeBody = routeGuard[0];
+  assert.match(routeBody, /case "\$PR_IS_DRAFT_STATE" in/,
+    "codex-review guard must use a case statement on PR_IS_DRAFT_STATE (not a bare = 'true' test)");
+  assert.match(routeBody, /true\)[\s\S]{0,400}exit 0/,
+    "codex-review guard 'true' arm must exit 0 with the mark-ready notice");
+  assert.match(routeBody, /false\)\s*\n\s*:\s*\n\s*;;/,
+    "codex-review guard must have an explicit 'false' arm that is the only fallthrough to non-draft routing");
+  assert.match(routeBody, /\*\)[\s\S]{0,600}::warning::[\s\S]{0,400}exit 0/,
+    "codex-review guard '*' (unknown/error) arm must warn and exit 0 without mutating the board");
 });

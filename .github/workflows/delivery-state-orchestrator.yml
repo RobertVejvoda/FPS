@@ -604,10 +604,23 @@ jobs:
               -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
               --jq '.data.repository.pullRequest.isDraft' \
               2>/dev/null || true)"
-            if [ "$PR_IS_DRAFT_STATE" = "true" ]; then
-              echo "::notice::PR #$PR_NUMBER is still a draft; /fps-state in-review does not route review while draft — mark the PR ready for review first"
-              exit 0
-            fi
+            # Fail-closed guard (AUT-007): only an explicit "false" may fall through to
+            # non-draft routing. "true" preserves state with the mark-ready notice. Any
+            # empty/null/unexpected/error value also preserves state and warns, so an
+            # API/permission/parse error cannot silently produce a false review handoff.
+            case "$PR_IS_DRAFT_STATE" in
+              true)
+                echo "::notice::PR #$PR_NUMBER is still a draft; /fps-state in-review does not route review while draft — mark the PR ready for review first"
+                exit 0
+                ;;
+              false)
+                :
+                ;;
+              *)
+                echo "::warning::Could not verify draft state for PR #$PR_NUMBER (isDraft='$PR_IS_DRAFT_STATE'); /fps-state in-review preserving board state — retry after confirming the PR is marked ready for review"
+                exit 0
+                ;;
+            esac
           fi
 
           LINKED_ISSUES="$(gh api graphql \
@@ -875,10 +888,23 @@ jobs:
               -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$ISSUE_NUMBER" \
               --jq '.data.repository.pullRequest.isDraft' \
               2>/dev/null || true)"
-            if [ "$PR_IS_DRAFT_STATE" = "true" ]; then
-              echo "::notice::PR #$ISSUE_NUMBER is still a draft; /fps-route codex-review does not route review while draft — mark the PR ready for review first"
-              exit 0
-            fi
+            # Fail-closed guard (AUT-007): only an explicit "false" may fall through to
+            # non-draft routing. "true" preserves state with the mark-ready notice. Any
+            # empty/null/unexpected/error value also preserves state and warns, so an
+            # API/permission/parse error cannot silently produce a false review handoff.
+            case "$PR_IS_DRAFT_STATE" in
+              true)
+                echo "::notice::PR #$ISSUE_NUMBER is still a draft; /fps-route codex-review does not route review while draft — mark the PR ready for review first"
+                exit 0
+                ;;
+              false)
+                :
+                ;;
+              *)
+                echo "::warning::Could not verify draft state for PR #$ISSUE_NUMBER (isDraft='$PR_IS_DRAFT_STATE'); /fps-route codex-review preserving board state — retry after confirming the PR is marked ready for review"
+                exit 0
+                ;;
+            esac
           fi
 
           if [ "$IS_PR_COMMENT" = "true" ]; then
