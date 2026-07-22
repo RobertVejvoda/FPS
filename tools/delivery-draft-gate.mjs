@@ -105,13 +105,16 @@ export function route(input) {
   }
 
   // A draft opened/synchronize/reopened event never touches Codex review. It may only nudge a
-  // freshly Assigned slice into In progress under its existing Implementer; every other Status
-  // (Needs changes, Blocked, a capped hold, Done, In review, Backlog, ...) is left untouched so a
-  // WIP push can never erase a manual/terminal hold or an ongoing implementation/repair state.
-  if (status === "Assigned") {
+  // freshly Ready or Assigned slice into In progress under its existing Implementer — a draft PR
+  // is direct evidence implementation has begun, so a slice still sitting at Ready (assignment
+  // handoff not yet reconciled) advances the same way as one already at Assigned. Every other
+  // Status (Needs changes, Blocked, a capped hold, Done, In review, Backlog, ...) is left
+  // untouched so a WIP push can never erase a manual/terminal hold or an ongoing
+  // implementation/repair state.
+  if (status === "Assigned" || status === "Ready") {
     return decision(
       "route-in-progress",
-      "first draft on an Assigned slice — move to In progress under the existing Implementer",
+      `first draft on a ${status} slice — move to In progress under the existing Implementer`,
       {
         status: "in-progress",
         owner: "implementer",

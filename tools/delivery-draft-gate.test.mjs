@@ -195,7 +195,43 @@ for (const currentImplementer of [undefined, "", "Robert", "SomeUnknownValue"]) 
     assert.equal(d.action, "route-in-progress");
     assert.equal(d.route.ownerOption, null);
   });
+
+  test(`route(): draft on Ready with Implementer=${JSON.stringify(currentImplementer)} yields ownerOption null (preserve Owner)`, () => {
+    const d = route({ action: "opened", isDraft: true, currentStatus: "Ready", currentImplementer });
+    assert.equal(d.action, "route-in-progress");
+    assert.equal(d.route.ownerOption, null);
+  });
 }
+
+// --- Ready is treated the same as Assigned for draft opened/synchronize/reopened ---
+// A slice can sit at Ready when the assignment-handoff comment has not yet reconciled it to
+// Assigned; a draft PR on such a slice is direct evidence implementation has begun, so it must
+// advance to In progress under the recorded Implementer instead of being left at Ready.
+for (const action of ["opened", "synchronize", "reopened"]) {
+  for (const implementer of ["Copilot", "Claude"]) {
+    test(`${implementer}: draft ${action} on a Ready issue moves it to In progress under the recorded Implementer`, () => {
+      const d = route({ action, isDraft: true, currentStatus: "Ready", currentImplementer: implementer });
+      assert.equal(d.action, "route-in-progress");
+      assert.deepEqual(d.route, {
+        status: "in-progress",
+        owner: "implementer",
+        ownerOption: mapImplementerToOwnerOption(implementer),
+      });
+    });
+  }
+}
+
+test("CLI: draft opened on Ready with recognized Implementer -> route-in-progress JSON with mapped ownerOption", () => {
+  const d = runGateCli({ action: "opened", isDraft: true, currentStatus: "Ready", currentImplementer: "Claude" });
+  assert.equal(d.action, "route-in-progress");
+  assert.deepEqual(d.route, { status: "in-progress", owner: "implementer", ownerOption: "claude" });
+});
+
+test("CLI: draft synchronize on Ready with recognized Implementer -> route-in-progress JSON with mapped ownerOption", () => {
+  const d = runGateCli({ action: "synchronize", isDraft: true, currentStatus: "Ready", currentImplementer: "Copilot" });
+  assert.equal(d.action, "route-in-progress");
+  assert.deepEqual(d.route, { status: "in-progress", owner: "implementer", ownerOption: "copilot" });
+});
 
 // --- Workflow conformance: `/fps-route assign Codex` records Owner=Codex AND Implementer=Codex ---
 // The workflow's set_implementer/assign branches are defined in the orchestrator YAML shell; these
