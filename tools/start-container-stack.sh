@@ -50,6 +50,16 @@
 #   --domain DOMAIN    After local checks pass, probe https://app.DOMAIN and
 #                      https://auth.DOMAIN through Cloudflare (Docker-only). The
 #                      public realm defaults to fairspot (override with --realm).
+#   --smoke-only       Hosted (--nas/--digitalocean) only. Genuinely non-mutating:
+#                      never renders Alertmanager config, never creates the
+#                      Docker network or pulls the probe image (fails clearly if
+#                      either is missing — start the stack normally first), and
+#                      never runs compose pull/up/down. Only runs the existing
+#                      ephemeral read-only probe containers plus health/readiness
+#                      checks and smoke against a stack that is already running.
+#                      Use this to re-check or re-run --domain smoke without
+#                      redeploying/replacing a pinned image tag. Rejected with
+#                      --seed or --down.
 #   --down             Tear down the stack (same compose files) and exit.
 #
 # Override the probe image with CURL_IMAGE (default curlimages/curl:8.11.1).
@@ -78,6 +88,7 @@ TEARDOWN=false
 PUBLIC_DOMAIN=""
 SEED=false
 REALM_OVERRIDE=""
+SMOKE_ONLY=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -89,6 +100,7 @@ while [[ $# -gt 0 ]]; do
     --seed)         SEED=true ;;
     --down)         TEARDOWN=true ;;
     --domain)       PUBLIC_DOMAIN="$2"; shift ;;
+    --smoke-only)   SMOKE_ONLY=true ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
   shift
@@ -162,6 +174,23 @@ if is_hosted && [[ "$SEED" == "true" ]]; then
   echo
   echo "Hosted-aware seeding is tracked as a follow-up to #604."
   exit 1
+fi
+
+# --smoke-only is a non-mutating recheck of an already-running hosted stack: it
+# never pulls or `up`s, so it never redeploys/replaces a pinned image tag. It
+# only means something for a hosted profile (local mode always builds/starts
+# from source) — --seed is already rejected for every hosted profile above, so
+# it needs no separate check here. --down mutates (stops the stack), so it
+# does not combine with a non-mutating recheck either.
+if [[ "$SMOKE_ONLY" == "true" ]]; then
+  if ! is_hosted; then
+    echo "ERROR: --smoke-only requires --nas or --digitalocean (checks/probes an already-running hosted stack)."
+    exit 1
+  fi
+  if [[ "$TEARDOWN" == "true" ]]; then
+    echo "ERROR: --smoke-only cannot be combined with --down (--down stops the stack)."
+    exit 1
+  fi
 fi
 
 # ── Resolve the internal OIDC realm ──────────────────────────────────────────────
@@ -260,6 +289,84 @@ if [[ -z "$GRAFANA_HOST_PORT" ]]; then
 fi
 GRAFANA_HOST_PORT="${GRAFANA_HOST_PORT:-3001}"
 
+# validate_digitalocean_web_contract — direct `--digitalocean --domain` runs
+# (normal start AND --smoke-only) must fail closed on the same five-value
+# FPS_WEB_* public runtime contract deploy-digitalocean.sh enforces in its own
+# preflight. Without this, an operator who runs this script directly (skipping
+# deploy-digitalocean.sh) can pull/up — or, with --smoke-only, probe — a stack
+# whose fairspot-web serves its baked default config.json (http://localhost:10000,
+# local Keycloak) or a mismatched/wrong-path auth contract that no browser can use.
+# Uses this script's own resolved ENV_FILE/PUBLIC_DOMAIN; only runs for
+# --digitalocean --domain, mirroring deploy-digitalocean.sh's SKIP_PUBLIC-gated
+# checks (§4-5).
+validate_digitalocean_web_contract() {
+  local auth_authority web_api_base_url web_oidc_authority web_oidc_client_id
+  local web_oidc_redirect_uri web_oidc_post_logout_redirect_uri pair
+  local expected_api_base expected_redirect expected_post_logout
+
+  auth_authority="$(read_env_value FPS_AUTH_AUTHORITY "$ENV_FILE")"
+  web_api_base_url="$(read_env_value FPS_WEB_API_BASE_URL "$ENV_FILE")"
+  web_oidc_authority="$(read_env_value FPS_WEB_OIDC_AUTHORITY "$ENV_FILE")"
+  web_oidc_client_id="$(read_env_value FPS_WEB_OIDC_CLIENT_ID "$ENV_FILE")"
+  web_oidc_redirect_uri="$(read_env_value FPS_WEB_OIDC_REDIRECT_URI "$ENV_FILE")"
+  web_oidc_post_logout_redirect_uri="$(read_env_value FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI "$ENV_FILE")"
+
+  if [[ "$auth_authority" != https://* ]]; then
+    echo "ERROR (DigitalOcean profile): hosted deployment requires encrypted public auth."
+    echo "  Set FPS_AUTH_AUTHORITY to a non-empty https:// URL in $ENV_FILE (TLS is terminated at Cloudflare)."
+    echo "  A blank value falls back to the internal Keycloak issuer, which public clients cannot use."
+    exit 1
+  fi
+
+  for pair in \
+    "FPS_WEB_API_BASE_URL=$web_api_base_url" \
+    "FPS_WEB_OIDC_AUTHORITY=$web_oidc_authority" \
+    "FPS_WEB_OIDC_CLIENT_ID=$web_oidc_client_id" \
+    "FPS_WEB_OIDC_REDIRECT_URI=$web_oidc_redirect_uri" \
+    "FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI=$web_oidc_post_logout_redirect_uri" \
+  ; do
+    if [[ -z "${pair#*=}" ]]; then
+      echo "ERROR (DigitalOcean profile): missing public web runtime setting ${pair%%=*}."
+      echo "  Without every FPS_WEB_* value, fairspot-web serves its baked default config.json"
+      echo "  (http://localhost:10000, local Keycloak) instead of the public app/auth contract."
+      echo "  Set every FPS_WEB_* value in $ENV_FILE (see docs/production/digitalocean-setup.md)."
+      exit 1
+    fi
+  done
+
+  expected_api_base="https://app.$PUBLIC_DOMAIN/api"
+  if [[ "$web_api_base_url" != "$expected_api_base" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_API_BASE_URL does not match the public domain."
+    echo "  Single-origin model: app.<domain> serves the SPA and proxies /api/ to Envoy, so this"
+    echo "  must be $expected_api_base for domain $PUBLIC_DOMAIN. Got: $web_api_base_url"
+    exit 1
+  fi
+  if [[ "$web_oidc_authority" != "$auth_authority" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_AUTHORITY does not match FPS_AUTH_AUTHORITY."
+    echo "  The browser-facing web OIDC authority and the API-validated auth authority must be the"
+    echo "  same public issuer, or the browser receives tokens every API rejects."
+    echo "  FPS_AUTH_AUTHORITY=$auth_authority"
+    echo "  FPS_WEB_OIDC_AUTHORITY=$web_oidc_authority"
+    exit 1
+  fi
+  # Exact-path match, not a same-origin prefix: a same-origin-but-wrong-path
+  # value must still be rejected, so compare against the documented
+  # callback/post-logout paths exactly rather than any path under that origin.
+  expected_redirect="https://app.$PUBLIC_DOMAIN/auth/callback"
+  if [[ "$web_oidc_redirect_uri" != "$expected_redirect" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_REDIRECT_URI does not match the documented callback path."
+    echo "  Expected exactly $expected_redirect for domain $PUBLIC_DOMAIN. Got: $web_oidc_redirect_uri"
+    exit 1
+  fi
+  expected_post_logout="https://app.$PUBLIC_DOMAIN/"
+  if [[ "$web_oidc_post_logout_redirect_uri" != "$expected_post_logout" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI does not match the documented post-logout path."
+    echo "  Expected exactly $expected_post_logout for domain $PUBLIC_DOMAIN. Got: $web_oidc_post_logout_redirect_uri"
+    exit 1
+  fi
+  ok "public web runtime settings: FPS_WEB_* present and consistent with domain $PUBLIC_DOMAIN"
+}
+
 # Health if a healthcheck is defined, otherwise the raw container state.
 _health() {
   docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$1" 2>/dev/null || true
@@ -322,10 +429,21 @@ if [[ "$TEARDOWN" == "true" ]]; then
   exit 0
 fi
 
+# DigitalOcean public web runtime contract — before any mutation (Alertmanager
+# render, network create, pull/up). Applies to both normal direct start and
+# --smoke-only (which still probes the public app/auth contract without
+# pulling/up-ing), so a direct invocation cannot skip what
+# deploy-digitalocean.sh enforces in its own preflight.
+if [[ "$MODE" == "digitalocean" && -n "$PUBLIC_DOMAIN" ]]; then
+  hdr "Public web runtime contract (FPS_WEB_*)"
+  validate_digitalocean_web_contract
+fi
+
 # Hosted Alertmanager notifications are rendered from the ignored operator env
 # file. If no ALERTMANAGER_* notification values are set, the renderer keeps the
-# local-only receiver so the stack remains non-notifying by default.
-if is_hosted; then
+# local-only receiver so the stack remains non-notifying by default. --smoke-only
+# must not write this file — it only checks/probes an already-running stack.
+if is_hosted && [[ "$SMOKE_ONLY" != "true" ]]; then
   hdr "Alertmanager notification config"
   "$REPO_ROOT/tools/render-alertmanager-nas-config.sh" "$ENV_FILE"
 fi
@@ -334,23 +452,48 @@ fi
 
 hdr "Docker network"
 
-if ! docker network inspect "$NET" >/dev/null 2>&1; then
-  echo "Creating $NET..."
-  docker network create "$NET" >/dev/null
-  ok "$NET created"
-else
+if [[ "$SMOKE_ONLY" == "true" ]]; then
+  # Non-mutating: check only, never create. The probe containers below need
+  # this network to already exist, so fail clearly instead of silently
+  # creating it (--smoke-only checks/probes an already-running stack).
+  if ! docker network inspect "$NET" >/dev/null 2>&1; then
+    echo "ERROR: --smoke-only requires the $NET Docker network to already exist."
+    echo "  Start the stack normally first: $COMPOSE_HUMAN up -d"
+    exit 1
+  fi
   ok "$NET exists"
+else
+  if ! docker network inspect "$NET" >/dev/null 2>&1; then
+    echo "Creating $NET..."
+    docker network create "$NET" >/dev/null
+    ok "$NET created"
+  else
+    ok "$NET exists"
+  fi
 fi
 
-# Pre-pull the probe image once so the polling loops below do not emit pull noise.
-if ! docker image inspect "$CURL_IMAGE" >/dev/null 2>&1; then
-  echo "Pulling probe image $CURL_IMAGE..."
-  docker pull "$CURL_IMAGE" >/dev/null 2>&1 || {
-    echo "ERROR: could not pull $CURL_IMAGE. Set CURL_IMAGE to an available image and retry."
+hdr "Probe image"
+
+if [[ "$SMOKE_ONLY" == "true" ]]; then
+  # Non-mutating: check only, never pull. `docker run` would otherwise pull
+  # the image implicitly the first time a probe container runs.
+  if ! docker image inspect "$CURL_IMAGE" >/dev/null 2>&1; then
+    echo "ERROR: --smoke-only requires probe image $CURL_IMAGE to already be pulled locally."
+    echo "  Start the stack normally first (which pre-pulls it), or run: docker pull $CURL_IMAGE"
     exit 1
-  }
+  fi
+  ok "probe image: $CURL_IMAGE"
+else
+  # Pre-pull the probe image once so the polling loops below do not emit pull noise.
+  if ! docker image inspect "$CURL_IMAGE" >/dev/null 2>&1; then
+    echo "Pulling probe image $CURL_IMAGE..."
+    docker pull "$CURL_IMAGE" >/dev/null 2>&1 || {
+      echo "ERROR: could not pull $CURL_IMAGE. Set CURL_IMAGE to an available image and retry."
+      exit 1
+    }
+  fi
+  ok "probe image: $CURL_IMAGE"
 fi
-ok "probe image: $CURL_IMAGE"
 
 # ── Start the stack ──────────────────────────────────────────────────────────────
 
@@ -397,7 +540,10 @@ require_vault_unsealed() {
   fi
 }
 
-if is_hosted; then
+if [[ "$SMOKE_ONLY" == "true" ]]; then
+  echo "--smoke-only: skipping pull/up. Checking and probing the already-running stack only."
+  echo "(If services below are not already up, start the stack normally first: $COMPOSE_HUMAN up -d)"
+elif is_hosted; then
   # Hosted profiles run pre-built images from a registry — pull, then start (never build).
   echo "Registry: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}  Tag: ${FPS_IMAGE_TAG:-latest}"
   echo "If the packages are private, run 'docker login ghcr.io' first."
@@ -788,8 +934,33 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
   # 2) Runtime config served by the web container.
   CFG="$(probe_pub -sf "$APP_URL/config.json" || true)"
   if printf '%s' "$CFG" | grep -q '"apiBaseUrl"'; then
-    API_BASE="$(printf '%s' "$CFG" | grep -o '"apiBaseUrl":"[^"]*"' | head -1)"
+    API_BASE="$(printf '%s' "$CFG" | tr -d '\n' | grep -o '"apiBaseUrl"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)"
     ok "app.$PUBLIC_DOMAIN /config.json present ($API_BASE)"
+
+    if [[ "$MODE" == "digitalocean" ]]; then
+      EXPECTED_API_BASE="$APP_URL/api"
+      if [[ "$API_BASE" != "$EXPECTED_API_BASE" ]]; then
+        fail "app.$PUBLIC_DOMAIN /config.json apiBaseUrl does not match the expected DigitalOcean value."
+        echo "    Expected: $EXPECTED_API_BASE"
+        echo "    Actual:   $API_BASE"
+        echo "    The running fairspot-web container may be serving a stale/baked config.json — rebuild/restart it."
+      else
+        ok "apiBaseUrl matches expected DigitalOcean value ($EXPECTED_API_BASE)"
+      fi
+
+      EXPECTED_AUTHORITY="$(read_env_value FPS_AUTH_AUTHORITY "$ENV_FILE")"
+      CFG_AUTHORITY="$(printf '%s' "$CFG" | tr -d '\n' | grep -o '"authority"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)"
+      if [[ -z "$EXPECTED_AUTHORITY" ]]; then
+        fail "Cannot verify config.json OIDC authority — FPS_AUTH_AUTHORITY is not set in $ENV_FILE."
+      elif [[ "$CFG_AUTHORITY" != "$EXPECTED_AUTHORITY" ]]; then
+        fail "app.$PUBLIC_DOMAIN /config.json OIDC authority does not match FPS_AUTH_AUTHORITY."
+        echo "    Expected: $EXPECTED_AUTHORITY"
+        echo "    Actual:   $CFG_AUTHORITY"
+        echo "    The running fairspot-web container may be serving a stale/baked config.json — rebuild/restart it."
+      else
+        ok "config.json OIDC authority matches FPS_AUTH_AUTHORITY ($EXPECTED_AUTHORITY)"
+      fi
+    fi
   else
     fail "app.$PUBLIC_DOMAIN /config.json missing or invalid (no apiBaseUrl)"
     echo "    Set FPS_WEB_* in nas.env so the web entrypoint generates config.json."

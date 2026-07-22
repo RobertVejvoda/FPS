@@ -9,7 +9,10 @@
 #   2. Rendered DigitalOcean Compose config asserts image-mode services, durable
 #      volumes + restart policies, and NO public host-port binding.
 #   3. CLI negative paths fail closed (missing env/tunnel/tag, latest tag,
-#      restore force/confirm gates).
+#      restore force/confirm gates, --skip-public without --skip-tunnel, a
+#      blank Cloudflare tunnel token, --smoke-only flag-combination guards, a
+#      direct start-container-stack.sh --digitalocean --domain run failing at
+#      the FPS_WEB_* contract before any start mutation).
 #   4. sha-<commit> flows through to the composed services without a local build.
 #
 # The rendered config contains interpolated secrets, so it is written to a temp
@@ -174,8 +177,14 @@ hdr "3. CLI negative paths (fail closed)"
 
 # Backup dir stub for restore-drill gate tests.
 STUB_BK="$TMP/backup"; mkdir -p "$STUB_BK"; echo '{"mode":"digitalocean"}' > "$STUB_BK/manifest.json"
-# Minimal env + tunnel files for deploy ordering tests.
-touch "$TMP/tunnel.env"
+# Minimal env + tunnel files for deploy ordering tests. A non-blank fixture token
+# so tests further down the preflight (auth authority, FPS_WEB_*, tag) reach
+# their own gate instead of tripping the tunnel-token check first.
+printf 'CLOUDFLARED_TUNNEL_TOKEN=fixture-not-a-secret\n' > "$TMP/tunnel.env"
+# Same tunnel file, but with a blank token — mirrors an operator who created the
+# file but left the value empty (or copied a template without filling it in).
+BLANK_TUNNEL_ENV="$TMP/tunnel-blank-token.env"
+printf 'CLOUDFLARED_TUNNEL_TOKEN=\n' > "$BLANK_TUNNEL_ENV"
 
 # expect_fail "<label>" <grep-pattern> -- <command...>
 expect_fail() {
@@ -211,8 +220,35 @@ if docker compose version >/dev/null 2>&1; then
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag latest
   expect_fail "deploy: mutable tag rejected" "not an immutable" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag staging
+  expect_fail "deploy: --skip-public requires --skip-tunnel" "requires --skip-tunnel" -- \
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --skip-public
+  expect_fail "deploy: blank tunnel token rejected" "CLOUDFLARED_TUNNEL_TOKEN is missing or blank" -- \
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$BLANK_TUNNEL_ENV" --domain example.test --tag sha-x
 else
   skip "docker compose CLI unavailable — deploy preflight negative paths skipped"
+fi
+
+# start-container-stack.sh --smoke-only flag-combination guards run before any
+# docker call, so they need no daemon/CLI.
+START_STACK="$REPO_ROOT/tools/start-container-stack.sh"
+expect_fail "start-stack: --smoke-only requires --nas or --digitalocean" "requires --nas or --digitalocean" -- \
+  "$START_STACK" --smoke-only
+expect_fail "start-stack: --smoke-only + --seed still rejected (--seed is LOCAL-ONLY)" "LOCAL-ONLY" -- \
+  "$START_STACK" --digitalocean --smoke-only --seed
+expect_fail "start-stack: --smoke-only rejects --down" "cannot be combined with --down" -- \
+  "$START_STACK" --digitalocean --smoke-only --down
+
+# A direct `--digitalocean --domain` invocation (skipping deploy-digitalocean.sh)
+# must fail at the same FPS_WEB_* contract check, before any mutation (Alertmanager
+# render, network create, pull/up) — reuses the deploy MISSING_WEB_ENV fixture
+# (a full DO env with FPS_WEB_API_BASE_URL blanked). Needs the Compose CLI, since
+# start-container-stack.sh checks `docker compose version` before this gate.
+if docker compose version >/dev/null 2>&1; then
+  expect_fail "start-stack: --digitalocean --domain fails at missing FPS_WEB_* contract before mutation" \
+    "missing public web runtime setting" -- \
+    "$START_STACK" --digitalocean --domain example.test --env-file "$MISSING_WEB_ENV"
+else
+  skip "docker compose CLI unavailable — start-stack contract preflight skipped"
 fi
 
 # restore-drill.sh / backup-stack.sh check `command -v docker` early, so their

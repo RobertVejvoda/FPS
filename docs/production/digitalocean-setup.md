@@ -164,10 +164,13 @@ which probes (Docker-only, no host tooling): the web SPA entry point and runtime
 `config.json`, API health through the web `/api` proxy → Envoy, Keycloak OIDC
 discovery on `auth.<domain>`, that the Keycloak admin console and internal/
 diagnostic paths are **not** publicly served, and edge rate limits (plan-
-dependent). Re-run it any time:
+dependent). Re-run it any time — use `--smoke-only` so a routine recheck never
+pulls or redeploys (it only checks/probes the already-running stack; without
+this flag the same command pulls and re-`up`s, and without `--tag` that can
+silently replace a previously pinned release with `latest`):
 
 ```sh
-./tools/start-container-stack.sh --digitalocean --domain <your-domain>
+./tools/start-container-stack.sh --digitalocean --domain <your-domain> --smoke-only
 ```
 
 ## 5. Operator access (no public dashboards)

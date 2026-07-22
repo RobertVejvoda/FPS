@@ -37,9 +37,10 @@ IMAGE_TAG=""
 ALLOW_LATEST=false
 DOWN=false
 
-read_env_value() {
+read_env_value_from() {
   key="$1"
-  [[ -f "$ENV_FILE" ]] || return 0
+  file="$2"
+  [[ -f "$file" ]] || return 0
   awk -F= -v key="$key" '
     /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
     {
@@ -54,8 +55,10 @@ read_env_value() {
         exit
       }
     }
-  ' "$ENV_FILE"
+  ' "$file"
 }
+
+read_env_value() { read_env_value_from "$1" "$ENV_FILE"; }
 
 usage() {
   cat <<'USAGE'
@@ -74,6 +77,8 @@ Options:
   --down                   Stop the DigitalOcean stack, preserving data volumes, and exit.
   --skip-tunnel            Internal troubleshooting only. Do not start cloudflared.
   --skip-public            Internal troubleshooting only. Do not run public hostname checks.
+                           Requires --skip-tunnel (the tunnel is the only ingress; it must
+                           not publish a stack the public gates did not validate).
 
 Rollback:
   Re-run with a previous immutable --tag (durable volumes are preserved):
@@ -101,6 +106,19 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+# --skip-public turns off the domain/auth-authority/FPS_WEB_*/immutable-tag
+# gates, but the Cloudflare Tunnel is the profile's only ingress — if it stays
+# up, the disabled gates' local/default auth, web, or mutable-image config
+# still gets published to the internet. Require the operator to also pass
+# --skip-tunnel so an internal-troubleshooting run cannot publish anything.
+if [[ "$SKIP_PUBLIC" == "true" && "$SKIP_TUNNEL" != "true" ]]; then
+  echo "ERROR (DigitalOcean profile): --skip-public requires --skip-tunnel."
+  echo "  --skip-public disables the public domain/auth/web/tag safety gates. Leaving the"
+  echo "  Cloudflare Tunnel running would publish that unvalidated config to the internet."
+  echo "  For internal stack troubleshooting only, pass both: --skip-public --skip-tunnel"
+  exit 1
+fi
 
 # ── Stop / rollback path (preserves volumes) ─────────────────────────────────
 if [[ "$DOWN" == "true" ]]; then
@@ -151,6 +169,24 @@ if [[ "$SKIP_TUNNEL" != "true" && ! -f "$TUNNEL_ENV_FILE" ]]; then
   echo "    printf 'CLOUDFLARED_TUNNEL_TOKEN=<token>\\n' > $TUNNEL_ENV_FILE"
   echo "  For internal stack troubleshooting only, rerun with --skip-tunnel --skip-public."
   exit 1
+fi
+
+# 3b. Cloudflare Tunnel token — the compose file interpolates CLOUDFLARED_TUNNEL_TOKEN
+#     without a required-value guard, so an empty file or a present-but-blank key
+#     would only fail after the stack (and, without --skip-public, the public gates)
+#     already ran: the connector starts but cannot authenticate. Fail before any
+#     mutation instead. The value itself is never printed.
+if [[ "$SKIP_TUNNEL" != "true" ]]; then
+  TUNNEL_TOKEN="$(read_env_value_from CLOUDFLARED_TUNNEL_TOKEN "$TUNNEL_ENV_FILE")"
+  if [[ -z "$TUNNEL_TOKEN" ]]; then
+    echo "ERROR (DigitalOcean profile): CLOUDFLARED_TUNNEL_TOKEN is missing or blank in $TUNNEL_ENV_FILE."
+    echo "  The Cloudflare Tunnel connector cannot authenticate without it (value not shown):"
+    echo "    printf 'CLOUDFLARED_TUNNEL_TOKEN=<token>\\n' > $TUNNEL_ENV_FILE"
+    echo "  For internal stack troubleshooting only, rerun with --skip-tunnel --skip-public."
+    exit 1
+  fi
+  unset TUNNEL_TOKEN
+  note "tunnel env file: $TUNNEL_ENV_FILE (CLOUDFLARED_TUNNEL_TOKEN present — value not printed)"
 fi
 
 # 4. Public domain + encrypted auth authority (Cloudflare-fronted).
