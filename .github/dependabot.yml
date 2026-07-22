@@ -9,6 +9,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # .NET server solution
   - package-ecosystem: "nuget"
@@ -19,6 +20,12 @@ updates:
     groups:
       nuget:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # ASP.NET Core 10 uses the Microsoft.OpenApi 2.x object model. Revisit
+      # this hold with the ASP.NET Core 11 migration. See closed PR #820.
+      - dependency-name: "Microsoft.OpenApi"
+        versions: ["3.*"]
 
   # Web app
   - package-ecosystem: "npm"
@@ -29,6 +36,7 @@ updates:
     groups:
       web:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # Mobile app
   - package-ecosystem: "npm"
@@ -39,3 +47,17 @@ updates:
     groups:
       mobile:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # Expo-managed: react-native / react are pinned by the Expo SDK and must be
+      # upgraded together via an `expo` SDK bump, not à la carte — bumping them
+      # standalone breaks the peer tree (npm ci ERESOLVE). See closed PR #809.
+      - dependency-name: "react-native"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      # TypeScript 7 is outside the current Expo peer contract. See closed
+      # PR #818; revisit with the matching Expo SDK/toolchain migration.
+      - dependency-name: "typescript"
+        versions: ["7.x"]
