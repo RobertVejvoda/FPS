@@ -75,6 +75,11 @@ FPS_PUBLIC_DOMAIN=example.test
 ALERTMANAGER_CONFIG_FILE=runtime/config.yaml
 ENV
 
+# Same fixture, but with a blank FPS_AUTH_AUTHORITY — mirrors the shipped
+# nas.env.example, which leaves the key present but empty.
+BLANK_AUTH_ENV="$TMP/do-blank-auth.env"
+sed 's/^FPS_AUTH_AUTHORITY=.*/FPS_AUTH_AUTHORITY=/' "$FIX_ENV" > "$BLANK_AUTH_ENV"
+
 render_do() {
   # $1 = image tag to pin (exported as FPS_IMAGE_TAG). Renders the full DO profile.
   FPS_IMAGE_TAG="$1" docker compose --project-directory "$INFRA_DIR" --env-file "$FIX_ENV" \
@@ -168,6 +173,8 @@ if docker compose version >/dev/null 2>&1; then
     "$DEPLOY" --env-file "$TMP/nope.env" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
   expect_fail "deploy: missing tunnel file" "tunnel env file not found" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/nope.env" --domain example.test --tag sha-x
+  expect_fail "deploy: blank auth authority rejected" "encrypted public auth" -- \
+    "$DEPLOY" --env-file "$BLANK_AUTH_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
   expect_fail "deploy: missing image tag"   "immutable image tag" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test
   expect_fail "deploy: latest tag rejected" "mutable" -- \

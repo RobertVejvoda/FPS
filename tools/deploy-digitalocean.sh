@@ -164,9 +164,10 @@ if [[ "$SKIP_PUBLIC" != "true" && -z "$DOMAIN" ]]; then
   echo "  For internal stack troubleshooting only, rerun with --skip-public."
   exit 1
 fi
-if [[ "$SKIP_PUBLIC" != "true" && -n "$AUTH_AUTHORITY" && "$AUTH_AUTHORITY" != https://* ]]; then
+if [[ "$SKIP_PUBLIC" != "true" && "$AUTH_AUTHORITY" != https://* ]]; then
   echo "ERROR (DigitalOcean profile): hosted deployment requires encrypted public auth."
-  echo "  Set FPS_AUTH_AUTHORITY to an https:// URL in $ENV_FILE (TLS is terminated at Cloudflare)."
+  echo "  Set FPS_AUTH_AUTHORITY to a non-empty https:// URL in $ENV_FILE (TLS is terminated at Cloudflare)."
+  echo "  A blank value falls back to the internal Keycloak issuer, which public clients cannot use."
   exit 1
 fi
 
