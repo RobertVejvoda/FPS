@@ -640,6 +640,26 @@ jobs:
               esac
             fi
 
+            # Reviewer-independence exception (AGENTS.md, AUT-007):
+            # /fps-state in-review must not route review back to the same actor that implemented
+            # the PR. The default `in-review` owner is Codex (set above); when the linked issue
+            # records Implementer=Codex, override to Robert so Codex never reviews its own
+            # implementation. An explicit non-Codex reviewer (Robert/Human/Claude/Copilot/None)
+            # is preserved as-is. Implementer is resolved per-linked-issue inside this loop, so
+            # a multi-issue PR cannot leak the first issue's result into later iterations.
+            if [ "$COMMAND" = "in-review" ] && [ "$OWNER_DISPLAY" = "Codex" ]; then
+              IMPLEMENTER_NAME_REVIEW="$(gh api graphql \
+                -f query='query($id:ID!){node(id:$id){...on ProjectV2Item{fieldValues(first:20){nodes{...on ProjectV2ItemFieldSingleSelectValue{name,field{...on ProjectV2SingleSelectField{name}}}}}}}}' \
+                -f id="$ITEM_ID" \
+                --jq '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' \
+                2>/dev/null || true)"
+              if [ "$IMPLEMENTER_NAME_REVIEW" = "Codex" ]; then
+                OWNER_OPTION="$OPT_OWNER_ROBERT"
+                OWNER_DISPLAY="Robert"
+                echo "::notice::Issue #$ISSUE_NUM Implementer=Codex; overriding in-review Owner to Robert (reviewer-independence)"
+              fi
+            fi
+
             gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
               --field-id "$FIELD_STATUS" --single-select-option-id "$STATUS_OPT" \
               && echo "::notice::Issue #$ISSUE_NUM Status -> $STATUS_NAME" \
@@ -727,6 +747,10 @@ jobs:
           IMPL_OPTION=""
           IMPL_DISPLAY=""
           CLAUDE_INVOCATION_REQUIRED="false"
+          # When true, per-target-issue Owner resolution is deferred into the target loop below
+          # so the reviewer-independence exception (Implementer=Codex -> Owner=Robert) can be
+          # applied per linked issue without leaking one issue's result into the next.
+          CODEX_REVIEW_ROUTE="false"
 
           set_owner() {
             case "$1" in
@@ -759,7 +783,9 @@ jobs:
             codex-review)
               STATUS_OPT="$OPT_STATUS_IN_REVIEW"
               STATUS_NAME="In review"
-              set_owner Codex
+              # Owner is resolved per-linked-issue below: Codex by default, Robert when the
+              # linked issue records Implementer=Codex (AGENTS.md reviewer-independence).
+              CODEX_REVIEW_ROUTE="true"
               ;;
             claude-fix)
               STATUS_OPT="$OPT_STATUS_NEEDS_CHANGES"
@@ -839,6 +865,25 @@ jobs:
             if [ -z "$ITEM_ID" ]; then
               echo "::warning::Could not get project item for issue #$TARGET_ISSUE; skipping"
               continue
+            fi
+
+            # /fps-route codex-review: resolve Owner per linked issue so a multi-issue PR cannot
+            # leak the first issue's Implementer lookup into subsequent iterations. Default is
+            # Codex; when the issue's Implementer field is Codex, override to Robert so Codex
+            # never reviews its own implementation (AGENTS.md reviewer-independence, AUT-007).
+            if [ "$CODEX_REVIEW_ROUTE" = "true" ]; then
+              OWNER_OPTION="$OPT_OWNER_CODEX"
+              OWNER_DISPLAY="Codex"
+              CR_IMPLEMENTER_NAME="$(gh api graphql \
+                -f query='query($id:ID!){node(id:$id){...on ProjectV2Item{fieldValues(first:20){nodes{...on ProjectV2ItemFieldSingleSelectValue{name,field{...on ProjectV2SingleSelectField{name}}}}}}}}' \
+                -f id="$ITEM_ID" \
+                --jq '.data.node.fieldValues.nodes[] | select(.field.name == "Implementer") | .name // empty' \
+                2>/dev/null || true)"
+              if [ "$CR_IMPLEMENTER_NAME" = "Codex" ]; then
+                OWNER_OPTION="$OPT_OWNER_ROBERT"
+                OWNER_DISPLAY="Robert"
+                echo "::notice::Issue #$TARGET_ISSUE Implementer=Codex; overriding codex-review Owner to Robert (reviewer-independence)"
+              fi
             fi
 
             gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \

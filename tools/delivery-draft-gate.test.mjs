@@ -281,3 +281,79 @@ test("workflow: every Needs-changes IMPLEMENTER_NAME case block handles Codex be
     assert.match(body, /Codex\)[^\n]*OPT_OWNER_CODEX/);
   }
 });
+
+// --- Manual In-review routing family: reviewer-independence when Implementer=Codex ---
+// These read the orchestrator YAML directly and assert the workflow's per-issue reviewer
+// selection for the two manual `In review` entry points (`/fps-route codex-review` and
+// `/fps-state in-review`). Both must default to Owner=Codex, override to Owner=Robert per
+// linked issue when that issue's Implementer=Codex, preserve an explicit non-Codex owner,
+// and resolve per linked issue so a multi-issue PR cannot leak the first issue's result.
+
+test("workflow /fps-route codex-review case defers per-issue Owner resolution (does not hardcode Owner=Codex upfront)", () => {
+  // The codex-review case body must NOT call `set_owner Codex` directly, and MUST set the
+  // per-issue routing flag that triggers the loop-body Implementer lookup.
+  const caseBlock = ORCH_YAML.match(/codex-review\)\s*\n[\s\S]*?;;/);
+  assert.ok(caseBlock, "codex-review) case not found");
+  assert.doesNotMatch(caseBlock[0], /\bset_owner\s+Codex\b/, "codex-review must not hardcode Owner=Codex outside the per-issue loop");
+  assert.match(caseBlock[0], /CODEX_REVIEW_ROUTE="true"/);
+  assert.match(caseBlock[0], /STATUS_OPT="\$OPT_STATUS_IN_REVIEW"/);
+});
+
+test("workflow /fps-route codex-review resolves Owner per linked issue with the Implementer=Codex → Robert exception", () => {
+  // The route-comment-command target loop must, when CODEX_REVIEW_ROUTE=true, (a) reset Owner
+  // to Codex per iteration (so no leakage from a prior issue), (b) look up Implementer for the
+  // current ITEM_ID, and (c) override to Robert when Implementer=Codex.
+  const idx = ORCH_YAML.indexOf('if [ "$CODEX_REVIEW_ROUTE" = "true" ]; then');
+  assert.ok(idx > 0, "codex-review per-issue Owner resolution block not found in target loop");
+  const block = ORCH_YAML.slice(idx, idx + 2000);
+  // Per-iteration reset to Codex default
+  assert.match(block, /OWNER_OPTION="\$OPT_OWNER_CODEX"/);
+  assert.match(block, /OWNER_DISPLAY="Codex"/);
+  // Per-issue Implementer lookup keyed to the current ITEM_ID (no leakage from a prior loop)
+  assert.match(block, /-f id="\$ITEM_ID"/);
+  assert.match(block, /Implementer/);
+  // Reviewer-independence override
+  assert.match(block, /"\$CR_IMPLEMENTER_NAME" = "Codex"/);
+  assert.match(block, /OWNER_OPTION="\$OPT_OWNER_ROBERT"/);
+  assert.match(block, /OWNER_DISPLAY="Robert"/);
+});
+
+test("workflow /fps-state in-review applies the Implementer=Codex → Robert override per linked issue", () => {
+  // The state-comment-command loop must, when COMMAND=in-review and the resolved Owner would
+  // be Codex, look up the current linked issue's Implementer and override to Robert if Codex.
+  const idx = ORCH_YAML.indexOf('if [ "$COMMAND" = "in-review" ] && [ "$OWNER_DISPLAY" = "Codex" ]; then');
+  assert.ok(idx > 0, "in-review reviewer-independence block not found in /fps-state loop");
+  const block = ORCH_YAML.slice(idx, idx + 2000);
+  // Per-issue Implementer lookup keyed to the current ITEM_ID
+  assert.match(block, /-f id="\$ITEM_ID"/);
+  assert.match(block, /Implementer/);
+  // Reviewer-independence override when Implementer=Codex
+  assert.match(block, /"\$IMPLEMENTER_NAME_REVIEW" = "Codex"/);
+  assert.match(block, /OWNER_OPTION="\$OPT_OWNER_ROBERT"/);
+  assert.match(block, /OWNER_DISPLAY="Robert"/);
+});
+
+test("workflow /fps-state in-review preserves an explicit non-Codex reviewer (Robert/Human/Claude/Copilot)", () => {
+  // The reviewer-independence override guard specifically checks `OWNER_DISPLAY = "Codex"`,
+  // so an explicit non-Codex EXPLICIT_OWNER never triggers the override — the guard itself
+  // is the durable predicate that preserves an explicit Robert/Human/Claude/Copilot reviewer.
+  const guard = ORCH_YAML.match(/if \[ "\$COMMAND" = "in-review" \] && \[ "\$OWNER_DISPLAY" = "Codex" \]; then/);
+  assert.ok(guard, "in-review override must be gated on OWNER_DISPLAY=Codex to preserve explicit non-Codex owners");
+});
+
+test("workflow: both manual In-review paths are inside per-linked-issue loops (no cross-issue leakage)", () => {
+  // Structural guarantee: the reviewer-independence overrides live inside `for ... do` loops
+  // that iterate linked issues, so the per-iteration Implementer lookup cannot leak the first
+  // issue's result into subsequent iterations. We assert each override sits between its loop's
+  // opening `for ... do` and the start of the next job stanza (a stable structural marker).
+  const routeLoopIdx = ORCH_YAML.indexOf("for TARGET_ISSUE in $TARGET_ISSUES");
+  assert.ok(routeLoopIdx > 0, "codex-review target loop not found");
+  const routeCodexIdx = ORCH_YAML.indexOf('CODEX_REVIEW_ROUTE" = "true"', routeLoopIdx);
+  assert.ok(routeCodexIdx > routeLoopIdx, "codex-review per-issue block must appear inside the TARGET_ISSUES loop");
+
+  const stateLoopIdx = ORCH_YAML.indexOf("for ISSUE_NUM in $LINKED_ISSUES");
+  assert.ok(stateLoopIdx > 0, "/fps-state linked-issues loop not found");
+  const routeJobIdx = ORCH_YAML.indexOf("route-comment-command:", stateLoopIdx);
+  const inReviewIdx = ORCH_YAML.indexOf('COMMAND" = "in-review" ] && [ "$OWNER_DISPLAY" = "Codex"', stateLoopIdx);
+  assert.ok(inReviewIdx > stateLoopIdx && inReviewIdx < routeJobIdx, "in-review override must appear inside the LINKED_ISSUES loop, not after the state job");
+});

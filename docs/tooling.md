@@ -57,7 +57,7 @@ When a formal PR review cannot be submitted (for example, because the reviewer a
 | Command | Status | Owner |
 | --- | --- | --- |
 | `/fps-state needs-changes [Claude\|Copilot\|Codex\|Robert]` | `Needs changes` | Explicit owner, or current `Implementer` field if omitted |
-| `/fps-state in-review` | `In review` | `Codex` |
+| `/fps-state in-review` | `In review` | `Codex` by default; overridden to `Robert` per linked issue when that issue's `Implementer = Codex` (reviewer-independence) |
 | `/fps-state done` | `Done` | `None` |
 | `/fps-state blocked [Robert\|Codex]` | `Blocked` | `Robert` if omitted |
 
@@ -88,13 +88,14 @@ When an implementer needs to hand work to another actor, post `/fps-route <comma
 
 | Command | Status | Owner | Implementer |
 | --- | --- | --- | --- |
-| `/fps-route codex-review` | `In review` | `Codex` | unchanged |
+| `/fps-route codex-review` | `In review` | `Codex` by default; overridden to `Robert` per target issue when that issue's `Implementer = Codex` (reviewer-independence) | unchanged |
 | `/fps-route claude-fix` | `Needs changes` | `Claude` | `Claude` |
 | `/fps-route copilot-fix` | `Needs changes` | `Copilot` | `Copilot` |
 | `/fps-route claude-question` | `Blocked` | `Codex` | `Claude` |
 | `/fps-route robert-decision` | `Blocked` | `Robert` | unchanged |
 | `/fps-route assign Claude` | `Assigned` | `Claude` | `Claude` |
 | `/fps-route assign Copilot` | `Assigned` | `Copilot` | `Copilot` |
+| `/fps-route assign Codex` | `Assigned` | `Codex` | `Codex` |
 | `/fps-route blocked [Robert\|Codex\|Claude\|Copilot]` | `Blocked` | explicit owner, or `Robert` if omitted | unchanged |
 
 Restrictions: `/fps-route` is accepted from trusted repository collaborators and known agent bots whose login identifies them as Copilot or Claude. It is for normal handoff only. Repository-owner `/fps-state` remains the authoritative override for correcting bad state.
