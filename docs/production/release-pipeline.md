@@ -27,6 +27,8 @@ Each stage maps to a concrete workflow or script:
 
 No secrets live in repository files. CI uses the built-in `GITHUB_TOKEN` for GHCR; the NAS authenticates with an operator-held PAT (`read:packages`) for private packages.
 
+The **DigitalOcean Droplet** profile runs the same deploy/smoke/rollback flow as the NAS rows above — the same pinned-tag pull, no host build — with `tools/deploy-digitalocean.sh` and `--digitalocean`, plus a delta overlay that suppresses public host ports for an internet-addressable host. Setup, operator access, and troubleshooting: [DigitalOcean Droplet setup](./digitalocean-setup.md).
+
 ---
 
 ## Which command to run
@@ -37,6 +39,8 @@ No secrets live in repository files. CI uses the built-in `GITHUB_TOKEN` for GHC
 | NAS release deploy (pulls a pinned tag) | `./tools/deploy-nas.sh --domain <domain> --tag sha-<commit>` |
 | NAS internal troubleshooting (no public smoke) | `./tools/start-container-stack.sh --nas --skip-e2e` |
 | Re-run public smoke only | `./tools/start-container-stack.sh --nas --domain <domain>` |
+| DigitalOcean Droplet release deploy (NAS baseline + public-port suppression) | `./tools/deploy-digitalocean.sh --domain <domain> --tag sha-<commit>` — see [DigitalOcean setup](./digitalocean-setup.md) |
+| DigitalOcean re-run public smoke only (non-mutating; never pulls/redeploys) | `./tools/start-container-stack.sh --digitalocean --domain <domain> --smoke-only` |
 
 ---
 

@@ -1,0 +1,104 @@
+# DigitalOcean Droplet deployment overlay — public-boundary hardening (#766).
+#
+# DELTA-ONLY. This file adds nothing but the one thing a single, internet-
+# addressable host needs that the LAN-fronted NAS profile does not: it stops
+# every container from publishing a host port on the Droplet's public
+# interface. Durable stores, named volumes, restart policies, production
+# Keycloak, and server-mode Vault all come from docker-compose.nas.yml — this
+# overlay MUST be applied on top of the NAS overlays, never instead of them.
+#
+# Full DigitalOcean profile (what tools/deploy-digitalocean.sh and the compose
+# resolver assemble):
+#   docker compose --env-file do.env \
+#     -f docker-compose.yaml \
+#     -f docker-compose.services.images.yml \
+#     -f docker-compose.dapr.yml \
+#     -f docker-compose.nas.yml \
+#     -f docker-compose.services.nas.yml \
+#     -f docker-compose.digitalocean.yml \
+#     up -d
+#
+# Why suppress every host port:
+#   On the NAS the host sits on a private LAN behind a router; a `0.0.0.0` host
+#   port is reachable only from the LAN. A DigitalOcean Droplet has a public IP,
+#   so the SAME `0.0.0.0` binding is reachable from the internet. The only
+#   ingress for this profile is the outbound Cloudflare Tunnel, which reaches
+#   `fairspot-web:80` and `keycloak:8080` over the internal `fairspot_network`
+#   Docker network — it needs no published host port. Container-to-container
+#   traffic likewise uses service names on that network, never host ports.
+#   So no service needs a host port, and every one is removed here.
+#
+# Compose merges `ports` sequences by APPENDING across files, so an overlay
+# cannot drop a port by omission. The `!reset []` tag empties the accumulated
+# list; `!override` replaces it. Both require a current Docker Compose v2
+# (compose-go merge tags); the deploy preflight checks the Compose version.
+#
+# Operator access to internal surfaces is via SSH + an on-demand tunnel to the
+# container, or Cloudflare Access — never a public host port. The one
+# convenience binding kept is Grafana, pinned to loopback (127.0.0.1) so it is
+# reachable only through `ssh -L` from the operator's machine, never publicly.
+
+services:
+
+  # ── Public 0.0.0.0 bindings on the base/image stack — removed ────────────────
+  # (envoy gateway, Keycloak, every app service, the web SPA, and the
+  # observability UIs; Cloudflare Tunnel reaches web + Keycloak internally.)
+  envoy-proxy:
+    ports: !reset []
+  keycloak:
+    ports: !reset []
+  jaeger:
+    ports: !reset []
+  prometheus:
+    ports: !reset []
+  alertmanager:
+    ports: !reset []
+  loki:
+    ports: !reset []
+  zipkin:
+    ports: !reset []
+
+  fairspot-audit:
+    ports: !reset []
+  fairspot-booking:
+    ports: !reset []
+  fairspot-configuration:
+    ports: !reset []
+  fairspot-customer:
+    ports: !reset []
+  fairspot-datahub:
+    ports: !reset []
+  fairspot-identity:
+    ports: !reset []
+  fairspot-notification:
+    ports: !reset []
+  fairspot-profile:
+    ports: !reset []
+  fairspot-reporting:
+    ports: !reset []
+  fairspot-web:
+    ports: !reset []
+
+  # ── Loopback bindings on the base stack — removed too ────────────────────────
+  # These are 127.0.0.1 on the NAS, so not internet-exposed even there, but on a
+  # single-purpose Droplet nothing on the host connects to them directly
+  # (containers use the Docker network). Removed to keep the host surface empty;
+  # reach a store, if ever needed, with `docker compose exec <svc> …`.
+  vault:
+    ports: !reset []
+  minio:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  mongodb:
+    ports: !reset []
+
+  # ── Grafana — the one operator convenience endpoint, loopback-only ───────────
+  # Kept host-bound but pinned to 127.0.0.1 so it is reachable only via
+  # `ssh -L ${FPS_GRAFANA_HOST_PORT:-3001}:127.0.0.1:${FPS_GRAFANA_HOST_PORT:-3001} <droplet>`
+  # (or Cloudflare Access). Never published on the public interface.
+  grafana:
+    ports: !override
+      - "127.0.0.1:${FPS_GRAFANA_HOST_PORT:-3001}:3000"

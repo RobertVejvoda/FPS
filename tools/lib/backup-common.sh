@@ -29,19 +29,30 @@ BACKUP_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$BACKUP_LIB_DIR/../.." && pwd)"
 INFRA_DIR="$REPO_ROOT/code/infrastructure"
 
+# True for the hosted durable profiles (nas, digitalocean): image-mode services,
+# durable Keycloak Postgres + server-mode Vault, and the NAS hardening overlays.
+# Both share one code path so a DigitalOcean change can never drift from NAS.
+is_hosted_profile() { [[ "$MODE" == "nas" || "$MODE" == "digitalocean" ]]; }
+
 # ── Resolve the compose command for the selected mode ────────────────────────
-# Mirrors start-container-stack.sh: MODE ∈ {local,nas}; ENV_FILE optional for
-# local, defaults to nas.env for nas. Sets the COMPOSE_CMD array and MODE.
+# Mirrors start-container-stack.sh: MODE ∈ {local,nas,digitalocean}. ENV_FILE is
+# optional for local; it defaults to nas.env for nas and do.env for digitalocean.
+# Sets the COMPOSE_CMD array and MODE.
 resolve_compose() {
   MODE="${MODE:-local}"
   # Default the env file and export the same interpolation vars that
   # start-container-stack.sh does, so any compose subcommand (ps/exec/down/up)
   # can render the config. DataHub fails closed without POSTGRES_PASSWORD, and
-  # the Vault/Dapr wiring needs VAULT_TOKEN; NAS supplies real values via nas.env.
-  if [[ "$MODE" == "nas" ]]; then
-    ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
+  # the Vault/Dapr wiring needs VAULT_TOKEN; hosted profiles supply real values
+  # via nas.env / do.env.
+  if is_hosted_profile; then
     SERVICES_FILE="docker-compose.services.images.yml"
     export ALERTMANAGER_CONFIG_FILE="${ALERTMANAGER_CONFIG_FILE:-runtime/config.yaml}"
+    if [[ "$MODE" == "digitalocean" ]]; then
+      ENV_FILE="${ENV_FILE:-$INFRA_DIR/do.env}"
+    else
+      ENV_FILE="${ENV_FILE:-$INFRA_DIR/nas.env}"
+    fi
   else
     ENV_FILE="${ENV_FILE:-$INFRA_DIR/local-docker.env}"
     SERVICES_FILE="docker-compose.services.yml"
@@ -54,9 +65,12 @@ resolve_compose() {
     "-f" "$INFRA_DIR/$SERVICES_FILE"
     "-f" "$INFRA_DIR/docker-compose.dapr.yml"
   )
-  if [[ "$MODE" == "nas" ]]; then
+  if is_hosted_profile; then
     files+=("-f" "$INFRA_DIR/docker-compose.nas.yml")
     files+=("-f" "$INFRA_DIR/docker-compose.services.nas.yml")
+  fi
+  if [[ "$MODE" == "digitalocean" ]]; then
+    files+=("-f" "$INFRA_DIR/docker-compose.digitalocean.yml")
   fi
 
   if [[ -n "${ENV_FILE:-}" && -f "$ENV_FILE" ]]; then

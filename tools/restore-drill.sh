@@ -19,15 +19,20 @@
 # So this drill automates recovery of the durable DATA, OBJECT, and IDENTITY
 # stores; Vault secret-store restore is a declared manual step (see #684).
 #
-# DESTRUCTIVE. Requires --yes. Targets the LOCAL stack by default; refuses --nas
-# unless --force-nas is also given (a NAS restore overwrites live customer data).
+# DESTRUCTIVE. Requires --yes. Targets the LOCAL stack by default. A hosted
+# restore overwrites live customer data, so it refuses each hosted profile unless
+# its OWN force flag is given: --nas needs --force-nas, --digitalocean needs
+# --force-digitalocean (a DigitalOcean restore never falls through to NAS or
+# local behavior).
 #
 # Usage:
-#   ./tools/restore-drill.sh --from <backup-dir> [--yes] [--local|--nas --force-nas]
-#                            [--env-file PATH] [--skip-smoke]
+#   ./tools/restore-drill.sh --from <backup-dir> [--yes]
+#       [--local | --nas --force-nas | --digitalocean --force-digitalocean]
+#       [--env-file PATH] [--skip-smoke]
 #
-# Exit codes: 0 data/object/identity stores restored + smoke + data-return passed;
-#             1 a hard failure.
+# Exit codes: 0 data/object/identity stores restored and assertions passed; the
+#             hosted smoke also passed unless DigitalOcean explicitly deferred
+#             it at the manual Vault DR boundary. 1 means a hard failure.
 
 set -euo pipefail
 
@@ -41,19 +46,22 @@ ENV_FILE=""
 FROM=""
 CONFIRMED=false
 FORCE_NAS=false
+FORCE_DO=false
 SKIP_SMOKE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --from)       FROM="${2:-}"; shift ;;
-    --nas)        MODE="nas" ;;
-    --local)      MODE="local" ;;
-    --force-nas)  FORCE_NAS=true ;;
-    --env-file)   ENV_FILE="${2:-}"; shift ;;
-    --yes)        CONFIRMED=true ;;
-    --skip-smoke) SKIP_SMOKE=true ;;
-    -h|--help)    sed -n '2,30p' "$0"; exit 0 ;;
-    *)            die "Unknown argument: $1 (see --help)" ;;
+    --from)                FROM="${2:-}"; shift ;;
+    --nas)                 MODE="nas" ;;
+    --digitalocean)        MODE="digitalocean" ;;
+    --local)               MODE="local" ;;
+    --force-nas)           FORCE_NAS=true ;;
+    --force-digitalocean)  FORCE_DO=true ;;
+    --env-file)            ENV_FILE="${2:-}"; shift ;;
+    --yes)                 CONFIRMED=true ;;
+    --skip-smoke)          SKIP_SMOKE=true ;;
+    -h|--help)             sed -n '2,32p' "$0"; exit 0 ;;
+    *)                     die "Unknown argument: $1 (see --help)" ;;
   esac
   shift
 done
@@ -67,6 +75,9 @@ FROM="$(cd "$FROM" && pwd)"
 
 if [[ "$MODE" == "nas" && "$FORCE_NAS" != "true" ]]; then
   die "Refusing to run a restore drill against NAS (it overwrites live data). Add --force-nas if you really mean it."
+fi
+if [[ "$MODE" == "digitalocean" && "$FORCE_DO" != "true" ]]; then
+  die "Refusing to run a restore drill against the DigitalOcean profile (it overwrites live data). Add --force-digitalocean if you really mean it."
 fi
 if [[ "$CONFIRMED" != "true" ]]; then
   die "This DESTROYS the '$MODE' stack and its volumes, then restores from $FROM. Re-run with --yes to proceed."
@@ -89,7 +100,7 @@ ok "Stack + volumes removed"
 
 # ── 3. Bring infra back up (clean volumes) ───────────────────────────────────
 INFRA_SERVICES=(mongodb mongodb-init postgres minio vault)
-[[ "$MODE" == "nas" ]] && INFRA_SERVICES+=(keycloak-postgres)
+is_hosted_profile && INFRA_SERVICES+=(keycloak-postgres)
 log "Starting infra: ${INFRA_SERVICES[*]}"
 "${COMPOSE_CMD[@]}" up -d "${INFRA_SERVICES[@]}"
 
@@ -110,7 +121,7 @@ _wait_healthy() {
 _wait_healthy mongodb
 _wait_healthy postgres
 _wait_healthy minio
-[[ "$MODE" == "nas" ]] && _wait_healthy keycloak-postgres
+is_hosted_profile && _wait_healthy keycloak-postgres
 
 # ── 4. Restore each store ────────────────────────────────────────────────────
 if _has "$MONGO_ARTIFACT"; then
@@ -132,7 +143,7 @@ if _has "$PG_DATAHUB_ARTIFACT"; then
   ok "Postgres restored"
 fi
 
-if [[ "$MODE" == "nas" ]] && _has "$KC_PG_ARTIFACT"; then
+if is_hosted_profile && _has "$KC_PG_ARTIFACT"; then
   log "Keycloak Postgres: psql restore"
   gunzip -c "$FROM/$KC_PG_ARTIFACT" | "${COMPOSE_CMD[@]}" exec -T keycloak-postgres sh -c \
     'PGPASSWORD="$POSTGRES_PASSWORD" psql -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null'
@@ -160,20 +171,56 @@ fi
 # steps. (The Vault backup artifact is produced automatically by
 # backup-stack.sh; only its restore is human-supervised.)
 VAULT_MANUAL=false
+VAULT_CONTAINER_SNAPSHOT="/tmp/restore-drill-vault.snap"
+
+# Print a fully shell-escaped, copy-pasteable command line for an argv array.
+_print_cmd() {
+  local step="$1"; shift
+  local out="" arg
+  for arg in "$@"; do
+    printf -v arg '%q' "$arg"
+    out="$out $arg"
+  done
+  echo "     ${step}.${out}"
+}
+
 if _has "$VAULT_SNAPSHOT_ARTIFACT"; then
   VAULT_MANUAL=true
   warn "Vault raft snapshot present — secret-store restore is a MANUAL DR step, not run by this drill:"
-  echo "     1. On a fresh server-mode node: vault operator init  (record keys + root token)"
-  echo "     2. vault operator unseal  (with the new keys)"
-  echo "     3. vault operator raft snapshot restore -force $VAULT_SNAPSHOT_ARTIFACT"
-  echo "     4. vault operator unseal  (with the SNAPSHOT cluster's original keys)"
-  echo "     5. verify a canary secret reads back"
+  _print_cmd 1 "${COMPOSE_CMD[@]}" exec vault vault operator init
+  echo "        (record keys + root token)"
+  _print_cmd 2 "${COMPOSE_CMD[@]}" exec vault vault operator unseal
+  echo "        (with the new keys)"
+  _print_cmd 3 "${COMPOSE_CMD[@]}" cp "$FROM/$VAULT_SNAPSHOT_ARTIFACT" "vault:$VAULT_CONTAINER_SNAPSHOT"
+  _print_cmd 4 "${COMPOSE_CMD[@]}" exec vault vault operator raft snapshot restore -force "$VAULT_CONTAINER_SNAPSHOT"
+  _print_cmd 5 "${COMPOSE_CMD[@]}" exec vault vault operator unseal
+  echo "        (with the SNAPSHOT cluster's original keys)"
+  echo "     6. verify a canary secret reads back"
   echo "     Full procedure + evidence: private runbook (#684)."
 elif _has "$VAULT_TAR_ARTIFACT"; then
   warn "Vault volume-tar present (local/dev, no durable secrets) — nothing to restore."
 fi
 
-# ── 5. Bring the full stack up (only needed for the smoke) ───────────────────
+# ── 5. DigitalOcean: Vault seal/init boundary before full-stack start ─────────
+# A DigitalOcean server-mode Vault is sealed/uninitialized after `down -v`.
+# The full-stack start path (start-container-stack.sh --digitalocean) calls
+# require_vault_unsealed and will exit immediately on a fresh node. Attempting
+# an automated full-stack smoke here would race the operator or silently fail.
+# The drill scope therefore stops at the data/object/identity assertion point;
+# full-stack smoke requires manual Vault init + unseal first (see notes above).
+if [[ "$MODE" == "digitalocean" ]] && [[ "$SKIP_SMOKE" != "true" ]]; then
+  warn "DigitalOcean: the full-stack smoke requires an initialized, unsealed Vault."
+  warn "  A fresh server-mode Vault is sealed/uninitialized after 'down -v'."
+  warn "  This run continues through the restored data/object/identity assertions."
+  warn "  After completing the manual Vault DR steps above, start the stack and"
+  warn "  run the hosted smoke manually (do not rerun this destructive drill):"
+  warn "    ./tools/start-container-stack.sh --digitalocean [--env-file PATH]"
+  warn ""
+  warn "Stopping drill at the data/object/identity store assertions (Vault DR boundary)."
+  SKIP_SMOKE=true
+fi
+
+# ── 6 (was 5). Bring the full stack up (only needed for the smoke) ───────────
 # The data-return assertions below query the restored stores directly, which are
 # already up from step 3 — so a --skip-smoke drill proves recovery without the
 # full app stack (and without services like Grafana that the smoke would need).
@@ -208,7 +255,9 @@ if [[ "$SKIP_SMOKE" == "true" ]]; then
 else
   log "Running stack smoke (health/readiness)"
   smoke_args=()
-  [[ "$MODE" == "nas" ]] && smoke_args+=(--nas)
+  # Pass the hosted profile flag through so the smoke resolves the same compose
+  # files (nas -> --nas, digitalocean -> --digitalocean).
+  is_hosted_profile && smoke_args+=("--$MODE")
   [[ -n "$ENV_FILE" ]] && smoke_args+=(--env-file "$ENV_FILE")
   if "$SCRIPT_DIR/start-container-stack.sh" ${smoke_args[@]+"${smoke_args[@]}"} --skip-e2e; then
     ok "Stack smoke passed"
@@ -221,7 +270,11 @@ echo
 [[ "$DATA_OK" == "true" ]] || die "Restore drill: data-return assertions FAILED"
 
 msg="Restore drill PASSED — data/object/identity stores rebuilt from $FROM; data returned"
-[[ "$SKIP_SMOKE" != "true" ]] && msg="$msg; smoke green"
+if [[ "$SKIP_SMOKE" != "true" ]]; then
+  msg="$msg; smoke green"
+elif [[ "$MODE" == "digitalocean" ]]; then
+  msg="$msg; full-stack smoke deferred (Vault DR boundary — complete manual Vault init/unseal first)"
+fi
 ok "$msg"
 if [[ "$VAULT_MANUAL" == "true" ]]; then
   warn "SCOPE: Vault secret-store restore is a separate MANUAL DR step (see above / #684)"
