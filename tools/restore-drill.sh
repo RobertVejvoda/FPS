@@ -171,14 +171,31 @@ fi
 # steps. (The Vault backup artifact is produced automatically by
 # backup-stack.sh; only its restore is human-supervised.)
 VAULT_MANUAL=false
+VAULT_CONTAINER_SNAPSHOT="/tmp/restore-drill-vault.snap"
+
+# Print a fully shell-escaped, copy-pasteable command line for an argv array.
+_print_cmd() {
+  local step="$1"; shift
+  local out="" arg
+  for arg in "$@"; do
+    printf -v arg '%q' "$arg"
+    out="$out $arg"
+  done
+  echo "     ${step}.${out}"
+}
+
 if _has "$VAULT_SNAPSHOT_ARTIFACT"; then
   VAULT_MANUAL=true
   warn "Vault raft snapshot present — secret-store restore is a MANUAL DR step, not run by this drill:"
-  echo "     1. On a fresh server-mode node: vault operator init  (record keys + root token)"
-  echo "     2. vault operator unseal  (with the new keys)"
-  echo "     3. vault operator raft snapshot restore -force $VAULT_SNAPSHOT_ARTIFACT"
-  echo "     4. vault operator unseal  (with the SNAPSHOT cluster's original keys)"
-  echo "     5. verify a canary secret reads back"
+  _print_cmd 1 "${COMPOSE_CMD[@]}" exec vault vault operator init
+  echo "        (record keys + root token)"
+  _print_cmd 2 "${COMPOSE_CMD[@]}" exec vault vault operator unseal
+  echo "        (with the new keys)"
+  _print_cmd 3 "${COMPOSE_CMD[@]}" cp "$FROM/$VAULT_SNAPSHOT_ARTIFACT" "vault:$VAULT_CONTAINER_SNAPSHOT"
+  _print_cmd 4 "${COMPOSE_CMD[@]}" exec vault vault operator raft snapshot restore -force "$VAULT_CONTAINER_SNAPSHOT"
+  _print_cmd 5 "${COMPOSE_CMD[@]}" exec vault vault operator unseal
+  echo "        (with the SNAPSHOT cluster's original keys)"
+  echo "     6. verify a canary secret reads back"
   echo "     Full procedure + evidence: private runbook (#684)."
 elif _has "$VAULT_TAR_ARTIFACT"; then
   warn "Vault volume-tar present (local/dev, no durable secrets) — nothing to restore."

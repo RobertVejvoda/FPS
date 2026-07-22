@@ -266,6 +266,20 @@ else
   skip "docker CLI unavailable — restore/backup gate assertions skipped"
 fi
 
+# Vault manual DR contract: restore-drill.sh must print an executable `docker
+# compose cp` of the verified host snapshot into a fixed container path, then
+# an executable `docker compose exec vault ... raft snapshot restore` step
+# must use that SAME container path (not the host path) — otherwise the
+# printed runbook is not copy-pasteable.
+cp_line="$(grep -m1 '_print_cmd 3 .*cp .*vault:' "$RESTORE" || true)"
+restore_line="$(grep -m1 '_print_cmd 4 .*exec vault .*raft snapshot restore' "$RESTORE" || true)"
+cp_path="$(printf '%s' "$cp_line" | sed -n 's/.*vault:\([^"]*\)".*/\1/p')"
+if [[ -n "$cp_path" ]] && printf '%s' "$restore_line" | grep -qF "$cp_path"; then
+  pass "restore-drill: Vault DR contract copies snapshot into container before raft restore"
+else
+  fail "restore-drill: Vault DR contract missing matching docker compose cp / raft restore container path"
+fi
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 hdr "Summary"
 echo "  PASS=$PASS  FAIL=$FAIL  SKIP=$SKIP"
