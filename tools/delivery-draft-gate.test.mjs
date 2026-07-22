@@ -234,3 +234,50 @@ test("workflow /fps-route assign case dispatches Codex through set_implementer (
 test("workflow /fps-route assign usage notice lists Codex as an allowed owner", () => {
   assert.match(ORCH_YAML, /Usage:\s*\/fps-route assign[^\n]*Codex/);
 });
+
+// --- Needs-changes handback: Implementer=Codex must return ownership to Codex, never fall through to None ---
+// These read the orchestrator YAML directly and assert the durable predicates for the three
+// Needs-changes paths so a regression that drops Codex from any of them fails the suite.
+test("workflow CHANGES_REQUESTED handler maps Implementer=Codex to OPT_OWNER_CODEX (no Owner=None fallthrough)", () => {
+  // First IMPLEMENTER_NAME case block belongs to the pull_request_review CHANGES_REQUESTED handler.
+  const idx = ORCH_YAML.indexOf('case "$IMPLEMENTER_NAME" in');
+  assert.ok(idx > 0, "CHANGES_REQUESTED IMPLEMENTER_NAME case block not found");
+  const block = ORCH_YAML.slice(idx, ORCH_YAML.indexOf("esac", idx));
+  assert.match(block, /Codex\)\s*OWNER_OPTION="\$OPT_OWNER_CODEX"\s*;;/);
+  assert.match(block, /Claude\)\s*OWNER_OPTION="\$OPT_OWNER_CLAUDE"\s*;;/);
+  assert.match(block, /Copilot\)\s*OWNER_OPTION="\$OPT_OWNER_COPILOT"\s*;;/);
+});
+
+test("workflow converted_to_draft handler maps Implementer=Codex to OPT_OWNER_CODEX (no Owner=None fallthrough)", () => {
+  // Second IMPLEMENTER_NAME case block belongs to the pr-converted-to-draft handler.
+  const first = ORCH_YAML.indexOf('case "$IMPLEMENTER_NAME" in');
+  const second = ORCH_YAML.indexOf('case "$IMPLEMENTER_NAME" in', first + 1);
+  assert.ok(second > first, "converted_to_draft IMPLEMENTER_NAME case block not found");
+  const block = ORCH_YAML.slice(second, ORCH_YAML.indexOf("esac", second));
+  assert.match(block, /Codex\)\s*OWNER_OPTION="\$OPT_OWNER_CODEX"\s*;;/);
+});
+
+test("workflow /fps-state needs-changes Implementer fallback maps Codex to OPT_OWNER_CODEX with display Codex", () => {
+  // Third IMPLEMENTER_NAME case block belongs to the /fps-state needs-changes owner-fallback.
+  const first = ORCH_YAML.indexOf('case "$IMPLEMENTER_NAME" in');
+  const second = ORCH_YAML.indexOf('case "$IMPLEMENTER_NAME" in', first + 1);
+  const third = ORCH_YAML.indexOf('case "$IMPLEMENTER_NAME" in', second + 1);
+  assert.ok(third > second, "/fps-state needs-changes IMPLEMENTER_NAME case block not found");
+  const block = ORCH_YAML.slice(third, ORCH_YAML.indexOf("esac", third));
+  assert.match(block, /Codex\)\s*OWNER_OPTION="\$OPT_OWNER_CODEX";\s*OWNER_DISPLAY="Codex"\s*;;/);
+});
+
+test("workflow: every Needs-changes IMPLEMENTER_NAME case block handles Codex before the None fallthrough", () => {
+  // Defensive: make sure no future edit reintroduces a Codex-less block. All three blocks must
+  // contain a `Codex)` arm, and it must appear before the wildcard `*)` fallthrough.
+  const re = /case "\$IMPLEMENTER_NAME" in([\s\S]*?)esac/g;
+  const blocks = [...ORCH_YAML.matchAll(re)].map((m) => m[1]);
+  assert.equal(blocks.length, 3, `expected 3 IMPLEMENTER_NAME case blocks, found ${blocks.length}`);
+  for (const [i, body] of blocks.entries()) {
+    const codexIdx = body.search(/\bCodex\)/);
+    const wildcardIdx = body.search(/^\s*\*\)/m);
+    assert.ok(codexIdx >= 0, `block #${i + 1} missing Codex) arm`);
+    assert.ok(wildcardIdx > codexIdx, `block #${i + 1} Codex) arm must precede the *) fallthrough`);
+    assert.match(body, /Codex\)[^\n]*OPT_OWNER_CODEX/);
+  }
+});

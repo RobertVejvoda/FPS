@@ -422,6 +422,7 @@ jobs:
             case "$IMPLEMENTER_NAME" in
               Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
               Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+              Codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
               Human)   OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
               *)       OWNER_OPTION="$OPT_OWNER_NONE" ;;
             esac
@@ -502,6 +503,7 @@ jobs:
             case "$IMPLEMENTER_NAME" in
               Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE" ;;
               Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT" ;;
+              Codex)   OWNER_OPTION="$OPT_OWNER_CODEX" ;;
               Human)   OWNER_OPTION="$OPT_OWNER_ROBERT" ;;
               *)       OWNER_OPTION="$OPT_OWNER_NONE" ;;
             esac
@@ -632,6 +634,7 @@ jobs:
               case "$IMPLEMENTER_NAME" in
                 Claude)  OWNER_OPTION="$OPT_OWNER_CLAUDE";  OWNER_DISPLAY="Claude" ;;
                 Copilot) OWNER_OPTION="$OPT_OWNER_COPILOT"; OWNER_DISPLAY="Copilot" ;;
+                Codex)   OWNER_OPTION="$OPT_OWNER_CODEX";   OWNER_DISPLAY="Codex" ;;
                 Human)   OWNER_OPTION="$OPT_OWNER_ROBERT";  OWNER_DISPLAY="Robert" ;;
                 *)       OWNER_OPTION="$OPT_OWNER_NONE";    OWNER_DISPLAY="None" ;;
               esac
