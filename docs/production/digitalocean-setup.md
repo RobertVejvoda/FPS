@@ -85,6 +85,46 @@ is no second secret schema to drift. Set at least the store credentials
 `FPS_APP_ORIGIN`), Grafana (`GRAFANA_*`), the public auth/app values
 (`FPS_AUTH_AUTHORITY` as an `https://` URL, `FPS_PUBLIC_DOMAIN`), and `VAULT_TOKEN`.
 
+### Public web runtime contract (`FPS_WEB_*`)
+
+`nas.env.example` omits these entirely — the template does not define any
+`FPS_WEB_*` key, so a `do.env` copied straight from it starts **without** the
+public web runtime contract at all, not merely with blank values for it. The
+`fairspot-web` container entrypoint (`code/web/fps-web/docker-entrypoint.sh`)
+reads them at startup to render its runtime `/config.json`. If
+`FPS_WEB_API_BASE_URL` is unset, the container does **not** fail — it
+silently serves the image's **baked default** `config.json`
+(`http://localhost:10000`, a local Keycloak issuer, local callback URLs), and
+the public smoke's `/config.json` check only asserts the file is *present*,
+not that it points at the public origin. A `do.env` copied straight from
+`nas.env.example` and never edited would therefore deploy a web app that
+browsers cannot sign in with or call the public API from.
+
+`tools/deploy-digitalocean.sh` closes this gap: for a normal public deploy (no
+`--skip-public`), preflight fails if any of the following are blank, or
+inconsistent with `--domain`/`FPS_AUTH_AUTHORITY`:
+
+| Variable | Required value for domain `<domain>` |
+| --- | --- |
+| `FPS_WEB_API_BASE_URL` | `https://app.<domain>/api` — single-origin model, nginx proxies `/api/` to Envoy |
+| `FPS_WEB_OIDC_AUTHORITY` | Must equal `FPS_AUTH_AUTHORITY` — the same public issuer the APIs validate |
+| `FPS_WEB_OIDC_CLIENT_ID` | Non-empty (e.g. `fps-web`) |
+| `FPS_WEB_OIDC_REDIRECT_URI` | Exactly `https://app.<domain>/auth/callback` — a same-origin path that isn't this exact value is still rejected |
+| `FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI` | Exactly `https://app.<domain>/` |
+
+Add these five lines to `do.env` after copying the template — substitute your
+own domain, and match the realm path if `FPS_AUTH_AUTHORITY` differs:
+
+```sh
+FPS_WEB_API_BASE_URL=https://app.<domain>/api
+FPS_WEB_OIDC_AUTHORITY=https://auth.<domain>/realms/fairspot
+FPS_WEB_OIDC_CLIENT_ID=fps-web
+FPS_WEB_OIDC_REDIRECT_URI=https://app.<domain>/auth/callback
+FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI=https://app.<domain>/
+```
+
+Full variable reference: [GHCR image publishing](ghcr-image-publishing.md#environment-variables-image-mode).
+
 ## 3. Deploy
 
 ```sh
@@ -94,7 +134,9 @@ is no second secret schema to drift. Set at least the store credentials
 The entry point runs a **non-mutating, fail-closed preflight** before starting
 anything, with DigitalOcean-specific errors: Docker/Compose present; `do.env`
 and the tunnel env file exist; a public domain and `https://` auth authority are
-set; an **immutable** image tag is pinned (a missing or `latest` tag is rejected
+set; the [public web runtime contract](#public-web-runtime-contract-fps_web_)
+(`FPS_WEB_*`) is present and consistent with the domain/auth authority; an
+**immutable** image tag is pinned (a missing or `latest` tag is rejected
 unless you pass `--allow-latest`, which is not valid for evidence); disk-space
 guidance; and a **public-boundary render check** that refuses to deploy if any
 service would publish a public port. Only then does it check the daemon, start
@@ -199,6 +241,7 @@ data assertions and the subsequent manual smoke in the private runbook
 | --- | --- |
 | Preflight: "cannot talk to the Docker daemon" | Run as a user in the `docker` group; confirm the daemon is up. |
 | Preflight: "requires an immutable image tag" | Pass `--tag sha-<commit>` (or a `v*` tag). `latest` needs `--allow-latest` and is not valid for evidence. |
+| Preflight: "missing public web runtime setting" / "does not match" | Fill every `FPS_WEB_*` value in `do.env` and match it to `--domain`/`FPS_AUTH_AUTHORITY` — see [Public web runtime contract](#public-web-runtime-contract-fps_web_). |
 | Preflight: "the merged Compose profile did not render" | A required value is missing in `do.env`, or Compose is too old for the overlay's merge tags — update Compose v2. |
 | Preflight: "refusing to deploy — a service would publish a PUBLIC host port" | The overlay/base drifted; run `./tools/validate-digitalocean-profile.sh` and restore the suppression. |
 | Vault "SEALED" / "UNINITIALIZED" on start | Unseal (or one-time init) as printed; re-run deploy. |

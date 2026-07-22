@@ -171,7 +171,72 @@ if [[ "$SKIP_PUBLIC" != "true" && "$AUTH_AUTHORITY" != https://* ]]; then
   exit 1
 fi
 
-# 5. Immutable image tag (only sha-<commit> or v* release tags; reject mutable tags).
+# 5. Public web runtime settings (FPS_WEB_*). The fairspot-web container
+#    entrypoint (code/web/fps-web/docker-entrypoint.sh) reads these at startup
+#    to render its runtime /config.json; if FPS_WEB_API_BASE_URL is unset it
+#    silently serves the image's BAKED DEFAULT config instead — http://localhost:10000
+#    and a local Keycloak issuer. nas.env.example (the template this runbook
+#    copies to do.env) omits these keys entirely, and the public smoke only
+#    checks that /config.json is *present*, not that it points at the public origin —
+#    so a copied-but-unedited template would deploy a web app that browsers
+#    cannot sign in with or call the public API from. Fail closed instead.
+WEB_API_BASE_URL="$(read_env_value FPS_WEB_API_BASE_URL)"
+WEB_OIDC_AUTHORITY="$(read_env_value FPS_WEB_OIDC_AUTHORITY)"
+WEB_OIDC_CLIENT_ID="$(read_env_value FPS_WEB_OIDC_CLIENT_ID)"
+WEB_OIDC_REDIRECT_URI="$(read_env_value FPS_WEB_OIDC_REDIRECT_URI)"
+WEB_OIDC_POST_LOGOUT_REDIRECT_URI="$(read_env_value FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI)"
+if [[ "$SKIP_PUBLIC" != "true" ]]; then
+  for pair in \
+    "FPS_WEB_API_BASE_URL=$WEB_API_BASE_URL" \
+    "FPS_WEB_OIDC_AUTHORITY=$WEB_OIDC_AUTHORITY" \
+    "FPS_WEB_OIDC_CLIENT_ID=$WEB_OIDC_CLIENT_ID" \
+    "FPS_WEB_OIDC_REDIRECT_URI=$WEB_OIDC_REDIRECT_URI" \
+    "FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI=$WEB_OIDC_POST_LOGOUT_REDIRECT_URI" \
+  ; do
+    if [[ -z "${pair#*=}" ]]; then
+      echo "ERROR (DigitalOcean profile): missing public web runtime setting ${pair%%=*}."
+      echo "  Without every FPS_WEB_* value, fairspot-web serves its baked default config.json"
+      echo "  (http://localhost:10000, local Keycloak) instead of the public app/auth contract."
+      echo "  Set every FPS_WEB_* value in $ENV_FILE (see docs/production/digitalocean-setup.md)."
+      echo "  For internal stack troubleshooting only, rerun with --skip-public."
+      exit 1
+    fi
+  done
+  EXPECTED_WEB_API_BASE_URL="https://app.$DOMAIN/api"
+  if [[ "$WEB_API_BASE_URL" != "$EXPECTED_WEB_API_BASE_URL" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_API_BASE_URL does not match the public domain."
+    echo "  Single-origin model: app.<domain> serves the SPA and proxies /api/ to Envoy, so this"
+    echo "  must be $EXPECTED_WEB_API_BASE_URL for domain $DOMAIN. Got: $WEB_API_BASE_URL"
+    exit 1
+  fi
+  if [[ "$WEB_OIDC_AUTHORITY" != "$AUTH_AUTHORITY" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_AUTHORITY does not match FPS_AUTH_AUTHORITY."
+    echo "  The browser-facing web OIDC authority and the API-validated auth authority must be the"
+    echo "  same public issuer, or the browser receives tokens every API rejects."
+    echo "  FPS_AUTH_AUTHORITY=$AUTH_AUTHORITY"
+    echo "  FPS_WEB_OIDC_AUTHORITY=$WEB_OIDC_AUTHORITY"
+    exit 1
+  fi
+  # Exact-path match, not a same-origin prefix: a same-origin-but-wrong-path
+  # value (e.g. an open-redirect or phishing path under app.<domain>) must
+  # still be rejected, so compare against the documented callback/post-logout
+  # paths exactly rather than accepting any arbitrary path under that origin.
+  EXPECTED_WEB_REDIRECT_URI="https://app.$DOMAIN/auth/callback"
+  if [[ "$WEB_OIDC_REDIRECT_URI" != "$EXPECTED_WEB_REDIRECT_URI" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_REDIRECT_URI does not match the documented callback path."
+    echo "  Expected exactly $EXPECTED_WEB_REDIRECT_URI for domain $DOMAIN. Got: $WEB_OIDC_REDIRECT_URI"
+    exit 1
+  fi
+  EXPECTED_WEB_POST_LOGOUT_REDIRECT_URI="https://app.$DOMAIN/"
+  if [[ "$WEB_OIDC_POST_LOGOUT_REDIRECT_URI" != "$EXPECTED_WEB_POST_LOGOUT_REDIRECT_URI" ]]; then
+    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI does not match the documented post-logout path."
+    echo "  Expected exactly $EXPECTED_WEB_POST_LOGOUT_REDIRECT_URI for domain $DOMAIN. Got: $WEB_OIDC_POST_LOGOUT_REDIRECT_URI"
+    exit 1
+  fi
+  note "public web runtime settings: FPS_WEB_* present and consistent with domain $DOMAIN"
+fi
+
+# 6. Immutable image tag (only sha-<commit> or v* release tags; reject mutable tags).
 IMAGE_TAG="${IMAGE_TAG:-${FPS_IMAGE_TAG:-}}"
 if [[ "$SKIP_PUBLIC" != "true" ]]; then
   _tag_is_immutable() {
@@ -212,7 +277,7 @@ if [[ -n "$IMAGE_TAG" ]]; then
 fi
 note "image tag: ${IMAGE_TAG:-<compose default>}"
 
-# 6. Disk-availability guidance (advisory; never mutates disks).
+# 7. Disk-availability guidance (advisory; never mutates disks).
 avail_kb="$(df -Pk "$INFRA_DIR" 2>/dev/null | awk 'NR==2 {print $4}')"
 if [[ -n "$avail_kb" ]]; then
   avail_gb=$(( avail_kb / 1024 / 1024 ))
@@ -223,7 +288,7 @@ if [[ -n "$avail_kb" ]]; then
   fi
 fi
 
-# 7. Public-boundary safety gate (fail-closed). Render the exact merged profile
+# 8. Public-boundary safety gate (fail-closed). Render the exact merged profile
 #    and assert NO service publishes a port on a public interface. The rendered
 #    config contains secrets, so it is never printed — only the port structure is
 #    inspected. This also proves every required env value is present (compose

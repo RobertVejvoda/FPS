@@ -73,12 +73,36 @@ FPS_AUTH_AUTHORITY=https://auth.example.test/realms/fairspot
 FPS_AUTH_AUDIENCE=fps-web
 FPS_PUBLIC_DOMAIN=example.test
 ALERTMANAGER_CONFIG_FILE=runtime/config.yaml
+FPS_WEB_API_BASE_URL=https://app.example.test/api
+FPS_WEB_OIDC_AUTHORITY=https://auth.example.test/realms/fairspot
+FPS_WEB_OIDC_CLIENT_ID=fps-web
+FPS_WEB_OIDC_REDIRECT_URI=https://app.example.test/auth/callback
+FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI=https://app.example.test/
 ENV
 
 # Same fixture, but with a blank FPS_AUTH_AUTHORITY — mirrors the shipped
 # nas.env.example, which leaves the key present but empty.
 BLANK_AUTH_ENV="$TMP/do-blank-auth.env"
 sed 's/^FPS_AUTH_AUTHORITY=.*/FPS_AUTH_AUTHORITY=/' "$FIX_ENV" > "$BLANK_AUTH_ENV"
+
+# Same fixture, but with a blank FPS_WEB_API_BASE_URL — mirrors an operator who
+# copied nas.env.example straight to do.env without filling the public web
+# runtime contract, which would otherwise leave fairspot-web serving its baked
+# localhost/dev config.json.
+MISSING_WEB_ENV="$TMP/do-missing-web.env"
+sed 's#^FPS_WEB_API_BASE_URL=.*#FPS_WEB_API_BASE_URL=#' "$FIX_ENV" > "$MISSING_WEB_ENV"
+
+# Same fixture, but FPS_WEB_OIDC_AUTHORITY points at a different issuer than
+# FPS_AUTH_AUTHORITY — a browser would receive tokens the APIs reject.
+MISMATCHED_WEB_ENV="$TMP/do-mismatched-web.env"
+sed 's#^FPS_WEB_OIDC_AUTHORITY=.*#FPS_WEB_OIDC_AUTHORITY=https://auth.wrong.test/realms/fairspot#' "$FIX_ENV" > "$MISMATCHED_WEB_ENV"
+
+# Same fixture, but FPS_WEB_OIDC_REDIRECT_URI is same-origin (still under
+# app.example.test) yet not the exact documented callback path — proves the
+# check is an EXACT match against the contract path, not a same-origin
+# prefix, so a same-origin open-redirect/phishing path is still rejected.
+MISMATCHED_REDIRECT_ENV="$TMP/do-mismatched-redirect.env"
+sed 's#^FPS_WEB_OIDC_REDIRECT_URI=.*#FPS_WEB_OIDC_REDIRECT_URI=https://app.example.test/auth/callback-evil#' "$FIX_ENV" > "$MISMATCHED_REDIRECT_ENV"
 
 render_do() {
   # $1 = image tag to pin (exported as FPS_IMAGE_TAG). Renders the full DO profile.
@@ -175,6 +199,12 @@ if docker compose version >/dev/null 2>&1; then
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/nope.env" --domain example.test --tag sha-x
   expect_fail "deploy: blank auth authority rejected" "encrypted public auth" -- \
     "$DEPLOY" --env-file "$BLANK_AUTH_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+  expect_fail "deploy: missing public web runtime setting rejected" "missing public web runtime setting" -- \
+    "$DEPLOY" --env-file "$MISSING_WEB_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+  expect_fail "deploy: web OIDC authority inconsistent with auth authority rejected" "does not match FPS_AUTH_AUTHORITY" -- \
+    "$DEPLOY" --env-file "$MISMATCHED_WEB_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+  expect_fail "deploy: web redirect URI same-origin-but-wrong-path rejected" "FPS_WEB_OIDC_REDIRECT_URI does not match" -- \
+    "$DEPLOY" --env-file "$MISMATCHED_REDIRECT_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
   expect_fail "deploy: missing image tag"   "immutable image tag" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test
   expect_fail "deploy: latest tag rejected" "mutable" -- \
