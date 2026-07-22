@@ -168,7 +168,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(fromJson('["opened","synchronize","reopened","ready_for_review"]'), github.event.action)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             tools/delivery-draft-gate.mjs

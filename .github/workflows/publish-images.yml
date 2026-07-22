@@ -44,7 +44,7 @@ jobs:
           - { name: fairspot-profile,       service: Profile,       project: FPS.Profile,       port: '5197' }
           - { name: fairspot-reporting,     service: Reporting,     project: FPS.Reporting,     port: '5171' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
@@ -87,7 +87,7 @@ jobs:
   build-web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
