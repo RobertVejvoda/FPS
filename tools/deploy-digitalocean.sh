@@ -239,7 +239,7 @@ hdr_render() {
     config
 }
 render_err="$(mktemp)"
-trap 'rm -f "$render_err"' EXIT
+trap 'find "$render_err" -maxdepth 0 -type f -delete 2>/dev/null || true' EXIT
 if ! rendered="$(hdr_render 2>"$render_err")"; then
   echo "ERROR (DigitalOcean profile): the merged Compose profile did not render."
   echo "  Likely a missing required value in $ENV_FILE, or a Docker Compose too old for the"

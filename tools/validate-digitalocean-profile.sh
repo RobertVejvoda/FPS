@@ -31,7 +31,7 @@ skip() { echo "  SKIP  $*"; SKIP=$((SKIP + 1)); }
 hdr()  { printf "\n== %s ==\n" "$*"; }
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'find "$TMP" -depth -delete 2>/dev/null || true' EXIT
 
 # ── 1. Syntax check every changed/new shell script ───────────────────────────
 hdr "1. bash -n (shell syntax)"
