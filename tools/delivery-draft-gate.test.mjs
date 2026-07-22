@@ -196,3 +196,41 @@ for (const currentImplementer of [undefined, "", "Robert", "SomeUnknownValue"]) 
     assert.equal(d.route.ownerOption, null);
   });
 }
+
+// --- Workflow conformance: `/fps-route assign Codex` records Owner=Codex AND Implementer=Codex ---
+// The workflow's set_implementer/assign branches are defined in the orchestrator YAML shell; these
+// tests read the YAML directly and assert the durable predicates so a regression in the shell
+// dispatch (e.g. Codex silently dropped from the assign case, or OPT_IMPL_CODEX removed) fails the
+// suite, not just the reducer contract.
+import { readFileSync } from "node:fs";
+
+const ORCH_YAML_PATH = fileURLToPath(new URL("../.github/workflows/delivery-state-orchestrator.yml", import.meta.url));
+const ORCH_YAML = readFileSync(ORCH_YAML_PATH, "utf8");
+
+test("workflow catalogues OPT_IMPL_CODEX with the known Project option id 533f5ac2", () => {
+  assert.match(ORCH_YAML, /OPT_IMPL_CODEX:\s*533f5ac2\b/);
+});
+
+test("workflow set_implementer supports Codex and maps it to OPT_IMPL_CODEX", () => {
+  assert.match(ORCH_YAML, /Codex\)\s*IMPL_OPTION="\$OPT_IMPL_CODEX";\s*IMPL_DISPLAY="Codex"\s*;;/);
+});
+
+test("workflow set_implementer error notice advertises Codex as a supported implementer", () => {
+  assert.match(ORCH_YAML, /Unsupported route implementer[^\n]*supported:[^\n]*Codex/);
+});
+
+test("workflow /fps-route assign case dispatches Codex through set_implementer (writes Implementer=Codex)", () => {
+  // Locate the `assign)` case body (from `assign)` up to the next top-level `blocked)` sibling)
+  // and assert Codex is dispatched to set_implementer within it.
+  const assignBlock = ORCH_YAML.match(/\bassign\)[\s\S]*?\n\s{12}blocked\)/);
+  assert.ok(assignBlock, "assign case not found in orchestrator workflow");
+  assert.match(
+    assignBlock[0],
+    /Codex\)\s*set_implementer\s+"\$ARG_OWNER"\s*;;/,
+    "assign case must dispatch Codex through set_implementer so Implementer=Codex is recorded",
+  );
+});
+
+test("workflow /fps-route assign usage notice lists Codex as an allowed owner", () => {
+  assert.match(ORCH_YAML, /Usage:\s*\/fps-route assign[^\n]*Codex/);
+});

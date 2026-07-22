@@ -122,6 +122,9 @@ Common option IDs:
 | Owner | `Claude` | `765bf827` |
 | Owner | `None` | `a0ebe14c` |
 | Implementer | `Claude` | `907ea51b` |
+| Implementer | `Copilot` | `b9bfc717` |
+| Implementer | `Codex` | `533f5ac2` |
+| Implementer | `None` | `571cc0a4` |
 
 The `pr-event-routing` job (AUT-007) uses `tools/delivery-draft-gate.mjs` as the single routing
 decision for both the ready-for-review Codex handoff and the draft `Assigned` → `In progress`

@@ -62,6 +62,7 @@ env:
   OPT_OWNER_NONE: a0ebe14c
   OPT_IMPL_CLAUDE: 907ea51b
   OPT_IMPL_COPILOT: b9bfc717
+  OPT_IMPL_CODEX: 533f5ac2
   OPT_IMPL_NONE: 571cc0a4
 
 jobs:
@@ -742,9 +743,10 @@ jobs:
             case "$1" in
               Claude)  IMPL_OPTION="$OPT_IMPL_CLAUDE";  IMPL_DISPLAY="Claude" ;;
               Copilot) IMPL_OPTION="$OPT_IMPL_COPILOT"; IMPL_DISPLAY="Copilot" ;;
+              Codex)   IMPL_OPTION="$OPT_IMPL_CODEX";   IMPL_DISPLAY="Codex" ;;
               None)    IMPL_OPTION="$OPT_IMPL_NONE";    IMPL_DISPLAY="None" ;;
               *)
-                echo "::notice::Unsupported route implementer '$1'; supported: Claude, Copilot, None"
+                echo "::notice::Unsupported route implementer '$1'; supported: Claude, Copilot, Codex, None"
                 exit 0
                 ;;
             esac
@@ -794,6 +796,7 @@ jobs:
                   CLAUDE_INVOCATION_REQUIRED="true"
                   ;;
                 Copilot) set_implementer "$ARG_OWNER" ;;
+                Codex)   set_implementer "$ARG_OWNER" ;;
               esac
               ;;
             blocked)
