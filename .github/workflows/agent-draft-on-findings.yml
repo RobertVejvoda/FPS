@@ -1,0 +1,37 @@
+name: Agent draft on blocking findings
+
+# Stage 1 of 2 (UNPRIVILEGED). Records the Codex review's ID + PR number for the privileged stage
+# to FETCH and VERIFY. pull_request_review runs the PR branch's version of this workflow for
+# same-repo PRs, so a contributor could alter it — therefore this stage holds NO secrets and
+# carries no SHA or severity (both are re-derived authoritatively via the GitHub API in stage 2).
+# The privileged draft/route/nudge happens only in agent-draft-on-findings-apply.yml (from main).
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+
+jobs:
+  signal:
+    if: >
+      github.event.review.user.login == 'chatgpt-codex-connector[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record the review reference
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          REVIEW_ID: ${{ github.event.review.id }}
+        run: |
+          set -uo pipefail
+          mkdir -p signal
+          printf '%s\n' "$PR" > signal/pr-number.txt
+          printf '%s\n' "$REVIEW_ID" > signal/review-id.txt
+      - name: Upload signal
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-loop-signal
+          path: signal/
+          retention-days: 1

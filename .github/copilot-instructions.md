@@ -1,10 +1,10 @@
 # GitHub Copilot Agent Instructions
 
-FPS is documentation-first unless the assigned issue explicitly asks for implementation work.
+**When you are assigned an issue, implement it.** Being assigned the issue *is* the request to write code: create and commit the file/code changes that satisfy the acceptance criteria. Do not stop at an "Initial plan", an investigation, or a comment — your deliverable is the committed change itself, not a description of it. The repository's broader "documentation-first" posture (in `AGENTS.md`) is about product direction and is the Product Owner's concern; it does **not** gate the implementation tasks assigned to you.
 
 ## Role
 
-GitHub Copilot agent is an implementer. By default, use it for mechanical, file-bounded slices. It may also be used for a broader **Copilot Pro+ controlled route** when the issue or Codex handoff explicitly says so. Use the issue body as the immediate assignment and the referenced documentation as the source of truth.
+GitHub Copilot agent is an implementer. By default, use it for mechanical, file-bounded slices. It may also be used for a broader **Copilot Pro+ controlled route** when the issue or Codex handoff explicitly says so. Use the issue body as the immediate assignment and the referenced documentation as the source of truth. Your job is to produce committed code changes — a session that ends with only an "Initial plan" commit and no file changes has failed the task.
 
 ## Scope Control
 
@@ -33,7 +33,7 @@ GitHub Copilot agent is an implementer. By default, use it for mechanical, file-
 ## Ready Signals
 
 - Start only when the issue is assigned to Copilot and has a clear implementation scope.
-- Create implementation branches from the latest `origin/master`, never from an arbitrary current branch.
+- Create implementation branches from the latest `origin/main`, never from an arbitrary current branch.
 - Treat Project `Status = Ready` as the preferred readiness signal; `ready-to-implement` is optional and secondary.
 - If `blocked-question` is present, do not implement; comment with the unresolved question if needed.
 - If a PR already exists for the same slice, do not start parallel work.
@@ -78,7 +78,7 @@ When using GitHub Copilot CLI for local agent work:
 
 - Run from the repository root.
 - Read and follow `AGENTS.md` before editing any file.
-- Create implementation branches from the latest `origin/master`; never branch from an arbitrary current branch.
+- Create implementation branches from the latest `origin/main`; never branch from an arbitrary current branch.
 - Implement only the assigned issue; do not absorb adjacent or future slices.
 - Prefer focused file reads and searches over broad repository scans.
 - Run `./tools/validate.sh` before reporting ready when feasible; if not feasible, state why and list the narrower checks run.

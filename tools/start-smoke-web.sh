@@ -55,7 +55,7 @@ printf '================================================\n'
 printf '\n'
 
 cd "$WEB_DIR"
-sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "require(\"rollup\"); const fs = require(\"fs\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-api-client/package.json\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-ui/package.json\")"'
+sh "$REPO_ROOT/tools/ensure-node-app-deps.sh" "$WEB_DIR" 'node -e "const fs = require(\"fs\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-api-client/package.json\"); fs.statSync(\"node_modules/@robertvejvoda/fairspot-ui/package.json\"); (async () => { try { await import(\"vite\"); process.exit(0); } catch { process.exit(1); } })();"'
 
 "$WEB_DIR/node_modules/.bin/vite" --host "$WEB_HOST" &
 WEB_PID="$!"

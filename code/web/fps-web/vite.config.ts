@@ -8,6 +8,7 @@ const webAppDir = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@robertvejvoda/fairspot-api-client': fileURLToPath(new URL('../../clients/typescript/src', import.meta.url)),
       '@robertvejvoda/fairspot-ui': fileURLToPath(new URL('../../clients/ui/src/index.ts', import.meta.url)),

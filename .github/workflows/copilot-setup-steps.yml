@@ -1,0 +1,42 @@
+name: Copilot setup steps
+
+# Prepares the Copilot coding agent's environment before it starts, so it can
+# build/test across this .NET + web + mobile monorepo. Without a working
+# environment the agent plans but can't implement (produces empty PRs). The job
+# MUST be named `copilot-setup-steps` for Copilot to pick it up. Also runs on
+# changes to this file so the setup itself stays validated in CI.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore .NET solution
+        run: dotnet restore code/server/FPS.sln
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install web dependencies
+        working-directory: code/web/fps-web
+        run: npm ci
+      - name: Install mobile dependencies
+        working-directory: code/mobile/fps-mobile
+        run: npm ci

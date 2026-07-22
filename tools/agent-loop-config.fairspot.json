@@ -1,0 +1,77 @@
+{
+  "_comment": "FairSpot CANARY configuration for the agent delivery loop. This is the ONLY repo-specific input to the loop; the reducer (agent-loop-reducer.mjs) and adapter logic are repository-neutral. For cross-repo reuse a sibling config replaces this file — see the 'cross-repo extraction notes' in PR #847. Keep the values in sync with .github/CODEOWNERS, .github/workflows/agent-auto-merge.yml (HIGH_RISK), and .github/workflows/delivery-state-orchestrator.yml (Project IDs).",
+
+  "maxRounds": 3,
+
+  "loopImplementers": [
+    { "login": "Copilot", "type": "Bot" }
+  ],
+
+  "highRiskPathPatterns": [
+    "^\\.github/",
+    "^tools/(security-gate\\.sh|llm-review\\.mjs|review-permission\\.sh)$",
+    "^tools/(deploy|backup|restore|provision|start-container)",
+    "^tools/lib/",
+    "(^|/)[Aa]uth/",
+    "(^|/)[Ss]ecurity/",
+    "(^|/)[Ii]dentity/",
+    "(^|/)appsettings[^/]*\\.json$",
+    "(^|/)public/config\\.json$",
+    "docker-entrypoint\\.sh$",
+    "(^|/)app\\.config\\.js$",
+    "(^|/)app\\.json$",
+    "(^|/)eas\\.json$",
+    "(^|/)dapr\\.yaml$",
+    "^code/infrastructure/",
+    "Dockerfile",
+    "docker-compose",
+    "/Migrations/",
+    "(^|/)package(-lock)?\\.json$",
+    "(^|/)(yarn\\.lock|pnpm-lock\\.yaml)$",
+    "(^|/)global\\.json$",
+    "\\.csproj$",
+    "Directory\\.(Packages|Build)\\.props$",
+    "CODEOWNERS",
+    "^AGENTS\\.md$",
+    "^AGENT_COOPERATION\\.md$",
+    "[Dd]raw"
+  ],
+
+  "reviewerBot": "chatgpt-codex-connector[bot]",
+
+  "ledgerWriters": [
+    { "login": "fairspot-delivery-bot[bot]", "type": "Bot" }
+  ],
+
+  "labels": {
+    "in-review": { "name": "pipeline:in-review", "color": "0E8A16" },
+    "addressing-feedback": { "name": "pipeline:addressing-feedback", "color": "FBCA04" },
+    "auto-merging": { "name": "pipeline:auto-merging", "color": "8250DF" },
+    "needs-human": { "name": "pipeline:needs-human", "color": "D73A4A" },
+    "capMarker": { "name": "autofix-capped", "color": "B60205" }
+  },
+
+  "project": {
+    "owner": "RobertVejvoda",
+    "number": "2",
+    "id": "PVT_kwHOAMdNjM4ApbPD",
+    "fieldStatus": "PVTSSF_lAHOAMdNjM4ApbPDzgg1is0",
+    "fieldOwner": "PVTSSF_lAHOAMdNjM4ApbPDzhTZl4I",
+    "fieldImplementer": "PVTSSF_lAHOAMdNjM4ApbPDzhTZl4E",
+    "status": {
+      "in-review": "4cc61d42",
+      "needs-changes": "57f4a681",
+      "blocked": "12d8c996"
+    },
+    "owners": {
+      "reviewer": "7694f322",
+      "human": "c1a28914",
+      "loopImplementer": "412d3a0c",
+      "none": "a0ebe14c"
+    },
+    "implementers": {
+      "loopImplementer": "b9bfc717",
+      "none": "571cc0a4"
+    }
+  }
+}

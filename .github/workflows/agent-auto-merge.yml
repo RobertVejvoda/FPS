@@ -1,7 +1,9 @@
 name: Agent auto-merge gate
 
 # Squash-merges a Copilot PR ONLY when every guard passes:
-#   - the trigger is a CLEAN review comment from Codex (the reviewer);
+#   - the trigger is a CLEAN Codex verdict — a conversation comment (issue_comment)
+#     OR a formal review (workflow_run via the stage-1 signal, fetched + verified
+#     from GitHub, never trusted from the artifact);
 #   - the PR was authored by the Copilot agent, from a branch in this repo;
 #   - Codex reviewed the CURRENT head commit (no post-review pushes);
 #   - the PR is fully mergeable (CI green + any required Code Owner review done);
@@ -14,19 +16,44 @@ name: Agent auto-merge gate
 on:
   issue_comment:
     types: [created]
+  # Formal-review channel: Codex can deliver a clean re-review as a formal review
+  # (e.g. after the loop marks a PR ready), which never produces an issue_comment —
+  # without this trigger such a PR would pass review and still sit unmerged forever.
+  workflow_run:
+    workflows: ["Agent draft on blocking findings"]
+    types: [completed]
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   gate:
     if: >
-      github.event.issue.pull_request != null &&
-      github.event.comment.user.login == 'chatgpt-codex-connector[bot]' &&
-      vars.AUTO_MERGE_ENABLED == 'true'
+      vars.AUTO_MERGE_ENABLED == 'true' && (
+        (github.event_name == 'issue_comment' &&
+         github.event.issue.pull_request != null &&
+         github.event.comment.user.login == 'chatgpt-codex-connector[bot]') ||
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'pull_request_review' &&
+         github.event.workflow_run.head_repository.full_name == github.repository)
+      )
     runs-on: ubuntu-latest
     steps:
+      - name: Download the stage-1 signal (formal-review channel only)
+        if: github.event_name == 'workflow_run'
+        id: dl
+        uses: actions/download-artifact@v4
+        with:
+          name: agent-loop-signal
+          path: signal
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+        continue-on-error: true
+
       - name: Mint app token
+        if: github.event_name == 'issue_comment' || steps.dl.outcome == 'success'
         id: app
         uses: actions/create-github-app-token@v1
         with:
@@ -34,21 +61,77 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Evaluate merge gate
+        if: github.event_name == 'issue_comment' || steps.dl.outcome == 'success'
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.issue.number }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          EVENT_NAME: ${{ github.event_name }}
+          # Trusted binding for the formal-review channel (confused-deputy guard).
+          WR_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -uo pipefail
           skip() { echo "AUTO-MERGE SKIPPED: $1"; exit 0; }
+          # GitHub's default `run:` shell adds `-e`, so any unguarded command that
+          # returns non-zero aborts the gate silently (exit 1, no log) and leaves the
+          # PR unmerged with no diagnostic. Make an unexpected failure visible.
+          trap 'echo "::warning::auto-merge gate hit an unexpected error and stopped — this PR was left for a human to merge."' ERR
 
-          # 1. Codex verdict must be clean (no blocking findings).
-          if printf '%s' "$COMMENT_BODY" | grep -Eiq 'p0|p1|blocking|must fix|changes? requested|found (an?|[0-9]+) '; then
+          # Best-effort delivery-pipeline stage label (a label op must never break the gate).
+          set_stage() {
+            # Provision the label idempotently (stable colour) so a fresh repo shows the
+            # state instead of silently no-opping; every op is non-fatal so a label
+            # hiccup can never break the pipeline.
+            case "$1" in
+              in-review)           c=0E8A16 ;;
+              addressing-feedback) c=FBCA04 ;;
+              auto-merging)        c=8250DF ;;
+              merged)              c=1A7F37 ;;
+              needs-human)         c=D73A4A ;;
+              *)                   c=EDEDED ;;
+            esac
+            gh label create "pipeline:$1" --repo "$REPO" --color "$c" >/dev/null 2>&1 || true
+            gh pr edit "$PR" --repo "$REPO" --add-label "pipeline:$1" >/dev/null 2>&1 || true
+            for s in in-review addressing-feedback auto-merging merged needs-human; do
+              [ "$s" = "$1" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "pipeline:$s" >/dev/null 2>&1 || true
+            done
+          }
+          # Terminal "a human should look" outcome: label it, say why on the PR, and stop.
+          # Used only past the provenance checks, so it never touches unrelated PRs/comments.
+          needs_human() {
+            set_stage needs-human
+            gh pr comment "$PR" --repo "$REPO" --body "⏸️ **Not auto-merged.** $1 — left for a human to review and merge." >/dev/null 2>&1 || true
+            echo "AUTO-MERGE NEEDS-HUMAN: $1"
+            exit 0
+          }
+
+          # 1. Establish the verdict text + reviewed SHA for this channel.
+          REVIEWED_SHA=""
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            # Formal-review channel. The stage-1 artifact only NAMES the PR + review
+            # (untrusted); the review itself is fetched from GitHub and verified.
+            # Unguarded gh calls here are deliberate: a failed fetch aborts the job
+            # loudly (fail closed) instead of reading as an empty/clean review.
+            PR=$(tr -dc '0-9' < signal/pr-number.txt 2>/dev/null || true)
+            REVIEW_ID=$(tr -dc '0-9' < signal/review-id.txt 2>/dev/null || true)
+            { [ -n "$PR" ] && [ -n "$REVIEW_ID" ]; } || skip "no stage-1 signal — nothing to do"
+            REVIEW_JSON=$(gh api "/repos/$REPO/pulls/$PR/reviews/$REVIEW_ID")
+            [ "$(printf '%s' "$REVIEW_JSON" | jq -r '.user.login')" = "chatgpt-codex-connector[bot]" ] || skip "review author is not the Codex reviewer"
+            REVIEWED_SHA=$(printf '%s' "$REVIEW_JSON" | jq -r '.commit_id // ""')
+            # Verdict text = summary + ALL inline comments (blocking badges live inline).
+            INLINE=$(gh api "/repos/$REPO/pulls/$PR/comments" --paginate --jq "[.[] | select(.pull_request_review_id == $REVIEW_ID) | .body] | join(\"\n\")")
+            VERDICT_TEXT=$(printf '%s\n%s' "$(printf '%s' "$REVIEW_JSON" | jq -r '.body // ""')" "$INLINE")
+          else
+            VERDICT_TEXT="$COMMENT_BODY"
+          fi
+
+          # 2. Codex verdict must be clean — blocking severities checked FIRST.
+          if printf '%s' "$VERDICT_TEXT" | grep -Eiq 'p0|p1|blocking|must fix|changes? requested|found (an?|[0-9]+) '; then
             skip "Codex reported blocking findings"
           fi
-          if ! printf '%s' "$COMMENT_BODY" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|\"findings\" *: *\[ *\]|looks good|lgtm|swish"; then
-            skip "Codex comment is not a recognised clean verdict"
+          if ! printf '%s' "$VERDICT_TEXT" | grep -Eiq "did.?n.?t find|no (major |significant )?(issues|findings)|no findings|\"findings\" *: *\[ *\]|looks good|lgtm|swish"; then
+            skip "Codex verdict is not a recognised clean verdict"
           fi
 
           # 2. PR facts.
@@ -60,6 +143,7 @@ jobs:
           AUTHOR_ID=$(printf '%s' "$PR_JSON" | jq -r '.user.id')
           HEAD_REPO=$(printf '%s' "$PR_JSON" | jq -r '.head.repo.full_name')
           DRAFT=$(printf '%s' "$PR_JSON" | jq -r '.draft')
+          CHANGED_FILES=$(printf '%s' "$PR_JSON" | jq -r '.changed_files')
           DEFAULT_BRANCH=$(gh api "/repos/$REPO" --jq '.default_branch')
 
           # 3. Provenance guards. Match the EXACT Copilot coding-agent bot by its
@@ -73,11 +157,38 @@ jobs:
           [ "$HEAD_REPO" = "$REPO" ] || skip "PR is from a fork ($HEAD_REPO)"
           [ "$BASE_REF" = "$DEFAULT_BRANCH" ] || skip "PR does not target the default branch"
           [ "$DRAFT" = "false" ] || skip "PR is still a draft"
+          [ "${CHANGED_FILES:-0}" -ge 1 ] || skip "PR has no file changes (empty) — nothing to merge"
+
+          # 3.5 Formal-review channel: bind the artifact-named PR to the TRUSTED
+          #     triggering run — a tampered stage-1 could name an unrelated PR that
+          #     has a clean review (confused-deputy guard, same as the loop adapter).
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            HEAD_REF=$(printf '%s' "$PR_JSON" | jq -r '.head.ref')
+            [ -z "${WR_HEAD_BRANCH:-}" ] || [ "$HEAD_REF" = "$WR_HEAD_BRANCH" ] || skip "PR head branch '$HEAD_REF' != triggering run branch '$WR_HEAD_BRANCH' (confused-deputy guard)"
+          fi
 
           # 4. Reviewed-commit must match current head (no post-review pushes).
-          REVIEWED_SHA=$(printf '%s' "$COMMENT_BODY" | grep -oiE 'reviewed commit[:` ]*[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1)
-          [ -n "${REVIEWED_SHA:-}" ] || skip "Codex comment has no 'Reviewed commit' marker to verify freshness"
+          # Formal-review channel already carries commit_id; the comment channel
+          # extracts it from Codex's markdown marker ("**Reviewed commit:** `<sha>`") —
+          # any non-hex separators between the label and the sha. `|| true` keeps a
+          # no-match from aborting the gate under `-e`; the check below handles it.
+          if [ -z "${REVIEWED_SHA:-}" ]; then
+            REVIEWED_SHA=$(printf '%s' "$COMMENT_BODY" | grep -oiE 'reviewed commit[^0-9a-f]{0,16}[0-9a-f]{7,40}' | grep -oiE '[0-9a-f]{7,40}' | head -1 || true)
+          fi
+          [ -n "${REVIEWED_SHA:-}" ] || skip "Codex verdict has no reviewed-commit reference to verify freshness"
           case "$HEAD_SHA" in "$REVIEWED_SHA"*) : ;; *) skip "Codex reviewed $REVIEWED_SHA but head is $HEAD_SHA (stale)" ;; esac
+
+          # Held for a human: a capped autonomous loop routes the PR to pipeline:needs-human.
+          # Never auto-merge it, even on a fresh clean verdict, until a human deliberately
+          # clears that stage — a later push/@codex must not silently re-enable a capped loop.
+          if printf '%s' "$PR_JSON" | jq -e '.labels[]? | select(.name == "autofix-capped")' >/dev/null 2>&1; then
+            needs_human "PR is labelled autofix-capped (the autonomous loop hit its round cap) — a human must clear it before it can merge"
+          fi
+
+          # Past this point it is a genuine auto-merge candidate: a clean Codex verdict
+          # on a non-draft, non-empty Copilot PR that targets the default branch, with
+          # the reviewed commit == current head. Make that visible.
+          set_stage auto-merging
 
           # 5. Fully mergeable (CI green + required reviews incl. code owners).
           #    GitHub computes mergeable_state asynchronously — poll briefly.
@@ -87,14 +198,14 @@ jobs:
             [ "$STATE" != "unknown" ] && break
             sleep 5
           done
-          [ "$STATE" = "clean" ] || skip "mergeable_state='$STATE' (CI not green, conflicts, or a required review is missing)"
+          [ "$STATE" = "clean" ] || needs_human "mergeable_state='$STATE' (CI not green, conflicts, or a required review is missing)"
 
           # 6. Low-risk only: no high-risk path in the diff.
           #    Keep in sync with .github/CODEOWNERS.
           FILES=$(gh api "/repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
           HIGH_RISK='^\.github/|^tools/(security-gate\.sh|llm-review\.mjs|review-permission\.sh)$|^tools/(deploy|backup|restore|provision|start-container)|^tools/lib/|(^|/)[Aa]uth/|(^|/)[Ss]ecurity/|(^|/)[Ii]dentity/|(^|/)appsettings[^/]*\.json$|(^|/)public/config\.json$|docker-entrypoint\.sh$|(^|/)app\.config\.js$|(^|/)app\.json$|(^|/)eas\.json$|(^|/)dapr\.yaml$|^code/infrastructure/|Dockerfile|docker-compose|/Migrations/|(^|/)package(-lock)?\.json$|(^|/)(yarn\.lock|pnpm-lock\.yaml)$|(^|/)global\.json$|\.csproj$|Directory\.(Packages|Build)\.props$|CODEOWNERS|[Dd]raw'
           if printf '%s\n' "$FILES" | grep -Eq "$HIGH_RISK"; then
-            skip "diff touches high-risk paths — human merge required"
+            needs_human "diff touches high-risk paths — human merge required"
           fi
 
           # 7. All gates passed → squash-merge as the app bot. Pin to the reviewed
@@ -104,8 +215,34 @@ jobs:
           #    retried, so a silent false-success would leave an approved PR unmerged).
           echo "All gates passed — merging PR #$PR at reviewed head $HEAD_SHA"
           if gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --match-head-commit "$HEAD_SHA"; then
+            set_stage merged
+            gh pr comment "$PR" --repo "$REPO" --body "🔀 **Auto-merged.** Codex verdict was clean, CI green, reviewed head matched, and the diff is low-risk." >/dev/null 2>&1 || true
             echo "AUTO-MERGE: DONE for PR #$PR"
           else
-            echo "::error::Merge of PR #$PR rejected (head moved, a required check regressed, or not mergeable). Left unmerged for a human."
-            exit 1
+            # With two verdict channels the same clean verdict can arrive twice
+            # (comment + formal review); if the other run merged first, this
+            # rejection is a WIN, not a failure.
+            PR_NOW=$(gh api "/repos/$REPO/pulls/$PR" 2>/dev/null || echo "{}")
+            if [ "$(printf '%s' "$PR_NOW" | jq -r '.merged // false')" = "true" ]; then
+              echo "PR #$PR was already merged (the other verdict channel won the race) — nothing to do."
+              exit 0
+            fi
+            # A rejection is one of two DISTINCT states — separate them (do not lump both
+            # under one "retries on the next clean verdict" claim, which is only true for one):
+            CURRENT_HEAD=$(printf '%s' "$PR_NOW" | jq -r '.head.sha // ""')
+            if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$HEAD_SHA" ]; then
+              # (a) A push landed between the checks and this merge (--match-head-commit no
+              #     longer matches). agent-rereview-on-push re-reviews the new head, whose
+              #     clean verdict re-runs this gate. Genuinely transient/self-healing — do
+              #     NOT install the terminal pipeline:needs-human hold. Fail loudly so the
+              #     rejection is visible; the retry is automatic.
+              gh pr comment "$PR" --repo "$REPO" --body "⚠️ **Auto-merge not applied** — the head moved since the review. This will retry automatically once the new push is re-reviewed." >/dev/null 2>&1 || true
+              echo "::error::Merge of PR #$PR rejected (head moved) — will retry on the re-review of the new push."
+              exit 1
+            fi
+            # (b) The head did NOT move: a required check regressed after the gate passed.
+            #     If it later recovers on its own there is no push and no new Codex verdict,
+            #     so nothing re-triggers this gate — it is genuinely stuck, not transient.
+            #     Hand off explicitly rather than leaving it in pipeline:auto-merging forever.
+            needs_human "a required check regressed after the merge gate passed, with no new push to re-trigger review — rerun the check (or push a fix) and re-request a Codex review"
           fi
