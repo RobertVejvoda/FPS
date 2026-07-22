@@ -393,3 +393,84 @@ test("workflow: both manual In-review paths are inside per-linked-issue loops (n
   const inReviewIdx = ORCH_YAML.indexOf('COMMAND" = "in-review" ] && [ "$OWNER_DISPLAY" = "Codex"', stateLoopIdx);
   assert.ok(inReviewIdx > stateLoopIdx && inReviewIdx < routeJobIdx, "in-review override must appear inside the LINKED_ISSUES loop, not after the state job");
 });
+
+// --- Draft-PR guard for manual In-review commands (AUT-007) -------------------------------
+// /fps-state in-review and /fps-route codex-review must not mutate linked-issue Status/Owner
+// while the PR target is still a draft — Codex intentionally skips draft PRs, so a review
+// handoff while draft would leave the board in a false review state. The guard queries the
+// PR's isDraft field, and, when true, emits a notice pointing the implementer at "mark ready
+// for review" and exits before any project item-edit. Once non-draft, the existing per-issue
+// routing (including the Implementer=Codex → Robert reviewer-independence exception) applies.
+
+test("workflow /fps-state in-review is draft-gated: exits before any board mutation when the PR is still a draft", () => {
+  // The guard must appear inside the /fps-state comment step, gated on COMMAND=in-review,
+  // must query isDraft on the target PR, and must exit before the linked-issue lookup and
+  // per-issue loop that write Status/Owner.
+  const inStateHandler = ORCH_YAML.match(
+    /COMMAND="\$\(echo "\$COMMENT_BODY" \| awk '\{print \$2\}' \| head -1\)"[\s\S]+?\n {2}route-comment-command:/,
+  );
+  assert.ok(inStateHandler, "/fps-state comment handler section not found");
+  const section = inStateHandler[0];
+  assert.match(section, /if \[ "\$COMMAND" = "in-review" \]; then[\s\S]{0,600}pullRequest\(number:\$pr\)\{isDraft\}/,
+    "/fps-state in-review must query PR isDraft when COMMAND=in-review");
+  assert.match(section, /\$PR_IS_DRAFT_STATE" = "true"[\s\S]{0,400}exit 0/,
+    "/fps-state in-review must exit 0 when the PR is a draft (no board mutation)");
+  // Structural: the draft guard must precede the LINKED_ISSUES lookup so no writes happen first.
+  const guardIdx = section.indexOf('"$COMMAND" = "in-review"');
+  const linkedIdx = section.indexOf("closingIssuesReferences(first:10)");
+  assert.ok(guardIdx > 0 && linkedIdx > guardIdx,
+    "/fps-state in-review draft guard must precede the linked-issues lookup and per-issue loop");
+});
+
+test("workflow /fps-route codex-review is draft-gated: exits before any board mutation when the PR target is still a draft", () => {
+  const inRouteHandler = ORCH_YAML.match(
+    /Parse: \/fps-route <command> \[<owner>\][\s\S]+$/,
+  );
+  assert.ok(inRouteHandler, "/fps-route comment handler section not found");
+  const section = inRouteHandler[0];
+  // Guard is gated on the codex-review route flag AND on IS_PR_COMMENT (issue targets must not
+  // be affected — codex-review on an issue must continue to route to In review).
+  assert.match(
+    section,
+    /\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true"[\s\S]{0,600}pullRequest\(number:\$pr\)\{isDraft\}/,
+    "/fps-route codex-review must query PR isDraft when the target is a PR",
+  );
+  assert.match(
+    section,
+    /\$PR_IS_DRAFT_STATE" = "true"[\s\S]{0,400}exit 0/,
+    "/fps-route codex-review must exit 0 when the PR target is a draft",
+  );
+  // Structural: the draft guard must precede the TARGET_ISSUES resolution and per-issue loop.
+  const guardIdx = section.indexOf('"$CODEX_REVIEW_ROUTE" = "true" ] && [ "$IS_PR_COMMENT"');
+  const loopIdx = section.indexOf("for TARGET_ISSUE in $TARGET_ISSUES");
+  assert.ok(guardIdx > 0 && loopIdx > guardIdx,
+    "/fps-route codex-review draft guard must precede the TARGET_ISSUES per-issue loop");
+});
+
+test("workflow /fps-route codex-review draft guard does not fire for issue (non-PR) targets", () => {
+  // The IS_PR_COMMENT gate ensures a /fps-route codex-review on an issue still routes normally
+  // — the draft-PR concept does not apply to issue targets.
+  const section = ORCH_YAML.slice(ORCH_YAML.indexOf("Parse: /fps-route <command> [<owner>]"));
+  const guardLine = section.match(/if \[ "\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true" \]; then/);
+  assert.ok(guardLine, "codex-review draft guard must be jointly gated on CODEX_REVIEW_ROUTE and IS_PR_COMMENT");
+});
+
+test("workflow: draft-gated manual In-review commands still reach non-draft behavior (guard exits only when isDraft=true)", () => {
+  // The guard body must only exit 0 inside the `isDraft = true` branch — a non-draft PR falls
+  // through to the existing linked-issue lookup and per-issue routing, so all previously-covered
+  // non-draft conformance tests (route-in-review, Implementer=Codex → Robert override, explicit
+  // reviewer preservation, per-issue reset) remain reachable.
+  const stateGuard = ORCH_YAML.match(
+    /if \[ "\$COMMAND" = "in-review" \]; then[\s\S]+?fi\n/,
+  );
+  assert.ok(stateGuard, "in-review guard block not found");
+  assert.match(stateGuard[0], /if \[ "\$PR_IS_DRAFT_STATE" = "true" \]; then[\s\S]+?exit 0[\s\S]+?fi/,
+    "in-review guard must only exit when PR_IS_DRAFT_STATE=true");
+
+  const routeGuard = ORCH_YAML.match(
+    /if \[ "\$CODEX_REVIEW_ROUTE" = "true" \] && \[ "\$IS_PR_COMMENT" = "true" \]; then[\s\S]+?fi\n/,
+  );
+  assert.ok(routeGuard, "codex-review guard block not found");
+  assert.match(routeGuard[0], /if \[ "\$PR_IS_DRAFT_STATE" = "true" \]; then[\s\S]+?exit 0[\s\S]+?fi/,
+    "codex-review guard must only exit when PR_IS_DRAFT_STATE=true");
+});

@@ -592,6 +592,24 @@ jobs:
           REPO_OWNER_NAME="${GH_REPO%%/*}"
           REPO_NAME="${GH_REPO##*/}"
 
+          # Draft-PR guard for /fps-state in-review (AUT-007): a manual review handoff must not
+          # mutate linked-issue Status/Owner while the PR is still a draft. Codex intentionally
+          # skips draft PRs, so an In-review handoff while draft would produce a false review
+          # state. Emit a clear notice pointing the implementer at "mark ready for review" and
+          # exit before any board writes. Other /fps-state commands (needs-changes, done,
+          # blocked) are unaffected.
+          if [ "$COMMAND" = "in-review" ]; then
+            PR_IS_DRAFT_STATE="$(gh api graphql \
+              -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){isDraft}}}' \
+              -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
+              --jq '.data.repository.pullRequest.isDraft' \
+              2>/dev/null || true)"
+            if [ "$PR_IS_DRAFT_STATE" = "true" ]; then
+              echo "::notice::PR #$PR_NUMBER is still a draft; /fps-state in-review does not route review while draft — mark the PR ready for review first"
+              exit 0
+            fi
+          fi
+
           LINKED_ISSUES="$(gh api graphql \
             -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){closingIssuesReferences(first:10){nodes{number}}}}}' \
             -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
@@ -842,6 +860,26 @@ jobs:
 
           REPO_OWNER_NAME="${GH_REPO%%/*}"
           REPO_NAME="${GH_REPO##*/}"
+
+          # Draft-PR guard for /fps-route codex-review (AUT-007): when the comment target is a
+          # PR and that PR is still a draft, do not mutate linked-issue Status/Owner and do not
+          # hand review to Codex. Codex intentionally skips draft PRs, so a review handoff while
+          # draft would produce a false review state. Emit a clear notice pointing the
+          # implementer at "mark ready for review" and exit before any board writes. Once
+          # non-draft, per-linked-issue routing (including Implementer=Codex -> Owner=Robert)
+          # applies as before. Other /fps-route commands and issue (non-PR) targets are
+          # unaffected.
+          if [ "$CODEX_REVIEW_ROUTE" = "true" ] && [ "$IS_PR_COMMENT" = "true" ]; then
+            PR_IS_DRAFT_STATE="$(gh api graphql \
+              -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){isDraft}}}' \
+              -f owner="$REPO_OWNER_NAME" -f repo="$REPO_NAME" -F pr="$ISSUE_NUMBER" \
+              --jq '.data.repository.pullRequest.isDraft' \
+              2>/dev/null || true)"
+            if [ "$PR_IS_DRAFT_STATE" = "true" ]; then
+              echo "::notice::PR #$ISSUE_NUMBER is still a draft; /fps-route codex-review does not route review while draft — mark the PR ready for review first"
+              exit 0
+            fi
+          fi
 
           if [ "$IS_PR_COMMENT" = "true" ]; then
             TARGET_ISSUES="$(gh api graphql \

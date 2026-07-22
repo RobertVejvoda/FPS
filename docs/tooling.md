@@ -57,7 +57,7 @@ When a formal PR review cannot be submitted (for example, because the reviewer a
 | Command | Status | Owner |
 | --- | --- | --- |
 | `/fps-state needs-changes [Claude\|Copilot\|Codex\|Robert]` | `Needs changes` | Explicit owner, or current `Implementer` field if omitted |
-| `/fps-state in-review` | `In review` | `Codex` by default; overridden to `Robert` per linked issue when that issue's `Implementer = Codex` (reviewer-independence) |
+| `/fps-state in-review` | `In review` | `Codex` by default; overridden to `Robert` per linked issue when that issue's `Implementer = Codex` (reviewer-independence). Draft-gated: no board mutation when the PR is still a draft — mark the completed draft ready for review first. |
 | `/fps-state done` | `Done` | `None` |
 | `/fps-state blocked [Robert\|Codex]` | `Blocked` | `Robert` if omitted |
 
@@ -88,7 +88,7 @@ When an implementer needs to hand work to another actor, post `/fps-route <comma
 
 | Command | Status | Owner | Implementer |
 | --- | --- | --- | --- |
-| `/fps-route codex-review` | `In review` | `Codex` by default; overridden to `Robert` per target issue when that issue's `Implementer = Codex` (reviewer-independence) | unchanged |
+| `/fps-route codex-review` | `In review` | `Codex` by default; overridden to `Robert` per target issue when that issue's `Implementer = Codex` (reviewer-independence). Draft-gated on PR targets: no board mutation and no Codex review handoff when the PR is still a draft — mark the completed draft ready for review first. Issue (non-PR) targets are unaffected by the draft gate. | unchanged |
 | `/fps-route claude-fix` | `Needs changes` | `Claude` | `Claude` |
 | `/fps-route copilot-fix` | `Needs changes` | `Copilot` | `Copilot` |
 | `/fps-route claude-question` | `Blocked` | `Codex` | `Claude` |
