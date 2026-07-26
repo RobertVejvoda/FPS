@@ -14,18 +14,20 @@ OPS002 defines the first hosted demo baseline for FairSpot. The demo environment
 
 ## Selected Baseline Profile
 
-The first OPS002 baseline is the Release 1 NAS/Cloudflare hosted evaluation profile. The cloud-hosted follow-up target is DigitalOcean, starting with a Droplet/Docker Compose profile that mirrors the current container stack and self-hosted Dapr sidecars. DOKS is deferred until Kubernetes evidence is needed. The baseline must stay portable enough to move to a client-owned platform through Dapr, OpenTelemetry, OIDC, and documented deployment boundaries.
+The first OPS002 cloud baseline is DOKS/Cloudflare. A disposable single-node x86 profile proves packaging and resource fit with synthetic data; the external-pilot baseline then uses three x86 4 vCPU / 8 GiB workers, an HA control plane, and an initial 100 GiB persistent-volume allowance. NAS/Cloudflare and the existing DigitalOcean Droplet profile remain secondary self-hosted/fallback evidence. The baseline stays portable enough to move to a client-owned platform through Dapr, OpenTelemetry, OIDC, and documented deployment boundaries.
 
 The baseline is acceptable if it can provide:
 
 - HTTPS ingress for the employee/API entry point;
 - container deployment from built images;
 - Dapr sidecars or equivalent Dapr runtime support;
+- Dapr mTLS/Sentry, sidecar injection, and scoped Kubernetes components;
 - Dapr pub/sub, state store, and secret-store components;
 - service-owned persistence with tenant-safe collections, partitions, or keys, plus backup/restore evidence;
 - an OIDC provider with seeded demo users and roles;
 - OpenTelemetry-compatible metrics, logs, and traces;
-- documented cost assumptions and teardown/scale-down instructions.
+- documented cost assumptions and teardown/scale-down instructions;
+- immutable image rollout, rollback, resource requests/limits, and off-cluster backup evidence.
 
 ## Runtime Shape
 
@@ -143,7 +145,7 @@ OPS002 does not require full production-grade deployment automation, but the dem
 - real customer data migration;
 - app-store packaging;
 - billing/payment integration;
-- full Kubernetes platform unless selected explicitly for the demo provider;
+- managed provider services or cluster capacity beyond the approved DOKS proof/pilot shapes unless evidence justifies them;
 - enterprise observability integration beyond proving an OpenTelemetry-compatible export path.
 
 ## Handoff To Later Slices

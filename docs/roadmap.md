@@ -60,7 +60,7 @@ Release 1 should validate what is already merged, not wait for every planned cus
 | Employee mobile | Login/session, My Spots, request submission, cancellation/confirmation where implemented, vehicle/default behavior, and Draw schedule visibility. | Full app store distribution approval. |
 | Booking and Draw | Request lifecycle, same-day behavior, manual/scheduled Draw behavior where implemented, employee-safe Draw status, and schedule metadata for the current parking vertical. | Full resource-map allocation across every future resource type. |
 | Data and reads | Service-owned state evidence and first event-fed projection/inbox behavior already merged. | Complete replacement of every reporting/read path. |
-| Hosted operations | NAS/Cloudflare/WAF/auth/runbook evidence and smoke/reset scenarios sufficient for evaluation. | Client-owned production handoff completeness. |
+| Hosted operations | DOKS/Cloudflare packaging, deployment/rollback, Dapr mTLS, WAF/auth, restore, observability, resource/cost, and smoke/reset evidence sufficient for evaluation. | Client-owned production handoff completeness; NAS/Droplet remain secondary validation profiles. |
 | Architecture and docs | Architecture Repository alignment, roadmap/readiness/work-package traceability, release notes, and known gaps. | Final ArchiMate diagram refresh for every viewpoint. |
 | Commercialisation | Free-core/deferred Billing decision remains documented. | Billing implementation. |
 
@@ -74,7 +74,7 @@ In TOGAF terms, the roadmap is the business-readable companion to [Transition Ar
 | --- | --- | --- | --- |
 | Customer durable tenant state | Tenant onboarding/readiness state survives restart and hosted deployment changes. | Phase C/E/F | Implemented through the Customer durable storage and PERSIST slices; keep restore evidence in Release 1 validation. |
 | DataHub first projections | Event-fed read models for booking outcomes, draw health, usage, and readiness summaries. | Phase C/E/F | Initial DataHub projections and rebuild evidence are merged; remaining work is read-path reconciliation and role-safe output validation. |
-| Hosted public-domain evidence | Prove NAS/Cloudflare/WAF/auth/smoke/reset behavior before real customer data. | Phase D/G | Issues #316, #315, #314, and Dapr hardening #378. |
+| Hosted public-domain evidence | Implement and prove DOKS/Cloudflare deployment/rollback, Dapr mTLS, WAF/auth, restore, observability, resource/cost fit, and smoke/reset behavior before real customer data. | Phase D/G | New DOKS foundation and hosted-evidence slices must supersede the NAS-first sequencing while reusing applicable evidence from #316, #315, #314, and Dapr hardening #378. |
 | Role-centered UX validation | Validate Employee, HR/facility, tenant admin, system admin, auditor, and sponsor default views. | Phase B/C/G | Draw schedule #340 is merged; Draw progress #339, HR operations #310, and UX follow-ups remain. |
 | Module-aware reservations UX | Replace parking/seat duplication with one combined My Reservations page and one date-first Request page. | Phase B/C/G | Source of truth: [Module Reservations UX](./business-layer/module-reservations-ux). Implementation should start with UX cleanup before broad Seats capability expansion. |
 | Contract evidence consolidation | Make API/event/generated client evidence discoverable from Information Systems Architecture. | Phase C/G | Issue #377. |

@@ -1,5 +1,7 @@
 # DigitalOcean Droplet Setup
 
+**Status:** Secondary fallback and self-hosted/BYOC evidence. DOKS/Cloudflare is the primary FairSpot-operated hosted evaluation target as of 2026-07-26.
+
 Credential-free operator profile for running FairSpot on a single, hardened
 **DigitalOcean Droplet** using the containerized stack — the same durable
 stores, secret-store, backup/restore, and Cloudflare protections as the NAS
@@ -251,15 +253,13 @@ data assertions and the subsequent manual smoke in the private runbook
 | `app.<domain>` unreachable | Confirm the Cloudflare Tunnel connector is running and the hostnames route to `fairspot-web:80` / `keycloak:8080`. |
 | Keycloak admin reachable publicly | A Cloudflare hostname/WAF rule is missing — see [Cloudflare WAF and edge](nas-cloudflare-deployment-profile.md). |
 
-## Beyond this profile (deferred, target shape)
+## Relationship To The DOKS Target
 
-The single-Droplet profile is the starting point. Managed services are evaluated
-only when a concrete durability or evidence need exists — none are implemented
-here:
+The single-Droplet profile remains a tested fallback, self-hosted conformance path, and migration asset. It is not a prerequisite for DOKS and does not define the first external-pilot platform. Managed services are evaluated only when a concrete durability or evidence need exists — none are implemented here:
 
 | Area | Direction |
 | --- | --- |
-| Orchestration | DOKS/Kubernetes only if cluster-level operation or evidence is required. |
+| Orchestration | DOKS/Kubernetes is the primary hosted target; this Droplet runbook remains intentionally Compose-only. |
 | Registry | GHCR remains acceptable; DigitalOcean Container Registry optional. |
 | Ingress | Cloudflare Tunnel by default; a DigitalOcean Load Balancer only if a concrete need is found. |
 | State stores | Self-hosted first; DigitalOcean Managed Databases / Spaces only when they improve durability or evidence. |

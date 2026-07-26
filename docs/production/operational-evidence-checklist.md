@@ -11,7 +11,7 @@ Observability requirements stay OpenTelemetry-compatible and provider-neutral; n
 
 ## How to use
 
-1. Pick the target profile (Local, NAS/Cloudflare, DigitalOcean, Client-owned/BYOC) from the [Deployment Profile Template](./deployment-profile-template).
+1. Pick the target profile (Local, DOKS/Cloudflare, NAS/Cloudflare, DigitalOcean Droplet fallback, Client-owned/BYOC) from the [Deployment Profile Template](./deployment-profile-template).
 2. Walk Sections 1–2 to confirm observability and backup/restore readiness.
 3. Run a restore drill and record it with Section 3's evidence shape.
 4. Run Section 4's post-restore smoke checks; attach results to the drill record.
@@ -55,7 +55,7 @@ Capture one record per restore drill. Keep it provider-neutral — no secrets, r
 | --- | --- |
 | Drill date/time (UTC) | |
 | Operator (actor) | |
-| Profile | Local / NAS-Cloudflare / DigitalOcean / Client-owned |
+| Profile | Local / DOKS-Cloudflare / NAS-Cloudflare / DigitalOcean-Droplet fallback / Client-owned |
 | Recovery point (backup timestamp restored) | |
 | Affected tenants | |
 | Affected services / stores | |

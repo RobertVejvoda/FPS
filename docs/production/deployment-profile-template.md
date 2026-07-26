@@ -1,13 +1,13 @@
 # OPS010A Deployment Profile Template
 
-**Status:** Template established. Release 1 hosted evaluation is NAS/Cloudflare; the FairSpot-operated cloud-hosted follow-up target is DigitalOcean. AWS/Azure are legacy/client-selected examples only.
+**Status:** Template established. DOKS/Cloudflare is the primary FairSpot-operated hosted evaluation target. NAS and the DigitalOcean Droplet profile are secondary self-hosted/fallback evidence. AWS/Azure are client-selected compatibility examples only.
 **Parent:** #229 · **Strategy:** [Hosting and Deployment Strategy](./hosting-deployment-strategy)
 
 FairSpot is a **bring-your-own-cloud** platform: the core architecture defines provider-neutral *contracts*, and each concrete environment is a *deployment profile* that binds those contracts to real technology. This page is the reusable template that keeps the two separated — so a new profile (a client cloud, a Kubernetes cluster, an on-prem install) can be described by filling in a known shape without changing application code or core architecture.
 
 - **Section 1** is the provider-neutral contract every profile must satisfy.
 - **Section 2** is the blank profile skeleton to copy.
-- **Section 3** fills the skeleton for the Local, NAS/Cloudflare, DigitalOcean, and Client-owned/BYOC profiles.
+- **Section 3** fills the skeleton for the Local, DOKS/Cloudflare, NAS/Cloudflare, and Client-owned/BYOC profiles.
 
 It does not restate the [deployment-profile strategy](./hosting-deployment-strategy) (comparison matrix, Dapr component mapping, cost/security depth) or duplicate per-profile runbooks; it links to them.
 
@@ -87,7 +87,7 @@ The developer/CI profile. Filled from the current [Local Test Harness](./local-t
 | Support boundary | None — not an operated environment. |
 | Validation / evidence | `start-local-harness.sh` seeds Green Logistics (`tools/dev-seed.sh`) and runs post-seed smoke `curl`s (`/me`, `/bookings`, `/notifications/unread-count`, `/profile/snapshot`) through the gateway; `./tools/validate.sh`. |
 
-### 3.2 NAS / Cloudflare (Release 1 hosted evaluation)
+### 3.2 NAS / Cloudflare (self-hosted/BYOC validation)
 
 Public contract only — detailed operator steps live in the private `fairspot-platform` runbook (#684). See [NAS Cloudflare Deployment Contract](./nas-cloudflare-deployment-profile) and [OIDC/Auth Contract](./nas-cloudflare-auth-profile).
 
@@ -105,31 +105,31 @@ Public contract only — detailed operator steps live in the private `fairspot-p
 | Backup / restore | Backup/restore + encryption evidence required before real customer data ([Encryption and Backup Evidence](./nas-encryption-backup-evidence)); detailed procedure private. |
 | Data classification / encryption | Confidential-by-default; HTTPS, encrypted stores/backups, real secret management. |
 | Cost assumptions | Low monthly evaluation cost; no committed prices in public docs. |
-| Operational ownership | FairSpot delivery team (evaluation, not client production). |
-| Support boundary | Evaluation environment; not a client-operated production system. |
+| Operational ownership | FairSpot delivery team for self-hosted conformance and recovery-lab validation. |
+| Support boundary | Secondary self-hosted/BYOC profile; not the first external-pilot platform and not a client-operated production system. |
 | Validation / evidence | Public-boundary smoke evidence ([Hosted Readiness Expectations](./hosted-smoke-runbook)) before real data. |
 
-### 3.3 DigitalOcean (cloud-hosted follow-up target)
+### 3.3 DigitalOcean Kubernetes (primary hosted evaluation target)
 
-Target shape only — see [DigitalOcean Setup](./digitalocean-setup). Reuses the same logical Dapr component names; managed services are evaluated only when a concrete evidence/durability need exists.
+Target shape only — see [Hosting Strategy](./hosting-deployment-strategy). Reuses the same logical Dapr component names; managed services are evaluated only when a concrete evidence/durability need exists. The existing [DigitalOcean Droplet Setup](./digitalocean-setup) remains secondary fallback evidence.
 
-| Section | DigitalOcean |
+| Section | DOKS / Cloudflare |
 | --- | --- |
-| Runtime | Start with a DO Droplet running the same containerized stack via Docker Compose; DOKS only if Kubernetes evidence is required. |
-| Ingress | Cloudflare in front where approved, or a DO Load Balancer when the profile needs it; public endpoints HTTPS. |
+| Runtime | DOKS on x86 workers. Use one 4 vCPU / 16 GiB worker for disposable proof, then three 4 vCPU / 8 GiB workers with an HA control plane for the external-pilot baseline. Dapr is installed through its supported Kubernetes route with mTLS/Sentry enabled. |
+| Ingress | In-cluster Cloudflare Tunnel/WAF by default; public endpoints HTTPS; no public provider load balancer unless a concrete need is found. |
 | Identity | Keycloak first; managed/client OIDC only when a pilot requires it. |
-| Dapr components | Same logical names; self-hosted sidecars/runtime initially. |
-| Persistence / read models | Self-hosted stores first; DO Managed Databases (PostgreSQL, MongoDB-compatible, Valkey/Redis, OpenSearch) evaluated only when durability/evidence improves. |
+| Dapr components | Same logical names; Kubernetes sidecar injection, scoped components, resiliency, and mTLS/Sentry required. |
+| Persistence / read models | Persistent volumes or explicitly selected external stores; an initial 100 GiB volume allowance is the planning baseline. Managed databases are adopted only when durability/evidence justifies them. |
 | Broker / pub-sub | RabbitMQ first (or another Dapr-compatible broker later) behind `fairspot-pubsub`. |
 | Secrets | Vault or profile-approved injection through the secret-store boundary; no secrets in manifests/docs. |
-| Object storage | MinIO initially; DO Spaces when hosted storage is needed. |
-| Observability | Grafana/Prometheus/Loki/Jaeger + OpenTelemetry export first; DO Monitoring adds host visibility only. |
-| Backup / restore | Droplet snapshots + service backups first; managed-DB backups if state moves; restore evidence required before customer data. |
+| Object storage | Spaces or another approved S3-compatible target for off-cluster backups; MinIO only when in-cluster operation is justified and its data is backed up off-cluster. |
+| Observability | Grafana/Prometheus/Loki/Jaeger + OpenTelemetry export first; DigitalOcean monitoring adds cluster/node/platform visibility only. |
+| Backup / restore | Off-cluster service backups plus a restore drill; managed-DB backups if state moves; restore evidence required before customer data. |
 | Data classification / encryption | Confidential-by-default when real data is present. |
-| Cost assumptions | Cost model only; GHCR acceptable for images, DO Container Registry optional. |
-| Operational ownership | FairSpot delivery team (follow-up evaluation target). |
+| Cost assumptions | Cost model only; immutable `linux/amd64` images from GHCR initially; resource requests/limits and cost alerts required. |
+| Operational ownership | FairSpot delivery team (primary hosted evaluation target). |
 | Support boundary | FairSpot-operated evaluation; not a client-operated environment. |
-| Validation / evidence | Same readiness bar as NAS before any real data; no application-service code changes for provider movement. |
+| Validation / evidence | Proof uses synthetic data only. HA pilot, rollout/rollback, Dapr health, restore, tenant isolation, no-internal-exposure, observability, and hosted smoke must pass before any real data; no application-service code changes for provider movement. |
 
 ### 3.4 Client-owned / BYOC
 
@@ -155,7 +155,7 @@ Operated by the client or the client's hosting partner. FairSpot supplies deploy
 
 ### 3.5 Legacy / client-selected (AWS, Azure)
 
-AWS and Azure are **not** active FairSpot-operated target clouds — they are legacy compatibility stubs ([AWS Setup](./aws-setup), [Azure Setup](./azure-setup)). An AWS or Azure deployment is possible only when a client explicitly selects it and provides tested Dapr component manifests, secrets, storage, monitoring, and backup/restore evidence for that client-owned environment. Treat them as instances of the Client-owned/BYOC profile, not as FairSpot targets. This is recorded in [Versions and Decisions](../versions-and-decisions) (bring-your-own-cloud architecture; DigitalOcean follow-up target).
+AWS and Azure are **not** active FairSpot-operated target clouds — they are client-driven compatibility stubs ([AWS Setup](./aws-setup), [Azure Setup](./azure-setup)). An AWS or Azure deployment is possible only when a client explicitly selects it and provides tested Dapr component manifests, secrets, storage, monitoring, and backup/restore evidence for that client-owned environment. Treat them as instances of the Client-owned/BYOC profile, not as FairSpot targets. This is recorded in [Versions and Decisions](../versions-and-decisions) (bring-your-own-cloud architecture; DOKS hosted target).
 
 ---
 

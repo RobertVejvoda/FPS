@@ -2,6 +2,8 @@
 
 > **Moved private (#684):** the detailed hosted-operator runbook now lives in the private `fairspot-platform` repository at `docs/runbooks/nas-cloudflare-deployment-profile.md`.
 
+> **Profile status (2026-07-26):** secondary self-hosted/BYOC validation and recovery-lab path. DOKS/Cloudflare is the primary FairSpot-operated hosted evaluation target.
+
 This public page is intentionally a summary only. The NAS + Cloudflare Tunnel profile is an operator deployment path for the FairSpot hosted pilot. It includes environment-specific routing, tunnel, gateway, firewall, recovery, and smoke-test steps that belong in the private platform plane, not in the open-core product documentation.
 
 ## Public Contract

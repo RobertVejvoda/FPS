@@ -1,8 +1,22 @@
 # OPS007A Demo Profile Decision And Runtime Inventory
 
-**Status:** Provider choice superseded. Release 1 uses NAS/Cloudflare; the cloud-hosted follow-up target is DigitalOcean.
+**Status:** Historical assessment. Provider recommendation superseded on 2026-07-26 by the DOKS hosted-target decision.
 **Prepared by:** Claude (FPS Implementer), 2026-05-22
 **Tracks:** Issue #234 → OPS007 (#226)
+
+---
+
+## Decision Update — 2026-07-26
+
+Robert selected DigitalOcean Kubernetes (DOKS) as the primary FairSpot-operated hosted evaluation target. The inventory and option analysis below remain implementation history, but their NAS-first and Droplet-first recommendation is no longer current.
+
+- DOKS/Cloudflare is the first cloud evidence path.
+- NAS/Cloudflare is retained for later self-hosted/BYOC validation and recovery-lab evidence.
+- The DigitalOcean Droplet/Docker Compose implementation remains a fallback and migration asset, not a gate before DOKS.
+- AWS/EKS remains a client-driven compatibility route, not the FairSpot-operated price-first target.
+- Synthetic data is mandatory for the proof profile; real customer data waits for the HA pilot, restore, tenant-isolation, public-surface, observability, and hosted-smoke gates.
+
+The current source of truth is [Hosting and Deployment Strategy](./hosting-deployment-strategy) and [Versions and Decisions](../versions-and-decisions).
 
 ---
 
@@ -161,7 +175,7 @@ Deploy FairSpot services and supporting infrastructure as Fly.io apps. No manage
 
 ## 4. Recommendation
 
-**Start with the Release 1 NAS/Cloudflare profile. Use Profile B (DigitalOcean Droplet + Docker Compose) as the cloud-hosted follow-up.**
+**Historical recommendation (superseded): start with NAS/Cloudflare, then use a DigitalOcean Droplet. The current target is DOKS/Cloudflare.**
 
 ### Rationale
 
@@ -187,7 +201,7 @@ Profile C (Fly.io) adds complexity without a compensating benefit and is not rec
 **Business decisions (Robert/Codex must answer — see [Open Decisions](#open-decisions)):**
 
 1. Domain or subdomain for the demo URL (e.g. `fairspot-demo.yourdomain.com`) — TLS and OIDC redirect URIs depend on it
-2. Target host choice for the cloud follow-up (DigitalOcean Droplet first unless Robert approves a different option)
+2. DOKS cluster and deployment details from the approved hosted-target profile
 3. SSH key for VM access
 
 **Implementation risks and known checks (OPS007B must address):**
@@ -209,14 +223,14 @@ These are concrete yes/no or option choices that require input from Robert or Co
 
 | # | Decision | Options | Blocking |
 |---|---|---|---|
-| D1 | **Cloud follow-up host** | DigitalOcean Droplet first, DOKS later, or explicitly approved alternative | Yes — needed before cloud provisioning |
+| D1 | **Cloud follow-up host** | Resolved: DOKS first; Droplet retained as fallback evidence | No — resolved 2026-07-26 |
 | D2 | **Domain for demo URL** | Use existing domain, register `fairspot.demo` / `fairspot-demo.example.com`, or use IP-only for first demo | Yes — TLS cert and OIDC redirect URIs depend on it |
-| D3 | **NAS → DigitalOcean timing** | After Release 1 evaluation path is stable vs before first external walkthrough | Yes — determines OPS007B scope |
+| D3 | **NAS → DigitalOcean timing** | Superseded: DOKS is the first external hosted target; NAS is later self-hosted validation | No — superseded 2026-07-26 |
 | D4 | **Identity for DigitalOcean profile** | Keep Keycloak first vs client/managed IdP for a specific pilot | No — can decide during OPS007B |
 | D5 | **Observability on Profile A** | Keep Grafana/Prometheus/Loki on the same VM vs skip dashboards for first demo and add in OPS007B | No — can decide during OPS007B |
 | D6 | **Demo reset downtime** | Acceptable to stop and restart Docker Compose for reset (≈30s) vs require hot-reset without downtime | No — can decide during OPS007B |
 
-Robert/Codex must answer **D1**, **D2**, and **D3** before OPS007B (deployment) work begins. D4–D6 can be decided in parallel with OPS007B.
+Robert/Codex resolved **D1**. **D2** remains required before public routing; D3 is superseded by the DOKS-first decision. D4–D6 can be decided during implementation.
 
 ---
 

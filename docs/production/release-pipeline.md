@@ -1,6 +1,6 @@
 # OPS022 — Release CI/CD Pipeline and Deployment Promotion
 
-**Status:** Implemented for Release 1.
+**Status:** Implemented for the NAS and DigitalOcean Droplet profiles. The DOKS target pipeline is not implemented.
 **Tracks:** OPS022 (issue #623). Builds on [GHCR Image Publishing](./ghcr-image-publishing.md) (OPS021).
 **Decision record:** `versions-and-decisions.md` → *Release artifact pipeline*.
 
@@ -28,6 +28,8 @@ Each stage maps to a concrete workflow or script:
 No secrets live in repository files. CI uses the built-in `GITHUB_TOKEN` for GHCR; the NAS authenticates with an operator-held PAT (`read:packages`) for private packages.
 
 The **DigitalOcean Droplet** profile runs the same deploy/smoke/rollback flow as the NAS rows above — the same pinned-tag pull, no host build — with `tools/deploy-digitalocean.sh` and `--digitalocean`, plus a delta overlay that suppresses public host ports for an internet-addressable host. Setup, operator access, and troubleshooting: [DigitalOcean Droplet setup](./digitalocean-setup.md).
+
+The primary **DOKS** target must preserve the same immutable-artifact principle but needs a separate implementation slice for Kubernetes deployment identity, manifests or Helm packaging, rollout health, rollback, Dapr health, public smoke, and evidence capture. Do not treat the NAS/Droplet scripts as proof that the DOKS pipeline exists.
 
 ---
 

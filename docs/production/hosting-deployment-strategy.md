@@ -2,10 +2,10 @@
 
 > **Public contract (#670/#684):** provider-neutral deployment strategy stays public. Hosted-operator procedures, environment values, evidence captures, and account-specific runbooks belong in the private `fairspot-platform` repository; the [Open-Core Documentation Boundary](../strategy-layer/open-core-boundary.md) tracks that split.
 
-**Status:** Baseline merged; Release 1 uses NAS/Cloudflare and the FairSpot-operated cloud-hosted follow-up target is DigitalOcean.
+**Status:** Updated 2026-07-26. DOKS/Cloudflare is the primary FairSpot-operated hosted evaluation target. NAS and the existing DigitalOcean Droplet profile remain secondary self-hosted/fallback evidence.
 
 **Prepared by:** Claude (FairSpot Implementer), 2026-05-14
-**Updated by:** Codex (FairSpot Product Owner), 2026-05-15
+**Updated by:** Codex (FairSpot Product Owner), 2026-07-26
 **Supersedes:** `azure-setup.md` and `aws-setup.md` as active FairSpot target-cloud plans. Those files remain legacy stubs only; the active cloud target note is [DigitalOcean Setup](./digitalocean-setup).
 
 ---
@@ -19,7 +19,7 @@ The product needs three practical targets:
 | Profile | Recommendation | Why |
 |---|---|---|
 | **Local** | Docker Compose or local containers with self-hosted Dapr components. | Lowest cost, fast feedback, and close enough to production contracts for development. |
-| **FairSpot-operated hosted evaluation** | Release 1 uses NAS/Cloudflare. The cloud-hosted follow-up target is DigitalOcean, starting with a Droplet/Docker Compose profile that mirrors the current container stack. DOKS is deferred until Kubernetes evidence is needed. | Lets business and technical evaluators try a real system and lets FairSpot collect usage/performance evidence without reopening AWS/Azure target-cloud planning. |
+| **FairSpot-operated hosted evaluation** | Use DigitalOcean Kubernetes (DOKS) behind Cloudflare as the primary path. Prove packaging on a disposable single-node x86 profile, then validate the three-node HA pilot baseline before real customer data. | Gives FairSpot a cost-bounded managed-Kubernetes environment that exercises the Dapr target architecture and maps directly to client-owned Kubernetes. |
 | **Client-owned production** | Client-selected cloud or platform, constrained by FairSpot component contracts, Dapr building blocks, OpenTelemetry telemetry, and documented backup/restore/security requirements. | Production operation belongs to the client. FairSpot should deliver deployable artifacts, configuration guidance, runbooks, and evidence rather than operate the client's environment. |
 
 Dapr remains the boundary for pub/sub, state, bindings, service invocation, and secrets. OpenTelemetry remains the boundary for logs, metrics, and traces. Provider-specific services are allowed only behind those boundaries or in clearly isolated deployment scripts.
@@ -30,7 +30,7 @@ Dapr remains the boundary for pub/sub, state, bindings, service invocation, and 
 
 | Criterion | **Local** | **FairSpot hosted evaluation** | **Client-owned production** | **Kubernetes / enterprise option** |
 |---|---|---|---|---|
-| **Dapr support** | Self-hosted sidecars and local component YAML. | Self-hosted Dapr sidecars for NAS/Cloudflare and initial DigitalOcean Droplet profile; DOKS later if cluster evidence is needed. | Must support Dapr components or a documented equivalent adapter path. | Strong fit when client requires Kubernetes control. |
+| **Dapr support** | Self-hosted sidecars and local component YAML. | Kubernetes Dapr control plane, mTLS/Sentry, sidecar injection, and scoped components on DOKS. | Must support Dapr components or a documented equivalent adapter path. | Strong fit when client requires Kubernetes control. |
 | **Identity integration** | Local or mocked OIDC. | Demo OIDC realm with seeded users and roles. | Client IdP through OIDC/OAuth 2.0, tenant and role claims mapped explicitly. | Enterprise OIDC, workload identity, private networking. |
 | **Cost role** | Minimal developer cost. | Low monthly spend; enough to run credible demos and measurements. Static provider prices are not committed in public docs. | Client-owned cost model; FairSpot supplies sizing assumptions and measurement method. | Higher baseline cost, justified only by client controls or steady load. |
 | **Operational complexity** | Low. | Medium; enough automation to redeploy repeatably. | Depends on client platform and controls. | High; useful when enterprise deployment standards require it. |
@@ -67,12 +67,15 @@ The hosted evaluation environment is not client production. Its job is to prove 
 - observable usage, latency, error rate, event processing, and notification delivery;
 - clear teardown and cost control.
 
-Release 1 uses NAS/Cloudflare because that path is already aligned with the containerized stack and public-domain evaluation plan. The cloud-hosted follow-up target is DigitalOcean:
+DOKS/Cloudflare is the approved FairSpot-operated target:
 
-- start with a small Droplet running the same containerized stack and self-hosted Dapr sidecars;
-- keep Cloudflare in front where approved, or use a DigitalOcean Load Balancer only when the profile needs it;
-- evaluate DigitalOcean Managed Databases, Spaces, and Container Registry only when they reduce operational risk or provide needed evidence;
-- move to DOKS only if Kubernetes behavior, autoscaling, or client-facing cluster evidence becomes a real requirement.
+- prove Kubernetes packaging and resource fit first on a disposable x86 4 vCPU / 16 GiB single-node profile with synthetic data only;
+- validate the external-pilot baseline on three x86 4 vCPU / 8 GiB workers with an HA control plane and an initial 100 GiB persistent-volume allowance;
+- install Dapr through its supported Kubernetes route with mTLS/Sentry enabled;
+- pull immutable `linux/amd64` images from GHCR until multi-architecture images are separately validated;
+- run Cloudflare Tunnel in the cluster and avoid a public provider load balancer until a concrete need appears;
+- keep authoritative state on persistent volumes or explicitly selected external stores, and send backups off-cluster to Spaces or another approved S3-compatible target;
+- forbid real customer data until restore, tenant isolation, public-surface, observability, and hosted smoke evidence pass.
 
 ### 2.3 Client-Owned Production
 
@@ -88,27 +91,28 @@ Client production is operated by the client or the client's hosting partner. Fai
 
 The exact provider choice is a client architecture decision. FairSpot should remain compatible with client-selected cloud, Kubernetes, and on-premises platforms by keeping provider-specific code outside the application services.
 
-### 2.4 DigitalOcean Hosted Target
+### 2.4 DOKS Hosted Target
 
-DigitalOcean is the active FairSpot-operated cloud-hosted follow-up target after the Release 1 NAS/Cloudflare evaluation path.
+DOKS is the active FairSpot-operated hosted evaluation target. NAS/Cloudflare and the DigitalOcean Droplet profile remain secondary self-hosted/fallback evidence.
 
-Initial profile:
+Approved target profile:
 
-- DigitalOcean Droplet running Docker Compose and the same containerized services used by NAS/Cloudflare.
-- Self-hosted Dapr sidecars/runtime using the existing profile component names.
+- Disposable proof: one x86 4 vCPU / 16 GiB worker, non-HA control plane, synthetic data only.
+- External-pilot baseline: three x86 4 vCPU / 8 GiB workers, HA control plane, and an initial 100 GiB persistent-volume allowance.
+- Dapr Kubernetes control plane and sidecars with mTLS/Sentry enabled and component scopes enforced.
 - Keycloak remains the first identity provider unless a pilot explicitly requires an external IdP.
-- RabbitMQ, MongoDB/PostgreSQL, Vault, MinIO, and observability can stay self-hosted initially if backups, restore, and secrets are handled correctly.
-- GHCR remains acceptable for images; DigitalOcean Container Registry is optional if it simplifies deployment.
-- Cloudflare can remain the public edge/WAF. DigitalOcean Load Balancer is a profile decision, not a default requirement.
+- RabbitMQ, MongoDB/PostgreSQL, Vault, MinIO, and observability may start in-cluster only when resource limits, persistence, backup, restore, and secrets are evidenced.
+- GHCR immutable `linux/amd64` images are the initial artifact source; multi-architecture publication is a later portability slice.
+- Cloudflare Tunnel runs in-cluster as the public edge/WAF. A DigitalOcean Load Balancer is not a default requirement.
 
 Managed-service evaluation path:
 
 - DigitalOcean Managed Databases for PostgreSQL, MongoDB-compatible alternatives where approved, Valkey/Redis, OpenSearch, or other state services when they provide better durability than self-hosting.
-- DigitalOcean Spaces for object storage where hosted reports, exports, backups, or attachments need provider-managed storage.
+- DigitalOcean Spaces is the preferred off-cluster backup/object-storage candidate where hosted reports, exports, backups, or attachments need provider-managed storage.
 - DigitalOcean Monitoring for host/resource visibility; application telemetry still flows through OpenTelemetry-compatible collectors/backends.
-- DOKS only after the Droplet profile proves insufficient or Kubernetes evidence is required.
+- The existing Droplet profile remains a recovery/self-hosted fallback; it is not a prerequisite for DOKS.
 
-### 2.5 Kubernetes / DOKS Candidate
+### 2.5 DOKS Implementation Rationale
 
 Kubernetes gives full workload control: custom networking, Helm releases, Dapr operator/sidecar injection, full observability stack, and clearer client-enterprise mapping.
 
@@ -119,7 +123,7 @@ Operational overhead is higher than the Droplet profile and should be accepted o
 - ingress, certificates, secrets, backups, and observability become platform responsibilities;
 - minimum cluster cost is higher than a single-host profile even at idle.
 
-Recommended only if the Droplet profile proves insufficient or full Kubernetes-native deployment is required for client compliance/evaluation.
+The overhead is accepted for the primary hosted evaluation because managed Kubernetes provides the closest price-first fit to FairSpot's Dapr target architecture and client-owned Kubernetes story. Implementation must keep that overhead bounded with explicit resource requests/limits, cost alerts, staged proof-to-pilot promotion, and repeatable rollout/rollback.
 
 ### 2.6 Hybrid / Minimal-Cost Stepping Stone
 
@@ -175,7 +179,7 @@ Backed by:
 - Billing service.
 - Full enterprise-grade observability hosting if the demo can export telemetry to a managed service.
 - Object storage unless reports/exports require it.
-- Kubernetes unless a client or demo constraint requires it.
+- Managed provider services that do not close a measured DOKS durability, security, or operations gap.
 
 **Cost planning model:**
 | Component | Demo cost expectation | Production cost ownership |
@@ -263,7 +267,7 @@ Component YAML files live in `code/infrastructure/dapr/components/`. Local files
 - **Scale-to-zero is useful for demo.** Internal services can scale down when idle if the selected runtime supports it. Identity may need an always-on instance.
 - **Persistence is usually the dominant variable.** OPS002 should validate cost against expected tenant count, data volume, backups, restore needs, and query/reporting load.
 - **Use managed services only where they reduce delivery risk.** A demo can use managed broker/secrets/monitoring to save time, but application code must stay behind Dapr and OpenTelemetry boundaries.
-- **Avoid Kubernetes by default for demo.** Use it only when the client target or technical validation requires Kubernetes behavior.
+- **Keep Kubernetes bounded.** Use the approved DOKS proof and pilot shapes, explicit resource requests/limits, and cost alerts; do not add managed services or cluster capacity without evidence.
 - **Verify current prices before sharing numbers externally.** Cloud pricing changes frequently; docs should show the cost model and assumptions, not pretend one estimate is final.
 
 ---
@@ -309,7 +313,7 @@ Pseudonymised audit records (`actor_hash`) as per the existing architecture deci
 
 The following questions should be resolved as OPS002 turns the demo baseline into a concrete hosted environment:
 
-1. **DigitalOcean profile cutover**: Should the cloud-hosted follow-up start as Droplet/Docker Compose only, or should DOKS be included in the first cloud evidence pass?
+1. **Resolved — DigitalOcean profile cutover**: DOKS is included in the first cloud evidence pass and is the primary FairSpot-operated hosted evaluation target.
 
 2. **Persistence hosting choice for demo**: Which option gives credible backup/restore and reporting evidence without creating unnecessary monthly cost?
 
@@ -345,9 +349,9 @@ The following documents contain outdated stack assumptions and are legacy refere
 
 - `docs/production/azure-setup.md` — legacy stub only; not an active FairSpot target-cloud plan.
 - `docs/production/aws-setup.md` — legacy stub only; not an active FairSpot target-cloud plan.
-- `docs/production/digitalocean-setup.md` — active FairSpot-operated cloud-hosted follow-up target note.
+- `docs/production/digitalocean-setup.md` — implemented fallback/self-hosted evidence; not the primary DOKS target.
 
-**Recommendation:** Keep the Azure/AWS paths as short compatibility stubs so old links do not imply active target-cloud support.
+**Recommendation:** Keep Azure/AWS as client-selected compatibility stubs and keep the Droplet runbook as fallback evidence so old links remain useful without implying that any of them is the active FairSpot-operated target.
 
 ---
 

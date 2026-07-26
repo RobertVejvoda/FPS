@@ -113,7 +113,7 @@ Jaeger is an open-source, end-to-end distributed tracing tool. It is used for mo
 
 ## Hosted Provider Monitoring
 
-Release 1 NAS/Cloudflare and the DigitalOcean cloud follow-up may use provider/resource monitoring for host health, network traffic, disk pressure, load balancers, and platform events. Application telemetry remains FairSpot-owned through OpenTelemetry-compatible metrics, logs, and traces. Business activity remains in the Audit service, not in provider logs.
+DOKS is the primary hosted evaluation target and must use provider/resource monitoring for cluster, node, network, persistent-volume, and platform-event health. NAS/Cloudflare and the DigitalOcean Droplet fallback may keep host-level monitoring. Application telemetry remains FairSpot-owned through OpenTelemetry-compatible metrics, logs, and traces. Business activity remains in the Audit service, not in provider logs.
 
 Provider monitoring is therefore supporting evidence only. A hosted profile is acceptable when operators can see:
 
