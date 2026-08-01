@@ -37,9 +37,9 @@
 #                      DigitalOcean default: code/infrastructure/do.env).
 #   --out DIR          Backup root (default: ./backups).
 #   --retention N      Keep the newest N runs, prune older (default: 7).
-#   --quiesce          Stop the writers (fairspot-* app services + keycloak)
-#                      around the dumps for a consistent snapshot, then resume
-#                      them (trap-guarded).
+#   --quiesce          Stop the currently running writers (fairspot-* app
+#                      services + keycloak) around the dumps for a consistent
+#                      snapshot, then resume only those services (trap-guarded).
 #
 # VAULT_TOKEN (shell env or --env-file) authenticates the raft snapshot. It must
 # carry the sys/storage/raft/snapshot policy; if the stack's Dapr token is
@@ -107,12 +107,15 @@ _record() { BACKED_UP+=("$1|$2|$3"); }
 APP_SERVICES=()
 _quiesce_start() {
   [[ -n "$QUIESCE" ]] || return 0
-  local svc
+  local svc running_services
+  if ! running_services="$("${COMPOSE_CMD[@]}" ps --services --status running 2>/dev/null)"; then
+    die "quiesce: could not determine which writer services are running"
+  fi
   while IFS= read -r svc; do
     case "$svc" in
       fairspot-*|keycloak) APP_SERVICES+=("$svc") ;;
     esac
-  done < <("${COMPOSE_CMD[@]}" config --services 2>/dev/null || true)
+  done <<< "$running_services"
   if (( ${#APP_SERVICES[@]} > 0 )); then
     log "Quiescing writers: ${APP_SERVICES[*]}"
     trap _quiesce_stop EXIT

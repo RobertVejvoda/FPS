@@ -18,7 +18,7 @@ TMP="$(mktemp -d)"
 trap 'find "$TMP" -depth -delete 2>/dev/null || true' EXIT
 
 hdr "1. Shell syntax"
-for script in tools/deploy-nas.sh tools/nas-start.sh tools/nas-stop.sh tools/start-container-stack.sh tools/validate-nas-profile.sh; do
+for script in tools/deploy-nas.sh tools/nas-start.sh tools/nas-stop.sh tools/start-container-stack.sh tools/backup-stack.sh tools/validate-nas-profile.sh; do
   if bash -n "$REPO_ROOT/$script"; then pass "bash -n $script"; else fail "bash -n $script"; fi
 done
 if sh -n "$INFRA_DIR/datahub/run-migrations.sh"; then
@@ -220,7 +220,65 @@ else
   fail "Grafana dashboard contains stale metric/job queries"
 fi
 
-hdr "5. CLI safety gates"
+hdr "5. Backup quiesce contract"
+BACKUP="$REPO_ROOT/tools/backup-stack.sh"
+BACKUP_FAKE_BIN="$TMP/backup-fake-bin"
+BACKUP_DOCKER_LOG="$TMP/backup-docker.log"
+mkdir -p "$BACKUP_FAKE_BIN"
+cat > "$BACKUP_FAKE_BIN/docker" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
+
+case " $* " in
+  *" ps --services --status running "*)
+    printf '%s\n' fairspot-datahub fairspot-booking keycloak mongodb postgres minio vault
+    exit 0
+    ;;
+  *" ps -aq "*)
+    for last do :; done
+    case "$last" in
+      fairspot-datahub|fairspot-datahub-migrate|fairspot-booking|keycloak)
+        printf 'cid-%s\n' "$last"
+        ;;
+    esac
+    exit 0
+    ;;
+  *" stop "*|*" start "*)
+    exit 0
+    ;;
+esac
+
+if [ "${1:-}" = "inspect" ]; then
+  for last do :; done
+  if [ "$last" = "cid-fairspot-datahub-migrate" ]; then
+    printf 'false\n'
+  else
+    printf 'true\n'
+  fi
+  exit 0
+fi
+
+exit 64
+SH
+cat > "$BACKUP_FAKE_BIN/sha256sum" <<'SH'
+#!/bin/sh
+printf 'fixture  %s\n' "${1:-artifact}"
+SH
+chmod +x "$BACKUP_FAKE_BIN/docker" "$BACKUP_FAKE_BIN/sha256sum"
+
+if FAKE_DOCKER_LOG="$BACKUP_DOCKER_LOG" PATH="$BACKUP_FAKE_BIN:$PATH" \
+  "$BACKUP" --nas --env-file "$FIX_ENV" --out "$TMP/backup-out" \
+    --retention 1 --quiesce > "$TMP/backup.out" 2>&1 \
+  && grep -q ' ps --services --status running' "$BACKUP_DOCKER_LOG" \
+  && grep -q ' stop .*fairspot-datahub.*fairspot-booking.*keycloak' "$BACKUP_DOCKER_LOG" \
+  && grep -q ' start .*fairspot-datahub.*fairspot-booking.*keycloak' "$BACKUP_DOCKER_LOG" \
+  && ! grep -Eq ' (stop|start) .*fairspot-datahub-migrate' "$BACKUP_DOCKER_LOG"; then
+  pass "quiesce resumes only writers that were running before backup"
+else
+  fail "quiesce can restart an exited one-shot service"
+fi
+
+hdr "6. CLI safety gates"
 expect_fail() {
   local label="$1" pattern="$2"; shift 2
   [[ "$1" == "--" ]] && shift
@@ -309,7 +367,7 @@ else
   skip "docker compose unavailable — direct-start contract check skipped"
 fi
 
-hdr "6. CI/CD artifact boundary"
+hdr "7. CI/CD artifact boundary"
 PUBLISH="$REPO_ROOT/.github/workflows/publish-images.yml"
 if grep -q 'type=sha,format=long' "$PUBLISH" && grep -q 'push: true' "$PUBLISH"; then
   pass "Publish Images produces immutable SHA-tagged GHCR artifacts"
