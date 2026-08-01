@@ -21,7 +21,7 @@ Each stage maps to a concrete workflow or script:
 |---|---|---|
 | **Validate** | `.github/workflows/ci.yml` — repo validation, NAS/DigitalOcean profile render and safety checks, API-client stale-check, mobile typecheck | every PR + push to `main` |
 | **Build & publish** | `.github/workflows/publish-images.yml` — builds 9 server images + web, pushes immutable `sha-<commit>` (+ `latest` on `main`, release tag on `v*`) to GHCR | push to `main`, `v*` tags |
-| **Deploy selected tag** | `tools/deploy-nas.sh --tag sha-<commit>` → `start-container-stack.sh --nas` pulls that tag, runs one-shot migrations, and starts/verifies the stack; the wrapper starts or attaches Cloudflare Tunnel | NAS host |
+| **Deploy selected tag** | `tools/deploy-nas.sh --tag sha-<commit>` → `start-container-stack.sh --nas` pulls that tag, runs finite migration jobs, and starts/verifies the stack; the wrapper starts or attaches Cloudflare Tunnel | NAS host |
 | **Public smoke** | exact app/auth hosts from CLI or ignored `nas.env`; checks web entry, `/config.json`, `/api/health/identity`, auth discovery, and protected surfaces; plus `tools/smoke-hosted.sh` for the full E2E | NAS host |
 | **Evidence + rollback** | record deployed tag, smoke result, rollback tag, residual risks using [release-evidence-template.md](./release-evidence-template.md) | release notes / issue |
 
@@ -72,6 +72,14 @@ Because every build is an immutable `sha-<commit>` image:
 - **Roll back** by re-running `deploy-nas.sh ... --tag sha-<previous-good-commit>`. The pull fetches the prior images and `up -d` recreates the containers; named data volumes are untouched, so durable state survives. No rebuild on the host.
 
 Record both the deployed tag and the designated rollback tag in the evidence so a rollback is a single command with a known-good target.
+
+The DataHub migration launcher also keeps rollback to images published before
+the explicit migration-and-exit mode finite: it runs the older image's existing
+Development startup migration path on container loopback and stops it only
+after ASP.NET reaches listening state. This makes the deployment workflow
+compatible with older artifacts; it does not make an application image
+compatible with a schema it cannot read. A schema-incompatible rollback still
+requires the documented restore path or an explicit operational decision.
 
 ---
 

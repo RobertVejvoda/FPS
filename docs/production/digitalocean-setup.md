@@ -187,6 +187,10 @@ an SSH tunnel from your workstation:
 ssh -L 3001:127.0.0.1:3001 <droplet>     # then open http://localhost:3001
 ```
 
+Grafana's external root URL follows the loopback-published host port (default
+`3001`). If `FPS_GRAFANA_HOST_PORT` is changed, Compose derives the matching
+root URL; `FPS_GRAFANA_ROOT_URL` remains available for an explicit external URL.
+
 Reach a store or Vault the same way (`docker compose ... exec <service> …` over
 SSH). Prefer Cloudflare Access for any operator surface exposed through the edge.
 
@@ -208,7 +212,11 @@ SSH). Prefer Cloudflare Access for any operator surface exposed through the edge
   ```sh
   ./tools/deploy-digitalocean.sh --domain <your-domain> --tag sha-<previous-commit>
   ```
-  A schema-incompatible rollback may need a restore — see the restore drill.
+  The finite DataHub migration launcher also supports images published before
+  explicit migration-and-exit mode by running their existing Development
+  startup migrations on container loopback and stopping them after they reach
+  listening state. A schema-incompatible rollback may still need a restore —
+  see the restore drill.
 
 ## 7. Backup
 

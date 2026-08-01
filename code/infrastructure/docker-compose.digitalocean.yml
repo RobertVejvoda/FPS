@@ -24,3 +24,5 @@ services:
   grafana:
     ports: !override
       - "127.0.0.1:${FPS_GRAFANA_HOST_PORT:-3001}:3000"
+    environment:
+      - GF_SERVER_ROOT_URL=${FPS_GRAFANA_ROOT_URL:-http://localhost:${FPS_GRAFANA_HOST_PORT:-3001}}

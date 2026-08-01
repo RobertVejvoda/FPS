@@ -27,8 +27,11 @@ and evidence are private:
 - `docker-compose.no-host-ports.yml` makes Cloudflare Tunnel the only ingress;
 - exact app/auth hostnames support names such as `app-dev.example.net` without
   forcing multi-level DNS names; `--domain` remains a compatibility shorthand;
-- a one-shot DataHub process applies compiled migrations in Production and exits
-  before the long-running service starts;
+- a finite DataHub migration job applies the selected image's compiled
+  migrations before the long-running Production service starts; current images
+  use an explicit migrate-and-exit mode, while rollback images published before
+  that mode use their Development startup migration path on container loopback
+  and are stopped by the launcher after reaching listening state;
 - Prometheus scrapes FairSpot services over Docker DNS, so host ports are not
   needed for monitoring;
 - `tools/validate-nas-profile.sh` proves the secret-free Compose and CLI safety

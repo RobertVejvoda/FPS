@@ -225,6 +225,7 @@ for file in \
   "$INFRA_DIR/dapr/components/container/s3store.yaml" \
   "$INFRA_DIR/dapr/components/container/vault.yaml" \
   "$INFRA_DIR/dapr/configuration/fairspot-config.yaml" \
+  "$INFRA_DIR/datahub/run-migrations.sh" \
   "$INFRA_DIR/envoy/envoy.yaml" \
   "$INFRA_DIR/prometheus/prometheus.yaml" \
   "$INFRA_DIR/prometheus/prometheus.containers.yaml" \

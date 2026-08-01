@@ -167,6 +167,12 @@ else
     else
       fail "pinned sha tag did not reach the image refs"
     fi
+
+    if grep -q 'GF_SERVER_ROOT_URL: http://localhost:3001' "$RENDER"; then
+      pass "Grafana absolute URLs use the default loopback-published port"
+    else
+      fail "Grafana root URL does not match the default loopback-published port"
+    fi
   else
     fail "compose config failed to render"
     sed 's/^/      /' "$TMP/render.err"

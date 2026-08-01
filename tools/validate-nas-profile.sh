@@ -21,6 +21,11 @@ hdr "1. Shell syntax"
 for script in tools/deploy-nas.sh tools/nas-start.sh tools/nas-stop.sh tools/start-container-stack.sh tools/validate-nas-profile.sh; do
   if bash -n "$REPO_ROOT/$script"; then pass "bash -n $script"; else fail "bash -n $script"; fi
 done
+if sh -n "$INFRA_DIR/datahub/run-migrations.sh"; then
+  pass "sh -n code/infrastructure/datahub/run-migrations.sh"
+else
+  fail "sh -n code/infrastructure/datahub/run-migrations.sh"
+fi
 
 FIX_ENV="$TMP/nas.env"
 cat > "$FIX_ENV" <<'ENV'
@@ -98,10 +103,13 @@ else
       fail "immutable tag missing from rendered DataHub image"
     fi
     if grep -q '^  fairspot-datahub-migrate:' "$RENDER" \
-      && grep -q 'DataHub__ApplyMigrationsAndExit: "true"' "$RENDER"; then
-      pass "one-shot production DataHub migration service is rendered"
+      && grep -q 'DataHub__ApplyMigrationsAndExit: "true"' "$RENDER" \
+      && grep -q 'ASPNETCORE_ENVIRONMENT: Development' "$RENDER" \
+      && grep -q 'ASPNETCORE_URLS: http://127.0.0.1:5211' "$RENDER" \
+      && grep -q 'run-datahub-migrations.sh' "$RENDER"; then
+      pass "finite DataHub migration service includes legacy-image rollback compatibility"
     else
-      fail "DataHub migration service/flag missing"
+      fail "DataHub migration service/compatibility launcher contract missing"
     fi
     if grep -q 'prometheus/prometheus.containers.yaml' "$RENDER"; then
       pass "hosted Prometheus mounts the container-DNS scrape config"
@@ -120,7 +128,72 @@ else
   fi
 fi
 
-hdr "3. Observability contract"
+hdr "3. DataHub migration launcher compatibility"
+MIGRATION_LAUNCHER="$INFRA_DIR/datahub/run-migrations.sh"
+FAKE_BIN="$TMP/fake-bin"
+mkdir -p "$FAKE_BIN"
+cat > "$FAKE_BIN/dotnet" <<'SH'
+#!/bin/sh
+case "${FAKE_DOTNET_MODE:-current}" in
+  current)
+    exit 0
+    ;;
+  legacy)
+    echo "Now listening on: http://127.0.0.1:5211"
+    trap 'exit 0' TERM INT
+    while :; do sleep 1; done
+    ;;
+  failure)
+    echo "fixture migration failure" >&2
+    exit 42
+    ;;
+  *)
+    exit 64
+    ;;
+esac
+SH
+chmod +x "$FAKE_BIN/dotnet"
+
+if current_output="$(
+  PATH="$FAKE_BIN:$PATH" \
+  FPS_ASSEMBLY=FPS.DataHub.dll \
+  FPS_DATAHUB_MIGRATION_TIMEOUT_SECONDS=5 \
+  FAKE_DOTNET_MODE=current \
+  "$MIGRATION_LAUNCHER" 2>&1
+)" && printf '%s' "$current_output" | grep -q 'exited successfully'; then
+  pass "current migration-mode image exits successfully"
+else
+  fail "current migration-mode image did not complete successfully"
+fi
+
+if legacy_output="$(
+  PATH="$FAKE_BIN:$PATH" \
+  FPS_ASSEMBLY=FPS.DataHub.dll \
+  FPS_DATAHUB_MIGRATION_TIMEOUT_SECONDS=5 \
+  FAKE_DOTNET_MODE=legacy \
+  "$MIGRATION_LAUNCHER" 2>&1
+)" && printf '%s' "$legacy_output" | grep -q 'Legacy DataHub image reached listening state'; then
+  pass "legacy rollback image is stopped after startup migrations"
+else
+  fail "legacy rollback image did not complete as a finite job"
+fi
+
+failure_output="$(
+  PATH="$FAKE_BIN:$PATH" \
+  FPS_ASSEMBLY=FPS.DataHub.dll \
+  FPS_DATAHUB_MIGRATION_TIMEOUT_SECONDS=5 \
+  FAKE_DOTNET_MODE=failure \
+  "$MIGRATION_LAUNCHER" 2>&1
+)"
+failure_rc=$?
+if [[ $failure_rc -eq 42 ]] \
+  && printf '%s' "$failure_output" | grep -q 'exited with code 42'; then
+  pass "migration failure remains fail-closed"
+else
+  fail "migration failure was not propagated (rc=$failure_rc)"
+fi
+
+hdr "4. Observability contract"
 if grep -q "targets: \['fairspot-datahub:5211'\]" "$INFRA_DIR/prometheus/prometheus.containers.yaml" \
   && ! grep -q 'host\.docker\.internal' "$INFRA_DIR/prometheus/prometheus.containers.yaml"; then
   pass "Prometheus uses Docker service DNS for FairSpot targets"
@@ -135,7 +208,7 @@ else
   fail "Grafana dashboard contains stale metric/job queries"
 fi
 
-hdr "4. CLI safety gates"
+hdr "5. CLI safety gates"
 expect_fail() {
   local label="$1" pattern="$2"; shift 2
   [[ "$1" == "--" ]] && shift
@@ -176,7 +249,7 @@ else
   skip "docker compose unavailable — direct-start contract check skipped"
 fi
 
-hdr "5. CI/CD artifact boundary"
+hdr "6. CI/CD artifact boundary"
 PUBLISH="$REPO_ROOT/.github/workflows/publish-images.yml"
 if grep -q 'type=sha,format=long' "$PUBLISH" && grep -q 'push: true' "$PUBLISH"; then
   pass "Publish Images produces immutable SHA-tagged GHCR artifacts"

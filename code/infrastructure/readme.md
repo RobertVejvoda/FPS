@@ -180,6 +180,13 @@ service and Dapr sidecar, attaches or starts `cloudflared`, and finally runs the
 public smoke. `mongodb-init`, `fairspot-datahub-migrate`, and `vault-init`
 finishing as `Exited (0)` means successful completion.
 
+The DataHub job uses a finite compatibility launcher. Current images apply
+migrations and exit through their explicit migration mode. When rolling back to
+an image published before that mode existed, the launcher lets the image run
+its existing Development startup migrations on container loopback, then stops
+it after ASP.NET reaches listening state. The long-running DataHub service
+always starts separately in Production only after that job succeeds.
+
 If the Tunnel is managed by this repo instead, omit
 `--existing-tunnel-container` and provide the ignored tunnel env file. The
 Production-compatible `--domain fairspot.net` shorthand still derives
