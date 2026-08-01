@@ -75,7 +75,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "targets": [
         {
-          "expr": "system_runtime_gc_heap_size",
+          "expr": "system_runtime_gc_heap_size / 1024 / 1024",
           "legendFormat": "heap MB"
         }
       ],

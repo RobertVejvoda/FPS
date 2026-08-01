@@ -104,10 +104,10 @@ else
     fi
     if grep -q '^  fairspot-datahub-migrate:' "$RENDER" \
       && grep -q 'DataHub__ApplyMigrationsAndExit: "true"' "$RENDER" \
-      && grep -q 'ASPNETCORE_ENVIRONMENT: Development' "$RENDER" \
+      && grep -q 'ASPNETCORE_ENVIRONMENT: Production' "$RENDER" \
       && grep -q 'ASPNETCORE_URLS: http://127.0.0.1:5211' "$RENDER" \
       && grep -q 'run-datahub-migrations.sh' "$RENDER"; then
-      pass "finite DataHub migration service includes legacy-image rollback compatibility"
+      pass "finite DataHub migration service preserves Production validation with legacy fallback"
     else
       fail "DataHub migration service/compatibility launcher contract missing"
     fi
@@ -136,9 +136,21 @@ cat > "$FAKE_BIN/dotnet" <<'SH'
 #!/bin/sh
 case "${FAKE_DOTNET_MODE:-current}" in
   current)
+    [ "${ASPNETCORE_ENVIRONMENT:-}" = "Production" ] || exit 65
+    [ "${DataHub__ApplyMigrationsAndExit:-}" = "true" ] || exit 66
     exit 0
     ;;
   legacy)
+    case "${ASPNETCORE_ENVIRONMENT:-}" in
+      Production)
+        [ "${DataHub__ApplyMigrationsAndExit:-}" = "true" ] || exit 66
+        ;;
+      Development)
+        [ "${DataHub__ApplyMigrationsAndExit:-}" = "false" ] || exit 66
+        echo "Legacy Development startup migrations applied"
+        ;;
+      *) exit 65 ;;
+    esac
     echo "Now listening on: http://127.0.0.1:5211"
     trap 'exit 0' TERM INT
     while :; do sleep 1; done
@@ -200,7 +212,7 @@ if grep -q "targets: \['fairspot-datahub:5211'\]" "$INFRA_DIR/prometheus/prometh
 else
   fail "Prometheus still depends on host-published FairSpot ports"
 fi
-if grep -q 'system_runtime_gc_heap_size' "$INFRA_DIR/grafana/dashboards/fairspot-local.json" \
+if grep -q 'system_runtime_gc_heap_size / 1024 / 1024' "$INFRA_DIR/grafana/dashboards/fairspot-local.json" \
   && grep -q 'system_runtime_threadpool_queue_length' "$INFRA_DIR/grafana/dashboards/fairspot-local.json" \
   && grep -q 'max by (job).*fairspot-' "$INFRA_DIR/grafana/dashboards/fairspot-local.json"; then
   pass "Grafana queries match current .NET metrics and FairSpot jobs"
