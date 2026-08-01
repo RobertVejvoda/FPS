@@ -115,6 +115,7 @@ render_do() {
     -f "$INFRA_DIR/docker-compose.dapr.yml" \
     -f "$INFRA_DIR/docker-compose.nas.yml" \
     -f "$INFRA_DIR/docker-compose.services.nas.yml" \
+    -f "$INFRA_DIR/docker-compose.no-host-ports.yml" \
     -f "$INFRA_DIR/docker-compose.digitalocean.yml" \
     config
 }

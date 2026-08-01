@@ -1,0 +1,61 @@
+# Tunnel-only hosted boundary — remove every host-published port.
+#
+# Apply this after the base, service, Dapr, and NAS overlays whenever an
+# outbound Cloudflare Tunnel is the only ingress. cloudflared reaches services
+# by Docker DNS on fairspot_network; application, infrastructure, observability,
+# and Dapr traffic therefore need no NAS host port. Operators use `docker
+# compose exec`, or a Cloudflare Access-protected hostname such as Grafana.
+#
+# Compose appends `ports` sequences across files. `!reset []` is therefore
+# required to remove bindings accumulated from the local-friendly base files.
+# Docker Compose v2.24+ supports this merge tag; deploy preflight and CI render
+# this profile before any containers are changed.
+
+services:
+  envoy-proxy:
+    ports: !reset []
+  vault:
+    ports: !reset []
+  minio:
+    ports: !reset []
+  keycloak:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  mongodb:
+    ports: !reset []
+  jaeger:
+    ports: !reset []
+  prometheus:
+    ports: !reset []
+  alertmanager:
+    ports: !reset []
+  loki:
+    ports: !reset []
+  grafana:
+    ports: !reset []
+  zipkin:
+    ports: !reset []
+
+  fairspot-audit:
+    ports: !reset []
+  fairspot-booking:
+    ports: !reset []
+  fairspot-configuration:
+    ports: !reset []
+  fairspot-customer:
+    ports: !reset []
+  fairspot-datahub:
+    ports: !reset []
+  fairspot-identity:
+    ports: !reset []
+  fairspot-notification:
+    ports: !reset []
+  fairspot-profile:
+    ports: !reset []
+  fairspot-reporting:
+    ports: !reset []
+  fairspot-web:
+    ports: !reset []

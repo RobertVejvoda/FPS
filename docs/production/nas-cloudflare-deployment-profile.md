@@ -18,6 +18,27 @@ Any hosted or client-owned FairSpot deployment must satisfy these public require
 | Storage | State stores, read models, and backup targets are tenant-safe and encrypted according to the selected deployment profile. |
 | Operations | Deployment must have backup/restore evidence, incident handling, maintenance expectations, and public-boundary smoke evidence before real customer data is processed. |
 
+## Reusable Deployment Automation
+
+The credential-free automation remains public even though live operator values
+and evidence are private:
+
+- `tools/deploy-nas.sh` is the recurring deploy/update/verify command;
+- `docker-compose.no-host-ports.yml` makes Cloudflare Tunnel the only ingress;
+- exact app/auth hostnames support names such as `app-dev.example.net` without
+  forcing multi-level DNS names; `--domain` remains a compatibility shorthand;
+- a one-shot DataHub process applies compiled migrations in Production and exits
+  before the long-running service starts;
+- Prometheus scrapes FairSpot services over Docker DNS, so host ports are not
+  needed for monitoring;
+- `tools/validate-nas-profile.sh` proves the secret-free Compose and CLI safety
+  contract in CI.
+
+CI validates code and deployment profiles. The image-publish workflow produces
+immutable GHCR `sha-*` artifacts. Deployment deliberately runs on the NAS after
+an operator selects a green tag; GitHub-hosted runners do not receive private
+NAS or Cloudflare credentials.
+
 ## Public References
 
 - [Production](../production): public deployment and operations overview.

@@ -151,6 +151,10 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in nas.env}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in nas.env}
+      # deploy-nas.sh derives these from the optional exact ops hostname. When
+      # no external ops host is configured, Grafana remains internal-only.
+      - GF_SERVER_ROOT_URL=${FPS_GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SECURITY_COOKIE_SECURE=${FPS_GRAFANA_COOKIE_SECURE:-false}
 
   zipkin:
     restart: unless-stopped

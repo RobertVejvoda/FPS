@@ -48,7 +48,8 @@ Rule ordering follows the file order (internal-path block first, then Keycloak a
 The hosted smoke checks that the rules are actually live. Run it against the public domain:
 
 ```bash
-./tools/start-container-stack.sh --nas --domain <domain>
+./tools/start-container-stack.sh --nas --smoke-only \
+  --app-host <app-host> --auth-host <auth-host>
 # or the full evidence writer:
 APP_URL=https://app.<domain>/api AUTH_URL=https://auth.<domain> OIDC_REALM=fairspot ./tools/smoke-hosted.sh
 ```

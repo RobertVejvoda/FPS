@@ -1,7 +1,7 @@
 apiVersion: 1
 
 providers:
-  - name: FairSpot Local
+  - name: FairSpot Development
     type: file
     disableDeletion: true
     updateIntervalSeconds: 30

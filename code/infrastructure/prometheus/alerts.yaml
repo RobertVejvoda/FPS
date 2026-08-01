@@ -3,7 +3,7 @@ groups:
     interval: 15s
     rules:
       - alert: FpsServiceDown
-        expr: up{job=~"fps-.*"} == 0
+        expr: up{job=~"fairspot-.*"} == 0
         for: 30s
         labels:
           severity: critical
@@ -15,9 +15,9 @@ groups:
       - alert: FpsHighErrorRate
         expr: |
           (
-            sum by (job) (rate(http_requests_received_total{job=~"fps-.*", code=~"5.."}[2m]))
+            sum by (job) (rate(http_requests_received_total{job=~"fairspot-.*", code=~"5.."}[2m]))
             /
-            sum by (job) (rate(http_requests_received_total{job=~"fps-.*"}[2m]))
+            sum by (job) (rate(http_requests_received_total{job=~"fairspot-.*"}[2m]))
           ) > 0.05
         for: 1m
         labels:
@@ -30,7 +30,7 @@ groups:
       - alert: FpsHighLatency
         expr: |
           histogram_quantile(0.95,
-            sum by (job, le) (rate(http_request_duration_seconds_bucket{job=~"fps-.*"}[2m]))
+            sum by (job, le) (rate(http_request_duration_seconds_bucket{job=~"fairspot-.*"}[2m]))
           ) > 2
         for: 2m
         labels:

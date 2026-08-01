@@ -27,6 +27,27 @@ services:
 
   fairspot-datahub:
     environment: *fairspot-nas-service-auth-env
+    depends_on:
+      fairspot-datahub-migrate:
+        condition: service_completed_successfully
+
+  # Production-safe one-shot schema migration. It runs the same immutable
+  # DataHub image as the service, applies compiled EF migrations, then exits 0.
+  # The normal DataHub container remains in Production and cannot start until
+  # this job completes successfully.
+  fairspot-datahub-migrate:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-datahub:${FPS_IMAGE_TAG:-latest}
+    restart: "no"
+    environment:
+      <<: *fairspot-nas-service-auth-env
+      ASPNETCORE_ENVIRONMENT: Production
+      DataHub__ApplyMigrationsAndExit: "true"
+      ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-fps_datahub};Username=${POSTGRES_USER:-fps};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for production-like DataHub, see nas.env}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - web
 
   fairspot-identity:
     environment: *fairspot-nas-service-auth-env

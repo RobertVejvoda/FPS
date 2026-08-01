@@ -70,7 +70,10 @@ resolve_compose() {
     files+=("-f" "$INFRA_DIR/docker-compose.services.nas.yml")
   fi
   if [[ "$MODE" == "digitalocean" ]]; then
+    files+=("-f" "$INFRA_DIR/docker-compose.no-host-ports.yml")
     files+=("-f" "$INFRA_DIR/docker-compose.digitalocean.yml")
+  elif [[ "$MODE" == "nas" ]]; then
+    files+=("-f" "$INFRA_DIR/docker-compose.no-host-ports.yml")
   fi
 
   if [[ -n "${ENV_FILE:-}" && -f "$ENV_FILE" ]]; then

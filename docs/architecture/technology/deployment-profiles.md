@@ -36,10 +36,21 @@ One-time setup is still required because the operator must create secrets and do
 After that, the expected NAS operation path is:
 
 ```bash
-./tools/deploy-nas.sh --domain fairspot.net
+./tools/deploy-nas.sh --tag sha-<commit> \
+  --existing-tunnel-container fairspot-cloudflared
 ```
 
-The wrapper starts the full container stack, starts `cloudflared`, and runs public-domain checks. The lower-level `./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env` remains the reusable health gate for CI/manual troubleshooting.
+Exact Development hostnames (`app-dev`, `auth-dev`, and optional Access-protected
+`ops-dev`) live in ignored `nas.env`. `--domain fairspot.net` remains the
+Production shorthand. The wrapper renders zero host ports, starts the full
+stack, runs DataHub migrations, starts or attaches `cloudflared`, and runs exact
+public-host checks. The lower-level `./tools/start-container-stack.sh --nas
+--env-file code/infrastructure/nas.env` remains the reusable health gate for
+manual troubleshooting.
+
+CI runs unit/build checks plus secret-free NAS/Compose profile validation. The
+publish workflow creates immutable GHCR `sha-*` images. The NAS consumes a
+selected green artifact; deployment is not pushed from a GitHub-hosted runner.
 
 This is intentionally "single command", not "zero configuration": credentials, DNS ownership, WAF policy, and identity-provider settings are security boundaries and must remain explicit.
 

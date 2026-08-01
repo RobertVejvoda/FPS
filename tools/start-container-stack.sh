@@ -20,7 +20,8 @@
 #
 # Usage (NAS/hosted — real credentials enforced via nas.env, Docker/Compose only):
 #   ./tools/start-container-stack.sh --nas
-#   ./tools/start-container-stack.sh --nas --domain fairspot.net
+#   ./tools/start-container-stack.sh --nas --app-host app-dev.fairspot.net \
+#     --auth-host auth-dev.fairspot.net
 #
 # Usage (DigitalOcean Droplet — NAS baseline + public-port suppression, do.env):
 #   ./tools/start-container-stack.sh --digitalocean --domain fairspot.net
@@ -28,9 +29,8 @@
 #
 # Flags:
 #   --nas              Apply NAS overlay (restart policies + required credential check).
-#   --digitalocean     Apply the NAS overlay plus the DigitalOcean delta overlay
-#                      (docker-compose.digitalocean.yml) that suppresses public
-#                      host-port bindings for an internet-addressable host (#766).
+#   --digitalocean     Apply the NAS + shared tunnel-only overlays, plus the
+#                      DigitalOcean loopback-Grafana delta (#766).
 #   --env-file PATH    Env file for the selected mode.
 #                      Local default: code/infrastructure/local-docker.env if present.
 #                      NAS default: code/infrastructure/nas.env.
@@ -47,9 +47,15 @@
 #                      local mode skips OIDC because the dev realm may not exist yet.
 #                      In --nas mode the internal OIDC check is skipped unless
 #                      --realm is set.
-#   --domain DOMAIN    After local checks pass, probe https://app.DOMAIN and
-#                      https://auth.DOMAIN through Cloudflare (Docker-only). The
-#                      public realm defaults to fairspot (override with --realm).
+#   --app-host HOST    Exact public application hostname to probe.
+#   --auth-host HOST   Exact public authentication hostname to probe. Explicit
+#                      app/auth hostnames must be supplied together.
+#   --domain DOMAIN    Backward-compatible shorthand that derives app.DOMAIN and
+#                      auth.DOMAIN when explicit hosts are not supplied.
+#                      The public realm defaults to fairspot (override --realm).
+#   --skip-public-smoke Validate hosted public configuration but do not probe the
+#                      public hosts. Used by the deploy wrapper before it starts
+#                      or attaches the Cloudflare Tunnel connector.
 #   --smoke-only       Hosted (--nas/--digitalocean) only. Genuinely non-mutating:
 #                      never renders Alertmanager config, never creates the
 #                      Docker network or pulls the probe image (fails clearly if
@@ -86,9 +92,12 @@ ENV_FILE=""
 SKIP_E2E=false
 TEARDOWN=false
 PUBLIC_DOMAIN=""
+PUBLIC_APP_HOST=""
+PUBLIC_AUTH_HOST=""
 SEED=false
 REALM_OVERRIDE=""
 SMOKE_ONLY=false
+SKIP_PUBLIC_SMOKE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -100,6 +109,9 @@ while [[ $# -gt 0 ]]; do
     --seed)         SEED=true ;;
     --down)         TEARDOWN=true ;;
     --domain)       PUBLIC_DOMAIN="$2"; shift ;;
+    --app-host)     PUBLIC_APP_HOST="$2"; shift ;;
+    --auth-host)    PUBLIC_AUTH_HOST="$2"; shift ;;
+    --skip-public-smoke) SKIP_PUBLIC_SMOKE=true ;;
     --smoke-only)   SMOKE_ONLY=true ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
@@ -225,9 +237,12 @@ COMPOSE_FILES=(
 if is_hosted; then
   COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.nas.yml")
   COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.services.nas.yml")
+  # Hosted ingress is the outbound Cloudflare Tunnel. Neither NAS nor a public
+  # Droplet needs application/store/observability ports published on the host.
+  COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.no-host-ports.yml")
 fi
-# DigitalOcean adds one delta overlay on top of the NAS baseline: it suppresses
-# public host-port bindings for an internet-addressable single host (#766).
+# DigitalOcean adds one delta after shared port suppression: Grafana is restored
+# on loopback only so an operator can use an SSH tunnel (#766).
 if [[ "$MODE" == "digitalocean" ]]; then
   COMPOSE_FILES+=("-f" "$INFRA_DIR/docker-compose.digitalocean.yml")
 fi
@@ -251,6 +266,7 @@ COMPOSE_HUMAN+=" -f docker-compose.yaml -f $SERVICES_FILE -f docker-compose.dapr
 if is_hosted; then
   COMPOSE_HUMAN+=" -f docker-compose.nas.yml"
   COMPOSE_HUMAN+=" -f docker-compose.services.nas.yml"
+  COMPOSE_HUMAN+=" -f docker-compose.no-host-ports.yml"
 fi
 if [[ "$MODE" == "digitalocean" ]]; then
   COMPOSE_HUMAN+=" -f docker-compose.digitalocean.yml"
@@ -276,6 +292,7 @@ read_env_value() {
         value = substr($0, index($0, "=") + 1)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
         gsub(/^"|"$/, "", value)
+        gsub(/^'\''|'\''$/, "", value)
         print value
         exit
       }
@@ -283,26 +300,45 @@ read_env_value() {
   ' "$file"
 }
 
+# Exact hostnames are the canonical interface for environment-qualified names
+# such as app-dev.fairspot.net. --domain remains a Production-friendly shorthand.
+PUBLIC_APP_HOST="${PUBLIC_APP_HOST:-$(read_env_value FPS_PUBLIC_APP_HOST "$ENV_FILE")}"
+PUBLIC_AUTH_HOST="${PUBLIC_AUTH_HOST:-$(read_env_value FPS_PUBLIC_AUTH_HOST "$ENV_FILE")}"
+PUBLIC_DOMAIN="${PUBLIC_DOMAIN:-$(read_env_value FPS_PUBLIC_DOMAIN "$ENV_FILE")}"
+
+if [[ -z "$PUBLIC_APP_HOST" && -z "$PUBLIC_AUTH_HOST" && -n "$PUBLIC_DOMAIN" ]]; then
+  PUBLIC_APP_HOST="app.$PUBLIC_DOMAIN"
+  PUBLIC_AUTH_HOST="auth.$PUBLIC_DOMAIN"
+fi
+
+if [[ -n "$PUBLIC_APP_HOST" || -n "$PUBLIC_AUTH_HOST" ]]; then
+  if [[ -z "$PUBLIC_APP_HOST" || -z "$PUBLIC_AUTH_HOST" ]]; then
+    echo "ERROR: --app-host and --auth-host (or FPS_PUBLIC_APP_HOST/FPS_PUBLIC_AUTH_HOST) must be supplied together."
+    exit 1
+  fi
+  for host in "$PUBLIC_APP_HOST" "$PUBLIC_AUTH_HOST"; do
+    case "$host" in
+      *://*|*/*|*:*|*' '*)
+        echo "ERROR: public host values must be hostnames only, without scheme, path, port, or spaces: $host"
+        exit 1
+        ;;
+    esac
+  done
+fi
+
 GRAFANA_HOST_PORT="${FPS_GRAFANA_HOST_PORT:-}"
 if [[ -z "$GRAFANA_HOST_PORT" ]]; then
   GRAFANA_HOST_PORT="$(read_env_value FPS_GRAFANA_HOST_PORT "$ENV_FILE")"
 fi
 GRAFANA_HOST_PORT="${GRAFANA_HOST_PORT:-3001}"
 
-# validate_digitalocean_web_contract — direct `--digitalocean --domain` runs
-# (normal start AND --smoke-only) must fail closed on the same five-value
-# FPS_WEB_* public runtime contract deploy-digitalocean.sh enforces in its own
-# preflight. Without this, an operator who runs this script directly (skipping
-# deploy-digitalocean.sh) can pull/up — or, with --smoke-only, probe — a stack
-# whose fairspot-web serves its baked default config.json (http://localhost:10000,
-# local Keycloak) or a mismatched/wrong-path auth contract that no browser can use.
-# Uses this script's own resolved ENV_FILE/PUBLIC_DOMAIN; only runs for
-# --digitalocean --domain, mirroring deploy-digitalocean.sh's SKIP_PUBLIC-gated
-# checks (§4-5).
-validate_digitalocean_web_contract() {
+# validate_hosted_web_contract — a direct hosted start/smoke must fail closed on
+# the browser/auth public contract even when the profile wrapper was skipped.
+validate_hosted_web_contract() {
   local auth_authority web_api_base_url web_oidc_authority web_oidc_client_id
   local web_oidc_redirect_uri web_oidc_post_logout_redirect_uri pair
-  local expected_api_base expected_redirect expected_post_logout
+  local kc_hostname app_origin expected_authority expected_api_base
+  local expected_redirect expected_post_logout
 
   auth_authority="$(read_env_value FPS_AUTH_AUTHORITY "$ENV_FILE")"
   web_api_base_url="$(read_env_value FPS_WEB_API_BASE_URL "$ENV_FILE")"
@@ -310,9 +346,11 @@ validate_digitalocean_web_contract() {
   web_oidc_client_id="$(read_env_value FPS_WEB_OIDC_CLIENT_ID "$ENV_FILE")"
   web_oidc_redirect_uri="$(read_env_value FPS_WEB_OIDC_REDIRECT_URI "$ENV_FILE")"
   web_oidc_post_logout_redirect_uri="$(read_env_value FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI "$ENV_FILE")"
+  kc_hostname="$(read_env_value KC_HOSTNAME "$ENV_FILE")"
+  app_origin="$(read_env_value FPS_APP_ORIGIN "$ENV_FILE")"
 
   if [[ "$auth_authority" != https://* ]]; then
-    echo "ERROR (DigitalOcean profile): hosted deployment requires encrypted public auth."
+    echo "ERROR (hosted profile): hosted deployment requires encrypted public auth."
     echo "  Set FPS_AUTH_AUTHORITY to a non-empty https:// URL in $ENV_FILE (TLS is terminated at Cloudflare)."
     echo "  A blank value falls back to the internal Keycloak issuer, which public clients cannot use."
     exit 1
@@ -326,7 +364,7 @@ validate_digitalocean_web_contract() {
     "FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI=$web_oidc_post_logout_redirect_uri" \
   ; do
     if [[ -z "${pair#*=}" ]]; then
-      echo "ERROR (DigitalOcean profile): missing public web runtime setting ${pair%%=*}."
+      echo "ERROR (hosted profile): missing public web runtime setting ${pair%%=*}."
       echo "  Without every FPS_WEB_* value, fairspot-web serves its baked default config.json"
       echo "  (http://localhost:10000, local Keycloak) instead of the public app/auth contract."
       echo "  Set every FPS_WEB_* value in $ENV_FILE (see docs/production/digitalocean-setup.md)."
@@ -334,15 +372,35 @@ validate_digitalocean_web_contract() {
     fi
   done
 
-  expected_api_base="https://app.$PUBLIC_DOMAIN/api"
+  expected_authority="https://$PUBLIC_AUTH_HOST/realms/$PUBLIC_REALM"
+  if [[ "$auth_authority" != "$expected_authority" ]]; then
+    echo "ERROR (hosted profile): FPS_AUTH_AUTHORITY does not match the configured auth host."
+    echo "  Expected: $expected_authority"
+    echo "  Got:      $auth_authority"
+    exit 1
+  fi
+  if [[ "$kc_hostname" != "https://$PUBLIC_AUTH_HOST" ]]; then
+    echo "ERROR (hosted profile): KC_HOSTNAME does not match the configured auth host."
+    echo "  Expected: https://$PUBLIC_AUTH_HOST"
+    echo "  Got:      $kc_hostname"
+    exit 1
+  fi
+  if [[ "$app_origin" != "https://$PUBLIC_APP_HOST" ]]; then
+    echo "ERROR (hosted profile): FPS_APP_ORIGIN does not match the configured app host."
+    echo "  Expected: https://$PUBLIC_APP_HOST"
+    echo "  Got:      $app_origin"
+    exit 1
+  fi
+
+  expected_api_base="https://$PUBLIC_APP_HOST/api"
   if [[ "$web_api_base_url" != "$expected_api_base" ]]; then
-    echo "ERROR (DigitalOcean profile): FPS_WEB_API_BASE_URL does not match the public domain."
+    echo "ERROR (hosted profile): FPS_WEB_API_BASE_URL does not match the public app host."
     echo "  Single-origin model: app.<domain> serves the SPA and proxies /api/ to Envoy, so this"
-    echo "  must be $expected_api_base for domain $PUBLIC_DOMAIN. Got: $web_api_base_url"
+    echo "  must be $expected_api_base. Got: $web_api_base_url"
     exit 1
   fi
   if [[ "$web_oidc_authority" != "$auth_authority" ]]; then
-    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_AUTHORITY does not match FPS_AUTH_AUTHORITY."
+    echo "ERROR (hosted profile): FPS_WEB_OIDC_AUTHORITY does not match FPS_AUTH_AUTHORITY."
     echo "  The browser-facing web OIDC authority and the API-validated auth authority must be the"
     echo "  same public issuer, or the browser receives tokens every API rejects."
     echo "  FPS_AUTH_AUTHORITY=$auth_authority"
@@ -352,19 +410,19 @@ validate_digitalocean_web_contract() {
   # Exact-path match, not a same-origin prefix: a same-origin-but-wrong-path
   # value must still be rejected, so compare against the documented
   # callback/post-logout paths exactly rather than any path under that origin.
-  expected_redirect="https://app.$PUBLIC_DOMAIN/auth/callback"
+  expected_redirect="https://$PUBLIC_APP_HOST/auth/callback"
   if [[ "$web_oidc_redirect_uri" != "$expected_redirect" ]]; then
-    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_REDIRECT_URI does not match the documented callback path."
-    echo "  Expected exactly $expected_redirect for domain $PUBLIC_DOMAIN. Got: $web_oidc_redirect_uri"
+    echo "ERROR (hosted profile): FPS_WEB_OIDC_REDIRECT_URI does not match the documented callback path."
+    echo "  Expected exactly $expected_redirect. Got: $web_oidc_redirect_uri"
     exit 1
   fi
-  expected_post_logout="https://app.$PUBLIC_DOMAIN/"
+  expected_post_logout="https://$PUBLIC_APP_HOST/"
   if [[ "$web_oidc_post_logout_redirect_uri" != "$expected_post_logout" ]]; then
-    echo "ERROR (DigitalOcean profile): FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI does not match the documented post-logout path."
-    echo "  Expected exactly $expected_post_logout for domain $PUBLIC_DOMAIN. Got: $web_oidc_post_logout_redirect_uri"
+    echo "ERROR (hosted profile): FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI does not match the documented post-logout path."
+    echo "  Expected exactly $expected_post_logout. Got: $web_oidc_post_logout_redirect_uri"
     exit 1
   fi
-  ok "public web runtime settings: FPS_WEB_* present and consistent with domain $PUBLIC_DOMAIN"
+  ok "public web/auth runtime settings match $PUBLIC_APP_HOST and $PUBLIC_AUTH_HOST"
 }
 
 # Health if a healthcheck is defined, otherwise the raw container state.
@@ -429,14 +487,12 @@ if [[ "$TEARDOWN" == "true" ]]; then
   exit 0
 fi
 
-# DigitalOcean public web runtime contract — before any mutation (Alertmanager
-# render, network create, pull/up). Applies to both normal direct start and
-# --smoke-only (which still probes the public app/auth contract without
-# pulling/up-ing), so a direct invocation cannot skip what
-# deploy-digitalocean.sh enforces in its own preflight.
-if [[ "$MODE" == "digitalocean" && -n "$PUBLIC_DOMAIN" ]]; then
+# Hosted public web/auth contract — before any mutation (Alertmanager render,
+# runtime-directory creation, network creation, or pull/up). A direct invocation
+# therefore cannot bypass the profile wrapper's exact-host consistency checks.
+if is_hosted && [[ -n "$PUBLIC_APP_HOST" && -n "$PUBLIC_AUTH_HOST" ]]; then
   hdr "Public web runtime contract (FPS_WEB_*)"
-  validate_digitalocean_web_contract
+  validate_hosted_web_contract
 fi
 
 # Hosted Alertmanager notifications are rendered from the ignored operator env
@@ -444,6 +500,11 @@ fi
 # local-only receiver so the stack remains non-notifying by default. --smoke-only
 # must not write this file — it only checks/probes an already-running stack.
 if is_hosted && [[ "$SMOKE_ONLY" != "true" ]]; then
+  # The base Promtail bind mount exists in every Compose profile. A fresh clone
+  # does not contain this ignored runtime directory, and Docker reports a bind
+  # mount failure instead of creating it consistently on NAS platforms.
+  mkdir -p "$REPO_ROOT/logs/local-harness"
+
   hdr "Alertmanager notification config"
   "$REPO_ROOT/tools/render-alertmanager-nas-config.sh" "$ENV_FILE"
 fi
@@ -559,7 +620,14 @@ elif is_hosted; then
   require_vault_unsealed
   # Stage 2: Vault is unsealed — start the rest of the graph, incl. vault-init.
   echo "Stage 2/2: Vault unsealed — starting the full stack…"
-  "${COMPOSE_CMD[@]}" up -d
+  if ! "${COMPOSE_CMD[@]}" up -d; then
+    echo "ERROR: Compose could not reach the requested hosted state."
+    echo "  A failed one-shot dependency (especially fairspot-datahub-migrate) blocks"
+    echo "  its long-running service by design. Inspect without printing secrets:"
+    echo "    $COMPOSE_HUMAN ps -a"
+    echo "    $COMPOSE_HUMAN logs fairspot-datahub-migrate mongodb-init vault-init"
+    exit 1
+  fi
 else
   echo "Command: $COMPOSE_HUMAN up -d --build"
   echo
@@ -603,6 +671,53 @@ done
 if [[ $FAILURES -gt 0 ]]; then
   echo
   echo "Infrastructure services failed. Resolve before continuing."
+  exit 1
+fi
+
+# ── Wait for one-shot bootstrap/migration jobs ──────────────────────────────────
+
+wait_for_completed_job() {
+  local svc="$1" label="$2" timeout="${3:-120}"
+  local elapsed=0 cid state code
+
+  printf "  Waiting for %s" "$svc"
+  while [[ $elapsed -lt $timeout ]]; do
+    cid="$(_cid "$svc")"
+    if [[ -n "$cid" ]]; then
+      state="$(_state "$cid")"
+      code="$(_exitcode "$cid")"
+      if [[ "$state" == "exited" && "$code" == "0" ]]; then
+        printf " — OK\n"
+        ok "$label ($svc exited 0)"
+        return 0
+      fi
+      if [[ "$state" == "exited" && -n "$code" && "$code" != "0" ]]; then
+        printf " — FAILED\n"
+        fail "$svc exited with code $code — $label failed"
+        echo "    Logs: $COMPOSE_HUMAN logs $svc"
+        return 1
+      fi
+    fi
+    printf "."
+    sleep 5
+    elapsed=$((elapsed + 5))
+  done
+
+  printf " — TIMEOUT\n"
+  fail "$svc did not complete within ${timeout}s"
+  echo "    Logs: $COMPOSE_HUMAN logs $svc"
+  return 1
+}
+
+hdr "Database bootstrap and migrations"
+wait_for_completed_job mongodb-init "MongoDB replica-set initialization" 120 || true
+if is_hosted; then
+  wait_for_completed_job fairspot-datahub-migrate "DataHub schema migration" 180 || true
+fi
+
+if [[ $FAILURES -gt 0 ]]; then
+  echo
+  echo "Database bootstrap or migrations failed. App services will not be healthy until this is resolved."
   exit 1
 fi
 
@@ -785,7 +900,7 @@ if [[ "$SKIP_E2E" == "true" ]]; then
     printf "${RED}%d health/readiness check(s) failed.${NC}\n" "$FAILURES"
     exit 1
   fi
-  printf "${GREEN}Stack up; container/service/sidecar health verified.${NC}\n"
+  printf "%bStack up; container/service/sidecar health verified.%b\n" "$GREEN" "$NC"
   info "Gateway, OIDC, and E2E smoke skipped (--skip-e2e)."
   exit 0
 fi
@@ -853,7 +968,7 @@ echo "Service health through the Envoy gateway (internal: envoy-proxy:10000)..."
 
 GATEWAY_SERVICES=(identity booking notification profile audit reporting configuration customer datahub)
 for svc in "${GATEWAY_SERVICES[@]}"; do
-  body="$(probe_net -sf http://envoy-proxy:10000/health/$svc || true)"
+  body="$(probe_net -sf "http://envoy-proxy:10000/health/$svc" || true)"
   if printf '%s' "$body" | grep -q '"status":"Healthy"'; then
     ok "$svc via gateway: Healthy"
   else
@@ -909,11 +1024,11 @@ fi
 
 # ── Public-domain smoke (optional, Docker-only) ──────────────────────────────────
 
-if [[ -n "$PUBLIC_DOMAIN" ]]; then
-  hdr "Public-domain smoke (https://$PUBLIC_DOMAIN)"
+if [[ "$SKIP_PUBLIC_SMOKE" != "true" && -n "$PUBLIC_APP_HOST" && -n "$PUBLIC_AUTH_HOST" ]]; then
+  hdr "Public-host smoke ($PUBLIC_APP_HOST / $PUBLIC_AUTH_HOST)"
 
-  APP_URL="https://app.$PUBLIC_DOMAIN"
-  AUTH_URL="https://auth.$PUBLIC_DOMAIN"
+  APP_URL="https://$PUBLIC_APP_HOST"
+  AUTH_URL="https://$PUBLIC_AUTH_HOST"
   REALM="$PUBLIC_REALM"
 
   # Single-origin model: app.<domain> serves the SPA at / and proxies /api/ to
@@ -923,64 +1038,62 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
   echo "Web app entry point..."
   APP_ROOT_STATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/" || true)"
   if [[ "$APP_ROOT_STATUS" == "200" ]]; then
-    ok "app.$PUBLIC_DOMAIN / reachable (HTTP 200, SPA)"
+    ok "$PUBLIC_APP_HOST / reachable (HTTP 200, SPA)"
   elif [[ -z "$APP_ROOT_STATUS" || "$APP_ROOT_STATUS" == "000" ]]; then
-    fail "app.$PUBLIC_DOMAIN unreachable — is the Cloudflare Tunnel running and routed to fairspot-web:80?"
+    fail "$PUBLIC_APP_HOST unreachable — is the Cloudflare Tunnel running and routed to fairspot-web:80?"
     echo "    Start tunnel: docker compose -f code/infrastructure/cloudflared/docker-compose.cloudflared.yml --env-file code/infrastructure/cloudflared/.env.nas up -d"
   else
-    fail "app.$PUBLIC_DOMAIN / returned HTTP $APP_ROOT_STATUS (expected 200)"
+    fail "$PUBLIC_APP_HOST / returned HTTP $APP_ROOT_STATUS (expected 200)"
   fi
 
   # 2) Runtime config served by the web container.
   CFG="$(probe_pub -sf "$APP_URL/config.json" || true)"
   if printf '%s' "$CFG" | grep -q '"apiBaseUrl"'; then
     API_BASE="$(printf '%s' "$CFG" | tr -d '\n' | grep -o '"apiBaseUrl"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)"
-    ok "app.$PUBLIC_DOMAIN /config.json present ($API_BASE)"
+    ok "$PUBLIC_APP_HOST /config.json present ($API_BASE)"
 
-    if [[ "$MODE" == "digitalocean" ]]; then
-      EXPECTED_API_BASE="$APP_URL/api"
-      if [[ "$API_BASE" != "$EXPECTED_API_BASE" ]]; then
-        fail "app.$PUBLIC_DOMAIN /config.json apiBaseUrl does not match the expected DigitalOcean value."
-        echo "    Expected: $EXPECTED_API_BASE"
-        echo "    Actual:   $API_BASE"
-        echo "    The running fairspot-web container may be serving a stale/baked config.json — rebuild/restart it."
-      else
-        ok "apiBaseUrl matches expected DigitalOcean value ($EXPECTED_API_BASE)"
-      fi
+    EXPECTED_API_BASE="$APP_URL/api"
+    if [[ "$API_BASE" != "$EXPECTED_API_BASE" ]]; then
+      fail "$PUBLIC_APP_HOST /config.json apiBaseUrl does not match the configured public app host."
+      echo "    Expected: $EXPECTED_API_BASE"
+      echo "    Actual:   $API_BASE"
+      echo "    The running fairspot-web container may be serving a stale/baked config.json — rebuild/restart it."
+    else
+      ok "apiBaseUrl matches configured public app host ($EXPECTED_API_BASE)"
+    fi
 
-      EXPECTED_AUTHORITY="$(read_env_value FPS_AUTH_AUTHORITY "$ENV_FILE")"
-      CFG_AUTHORITY="$(printf '%s' "$CFG" | tr -d '\n' | grep -o '"authority"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)"
-      if [[ -z "$EXPECTED_AUTHORITY" ]]; then
-        fail "Cannot verify config.json OIDC authority — FPS_AUTH_AUTHORITY is not set in $ENV_FILE."
-      elif [[ "$CFG_AUTHORITY" != "$EXPECTED_AUTHORITY" ]]; then
-        fail "app.$PUBLIC_DOMAIN /config.json OIDC authority does not match FPS_AUTH_AUTHORITY."
-        echo "    Expected: $EXPECTED_AUTHORITY"
-        echo "    Actual:   $CFG_AUTHORITY"
-        echo "    The running fairspot-web container may be serving a stale/baked config.json — rebuild/restart it."
-      else
-        ok "config.json OIDC authority matches FPS_AUTH_AUTHORITY ($EXPECTED_AUTHORITY)"
-      fi
+    EXPECTED_AUTHORITY="$(read_env_value FPS_AUTH_AUTHORITY "$ENV_FILE")"
+    CFG_AUTHORITY="$(printf '%s' "$CFG" | tr -d '\n' | grep -o '"authority"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)"
+    if [[ -z "$EXPECTED_AUTHORITY" ]]; then
+      fail "Cannot verify config.json OIDC authority — FPS_AUTH_AUTHORITY is not set in $ENV_FILE."
+    elif [[ "$CFG_AUTHORITY" != "$EXPECTED_AUTHORITY" ]]; then
+      fail "$PUBLIC_APP_HOST /config.json OIDC authority does not match FPS_AUTH_AUTHORITY."
+      echo "    Expected: $EXPECTED_AUTHORITY"
+      echo "    Actual:   $CFG_AUTHORITY"
+      echo "    The running fairspot-web container may be serving a stale/baked config.json — rebuild/restart it."
+    else
+      ok "config.json OIDC authority matches FPS_AUTH_AUTHORITY ($EXPECTED_AUTHORITY)"
     fi
   else
-    fail "app.$PUBLIC_DOMAIN /config.json missing or invalid (no apiBaseUrl)"
+    fail "$PUBLIC_APP_HOST /config.json missing or invalid (no apiBaseUrl)"
     echo "    Set FPS_WEB_* in nas.env so the web entrypoint generates config.json."
   fi
 
   # 3) API health through the web /api proxy → Envoy → Identity.
   API_HEALTH="$(probe_pub -sf "$APP_URL/api/health/identity" || true)"
   if printf '%s' "$API_HEALTH" | grep -q '"status":"Healthy"'; then
-    ok "app.$PUBLIC_DOMAIN /api/health/identity → Healthy (web → Envoy proxy works)"
+    ok "$PUBLIC_APP_HOST /api/health/identity → Healthy (web → Envoy proxy works)"
   else
-    fail "app.$PUBLIC_DOMAIN /api/health/identity not Healthy — check the nginx /api proxy and Envoy"
+    fail "$PUBLIC_APP_HOST /api/health/identity not Healthy — check the nginx /api proxy and Envoy"
   fi
 
   # 4) Auth discovery.
   AUTH_DISC="$(probe_pub -sf "$AUTH_URL/realms/$REALM/.well-known/openid-configuration" || true)"
   if printf '%s' "$AUTH_DISC" | grep -q '"issuer"'; then
     ISS="$(printf '%s' "$AUTH_DISC" | grep -o '"issuer":"[^"]*"' | head -1)"
-    ok "auth.$PUBLIC_DOMAIN OIDC discovery ($ISS)"
+    ok "$PUBLIC_AUTH_HOST OIDC discovery ($ISS)"
   else
-    fail "auth.$PUBLIC_DOMAIN OIDC discovery unreachable (realm $REALM)"
+    fail "$PUBLIC_AUTH_HOST OIDC discovery unreachable (realm $REALM)"
     echo "    Check tunnel: docker compose -f code/infrastructure/cloudflared/docker-compose.cloudflared.yml logs cloudflared"
   fi
 
@@ -989,7 +1102,7 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
   if [[ "$KC_ADMIN_STATUS" == "401" || "$KC_ADMIN_STATUS" == "403" || "$KC_ADMIN_STATUS" == "404" ]]; then
     ok "Keycloak admin not publicly exposed (HTTP $KC_ADMIN_STATUS)"
   else
-    fail "auth.$PUBLIC_DOMAIN/admin returned HTTP $KC_ADMIN_STATUS — admin console must not be public (configure the Cloudflare WAF / hostname rules, SEC010)"
+    fail "$PUBLIC_AUTH_HOST/admin returned HTTP $KC_ADMIN_STATUS — admin console must not be public (configure the Cloudflare WAF / hostname rules, SEC010)"
   fi
 
   # 6) Internal/diagnostic surfaces on app.<domain> must be blocked by the Cloudflare
@@ -998,9 +1111,9 @@ if [[ -n "$PUBLIC_DOMAIN" ]]; then
   for rpath in metrics dapr/v1.0/metadata v1.0/healthz healthz admin _internal; do
     RSTATUS="$(probe_pub -o /dev/null -w '%{http_code}' "$APP_URL/$rpath" || true)"
     if [[ "$RSTATUS" == "401" || "$RSTATUS" == "403" || "$RSTATUS" == "404" ]]; then
-      ok "app.$PUBLIC_DOMAIN/$rpath not publicly served (HTTP $RSTATUS)"
+      ok "$PUBLIC_APP_HOST/$rpath not publicly served (HTTP $RSTATUS)"
     else
-      fail "app.$PUBLIC_DOMAIN/$rpath returned HTTP $RSTATUS — internal/diagnostic path must be blocked (Cloudflare WAF, SEC010 §1.1)"
+      fail "$PUBLIC_APP_HOST/$rpath returned HTTP $RSTATUS — internal/diagnostic path must be blocked (Cloudflare WAF, SEC010 §1.1)"
     fi
   done
 
@@ -1051,8 +1164,8 @@ if [[ $FAILURES -gt 0 ]]; then
   exit 1
 fi
 
-printf "${GREEN}All checks passed.${NC}\n"
-if [[ -z "$PUBLIC_DOMAIN" ]]; then
+printf "%bAll checks passed.%b\n" "$GREEN" "$NC"
+if [[ "$SKIP_PUBLIC_SMOKE" == "true" || -z "$PUBLIC_APP_HOST" || -z "$PUBLIC_AUTH_HOST" ]]; then
   echo
   echo "Stack is running in $MODE-container mode."
   if [[ "$MODE" == "digitalocean" ]]; then
@@ -1061,6 +1174,11 @@ if [[ -z "$PUBLIC_DOMAIN" ]]; then
     # to run the public smoke.
     echo "  Ingress:   Cloudflare Tunnel (no public host ports; re-run with --domain for the public smoke)"
     echo "  Grafana:   http://127.0.0.1:$GRAFANA_HOST_PORT (loopback only; reach via ssh -L)"
+  elif [[ "$MODE" == "nas" ]]; then
+    echo "  Ingress:   Cloudflare Tunnel only (the NAS publishes no host ports)."
+    if [[ -n "$PUBLIC_APP_HOST" && -n "$PUBLIC_AUTH_HOST" ]]; then
+      echo "  Next:      attach/start cloudflared, then re-run with --smoke-only and the exact hosts."
+    fi
   else
     echo "  Gateway:   http://localhost:10000"
     echo "  Keycloak:  http://localhost:8180"

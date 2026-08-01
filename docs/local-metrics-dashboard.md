@@ -8,7 +8,7 @@ OBS002 adds Prometheus metrics to all FPS .NET services and provisions a Grafana
 
 Default credentials: `admin` / `admin` (local only — change immediately in any shared environment).
 
-The **FairSpot Local Operations** dashboard auto-provisions on first Grafana start.
+The **FairSpot Development Operations** dashboard auto-provisions on first Grafana start.
 
 The local host port defaults to `3001` so Docsify can use `3000`. Grafana still
 listens on `3000` inside the Docker network. If host port `3001` is already in
@@ -26,7 +26,10 @@ For repeatable local use, put `FPS_GRAFANA_HOST_PORT=3002` in the ignored
 
 ## Platform note
 
-`host.docker.internal` is used by Prometheus to reach FPS services running on the host. On Linux Docker, `extra_hosts: host-gateway` is set in `docker-compose.yaml` for the Prometheus container — no extra steps needed. On macOS and Windows Docker Desktop, this resolves automatically.
+The host harness uses `host.docker.internal`; Linux gets the host-gateway mapping
+from Compose. The full Local-container and NAS profiles override that config
+with `prometheus.containers.yaml` and scrape by Docker DNS (for example,
+`fairspot-datahub:5211`). NAS therefore needs no published service ports.
 
 ## Starting the stack
 
@@ -45,9 +48,9 @@ docker compose -f code/infrastructure/docker-compose.yaml up -d prometheus grafa
 | HTTP Error Rate | 4xx+5xx / total | Fraction of requests that errored, per service |
 | HTTP Duration p50/p95 | `http_request_duration_seconds` | Latency percentiles in ms per service |
 | HTTP In-Flight | `http_requests_in_progress` | Concurrent active requests per service |
-| GC Heap Size | `dotnet_gc_heap_size_bytes` | .NET managed heap in MB |
-| Thread Pool Queue | `dotnet_threadpool_queue_length` | Work-item backlog in the thread pool |
-| Service Health | `up{job=~"fps-(identity\|booking\|notification\|profile\|audit\|reporting\|configuration\|customer\|datahub)"}` | UP/DOWN per local FairSpot service scrape target; red = Prometheus cannot reach that service |
+| GC Heap Size | `system_runtime_gc_heap_size` | .NET managed heap in MB |
+| Thread Pool Queue | `system_runtime_threadpool_queue_length` | Work-item backlog in the thread pool |
+| Service Health | `max by (job) (up{job=~"fairspot-(identity\|booking\|notification\|profile\|audit\|reporting\|configuration\|customer\|datahub)"})` | UP/DOWN per FairSpot service; grouping avoids stale duplicate target series after a config change |
 | RabbitMQ Published Rate | `rabbitmq_channel_messages_published_total` | Events published per second |
 | RabbitMQ Queue Depth | `rabbitmq_queue_messages` | Messages waiting per queue |
 
@@ -75,7 +78,7 @@ RabbitMQ (port 15692) is scraped from within the Docker network — the promethe
 
 ## Finding a failing service
 
-1. Open Grafana → **FairSpot Local Operations** → **Service Health** panel.
+1. Open Grafana → **FairSpot Development Operations** → **Service Health** panel.
 2. Red = Prometheus cannot scrape `GET /metrics` — service is down or not started.
 3. Drill into **HTTP Error Rate** — spikes identify which service is returning errors.
 4. Cross-correlate with Jaeger traces at **http://localhost:16686** using the `TraceId` from service logs.
@@ -90,10 +93,10 @@ RabbitMQ (port 15692) is scraped from within the Docker network — the promethe
 - `http_requests_in_progress{method,route}` — gauge
 
 **Runtime (prometheus-net.SystemMetrics):**
-- `dotnet_gc_heap_size_bytes` — managed heap
-- `dotnet_gc_collection_count_total` — GC generations
-- `dotnet_threadpool_num_threads` — thread pool size
-- `dotnet_threadpool_queue_length` — work-item backlog
+- `system_runtime_gc_heap_size` — managed heap in MB
+- `system_runtime_dotnet_gc_collections` — GC collections
+- `system_runtime_dotnet_thread_pool_thread_count` — thread pool threads
+- `system_runtime_threadpool_queue_length` — work-item backlog
 - `process_cpu_seconds_total` — CPU time
 - `process_working_set_bytes` — RSS memory
 
@@ -120,12 +123,12 @@ Raw metric browser and PromQL REPL: **http://localhost:9090**
 Useful queries:
 ```promql
 # Local FairSpot service up/down targets
-up{job=~"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer|datahub)"}
+max by (job) (up{job=~"fairspot-(identity|booking|notification|profile|audit|reporting|configuration|customer|datahub)"})
 
 # 95th-percentile latency for all FPS services (ms)
-histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[1m]))) * 1000
+histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[5m]))) * 1000
 
 # Error rate per service
-sum by (job) (rate(http_requests_received_total{code=~"4..|5.."}[1m]))
-  / sum by (job) (rate(http_requests_received_total[1m]))
+sum by (job) (rate(http_requests_received_total{code=~"4..|5.."}[5m]))
+  / sum by (job) (rate(http_requests_received_total[5m]))
 ```

@@ -1,10 +1,10 @@
 {
-  "title": "FairSpot Local Operations",
+  "title": "FairSpot Development Operations",
   "uid": "fairspot-local-ops",
   "schemaVersion": 38,
   "version": 1,
   "refresh": "15s",
-  "tags": ["fairspot", "local"],
+  "tags": ["fairspot", "development", "nas"],
   "time": { "from": "now-1h", "to": "now" },
   "panels": [
     {
@@ -14,7 +14,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "sum by (job) (rate(http_requests_received_total[1m]))",
+          "expr": "sum by (job) (rate(http_requests_received_total[5m]))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -29,7 +29,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "sum by (job) (rate(http_requests_received_total{code=~\"4..|5..\"}[1m])) / sum by (job) (rate(http_requests_received_total[1m]))",
+          "expr": "sum by (job) (rate(http_requests_received_total{code=~\"4..|5..\"}[5m])) / sum by (job) (rate(http_requests_received_total[5m]))",
           "legendFormat": "{{job}}"
         }
       ],
@@ -44,11 +44,11 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (job, le) (rate(http_request_duration_seconds_bucket[1m]))) * 1000",
+          "expr": "histogram_quantile(0.50, sum by (job, le) (rate(http_request_duration_seconds_bucket[5m]))) * 1000",
           "legendFormat": "p50 {{job}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[1m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[5m]))) * 1000",
           "legendFormat": "p95 {{job}}"
         }
       ],
@@ -75,7 +75,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "targets": [
         {
-          "expr": "dotnet_gc_heap_size_bytes / 1024 / 1024",
+          "expr": "system_runtime_gc_heap_size",
           "legendFormat": "heap MB"
         }
       ],
@@ -90,7 +90,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "targets": [
         {
-          "expr": "dotnet_threadpool_queue_length",
+          "expr": "system_runtime_threadpool_queue_length",
           "legendFormat": "queue length"
         }
       ]
@@ -102,7 +102,7 @@
       "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
       "targets": [
         {
-          "expr": "up{job=~\"fps-(identity|booking|notification|profile|audit|reporting|configuration|customer|datahub)\"}",
+          "expr": "max by (job) (up{job=~\"fairspot-(identity|booking|notification|profile|audit|reporting|configuration|customer|datahub)\"})",
           "legendFormat": "{{job}}"
         }
       ],
@@ -128,7 +128,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
       "targets": [
         {
-          "expr": "rate(rabbitmq_channel_messages_published_total[1m])",
+          "expr": "rate(rabbitmq_channel_messages_published_total[5m])",
           "legendFormat": "published/s"
         }
       ]
@@ -147,7 +147,7 @@
     },
     {
       "id": 10,
-      "title": "FPS Service Logs (Loki) — copy TraceId to search in Jaeger at :16686",
+      "title": "Local Harness Logs (local profile only; hosted logs use docker compose logs)",
       "type": "logs",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 36 },
       "datasource": { "type": "loki", "uid": "fairspot-loki" },

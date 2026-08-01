@@ -1,3 +1,6 @@
+# Prometheus targets for the full container stack (Local container and hosted).
+# Services share fairspot_network, so scrape by stable Docker DNS without host ports.
+
 global:
   scrape_interval:     15s
   evaluation_interval: 15s
@@ -15,57 +18,52 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Host-harness targets. The full container stack overrides this file with
-  # prometheus.containers.yaml and scrapes the same jobs by Docker DNS.
   - job_name: 'fairspot-identity'
     static_configs:
-      - targets: ['host.docker.internal:5192']
+      - targets: ['fairspot-identity:5192']
     metrics_path: /metrics
 
   - job_name: 'fairspot-booking'
     static_configs:
-      - targets: ['host.docker.internal:5131']
+      - targets: ['fairspot-booking:5131']
     metrics_path: /metrics
 
   - job_name: 'fairspot-notification'
     static_configs:
-      - targets: ['host.docker.internal:5157']
+      - targets: ['fairspot-notification:5157']
     metrics_path: /metrics
 
   - job_name: 'fairspot-profile'
     static_configs:
-      - targets: ['host.docker.internal:5197']
+      - targets: ['fairspot-profile:5197']
     metrics_path: /metrics
 
   - job_name: 'fairspot-audit'
     static_configs:
-      - targets: ['host.docker.internal:5161']
+      - targets: ['fairspot-audit:5161']
     metrics_path: /metrics
 
   - job_name: 'fairspot-reporting'
     static_configs:
-      - targets: ['host.docker.internal:5171']
+      - targets: ['fairspot-reporting:5171']
     metrics_path: /metrics
 
   - job_name: 'fairspot-configuration'
     static_configs:
-      - targets: ['host.docker.internal:5141']
+      - targets: ['fairspot-configuration:5141']
     metrics_path: /metrics
 
   - job_name: 'fairspot-customer'
     static_configs:
-      - targets: ['host.docker.internal:5181']
+      - targets: ['fairspot-customer:5181']
     metrics_path: /metrics
 
   - job_name: 'fairspot-datahub'
     static_configs:
-      - targets: ['host.docker.internal:5211']
+      - targets: ['fairspot-datahub:5211']
     metrics_path: /metrics
 
-  # Infrastructure dependencies
   - job_name: 'rabbitmq'
     static_configs:
       - targets: ['rabbitmq:15692']
     metrics_path: /metrics
-
-  # Keycloak start-dev mode does not expose a /metrics endpoint — omitted intentionally.

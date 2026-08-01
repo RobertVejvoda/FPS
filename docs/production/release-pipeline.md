@@ -19,13 +19,16 @@ Each stage maps to a concrete workflow or script:
 
 | Stage | What runs | Where |
 |---|---|---|
-| **Validate** | `.github/workflows/ci.yml` — repo validation, API-client stale-check, mobile typecheck | every PR + push to master |
-| **Build & publish** | `.github/workflows/publish-images.yml` — builds 9 server images + web, pushes immutable `sha-<commit>` (+ `latest` on master, release tag on `v*`) to GHCR | push to master, `v*` tags |
-| **Deploy selected tag** | `tools/deploy-nas.sh --domain <d> --tag sha-<commit>` → `start-container-stack.sh --nas` pulls that tag (no build) and starts the stack + Cloudflare Tunnel | NAS host |
-| **Public smoke** | `start-container-stack.sh --nas --domain <d>` (run by `deploy-nas.sh`): web entry, `/config.json`, `/api/health/identity`, auth discovery, protected-surface check; plus `tools/smoke-hosted.sh` for the full E2E | NAS host |
+| **Validate** | `.github/workflows/ci.yml` — repo validation, NAS/DigitalOcean profile render and safety checks, API-client stale-check, mobile typecheck | every PR + push to `main` |
+| **Build & publish** | `.github/workflows/publish-images.yml` — builds 9 server images + web, pushes immutable `sha-<commit>` (+ `latest` on `main`, release tag on `v*`) to GHCR | push to `main`, `v*` tags |
+| **Deploy selected tag** | `tools/deploy-nas.sh --tag sha-<commit>` → `start-container-stack.sh --nas` pulls that tag, runs one-shot migrations, and starts/verifies the stack; the wrapper starts or attaches Cloudflare Tunnel | NAS host |
+| **Public smoke** | exact app/auth hosts from CLI or ignored `nas.env`; checks web entry, `/config.json`, `/api/health/identity`, auth discovery, and protected surfaces; plus `tools/smoke-hosted.sh` for the full E2E | NAS host |
 | **Evidence + rollback** | record deployed tag, smoke result, rollback tag, residual risks using [release-evidence-template.md](./release-evidence-template.md) | release notes / issue |
 
-No secrets live in repository files. CI uses the built-in `GITHUB_TOKEN` for GHCR; the NAS authenticates with an operator-held PAT (`read:packages`) for private packages.
+No secrets live in repository files. CI uses the built-in `GITHUB_TOKEN` for
+GHCR. Public images need no NAS registry credential; a private registry would
+use an operator-held read token. Deployment runs on the NAS, not a
+GitHub-hosted runner, so NAS/Cloudflare/Vault credentials never enter CI.
 
 The **DigitalOcean Droplet** profile runs the same deploy/smoke/rollback flow as the NAS rows above — the same pinned-tag pull, no host build — with `tools/deploy-digitalocean.sh` and `--digitalocean`, plus a delta overlay that suppresses public host ports for an internet-addressable host. Setup, operator access, and troubleshooting: [DigitalOcean Droplet setup](./digitalocean-setup.md).
 
@@ -36,9 +39,10 @@ The **DigitalOcean Droplet** profile runs the same deploy/smoke/rollback flow as
 | Goal | Command |
 |---|---|
 | Local development (builds from source) | `./tools/local-start.sh` or `./tools/start-container-stack.sh` |
-| NAS release deploy (pulls a pinned tag) | `./tools/deploy-nas.sh --domain <domain> --tag sha-<commit>` |
-| NAS internal troubleshooting (no public smoke) | `./tools/start-container-stack.sh --nas --skip-e2e` |
-| Re-run public smoke only | `./tools/start-container-stack.sh --nas --domain <domain>` |
+| NAS deploy with exact hosts from ignored `nas.env` | `./tools/deploy-nas.sh --tag sha-<commit> --existing-tunnel-container <name>` |
+| NAS deploy with explicit CLI hosts | `./tools/deploy-nas.sh --app-host <app-host> --auth-host <auth-host> --tag sha-<commit>` |
+| NAS internal troubleshooting (no public probe) | `./tools/start-container-stack.sh --nas --skip-public-smoke` |
+| Re-run public smoke only | `./tools/start-container-stack.sh --nas --smoke-only --app-host <app-host> --auth-host <auth-host>` |
 | DigitalOcean Droplet release deploy (NAS baseline + public-port suppression) | `./tools/deploy-digitalocean.sh --domain <domain> --tag sha-<commit>` — see [DigitalOcean setup](./digitalocean-setup.md) |
 | DigitalOcean re-run public smoke only (non-mutating; never pulls/redeploys) | `./tools/start-container-stack.sh --digitalocean --domain <domain> --smoke-only` |
 
@@ -50,10 +54,10 @@ The **DigitalOcean Droplet** profile runs the same deploy/smoke/rollback flow as
 
 ```bash
 # Release deploy — pinned, reproducible:
-./tools/deploy-nas.sh --domain fairspot.net --tag sha-<commit>
+./tools/deploy-nas.sh --tag sha-<commit> --existing-tunnel-container <name>
 
 # v* release tag also works:
-./tools/deploy-nas.sh --domain fairspot.net --tag v1.0.0
+./tools/deploy-nas.sh --tag v1.0.0 --existing-tunnel-container <name>
 ```
 
 Without `--tag` (or with `--tag latest`) a public deploy aborts and tells you to pin a tag. `--allow-latest` overrides this for non-release experiments only; the deploy banner then warns the tag is not valid for Release 1 evidence. The chosen tag is printed in the deploy banner and must be copied into the release evidence.
@@ -73,13 +77,15 @@ Record both the deployed tag and the designated rollback tag in the evidence so 
 
 ## What the public smoke verifies
 
-`start-container-stack.sh --nas --domain <domain>` checks (Docker-only, via a throwaway curl container with public egress):
+`start-container-stack.sh --nas --app-host <app-host> --auth-host <auth-host>`
+checks the exact configured names (Docker-only, via a throwaway curl container
+with public egress):
 
-1. **Web entry** — `https://app.<domain>/` returns 200 (SPA index).
-2. **Runtime config** — `https://app.<domain>/config.json` is present and has `apiBaseUrl`.
-3. **API health** — `https://app.<domain>/api/health/identity` is `Healthy` (proves the web `/api` proxy → Envoy → service path).
-4. **Auth discovery** — `https://auth.<domain>/realms/fairspot/.well-known/openid-configuration` resolves.
-5. **Protected surface** — `https://auth.<domain>/admin/` is **not** publicly reachable (must be 401/403/404; a 200 fails the smoke and points to the Cloudflare WAF/hostname rules, SEC010).
+1. **Web entry** — `https://<app-host>/` returns 200 (SPA index).
+2. **Runtime config** — `https://<app-host>/config.json` has the exact expected API and OIDC values.
+3. **API health** — `https://<app-host>/api/health/identity` is `Healthy`.
+4. **Auth discovery** — `https://<auth-host>/realms/fairspot/.well-known/openid-configuration` resolves.
+5. **Protected surface** — `https://<auth-host>/admin/` is **not** publicly reachable.
 
 For the full hosted E2E (login → booking → notification → audit, TLS/WAF), run `tools/smoke-hosted.sh` with `APP_URL=https://app.<domain>/api`.
 

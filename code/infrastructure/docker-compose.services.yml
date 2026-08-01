@@ -32,6 +32,12 @@ x-fairspot-service-auth-env: &fairspot-service-auth-env
 
 services:
 
+  # The service-container profile scrapes by Docker DNS. Infrastructure-only +
+  # host-harness mode keeps the base host.docker.internal configuration.
+  prometheus:
+    volumes:
+      - ./prometheus/prometheus.containers.yaml:/etc/prometheus/prometheus.yaml:ro
+
   fairspot-audit:
     image: fairspot-audit:local
     build:
