@@ -193,11 +193,21 @@ Production-compatible `--domain fairspot.net` shorthand still derives
 `app.fairspot.net` and `auth.fairspot.net`; Development should use explicit
 `FPS_PUBLIC_APP_HOST=app-dev...` and `FPS_PUBLIC_AUTH_HOST=auth-dev...` values.
 
-For internal troubleshooting only, the low-level stack can be started without public checks:
+For internal troubleshooting only, the low-level stack can be started without
+public probes. Pass the exact hosts so it still validates the hosted runtime
+contract before mutation:
 
 ```bash
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --skip-public-smoke
+./tools/start-container-stack.sh --nas \
+  --env-file code/infrastructure/nas.env \
+  --app-host <app-host> \
+  --auth-host <auth-host> \
+  --skip-public-smoke
 ```
+
+If exact hosts are intentionally omitted, first stop or disconnect every
+Cloudflare Tunnel connector from `fairspot_network`. The script rejects an
+unchecked hosted mutation while active ingress remains attached.
 
 ### CI/CD boundary
 

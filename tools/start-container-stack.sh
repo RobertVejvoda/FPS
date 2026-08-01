@@ -55,7 +55,9 @@
 #                      The public realm defaults to fairspot (override --realm).
 #   --skip-public-smoke Validate hosted public configuration but do not probe the
 #                      public hosts. Used by the deploy wrapper before it starts
-#                      or attaches the Cloudflare Tunnel connector.
+#                      or attaches the Cloudflare Tunnel connector. A hosted
+#                      start without exact app/auth hosts is rejected while an
+#                      active cloudflared connector is attached to the stack.
 #   --smoke-only       Hosted (--nas/--digitalocean) only. Genuinely non-mutating:
 #                      never renders Alertmanager config, never creates the
 #                      Docker network or pulls the probe image (fails clearly if
@@ -493,6 +495,26 @@ fi
 if is_hosted && [[ -n "$PUBLIC_APP_HOST" && -n "$PUBLIC_AUTH_HOST" ]]; then
   hdr "Public web runtime contract (FPS_WEB_*)"
   validate_hosted_web_contract
+fi
+
+# Without exact public hosts, a direct hosted start cannot prove that the web,
+# OIDC, and Keycloak settings match the routes already exposed by Cloudflare.
+# Refuse before the first mutation when a connector is attached to the stack.
+# The deployment wrappers pass exact hosts during their safe handoff, so their
+# pre-tunnel start continues through the validated contract above.
+if is_hosted && [[ "$SMOKE_ONLY" != "true" ]] \
+  && [[ -z "$PUBLIC_APP_HOST" || -z "$PUBLIC_AUTH_HOST" ]]; then
+  active_tunnel_containers="$(
+    docker ps --filter status=running --filter network="$NET" \
+      --format '{{.Names}}\t{{.Image}}' 2>/dev/null \
+      | awk 'tolower($0) ~ /cloudflared/ { print $1 }' || true
+  )"
+  if [[ -n "$active_tunnel_containers" ]]; then
+    echo "ERROR: hosted stack mutation without exact app/auth hosts is unsafe while an active Cloudflare Tunnel connector is attached to $NET."
+    echo "Pass --app-host and --auth-host so the hosted contract is validated, or stop/disconnect the connector first:"
+    printf '%s\n' "$active_tunnel_containers" | sed 's/^/  /'
+    exit 1
+  fi
 fi
 
 # Hosted Alertmanager notifications are rendered from the ignored operator env

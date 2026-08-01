@@ -41,7 +41,7 @@ The **DigitalOcean Droplet** profile runs the same deploy/smoke/rollback flow as
 | Local development (builds from source) | `./tools/local-start.sh` or `./tools/start-container-stack.sh` |
 | NAS deploy with exact hosts from ignored `nas.env` | `./tools/deploy-nas.sh --tag sha-<commit> --existing-tunnel-container <name>` |
 | NAS deploy with explicit CLI hosts | `./tools/deploy-nas.sh --app-host <app-host> --auth-host <auth-host> --tag sha-<commit>` |
-| NAS internal troubleshooting (no public probe) | `./tools/start-container-stack.sh --nas --skip-public-smoke` |
+| NAS internal troubleshooting (contract validation, no public probe) | `./tools/start-container-stack.sh --nas --app-host <app-host> --auth-host <auth-host> --skip-public-smoke` |
 | Re-run public smoke only | `./tools/start-container-stack.sh --nas --smoke-only --app-host <app-host> --auth-host <auth-host>` |
 | DigitalOcean Droplet release deploy (NAS baseline + public-port suppression) | `./tools/deploy-digitalocean.sh --domain <domain> --tag sha-<commit>` — see [DigitalOcean setup](./digitalocean-setup.md) |
 | DigitalOcean re-run public smoke only (non-mutating; never pulls/redeploys) | `./tools/start-container-stack.sh --digitalocean --domain <domain> --smoke-only` |

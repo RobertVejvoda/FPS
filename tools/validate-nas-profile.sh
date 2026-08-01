@@ -250,7 +250,12 @@ FAKE_DOCKER_BIN="$TMP/fake-docker-bin"
 mkdir -p "$FAKE_DOCKER_BIN"
 cat > "$FAKE_DOCKER_BIN/docker" <<'SH'
 #!/bin/sh
+if [ "${1:-}" = "--version" ]; then
+  printf 'Docker version 24.0.0, build fixture\n'
+  exit 0
+fi
 if [ "${1:-}" = "compose" ] && [ "${2:-}" = "version" ]; then
+  printf 'Docker Compose version v2.29.2\n'
   exit 0
 fi
 if [ "${1:-}" = "info" ]; then
@@ -267,6 +272,15 @@ expect_fail "deploy refuses unchecked mutation while a tunnel remains active" \
   "active Cloudflare Tunnel connector" -- \
   env PATH="$FAKE_DOCKER_BIN:$PATH" "$DEPLOY" --env-file "$FIX_ENV" \
     --skip-public --skip-tunnel
+
+NO_PUBLIC_HOST_ENV="$TMP/no-public-host.env"
+sed -e 's/^FPS_PUBLIC_APP_HOST=.*/FPS_PUBLIC_APP_HOST=/' \
+  -e 's/^FPS_PUBLIC_AUTH_HOST=.*/FPS_PUBLIC_AUTH_HOST=/' \
+  "$FIX_ENV" > "$NO_PUBLIC_HOST_ENV"
+expect_fail "direct NAS start refuses unchecked mutation while a tunnel remains active" \
+  "active Cloudflare Tunnel connector" -- \
+  env PATH="$FAKE_DOCKER_BIN:$PATH" "$START" --nas \
+    --env-file "$NO_PUBLIC_HOST_ENV" --skip-public-smoke
 
 MISMATCH_ENV="$TMP/mismatch.env"
 sed 's#^FPS_WEB_API_BASE_URL=.*#FPS_WEB_API_BASE_URL=https://wrong.example.test/api#' "$FIX_ENV" > "$MISMATCH_ENV"
