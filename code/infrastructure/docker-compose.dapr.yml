@@ -40,6 +40,14 @@ x-dapr-sidecar-base: &dapr-sidecar-base
 
 services:
 
+  # Every full service-container profile includes this overlay. Select the
+  # Docker-DNS scrape config here so the two service definition files remain
+  # valid standalone build/image manifests; infrastructure-only + host-harness
+  # mode keeps the base host.docker.internal configuration.
+  prometheus:
+    volumes:
+      - ./prometheus/prometheus.containers.yaml:/etc/prometheus/prometheus.yaml:ro
+
   # ── Vault secret seed ───────────────────────────────────────────────────────
   # Seeds the three Dapr secrets on a clean host without host Vault CLI or Dapr CLI.
   # Runs once and exits (restart: "no"). For NAS: override VAULT_TOKEN and credentials

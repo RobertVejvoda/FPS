@@ -86,6 +86,13 @@ if ! docker compose version >/dev/null 2>&1; then
   skip "docker compose unavailable — render checks skipped"
 else
   RENDER="$TMP/rendered.yaml"
+  if docker compose --project-directory "$INFRA_DIR" --env-file "$FIX_ENV" \
+    -f "$INFRA_DIR/docker-compose.services.yml" config >"$TMP/services-only.yaml" 2>"$TMP/services-only.err"; then
+    pass "standalone service-build Compose file remains structurally valid"
+  else
+    fail "standalone service-build Compose file requires an undeclared base service"
+    sed 's/^/    /' "$TMP/services-only.err"
+  fi
   if render_nas > "$RENDER" 2>"$TMP/render.err"; then
     pass "Compose profile renders from placeholder values"
     if grep -q 'published:' "$RENDER"; then

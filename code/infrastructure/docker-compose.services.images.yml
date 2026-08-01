@@ -44,11 +44,6 @@ x-fairspot-service-auth-env: &fairspot-service-auth-env
 
 services:
 
-  # Hosted services are internal-only; Prometheus scrapes them by Docker DNS.
-  prometheus:
-    volumes:
-      - ./prometheus/prometheus.containers.yaml:/etc/prometheus/prometheus.yaml:ro
-
   fairspot-audit:
     image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-audit:${FPS_IMAGE_TAG:-latest}
     ports:
