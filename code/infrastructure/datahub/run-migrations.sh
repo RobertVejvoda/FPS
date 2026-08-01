@@ -84,6 +84,7 @@ ASPNETCORE_ENVIRONMENT=Development \
 DataHub__ApplyMigrationsAndExit=false \
   dotnet "$FPS_ASSEMBLY" >"$log_file" 2>&1 &
 migration_pid=$!
+elapsed=0
 
 while [ "$elapsed" -lt "$timeout_seconds" ]; do
   if ! kill -0 "$migration_pid" 2>/dev/null; then

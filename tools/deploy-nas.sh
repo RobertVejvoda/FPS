@@ -63,7 +63,8 @@ Options:
   --auth-host HOST         Exact authentication hostname (or FPS_PUBLIC_AUTH_HOST).
   --ops-host HOST          Optional Access-protected Grafana hostname (or FPS_PUBLIC_OPS_HOST).
   --domain DOMAIN          Compatibility shorthand deriving app.DOMAIN/auth.DOMAIN.
-  --tag TAG                Immutable sha-<commit> or v* image tag. Required publicly.
+  --tag TAG                Published sha-<40-hex-commit> or vMAJOR.MINOR.PATCH tag.
+                           Required publicly.
   --allow-latest           Allow a mutable tag for a non-evidence experiment.
   --existing-tunnel-container NAME
                            Reuse an independently managed cloudflared container;
@@ -161,19 +162,22 @@ if [[ "$DOWN" == "true" ]]; then
 fi
 
 IMAGE_TAG="${IMAGE_TAG:-${FPS_IMAGE_TAG:-$(read_env_value FPS_IMAGE_TAG)}}"
-tag_is_immutable() { [[ "$1" == sha-* || "$1" == v* ]]; }
+tag_is_published_immutable() {
+  [[ "$1" =~ ^sha-[0-9a-f]{40}$ \
+    || "$1" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]
+}
 if [[ "$SKIP_PUBLIC" != "true" ]]; then
   if [[ -z "$IMAGE_TAG" || "$IMAGE_TAG" == "latest" ]] && [[ "$ALLOW_LATEST" != "true" ]]; then
     echo "ERROR (NAS profile): a public deployment requires an immutable image tag."
-    echo "  Use --tag sha-<commit> (recommended) or an explicit v* release tag."
+    echo "  Use --tag sha-<40-hex-commit> (recommended) or an explicit vMAJOR.MINOR.PATCH release tag."
     exit 1
   fi
-  if [[ -n "$IMAGE_TAG" && "$IMAGE_TAG" != "latest" ]] && ! tag_is_immutable "$IMAGE_TAG" && [[ "$ALLOW_LATEST" != "true" ]]; then
-    echo "ERROR (NAS profile): tag '$IMAGE_TAG' is not an immutable sha-* or v* deployment tag."
+  if [[ -n "$IMAGE_TAG" && "$IMAGE_TAG" != "latest" ]] && ! tag_is_published_immutable "$IMAGE_TAG" && [[ "$ALLOW_LATEST" != "true" ]]; then
+    echo "ERROR (NAS profile): tag '$IMAGE_TAG' is not a published immutable sha-<40-hex-commit> or vMAJOR.MINOR.PATCH deployment tag."
     exit 1
   fi
 fi
-if [[ "$ALLOW_LATEST" == "true" ]] && { [[ -z "$IMAGE_TAG" ]] || ! tag_is_immutable "${IMAGE_TAG:-latest}"; }; then
+if [[ "$ALLOW_LATEST" == "true" ]] && { [[ -z "$IMAGE_TAG" ]] || ! tag_is_published_immutable "${IMAGE_TAG:-latest}"; }; then
   echo "WARNING: deploying a mutable image selection. This is not valid release evidence."
 fi
 if [[ -n "$IMAGE_TAG" ]]; then

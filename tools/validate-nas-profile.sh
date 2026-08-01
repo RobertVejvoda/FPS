@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INFRA_DIR="$REPO_ROOT/code/infrastructure"
 PASS=0 FAIL=0 SKIP=0
+FIX_SHA_TAG="sha-0123456789abcdef0123456789abcdef01234567"
 
 pass() { echo "  PASS  $*"; PASS=$((PASS + 1)); }
 fail() { echo "  FAIL  $*"; FAIL=$((FAIL + 1)); }
@@ -67,7 +68,7 @@ ALERTMANAGER_CONFIG_FILE=runtime/config.yaml
 ENV
 
 render_nas() {
-  FPS_IMAGE_TAG=sha-testfixture \
+  FPS_IMAGE_TAG="$FIX_SHA_TAG" \
   FPS_GRAFANA_ROOT_URL=https://ops-dev.example.test \
   FPS_GRAFANA_COOKIE_SECURE=true \
   docker compose --project-directory "$INFRA_DIR" --env-file "$FIX_ENV" \
@@ -97,7 +98,7 @@ else
     else
       pass "NAS consumes published images only"
     fi
-    if grep -q 'image: ghcr.io/robertvejvoda/fairspot-datahub:sha-testfixture' "$RENDER"; then
+    if grep -q "image: ghcr.io/robertvejvoda/fairspot-datahub:$FIX_SHA_TAG" "$RENDER"; then
       pass "immutable tag reaches DataHub service and migration job"
     else
       fail "immutable tag missing from rendered DataHub image"
@@ -155,6 +156,22 @@ case "${FAKE_DOTNET_MODE:-current}" in
     trap 'exit 0' TERM INT
     while :; do sleep 1; done
     ;;
+  slow-legacy)
+    case "${ASPNETCORE_ENVIRONMENT:-}" in
+      Production)
+        [ "${DataHub__ApplyMigrationsAndExit:-}" = "true" ] || exit 66
+        ;;
+      Development)
+        [ "${DataHub__ApplyMigrationsAndExit:-}" = "false" ] || exit 66
+        echo "Slow legacy Development startup migrations applied"
+        ;;
+      *) exit 65 ;;
+    esac
+    sleep 2
+    echo "Now listening on: http://127.0.0.1:5211"
+    trap 'exit 0' TERM INT
+    while :; do sleep 1; done
+    ;;
   failure)
     echo "fixture migration failure" >&2
     exit 42
@@ -188,6 +205,18 @@ if legacy_output="$(
   pass "legacy rollback image is stopped after startup migrations"
 else
   fail "legacy rollback image did not complete as a finite job"
+fi
+
+if slow_legacy_output="$(
+  PATH="$FAKE_BIN:$PATH" \
+  FPS_ASSEMBLY=FPS.DataHub.dll \
+  FPS_DATAHUB_MIGRATION_TIMEOUT_SECONDS=3 \
+  FAKE_DOTNET_MODE=slow-legacy \
+  "$MIGRATION_LAUNCHER" 2>&1
+)" && printf '%s' "$slow_legacy_output" | grep -q 'Legacy DataHub image reached listening state'; then
+  pass "legacy fallback receives a fresh migration timeout budget"
+else
+  fail "legacy fallback inherited the migration-mode timeout budget"
 fi
 
 failure_output="$(
@@ -297,16 +326,20 @@ printf 'CLOUDFLARED_TUNNEL_TOKEN=fixture-not-a-secret\n' > "$TMP/tunnel.env"
 
 expect_fail "deploy rejects a missing env file" "env file not found" -- \
   "$DEPLOY" --env-file "$TMP/missing.env" --app-host app-dev.example.test \
-  --auth-host auth-dev.example.test --tag sha-x
+  --auth-host auth-dev.example.test --tag "$FIX_SHA_TAG"
 MISSING_AUTH_ENV="$TMP/missing-auth.env"
 sed 's/^FPS_PUBLIC_AUTH_HOST=.*/FPS_PUBLIC_AUTH_HOST=/' "$FIX_ENV" > "$MISSING_AUTH_ENV"
 expect_fail "deploy requires app/auth hosts together" "exact app and auth hostnames are required" -- \
   "$DEPLOY" --env-file "$MISSING_AUTH_ENV" --tunnel-env-file "$TMP/tunnel.env" \
-  --app-host app-dev.example.test --tag sha-x
+  --app-host app-dev.example.test --tag "$FIX_SHA_TAG"
 expect_fail "deploy rejects latest without waiver" "immutable image tag" -- \
   "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --tag latest
+expect_fail "deploy rejects an abbreviated SHA tag without waiver" "not a published immutable" -- \
+  "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --tag sha-dev
+expect_fail "deploy rejects a non-SemVer release tag without waiver" "not a published immutable" -- \
+  "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --tag vlatest
 expect_fail "deploy requires tunnel off when public smoke is skipped" "requires --skip-tunnel" -- \
-  "$DEPLOY" --env-file "$FIX_ENV" --skip-public --tag sha-x
+  "$DEPLOY" --env-file "$FIX_ENV" --skip-public --tag "$FIX_SHA_TAG"
 
 tag_gate_line="$(grep -n '^IMAGE_TAG=' "$DEPLOY" | head -1 | cut -d: -f1)"
 docker_gate_line="$(grep -n '^if ! command -v docker' "$DEPLOY" | head -1 | cut -d: -f1)"
@@ -345,7 +378,7 @@ expect_fail "deploy refuses unchecked mutation while a tunnel remains active" \
 expect_fail "deploy validates a named existing tunnel before stack mutation" \
   "existing tunnel container 'missing-cloudflared' is not running" -- \
   env PATH="$FAKE_DOCKER_BIN:$PATH" "$DEPLOY" --env-file "$FIX_ENV" \
-    --tag sha-x --existing-tunnel-container missing-cloudflared
+    --tag "$FIX_SHA_TAG" --existing-tunnel-container missing-cloudflared
 
 NO_PUBLIC_HOST_ENV="$TMP/no-public-host.env"
 sed -e 's/^FPS_PUBLIC_APP_HOST=.*/FPS_PUBLIC_APP_HOST=/' \
