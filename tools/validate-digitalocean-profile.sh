@@ -240,7 +240,10 @@ tunnel_start_line="$(grep -n '== Starting Cloudflare Tunnel connector ==' "$DEPL
 # Match the literal shell variables in the deployment script.
 # shellcheck disable=SC2016
 post_tunnel_smoke_line="$(grep -n 'start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" --domain "$DOMAIN"' "$DEPLOY" | head -1 | cut -d: -f1)"
-if [[ -n "$pre_tunnel_start_line" && -n "$tunnel_start_line" && -n "$post_tunnel_smoke_line" ]] \
+# Match the literal $DOMAIN token passed by the wrapper.
+# shellcheck disable=SC2016
+if grep -B 1 -- '--skip-public-smoke' "$DEPLOY" | grep -q -- '--domain "$DOMAIN"' \
+  && [[ -n "$pre_tunnel_start_line" && -n "$tunnel_start_line" && -n "$post_tunnel_smoke_line" ]] \
   && [[ "$pre_tunnel_start_line" -lt "$tunnel_start_line" ]] \
   && [[ "$tunnel_start_line" -lt "$post_tunnel_smoke_line" ]]; then
   pass "deploy defers public smoke until after the Tunnel start"

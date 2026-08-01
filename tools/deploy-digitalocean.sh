@@ -386,6 +386,7 @@ echo
 # Validate the exact hosted contract but defer public probes until the connector
 # below is running. The post-tunnel invocation remains the release smoke gate.
 "$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" \
+  --domain "$DOMAIN" \
   --skip-public-smoke
 
 # ── Cloudflare Tunnel connector (the only ingress) ───────────────────────────
