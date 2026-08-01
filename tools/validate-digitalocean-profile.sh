@@ -235,6 +235,19 @@ else
   skip "docker compose CLI unavailable — deploy preflight negative paths skipped"
 fi
 
+pre_tunnel_start_line="$(grep -n -- '--skip-public-smoke' "$DEPLOY" | head -1 | cut -d: -f1)"
+tunnel_start_line="$(grep -n '== Starting Cloudflare Tunnel connector ==' "$DEPLOY" | head -1 | cut -d: -f1)"
+# Match the literal shell variables in the deployment script.
+# shellcheck disable=SC2016
+post_tunnel_smoke_line="$(grep -n 'start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" --domain "$DOMAIN"' "$DEPLOY" | head -1 | cut -d: -f1)"
+if [[ -n "$pre_tunnel_start_line" && -n "$tunnel_start_line" && -n "$post_tunnel_smoke_line" ]] \
+  && [[ "$pre_tunnel_start_line" -lt "$tunnel_start_line" ]] \
+  && [[ "$tunnel_start_line" -lt "$post_tunnel_smoke_line" ]]; then
+  pass "deploy defers public smoke until after the Tunnel start"
+else
+  fail "deploy does not preserve the pre-tunnel start / post-tunnel smoke handoff"
+fi
+
 # start-container-stack.sh --smoke-only flag-combination guards run before any
 # docker call, so they need no daemon/CLI.
 START_STACK="$REPO_ROOT/tools/start-container-stack.sh"

@@ -193,6 +193,15 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ "$SKIP_TUNNEL" != "true" && -n "$EXISTING_TUNNEL_CONTAINER" ]]; then
+  tunnel_state="$(docker inspect -f '{{.State.Status}}' "$EXISTING_TUNNEL_CONTAINER" 2>/dev/null || true)"
+  if [[ "$tunnel_state" != "running" ]]; then
+    echo "ERROR (NAS profile): existing tunnel container '$EXISTING_TUNNEL_CONTAINER' is not running (state: ${tunnel_state:-missing})."
+    echo "  Correct the name or start the connector before any stack mutation."
+    exit 1
+  fi
+fi
+
 if [[ "$SKIP_TUNNEL" == "true" ]]; then
   active_tunnel_containers="$(
     docker ps --filter status=running --filter network=fairspot_network \
@@ -300,6 +309,8 @@ if [[ "$SKIP_TUNNEL" != "true" ]]; then
   echo
   echo "== Cloudflare Tunnel connector =="
   if [[ -n "$EXISTING_TUNNEL_CONTAINER" ]]; then
+    # Re-check after the stack start to catch a connector that stopped after
+    # preflight but before the attachment/public-smoke handoff.
     tunnel_state="$(docker inspect -f '{{.State.Status}}' "$EXISTING_TUNNEL_CONTAINER" 2>/dev/null || true)"
     if [[ "$tunnel_state" != "running" ]]; then
       echo "ERROR: existing tunnel container '$EXISTING_TUNNEL_CONTAINER' is not running (state: ${tunnel_state:-missing})."

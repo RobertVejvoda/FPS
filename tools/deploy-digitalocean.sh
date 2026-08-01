@@ -383,7 +383,10 @@ echo "Image tag:  ${IMAGE_TAG:-<compose default>}"
 echo
 
 # ── Start the DigitalOcean profile ───────────────────────────────────────────
-"$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE"
+# Validate the exact hosted contract but defer public probes until the connector
+# below is running. The post-tunnel invocation remains the release smoke gate.
+"$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" \
+  --skip-public-smoke
 
 # ── Cloudflare Tunnel connector (the only ingress) ───────────────────────────
 if [[ "$SKIP_TUNNEL" != "true" ]]; then

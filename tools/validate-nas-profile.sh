@@ -284,6 +284,10 @@ expect_fail "deploy refuses unchecked mutation while a tunnel remains active" \
   "active Cloudflare Tunnel connector" -- \
   env PATH="$FAKE_DOCKER_BIN:$PATH" "$DEPLOY" --env-file "$FIX_ENV" \
     --skip-public --skip-tunnel
+expect_fail "deploy validates a named existing tunnel before stack mutation" \
+  "existing tunnel container 'missing-cloudflared' is not running" -- \
+  env PATH="$FAKE_DOCKER_BIN:$PATH" "$DEPLOY" --env-file "$FIX_ENV" \
+    --tag sha-x --existing-tunnel-container missing-cloudflared
 
 NO_PUBLIC_HOST_ENV="$TMP/no-public-host.env"
 sed -e 's/^FPS_PUBLIC_APP_HOST=.*/FPS_PUBLIC_APP_HOST=/' \
