@@ -68,7 +68,9 @@ Options:
   --existing-tunnel-container NAME
                            Reuse an independently managed cloudflared container;
                            attach it idempotently to fairspot_network.
-  --skip-tunnel            Internal troubleshooting only; requires --skip-public.
+  --skip-tunnel            Internal troubleshooting only; requires --skip-public
+                           and refuses an active cloudflared connector on the
+                           FairSpot network.
   --skip-public            Skip public hostname smoke; requires --skip-tunnel.
   --down                   Stop the stack, preserving data volumes, then exit.
 
@@ -158,29 +160,6 @@ if [[ "$DOWN" == "true" ]]; then
   exit 0
 fi
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "ERROR (NAS profile): docker is not installed."
-  exit 1
-fi
-if ! docker compose version >/dev/null 2>&1; then
-  echo "ERROR (NAS profile): Docker Compose v2 is required."
-  exit 1
-fi
-
-if [[ "$SKIP_TUNNEL" != "true" && -z "$EXISTING_TUNNEL_CONTAINER" ]]; then
-  if [[ ! -f "$TUNNEL_ENV_FILE" ]]; then
-    echo "ERROR (NAS profile): tunnel env file not found: $TUNNEL_ENV_FILE"
-    echo "  Or pass --existing-tunnel-container <name> for an independently managed connector."
-    exit 1
-  fi
-  tunnel_token="$(read_env_value_from CLOUDFLARED_TUNNEL_TOKEN "$TUNNEL_ENV_FILE")"
-  if [[ -z "$tunnel_token" ]]; then
-    echo "ERROR (NAS profile): CLOUDFLARED_TUNNEL_TOKEN is missing or blank (value not shown)."
-    exit 1
-  fi
-  unset tunnel_token
-fi
-
 IMAGE_TAG="${IMAGE_TAG:-${FPS_IMAGE_TAG:-$(read_env_value FPS_IMAGE_TAG)}}"
 tag_is_immutable() { [[ "$1" == sha-* || "$1" == v* ]]; }
 if [[ "$SKIP_PUBLIC" != "true" ]]; then
@@ -199,6 +178,48 @@ if [[ "$ALLOW_LATEST" == "true" ]] && { [[ -z "$IMAGE_TAG" ]] || ! tag_is_immuta
 fi
 if [[ -n "$IMAGE_TAG" ]]; then
   export FPS_IMAGE_TAG="$IMAGE_TAG"
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERROR (NAS profile): docker is not installed."
+  exit 1
+fi
+if ! docker compose version >/dev/null 2>&1; then
+  echo "ERROR (NAS profile): Docker Compose v2 is required."
+  exit 1
+fi
+if ! docker info >/dev/null 2>&1; then
+  echo "ERROR (NAS profile): cannot reach the Docker daemon."
+  exit 1
+fi
+
+if [[ "$SKIP_TUNNEL" == "true" ]]; then
+  active_tunnel_containers="$(
+    docker ps --filter status=running --filter network=fairspot_network \
+      --format '{{.Names}}\t{{.Image}}' 2>/dev/null \
+      | awk 'tolower($0) ~ /cloudflared/ { print $1 }' \
+      || true
+  )"
+  if [[ -n "$active_tunnel_containers" ]]; then
+    echo "ERROR (NAS profile): an active Cloudflare Tunnel connector is still attached to fairspot_network."
+    echo "  --skip-public --skip-tunnel is safe only after every connector is stopped or disconnected."
+    printf '%s\n' "$active_tunnel_containers" | sed 's/^/  Active connector: /'
+    exit 1
+  fi
+fi
+
+if [[ "$SKIP_TUNNEL" != "true" && -z "$EXISTING_TUNNEL_CONTAINER" ]]; then
+  if [[ ! -f "$TUNNEL_ENV_FILE" ]]; then
+    echo "ERROR (NAS profile): tunnel env file not found: $TUNNEL_ENV_FILE"
+    echo "  Or pass --existing-tunnel-container <name> for an independently managed connector."
+    exit 1
+  fi
+  tunnel_token="$(read_env_value_from CLOUDFLARED_TUNNEL_TOKEN "$TUNNEL_ENV_FILE")"
+  if [[ -z "$tunnel_token" ]]; then
+    echo "ERROR (NAS profile): CLOUDFLARED_TUNNEL_TOKEN is missing or blank (value not shown)."
+    exit 1
+  fi
+  unset tunnel_token
 fi
 
 # Grafana needs its external origin for redirects and secure cookies when an
@@ -265,11 +286,6 @@ if printf '%s\n' "$rendered" | grep -q 'published:'; then
 fi
 unset rendered
 echo "  Boundary:  no host-published ports"
-
-if ! docker info >/dev/null 2>&1; then
-  echo "ERROR (NAS profile): cannot reach the Docker daemon."
-  exit 1
-fi
 
 start_args=(--nas --env-file "$ENV_FILE" --skip-public-smoke)
 if [[ -n "$APP_HOST" && -n "$AUTH_HOST" ]]; then

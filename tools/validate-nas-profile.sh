@@ -238,6 +238,36 @@ expect_fail "deploy rejects latest without waiver" "immutable image tag" -- \
 expect_fail "deploy requires tunnel off when public smoke is skipped" "requires --skip-tunnel" -- \
   "$DEPLOY" --env-file "$FIX_ENV" --skip-public --tag sha-x
 
+tag_gate_line="$(grep -n '^IMAGE_TAG=' "$DEPLOY" | head -1 | cut -d: -f1)"
+docker_gate_line="$(grep -n '^if ! command -v docker' "$DEPLOY" | head -1 | cut -d: -f1)"
+if [[ -n "$tag_gate_line" && -n "$docker_gate_line" && "$tag_gate_line" -lt "$docker_gate_line" ]]; then
+  pass "immutable-tag validation runs before the Docker prerequisite"
+else
+  fail "immutable-tag validation does not run before the Docker prerequisite"
+fi
+
+FAKE_DOCKER_BIN="$TMP/fake-docker-bin"
+mkdir -p "$FAKE_DOCKER_BIN"
+cat > "$FAKE_DOCKER_BIN/docker" <<'SH'
+#!/bin/sh
+if [ "${1:-}" = "compose" ] && [ "${2:-}" = "version" ]; then
+  exit 0
+fi
+if [ "${1:-}" = "info" ]; then
+  exit 0
+fi
+if [ "${1:-}" = "ps" ]; then
+  printf 'fairspot-cloudflared\tcloudflare/cloudflared:latest\n'
+  exit 0
+fi
+exit 64
+SH
+chmod +x "$FAKE_DOCKER_BIN/docker"
+expect_fail "deploy refuses unchecked mutation while a tunnel remains active" \
+  "active Cloudflare Tunnel connector" -- \
+  env PATH="$FAKE_DOCKER_BIN:$PATH" "$DEPLOY" --env-file "$FIX_ENV" \
+    --skip-public --skip-tunnel
+
 MISMATCH_ENV="$TMP/mismatch.env"
 sed 's#^FPS_WEB_API_BASE_URL=.*#FPS_WEB_API_BASE_URL=https://wrong.example.test/api#' "$FIX_ENV" > "$MISMATCH_ENV"
 if docker compose version >/dev/null 2>&1; then

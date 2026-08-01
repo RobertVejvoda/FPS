@@ -208,7 +208,12 @@ SSH). Prefer Cloudflare Access for any operator surface exposed through the edge
   ./tools/deploy-digitalocean.sh --domain <your-domain> --tag sha-<newer-commit>
   ```
 - **Rollback**: redeploy a **previous** immutable tag the same way. Because the
-  data volumes are preserved, rollback swaps images without touching state:
+  data volumes are preserved, rollback swaps images without touching state.
+  Before executing it, compare
+  `code/server/DataHub/FPS.DataHub/Infrastructure/Migrations/` between the
+  previous and current commits. If migrations differ, confirm the previous
+  image can read the current schema or select a verified pre-migration restore
+  point; do not run the command while that decision is unresolved:
   ```sh
   ./tools/deploy-digitalocean.sh --domain <your-domain> --tag sha-<previous-commit>
   ```

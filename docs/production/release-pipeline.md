@@ -68,6 +68,18 @@ Without `--tag` (or with `--tag latest`) a public deploy aborts and tells you to
 
 Because every build is an immutable `sha-<commit>` image:
 
+Before executing a rollback, compare DataHub migrations between the previous
+and current commits:
+
+```sh
+git diff --name-status <previous-good-commit>..<current-commit> -- \
+  code/server/DataHub/FPS.DataHub/Infrastructure/Migrations/
+```
+
+If that command reports changes, first confirm that the previous image can read
+the current schema or select the verified pre-migration restore point. Do not
+run the image rollback while that decision is unresolved.
+
 - **Promote** a validated commit by deploying its `sha-<commit>` tag to the NAS.
 - **Roll back** by re-running `deploy-nas.sh ... --tag sha-<previous-good-commit>`. The pull fetches the prior images and `up -d` recreates the containers; named data volumes are untouched, so durable state survives. No rebuild on the host.
 
