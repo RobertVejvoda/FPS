@@ -406,7 +406,9 @@ fi
 if [[ "$SKIP_PUBLIC" != "true" && -n "$DOMAIN" ]]; then
   echo
   echo "== Public-domain smoke =="
-  "$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" --domain "$DOMAIN"
+  "$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" \
+    --domain "$DOMAIN" \
+    --smoke-only
 elif [[ "$SKIP_PUBLIC" != "true" ]]; then
   echo
   echo "INFO: Public-domain smoke skipped because --domain was not provided."
