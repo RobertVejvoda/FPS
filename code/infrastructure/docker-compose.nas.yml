@@ -1,20 +1,14 @@
 # NAS deployment overlay — adds restart policies and enforces required secrets.
 #
-# Usage (infra-only stack):
+# Full NAS stack (normally run through tools/deploy-nas.sh):
 #   docker compose \
 #     --env-file nas.env \
 #     -f docker-compose.yaml \
-#     -f docker-compose.nas.yml \
-#     up -d
-#
-# With service containers + Dapr (full stack):
-#   docker compose \
-#     --env-file nas.env \
-#     -f docker-compose.yaml \
-#     -f docker-compose.services.yml \
+#     -f docker-compose.services.images.yml \
 #     -f docker-compose.dapr.yml \
 #     -f docker-compose.nas.yml \
 #     -f docker-compose.services.nas.yml \
+#     -f docker-compose.no-host-ports.yml \
 #     up -d
 #
 # Prerequisites:

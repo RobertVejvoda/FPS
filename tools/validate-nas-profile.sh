@@ -403,6 +403,11 @@ if docker compose version >/dev/null 2>&1; then
     "FPS_WEB_API_BASE_URL does not match" -- \
     "$START" --nas --env-file "$MISMATCH_ENV" --app-host app-dev.example.test \
       --auth-host auth-dev.example.test
+  expect_fail "direct NAS start validates shell-overridden Compose values before mutation" \
+    "FPS_WEB_API_BASE_URL does not match" -- \
+    env FPS_WEB_API_BASE_URL=https://shell-override.example.test/api \
+      "$START" --nas --env-file "$FIX_ENV" --app-host app-dev.example.test \
+      --auth-host auth-dev.example.test
 else
   skip "docker compose unavailable — direct-start contract check skipped"
 fi
@@ -418,6 +423,15 @@ if grep -q 'validate-nas-profile.sh' "$REPO_ROOT/.github/workflows/ci.yml"; then
   pass "CI runs NAS profile validation"
 else
   fail "CI does not run NAS profile validation"
+fi
+if [[ "$(grep -c 'docker-compose.no-host-ports.yml' "$INFRA_DIR/docker-compose.services.images.yml")" -ge 2 ]] \
+  && grep -q 'docker-compose.services.images.yml' "$INFRA_DIR/docker-compose.nas.yml" \
+  && grep -q 'docker-compose.no-host-ports.yml' "$INFRA_DIR/docker-compose.nas.yml" \
+  && [[ "$(grep -c 'docker-compose.no-host-ports.yml' "$REPO_ROOT/docs/production/ghcr-image-publishing.md")" -ge 2 ]] \
+  && grep -q 'docker-compose.no-host-ports.yml' "$REPO_ROOT/docs/local-alerts-runbook.md"; then
+  pass "all raw NAS examples preserve image mode and the tunnel-only port boundary"
+else
+  fail "a raw NAS example omits image mode or docker-compose.no-host-ports.yml"
 fi
 
 hdr "Summary"

@@ -302,6 +302,19 @@ read_env_value() {
   ' "$file"
 }
 
+# Docker Compose gives a variable exported by the invoking shell precedence
+# over --env-file interpolation. Hosted safety checks must validate that same
+# effective value, including an explicitly exported empty value, before any
+# stack mutation.
+effective_compose_env_value() {
+  local key="$1"
+  if printenv "$key" >/dev/null 2>&1; then
+    printf '%s\n' "${!key}"
+  else
+    read_env_value "$key" "$ENV_FILE"
+  fi
+}
+
 # Exact hostnames are the canonical interface for environment-qualified names
 # such as app-dev.fairspot.net. --domain remains a Production-friendly shorthand.
 PUBLIC_APP_HOST="${PUBLIC_APP_HOST:-$(read_env_value FPS_PUBLIC_APP_HOST "$ENV_FILE")}"
@@ -342,14 +355,14 @@ validate_hosted_web_contract() {
   local kc_hostname app_origin expected_authority expected_api_base
   local expected_redirect expected_post_logout
 
-  auth_authority="$(read_env_value FPS_AUTH_AUTHORITY "$ENV_FILE")"
-  web_api_base_url="$(read_env_value FPS_WEB_API_BASE_URL "$ENV_FILE")"
-  web_oidc_authority="$(read_env_value FPS_WEB_OIDC_AUTHORITY "$ENV_FILE")"
-  web_oidc_client_id="$(read_env_value FPS_WEB_OIDC_CLIENT_ID "$ENV_FILE")"
-  web_oidc_redirect_uri="$(read_env_value FPS_WEB_OIDC_REDIRECT_URI "$ENV_FILE")"
-  web_oidc_post_logout_redirect_uri="$(read_env_value FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI "$ENV_FILE")"
-  kc_hostname="$(read_env_value KC_HOSTNAME "$ENV_FILE")"
-  app_origin="$(read_env_value FPS_APP_ORIGIN "$ENV_FILE")"
+  auth_authority="$(effective_compose_env_value FPS_AUTH_AUTHORITY)"
+  web_api_base_url="$(effective_compose_env_value FPS_WEB_API_BASE_URL)"
+  web_oidc_authority="$(effective_compose_env_value FPS_WEB_OIDC_AUTHORITY)"
+  web_oidc_client_id="$(effective_compose_env_value FPS_WEB_OIDC_CLIENT_ID)"
+  web_oidc_redirect_uri="$(effective_compose_env_value FPS_WEB_OIDC_REDIRECT_URI)"
+  web_oidc_post_logout_redirect_uri="$(effective_compose_env_value FPS_WEB_OIDC_POST_LOGOUT_REDIRECT_URI)"
+  kc_hostname="$(effective_compose_env_value KC_HOSTNAME)"
+  app_origin="$(effective_compose_env_value FPS_APP_ORIGIN)"
 
   if [[ "$auth_authority" != https://* ]]; then
     echo "ERROR (hosted profile): hosted deployment requires encrypted public auth."
