@@ -44,7 +44,7 @@ jobs:
       - name: Download the stage-1 signal (formal-review channel only)
         if: github.event_name == 'workflow_run'
         id: dl
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: agent-loop-signal
           path: signal
