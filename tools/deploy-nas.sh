@@ -304,6 +304,9 @@ start_args=(--nas --env-file "$ENV_FILE" --skip-public-smoke)
 if [[ -n "$APP_HOST" && -n "$AUTH_HOST" ]]; then
   start_args+=(--app-host "$APP_HOST" --auth-host "$AUTH_HOST")
 fi
+if [[ "$SKIP_PUBLIC" != "true" ]]; then
+  start_args+=(--validated-public-handoff)
+fi
 
 echo
 echo "== Starting and verifying the NAS stack =="

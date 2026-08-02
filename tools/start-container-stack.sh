@@ -58,6 +58,11 @@
 #                      or attaches the Cloudflare Tunnel connector. A hosted
 #                      start without exact app/auth hosts is rejected while an
 #                      active cloudflared connector is attached to the stack.
+#   --validated-public-handoff
+#                      Internal deployment-wrapper handoff. Confirms the wrapper
+#                      already enforced its public tag/config/boundary gates and
+#                      will run post-start public smoke. Required when a mutating
+#                      --skip-public-smoke run finds active Cloudflare ingress.
 #   --smoke-only       Hosted (--nas/--digitalocean) only. Genuinely non-mutating:
 #                      never renders Alertmanager config, never creates the
 #                      Docker network or pulls the probe image (fails clearly if
@@ -100,6 +105,7 @@ SEED=false
 REALM_OVERRIDE=""
 SMOKE_ONLY=false
 SKIP_PUBLIC_SMOKE=false
+VALIDATED_PUBLIC_HANDOFF=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -114,6 +120,7 @@ while [[ $# -gt 0 ]]; do
     --app-host)     PUBLIC_APP_HOST="$2"; shift ;;
     --auth-host)    PUBLIC_AUTH_HOST="$2"; shift ;;
     --skip-public-smoke) SKIP_PUBLIC_SMOKE=true ;;
+    --validated-public-handoff) VALIDATED_PUBLIC_HANDOFF=true ;;
     --smoke-only)   SMOKE_ONLY=true ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
@@ -205,6 +212,13 @@ if [[ "$SMOKE_ONLY" == "true" ]]; then
     echo "ERROR: --smoke-only cannot be combined with --down (--down stops the stack)."
     exit 1
   fi
+fi
+
+if [[ "$VALIDATED_PUBLIC_HANDOFF" == "true" ]] \
+  && { ! is_hosted || [[ "$SKIP_PUBLIC_SMOKE" != "true" ]] \
+    || [[ "$SMOKE_ONLY" == "true" ]] || [[ "$TEARDOWN" == "true" ]]; }; then
+  echo "ERROR: --validated-public-handoff is internal to a mutating hosted --skip-public-smoke deployment."
+  exit 1
 fi
 
 # ── Resolve the internal OIDC realm ──────────────────────────────────────────────
@@ -510,21 +524,28 @@ if is_hosted && [[ -n "$PUBLIC_APP_HOST" && -n "$PUBLIC_AUTH_HOST" ]]; then
   validate_hosted_web_contract
 fi
 
-# Without exact public hosts, a direct hosted start cannot prove that the web,
-# OIDC, and Keycloak settings match the routes already exposed by Cloudflare.
-# Refuse before the first mutation when a connector is attached to the stack.
-# The deployment wrappers pass exact hosts during their safe handoff, so their
-# pre-tunnel start continues through the validated contract above.
-if is_hosted && [[ "$SMOKE_ONLY" != "true" ]] \
-  && [[ -z "$PUBLIC_APP_HOST" || -z "$PUBLIC_AUTH_HOST" ]]; then
+# Detect active ingress on every mutating hosted start. Exact public hosts prove
+# the web/auth contract, but a run that deliberately defers public smoke is
+# still unsafe while an existing connector publishes the replacement stack
+# unless a deployment wrapper completed its tag/config/boundary preflight and
+# explicitly promises the post-start smoke handoff.
+if is_hosted && [[ "$SMOKE_ONLY" != "true" ]]; then
   active_tunnel_containers="$(
     docker ps --filter status=running --filter network="$NET" \
       --format '{{.Names}}\t{{.Image}}' 2>/dev/null \
       | awk 'tolower($0) ~ /cloudflared/ { print $1 }' || true
   )"
-  if [[ -n "$active_tunnel_containers" ]]; then
+  if [[ -n "$active_tunnel_containers" ]] \
+    && [[ -z "$PUBLIC_APP_HOST" || -z "$PUBLIC_AUTH_HOST" ]]; then
     echo "ERROR: hosted stack mutation without exact app/auth hosts is unsafe while an active Cloudflare Tunnel connector is attached to $NET."
     echo "Pass --app-host and --auth-host so the hosted contract is validated, or stop/disconnect the connector first:"
+    printf '%s\n' "$active_tunnel_containers" | sed 's/^/  /'
+    exit 1
+  fi
+  if [[ -n "$active_tunnel_containers" && "$SKIP_PUBLIC_SMOKE" == "true" \
+    && "$VALIDATED_PUBLIC_HANDOFF" != "true" ]]; then
+    echo "ERROR: hosted stack mutation while public smoke is skipped is unsafe with an active Cloudflare Tunnel connector attached to $NET."
+    echo "Use the validated deployment wrapper, or stop/disconnect the connector before direct troubleshooting:"
     printf '%s\n' "$active_tunnel_containers" | sed 's/^/  /'
     exit 1
   fi

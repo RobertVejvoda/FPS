@@ -386,9 +386,11 @@ echo
 # ── Start the DigitalOcean profile ───────────────────────────────────────────
 # Validate the exact hosted contract but defer public probes until the connector
 # below is running. The post-tunnel invocation remains the release smoke gate.
-"$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" \
-  --domain "$DOMAIN" \
-  --skip-public-smoke
+start_args=(--digitalocean --env-file "$ENV_FILE" --domain "$DOMAIN" --skip-public-smoke)
+if [[ "$SKIP_PUBLIC" != "true" ]]; then
+  start_args+=(--validated-public-handoff)
+fi
+"$REPO_ROOT/tools/start-container-stack.sh" "${start_args[@]}"
 
 # ── Cloudflare Tunnel connector (the only ingress) ───────────────────────────
 if [[ "$SKIP_TUNNEL" != "true" ]]; then

@@ -256,6 +256,12 @@ if grep -B 1 -- '--skip-public-smoke' "$DEPLOY" | grep -q -- '--domain "$DOMAIN"
 else
   fail "deploy does not preserve the pre-tunnel start / post-tunnel smoke handoff"
 fi
+if grep -A 2 -F 'if [[ "$SKIP_PUBLIC" != "true" ]]; then' "$DEPLOY" \
+  | grep -q -- 'start_args+=(--validated-public-handoff)'; then
+  pass "deploy grants the active-ingress handoff only when public validation remains enabled"
+else
+  fail "deploy can grant the active-ingress handoff while public validation is skipped"
+fi
 
 # start-container-stack.sh --smoke-only flag-combination guards run before any
 # docker call, so they need no daemon/CLI.

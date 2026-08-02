@@ -395,6 +395,11 @@ expect_fail "direct NAS start refuses unchecked mutation while a tunnel remains 
   "active Cloudflare Tunnel connector" -- \
   env PATH="$FAKE_DOCKER_BIN:$PATH" "$START" --nas \
     --env-file "$NO_PUBLIC_HOST_ENV" --skip-public-smoke
+expect_fail "direct DigitalOcean start refuses active ingress while public smoke is deferred" \
+  "public smoke is skipped" -- \
+  env PATH="$FAKE_DOCKER_BIN:$PATH" "$START" --digitalocean \
+    --env-file "$FIX_ENV" --app-host app-dev.example.test \
+    --auth-host auth-dev.example.test --skip-public-smoke
 
 MISMATCH_ENV="$TMP/mismatch.env"
 sed 's#^FPS_WEB_API_BASE_URL=.*#FPS_WEB_API_BASE_URL=https://wrong.example.test/api#' "$FIX_ENV" > "$MISMATCH_ENV"
