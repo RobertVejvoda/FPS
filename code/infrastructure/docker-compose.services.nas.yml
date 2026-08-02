@@ -27,6 +27,36 @@ services:
 
   fairspot-datahub:
     environment: *fairspot-nas-service-auth-env
+    depends_on:
+      fairspot-datahub-migrate:
+        condition: service_completed_successfully
+
+  # Finite schema migration job. Current images use the explicit migrate/exit
+  # switch in Production so EF pending-model validation remains fail-closed.
+  # The mounted launcher also supports rollback to older published images: it
+  # detects that they ignored the switch, restarts only that legacy fallback in
+  # Development so startup applies compiled migrations, binds it to container
+  # loopback, and stops it after ASP.NET reaches listening state. The normal
+  # DataHub service remains in Production and cannot start until this job
+  # completes successfully.
+  fairspot-datahub-migrate:
+    image: ${FPS_REGISTRY:-ghcr.io/robertvejvoda}/fairspot-datahub:${FPS_IMAGE_TAG:-latest}
+    restart: "no"
+    entrypoint: ["/bin/sh", "/opt/fairspot/run-datahub-migrations.sh"]
+    environment:
+      <<: *fairspot-nas-service-auth-env
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://127.0.0.1:5211
+      DataHub__ApplyMigrationsAndExit: "true"
+      ConnectionStrings__DataHub: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-fps_datahub};Username=${POSTGRES_USER:-fps};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for production-like DataHub, see nas.env}"
+      Logging__LogLevel__Microsoft.Hosting.Lifetime: Information
+    volumes:
+      - ./datahub/run-migrations.sh:/opt/fairspot/run-datahub-migrations.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - web
 
   fairspot-identity:
     environment: *fairspot-nas-service-auth-env

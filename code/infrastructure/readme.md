@@ -6,8 +6,8 @@ This guide describes the lower-level Docker Compose infrastructure. For normal u
 |---|---|---|
 | Local full stack | `./tools/local-start.sh` | Local Docker backend, local seed, web dev server, Expo mobile dev server. No Cloudflare. |
 | Local stop | `./tools/local-stop.sh` | Stops web/mobile and local Docker containers. |
-| NAS hosted | `./tools/nas-start.sh --domain fairspot.net` | NAS Docker runtime, auth, gateway/web/API, observability, Dapr, state stores, Cloudflare Tunnel, HTTPS public checks. |
-| NAS stop | `./tools/nas-stop.sh` | Stops Cloudflare Tunnel and NAS Docker runtime. |
+| NAS Development | `./tools/deploy-nas.sh --tag sha-<commit> --existing-tunnel-container fairspot-cloudflared` | Pulls immutable images; renders the no-host-port profile; starts stores, migrations, services, Dapr, and observability; attaches the existing Tunnel; runs internal and exact-host public checks. Exact hosts come from ignored `nas.env`. |
+| NAS stop | `./tools/deploy-nas.sh --down --existing-tunnel-container fairspot-cloudflared` | Stops FairSpot while preserving volumes; leaves the independently managed Tunnel running. Omit the existing-container option for a Compose-managed Tunnel. |
 
 Local is the only profile allowed to use plain HTTP for browser/mobile testing. NAS and later hosted/cloud profiles are external hosting profiles and must use encrypted public communication through HTTPS.
 
@@ -19,7 +19,7 @@ The setup includes services like MongoDB, RabbitMQ, Vault, MinIO (S3), and other
 
 1. **Docker**: Ensure Docker is installed and running on your system.
    - [Install Docker](https://docs.docker.com/get-docker/)
-2. **Docker Compose v2**: Required by the local and NAS scenario scripts.
+2. **Docker Compose v2.24+**: Required by hosted profiles for `!reset`/`!override` merge tags.
 3. **Node.js/npm**: Required only when running local web and Expo mobile developer servers through `./tools/local-start.sh`.
 
 The containerized local and NAS profiles do not require host-installed .NET or Dapr CLI. Dapr runs as containers managed by Docker Compose.
@@ -163,17 +163,61 @@ See `dapr/README.md` for the full component contract, app scoping rules, and pro
 
 ## NAS / Hosted Deployment
 
-For NAS or hosted deployments, use the scenario script. Cloudflare Tunnel is part of the NAS hosted profile:
+For NAS Development, put the exact app/auth/ops hostnames and all real values in
+the ignored `nas.env`, then use the scenario script with an immutable image tag:
 
 ```bash
-./tools/nas-start.sh --domain fairspot.net
+./tools/deploy-nas.sh \
+  --tag sha-<full-commit> \
+  --existing-tunnel-container fairspot-cloudflared
 ```
 
-For internal troubleshooting only, the low-level stack can be started without public checks:
+The wrapper is idempotent and preserves durable volumes. It prepares required
+ignored bind-mount directories, checks the exact public web/OIDC contract,
+renders a profile with zero host-published ports, pulls images, gates durable
+Vault, runs the one-shot Mongo and DataHub migration jobs, verifies every
+service and Dapr sidecar, attaches or starts `cloudflared`, and finally runs the
+public smoke. `mongodb-init`, `fairspot-datahub-migrate`, and `vault-init`
+finishing as `Exited (0)` means successful completion.
+
+The DataHub job uses a finite compatibility launcher. Current images apply
+migrations and exit through their explicit migration mode. When rolling back to
+an image published before that mode existed, the launcher lets the image run
+its existing Development startup migrations on container loopback, then stops
+it after ASP.NET reaches listening state. The long-running DataHub service
+always starts separately in Production only after that job succeeds.
+
+If the Tunnel is managed by this repo instead, omit
+`--existing-tunnel-container` and provide the ignored tunnel env file. The
+Production-compatible `--domain fairspot.net` shorthand still derives
+`app.fairspot.net` and `auth.fairspot.net`; Development should use explicit
+`FPS_PUBLIC_APP_HOST=app-dev...` and `FPS_PUBLIC_AUTH_HOST=auth-dev...` values.
+
+For internal troubleshooting only, the low-level stack can be started without
+public probes. Pass the exact hosts so it still validates the hosted runtime
+contract before mutation:
 
 ```bash
-./tools/start-container-stack.sh --nas --env-file code/infrastructure/nas.env --skip-e2e
+./tools/start-container-stack.sh --nas \
+  --env-file code/infrastructure/nas.env \
+  --app-host <app-host> \
+  --auth-host <auth-host> \
+  --skip-public-smoke
 ```
+
+If exact hosts are intentionally omitted, first stop or disconnect every
+Cloudflare Tunnel connector from `fairspot_network`. The script rejects an
+unchecked hosted mutation while active ingress remains attached.
+
+### CI/CD boundary
+
+- `.github/workflows/ci.yml` builds/tests the code and renders/validates the NAS
+  and DigitalOcean Compose profiles with placeholder values.
+- `.github/workflows/publish-images.yml` builds all service/web images and
+  publishes immutable `sha-<full-commit>` tags to GHCR.
+- The NAS is the deployment runner: an operator selects a green immutable tag
+  and runs `deploy-nas.sh` locally. GitHub-hosted runners receive no NAS,
+  Cloudflare, Vault, or application credentials and do not connect to the NAS.
 
 See `docs/production/nas-cloudflare-deployment-profile.md` for the full NAS deployment runbook.
 

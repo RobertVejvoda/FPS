@@ -44,6 +44,7 @@ if [ "$MODE" = "--reset" ]; then
     -f "$INFRA_DIR/docker-compose.dapr.yml" \
     -f "$INFRA_DIR/docker-compose.nas.yml" \
     -f "$INFRA_DIR/docker-compose.services.nas.yml" \
+    -f "$INFRA_DIR/docker-compose.no-host-ports.yml" \
     down -v
 else
   printf '[nas] Stopping NAS containers; volumes preserved...\n'

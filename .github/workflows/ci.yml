@@ -32,6 +32,12 @@ jobs:
       - name: Repository validation
         run: ./tools/validate.sh
 
+      - name: NAS deployment profile validation
+        run: ./tools/validate-nas-profile.sh
+
+      - name: DigitalOcean deployment profile validation
+        run: ./tools/validate-digitalocean-profile.sh
+
       - name: Set up Node.js for client stale-check
         uses: actions/setup-node@v7
         with:

@@ -87,11 +87,22 @@ builder.Services.AddFpsDurableDeactivatedUserStore();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// Hosted deployments apply schema changes through a one-shot Compose service before
+// the normal DataHub process starts.  This keeps the long-running service in
+// Production while reusing the exact migration assembly shipped in its image.
+// Local Development retains its convenient migrate-on-start behaviour.
+var applyMigrationsAndExit = builder.Configuration.GetValue<bool>("DataHub:ApplyMigrationsAndExit");
+if (app.Environment.IsDevelopment() || applyMigrationsAndExit)
 {
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<DataHubDbContext>();
     await db.Database.MigrateAsync();
+}
+
+if (applyMigrationsAndExit)
+{
+    app.Logger.LogInformation("DataHub database migrations applied successfully; exiting migration mode.");
+    return;
 }
 
 // SEC003 (#495): docs are gated to Development to reduce hosted recon surface.

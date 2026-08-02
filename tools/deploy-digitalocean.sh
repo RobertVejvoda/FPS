@@ -69,9 +69,9 @@ Options:
   --env-file PATH          DigitalOcean stack env file. Default: code/infrastructure/do.env
   --tunnel-env-file PATH   Cloudflare tunnel env file. Default: code/infrastructure/cloudflared/.env.do
   --domain DOMAIN          Public domain for smoke checks, e.g. fairspot.net
-  --tag TAG                Image tag to deploy (sets FPS_IMAGE_TAG). Use an immutable
-                           tag — sha-<commit> or a v* release tag. Required for a
-                           public/evidence deployment (see --allow-latest).
+  --tag TAG                Image tag to deploy (sets FPS_IMAGE_TAG). Use a published
+                           sha-<40-hex-commit> or vMAJOR.MINOR.PATCH release tag.
+                           Required for a public/evidence deployment (see --allow-latest).
   --allow-latest           Permit deploying the moving "latest" tag. Not valid for
                            release/evidence deployments.
   --down                   Stop the DigitalOcean stack, preserving data volumes, and exit.
@@ -272,16 +272,17 @@ if [[ "$SKIP_PUBLIC" != "true" ]]; then
   note "public web runtime settings: FPS_WEB_* present and consistent with domain $DOMAIN"
 fi
 
-# 6. Immutable image tag (only sha-<commit> or v* release tags; reject mutable tags).
+# 6. Published immutable image tag (full commit SHA or v-prefixed SemVer).
 IMAGE_TAG="${IMAGE_TAG:-${FPS_IMAGE_TAG:-}}"
 if [[ "$SKIP_PUBLIC" != "true" ]]; then
-  _tag_is_immutable() {
-    [[ "$1" == sha-* || "$1" == v*.*.* || "$1" == v*.* || "$1" == v* ]]
+  _tag_is_published_immutable() {
+    [[ "$1" =~ ^sha-[0-9a-f]{40}$ \
+      || "$1" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]
   }
   if [[ -z "$IMAGE_TAG" ]]; then
     if [[ "$ALLOW_LATEST" != "true" ]]; then
       echo "ERROR (DigitalOcean profile): a public/evidence deployment requires an immutable image tag."
-      echo "  Pin a sha-<commit> (or a v* release tag) so the deploy is reproducible and recorded:"
+      echo "  Pin a sha-<40-hex-commit> (or a vMAJOR.MINOR.PATCH release tag) so the deploy is reproducible and recorded:"
       echo "    ./tools/deploy-digitalocean.sh --domain ${DOMAIN:-<domain>} --tag sha-<commit>"
       echo "  To deploy with a mutable tag anyway (not valid for evidence), add --allow-latest."
       exit 1
@@ -290,15 +291,15 @@ if [[ "$SKIP_PUBLIC" != "true" ]]; then
   elif [[ "$IMAGE_TAG" == "latest" ]]; then
     if [[ "$ALLOW_LATEST" != "true" ]]; then
       echo "ERROR (DigitalOcean profile): tag 'latest' is mutable and not valid for evidence deployments."
-      echo "  Pin a sha-<commit> (or a v* release tag) so the deploy is reproducible and recorded:"
+      echo "  Pin a sha-<40-hex-commit> (or a vMAJOR.MINOR.PATCH release tag) so the deploy is reproducible and recorded:"
       echo "    ./tools/deploy-digitalocean.sh --domain ${DOMAIN:-<domain>} --tag sha-<commit>"
       echo "  To deploy the moving 'latest' tag anyway (not valid for evidence), add --allow-latest."
       exit 1
     fi
     echo "  WARNING: deploying moving tag 'latest' (--allow-latest). Not valid for release evidence."
-  elif ! _tag_is_immutable "$IMAGE_TAG"; then
+  elif ! _tag_is_published_immutable "$IMAGE_TAG"; then
     if [[ "$ALLOW_LATEST" != "true" ]]; then
-      echo "ERROR (DigitalOcean profile): tag '$IMAGE_TAG' is not an immutable sha-<commit> or v* tag."
+      echo "ERROR (DigitalOcean profile): tag '$IMAGE_TAG' is not a published immutable sha-<40-hex-commit> or vMAJOR.MINOR.PATCH tag."
       echo "  Registry tags (other than digests) are mutable by default — the same tag can later point"
       echo "  to a different image, making the deploy non-reproducible and invalid for evidence."
       echo "  Use a pinned tag:  --tag sha-<commit>   or   --tag v1.2.3"
@@ -337,6 +338,7 @@ hdr_render() {
     -f "$INFRA_DIR/docker-compose.dapr.yml" \
     -f "$INFRA_DIR/docker-compose.nas.yml" \
     -f "$INFRA_DIR/docker-compose.services.nas.yml" \
+    -f "$INFRA_DIR/docker-compose.no-host-ports.yml" \
     -f "$INFRA_DIR/docker-compose.digitalocean.yml" \
     config
 }
@@ -382,7 +384,13 @@ echo "Image tag:  ${IMAGE_TAG:-<compose default>}"
 echo
 
 # ── Start the DigitalOcean profile ───────────────────────────────────────────
-"$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE"
+# Validate the exact hosted contract but defer public probes until the connector
+# below is running. The post-tunnel invocation remains the release smoke gate.
+start_args=(--digitalocean --env-file "$ENV_FILE" --domain "$DOMAIN" --skip-public-smoke)
+if [[ "$SKIP_PUBLIC" != "true" ]]; then
+  start_args+=(--validated-public-handoff)
+fi
+"$REPO_ROOT/tools/start-container-stack.sh" "${start_args[@]}"
 
 # ── Cloudflare Tunnel connector (the only ingress) ───────────────────────────
 if [[ "$SKIP_TUNNEL" != "true" ]]; then
@@ -401,7 +409,9 @@ fi
 if [[ "$SKIP_PUBLIC" != "true" && -n "$DOMAIN" ]]; then
   echo
   echo "== Public-domain smoke =="
-  "$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" --domain "$DOMAIN"
+  "$REPO_ROOT/tools/start-container-stack.sh" --digitalocean --env-file "$ENV_FILE" \
+    --domain "$DOMAIN" \
+    --smoke-only
 elif [[ "$SKIP_PUBLIC" != "true" ]]; then
   echo
   echo "INFO: Public-domain smoke skipped because --domain was not provided."

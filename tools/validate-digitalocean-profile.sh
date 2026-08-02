@@ -28,6 +28,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INFRA_DIR="$REPO_ROOT/code/infrastructure"
 
 PASS=0 FAIL=0 SKIP=0
+FIX_SHA_TAG="sha-0123456789abcdef0123456789abcdef01234567"
 pass() { echo "  PASS  $*"; PASS=$((PASS + 1)); }
 fail() { echo "  FAIL  $*"; FAIL=$((FAIL + 1)); }
 skip() { echo "  SKIP  $*"; SKIP=$((SKIP + 1)); }
@@ -115,6 +116,7 @@ render_do() {
     -f "$INFRA_DIR/docker-compose.dapr.yml" \
     -f "$INFRA_DIR/docker-compose.nas.yml" \
     -f "$INFRA_DIR/docker-compose.services.nas.yml" \
+    -f "$INFRA_DIR/docker-compose.no-host-ports.yml" \
     -f "$INFRA_DIR/docker-compose.digitalocean.yml" \
     config
 }
@@ -126,7 +128,7 @@ if ! docker compose version >/dev/null 2>&1; then
 else
   docker network inspect fairspot_network >/dev/null 2>&1 || docker network create fairspot_network >/dev/null 2>&1 || true
   RENDER="$TMP/rendered.yaml"
-  if render_do "sha-testfixture" > "$RENDER" 2>"$TMP/render.err"; then
+  if render_do "$FIX_SHA_TAG" > "$RENDER" 2>"$TMP/render.err"; then
     pass "compose config renders (merge tags supported, all required vars present)"
 
     # Image-mode services present, and NO local build context.
@@ -161,10 +163,16 @@ else
     fi
 
     # 4. sha-<commit> passthrough — the pinned tag reaches the images, no build.
-    if grep -qE 'image: .*/fairspot-web:sha-testfixture' "$RENDER"; then
+    if grep -qE "image: .*/fairspot-web:$FIX_SHA_TAG" "$RENDER"; then
       pass "sha-<commit> tag flows through to the composed images (no local build)"
     else
       fail "pinned sha tag did not reach the image refs"
+    fi
+
+    if grep -q 'GF_SERVER_ROOT_URL: http://localhost:3001' "$RENDER"; then
+      pass "Grafana absolute URLs use the default loopback-published port"
+    else
+      fail "Grafana root URL does not match the default loopback-published port"
     fi
   else
     fail "compose config failed to render"
@@ -203,29 +211,56 @@ BACKUP="$REPO_ROOT/tools/backup-stack.sh"
 # the Compose CLI (offline), not a running daemon.
 if docker compose version >/dev/null 2>&1; then
   expect_fail "deploy: missing env file"    "env file not found" -- \
-    "$DEPLOY" --env-file "$TMP/nope.env" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$TMP/nope.env" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag "$FIX_SHA_TAG"
   expect_fail "deploy: missing tunnel file" "tunnel env file not found" -- \
-    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/nope.env" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/nope.env" --domain example.test --tag "$FIX_SHA_TAG"
   expect_fail "deploy: blank auth authority rejected" "encrypted public auth" -- \
-    "$DEPLOY" --env-file "$BLANK_AUTH_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$BLANK_AUTH_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag "$FIX_SHA_TAG"
   expect_fail "deploy: missing public web runtime setting rejected" "missing public web runtime setting" -- \
-    "$DEPLOY" --env-file "$MISSING_WEB_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$MISSING_WEB_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag "$FIX_SHA_TAG"
   expect_fail "deploy: web OIDC authority inconsistent with auth authority rejected" "does not match FPS_AUTH_AUTHORITY" -- \
-    "$DEPLOY" --env-file "$MISMATCHED_WEB_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$MISMATCHED_WEB_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag "$FIX_SHA_TAG"
   expect_fail "deploy: web redirect URI same-origin-but-wrong-path rejected" "FPS_WEB_OIDC_REDIRECT_URI does not match" -- \
-    "$DEPLOY" --env-file "$MISMATCHED_REDIRECT_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$MISMATCHED_REDIRECT_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag "$FIX_SHA_TAG"
   expect_fail "deploy: missing image tag"   "immutable image tag" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test
   expect_fail "deploy: latest tag rejected" "mutable" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag latest
-  expect_fail "deploy: mutable tag rejected" "not an immutable" -- \
+  expect_fail "deploy: mutable tag rejected" "not a published immutable" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag staging
+  expect_fail "deploy: abbreviated SHA tag rejected" "not a published immutable" -- \
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag sha-dev
+  expect_fail "deploy: non-SemVer release tag rejected" "not a published immutable" -- \
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --domain example.test --tag vlatest
   expect_fail "deploy: --skip-public requires --skip-tunnel" "requires --skip-tunnel" -- \
     "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$TMP/tunnel.env" --skip-public
   expect_fail "deploy: blank tunnel token rejected" "CLOUDFLARED_TUNNEL_TOKEN is missing or blank" -- \
-    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$BLANK_TUNNEL_ENV" --domain example.test --tag sha-x
+    "$DEPLOY" --env-file "$FIX_ENV" --tunnel-env-file "$BLANK_TUNNEL_ENV" --domain example.test --tag "$FIX_SHA_TAG"
 else
   skip "docker compose CLI unavailable — deploy preflight negative paths skipped"
+fi
+
+pre_tunnel_start_line="$(grep -n -- '--skip-public-smoke' "$DEPLOY" | head -1 | cut -d: -f1)"
+tunnel_start_line="$(grep -n '== Starting Cloudflare Tunnel connector ==' "$DEPLOY" | head -1 | cut -d: -f1)"
+# Match the literal shell variable in the deployment script.
+# shellcheck disable=SC2016
+post_tunnel_smoke_line="$(grep -n -- '--smoke-only' "$DEPLOY" | head -1 | cut -d: -f1)"
+# Match the literal $DOMAIN token passed by the wrapper.
+# shellcheck disable=SC2016
+if grep -B 1 -- '--skip-public-smoke' "$DEPLOY" | grep -q -- '--domain "$DOMAIN"' \
+  && grep -B 1 -- '--smoke-only' "$DEPLOY" | grep -q -- '--domain "$DOMAIN"' \
+  && [[ -n "$pre_tunnel_start_line" && -n "$tunnel_start_line" && -n "$post_tunnel_smoke_line" ]] \
+  && [[ "$pre_tunnel_start_line" -lt "$tunnel_start_line" ]] \
+  && [[ "$tunnel_start_line" -lt "$post_tunnel_smoke_line" ]]; then
+  pass "deploy defers public smoke until after the Tunnel start"
+else
+  fail "deploy does not preserve the pre-tunnel start / post-tunnel smoke handoff"
+fi
+if grep -A 2 -F 'if [[ "$SKIP_PUBLIC" != "true" ]]; then' "$DEPLOY" \
+  | grep -q -- 'start_args+=(--validated-public-handoff)'; then
+  pass "deploy grants the active-ingress handoff only when public validation remains enabled"
+else
+  fail "deploy can grant the active-ingress handoff while public validation is skipped"
 fi
 
 # start-container-stack.sh --smoke-only flag-combination guards run before any

@@ -1,20 +1,14 @@
 # NAS deployment overlay — adds restart policies and enforces required secrets.
 #
-# Usage (infra-only stack):
+# Full NAS stack (normally run through tools/deploy-nas.sh):
 #   docker compose \
 #     --env-file nas.env \
 #     -f docker-compose.yaml \
-#     -f docker-compose.nas.yml \
-#     up -d
-#
-# With service containers + Dapr (full stack):
-#   docker compose \
-#     --env-file nas.env \
-#     -f docker-compose.yaml \
-#     -f docker-compose.services.yml \
+#     -f docker-compose.services.images.yml \
 #     -f docker-compose.dapr.yml \
 #     -f docker-compose.nas.yml \
 #     -f docker-compose.services.nas.yml \
+#     -f docker-compose.no-host-ports.yml \
 #     up -d
 #
 # Prerequisites:
@@ -151,6 +145,10 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in nas.env}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in nas.env}
+      # deploy-nas.sh derives these from the optional exact ops hostname. When
+      # no external ops host is configured, Grafana remains internal-only.
+      - GF_SERVER_ROOT_URL=${FPS_GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SECURITY_COOKIE_SECURE=${FPS_GRAFANA_COOKIE_SECURE:-false}
 
   zipkin:
     restart: unless-stopped

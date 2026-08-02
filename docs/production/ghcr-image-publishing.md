@@ -77,6 +77,7 @@ docker compose --env-file nas.env \
   -f docker-compose.dapr.yml \
   -f docker-compose.nas.yml \
   -f docker-compose.services.nas.yml \
+  -f docker-compose.no-host-ports.yml \
   pull
 docker compose --env-file nas.env \
   -f docker-compose.yaml \
@@ -84,6 +85,7 @@ docker compose --env-file nas.env \
   -f docker-compose.dapr.yml \
   -f docker-compose.nas.yml \
   -f docker-compose.services.nas.yml \
+  -f docker-compose.no-host-ports.yml \
   up -d
 ```
 

@@ -16,9 +16,8 @@ evidence** live in the private companion issue
 
 ## How this profile is built
 
-The DigitalOcean profile reuses the hardened NAS baseline and adds **one**
-delta overlay whose only job is to keep an internet-addressable host from
-publishing container ports on its public interface:
+The DigitalOcean profile reuses the hardened NAS baseline and shared
+Tunnel-only port suppression, then adds one Droplet convenience delta:
 
 | Layer | File |
 | --- | --- |
@@ -26,7 +25,8 @@ publishing container ports on its public interface:
 | Image-mode services (no local build) | `code/infrastructure/docker-compose.services.images.yml` |
 | Dapr sidecars | `code/infrastructure/docker-compose.dapr.yml` |
 | NAS hardening (restart policies, durable Keycloak Postgres, server-mode Vault, enforced secrets) | `code/infrastructure/docker-compose.nas.yml`, `docker-compose.services.nas.yml` |
-| **DigitalOcean delta (public-port suppression)** | `code/infrastructure/docker-compose.digitalocean.yml` |
+| **Shared Tunnel-only boundary (no host ports)** | `code/infrastructure/docker-compose.no-host-ports.yml` |
+| **DigitalOcean delta (loopback-only Grafana)** | `code/infrastructure/docker-compose.digitalocean.yml` |
 
 `tools/deploy-digitalocean.sh` and `tools/start-container-stack.sh --digitalocean`
 assemble exactly these files. Backups and restores target the same profile via
@@ -34,9 +34,9 @@ assemble exactly these files. Backups and restores target the same profile via
 
 ### The public boundary
 
-On the NAS, a `0.0.0.0` host port is reachable only from the private LAN. A
-Droplet has a public IP, so the delta overlay removes **every** host-port
-publish and pins the one operator convenience endpoint (Grafana) to loopback.
+The shared Tunnel-only overlay removes **every** host-port publish. The
+DigitalOcean delta then adds back one operator convenience endpoint (Grafana)
+on loopback only.
 The only ingress is the outbound **Cloudflare Tunnel**, which reaches
 `fairspot-web:80` and `keycloak:8080` over the internal Docker network — no
 published host port is required. Container-to-container traffic uses service
@@ -87,18 +87,22 @@ is no second secret schema to drift. Set at least the store credentials
 
 ### Public web runtime contract (`FPS_WEB_*`)
 
-`nas.env.example` omits these entirely — the template does not define any
-`FPS_WEB_*` key, so a `do.env` copied straight from it starts **without** the
-public web runtime contract at all, not merely with blank values for it. The
+`nas.env.example` includes the explicit hostname and web-runtime keys but leaves
+their environment-specific values blank. A DigitalOcean operator must fill
+`FPS_PUBLIC_DOMAIN`, `KC_HOSTNAME`, `FPS_APP_ORIGIN`, `FPS_AUTH_AUTHORITY`, and
+every required `FPS_WEB_*` value for the selected Droplet domain. Leave
+`FPS_PUBLIC_APP_HOST`/`FPS_PUBLIC_AUTH_HOST` blank when using the
+DigitalOcean `--domain` shorthand.
+
+The
 `fairspot-web` container entrypoint (`code/web/fps-web/docker-entrypoint.sh`)
 reads them at startup to render its runtime `/config.json`. If
 `FPS_WEB_API_BASE_URL` is unset, the container does **not** fail — it
 silently serves the image's **baked default** `config.json`
 (`http://localhost:10000`, a local Keycloak issuer, local callback URLs), and
-the public smoke's `/config.json` check only asserts the file is *present*,
-not that it points at the public origin. A `do.env` copied straight from
-`nas.env.example` and never edited would therefore deploy a web app that
-browsers cannot sign in with or call the public API from.
+the hosted preflight and public smoke reject a missing or inconsistent exact
+contract. A `do.env` copied straight from `nas.env.example` and never edited
+therefore fails before deployment.
 
 `tools/deploy-digitalocean.sh` closes this gap: for a normal public deploy (no
 `--skip-public`), preflight fails if any of the following are blank, or
@@ -148,7 +152,8 @@ volume. The start script pauses with the one-time init/unseal instructions:
 ```sh
 docker compose --project-directory code/infrastructure --env-file code/infrastructure/do.env \
   -f docker-compose.yaml -f docker-compose.services.images.yml -f docker-compose.dapr.yml \
-  -f docker-compose.nas.yml -f docker-compose.services.nas.yml -f docker-compose.digitalocean.yml \
+  -f docker-compose.nas.yml -f docker-compose.services.nas.yml \
+  -f docker-compose.no-host-ports.yml -f docker-compose.digitalocean.yml \
   exec vault vault operator init         # record unseal shares + root token OUT OF BAND
 # ... unseal (3 shares), enable the kv-v2 secret path, provision a least-privilege
 #     token, set VAULT_TOKEN in do.env, then re-run deploy. See the NAS runbook.
@@ -182,6 +187,10 @@ an SSH tunnel from your workstation:
 ssh -L 3001:127.0.0.1:3001 <droplet>     # then open http://localhost:3001
 ```
 
+Grafana's external root URL follows the loopback-published host port (default
+`3001`). If `FPS_GRAFANA_HOST_PORT` is changed, Compose derives the matching
+root URL; `FPS_GRAFANA_ROOT_URL` remains available for an explicit external URL.
+
 Reach a store or Vault the same way (`docker compose ... exec <service> …` over
 SSH). Prefer Cloudflare Access for any operator surface exposed through the edge.
 
@@ -199,11 +208,20 @@ SSH). Prefer Cloudflare Access for any operator surface exposed through the edge
   ./tools/deploy-digitalocean.sh --domain <your-domain> --tag sha-<newer-commit>
   ```
 - **Rollback**: redeploy a **previous** immutable tag the same way. Because the
-  data volumes are preserved, rollback swaps images without touching state:
+  data volumes are preserved, rollback swaps images without touching state.
+  Before executing it, compare
+  `code/server/DataHub/FPS.DataHub/Infrastructure/Migrations/` between the
+  previous and current commits. If migrations differ, confirm the previous
+  image can read the current schema or select a verified pre-migration restore
+  point; do not run the command while that decision is unresolved:
   ```sh
   ./tools/deploy-digitalocean.sh --domain <your-domain> --tag sha-<previous-commit>
   ```
-  A schema-incompatible rollback may need a restore — see the restore drill.
+  The finite DataHub migration launcher also supports images published before
+  explicit migration-and-exit mode by running their existing Development
+  startup migrations on container loopback and stopping them after they reach
+  listening state. A schema-incompatible rollback may still need a restore —
+  see the restore drill.
 
 ## 7. Backup
 
