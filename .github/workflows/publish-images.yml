@@ -57,7 +57,7 @@ jobs:
 
       - name: Image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ env.REGISTRY_OWNER }}/${{ matrix.name }}
           tags: |
@@ -100,7 +100,7 @@ jobs:
 
       - name: Image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ env.REGISTRY_OWNER }}/fairspot-web
           tags: |
